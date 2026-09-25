@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Models\StudentRoster;
 use App\Models\StudentSchoolYear;
 use App\Models\Term;
+use App\Support\EmailAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -114,6 +115,9 @@ class StudentController extends Controller
     /** POST /capsa/students — take on somebody one at a time. */
     public function store(Request $request): JsonResponse
     {
+        // A pasted address can carry a space nobody can see.
+        $request->merge(['email' => EmailAddress::clean($request->input('email'))]);
+
         $data = $request->validate([
             // Not unique:students. Removing a student from a section keeps
             // their account and only clears the section, so the address of
@@ -392,7 +396,7 @@ class StudentController extends Controller
      */
     private function schoolEmail(string $raw): ?string
     {
-        $email = Str::lower(trim($raw));
+        $email = EmailAddress::clean($raw);
         $plain = Str::ascii($email);
 
         if ($plain !== $email && filter_var($plain, FILTER_VALIDATE_EMAIL)) {

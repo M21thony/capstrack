@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Capsa;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\ExpertExpertise;
+use App\Support\EmailAddress;
 use App\Support\SpreadsheetFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -105,7 +106,7 @@ class ExpertRosterController extends Controller
                 $rowNum = $i + 2; // 1-based + header
                 $where = "{$sheetName} row {$rowNum}";
 
-                $email = trim((string) ($row[$emailCol] ?? ''));
+                $email = EmailAddress::clean((string) ($row[$emailCol] ?? ''));
                 $name = trim((string) ($row[$nameCol] ?? ''));
 
                 if ($email === '' && $name === '') {
