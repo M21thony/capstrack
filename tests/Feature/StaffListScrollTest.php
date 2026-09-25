@@ -17,18 +17,30 @@ class StaffListScrollTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_team_management_scrolls_its_rows_under_sticky_headings(): void
+    /**
+     * Team Management is laid out as the Student Section List: a line of
+     * counts, a line of search, filters and ways in, and the list filling
+     * the rest of the screen with the developers' credit at its end.
+     */
+    public function test_team_management_is_laid_out_as_the_section_list(): void
     {
         $css = File::get(public_path('css/team-management.css'));
 
-        $this->assertStringContainsString('.content:has(> .tmx){display:flex;flex-direction:column}', $css);
-        $this->assertStringContainsString('.tmx .tcard{flex:1 1 0;min-height:320px;display:flex;flex-direction:column}', $css);
-        $this->assertStringContainsString('.tmx .tcard > .tscroll{flex:1;min-height:0;overflow:auto}', $css);
+        $this->assertStringContainsString('.content:has(> .tm-list){display:flex;flex-direction:column;min-height:0;overflow:hidden}', $css);
+        $this->assertStringContainsString('.tm-list .tcard > .tscroll{flex:1;min-height:0;overflow:auto}', $css);
         $this->assertStringContainsString('position:sticky;top:0;z-index:2;', $css);
+        $this->assertStringContainsString(
+            "first('.list-card, .tm-list .tscroll, .dx-table-wrap, .fx-scroll', scrolls)",
+            File::get(resource_path('views/partials/mobile-tabbar.blade.php'))
+        );
 
         $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'sections' => ['BSIT-3A']]));
         $this->actingAs($capsa, 'expert')->get(route('capsa.team_management'))->assertOk()
-            ->assertSee('<div class="tscroll"><table>', false);
+            ->assertSee('<div class="tmx tm-list">', false)
+            ->assertSeeInOrder(['class="page-count"', 'class="page-count-noun"', 'in progress', 'for review', 'completed'], false)
+            ->assertSeeInOrder(['id="tm-q"', 'data-v="progress"', 'Milestones', 'Leave Requests', 'id="setBtn"', 'id="tm-teams"'], false)
+            ->assertDontSee('class="stats"', false)
+            ->assertDontSee('class="phead"', false);
     }
 
     public function test_the_activity_log_is_a_scrolling_list_with_its_page_controls_outside(): void

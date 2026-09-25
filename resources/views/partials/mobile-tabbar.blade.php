@@ -150,7 +150,7 @@
     var content = first(':scope > .content, div.content', function () { return true; });
     if (!scrolls(content)) {
       content = first(':scope > *, :scope > #real-content > *', scrolls)
-        || first('.list-card, .dx-table-wrap, .fx-scroll', scrolls);
+        || first('.list-card, .tm-list .tscroll, .dx-table-wrap, .fx-scroll', scrolls);
     }
     if (!content) {
       return;
