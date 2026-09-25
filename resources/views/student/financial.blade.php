@@ -15,7 +15,12 @@
   #fx-student .sys-credits{padding:12px 12px 14px;line-height:normal}
   #fx-student .sys-credits .credits-title{font-size:8px}
   #fx-student .sys-credits .credits-names{font-size:9px}
+  /* The how-to card sits straight in .main on this page, with no .content
+     around it, so it gets the room .content gives it everywhere else rather
+     than touching the top bar and the screen's edge. */
+  .main > .page-tutorial{margin:16px 20px}
   @media (max-width:768px){
+    .main > .page-tutorial{margin:12px}
     #fx-student .sys-credits{padding:10px 12px}
     #fx-student .sys-credits .credits-title{font-size:7px}
     #fx-student .sys-credits .credits-names{font-size:8px}
@@ -54,7 +59,7 @@
       <header class="fx-page-head">
         <div><h1 style="margin-bottom:2px">Financial Records</h1><p class="fx-who">
           @if ($state['team'])
-            Team {{ $state['team']['name'] }}@if ($state['section']) · {{ $state['section'] }}@endif
+            {{ Str::startsWith(Str::lower($state['team']['name']), 'team') ? '' : 'Team ' }}{{ $state['team']['name'] }}@if ($state['section']) · {{ $state['section'] }}@endif
           @else
             You are not on a team yet.
           @endif
