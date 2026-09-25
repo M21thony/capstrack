@@ -103,7 +103,7 @@ class TeamReachesTitleDefenseTest extends TestCase
             $this->panel[$seat] = $this->expertHolding($seat === 'two' ? 'consultant' : 'adviser');
         }
 
-        foreach ([DefenseOutcome::PRE_PROPOSAL, DefenseOutcome::TITLE_DEFENSE] as $type) {
+        foreach ([DefenseOutcome::PRE_PROPOSAL, DefenseOutcome::TITLE_DEFENSE, 'Pre Oral Defense', 'Final Oral Defense'] as $type) {
             $rubric = GradingRubric::create(['rubric_name' => $type.' Rubric', 'rubric_type' => $type, 'total_points' => 100, 'is_active' => true]);
             $rubric->criteria()->create([
                 'criterion_name' => 'Overall', 'category' => 'All', 'category_max_points' => 100, 'max_points' => 100,
@@ -213,25 +213,59 @@ class TeamReachesTitleDefenseTest extends TestCase
     }
 
     /**
-     * A chapter draft, sent to whoever the upload pop-up sends that chapter
-     * to; every reviewer on it approves, then the adviser's signed CLF.
+     * A document sent to everyone the upload pop-up offers for it; every
+     * reviewer on it approves.
      */
-    private function chapter(int $n): void
+    private function reviewed(string $key): void
     {
-        $this->handIn("chapter_{$n}_draft", ['adviser', 'consultant', 'subject_adviser']);
-        $file = CapstoneDocument::where('deliverable_id', $this->line("chapter_{$n}_draft")->id)->latest('file_id')->firstOrFail();
+        $this->handIn($key, ['adviser', 'consultant', 'subject_adviser', 'grammarian', 'panel']);
+        $file = CapstoneDocument::where('deliverable_id', $this->line($key)->id)->latest('file_id')->firstOrFail();
         $reviews = CapstoneDocumentReview::where('file_id', $file->file_id)->get();
         $this->assertContains('adviser', $reviews->pluck('role')->all());
 
         foreach ($reviews as $review) {
-            $reviewer = CapstoneExpert::findOrFail($review->expert_id);
-            $this->asExpert($reviewer)
+            $this->asExpert(CapstoneExpert::findOrFail($review->expert_id))
                 ->postJson(route('reviews.status.update', $review->review_id), ['review_status' => CapstoneDocumentReview::REVIEWED, 'verdict' => CapstoneDocumentReview::APPROVED])
                 ->assertOk();
         }
-        $this->assertDone("chapter_{$n}_draft");
+        $this->assertDone($key);
+    }
 
+    /** A chapter draft its reviewers approve, then the adviser's signed CLF for it. */
+    private function chapter(int $n): void
+    {
+        $this->reviewed("chapter_{$n}_draft");
         $this->paper("clf_chapter_{$n}");
+    }
+
+    /** Every member uploads their receipt for the defense's fee, and the CaPSA verifies each. */
+    private function feesPaid(string $type): void
+    {
+        $fee = ExpensePost::create([
+            'admin_id' => $this->capsa->expert_id, 'title' => $type.' Fee', 'course' => 'BSIT',
+            'defense_type' => $type, 'amount' => 300, 'is_active' => true,
+        ]);
+
+        foreach ($this->members as $i => $member) {
+            $this->asStudent($member)
+                ->post(route('student.financial.submit'), [
+                    'expense_post_id' => $fee->id,
+                    'receipt_image' => UploadedFile::fake()->image("receipt{$i}.jpg"),
+                    'receipt_number' => 'OR '.$fee->id.'00'.$i,
+                ])->assertSessionHasNoErrors();
+            $record = FinancialRecord::where('student_id', $member->student_id)->where('expense_post_id', $fee->id)->firstOrFail();
+            $this->asExpert($this->capsa)
+                ->patchJson(route('api.admin.financial.update', $record->id), ['status' => 'approved', 'or_confirmed' => true])
+                ->assertOk();
+        }
+    }
+
+    /** The two CLFs recommending the team for a defense, and its signed hearing notice. */
+    private function readyFor(string $prefix): void
+    {
+        $this->paper("clf_recommend_{$prefix}_adviser");
+        $this->paper("clf_recommend_{$prefix}_consultant");
+        $this->paper("{$prefix}_hearing_notice");
     }
 
     /** The CaPSA gives the team its panel, sets the date inside the window, and the panel grades it on the day. */
@@ -273,6 +307,53 @@ class TeamReachesTitleDefenseTest extends TestCase
     // ------------------------------------------------------------------
 
     public function test_a_team_goes_from_getting_started_to_a_passed_title_defense(): void
+    {
+        $this->reachTitleDefense();
+
+        // Past it, the next line is open to hand in.
+        $this->assertFalse($this->state('revised_manuscript')->locked, 'the Revised Proposal Manuscript opens after the Title Defense');
+    }
+
+    public function test_the_team_carries_on_to_the_final_manuscript(): void
+    {
+        $this->reachTitleDefense();
+
+        // The rest of Capstone 1.
+        $this->reviewed('revised_manuscript');
+        $this->paper('td_rsc');
+
+        // Capstone 2: building the system, then Chapter 4 and the Pre Oral Defense.
+        $this->paper('c2_development_plan');
+        $this->capsaChecks('c2_system_demo');
+        $this->assertDone('c2_system_demo');
+        $this->chapter(4);
+        $this->readyFor('pod');
+        $this->feesPaid('Pre Oral Defense');
+        $this->defense('Pre Oral Defense', '2027-08-16');
+        $this->assertDone('pre_oral_defense');
+        $this->paper('pod_rsc');
+
+        // Chapter 5 and the Final Oral Defense.
+        $this->chapter(5);
+        $this->readyFor('fod');
+        $this->feesPaid('Final Oral Defense');
+        $this->defense('Final Oral Defense', '2027-10-18');
+        $this->assertDone('final_oral_defense');
+        $this->paper('fod_rsc');
+
+        // The Final Manuscript, edited and signed.
+        $this->reviewed('final_manuscript');
+        $this->paper('editing_certificate');
+        $this->paper('approval_sheet');
+
+        $progress = MilestoneProgress::forTeam($this->checklist->fresh(), $this->team->team_id);
+        $open = $progress->items->reject(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
+            ->map(fn ($row) => $row->item->template_key)->values()->all();
+        $this->assertSame([], $open, 'every line on the checklist is closed');
+    }
+
+    /** From Getting started to a passed Title Defense, as the people involved do it. */
+    private function reachTitleDefense(): void
     {
         // Getting started: the signed forms.
         foreach (['team_assignment_form', 'role_acceptance_adviser', 'role_acceptance_consultant', 'role_acceptance_grammarian'] as $key) {
@@ -317,34 +398,12 @@ class TeamReachesTitleDefenseTest extends TestCase
             $this->chapter($n);
         }
 
-        // Title Defense: recommended by the adviser and consultant, the hearing notice signed...
-        $this->paper('clf_recommend_td_adviser');
-        $this->paper('clf_recommend_td_consultant');
-        $this->paper('td_hearing_notice');
-
-        // ...and every member's fee receipt verified.
-        $fee = ExpensePost::create([
-            'admin_id' => $this->capsa->expert_id, 'title' => 'Title Defense Fee', 'course' => 'BSIT',
-            'defense_type' => DefenseOutcome::TITLE_DEFENSE, 'amount' => 300, 'is_active' => true,
-        ]);
-        foreach ($this->members as $i => $member) {
-            $this->asStudent($member)
-                ->post(route('student.financial.submit'), [
-                    'expense_post_id' => $fee->id,
-                    'receipt_image' => UploadedFile::fake()->image("receipt{$i}.jpg"),
-                    'receipt_number' => 'OR 0010'.$i,
-                ])->assertSessionHasNoErrors();
-            $record = FinancialRecord::where('student_id', $member->student_id)->firstOrFail();
-            $this->asExpert($this->capsa)
-                ->patchJson(route('api.admin.financial.update', $record->id), ['status' => 'approved', 'or_confirmed' => true])
-                ->assertOk();
-        }
-
+        // Title Defense: recommended by the adviser and consultant, the hearing
+        // notice signed, and every member's fee receipt verified.
+        $this->readyFor('td');
+        $this->feesPaid(DefenseOutcome::TITLE_DEFENSE);
         $this->defense(DefenseOutcome::TITLE_DEFENSE, '2027-03-15');
         $this->assertDone('title_defense');
-
-        // Past it, the next line is open to hand in.
-        $this->assertFalse($this->state('revised_manuscript')->locked, 'the Revised Proposal Manuscript opens after the Title Defense');
     }
 
     // ------------------------------------------------------------------
