@@ -41,10 +41,11 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* The card is centred by its own auto margins, not the body's flex
+     centring: a centred box taller than the screen spilled off the top,
+     out of reach, on a 768px-tall laptop. Auto margins stop at zero. */
   body {
     display: flex;
-    align-items: center;
-    justify-content: center;
     min-height: 100vh;min-height: 100dvh;
     overflow-x: hidden;
     padding: 28px 24px;
@@ -62,6 +63,7 @@
 
   .team-page {
     display: flex;
+    margin: auto;
     width: 100%;
     max-width: 1360px;
     min-height: min(820px, calc(100vh - 56px));min-height: min(820px, calc(100dvh - 56px));
@@ -201,11 +203,14 @@
     flex: 1 1 60%;
     min-width: 0;
     background:
-      radial-gradient(circle at 70% 15%, rgba(245,183,0,0.08), transparent 45%),
+      radial-gradient(circle at 70% 15%, rgba(245,183,0,0.10), transparent 45%),
+      radial-gradient(circle at 15% 90%, rgba(245,183,0,0.06), transparent 40%),
       var(--cream);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 22px;
     padding: clamp(24px, 4vw, 56px);
     overflow-y: auto;
     scrollbar-width: none;
@@ -213,70 +218,140 @@
   }
   .people-panel::-webkit-scrollbar { display: none; }
 
+  .people-head {
+    text-align: center;
+  }
+  .people-head h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .people-head p {
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
   .people-grid {
-    /* Six half-width columns so the 3-over-2 rows work: each card spans
-       two columns, and the bottom pair starts one column in, which centres
-       them under the top row (a plain 3-col grid left-aligns cards 4-5). */
+    /* Six half-width columns so the 3-over-2 rows work: each card spans two,
+       and the bottom pair starts one column in, centred under the top row. */
     display: grid;
-    grid-template-columns: repeat(6, minmax(80px, 100px));
-    gap: clamp(18px, 2.4vw, 34px);
+    grid-template-columns: repeat(6, minmax(72px, 96px));
+    gap: clamp(16px, 2vw, 26px);
     justify-content: center;
   }
 
+  /* ── A profile, drawn as a trading card ──
+     A gold foil frame, the member's number in the set, their role as the
+     card's type, the photo as the art, and a sheen that runs across it on
+     hover - the collectible card the phone's deck below deals out. */
   .person-card {
     grid-column: span 2;
-    background: var(--cream-card);
-    border-radius: 16px;
-    padding: 30px 18px 24px;
-    text-align: center;
-    box-shadow: 0 2px 6px rgba(23,26,31,0.05), 0 12px 28px rgba(23,26,31,0.06);
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    position: relative;
+    border-radius: 18px;
+    padding: 3px;
+    background: linear-gradient(145deg, var(--gold-bright), var(--gold-dim) 45%, #fff3c4 60%, var(--gold) 100%);
+    box-shadow: 0 2px 6px rgba(23,26,31,0.06), 0 16px 32px rgba(23,26,31,0.10);
+    transition: transform 0.22s cubic-bezier(.2,.8,.2,1), box-shadow 0.22s ease;
   }
-  /* Second row: start one column in, so the pair of cards sits centred. */
   .person-card:nth-child(4) { grid-column: 2 / span 2; }
-  .person-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 10px rgba(23,26,31,0.06), 0 20px 40px rgba(23,26,31,0.1);
+  .card-face {
+    position: relative;
+    height: 100%;
+    border-radius: 15px;
+    background: var(--cream-card);
+    padding: 10px 10px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
   }
-
+  .card-top {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .card-no {
+    font-family: 'Geist Pixel', monospace;
+    font-size: 12px;
+    color: var(--gold-dim);
+  }
+  .card-set {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
   .avatar {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 18px;
-    border-radius: 50%;
+    width: 100%;
+    aspect-ratio: 5 / 4;
+    margin: 0 0 12px;
+    border-radius: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: linear-gradient(145deg, var(--gold-bright), var(--gold-dim));
     color: #fff;
     font-weight: 700;
-    font-size: 20px;
+    font-size: 30px;
     letter-spacing: 0.02em;
     text-shadow: 0 1px 2px rgba(0,0,0,0.18);
     overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
   }
   .avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
+    -webkit-user-drag: none;
+    user-select: none;
   }
-
   .person-name {
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 700;
     color: var(--ink);
-    margin: 0 0 4px;
+    margin: 0 0 6px;
     letter-spacing: -0.01em;
+    line-height: 1.25;
   }
   .person-role {
-    font-variant-numeric: tabular-nums;
-    font-size: 12px;
-    color: var(--ink-soft);
-    margin: 0 0 16px;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #7a5c00;
+    background: rgba(245,183,0,0.14);
+    border-radius: 99px;
+    padding: 3px 10px;
+    margin: 0 0 12px;
+  }
+  .card-sheen {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.55) 45%, rgba(255,230,140,0.25) 52%, transparent 65%);
+    transform: translateX(-120%);
+    transition: transform 0.7s ease;
+  }
+  @media (hover: hover) {
+    .person-card:hover {
+      transform: translateY(-6px) rotate(-0.6deg);
+      box-shadow: 0 6px 14px rgba(23,26,31,0.08), 0 26px 46px rgba(23,26,31,0.16);
+    }
+    .person-card:hover .card-sheen { transform: translateX(120%); }
   }
 
   .person-links {
+    margin-top: auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -285,15 +360,15 @@
   .person-links a,
   .person-links button,
   .person-links .icon-off {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     background: #f3f0e8;
     color: var(--ink-soft);
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
   }
   .person-links button {
     border: 0;
@@ -306,6 +381,8 @@
     background: var(--gold);
     color: #fff;
   }
+  .person-links a:active,
+  .person-links button:active { transform: scale(0.9); }
   .person-links a:focus-visible,
   .person-links button:focus-visible {
     outline: 2px solid var(--gold);
@@ -328,9 +405,10 @@
     fill: currentColor;
   }
 
-  /* The "Copied" notice at the side of the screen, so the click is
-     acknowledged even when the envelope is scrolled out of sight or too
-     small to notice changing colour. */
+  /* The deck's controls, shown on a phone only. */
+  .deck-nav { display: none; }
+
+  /* "Copied" - one word in a small pill, and nothing else. */
   .copy-toast {
     position: fixed;
     right: 24px;
@@ -338,18 +416,16 @@
     z-index: 1000;
     display: flex;
     align-items: center;
-    gap: 12px;
-    max-width: calc(100vw - 32px);
-    padding: 12px 18px 12px 14px;
-    border-radius: 12px;
-    border-left: 3px solid var(--gold);
+    gap: 8px;
+    padding: 9px 16px 9px 10px;
+    border-radius: 99px;
     background: var(--navy-panel);
     color: #fff;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
     font-size: 13.5px;
-    line-height: 1.35;
+    font-weight: 600;
     opacity: 0;
-    transform: translateX(24px);
+    transform: translateY(12px);
     pointer-events: none;
     transition: opacity 0.2s ease, transform 0.2s ease;
   }
@@ -359,8 +435,8 @@
   }
   .copy-toast-ic {
     flex: none;
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -369,65 +445,127 @@
     color: var(--ink);
   }
   .copy-toast-ic svg {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     fill: none;
     stroke: currentColor;
     stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  .copy-toast.failed .copy-toast-ic {
-    background: #f87171;
-  }
-  .copy-toast strong {
-    display: block;
-    font-weight: 700;
-  }
-  .copy-toast span {
-    display: block;
-    color: rgba(255, 255, 255, 0.7);
-    overflow-wrap: anywhere;
-  }
+  .copy-toast.failed .copy-toast-ic { background: #f87171; }
   @media (max-width: 600px) {
     .copy-toast {
-      right: 16px;
-      left: 16px;
-      bottom: calc(16px + env(safe-area-inset-bottom));
-      transform: translateY(16px);
+      right: auto;
+      left: 50%;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      transform: translate(-50%, 12px);
     }
+    .copy-toast.show { transform: translate(-50%, 0); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .copy-toast { transition: none; }
+    .copy-toast, .person-card, .card-sheen { transition: none; }
   }
 
-  /* ══════════════════════ RESPONSIVE ══════════════════════ */
+  /* ══════════════════════ TABLET (601–1000px) ══════════════════════ */
   @media (max-width: 1000px) {
-    /* body's align-items/justify-content: center only works while the card
-       is shorter than the viewport. Stacked, the hero panel + five person
-       cards run taller than a phone screen, and a centred flex item that
-       overflows gets clipped equally off both edges — the top of the page
-       (the "Built by team Bulbasaur" panel) ends up scrolled above y:0
-       with no way to reach it. Below this breakpoint the page just flows
-       top-to-bottom instead, same as login.blade.php's own phone layout. */
+    /* The card only centres in the viewport while it is shorter than it;
+       stacked, the page flows top to bottom instead, as the login page does. */
     body { display: block; padding: 0; }
     .team-page { flex-direction: column; min-height: 100vh;min-height: 100dvh; border-radius: 0; max-width: 100%; }
-    .story-panel { flex: none; padding: 32px 24px; }
-    .story-mid { margin: 28px 0 40px; }
-    .trend-motif { width: 60%; opacity: 0.3; }
-    .people-panel { flex: none; padding: 36px 20px 56px; overflow-y: visible; }
-    .people-grid { grid-template-columns: repeat(2, minmax(150px, 220px)); }
+    .story-panel { flex: none; padding: 34px clamp(24px, 6vw, 56px) 26px; }
+    .story-mid { margin: 20px 0 28px; max-width: 620px; }
+    h1.story-title { font-size: clamp(1.9rem, 5vw, 2.6rem); }
+    .trend-motif { width: 46%; opacity: 0.25; }
+    .people-panel { flex: 1; justify-content: flex-start; padding: 40px clamp(20px, 5vw, 48px) 56px; overflow-y: visible; }
+    .people-grid { grid-template-columns: repeat(6, minmax(64px, 104px)); }
+  }
+  @media (max-width: 760px) and (min-width: 601px) {
+    /* Two across, the odd one out centred under them. */
+    .people-grid { grid-template-columns: repeat(2, minmax(170px, 230px)); }
     .person-card, .person-card:nth-child(4) { grid-column: auto; }
-    /* The odd 5th card gets its own centred row, sized like its siblings. */
+    .person-card:last-child:nth-child(odd) { grid-column: 1 / -1; justify-self: center; width: min(230px, 100%); }
+  }
+
+  /* ══════════════════════ PHONE (≤600px): the deck ══════════════════════
+     The cards are dealt as a deck: the top one in full, the next two peeking
+     out behind it. Swipe the top card either way and it flies off to the
+     bottom of the deck, the way a pack is flicked through in Pokémon TCG
+     Pocket - and after the last it comes round to the first again. */
+  @media (max-width: 600px) {
+    .story-panel { padding: 24px 20px 20px; }
+    .story-mid { margin: 14px 0 18px; }
+    .story-sub { font-size: 13.5px; }
+    .people-panel { padding: 28px 16px calc(36px + env(safe-area-inset-bottom)); gap: 16px; overflow: hidden; }
+    .people-grid {
+      display: grid;
+      grid-template-columns: min(272px, calc(100vw - 72px));
+      grid-template-areas: "deck";
+      gap: 0;
+      padding-bottom: 30px;
+      touch-action: pan-y;
+    }
+    .person-card,
+    .person-card:nth-child(4),
     .person-card:last-child:nth-child(odd) {
-      grid-column: 1 / -1;
-      justify-self: center;
-      width: min(220px, 100%);
+      grid-area: deck;
+      width: auto;
+      --pos: 0;
+      z-index: var(--z, 1);
+      transform-origin: 50% 90%;
+      transform:
+        translateY(calc(min(var(--pos), 2) * 14px))
+        scale(calc(1 - min(var(--pos), 2) * 0.05))
+        rotate(calc(var(--tilt, 0) * 1deg));
+      opacity: calc(1 - max(var(--pos) - 2, 0));
+      transition: transform 0.32s cubic-bezier(.2,.8,.2,1), opacity 0.2s ease, box-shadow 0.2s ease;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .person-card.is-top { cursor: grab; }
+    .person-card.is-dragging { transition: none; cursor: grabbing; }
+    .person-card.is-still { transition: none; }
+    .avatar { font-size: 40px; aspect-ratio: 1 / 1; }
+    .person-name { font-size: 16px; }
+    .story-bottom { flex-direction: column-reverse; align-items: flex-start; gap: 10px; }
+
+    .deck-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+    .deck-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(23,26,31,0.06);
+    }
+    .deck-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .deck-btn:active { transform: scale(0.92); }
+    .deck-count {
+      min-width: 56px;
+      text-align: center;
+      font-family: 'Geist Pixel', monospace;
+      font-size: 14px;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .deck-hint {
+      margin: -6px 0 0;
+      font-size: 11.5px;
+      color: var(--ink-soft);
+      text-align: center;
     }
   }
-  @media (max-width: 480px) {
-    .story-panel { padding: 26px 18px; }
-    .people-grid { grid-template-columns: minmax(200px, 280px); }
+  @media (max-width: 600px) and (prefers-reduced-motion: reduce) {
+    .person-card, .person-card:nth-child(4) { transition: opacity 0.15s linear; }
   }
 </style>
 </head>
@@ -457,48 +595,69 @@
   </div>
 
   <div class="people-panel">
-    <div class="people-grid">
+    <div class="people-head">
+      <h2>Meet the Team</h2>
+      <p>{{ count($team) }} members of team Bulbasaur</p>
+    </div>
+
+    <div class="people-grid" id="team-deck" aria-roledescription="deck of cards" aria-label="Team members">
       @foreach ($team as $member)
-        <div class="person-card">
-          @php $photo = $member['image'] && file_exists(public_path($member['image'])) ? $member['image'] : null; @endphp
-          <div class="avatar{{ $photo ? ' has-photo' : '' }}" aria-hidden="true">
-            @if ($photo)
-              <img src="{{ asset($photo) }}" alt="{{ $member['name'] }}">
-            @else
-              {{ $member['initials'] }}
-            @endif
+        <article class="person-card" data-card="{{ $loop->index }}" aria-label="{{ $member['name'] }}, {{ $member['role'] }}">
+          <div class="card-face">
+            <div class="card-top">
+              <span class="card-no">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}/{{ str_pad(count($team), 2, '0', STR_PAD_LEFT) }}</span>
+              <span class="card-set">CapsTrack</span>
+            </div>
+            @php $photo = $member['image'] && file_exists(public_path($member['image'])) ? $member['image'] : null; @endphp
+            <div class="avatar{{ $photo ? ' has-photo' : '' }}" aria-hidden="true">
+              @if ($photo)
+                <img src="{{ asset($photo) }}" alt="{{ $member['name'] }}" draggable="false">
+              @else
+                {{ $member['initials'] }}
+              @endif
+            </div>
+            <p class="person-name">{{ $member['name'] }}</p>
+            <p class="person-role">{{ $member['role'] }}</p>
+            <div class="person-links">
+              @if ($member['facebook'])
+                <a href="{{ $member['facebook'] }}" target="_blank" rel="noopener noreferrer" aria-label="{{ $member['name'] }} on Facebook">
+                  <svg viewBox="0 0 24 24"><path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6c-.3-.04-1.3-.13-2.45-.13-2.4 0-4.05 1.47-4.05 4.17v2.35H8.5V13h2.7v8h2.3z"/></svg>
+                </a>
+              @else
+                <span class="icon-off" title="Facebook link not added yet" aria-label="Facebook link not added yet">
+                  <svg viewBox="0 0 24 24"><path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6c-.3-.04-1.3-.13-2.45-.13-2.4 0-4.05 1.47-4.05 4.17v2.35H8.5V13h2.7v8h2.3z"/></svg>
+                </span>
+              @endif
+              @if ($member['email'])
+                <button type="button" class="icon-copy" data-email="{{ $member['email'] }}" title="Copy {{ $member['name'] }}'s email" aria-label="Copy {{ $member['name'] }}'s email">
+                  <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                </button>
+              @else
+                <span class="icon-off" title="Email not added yet" aria-label="Email not added yet">
+                  <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                </span>
+              @endif
+            </div>
+            <span class="card-sheen" aria-hidden="true"></span>
           </div>
-          <p class="person-name">{{ $member['name'] }}</p>
-          <p class="person-role">{{ $member['role'] }}</p>
-          <div class="person-links">
-            @if ($member['facebook'])
-              <a href="{{ $member['facebook'] }}" target="_blank" rel="noopener noreferrer" aria-label="{{ $member['name'] }} on Facebook">
-                <svg viewBox="0 0 24 24"><path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6c-.3-.04-1.3-.13-2.45-.13-2.4 0-4.05 1.47-4.05 4.17v2.35H8.5V13h2.7v8h2.3z"/></svg>
-              </a>
-            @else
-              <span class="icon-off" title="Facebook link not added yet" aria-label="Facebook link not added yet">
-                <svg viewBox="0 0 24 24"><path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6c-.3-.04-1.3-.13-2.45-.13-2.4 0-4.05 1.47-4.05 4.17v2.35H8.5V13h2.7v8h2.3z"/></svg>
-              </span>
-            @endif
-            @if ($member['email'])
-              <button type="button" class="icon-copy" data-email="{{ $member['email'] }}" title="Copy {{ $member['name'] }}'s email" aria-label="Copy {{ $member['name'] }}'s email">
-                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-              </button>
-            @else
-              <span class="icon-off" title="Email not added yet" aria-label="Email not added yet">
-                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-              </span>
-            @endif
-          </div>
-        </div>
+        </article>
       @endforeach
     </div>
+
+    {{-- The deck's own controls, on a phone: the same as a swipe, for anyone
+         who would rather tap, or cannot swipe. --}}
+    <div class="deck-nav" aria-label="Browse the team">
+      <button type="button" class="deck-btn" id="deck-prev" aria-label="Previous member"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <span class="deck-count" id="deck-count" aria-live="polite">1 / {{ count($team) }}</span>
+      <button type="button" class="deck-btn" id="deck-next" aria-label="Next member"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <p class="deck-hint deck-nav">Swipe the card to see the next one</p>
   </div>
 </div>
 
 <div class="copy-toast" id="copy-toast" role="status" aria-live="polite">
   <span class="copy-toast-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4 4 10-10"/></svg></span>
-  <div><strong id="copy-toast-title">Copied</strong><span id="copy-toast-text"></span></div>
+  <span id="copy-toast-title">Copied</span>
 </div>
 
 <script>
@@ -511,9 +670,9 @@
       var markCopied = function () {
         button.classList.add('copied');
         window.setTimeout(function () { button.classList.remove('copied'); }, 1200);
-        showToast(true, email);
+        showToast(true);
       };
-      var markFailed = function () { showToast(false, email); };
+      var markFailed = function () { showToast(false); };
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(email).then(markCopied, function () { copyFromField(email, markCopied, markFailed); });
@@ -524,14 +683,12 @@
     });
   });
 
-  // Says so at the side of the screen, with the address itself - which is
-  // also how it can still be copied by hand when the browser refuses.
+  // "Copied", and nothing more: the address is already on the clipboard.
   var toast = document.getElementById('copy-toast');
   var toastTimer = null;
-  function showToast(copied, email) {
+  function showToast(copied) {
     toast.classList.toggle('failed', !copied);
     document.getElementById('copy-toast-title').textContent = copied ? 'Copied' : "Couldn't copy";
-    document.getElementById('copy-toast-text').textContent = copied ? email + ' is on your clipboard.' : 'The address is ' + email + '.';
     toast.classList.add('show');
     window.clearTimeout(toastTimer);
     toastTimer = window.setTimeout(function () { toast.classList.remove('show'); }, 4000);
@@ -555,13 +712,160 @@
         failed();
       }
     } catch (error) {
-      // Clipboard access can still be refused; the notice then shows the
-      // address so it can be copied by hand.
+      // Clipboard access can still be refused; the notice says so.
       failed();
     }
 
     document.body.removeChild(field);
   }
+
+  // ── The deck, on a phone ──
+  // The cards stack: order[0] is on top. A swipe either way flings the top
+  // card off and it goes to the bottom, so the deck loops - after the last
+  // member comes the first again. The buttons (and arrow keys) do the same.
+  (function () {
+    var deck = document.getElementById('team-deck');
+    if (!deck) return;
+    var cards = Array.prototype.slice.call(deck.querySelectorAll('.person-card'));
+    var count = document.getElementById('deck-count');
+    var phone = window.matchMedia('(max-width: 600px)');
+    var still = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var order = cards.map(function (card, i) { return i; });
+    var TILTS = [0, -3, 3];
+    var busy = false;
+
+    function lay() {
+      order.forEach(function (index, pos) {
+        var card = cards[index];
+        card.style.setProperty('--pos', pos);
+        card.style.setProperty('--z', String(cards.length - pos));
+        card.style.setProperty('--tilt', String(pos < 3 ? TILTS[pos] : 0));
+        card.classList.toggle('is-top', pos === 0);
+        card.inert = pos !== 0;
+        card.setAttribute('aria-hidden', pos === 0 ? 'false' : 'true');
+      });
+      count.textContent = (order[0] + 1) + ' / ' + cards.length;
+    }
+
+    function unlay() {
+      cards.forEach(function (card) {
+        ['--pos', '--z', '--tilt'].forEach(function (p) { card.style.removeProperty(p); });
+        card.style.transform = '';
+        card.classList.remove('is-top', 'is-dragging', 'is-still');
+        card.inert = false;
+        card.removeAttribute('aria-hidden');
+      });
+    }
+
+    // Held still for a frame, so a card can be put somewhere without being
+    // seen to travel there.
+    function still1(card, then) {
+      card.classList.add('is-still');
+      then();
+      void card.offsetWidth;
+      card.classList.remove('is-still');
+    }
+
+    function next(direction) {
+      if (busy) return;
+      var card = cards[order[0]];
+      var dir = direction || 1;
+      if (still.matches) {
+        order.push(order.shift());
+        lay();
+        return;
+      }
+      busy = true;
+      card.classList.remove('is-dragging');
+      card.style.transform = 'translateX(' + (dir * 130) + '%) rotate(' + (dir * 22) + 'deg)';
+      setTimeout(function () {
+        still1(card, function () {
+          card.style.transform = '';
+          order.push(order.shift());
+          lay();
+        });
+        busy = false;
+      }, 280);
+    }
+
+    function previous() {
+      if (busy) return;
+      order.unshift(order.pop());
+      var card = cards[order[0]];
+      if (still.matches) { lay(); return; }
+      busy = true;
+      still1(card, function () {
+        lay();
+        card.style.transform = 'translateX(-130%) rotate(-22deg)';
+      });
+      requestAnimationFrame(function () {
+        card.style.transform = '';
+        setTimeout(function () { busy = false; }, 300);
+      });
+    }
+
+    // Dragging the top card: it follows the finger and leans with it, and
+    // either flies off (far or fast enough) or springs back.
+    var drag = null;
+    deck.addEventListener('pointerdown', function (e) {
+      if (!phone.matches || busy) return;
+      var card = e.target.closest('.person-card.is-top');
+      if (!card || e.target.closest('a, button')) return;
+      drag = { card: card, id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), dx: 0, moving: false };
+    });
+    deck.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var dx = e.clientX - drag.x;
+      var dy = e.clientY - drag.y;
+      if (!drag.moving) {
+        if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) {
+          if (Math.abs(dy) > 12) drag = null;
+          return;
+        }
+        drag.moving = true;
+        drag.card.classList.add('is-dragging');
+        try { drag.card.setPointerCapture(e.pointerId); } catch (err) {}
+      }
+      drag.dx = dx;
+      drag.card.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 16) + 'deg)';
+    });
+    function release(e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var d = drag;
+      drag = null;
+      if (!d.moving) return;
+      var speed = Math.abs(d.dx) / Math.max(1, Date.now() - d.t);
+      if (Math.abs(d.dx) > 80 || speed > 0.6) {
+        next(d.dx < 0 ? -1 : 1);
+      } else {
+        d.card.classList.remove('is-dragging');
+        d.card.style.transform = '';
+      }
+    }
+    deck.addEventListener('pointerup', release);
+    deck.addEventListener('pointercancel', release);
+
+    document.getElementById('deck-next').addEventListener('click', function () { next(-1); });
+    document.getElementById('deck-prev').addEventListener('click', previous);
+    deck.addEventListener('keydown', function (e) {
+      if (!phone.matches) return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); next(-1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); previous(); }
+    });
+
+    function apply() {
+      if (phone.matches) {
+        deck.tabIndex = 0;
+        lay();
+      } else {
+        deck.removeAttribute('tabindex');
+        unlay();
+      }
+    }
+    apply();
+    if (phone.addEventListener) phone.addEventListener('change', apply);
+    else phone.addListener(apply);
+  })();
 </script>
 
 </body>

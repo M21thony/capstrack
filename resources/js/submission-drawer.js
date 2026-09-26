@@ -914,5 +914,8 @@ window.openSubmissionDrawer = openSubmission;
 window.submissionToast = showToast;
 
 // The Document Submission page opened for one line (?item=) opens straight onto it.
-const autoOpen = document.querySelector('[data-open-upload]');
+// Only for a line named on that page: any other page's button that happened
+// to carry the attribute (Financial Records' receipt upload once did) opened
+// this pop-up over it on load.
+const autoOpen = document.querySelector('.sub-card [data-open-upload]:not([data-open-upload=""])');
 if (autoOpen) openSubmission(autoOpen.dataset.openUpload, autoOpen);

@@ -77,6 +77,8 @@ class StudentRosterDuplicateNumberTest extends TestCase
         $errors = implode(' ', $response->json('errors'));
         $this->assertStringContainsString('221001135', $errors);
         $this->assertStringContainsString('another account', $errors);
+        // Named, so the CaPSA can find the account that holds it.
+        $this->assertStringContainsString('someone.else@my.cspc.edu.ph', $errors);
     }
 
     public function test_the_preview_warns_about_a_reused_number_before_upload(): void
