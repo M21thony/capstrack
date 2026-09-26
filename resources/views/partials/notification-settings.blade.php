@@ -13,6 +13,32 @@
 @endphp
 
 @if ($prefsPerson)
+  {{-- Ahead of the card, so it is never on screen without its styles:
+       after it, the card was drawn plain first and grew into them. --}}
+  <style>
+  .notif-prefs{max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);font-family:'DM Sans','DM Sans Fallback',sans-serif}
+  .notif-prefs-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:18px}
+  .notif-prefs-btn{padding:8px 16px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif}
+  .notif-prefs-btn:hover{background:#1d4ed8}
+  .notif-prefs-btn:disabled{opacity:.6;cursor:default}
+  .notif-prefs-intro{font-size:12.5px;color:var(--text3);line-height:1.5;margin-bottom:14px}
+  .notif-prefs-perm{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:8px;background:rgba(37,99,235,0.06);font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:14px}
+  #notif-prefs-allow{padding:6px 12px;font-size:11.5px;flex-shrink:0}
+  .notif-prefs-head{display:grid;grid-template-columns:1fr 72px 72px;gap:8px;padding-bottom:6px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text3);text-align:center;border-bottom:1px solid var(--border)}
+  .notif-prefs-head span:first-child{text-align:left}
+  .notif-prefs-row{display:grid;grid-template-columns:1fr 72px 72px;gap:8px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
+  .notif-prefs-row:last-of-type{border-bottom:none}
+  .notif-prefs-master{grid-template-columns:1fr auto;margin-bottom:8px;cursor:pointer}
+  .notif-prefs-master .notif-prefs-label{font-weight:600;color:var(--text)}
+  .notif-prefs-label{font-size:12.5px;color:var(--text2);line-height:1.4}
+  .notif-prefs-cell{text-align:center}
+  .notif-prefs-none{color:var(--text3);opacity:.5}
+  .notif-prefs input[type=checkbox]{width:16px;height:16px;accent-color:#2563eb;cursor:pointer}
+  .notif-prefs.is-off .notif-prefs-head,
+  .notif-prefs.is-off .notif-prefs-row:not(.notif-prefs-master){opacity:.4;pointer-events:none}
+  .notif-prefs-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:16px}
+  .notif-prefs-saved{font-size:11.5px;color:var(--text3)}
+  </style>
   @php
     $prefsAudience = $prefsPerson->notificationAudience();
     $prefsTypes = \App\Support\NotificationTypes::for($prefsAudience);
@@ -36,10 +62,32 @@
     </p>
 
     {{-- What the browser itself allows. Nothing below matters if it says no. --}}
-    <div class="notif-prefs-perm" id="notif-prefs-perm" style="display:none">
+    <div class="notif-prefs-perm" id="notif-prefs-perm">
       <span id="notif-prefs-perm-text"></span>
       <button type="button" class="notif-prefs-btn" id="notif-prefs-allow" style="display:none">Allow notifications</button>
     </div>
+    <script>
+    // Said as the box is drawn, not once the page has loaded: filled in then,
+    // the box grew in and pushed every switch below it down. The same test
+    // /js/capstrack-push.js makes, which is not loaded yet at this point.
+    (function () {
+      var wrap = document.getElementById('notif-wrap');
+      var supported = !!(wrap && wrap.dataset.vapid && window.isSecureContext
+        && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
+      var state = supported ? Notification.permission : 'unsupported';
+      var text = document.getElementById('notif-prefs-perm-text');
+      if (state === 'granted') {
+        text.textContent = 'This browser is set up for desktop notifications.';
+      } else if (state === 'denied') {
+        text.textContent = 'This browser is blocking notifications. Turn them back on in its site settings for CapsTrack.';
+      } else if (state === 'default') {
+        text.textContent = 'This browser has not been set up for desktop notifications yet.';
+        document.getElementById('notif-prefs-allow').style.display = 'inline-flex';
+      } else {
+        text.textContent = 'This browser cannot show desktop notifications. CapsTrack has to be opened over https:// for them to work.';
+      }
+    })();
+    </script>
 
     <label class="notif-prefs-row notif-prefs-master">
       <span class="notif-prefs-label">Notify me at all</span>
@@ -78,30 +126,6 @@
     </div>
   </div>
 
-  <style>
-  .notif-prefs{max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);font-family:'DM Sans',sans-serif}
-  .notif-prefs-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:18px}
-  .notif-prefs-btn{padding:8px 16px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
-  .notif-prefs-btn:hover{background:#1d4ed8}
-  .notif-prefs-btn:disabled{opacity:.6;cursor:default}
-  .notif-prefs-intro{font-size:12.5px;color:var(--text3);line-height:1.5;margin-bottom:14px}
-  .notif-prefs-perm{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:8px;background:rgba(37,99,235,0.06);font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:14px}
-  #notif-prefs-allow{padding:6px 12px;font-size:11.5px;flex-shrink:0}
-  .notif-prefs-head{display:grid;grid-template-columns:1fr 72px 72px;gap:8px;padding-bottom:6px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text3);text-align:center;border-bottom:1px solid var(--border)}
-  .notif-prefs-head span:first-child{text-align:left}
-  .notif-prefs-row{display:grid;grid-template-columns:1fr 72px 72px;gap:8px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
-  .notif-prefs-row:last-of-type{border-bottom:none}
-  .notif-prefs-master{grid-template-columns:1fr auto;margin-bottom:8px;cursor:pointer}
-  .notif-prefs-master .notif-prefs-label{font-weight:600;color:var(--text)}
-  .notif-prefs-label{font-size:12.5px;color:var(--text2);line-height:1.4}
-  .notif-prefs-cell{text-align:center}
-  .notif-prefs-none{color:var(--text3);opacity:.5}
-  .notif-prefs input[type=checkbox]{width:16px;height:16px;accent-color:#2563eb;cursor:pointer}
-  .notif-prefs.is-off .notif-prefs-head,
-  .notif-prefs.is-off .notif-prefs-row:not(.notif-prefs-master){opacity:.4;pointer-events:none}
-  .notif-prefs-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:16px}
-  .notif-prefs-saved{font-size:11.5px;color:var(--text3)}
-  </style>
 
   <script src="/js/capstrack-push.js" defer></script>
   <script>
@@ -142,25 +166,10 @@
       });
     });
 
-    var perm = document.getElementById('notif-prefs-perm');
     var text = document.getElementById('notif-prefs-perm-text');
     var allow = document.getElementById('notif-prefs-allow');
     var ready = 'This browser is set up for desktop notifications.';
     var blocked = 'This browser is blocking notifications. Turn them back on in its site settings for CapsTrack.';
-    var state = window.CapsTrackPush ? CapsTrackPush.state() : 'unsupported';
-
-    perm.style.display = 'flex';
-
-    if (state === 'granted') {
-      text.textContent = ready;
-    } else if (state === 'denied') {
-      text.textContent = blocked;
-    } else if (state === 'default') {
-      text.textContent = 'This browser has not been set up for desktop notifications yet.';
-      allow.style.display = 'inline-flex';
-    } else {
-      text.textContent = 'This browser cannot show desktop notifications. CapsTrack has to be opened over https:// for them to work.';
-    }
 
     allow.addEventListener('click', function () {
       allow.disabled = true;

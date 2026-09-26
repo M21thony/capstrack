@@ -10,7 +10,7 @@
     /* Sign-in page. 'Geist Pixel' is self-hosted by the login view's own
        @font-face; 'DM Sans' comes from the Google Fonts link in its head. */
     --font-display: 'Geist Pixel', ui-sans-serif, system-ui, sans-serif;
-    --font-body: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'DM Sans','DM Sans Fallback', ui-sans-serif, system-ui, sans-serif;
 
     /* Department theme: black + yellow. */
     --color-navy: #0a0a0a;

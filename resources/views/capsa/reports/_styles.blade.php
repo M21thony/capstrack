@@ -18,7 +18,7 @@
 
 .rp-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px}
 
-.rp-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;border-radius:7px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font:500 13.5px/1 'DM Sans',sans-serif;white-space:nowrap;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.rp-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;border-radius:7px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font:500 13.5px/1 'DM Sans','DM Sans Fallback',sans-serif;white-space:nowrap;cursor:pointer;text-decoration:none;box-sizing:border-box}
 .rp-btn:hover{border-color:var(--text3)}
 .rp-btn.gold{background:var(--accent);border-color:var(--accent);color:#18191f;font-weight:600}
 .rp-btn.gold:hover{background:var(--accent2);border-color:var(--accent2)}
@@ -31,7 +31,7 @@
 .rp-btn.icon{width:36px;padding:0}
 
 .rp-field{display:flex;flex-direction:column;gap:5px;font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;min-width:0}
-.rp-field select,.rp-select{height:38px;padding:0 10px;border:1px solid var(--border2);border-radius:7px;background:var(--bg2);color:var(--text);font:400 14px 'DM Sans',sans-serif;text-transform:none;letter-spacing:0;width:100%;min-width:0}
+.rp-field select,.rp-select{height:38px;padding:0 10px;border:1px solid var(--border2);border-radius:7px;background:var(--bg2);color:var(--text);font:400 14px 'DM Sans','DM Sans Fallback',sans-serif;text-transform:none;letter-spacing:0;width:100%;min-width:0}
 .rp-field select:focus,.rp-select:focus,.rp-search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,.2)}
 
 .chip{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap}

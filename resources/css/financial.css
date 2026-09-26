@@ -12,7 +12,7 @@
   --fx-bad:var(--red,#dc2626); --fx-bad-bg:var(--red-bg,rgba(220,38,38,.07));
   --fx-sel:var(--accent-light,#faf7ed); --fx-r:6px;
   flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;
-  background:var(--fx-bg); color:var(--fx-ink); font:14px/1.45 'DM Sans',sans-serif;
+  background:var(--fx-bg); color:var(--fx-ink); font:14px/1.45 'DM Sans','DM Sans Fallback',sans-serif;
 }
 .fx button,.fx input,.fx select,.fx textarea,.fx-dialog button,.fx-dialog input,.fx-dialog select{font:inherit;color:inherit}
 .fx button,.fx .fx-file,.fx-dialog button{cursor:pointer}
@@ -131,7 +131,7 @@
 .fx-team-head h2{margin:0;font-size:14px}
 
 /* Dialogs and the toast live in the top layer, so they carry their own tokens. */
-.fx-dialog,.fx-toast{--fx-surface:#fff;--fx-sunk:var(--bg3,#f7f8fa);--fx-line:var(--border,#e0e2e8);--fx-line2:var(--border2,#c8cad4);--fx-ink:var(--text,#1e2128);--fx-muted:#656b7a;--fx-brand:var(--accent,#c9a82c);--fx-r:6px;font:14px/1.45 'DM Sans',sans-serif;color:var(--fx-ink)}
+.fx-dialog,.fx-toast{--fx-surface:#fff;--fx-sunk:var(--bg3,#f7f8fa);--fx-line:var(--border,#e0e2e8);--fx-line2:var(--border2,#c8cad4);--fx-ink:var(--text,#1e2128);--fx-muted:#656b7a;--fx-brand:var(--accent,#c9a82c);--fx-r:6px;font:14px/1.45 'DM Sans','DM Sans Fallback',sans-serif;color:var(--fx-ink)}
 .fx-dialog{border:0;border-radius:8px;padding:0;margin:auto;inset:0;background:#fff;box-shadow:0 20px 50px rgba(24,25,31,.3);width:min(440px,calc(100vw - 32px))}
 .fx-dialog::backdrop{background:rgba(24,25,31,.6)}
 /* Shrink-wrapped to the picture, so margin:auto centres it. width:auto with inset:0 stretched the window across the screen and left the receipt pinned to the left. */
@@ -164,3 +164,23 @@
   .fx-list{border-right:0;border-bottom:1px solid var(--fx-line)}
 }
 @media (max-width:600px){ .fx-col-up,.fx-col-team{display:none} .fx-mine .fx-btn{width:100%} .fx-two{grid-template-columns:1fr} }
+/* With two columns hidden, a fixed-layout table put the cells after them
+   in the wrong columns, and the member's name got what was left: "Mark..."
+   in a row that stopped two-thirds of the way across. Laid out by what is
+   in them instead, the name takes the room. */
+@media (max-width:600px){
+  #fx-capsa .fx-list table{table-layout:auto}
+  #fx-capsa .fx-list colgroup col{width:auto!important}
+  #fx-capsa .fx-list colgroup col:first-child{width:52px!important}
+}
+/* The CaPSA's header on a phone: the title and New fee on one line, the fee
+   tabs on their own below. The tabs are drawn by script after the page is
+   first on screen; with nowhere set aside for them they took the title's
+   line and pushed New fee - and the whole page under it - down a row. Their
+   row is kept from the start (it is left out when there are no fees). */
+@media (max-width:600px){
+  .fx-page-head{row-gap:0;padding:12px 16px 0}
+  .fx-page-head h1{flex:1;margin-bottom:12px}
+  .fx-page-head .fx-actions{margin:0 0 10px}
+  .fx-page-head .fx-tabs{order:3;flex:1 0 100%;min-height:41px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 10px}
+}

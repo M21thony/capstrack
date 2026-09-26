@@ -24,7 +24,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'DM Sans','DM Sans Fallback', sans-serif;
     background: var(--navy);
     color: var(--text);
     min-height: 100vh;min-height: 100dvh;
@@ -126,7 +126,7 @@
     border-radius: 10px;
     font-size: 13px;
     font-weight: 600;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'DM Sans','DM Sans Fallback', sans-serif;
     cursor: pointer;
     border: none;
     transition: all 0.2s;
