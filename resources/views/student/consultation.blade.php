@@ -148,13 +148,19 @@
 .sched-cal .calendar-day.past{color:var(--text3);opacity:.4;cursor:default}
 /* Available is the only state a plain picker needs to signal - the legend
    under the times says what the dot means. */
-.sched-cal .calendar-day.available{color:var(--text);font-weight:600;cursor:pointer}
-.sched-cal .calendar-day.available:hover{background:var(--bg4)}
-.sched-cal .calendar-day.not-available{color:var(--text3);opacity:.5;cursor:not-allowed}
 .sched-cal .calendar-day.today{box-shadow:inset 0 0 0 1.5px var(--border2)}
+/* The colour that says a date can be booked: a gold ring on a pale gold
+   disc. It used to come from the agenda calendar's 3px left border, which
+   also bent the circle into a half-moon; taking that border off took the
+   colour with it, and a bookable date was only bold. */
+.sched-cal .calendar-day.available{color:var(--text);font-weight:700;cursor:pointer;
+                                   background:var(--accent-light);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.sched-cal .calendar-day.available:hover{background:rgba(201,168,44,.28)}
+/* A date the team already has a session on: blue, as in the legend. */
+.sched-cal .calendar-day.my-booking{color:var(--blue);font-weight:700;background:var(--blue-bg);box-shadow:inset 0 0 0 2px var(--blue)}
 .sched-cal .calendar-day.selected{background:var(--accent);color:#18191f;font-weight:700;box-shadow:none}
 .sched-cal .calendar-day.selected:hover{background:var(--accent)}
-.sched-cal .calendar-day.my-booking{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.sched-cal .calendar-day.not-available{color:var(--text3);opacity:.5;cursor:not-allowed}
 
 .col-head{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:10px}
 .sched-cal .calendar-grid{max-width:340px}
@@ -480,7 +486,7 @@
               <span><strong>Available:</strong> Click a date to book a slot.</span>
             </div>
             <div class="note-item">
-              <div style="width: 6px; height: 6px; background: var(--accent); border-radius: 50%; flex-shrink: 0; margin-top: 3px;"></div>
+              <div style="width: 8px; height: 8px; background: var(--blue-bg); box-shadow: inset 0 0 0 1.5px var(--blue); border-radius: 50%; flex-shrink: 0; margin-top: 3px;"></div>
               <span><strong>Your Booking:</strong> Pending appointments.</span>
             </div>
           </div>

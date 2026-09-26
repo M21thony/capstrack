@@ -308,11 +308,13 @@ for (const [width, height] of [[390, 844], [320, 640]]) {
         sideways: content.scrollWidth - content.clientWidth,
         pageWider: document.documentElement.scrollWidth - innerWidth,
         oddDays: days.filter((d) => { const r = d.getBoundingClientRect(); return Math.abs(r.width - r.height) > 1.5 || parseFloat(getComputedStyle(d).borderLeftWidth) > 0; }).length,
+        // A bookable date still carries its colour.
+        uncolouredBookable: days.filter((d) => d.classList.contains('available') && !d.classList.contains('selected') && getComputedStyle(d).backgroundColor === 'rgba(0, 0, 0, 0)').length,
         emptyOrSteps: !!document.querySelector('.book-empty') !== !document.querySelector('.book-body').hidden,
       };
     });
 
-    expect(result).toEqual({ sideways: 0, pageWider: 0, oddDays: 0, emptyOrSteps: true });
+    expect(result).toEqual({ sideways: 0, pageWider: 0, oddDays: 0, uncolouredBookable: 0, emptyOrSteps: true });
     await context.close();
   });
 }
