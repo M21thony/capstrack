@@ -1457,7 +1457,14 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
   });
 });
 
+// Drawn from the list that came with the page; asked for only if it did not.
+@if (isset($initialRubrics))
+rubrics = (@json($initialRubrics)).map(normalizeRubric);
+renderList();
+updateStats();
+@else
 loadRubrics();
+@endif
 </script>
 
 <style>
@@ -1645,7 +1652,7 @@ loadRubrics();
   flex-shrink: 0;
   white-space: nowrap;
   gap: 6px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans','DM Sans Fallback', sans-serif;
   font-size: 12px;
   font-weight: 700;
   padding: 9px 16px;
@@ -1791,16 +1798,19 @@ loadRubrics();
 }
 
 @media (max-width: 480px) {
-  .topbar { padding: 0 8px; }
-  .page-title { font-size: 13px; }
-  .content { padding: 8px; }
+  /* The same edges and title as the portal's other pages on a phone
+     (admin.css). This page used to shrink everything a step further at every
+     width below here - 5px edges, 7px labels, 9px button text by 390px. */
+  .topbar { padding: 0 10px 0 16px; }
+  .page-title { font-size: 14px; }
+  .content { padding: 10px; }
   .rb-page-header { gap: 8px; }
-  .rb-stat-strip { gap: 6px; }
-  .rb-stat-item { padding: 10px 12px; }
-  .rb-stat-n { font-size: 15px; }
-  .rb-stat-l { font-size: 8px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 42px; font-size: 11px; }
-  .rb-tab-btn { font-size: 10px; padding: 4px 8px; }
+  .rb-stat-strip { gap: 8px; }
+  .rb-stat-item { padding: 12px 14px; }
+  .rb-stat-n { font-size: 18px; }
+  .rb-stat-l { font-size: 10px; }
+  .rb-mobile-new-btn .btn-primary { min-height: 44px; font-size: 13px; }
+  .rb-tab-btn { font-size: 11px; padding: 5px 9px; }
   .rb-tab-count { min-width: 15px; height: 15px; font-size: 9px; padding: 0 4px; }
   .rb-rubric-footer { flex-direction: column; gap: 6px; }
   .rb-rubric-footer .btn { width: 100%; justify-content: center; }
@@ -1827,29 +1837,12 @@ loadRubrics();
 }
 
 @media (max-width: 425px) {
-  .topbar { padding: 0 6px; gap: 6px; }
-  .content { padding: 6px; }
-  .rb-stat-item { padding: 8px 10px; }
-  .rb-stat-n { font-size: 14px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 38px; font-size: 10px; }
-  .rb-tab-btn { font-size: 9px; padding: 3px 6px; }
   .rb-rubric-header { gap: 6px; padding: 12px 14px; }
   .rb-rubric-header > div:last-child { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
 }
 
-@media (max-width: 390px) {
-  .content { padding: 5px; }
-  .rb-stat-strip { gap: 5px; }
-  .rb-stat-item { padding: 6px 8px; }
-  .rb-stat-n { font-size: 13px; }
-  .rb-stat-l { font-size: 7px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 34px; font-size: 9px; }
-}
 
 @media (max-width: 375px) {
-  .rb-stat-strip { gap: 5px; }
-  .rb-stat-item { padding: 6px 8px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 34px; }
   .rb-type-grid { grid-template-columns: 1fr 1fr; }
   .rb-crit-name-input { font-size: 12px !important; }
   .rb-maxpts-input { width: 54px !important; font-size: 11px !important; }
@@ -1860,10 +1853,7 @@ loadRubrics();
 }
 
 @media (max-width: 320px) {
-  .rb-stat-strip { grid-template-columns: 1fr; }
-  .rb-stat-item { min-width: 0; }
-  .rb-stat-l { font-size: 7px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 32px; font-size: 9px; }
+  .rb-stat-item { min-width: 0; padding: 10px; }
   .rb-type-grid { grid-template-columns: 1fr; }
   .modal-steps { flex-direction: column; gap: 6px; align-items: flex-start; }
   .step-connector { width: 2px; height: 16px; margin: 0 0 0 10px; }

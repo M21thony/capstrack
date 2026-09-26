@@ -68,7 +68,7 @@
   .ep-tags-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:26px}
   .ep-tag-input-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1.5px solid var(--border);border-radius:9px;background:#fff}
   .ep-tag-input-row:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,0.1)}
-  .ep-tag-input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--text)}
+  .ep-tag-input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:12.5px;color:var(--text)}
   .ep-tag-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,0.1)}
   .ep-tag-input::placeholder{color:var(--text3)}
   .ep-quick-groups{margin-top:10px}
@@ -76,7 +76,7 @@
      and only the one being looked at taking up room. */
   .ep-grp-tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:9px;
                padding-bottom:8px;border-bottom:1px solid var(--border)}
-  .ep-grp-tab{font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:700;
+  .ep-grp-tab{font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:10.5px;font-weight:700;
               letter-spacing:0.3px;padding:4px 9px;border-radius:7px;border:1px solid transparent;
               background:transparent;color:var(--text3);cursor:pointer;
               display:inline-flex;align-items:center;gap:5px;transition:background .12s,color .12s}
@@ -106,7 +106,7 @@
   .ep-search-clear svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
   .ep-search-clear:hover{background:var(--bg4);color:var(--text)}
   .ep-quick-chip{
-    font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:4px 10px;
+    font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:11px;font-weight:600;padding:4px 10px;
     border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--text2);
     cursor:pointer;transition:border-color .12s,background .12s,color .12s;
     max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;

@@ -32,7 +32,7 @@
   .fn-text{display:flex;flex-direction:column;gap:3px;min-width:0}
   .fn-title{font-size:13px;font-weight:700;line-height:1.35}
   .fn-body{font-size:12.5px;color:var(--text2,#4a5060);line-height:1.45}
-  .fn-action{align-self:flex-start;margin-top:3px;min-height:34px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--bg2,#ffffff);font-family:'DM Sans',sans-serif}
+  .fn-action{align-self:flex-start;margin-top:3px;min-height:34px;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--bg2,#ffffff);font-family:'DM Sans','DM Sans Fallback',sans-serif}
   .fn-error{background:#fdeaea;border:1px solid #f1c4c4}
   .fn-error svg{stroke:#b91c1c}.fn-error .fn-title{color:#b91c1c}
   .fn-error .fn-action{color:#b91c1c;border:1px solid #f1c4c4}

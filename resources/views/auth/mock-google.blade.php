@@ -8,7 +8,7 @@
         margin: 0;
         padding: 0;
         background-color: #0f1115;
-        font-family: 'DM Sans', sans-serif;
+        font-family: 'DM Sans','DM Sans Fallback', sans-serif;
         display: flex;
         align-items: center;
         justify-content: center;

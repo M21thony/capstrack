@@ -196,7 +196,7 @@
   .roles-btn{
     display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
     border:1.5px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue);
-    font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;
+    font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif;
   }
   .roles-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
   .roles-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.2}

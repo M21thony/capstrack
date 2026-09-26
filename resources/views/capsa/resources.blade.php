@@ -80,12 +80,15 @@
         <div class="lib-count" id="lib-count">&nbsp;</div>
       </div>
       <div class="lib-head-actions">
+        {{-- Drawn as the server knows it, not "Checking…": the check that
+             follows used to bring in the Connect button after the page was
+             on screen, and it pushed Upload and the library down a line. --}}
         <span class="drive-pill" id="gdrive-banner">
-          <span class="drive-dot" id="gdrive-dot"></span>
-          <span id="gdrive-status-text">Checking Google Drive…</span>
+          <span class="drive-dot {{ $driveConnected ? 'drive-dot-on' : 'drive-dot-off' }}" id="gdrive-dot"></span>
+          <span id="gdrive-status-text">{{ $driveConnected ? 'Drive connected' : 'Drive not connected' }}</span>
         </span>
-        <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:none">Connect Google Drive</a>
-        <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px;display:none" onclick="disconnectDrive()">Disconnect</button>
+        <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:{{ $driveConnected ? 'none' : 'inline-flex' }}">Connect Google Drive</a>
+        <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px;display:{{ $driveConnected ? 'inline-flex' : 'none' }}" onclick="disconnectDrive()">Disconnect</button>
         <button class="btn btn-primary" id="open-upload-btn" style="font-size:12.5px" onclick="openUpload()">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Upload

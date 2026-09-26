@@ -44,15 +44,33 @@
   const handlers = {};
   window.onBulk = function (id, fn) { handlers[id] = fn; };
 
+  // Wired the moment the parser is past the end of the table - something
+  // after it has arrived - which is before the page is first drawn. Wired at
+  // DOMContentLoaded instead, the tick box column arrived after the page was
+  // on screen, and every row narrowed, re-wrapped and moved.
+  let started = false;
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start);
+    const pastTable = function () {
+      const table = document.querySelector(@json($table));
+      for (let el = table; el && el !== document.body; el = el.parentNode) {
+        if (el.nextSibling) return true;
+      }
+      return false;
+    };
+    const watch = new MutationObserver(function () {
+      if (pastTable()) { watch.disconnect(); start(); }
+    });
+    watch.observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('DOMContentLoaded', function () { watch.disconnect(); start(); });
   } else {
     start();
   }
 
 function start() {
+  if (started) return;
   const table = document.querySelector(@json($table));
   if (!table) return;
+  started = true;
 
   const noun = @json($noun);
   const bar = document.getElementById('selbar');
