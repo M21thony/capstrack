@@ -318,3 +318,22 @@ for (const [width, height] of [[390, 844], [320, 640]]) {
     await context.close();
   });
 }
+
+/** Financial Records opens no document upload over itself, and a receipt photo can be chosen. */
+test('Financial Records on a phone: no document upload pop-up, and a photo can be chosen', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await signIn(page, 'financial');
+  await page.waitForTimeout(1500);
+  expect(await page.evaluate(() => !!document.querySelector('dialog.up[open]')), 'the document upload stayed shut').toBe(false);
+
+  const upload = page.locator('[data-fx-upload]');
+  test.skip(await upload.count() === 0, 'no fee to upload a receipt for in this database');
+  await upload.click();
+  await expect(page.locator('#fx-d-upload')).toBeVisible();
+  expect(await page.locator('#u-file').getAttribute('capture')).toBeNull();
+  await page.setInputFiles('#u-file', { name: 'receipt.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+  await expect(page.locator('#u-pick-t')).toHaveText('Choose a different photo');
+  expect(await page.evaluate(() => !!document.querySelector('dialog.up[open]'))).toBe(false);
+  await context.close();
+});

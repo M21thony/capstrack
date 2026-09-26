@@ -90,7 +90,10 @@
       <input class="fx-field" id="u-or" autocomplete="off" maxlength="40" placeholder="As printed on the official receipt" aria-describedby="u-or-help">
       <div class="fx-muted" id="u-or-help" style="font-size:12px;margin-top:4px">Your CaPSA checks this against the number in the photo.</div></div>
     <div><span class="fx-lbl">Photo of the receipt</span>
-      <label class="fx-btn fx-file" id="u-pick"><svg><use href="#fx-i-camera"/></svg><span id="u-pick-t">Take or choose a photo</span><input type="file" id="u-file" accept="image/*" capture="environment" aria-label="Photo of your receipt"></label>
+      {{-- No capture attribute: it made a phone open the camera and nothing
+           else, so a receipt already in the gallery could not be chosen. Without
+           it the phone offers both - Take Photo and the photo library. --}}
+      <label class="fx-btn fx-file" id="u-pick"><svg><use href="#fx-i-camera"/></svg><span id="u-pick-t">Take or choose a photo</span><input type="file" id="u-file" accept="image/*" aria-label="Photo of your receipt"></label>
       <img id="u-preview" alt="The receipt you picked" hidden style="display:block;margin-top:10px;max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--border,#e0e2e8)"></div>
     <div id="u-err" role="alert" style="font-size:12.5px;color:#b42318" hidden></div>
   </div>
