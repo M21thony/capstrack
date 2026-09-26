@@ -1189,3 +1189,10 @@ a.btn.content,
   .cal-controls .mode-toggle { flex: 1 1 100%; display: flex; }
   .cal-controls .mode-toggle .mode-btn { flex: 1; padding-left: 6px; padding-right: 6px; }
 }
+
+/* The month grid is drawn by script after the page loads, and until then it
+   was empty and flat - so the legend and the side column jumped down by
+   400px a moment after the page appeared. Its room is kept until it is
+   drawn: six weeks of cells, the same height at every width. (Not :empty -
+   the whitespace around the placeholder comment keeps it from matching.) */
+#cal-grid{min-height:401px}

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Vite;
 use Tests\TestCase;
 
 /**
@@ -19,10 +20,42 @@ class SecurityHeadersTest extends TestCase
         foreach (['/login', '/up'] as $url) {
             $this->get($url)
                 ->assertHeader('X-Frame-Options', 'SAMEORIGIN')
-                ->assertHeader('Content-Security-Policy', "frame-ancestors 'self'")
                 ->assertHeader('X-Content-Type-Options', 'nosniff')
                 ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
                 ->assertHeaderMissing('X-Powered-By');
+        }
+    }
+
+    public function test_the_content_security_policy_refuses_scripts_from_other_sites(): void
+    {
+        $policy = collect(explode(';', (string) $this->get('/login')->headers->get('Content-Security-Policy')))
+            ->mapWithKeys(function (string $directive): array {
+                $parts = preg_split('/\s+/', trim($directive));
+
+                return [array_shift($parts) => $parts];
+            });
+
+        $this->assertSame(["'self'"], $policy['default-src']);
+        $this->assertSame(["'self'"], $policy['frame-ancestors']);
+        $this->assertSame(["'none'"], $policy['object-src']);
+        $this->assertNotContains('*', $policy['script-src']);
+        $this->assertNotContains('https:', $policy['script-src']);
+        $this->assertNotContains("'unsafe-eval'", $policy['script-src']);
+        // The login page's reCAPTCHA is the one outside script it needs.
+        $this->assertContains('https://www.google.com', $policy['script-src']);
+    }
+
+    public function test_the_dev_server_is_not_refused_while_it_runs(): void
+    {
+        $hot = storage_path('framework/testing/hot');
+        @mkdir(dirname($hot), 0777, true);
+        file_put_contents($hot, 'http://localhost:5173');
+        Vite::useHotFile($hot);
+
+        try {
+            $this->get('/login')->assertHeader('Content-Security-Policy', "frame-ancestors 'self'");
+        } finally {
+            @unlink($hot);
         }
     }
 
