@@ -257,6 +257,7 @@
 {{-- Every portal page carries this bar, so the idle sign-out rides with it. --}}
 @include('partials.idle-logout')
 @include('partials.enter-submits')
+@include('partials.smooth-navigation')
 @endonce
 
 @if ($floating ?? false)
@@ -468,8 +469,18 @@
     spacer.className = 'mtab-spacer';
     spacer.setAttribute('aria-hidden', 'true');
     // Less whatever room the page already keeps at its end, so the gap above
-    // the pill is the same on every page.
-    var own = parseFloat(getComputedStyle(scroller).paddingBottom) || 0;
+    // the pill is the same on every page: the scrolling box's own padding,
+    // and on pages whose scrolling box wraps the page container (the expert
+    // dashboard, Team Grading, Defense Scheduling) that container's too.
+    var gapBelow = function (el) {
+      var cs = getComputedStyle(el);
+      return (parseFloat(cs.paddingBottom) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    };
+    var own = gapBelow(scroller);
+    var credits = scroller.querySelector('.legal-credits');
+    for (var el = credits && credits.parentElement; el && el !== scroller; el = el.parentElement) {
+      own += gapBelow(el) + (parseFloat(getComputedStyle(el).marginBottom) || 0);
+    }
     spacer.style.height = 'calc(' + Math.max(0, 88 - own) + 'px + env(safe-area-inset-bottom, 0px))';
     scroller.appendChild(spacer);
   });
