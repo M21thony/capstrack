@@ -29,7 +29,7 @@
 <style>
   .ad-scrim{position:fixed;inset:0;z-index:1600;background:rgba(24,25,31,.45);display:flex;align-items:center;justify-content:center;padding:20px;animation:adScrimIn 250ms ease-out both}
   .ad-scrim[hidden]{display:none}
-  .ad-box{width:440px;max-width:100%;box-sizing:border-box;background:var(--bg2,#fff);border:1px solid var(--border,#e0e2e8);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;animation:adBoxIn 250ms cubic-bezier(.16,.84,.44,1) both;font-family:'DM Sans',sans-serif}
+  .ad-box{width:440px;max-width:100%;box-sizing:border-box;background:var(--bg2,#fff);border:1px solid var(--border,#e0e2e8);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;animation:adBoxIn 250ms cubic-bezier(.16,.84,.44,1) both;font-family:'DM Sans','DM Sans Fallback',sans-serif}
   .ad-box.ad-md{width:496px}
   .ad-box.ad-lg{width:720px}
   @keyframes adScrimIn{from{opacity:0}to{opacity:1}}
@@ -62,7 +62,7 @@
   .ad-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   .ad-note{flex:1;min-width:120px;font-size:12px;color:var(--text3,#656b7a)}
   .ad-note.ad-note-warn{color:#b91c1c;font-weight:600}
-  .ad-btn{min-height:44px;padding:11px 18px;border-radius:9px;font-size:13.5px;cursor:pointer;font-family:'DM Sans',sans-serif}
+  .ad-btn{min-height:44px;padding:11px 18px;border-radius:9px;font-size:13.5px;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif}
   .ad-btn[hidden]{display:none}
   .ad-btn-2{font-weight:500;background:var(--bg,#f2f3f5);color:var(--text,#1e2128);border:1px solid var(--border,#e0e2e8)}
   .ad-btn-1{font-weight:700;background:var(--accent,#c9a82c);color:#18191f;border:1px solid var(--accent2,#b5941f)}

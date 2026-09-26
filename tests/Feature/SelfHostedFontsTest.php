@@ -63,4 +63,46 @@ class SelfHostedFontsTest extends TestCase
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
         $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk()->assertSee($link, false);
     }
+
+    /**
+     * What a page is drawn in before DM Sans is ready is Arial set to DM
+     * Sans's measurements - its line height to the pixel - so the text does
+     * not grow and push the page down when DM Sans comes in.
+     */
+    public function test_the_stand_in_for_dm_sans_is_measured_to_it(): void
+    {
+        $css = File::get(public_path('css/fonts.css'));
+
+        preg_match_all("/@font-face\s*\{[^}]*font-family:\s*'DM Sans Fallback';[^}]*\}/", $css, $faces);
+
+        $this->assertCount(2, $faces[0], 'one face for regular text and one for bold');
+
+        foreach ($faces[0] as $face) {
+            $this->assertStringContainsString("local('Arial')", str_replace("local('Arial Bold')", "local('Arial')", $face));
+            $this->assertStringContainsString('size-adjust: 102%', $face);
+            // DM Sans: 0.992em above the line and 0.310em below, no gap -
+            // written before the 102% it is scaled by.
+            $this->assertStringContainsString('ascent-override: 97.25%', $face);
+            $this->assertStringContainsString('descent-override: 30.39%', $face);
+            $this->assertStringContainsString('line-gap-override: 0%', $face);
+        }
+    }
+
+    /** A font list that names DM Sans names its stand-in straight after it. */
+    public function test_every_font_list_falls_back_to_the_measured_stand_in(): void
+    {
+        $missing = collect([public_path('css'), resource_path()])
+            ->flatMap(fn (string $dir) => File::allFiles($dir))
+            ->filter(fn ($file) => in_array($file->getExtension(), ['css', 'php'], true))
+            ->reject(fn ($file) => $file->getPathname() === public_path('css/fonts.css'))
+            ->flatMap(function ($file) {
+                preg_match_all('/font(?:-family)?\s*:[^;}{\n]*[\'"]DM Sans[\'"](?!\s*,\s*[\'"]DM Sans Fallback)[^;}{\n]*/', $file->getContents(), $lists);
+
+                return array_map(fn (string $list) => $file->getRelativePathname().': '.trim($list), $lists[0]);
+            })
+            ->values()
+            ->all();
+
+        $this->assertSame([], $missing);
+    }
 }

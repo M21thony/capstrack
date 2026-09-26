@@ -22,7 +22,7 @@
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans','DM Sans Fallback', sans-serif;
   background: var(--bg);
   color: var(--text1);
   min-height: 100vh;min-height: 100dvh;

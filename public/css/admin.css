@@ -16,7 +16,7 @@ dialog{margin:auto}
   --blue:#1d4ed8;--blue-bg:rgba(29,78,216,0.07);
 }
 html,body{height:100%;overflow:hidden}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;font-size:16px}
+body{font-family:'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg);color:var(--text);display:flex;font-size:16px}
 
 /* ── SIDEBAR ── */
 .sidebar{width:250px;min-width:250px;background:var(--navy-dark);display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
@@ -64,7 +64,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .topbar{height:58px;min-height:58px;border-bottom:2px solid var(--accent);display:flex;align-items:center;padding:0 26px;gap:14px;background:var(--navy-mid)}
 .page-title{font-size:17px;font-weight:500;color:var(--navy-text);flex:1}
 .topbar-actions{display:flex;align-items:center;gap:10px}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border:none;font-family:'DM Sans',sans-serif;text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border:none;font-family:'DM Sans','DM Sans Fallback',sans-serif;text-decoration:none}
 .btn-primary{background:var(--accent);color:#18191f;font-weight:700}
 .btn-primary:hover{background:var(--accent2)}
 .btn-primary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -146,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .td-main{color:var(--text)!important;font-weight:500}
 
 /* ── FORM ── */
-.input{width:100%;background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:10px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border 0.15s}
+.input{width:100%;background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:10px 14px;color:var(--text);font-size:14px;font-family:'DM Sans','DM Sans Fallback',sans-serif;outline:none;transition:border 0.15s}
 .input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,0.1)}
 .input::placeholder{color:var(--text3)}
 select.input{cursor:pointer}
@@ -155,7 +155,7 @@ textarea.input{resize:vertical;min-height:80px}
 .form-group{display:flex;flex-direction:column;margin-bottom:16px}
 
 /* ── CONTENT BUTTONS ── */
-.content .btn-sm{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif;white-space:nowrap;border:1.5px solid;line-height:1.4}
+.content .btn-sm{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;font-family:'DM Sans','DM Sans Fallback',sans-serif;white-space:nowrap;border:1.5px solid;line-height:1.4}
 .content .btn-sm svg{width:12px;height:12px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2}
 .content .btn-sm.btn-success{background:transparent;color:var(--green);border-color:rgba(22,163,74,0.2)}
 .content .btn-sm.btn-success:hover{background:var(--green-bg);border-color:var(--green);box-shadow:0 2px 8px rgba(22,163,74,0.12)}
@@ -165,7 +165,7 @@ textarea.input{resize:vertical;min-height:80px}
 .content .btn-sm.btn-ghost:hover{background:var(--accent-light);color:var(--accent3);border-color:var(--accent)}
 .content .btn-sm.btn-primary{background:var(--accent);color:#18191f;font-weight:700;border:none}
 .content .btn-sm.btn-primary:hover{background:var(--accent2);box-shadow:0 2px 8px rgba(201,168,44,0.2)}
-.content .btn-ghost{background:transparent;color:var(--text2);border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s}
+.content .btn-ghost{background:transparent;color:var(--text2);border:1.5px solid var(--border);font-family:'DM Sans','DM Sans Fallback',sans-serif;display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s}
 .content .btn-ghost:hover{background:var(--accent-light);color:var(--accent3);border-color:var(--accent)}
 
 /* ── PROGRESS ── */
@@ -250,7 +250,7 @@ textarea.input{resize:vertical;min-height:80px}
 .login-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(201,168,44,0.08);border:1px solid rgba(201,168,44,0.25);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--accent3);margin-bottom:14px}
 .login-title{font-variant-numeric:tabular-nums;font-size:19px;font-weight:700;color:var(--text);margin-bottom:4px}
 .login-sub{font-size:13px;color:var(--text3);margin-bottom:28px;line-height:1.6}
-.google-btn{width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'DM Sans',sans-serif;transition:all 0.15s;margin-bottom:10px}
+.google-btn{width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'DM Sans','DM Sans Fallback',sans-serif;transition:all 0.15s;margin-bottom:10px}
 .google-btn:hover{border-color:var(--accent);background:var(--accent-light)}
 .divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--text3);font-size:11px}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
@@ -267,7 +267,7 @@ textarea.input{resize:vertical;min-height:80px}
 /* ── TAB UI ── */
 .tab-bar{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;border-bottom:1px solid var(--border)}
 .tab-bar-wide{width:100%}
-.tab-btn{display:inline-flex;align-items:center;gap:7px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;padding:10px 16px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);text-decoration:none;white-space:nowrap;transition:.13s}
+.tab-btn{display:inline-flex;align-items:center;gap:7px;font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:12.5px;font-weight:600;padding:10px 16px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);text-decoration:none;white-space:nowrap;transition:.13s}
 .tab-btn:hover{background:var(--bg4);color:var(--text)}
 .tab-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .tab-btn.active{color:var(--accent3);border-bottom-color:var(--accent)}
@@ -280,7 +280,7 @@ textarea.input{resize:vertical;min-height:80px}
 .yt th{font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:var(--text3);text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)}
 .yt th:first-child{text-align:left}
 .yt td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--border);color:var(--text2);font-variant-numeric:tabular-nums;font-size:11px}
-.yt td:first-child{text-align:left;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--text)}
+.yt td:first-child{text-align:left;font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:12px;font-weight:500;color:var(--text)}
 .yt tr:last-child td{border-bottom:none}
 .yt tr.yt-current td{background:var(--accent-bg)}
 .yt tr.yt-current td:first-child{border-left:3px solid var(--accent);padding-left:7px}
@@ -288,7 +288,7 @@ textarea.input{resize:vertical;min-height:80px}
 .yt .fail{color:var(--red)}
 .yt .rate{color:var(--accent3);font-weight:700}
 .yt .total{color:var(--blue);font-weight:700}
-.yt tfoot td{font-weight:700;font-family:'DM Sans',sans-serif;font-size:12px;background:var(--bg3);color:var(--text);border-top:2px solid var(--border);border-bottom:none}
+.yt tfoot td{font-weight:700;font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:12px;background:var(--bg3);color:var(--text);border-top:2px solid var(--border);border-bottom:none}
 .yt tfoot td.pass{color:var(--green);font-variant-numeric:tabular-nums;}
 .yt tfoot td.fail{color:var(--red);font-variant-numeric:tabular-nums;}
 .yt tfoot td.rate{color:var(--accent3);font-variant-numeric:tabular-nums;}
@@ -368,7 +368,7 @@ textarea.input{resize:vertical;min-height:80px}
 
 /* ── RESOURCES: FILTER TABS ── */
 .filter-tabs{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;border-bottom:1px solid var(--border)}
-.filter-tab{font-size:11.5px;font-weight:600;padding:8px 13px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);transition:.13s;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.filter-tab{font-size:11.5px;font-weight:600;padding:8px 13px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);transition:.13s;font-family:'DM Sans','DM Sans Fallback',sans-serif;white-space:nowrap}
 .filter-tab:hover{background:var(--bg4);color:var(--text)}
 .filter-tab.active{color:var(--accent3);border-bottom-color:var(--accent)}
 
@@ -465,12 +465,12 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-desc-tiny{flex:1;font-size:11px!important;padding:6px 8px!important}
 
 /* Add criterion button */
-.rb-btn-add-criterion{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;border:1.5px dashed var(--border2);border-radius:9px;background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.rb-btn-add-criterion{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;border:1.5px dashed var(--border2);border-radius:9px;background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'DM Sans','DM Sans Fallback',sans-serif}
 .rb-btn-add-criterion:hover{border-color:var(--accent);color:var(--accent3);background:rgba(201,168,44,0.05)}
 .rb-btn-add-criterion svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5}
 
 /* Danger button (content area) */
-.rb-btn-danger{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid rgba(220,38,38,0.2);background:transparent;color:var(--red);font-family:'DM Sans',sans-serif}
+.rb-btn-danger{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid rgba(220,38,38,0.2);background:transparent;color:var(--red);font-family:'DM Sans','DM Sans Fallback',sans-serif}
 .rb-btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
 .rb-btn-danger svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5}
 
@@ -495,7 +495,7 @@ textarea.input{resize:vertical;min-height:80px}
 .topbar{height:58px;min-height:58px;border-bottom:2px solid var(--accent);display:flex;align-items:center;padding:0 26px;gap:14px;background:var(--navy-mid)}
 .page-title{font-size:17px;font-weight:500;color:var(--navy-text);flex:1}
 .topbar-actions{display:flex;align-items:center;gap:10px}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border:none;font-family:'DM Sans',sans-serif;text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border:none;font-family:'DM Sans','DM Sans Fallback',sans-serif;text-decoration:none}
 .btn-primary{background:var(--accent);color:#18191f;font-weight:700}
 .btn-primary:hover{background:var(--accent2)}
 .btn-primary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -528,7 +528,7 @@ textarea.input{resize:vertical;min-height:80px}
 /* ── TAB BAR (existing .tab-btn override for rubric tabs) ── */
 .tab-bar{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;border-bottom:1px solid var(--border)}
 .tab-bar-wide{width:100%}
-.tab-btn{display:inline-flex;align-items:center;gap:7px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;padding:10px 16px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);text-decoration:none;white-space:nowrap;transition:.13s}
+.tab-btn{display:inline-flex;align-items:center;gap:7px;font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:12.5px;font-weight:600;padding:10px 16px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);text-decoration:none;white-space:nowrap;transition:.13s}
 .tab-btn:hover{background:var(--bg4);color:var(--text)}
 .tab-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .tab-btn.active{color:var(--accent3);border-bottom-color:var(--accent)}
@@ -546,14 +546,14 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-tab-header{display:flex;align-items:stretch;border-bottom:1px solid var(--border);overflow:hidden}
 .rb-tab-nav{display:flex;align-items:stretch;gap:2px;padding:0 12px;flex:1;overflow-x:auto;min-width:0}
 .rb-tab-nav::-webkit-scrollbar{height:0}
-.rb-tab-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-size:12.5px;font-weight:600;font-family:"DM Sans",sans-serif;transition:.13s;white-space:nowrap;flex-shrink:0}
+.rb-tab-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-size:12.5px;font-weight:600;font-family:"DM Sans","DM Sans Fallback",sans-serif;transition:.13s;white-space:nowrap;flex-shrink:0}
 .rb-tab-btn:hover{background:var(--bg4);color:var(--text)}
 .rb-tab-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .rb-tab-btn.active{color:var(--accent3);box-shadow:inset 0 -2px 0 var(--accent)}
 .rb-tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:var(--bg4);color:var(--text3);border-radius:9px;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}
 .rb-tab-btn.active .rb-tab-count{background:var(--accent-light);color:var(--accent3)}
 .rb-tab-search{display:flex;align-items:center;gap:8px;padding:10px 14px;border-left:1px solid var(--border);flex-shrink:0}
-.rb-search-input{border:none;outline:none;background:transparent;font-size:13px;font-family:"DM Sans",sans-serif;color:var(--text);width:190px;transition:width .2s ease}
+.rb-search-input{border:none;outline:none;background:transparent;font-size:13px;font-family:"DM Sans","DM Sans Fallback",sans-serif;color:var(--text);width:190px;transition:width .2s ease}
 .rb-search-input::placeholder{color:var(--text3)}
 .rb-search-input:focus{width:260px}
 
@@ -581,7 +581,7 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-level-chip{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:8px 10px}
 .rb-level-score{font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--accent3);margin-bottom:3px}
 .rb-level-desc{font-size:10.5px;color:var(--text3);line-height:1.4}
-.rb-btn-danger{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid rgba(220,38,38,0.2);background:transparent;color:var(--red);font-family:"DM Sans",sans-serif}
+.rb-btn-danger{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid rgba(220,38,38,0.2);background:transparent;color:var(--red);font-family:"DM Sans","DM Sans Fallback",sans-serif}
 .rb-btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
 .rb-btn-danger:disabled{opacity:.55;cursor:not-allowed}
 .rb-btn-danger:disabled:hover{background:transparent;color:var(--red);border-color:rgba(220,38,38,0.2)}
@@ -727,7 +727,7 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-empty-criteria-icon{width:40px;height:40px;background:var(--bg4);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
 
 /* ── ADD CRITERION BUTTON ── */
-.rb-btn-add-criterion{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;border:1.5px dashed var(--border2);border-radius:9px;background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:"DM Sans",sans-serif}
+.rb-btn-add-criterion{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;border:1.5px dashed var(--border2);border-radius:9px;background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:"DM Sans","DM Sans Fallback",sans-serif}
 .rb-btn-add-criterion:hover{border-color:var(--accent);color:var(--accent3);background:rgba(201,168,44,.05)}
 .rb-btn-add-criterion svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5}
 
@@ -740,7 +740,7 @@ textarea.input{resize:vertical;min-height:80px}
 
 /* ── APPROVAL PAGE ENHANCEMENTS ── */
 .approval-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-.approval-toolbar .input{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:9px 14px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:border-color .15s}
+.approval-toolbar .input{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:9px 14px;font-size:13px;font-family:'DM Sans','DM Sans Fallback',sans-serif;color:var(--text);outline:none;transition:border-color .15s}
 .approval-toolbar .input:focus{border-color:var(--accent)}
 .approval-search{position:relative;display:flex;align-items:center}
 .approval-search svg{position:absolute;left:11px;width:14px;height:14px;stroke:var(--text3);fill:none;stroke-width:2;pointer-events:none}
@@ -861,7 +861,7 @@ textarea.input{resize:vertical;min-height:80px}
 
 /* ── REJECT REASON FIELD ── */
 .reject-reason-wrap{margin-top:14px}
-.reject-reason-wrap textarea{width:100%;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;resize:vertical;min-height:80px;outline:none;transition:border-color .15s}
+.reject-reason-wrap textarea{width:100%;font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:13px;color:var(--text);background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;resize:vertical;min-height:80px;outline:none;transition:border-color .15s}
 .reject-reason-wrap textarea:focus{border-color:rgba(220,38,38,.4)}
 .reject-reason-wrap label{font-size:11px;font-weight:600;color:var(--text3);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
 
@@ -1060,6 +1060,9 @@ textarea.input{resize:vertical;min-height:80px}
   .table td{padding:6px 0;border-bottom:none;font-size:12px;display:flex;align-items:center;gap:8px}
   .table td::before{content:attr(data-label);font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;width:70px;flex-shrink:0}
   .table td:first-child{padding-top:0}
+  /* The same once partials/row-select puts its tick box in front, a moment
+     after the page is shown: the first field moved down under it as it did. */
+  .table td.rs-cell:first-child + td{padding-top:0}
   .table td:last-child{padding-bottom:0}
   .table td[style*="padding-left"]{padding-left:0!important}
 
@@ -1588,7 +1591,7 @@ tr.rs-on > td{background:var(--accent-light)}
 .rowmenu-item{
   display:flex;align-items:center;gap:9px;width:100%;text-align:left;
   padding:8px 10px;border:0;border-radius:6px;background:none;cursor:pointer;
-  font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:500;color:var(--text);
+  font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:12.5px;font-weight:500;color:var(--text);
   white-space:nowrap;
 }
 .rowmenu-item svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.1;flex-shrink:0}
@@ -1700,4 +1703,23 @@ a.btn.content,
   .log-filters{flex-wrap:wrap}
   .log-filters input[name="search"]{flex:1 1 100%;max-width:none!important}
   .log-filters select{flex:1;width:auto!important}
+}
+
+/* ══ a tablet: the sidebar slides in ══
+   Held open beside the page on an iPad in portrait, it left the page some
+   520px, and the lists lost their last columns off the edge. From 769px to
+   1024px it is the phone's drawer instead, behind the menu button - Team
+   Assignments already worked this way. Both ways a page opens it are
+   answered: the .mobile-open class and body.sidebar-open. */
+@media (min-width:769px) and (max-width:1024px){
+  /* Through .topbar: several pages restate .hamburger-btn{display:none}
+     after this sheet, which would win over a plain one. */
+  .topbar .hamburger-btn{display:flex}
+  .sidebar{display:flex;position:fixed;left:0;top:0;height:100vh;height:100dvh;z-index:500;
+    transform:translateX(-100%);transition:transform .25s cubic-bezier(.16,1,.3,1)}
+  .sidebar.mobile-open,body.sidebar-open .sidebar{transform:none;box-shadow:8px 0 30px rgba(0,0,0,.25)}
+  body.sidebar-open .sidebar-overlay{display:block}
+}
+@media (min-width:769px) and (max-width:1024px) and (prefers-reduced-motion:reduce){
+  .sidebar{transition:none}
 }

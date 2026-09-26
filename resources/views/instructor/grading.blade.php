@@ -40,10 +40,15 @@
   /* A phone gets one card per defense instead of a six-column row: the team
      on top, what and when under it, and the button across the bottom. */
   @media (max-width:700px){
-    .gl{max-height:none;overflow:visible}
-    .gl-scroll{overflow:visible}
     .gl-filter{margin-left:0;width:100%}
     .gl-filter button{flex:1}
+  }
+  /* A tablet too - the six columns are wider than its screen, and the time
+     came out a word a line with the Grade button off the edge - laid out
+     across (below). */
+  @media (max-width:1024px){
+    .gl{max-height:none;overflow:visible}
+    .gl-scroll{overflow:visible}
     .gl table,.gl tbody{display:block}
     .gl thead{display:none}
     .gl tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:14px;border-bottom:1px solid var(--border)}
@@ -61,6 +66,18 @@
     .gl-none td{grid-column:1 / -1}
     /* display:grid above would otherwise show rows the filter hid. */
     .gl tbody tr[hidden]{display:none}
+  }
+  /* The team on the left; what and when, your seat and grade beside it; the
+     button at the end. */
+  @media (min-width:701px) and (max-width:1024px){
+    .gl tbody tr{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto auto;align-items:center;gap:6px 18px;padding:14px 16px}
+    .gl td:nth-child(1){grid-column:1;grid-row:1 / span 2}
+    .gl td:nth-child(2){grid-column:2;grid-row:1}
+    .gl td:nth-child(4){grid-column:2;grid-row:2;font-size:12px}
+    .gl td:nth-child(3){grid-column:3;grid-row:1}
+    .gl td:nth-child(5){grid-column:3;grid-row:2;text-align:right}
+    .gl td:nth-child(6){grid-column:4;grid-row:1 / span 2;text-align:right!important}
+    .gl-go{display:inline-block}
   }
 </style>
 </head>

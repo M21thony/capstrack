@@ -303,7 +303,7 @@
   .section-search input:focus{border-color:#94a3b8;background:#fff}
 
   .section-bulk-row{display:flex;align-items:center;gap:8px;margin-top:8px}
-  .section-bulk-row button{background:none;border:none;padding:0;font-size:11.5px;font-weight:700;color:#2563eb;cursor:pointer;font-family:'DM Sans',sans-serif}
+  .section-bulk-row button{background:none;border:none;padding:0;font-size:11.5px;font-weight:700;color:#2563eb;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif}
   .section-bulk-row button:hover{text-decoration:underline}
   .section-bulk-row span{color:#cbd5e1;font-size:11px}
 

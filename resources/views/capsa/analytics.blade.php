@@ -32,7 +32,7 @@
 .an-filter-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 14px}
 .an-field{display:flex;flex-direction:column;gap:4px}
 .an-field label{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
-.an-select{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:8px 32px 8px 12px;border-radius:9px;border:1px solid var(--border2);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23656b7a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;color:var(--text);appearance:none;-webkit-appearance:none;cursor:pointer;min-width:150px}
+.an-select{font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:13px;font-weight:500;padding:8px 32px 8px 12px;border-radius:9px;border:1px solid var(--border2);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23656b7a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;color:var(--text);appearance:none;-webkit-appearance:none;cursor:pointer;min-width:150px}
 .an-select:hover{border-color:var(--accent)}
 .an-select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .an-reset{font-size:12.5px;font-weight:600;color:var(--accent3);text-decoration:none;padding:9px 4px}
@@ -63,7 +63,7 @@
 .an-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
 .an-card-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.01em}
 .an-card-sub{font-size:12.5px;color:var(--text3);margin-top:3px;line-height:1.5;max-width:64ch}
-.an-toggle{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--text2);background:#fff;border:1px solid var(--border2);border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.an-toggle{font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:12px;font-weight:600;color:var(--text2);background:#fff;border:1px solid var(--border2);border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap}
 .an-toggle:hover{border-color:var(--accent);color:var(--text)}
 .an-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -163,9 +163,9 @@
 .an-dash{color:var(--text3)}
 .an-mini-tags{display:flex;flex-wrap:wrap;gap:4px 10px}
 .an-mini-tags span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);white-space:nowrap}
-.an-search{font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px 8px 34px;border-radius:9px;border:1px solid var(--border2);width:240px;max-width:100%;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23656b7a' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 11px center}
+.an-search{font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:13px;padding:8px 12px 8px 34px;border-radius:9px;border:1px solid var(--border2);width:240px;max-width:100%;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23656b7a' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 11px center}
 .an-search:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.an-more{display:block;margin:12px auto 0;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;color:var(--accent3);background:none;border:none;cursor:pointer;padding:6px 12px}
+.an-more{display:block;margin:12px auto 0;font-family:'DM Sans','DM Sans Fallback',sans-serif;font-size:12.5px;font-weight:600;color:var(--accent3);background:none;border:none;cursor:pointer;padding:6px 12px}
 .an-more:hover{text-decoration:underline}
 
 .an-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:34px 18px;color:var(--text3);font-size:13px;gap:8px}

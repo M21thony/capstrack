@@ -464,6 +464,20 @@
           && !el.closest('.modal-overlay, dialog, [role="dialog"], .notif-dropdown, #skeleton-content, .sk-overlay');
       });
     if (!scroller) return;
+    // Something held under the scrolling area - the page controls under the
+    // Activity Log - would be left under the pill: the page keeps its room
+    // at the bottom instead, and the controls stay above it.
+    var below = false;
+    for (var from = scroller; from && from !== main && !below; from = from.parentElement) {
+      for (var next = from.nextElementSibling; next; next = next.nextElementSibling) {
+        var pos = getComputedStyle(next).position;
+        if (next.offsetHeight > 0 && pos !== 'fixed' && pos !== 'absolute' && !next.matches('script, style, template, .mtab')) {
+          below = true;
+          break;
+        }
+      }
+    }
+    if (below) return;
     main.style.paddingBottom = '0px';
     var spacer = document.createElement('div');
     spacer.className = 'mtab-spacer';

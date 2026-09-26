@@ -21,7 +21,7 @@
 .rp-tools .grow{flex:1}
 .rp-search{position:relative;flex:0 1 280px;min-width:180px}
 .rp-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3)}
-.rp-search input{width:100%;height:36px;padding:0 12px 0 34px;border:1px solid var(--border2);border-radius:7px;background:var(--bg2);color:var(--text);font:400 14px 'DM Sans',sans-serif;box-sizing:border-box}
+.rp-search input{width:100%;height:36px;padding:0 12px 0 34px;border:1px solid var(--border2);border-radius:7px;background:var(--bg2);color:var(--text);font:400 14px 'DM Sans','DM Sans Fallback',sans-serif;box-sizing:border-box}
 .rp-seg{display:inline-flex;border:1px solid var(--border2);border-radius:7px;overflow:hidden;height:36px}
 .rp-seg a,.rp-seg span{display:inline-flex;align-items:center;padding:0 12px;font-size:13.5px;text-decoration:none;color:var(--text2);background:var(--bg2)}
 .rp-seg > * + *{border-left:1px solid var(--border2)}
@@ -95,7 +95,7 @@
 .rp-edge:hover{border-color:var(--text3)}
 .rp-edge.l{left:8px}.rp-edge.r{right:8px}
 .rp-foot{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);font-size:13px;color:var(--text2)}
-.rp-foot kbd{font:600 11px 'DM Sans',sans-serif;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--bg3)}
+.rp-foot kbd{font:600 11px 'DM Sans','DM Sans Fallback',sans-serif;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--bg3)}
 
 /* Dialogs and the side panel. */
 .rp-dim{display:none;position:fixed;inset:0;z-index:1200;background:rgba(15,18,28,.5);align-items:center;justify-content:center;padding:24px}
