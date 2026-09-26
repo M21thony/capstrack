@@ -1,6 +1,6 @@
 /*
  * A student's Financial Records: one short row for their own receipt (the
- * button opens the camera on a phone) and the team's list below it.
+ * button offers the camera or the photo library on a phone) and the team's list below it.
  */
 import { $, esc, peso, statusHtml, barHtml, send, toast, wireDialogs } from './shared.js';
 
@@ -39,7 +39,7 @@ function render() {
       pending: '<svg><use href="#fx-i-upload"/></svg>Replace',
     }[s] : null;
     $('#s-mine').innerHTML = thumb + `<div class="fx-mine-text">${text}</div>`
-      + (label ? `<button type="button" class="fx-btn ${s === 'pending' ? '' : 'fx-btn-primary'}" data-open-upload>${label}</button>` : '');
+      + (label ? `<button type="button" class="fx-btn ${s === 'pending' ? '' : 'fx-btn-primary'}" data-fx-upload>${label}</button>` : '');
     // A photo whose file is gone shows a plain placeholder, not the browser's
     // broken-image box, and no longer opens an empty viewer.
     $('#s-mine').querySelectorAll('.fx-mine-thumb img').forEach(img => img.addEventListener('error', () => {
@@ -118,7 +118,10 @@ async function upload() {
 $('#u-file').addEventListener('change', e => pick(e.target.files[0]));
 $('#u-send').addEventListener('click', upload);
 $('#u-or').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); upload(); } });
-$('#s-mine').addEventListener('click', e => { if (e.target.closest('[data-open-upload]')) openUpload(); });
+// Its own attribute: data-open-upload is what the document upload pop-up
+// looks for to open itself on page load, and finding the receipt button it
+// opened over Financial Records on every visit.
+$('#s-mine').addEventListener('click', e => { if (e.target.closest('[data-fx-upload]')) openUpload(); });
 
 $('#s-fees').addEventListener('click', e => { const b = e.target.closest('[data-fee]'); if (b) { fee = +b.dataset.fee; render(); } });
 $('#s-mine').addEventListener('dragover', e => { if (S.can_submit && fee && st(fee, ME) !== 'verified') { e.preventDefault(); $('#s-mine').classList.add('fx-drag'); } });
