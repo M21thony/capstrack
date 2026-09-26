@@ -22,6 +22,10 @@
     .dr-filters { flex-wrap: wrap; }
     .dr-filters > .input { flex: 1 1 100%; width: 100% !important; max-width: none !important; }
     .dr-filters > span[style*="flex:1"] { display: none; }
+  }
+  /* So does a tablet: the six columns are wider than its screen, and the
+     status and the buttons to open a document sat off its right edge. */
+  @media (max-width: 1024px) {
     .dr-table, .dr-table tbody { display: block; width: 100%; }
     .dr-table thead { display: none; }
     .dr-table tbody tr.dr-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; padding: 14px; border-bottom: 1px solid var(--border); }
@@ -35,6 +39,26 @@
     .dr-table tbody tr.dr-row td:nth-child(6) .btn { width: 100%; justify-content: center; }
     .dr-table tbody tr:not(.dr-row) { display: block; }
     .dr-table tbody tr:not(.dr-row) td { display: block; }
+    /* The state's colour down the card's own edge: on the first cell it was a
+       sliver beside the file icon. */
+    .dr-table tbody tr.dr-row td:first-child { box-shadow: none; }
+    .dr-table tbody tr.dr-row { box-shadow: inset 3px 0 0 var(--border); }
+    .dr-table tbody tr.dr-row.is-done { box-shadow: inset 3px 0 0 var(--green); }
+    .dr-table tbody tr.dr-row.is-waiting { box-shadow: inset 3px 0 0 var(--accent3); }
+    .dr-table tbody tr.dr-row.is-late { box-shadow: inset 3px 0 0 var(--red); }
+  }
+  /* On a tablet the card is two lines: the document on the left, its team,
+     date, status and buttons on the right. The version is already under the
+     file name. */
+  @media (min-width: 701px) and (max-width: 1024px) {
+    .dr-table tbody tr.dr-row { grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px 16px; padding: 14px 20px; }
+    .dr-table tbody tr.dr-row td:nth-child(1) { grid-column: 1; grid-row: 1 / span 2; }
+    .dr-table tbody tr.dr-row td:nth-child(2) { grid-column: 2; grid-row: 1; justify-self: end; }
+    .dr-table tbody tr.dr-row td:nth-child(3) { grid-column: 3; grid-row: 1; }
+    .dr-table tbody tr.dr-row td:nth-child(4) { display: none; }
+    .dr-table tbody tr.dr-row td:nth-child(5) { grid-column: 2; grid-row: 2; justify-self: end; }
+    .dr-table tbody tr.dr-row td:nth-child(6) { grid-column: 3; grid-row: 2; }
+    .dr-table tbody tr.dr-row td:nth-child(6) .btn { width: auto; }
   }
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])

@@ -174,7 +174,7 @@
   }
 
   .profile-page .pf-btn {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'DM Sans','DM Sans Fallback', sans-serif;
     font-size: 13px;
     font-weight: 600;
     padding: 9px 14px;
@@ -600,10 +600,10 @@
                 <div style="position:relative">
                   <div style="display:flex;gap:8px">
                     <div style="flex:1;position:relative">
-                      <input type="text" id="expertiseSearchInput" placeholder="Search or add expertise..." autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--pf-border);border-radius:8px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif;color:var(--pf-text)" onkeydown="handleExpertiseKeydown(event)" />
+                      <input type="text" id="expertiseSearchInput" placeholder="Search or add expertise..." autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--pf-border);border-radius:8px;font-size:13px;outline:none;font-family:'DM Sans','DM Sans Fallback',sans-serif;color:var(--pf-text)" onkeydown="handleExpertiseKeydown(event)" />
                       <div id="expertiseSuggestions" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--pf-border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.08);max-height:180px;overflow-y:auto;z-index:10;display:none;margin-top:4px"></div>
                     </div>
-                    <button type="button" onclick="addExpertiseFromInput()" style="padding:9px 14px;border:1.5px solid var(--pf-border);border-radius:8px;background:#fff;color:var(--pf-text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">Add</button>
+                    <button type="button" onclick="addExpertiseFromInput()" style="padding:9px 14px;border:1.5px solid var(--pf-border);border-radius:8px;background:#fff;color:var(--pf-text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif;white-space:nowrap">Add</button>
                   </div>
                 </div>
 
@@ -612,7 +612,7 @@
             </div>
 
             <div class="pf-form-footer" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--pf-border);display:flex;justify-content:flex-end">
-              <button type="submit" style="padding:9px 14px;border:1.5px solid var(--pf-border);border-radius:8px;background:#fff;color:var(--pf-text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Save Profile</button>
+              <button type="submit" style="padding:9px 14px;border:1.5px solid var(--pf-border);border-radius:8px;background:#fff;color:var(--pf-text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif">Save Profile</button>
             </div>
           </div>
 
@@ -626,7 +626,7 @@
                 </div>
                 <div class="pf-card-desc" style="margin-top:2px">Choose which sections you manage</div>
               </div>
-              <span class="pf-section-count" id="pf-section-count" style="font-size:12px;padding:5px 12px;background:rgba(71,85,105,0.08);color:var(--pf-accent);border-radius:8px;font-weight:600;white-space:nowrap;font-family:'DM Sans',sans-serif">{{ count($sectionList) }} / {{ count($allAvailableSections) }}</span>
+              <span class="pf-section-count" id="pf-section-count" style="font-size:12px;padding:5px 12px;background:rgba(71,85,105,0.08);color:var(--pf-accent);border-radius:8px;font-weight:600;white-space:nowrap;font-family:'DM Sans','DM Sans Fallback',sans-serif">{{ count($sectionList) }} / {{ count($allAvailableSections) }}</span>
             </div>
 
             <div style="flex:1;display:flex;flex-direction:column;min-height:0;padding-top:16px">
@@ -650,7 +650,7 @@
             </div>
 
             <div class="pf-form-footer" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--pf-border);display:flex;justify-content:flex-end">
-              <button type="submit" style="padding:9px 14px;border:1.5px solid var(--pf-border);border-radius:8px;background:#fff;color:var(--pf-text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Update Sections</button>
+              <button type="submit" style="padding:9px 14px;border:1.5px solid var(--pf-border);border-radius:8px;background:#fff;color:var(--pf-text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif">Update Sections</button>
             </div>
           </div>
 
@@ -671,8 +671,8 @@
 
           <div style="padding-top:16px">
             <div style="display:flex;gap:8px;margin-bottom:16px">
-              <input type="text" id="newFolderName" placeholder="e.g. Batch 2026 - Section A" style="flex:1;padding:9px 12px;border:1.5px solid var(--pf-border);border-radius:8px;font-size:13.5px;font-family:'DM Sans',sans-serif" />
-              <button type="button" id="addFolderBtn" style="padding:9px 16px;border:none;border-radius:8px;background:var(--pf-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">Add Folder</button>
+              <input type="text" id="newFolderName" placeholder="e.g. Batch 2026 - Section A" style="flex:1;padding:9px 12px;border:1.5px solid var(--pf-border);border-radius:8px;font-size:13.5px;font-family:'DM Sans','DM Sans Fallback',sans-serif" />
+              <button type="button" id="addFolderBtn" style="padding:9px 16px;border:none;border-radius:8px;background:var(--pf-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif;white-space:nowrap">Add Folder</button>
             </div>
             <div id="folderNotice" hidden style="margin-bottom:16px"></div>
             <div id="folderListContainer" style="display:flex;flex-direction:column;gap:6px">

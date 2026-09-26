@@ -9,6 +9,32 @@
  * system fonts, and no visit is reported to a third party. All three fonts
  * are under the SIL Open Font License 1.1, which allows serving them so.
  */
+/*
+ * What a page shows in the moment before DM Sans is ready - on every page
+ * change, however briefly: Arial, sized and spaced to DM Sans's own
+ * measurements (its height above and below the line, and 2% wider). Drawn in
+ * plain Arial first, every line of text was a little shorter and grew when
+ * DM Sans came in, and the whole page slid down a few pixels as it opened.
+ * Every font list names it straight after DM Sans.
+ */
+@font-face {
+  font-family: 'DM Sans Fallback';
+  font-weight: 100 500;
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Arimo'), local('Roboto');
+  size-adjust: 102%;
+  ascent-override: 97.25%;
+  descent-override: 30.39%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'DM Sans Fallback';
+  font-weight: 600 900;
+  src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('Arimo Bold'), local('Roboto Bold');
+  size-adjust: 102%;
+  ascent-override: 97.25%;
+  descent-override: 30.39%;
+  line-gap-override: 0%;
+}
 @font-face {
   font-family: 'DM Sans';
   font-style: normal;

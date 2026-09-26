@@ -37,7 +37,7 @@
     height: 100%;
     background: var(--navy);
     color: var(--ink);
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'DM Sans','DM Sans Fallback', sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 

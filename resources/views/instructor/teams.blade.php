@@ -9,7 +9,7 @@
 <style>
 .team-overview-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .team-role-tabs { display: flex; flex-wrap: wrap; width: fit-content; max-width: 100%; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-.team-role-tab { padding: 10px 16px; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--text2); font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: 0.13s; white-space: nowrap; }
+.team-role-tab { padding: 10px 16px; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--text2); font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: 'DM Sans','DM Sans Fallback', sans-serif; transition: 0.13s; white-space: nowrap; }
 .team-role-tab.active { color: var(--accent3); border-bottom-color: var(--accent); }
 .team-role-tab:hover:not(.active) { color: var(--text); background: var(--bg4); }
 .team-role-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -97,6 +97,8 @@
   .team-row { grid-template-columns: 34px 1fr 14px; row-gap: 9px; }
   .tr-prog { grid-column: 2 / 4; }
   .tr-flag { grid-column: 2 / 4; margin-top: -4px; }
+  /* Beside the name, not in a row of its own under the rest. */
+  .tr-chev { grid-column: 3; grid-row: 1; }
   .teams-summary { gap: 10px 0; }
   .ts-say { margin-left: 0; width: 100%; }
 }
@@ -146,13 +148,13 @@
 .info-member-name { font-size: 13px; color: var(--text2); flex: 1; }
 .info-lead-tag { font-size: 9px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: rgba(201,168,44,0.15); color: var(--accent3); white-space: nowrap; }
 
-.btn { display: inline-flex; align-items: center; gap: 6px; border: none; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.15s; border-radius: 8px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: none; font-family: 'DM Sans','DM Sans Fallback', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.15s; border-radius: 8px; }
 .btn-ghost { background: transparent; color: var(--text2); border: 1.5px solid var(--border); padding: 8px 16px; font-size: 12px; }
 .btn-ghost:hover { background: var(--accent-light); color: var(--accent3); border-color: var(--accent); }
 /* Content-width and at the end - see the same note on the assignments
    page. flex:1 made a one-word Close span the whole panel. */
 .modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
-.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
+.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans','DM Sans Fallback', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
 .modal-actions .btn-soft { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
 .modal-actions .btn-soft:hover { background: var(--border); border-color: var(--text3); }
 

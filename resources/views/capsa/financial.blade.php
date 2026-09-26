@@ -43,7 +43,7 @@
 
     <header class="fx-page-head">
       <h1>Financial Records</h1>
-      <div class="fx-tabs" role="tablist" aria-label="Fee" id="c-fees"></div>
+      <div class="fx-tabs" role="tablist" aria-label="Fee" id="c-fees" @if (collect($state['fees'] ?? [])->isEmpty()) hidden @endif></div>
       <div class="fx-actions"><button class="fx-btn" id="c-new-fee"><svg><use href="#fx-i-plus"/></svg>New fee</button></div>
     </header>
 
