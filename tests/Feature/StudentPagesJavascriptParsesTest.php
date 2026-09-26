@@ -52,15 +52,22 @@ class StudentPagesJavascriptParsesTest extends TestCase
             ->getContent();
 
         // Inline blocks only. A src= script is a built asset with its own
-        // checks, and there is nothing of ours inside the tag to parse. A
-        // type="application/json" block is data (the upload pop-up's
-        // addresses), not a script.
-        preg_match_all('/<script(?![^>]*\b(?:src=|type="application\/json"))[^>]*>(.*?)<\/script>/s', $html, $matches);
+        // checks, and there is nothing of ours inside the tag to parse.
+        preg_match_all('/<script(?![^>]*\bsrc=)([^>]*)>(.*?)<\/script>/s', $html, $matches);
 
-        $this->assertNotEmpty($matches[1], 'the page carries inline script');
+        $this->assertNotEmpty($matches[2], 'the page carries inline script');
 
-        foreach ($matches[1] as $i => $script) {
+        foreach ($matches[2] as $i => $script) {
             if (trim($script) === '') {
+                continue;
+            }
+
+            // A block of data (the upload pop-up's addresses, the pages the
+            // browser may fetch ahead) is JSON, not a script.
+            if (preg_match('/\btype="(?!module"|text\/javascript")[^"]+"/', $matches[1][$i])) {
+                json_decode($script);
+                $this->assertSame(JSON_ERROR_NONE, json_last_error(), "Data block #{$i} on {$routeName} is not valid JSON: ".json_last_error_msg());
+
                 continue;
             }
 
