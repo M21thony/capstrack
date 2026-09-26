@@ -69,7 +69,7 @@
 
   /* Pill icon-buttons, matching the same convention admin/experts.blade.php
      uses for its row actions. */
-  .btn-pill{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;transition:transform 0.12s ease,box-shadow 0.12s ease,background 0.12s ease,border-color 0.12s ease,color 0.12s ease;user-select:none;border:1.5px solid transparent;white-space:nowrap;font-family:'DM Sans',sans-serif}
+  .btn-pill{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;transition:transform 0.12s ease,box-shadow 0.12s ease,background 0.12s ease,border-color 0.12s ease,color 0.12s ease;user-select:none;border:1.5px solid transparent;white-space:nowrap;font-family:'DM Sans','DM Sans Fallback',sans-serif}
   .btn-pill svg{width:12px;height:12px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2.2}
   .btn-pill:active{transform:translateY(1px)}
   .btn-edit{background:rgba(37,99,235,0.06);color:#2563eb;border-color:rgba(37,99,235,0.16)}

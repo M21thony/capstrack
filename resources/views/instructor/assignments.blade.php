@@ -183,7 +183,9 @@
    room for two independent scroll areas; the list keeps a height cap so a
    long history never pushes the application off the bottom. */
 @media (max-width: 900px) {
-  .ta-content { overflow-y: auto; padding: 16px; }
+  /* One scrolling area, the page's own: a second one inside it held the
+     application in a box shorter than the screen, its buttons out of reach. */
+  .ta-content { flex: none; overflow: visible; padding: 16px; }
   .ta-split { display: flex; flex-direction: column; flex: none; }
   .ta-list { max-height: 60vh;max-height: 60dvh; }
   .ta-panel { overflow: visible; }
@@ -200,6 +202,15 @@
   .ta-search { flex: 1; }
   .ta-search input { width: 100%; }
   .ta-col-leader { display: none; }
+  /* The team's name gets the room: at the desktop widths of the role and
+     waiting columns it was cut to its first few letters. */
+  .ta-table col:nth-child(2) { width: 100px !important; }
+  .ta-table col:last-child { width: 84px !important; }
+  .ta-table th, .ta-table td { padding-left: 8px; padding-right: 8px; }
+  .ta-table th:first-child, .ta-table td:first-child { padding-left: 12px; }
+  .ta-table .ta-chip { padding: 0 7px; }
+  .ta-row-btn { gap: 10px; }
+  .ta-table .ta-tile { width: 30px; height: 30px; }
   .ta-dialog-foot { flex-direction: column-reverse; }
   .ta-dialog-foot .ta-btn { width: 100%; }
   .msg-toast { left: 12px; right: 12px; bottom: 12px; max-width: none; }
@@ -778,7 +789,8 @@ function markSelected(kind, id) {
 function selectFirstVisible() {
   const first = rowsIn(activeTab).find((r) => !r.hidden);
   if (!first) { showEmptyPanel(); return; }
-  if (first.dataset.kind === 'title') selectTitle(Number(first.dataset.id)); else selectAssignment(Number(first.dataset.id));
+  // Picked for them, not by them: the phone stays at the top of the queue.
+  if (first.dataset.kind === 'title') selectTitle(Number(first.dataset.id), false); else selectAssignment(Number(first.dataset.id), false);
 }
 
 function showEmptyPanel() {
@@ -821,7 +833,7 @@ function revealPanelOnPhone() {
   }
 }
 
-function selectAssignment(id) {
+function selectAssignment(id, reveal = true) {
   const d = assignmentData[id];
   if (!d) return;
   current = { kind: 'asg', id: id };
@@ -907,10 +919,10 @@ function selectAssignment(id) {
     row.appendChild(button('Remove from list', 'ghost', () => openClearModal(id), 'trash'));
     acts.appendChild(row);
   }
-  revealPanelOnPhone();
+  if (reveal) revealPanelOnPhone();
 }
 
-function selectTitle(id) {
+function selectTitle(id, reveal = true) {
   const t = titleData[id];
   if (!t) return;
   current = { kind: 'title', id: id };
@@ -958,7 +970,7 @@ function selectTitle(id) {
   pair.appendChild(button('Approve', 'go', () => openTitleApproveModal(id), 'check'));
   acts.appendChild(pair);
   acts.appendChild(el('p', { class: 'ta-note' }, 'Asking for another sends the team your note on what to change.'));
-  revealPanelOnPhone();
+  if (reveal) revealPanelOnPhone();
 }
 
 function dupLine(t) {

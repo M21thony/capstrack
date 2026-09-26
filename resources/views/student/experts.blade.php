@@ -61,7 +61,7 @@
 .req-card .status-badge { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-left: auto; flex-shrink: 0; }
 
 /* Button system — clean, simple, user-friendly */
-.btn { display: inline-flex; align-items: center; gap: 6px; border: none; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.15s; border-radius: 8px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: none; font-family: 'DM Sans','DM Sans Fallback', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.15s; border-radius: 8px; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-sm { font-size: 12px; padding: 7px 14px; }
 .btn-md { font-size: 13px; padding: 10px 18px; }
@@ -126,7 +126,7 @@
 .modal-box .form-group label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
 .modal-box .form-group label .req { color: var(--red); margin-left: 2px; }
 .modal-box .form-group select,
-.modal-box .form-group textarea { width: 100%; padding: 12px 14px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; box-sizing: border-box; transition: border 0.15s; }
+.modal-box .form-group textarea { width: 100%; padding: 12px 14px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; font-family: 'DM Sans','DM Sans Fallback', sans-serif; outline: none; box-sizing: border-box; transition: border 0.15s; }
 .modal-box .form-group select:focus,
 .modal-box .form-group textarea:focus { border-color: var(--accent); }
 .modal-box .form-group textarea { resize: vertical; min-height: 140px; line-height: 1.6; }
@@ -154,7 +154,7 @@
 .skill-filter.open .skill-picker { display: block; }
 .skill-picker-search { display: flex; align-items: center; gap: 7px; padding: 9px 11px; border-bottom: 1px solid var(--border); }
 .skill-picker-search svg { width: 13px; height: 13px; stroke: var(--text3); fill: none; stroke-width: 2; flex-shrink: 0; }
-.skill-picker-search input { flex: 1; border: none; outline: none; background: none; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); }
+.skill-picker-search input { flex: 1; border: none; outline: none; background: none; font-family: 'DM Sans','DM Sans Fallback', sans-serif; font-size: 13px; color: var(--text); }
 .skill-picker-search input::placeholder { color: var(--text3); }
 .skill-picker-list { max-height: 300px; overflow-y: auto; padding: 7px; display: flex; flex-direction: column; gap: 4px;scrollbar-width:none;-ms-overflow-style:none}
 .skill-picker-list::-webkit-scrollbar{display:none}
@@ -185,7 +185,7 @@
 
 /* Role picker in the apply modal - one card per role the expert holds. */
 .role-choice-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.role-choice { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text2); font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: 0.15s; }
+.role-choice { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text2); font-size: 13px; font-weight: 600; font-family: 'DM Sans','DM Sans Fallback', sans-serif; cursor: pointer; transition: 0.15s; }
 .role-choice:hover { border-color: var(--accent); }
 .role-choice .role-choice-mark { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border2, var(--border)); flex-shrink: 0; transition: 0.15s; }
 .role-choice.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent3); }
@@ -198,7 +198,7 @@
    out as a bar the full width of the modal. The narrow breakpoint below
    still stacks them full-width, which is right on a phone. */
 .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
-.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
+.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans','DM Sans Fallback', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
 .modal-actions .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* On a phone there is no room for two buttons side by side once they are
@@ -223,7 +223,7 @@
 .remove-field { margin-top: 16px; }
 .remove-field label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
 .remove-field label strong { color: var(--red); font-variant-numeric:tabular-nums; }
-.modal-input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg3); color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; box-sizing: border-box; transition: border 0.2s, box-shadow 0.2s, background 0.2s; }
+.modal-input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg3); color: var(--text); font-size: 14px; font-family: 'DM Sans','DM Sans Fallback', sans-serif; outline: none; box-sizing: border-box; transition: border 0.2s, box-shadow 0.2s, background 0.2s; }
 .modal-input:focus { border-color: var(--accent); background: var(--bg2); box-shadow: 0 0 0 3px var(--accent-glow); }
 .modal-input.error { border-color: var(--red); background: var(--red-bg); box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
 .remove-field textarea.modal-input { min-height: 80px; line-height: 1.5; }

@@ -117,7 +117,7 @@
           <th scope="col" style="width:220px">Report</th>
           <th scope="col">What's in it</th>
           <th scope="col" style="width:210px">Extra filter</th>
-          <th scope="col" style="width:300px;text-align:right">Get it</th>
+          <th scope="col" style="width:316px;text-align:right">Get it</th>
         </tr></thead>
         <tbody>
           @foreach ($reports as $r)
