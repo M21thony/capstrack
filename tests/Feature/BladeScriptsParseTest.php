@@ -32,17 +32,32 @@ class BladeScriptsParseTest extends TestCase
         foreach ($this->bladeFiles() as $file) {
             $source = file_get_contents($file);
 
-            if (! preg_match_all('/<script(?:\s[^>]*)?>(.*?)<\/script>/s', $source, $matches)) {
+            if (! preg_match_all('/<script(\s[^>]*)?>(.*?)<\/script>/s', $source, $matches)) {
                 continue;
             }
 
-            foreach ($matches[1] as $index => $block) {
+            foreach ($matches[2] as $index => $block) {
                 // A block that only loads a src, or is a template, has nothing to check.
                 if (trim($block) === '') {
                     continue;
                 }
 
                 $js = $this->withoutBlade($block);
+
+                // A block of data - the upload pop-up's addresses, the pages
+                // the browser may fetch ahead - is JSON, not a script.
+                if ($this->isData($matches[1][$index])) {
+                    json_decode($js);
+
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $where = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file);
+                        $broken[] = $where.' (block '.$index.'): not valid JSON - '.json_last_error_msg();
+                    }
+
+                    $checked++;
+
+                    continue;
+                }
 
                 // Anything still carrying PHP after the swap is a block this
                 // cannot faithfully turn into JavaScript, and a guess would
@@ -69,6 +84,16 @@ class BladeScriptsParseTest extends TestCase
 
         $this->assertGreaterThan(0, $checked, 'no script blocks were found to check');
         $this->assertSame([], $broken, "Blade views shipping unparsable JavaScript:\n".implode("\n", $broken));
+    }
+
+    /** Whether a <script> tag's attributes mark it as data rather than JavaScript. */
+    private function isData(string $attributes): bool
+    {
+        if (! preg_match('/\btype\s*=\s*["\']([^"\']*)["\']/i', $attributes, $type)) {
+            return false;
+        }
+
+        return ! in_array(strtolower(trim($type[1])), ['', 'module', 'text/javascript', 'application/javascript'], true);
     }
 
     /** @return list<string> */
