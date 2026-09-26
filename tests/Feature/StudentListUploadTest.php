@@ -293,6 +293,99 @@ class StudentListUploadTest extends TestCase
         $this->assertNotNull(StudentRoster::where('email', 'ana.cruz@my.cspc.edu.ph')->first());
     }
 
+    /** A student added by hand under a mistyped email, with the right number. */
+    private function mistypedByHand(array $overrides = []): Student
+    {
+        return Student::create($overrides + [
+            'email' => 'iantumambing@my.cspc.edu.ph',
+            'f_name' => 'Ian Cyrus',
+            'l_name' => 'Tumambing',
+            'student_number' => '231002256',
+            'course' => 'Bachelor of Science in Information Technology',
+        ]);
+    }
+
+    public function test_the_list_corrects_an_email_mistyped_on_an_account_nobody_signed_into(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+        $student = $this->mistypedByHand();
+
+        $response = $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['iatumambing@my.cspc.edu.ph', 'Tumambing, Ian Cyrus', '231002256', 'BSIT', 3, 'B'],
+            ]),
+        ]);
+
+        $response->assertOk()->assertJson(['created' => 0, 'matched' => 1, 'errors' => []]);
+        $this->assertStringContainsString('email corrected from iantumambing@my.cspc.edu.ph to iatumambing@my.cspc.edu.ph', $response->json('corrected.0'));
+        $this->assertSame('iatumambing@my.cspc.edu.ph', $student->fresh()->email);
+        $this->assertSame('231002256', $student->fresh()->student_number);
+        $this->assertSame(1, Student::count());
+    }
+
+    public function test_the_last_name_is_compared_without_case_or_accents(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+        $student = $this->mistypedByHand(['l_name' => 'MI'.json_decode('"\u00d1"').'ULAS']);
+
+        $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['anminulas@my.cspc.edu.ph', 'Mi'.json_decode('"\u00f1"').'ulas, Analiza', '231002256', 'BSIT', 3, 'B'],
+            ]),
+        ])->assertOk()->assertJson(['created' => 0, 'errors' => []]);
+
+        $this->assertSame('anminulas@my.cspc.edu.ph', $student->fresh()->email);
+    }
+
+    public function test_the_preview_shows_the_email_it_would_correct_without_changing_it(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+        $student = $this->mistypedByHand();
+
+        $response = $this->post(route('capsa.rosters.students.preview'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['iatumambing@my.cspc.edu.ph', 'Tumambing, Ian Cyrus', '231002256', 'BSIT', 3, 'B'],
+            ]),
+        ]);
+
+        $response->assertOk()->assertJson(['create' => 0, 'update' => 1, 'errors' => []]);
+        $this->assertContains('email', $response->json('rows.0.changes'));
+        $this->assertCount(1, $response->json('corrected'));
+        $this->assertSame('iantumambing@my.cspc.edu.ph', $student->fresh()->email);
+    }
+
+    public function test_an_account_someone_signed_into_keeps_its_email_and_is_named(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+        $student = $this->mistypedByHand(['last_seen_at' => now()]);
+
+        $response = $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['iatumambing@my.cspc.edu.ph', 'Tumambing, Ian Cyrus', '231002256', 'BSIT', 3, 'B'],
+            ]),
+        ]);
+
+        $response->assertOk()->assertJson(['created' => 1, 'corrected' => []]);
+        $this->assertStringContainsString('already belongs to another account (Ian Cyrus Tumambing, iantumambing@my.cspc.edu.ph)', $response->json('errors.0'));
+        $this->assertSame('iantumambing@my.cspc.edu.ph', $student->fresh()->email);
+    }
+
+    public function test_a_number_on_an_account_under_another_name_is_not_taken_over(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+        $student = $this->mistypedByHand(['l_name' => 'Morada', 'f_name' => 'Jerald']);
+
+        $response = $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['iatumambing@my.cspc.edu.ph', 'Tumambing, Ian Cyrus', '231002256', 'BSIT', 3, 'B'],
+            ]),
+        ]);
+
+        $response->assertOk()->assertJson(['created' => 1, 'corrected' => []]);
+        $this->assertStringContainsString('already belongs to another account (Jerald Morada, iantumambing@my.cspc.edu.ph)', $response->json('errors.0'));
+        $this->assertSame('iantumambing@my.cspc.edu.ph', $student->fresh()->email);
+    }
+
     /**
      * Uploading again updates the stored list rather than duplicating it -
      * but a value already on the account is left where it is. The list is a
