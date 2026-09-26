@@ -36,7 +36,7 @@ class SecurityHeaders
         'img-src' => ["'self'", 'data:', 'blob:', 'https:'],
         'media-src' => ["'self'", 'data:', 'blob:'],
         'connect-src' => ["'self'", 'https://accounts.google.com', 'https://www.googleapis.com', 'https://content.googleapis.com', 'https://www.google.com'],
-        'frame-src' => ["'self'", 'blob:', 'https://www.google.com', 'https://accounts.google.com', 'https://docs.google.com', 'https://drive.google.com', 'https://content.googleapis.com'],
+        'frame-src' => ["'self'", 'blob:', 'https://www.google.com', 'https://recaptcha.google.com', 'https://accounts.google.com', 'https://docs.google.com', 'https://drive.google.com', 'https://content.googleapis.com'],
         'worker-src' => ["'self'", 'blob:'],
         'object-src' => ["'none'"],
         'base-uri' => ["'self'"],
