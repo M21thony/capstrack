@@ -181,7 +181,10 @@ test('the highlight glides on the tap and is not replayed on the page it opens',
   expect(await glideX()).toBe(0);
 
   // On the tap, before the next page is there, it is already on its way.
-  // Noted in the page itself, since the page is on its way out.
+  // Noted in the page itself, since the page is on its way out. The next page
+  // is held back to leave time to look; its early fetch on the finger landing
+  // (the speculation rules) is turned off, or it would arrive past the hold.
+  await page.evaluate(() => document.querySelectorAll('script[type="speculationrules"]').forEach((el) => el.remove()));
   await page.route('**/*', async (route) => {
     if (route.request().isNavigationRequest()) await new Promise((r) => setTimeout(r, 1200));
     await route.continue();
