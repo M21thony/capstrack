@@ -120,17 +120,43 @@ class TeamPageTest extends TestCase
         }
     }
 
-    /** Copying an address says so at the side of the screen, and shows the address. */
-    public function test_copying_an_email_shows_a_copied_notice(): void
+    /** Copying an address says "Copied" - one word in a small pill, and nothing else. */
+    public function test_copying_an_email_shows_only_copied(): void
     {
         $html = $this->get(route('team'))
             ->assertOk()
             ->assertSee('<div class="copy-toast" id="copy-toast" role="status" aria-live="polite">', false)
+            ->assertSee('<span id="copy-toast-title">Copied</span>', false)
+            ->assertDontSee('copy-toast-text', false)
+            ->assertDontSee('is on your clipboard')
             ->getContent();
 
-        $this->assertStringContainsString('showToast(true, email);', $html);
+        $this->assertStringContainsString('showToast(true);', $html);
         $this->assertStringContainsString("copied ? 'Copied' : \"Couldn't copy\"", $html);
         $this->assertStringContainsString('.copy-toast.show {', $html);
+    }
+
+    /**
+     * Each member is a trading card - their number in the set, the photo as
+     * the art, the role as its type - and on a phone the cards are a deck
+     * that loops: swiped or stepped past the last, it comes round to the
+     * first.
+     */
+    public function test_the_members_are_cards_dealt_as_a_looping_deck_on_a_phone(): void
+    {
+        $html = $this->get(route('team'))->assertOk()
+            ->assertSee('<div class="people-grid" id="team-deck" aria-roledescription="deck of cards" aria-label="Team members">', false)
+            ->assertSeeInOrder(['<span class="card-no">01/05</span>', '<span class="card-no">05/05</span>'], false)
+            ->assertSee('<button type="button" class="deck-btn" id="deck-prev" aria-label="Previous member">', false)
+            ->assertSee('<span class="deck-count" id="deck-count" aria-live="polite">1 / 5</span>', false)
+            ->getContent();
+
+        // Past the last card, the first again; before the first, the last.
+        $this->assertStringContainsString('order.push(order.shift());', $html);
+        $this->assertStringContainsString('order.unshift(order.pop());', $html);
+        $this->assertStringContainsString("window.matchMedia('(max-width: 600px)')", $html);
+        // Only the top card can be reached; the rest are behind it.
+        $this->assertStringContainsString('card.inert = pos !== 0;', $html);
     }
 
     public function test_login_page_links_to_the_team_page(): void

@@ -90,6 +90,9 @@ class ConsultationPageStatesTest extends TestCase
             ->assertOk()
             ->assertSee('.sched-cal .calendar-day{border:0!important}', false)
             ->assertSee('.sched-cal .calendar-day{height:44px!important;padding:0!important;font-size:13px!important}', false)
-            ->assertSee('.sched-cal .calendar-day{width:100%;max-width:40px;height:auto!important;aspect-ratio:1/1}', false);
+            ->assertSee('.sched-cal .calendar-day{width:100%;max-width:40px;height:auto!important;aspect-ratio:1/1}', false)
+            // Round, and still coloured: a bookable date gold, a booked one blue.
+            ->assertSee('background:var(--accent-light);box-shadow:inset 0 0 0 1.5px var(--accent)}', false)
+            ->assertSee('.sched-cal .calendar-day.my-booking{color:var(--blue);font-weight:700;background:var(--blue-bg);box-shadow:inset 0 0 0 2px var(--blue)}', false);
     }
 }

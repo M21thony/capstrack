@@ -223,6 +223,31 @@ class StudentPhoneLayoutTest extends TestCase
         );
     }
 
+    /**
+     * The receipt button wore data-open-upload - what the document upload
+     * pop-up looks for to open itself on load - so that pop-up opened over
+     * Financial Records on every visit.
+     */
+    public function test_financial_records_does_not_open_the_document_upload(): void
+    {
+        $this->assertStringContainsString('data-fx-upload>${label}</button>', File::get(resource_path('js/financial/student.js')));
+        $this->assertStringNotContainsString('data-open-upload>', File::get(resource_path('js/financial/student.js')));
+        $this->assertStringNotContainsString("closest('[data-open-upload]')", File::get(resource_path('js/financial/student.js')));
+        $this->assertStringContainsString(
+            "document.querySelector('.sub-card [data-open-upload]:not([data-open-upload=\"\"])')",
+            File::get(resource_path('js/submission-drawer.js'))
+        );
+    }
+
+    /** capture made a phone open the camera and nothing else; the gallery could not be chosen. */
+    public function test_a_receipt_photo_can_come_from_the_camera_or_the_gallery(): void
+    {
+        $this->actingAs($this->student())->get(route('student.financial'))
+            ->assertOk()
+            ->assertSee('<input type="file" id="u-file" accept="image/*" aria-label="Photo of your receipt">', false)
+            ->assertDontSee('capture="environment"', false);
+    }
+
     /** The profile form has no sidebar or tab bar, so editing has its own way out. */
     public function test_editing_the_profile_has_a_way_back(): void
     {
