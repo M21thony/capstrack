@@ -869,17 +869,10 @@ function renderRosterPreview(data) {
 
   const errorBox = document.getElementById('studentRosterErrors');
 
-  const corrected = (data.corrected || []).length
-    ? '<div style="font-size:12px;color:#15803d;max-height:120px;overflow-y:auto;margin-bottom:12px">'
-      + data.corrected.map(e => `<div>${escRoster(e)}</div>`).join('') + '</div>'
-    : '';
-
-  if (corrected || (data.errors && data.errors.length)) {
+  if (data.errors && data.errors.length) {
     errorBox.style.display = 'block';
-    errorBox.innerHTML = corrected + ((data.errors || []).length
-      ? '<div style="font-size:12px;color:#b91c1c;max-height:120px;overflow-y:auto;margin-bottom:12px">'
-        + data.errors.map(e => `<div>${escRoster(e)}</div>`).join('') + '</div>'
-      : '');
+    errorBox.innerHTML = '<div style="font-size:12px;color:#b91c1c;max-height:120px;overflow-y:auto;margin-bottom:12px">'
+      + data.errors.map(e => `<div>${escRoster(e)}</div>`).join('') + '</div>';
   } else {
     errorBox.style.display = 'none';
     errorBox.innerHTML = '';
@@ -964,10 +957,6 @@ function uploadStudentRoster(btn) {
       }
       if (data.already_complete) {
         html += `<div style="margin-top:4px;color:var(--text3)">${data.already_complete} already had everything &mdash; nothing on those was changed.</div>`;
-      }
-      if (data.corrected && data.corrected.length) {
-        html += '<div style="max-height:160px;overflow-y:auto;color:#15803d;margin-top:6px">' +
-          data.corrected.map(e => `<div>${escRoster(e)}</div>`).join('') + '</div>';
       }
       if (data.errors && data.errors.length) {
         html += '<div style="max-height:160px;overflow-y:auto;color:var(--text3);margin-top:6px">' +

@@ -90,7 +90,6 @@ class StudentRosterController extends Controller
         $enrolments = [];
         $filled = 0;
         $alreadyComplete = 0;
-        $corrected = [];
 
         // Worked out before anything is written: a promotion is the year on
         // the list against the year the account has now.
@@ -115,12 +114,6 @@ class StudentRosterController extends Controller
             // this list existed has no student number, course or section on
             // their profile. Fill them in from the official list.
             $student = Student::whereRaw('LOWER(email) = ?', [$row['email']])->first();
-
-            if (! $student && ($mistyped = $this->mistypedAccountFor($row))) {
-                $corrected[] = $this->correctionNote($row, $mistyped);
-                $mistyped->update(['email' => $row['email']]);
-                $student = $mistyped;
-            }
 
             // Nobody has signed in on this address yet. Make the account now,
             // ready and filled in, rather than storing the row and waiting -
@@ -187,7 +180,6 @@ class StudentRosterController extends Controller
             'created' => $created,
             'filled' => $filled,
             'already_complete' => $alreadyComplete,
-            'corrected' => $corrected,
             'skipped' => $read['skipped'],
             'errors' => $read['errors'],
         ]);
@@ -220,17 +212,8 @@ class StudentRosterController extends Controller
         $update = 0;
         $unchanged = 0;
 
-        $corrected = [];
-
         foreach ($read['rows'] as $row) {
             $student = Student::whereRaw('LOWER(email) = ?', [$row['email']])->first();
-            $emailChange = [];
-
-            if (! $student && ($mistyped = $this->mistypedAccountFor($row))) {
-                $corrected[] = $this->correctionNote($row, $mistyped);
-                $student = $mistyped;
-                $emailChange = ['email' => $row['email']];
-            }
 
             // Warn before the upload, not after it crashes: a number that
             // already belongs to a different account is dropped on import, so
@@ -243,7 +226,7 @@ class StudentRosterController extends Controller
                 $action = 'create';
                 $changes = [];
                 $create++;
-            } elseif (($changes = $emailChange + $this->changesFor($student, $row)) !== []) {
+            } elseif (($changes = $this->changesFor($student, $row)) !== []) {
                 $action = 'update';
                 $update++;
             } else {
@@ -275,7 +258,6 @@ class StudentRosterController extends Controller
             'create' => $create,
             'update' => $update,
             'unchanged' => $unchanged,
-            'corrected' => $corrected,
             'skipped' => $read['skipped'],
             'errors' => $read['errors'],
         ]);
@@ -565,46 +547,7 @@ class StudentRosterController extends Controller
         );
     }
 
-    /**
-     * The account a CaPSA added by hand under a mistyped email.
-     *
-     * Sign-in matches on email, so an account whose address is wrong can
-     * never be signed into: it holds the row's student number, has never been
-     * seen, and carries the same last name. Only then is it the same student,
-     * and the list's address is the one to keep. An account someone has
-     * signed into, or one under another name, is left alone and reported.
-     */
-    private function mistypedAccountFor(array $row): ?Student
-    {
-        if ($row['student_number'] === '') {
-            return null;
-        }
-
-        $student = Student::where('student_number', $row['student_number'])->first();
-
-        if (! $student || $student->last_seen_at !== null) {
-            return null;
-        }
-
-        [, , $lastName] = $this->nameParts($row['raw'], null);
-
-        return $this->sameName($student->l_name, $lastName) ? $student : null;
-    }
-
-    /** Last names compared without case, spacing or accents: "Miñulas" is "MINULAS". */
-    private function sameName(?string $onAccount, ?string $onList): bool
-    {
-        $plain = fn (?string $name): string => preg_replace('/[^a-z]/', '', strtolower(Str::ascii((string) $name)));
-
-        return $plain($onAccount) !== '' && $plain($onAccount) === $plain($onList);
-    }
-
-    private function correctionNote(array $row, Student $student): string
-    {
-        return "Row {$row['row']}: email corrected from {$student->email} to {$row['email']} - same student number ({$row['student_number']}) and last name, and nobody had signed in on the old address.";
-    }
-
-    /** Who holds a student number, so the CaPSA can find the account to fix. */
+    /** Who holds a student number, so the CaPSA can find the account that clashes. */
     private function holderOf(string $number): string
     {
         $holder = Student::where('student_number', $number)->first();
