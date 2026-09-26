@@ -192,7 +192,7 @@
   position:fixed;bottom:24px;right:24px;z-index:9999;
   background:var(--bg2,#1e1e2e);color:var(--text,#e0e0e0);
   padding:12px 18px;border-radius:10px;border-left:4px solid var(--accent,#00e5ff);
-  font-size:13px;font-family:'DM Sans',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.4);
+  font-size:13px;font-family:'DM Sans','DM Sans Fallback',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.4);
   display:flex;align-items:center;gap:10px;
   opacity:0;transform:translateY(10px);transition:opacity .25s,transform .25s;
   pointer-events:none;">
@@ -208,7 +208,7 @@
 .slot-derived b{color:var(--text2);font-weight:600}
 
 .slot-more-toggle{display:flex;align-items:center;gap:5px;background:none;border:none;
-  padding:0 0 12px;font:600 11.5px 'DM Sans',sans-serif;color:var(--accent3);cursor:pointer}
+  padding:0 0 12px;font:600 11.5px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--accent3);cursor:pointer}
 .slot-more-toggle svg{transition:transform .15s}
 .slot-more-toggle.is-open svg{transform:rotate(90deg)}
 .slot-more-toggle:hover{color:var(--accent2)}
@@ -352,16 +352,16 @@
 #scope-ask.show{display:flex}
 #scope-ask .box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;
   max-width:400px;width:100%;padding:20px;box-shadow:0 18px 44px -18px rgba(0,0,0,.45)}
-#scope-ask h3{margin:0 0 6px;font:600 15px 'DM Sans',sans-serif;color:var(--text)}
+#scope-ask h3{margin:0 0 6px;font:600 15px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text)}
 #scope-ask p{margin:0 0 15px;font-size:12.5px;line-height:1.5;color:var(--text3)}
 #scope-ask .opt{display:block;width:100%;text-align:left;background:var(--bg3);
   border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:8px;
   cursor:pointer;font:inherit;color:var(--text)}
 #scope-ask .opt:hover{border-color:var(--accent);background:var(--accent-light)}
-#scope-ask .opt b{display:block;font:600 13px 'DM Sans',sans-serif}
+#scope-ask .opt b{display:block;font:600 13px 'DM Sans','DM Sans Fallback',sans-serif}
 #scope-ask .opt span{display:block;font-size:11.5px;color:var(--text3);margin-top:2px}
 #scope-ask .cancel{width:100%;background:none;border:none;padding:6px;cursor:pointer;
-  font:500 12.5px 'DM Sans',sans-serif;color:var(--text3)}
+  font:500 12.5px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text3)}
 #scope-ask .cancel:hover{color:var(--text)}
 </style>
 
@@ -530,7 +530,7 @@
 .qa-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:0 14px 13px}
 .qa-spacer{flex:1}
 .qa-act{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;
-  font:600 11.5px 'DM Sans',sans-serif;color:var(--text2)}
+  font:600 11.5px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text2)}
 .qa-act:hover{border-color:var(--text3);color:var(--text)}
 .qa-act.is-danger:hover{border-color:var(--red,#dc2626);color:var(--red,#dc2626)}
 .qa-foot .btn{flex:none}

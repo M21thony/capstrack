@@ -4,12 +4,12 @@
  * is the shared reader (component/reader/reader.css).
  */
 html,body{margin:0;height:100%}
-body{background:#f2f3f5;font-family:"DM Sans",system-ui,sans-serif;overflow:hidden}
+body{background:#f2f3f5;font-family:"DM Sans","DM Sans Fallback",system-ui,sans-serif;overflow:hidden}
 #pdf-annotator-root{height:100%}
 
 .an-app{display:grid;grid-template-rows:auto minmax(0,1fr);height:100vh}
 
-.an-bar{display:flex;align-items:center;gap:12px;padding:8px 16px;min-height:58px;background:#1e2028;border-bottom:2px solid #c9a82c;color:rgba(255,255,255,.88);flex-wrap:wrap;font-family:"DM Sans",system-ui,sans-serif}
+.an-bar{display:flex;align-items:center;gap:12px;padding:8px 16px;min-height:58px;background:#1e2028;border-bottom:2px solid #c9a82c;color:rgba(255,255,255,.88);flex-wrap:wrap;font-family:"DM Sans","DM Sans Fallback",system-ui,sans-serif}
 .an-bar :focus-visible{outline:2px solid #c9a82c;outline-offset:2px}
 .an-back{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:rgba(255,255,255,.62);text-decoration:none;padding:5px 8px;border-radius:6px}
 .an-back:hover{background:rgba(245,193,0,.12);color:#c9a82c}
@@ -42,7 +42,7 @@ body{background:#f2f3f5;font-family:"DM Sans",system-ui,sans-serif;overflow:hidd
 .an-split > .rr-work > .rr-viewer{grid-column:1;grid-row:2}
 .an-compare .rr-viewer{grid-column:2;grid-row:2;border-left:1px solid #d6d8df}
 .an-split > .rr-work > .rr-side{grid-column:3;grid-row:1 / span 2}
-.an-pane-head,.an-compare-bar{display:flex;align-items:center;gap:8px;min-height:46px;padding:6px 14px;background:#fff;border-bottom:1px solid #e0e2e8;font:13px/1.4 "DM Sans",system-ui,sans-serif;color:#1e2128;flex-wrap:wrap}
+.an-pane-head,.an-compare-bar{display:flex;align-items:center;gap:8px;min-height:46px;padding:6px 14px;background:#fff;border-bottom:1px solid #e0e2e8;font:13px/1.4 "DM Sans","DM Sans Fallback",system-ui,sans-serif;color:#1e2128;flex-wrap:wrap}
 .an-pane-head{grid-column:1;grid-row:1}
 .an-compare-bar{grid-column:2;grid-row:1;border-left:1px solid #d6d8df}
 .an-pane-head b,.an-compare-bar label{font-weight:700}

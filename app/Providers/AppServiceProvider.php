@@ -14,10 +14,23 @@ use App\Support\LeaveDecisionDetails;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Scripts that draw their page from data embedded in it.
+     *
+     * @var list<string>
+     */
+    public const PAGE_DRAWING_SCRIPTS = [
+        'resources/js/financial/capsa.js',
+        'resources/js/financial/student.js',
+        'resources/js/defenses/defense-scheduling.js',
+        'resources/js/defenses/panel-assignment.js',
+    ];
+
     /**
      * Register any application services.
      */
@@ -39,6 +52,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
+        // The pages these scripts draw - everything below the header comes
+        // from them - are held off the screen until the script has run, so
+        // their first frame is the finished page. Drawn first and filled in
+        // after, the page jumped once as it filled, on every visit.
+        Vite::useScriptTagAttributes(
+            fn (string $src): array => in_array($src, self::PAGE_DRAWING_SCRIPTS, true) ? ['blocking' => 'render'] : []
+        );
 
         View::composer('student.*', function ($view) {
             if (auth()->check()) {

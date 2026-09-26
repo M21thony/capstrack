@@ -46,6 +46,9 @@
       .dash-lead b{color:var(--text)}
       .dash-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
       .dash-tiles .stat-chip.quiet .stat-n{color:var(--text3)!important}
+      /* Two across on a phone, as on the expert dashboard: one a row, the four
+         of them took the whole first screen. */
+      @media (max-width:480px){.dash-tiles{grid-template-columns:1fr 1fr;gap:10px}}
       .dash-facts{display:flex;flex-direction:column;gap:8px}
       .dash-fact{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:10px;background:var(--bg3);font-size:13.5px}
       .dash-fact b{font-variant-numeric:tabular-nums}

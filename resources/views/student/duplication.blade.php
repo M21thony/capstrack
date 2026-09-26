@@ -88,7 +88,7 @@
   border: none;
   background: none;
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans','DM Sans Fallback', sans-serif;
   font-size: 10px;
   font-weight: 600;
   color: var(--primary, #5b5bd6);
