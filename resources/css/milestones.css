@@ -236,6 +236,14 @@
 .ms-ecount { font-size: 12px; color: var(--text3); white-space: nowrap; }
 .ms-gate { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); cursor: pointer; }
 .ms-ehead .ms-btn { min-height: 30px; padding-right: 9px; font-size: 12px; }
+.ms-closed-tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bg4); color: var(--text2); white-space: nowrap; }
+/* A milestone's own due date and description, under its name. */
+.ms-emeta { display: flex; align-items: flex-start; gap: 10px; padding: 6px 12px 6px 42px; border-bottom: 1px solid var(--border); }
+.ms-emeta-field { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); flex: none; }
+.ms-emeta input[type=date], .ms-emeta-desc { border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; min-height: 31px; font: inherit; font-size: 12.5px; background: var(--bg2); color: var(--text); }
+.ms-emeta-desc { flex: 1; min-width: 0; resize: vertical; line-height: 1.45; }
+.ms-emeta input:focus, .ms-emeta-desc:focus { outline: none; border-color: var(--accent); }
+@media (max-width: 720px) { .ms-emeta { flex-direction: column; align-items: stretch; padding-left: 12px; } }
 .ms-erow { padding: 2px 12px 2px 42px; border-top: 1px solid var(--border); }
 .ms-ebody > .ms-erow:first-child { border-top: 0; }
 .ms-erow.ms-picked { background: var(--accent-light); }

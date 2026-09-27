@@ -543,10 +543,12 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     h.append(
       hd, chev, el('span', 'ms-ord', String(idx + 1)), name, nameActs,
       el('span', 'ms-ecount', plural(items.length, 'deliverable')),
+      ...(m.closed ? [el('span', 'ms-closed-tag', 'Closed')] : []),
       // The first milestone has nothing before it to wait for.
       ...(idx === 0 ? [] : [gateBox(m)]),
       el('span', 'ms-spacer'),
       btn('Add deliverables', 'ms-btn-add', () => openAdd(m), 'plus'),
+      closeButton(m),
       btn('Archive', '', () => run(
         async () => { await api('PATCH', fill(urls.milestone, m.id), { archived: true }); await reload(); },
         `Archived the ${m.name} milestone. Teams no longer see it or its deliverables.`,
@@ -606,6 +608,8 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     intoPhase(h);
 
     if (!open) return g;
+
+    g.append(detailsRow(m));
 
     const list = el('div', 'ms-ebody');
     if (!items.length) list.append(el('div', 'ms-drop-hint', 'No deliverables yet. Add some, or drag them here.'));
@@ -920,6 +924,63 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
   }
 
   // ── Small helpers ─────────────────────────────────────────────────────
+
+  /**
+   * A milestone's own due date and description, saved as soon as they change:
+   * the date when it is picked, the description when the box is left.
+   */
+  function detailsRow(m) {
+    const row = el('div', 'ms-emeta');
+    const set = change => api('PATCH', fill(urls.milestone, m.id), change).then(reload);
+
+    const due = dateInput('ms-emeta-due');
+    due.value = m.due_on || '';
+    due.dataset.key = 'due-' + m.id;
+    due.setAttribute('aria-label', `Due date of ${m.name}`);
+    due.addEventListener('change', () => {
+      const before = m.due_on || null;
+      const after = due.value || null;
+      if (after === before) return;
+      E.focusKey = 'due-' + m.id;
+      run(
+        () => set({ due_on: after }),
+        after ? `${m.name} is due ${fmtDate(after)}.` : `${m.name} no longer has a due date of its own.`,
+        () => set({ due_on: before }),
+      );
+    });
+
+    const desc = el('textarea', 'ms-emeta-desc');
+    desc.rows = 1;
+    desc.maxLength = 2000;
+    desc.value = m.description || '';
+    desc.placeholder = 'What this milestone is for (optional)';
+    desc.dataset.key = 'desc-' + m.id;
+    desc.setAttribute('aria-label', `Description of ${m.name}`);
+    desc.addEventListener('change', () => {
+      const before = m.description || null;
+      const after = desc.value.trim() || null;
+      if (after === before) return;
+      E.focusKey = 'desc-' + m.id;
+      run(() => set({ description: after }), `Saved the description of ${m.name}.`, () => set({ description: before }));
+    });
+
+    const dueLabel = el('label', 'ms-emeta-field');
+    dueLabel.append(el('span', '', 'Due'), due);
+    row.append(dueLabel, desc);
+    return row;
+  }
+
+  /** Close a milestone once it is over, or reopen it. Teams' progress on it stays as it is. */
+  function closeButton(m) {
+    const set = closed => api('PATCH', fill(urls.milestone, m.id), { closed }).then(reload);
+    return m.closed
+      ? btn('Reopen', '', () => run(() => set(false), `Reopened ${m.name}.`, () => set(true)), 'undo')
+      : btn('Close', '', () => run(
+        () => set(true),
+        `Closed ${m.name}. It sends no more reminders; teams keep their progress on it.`,
+        () => set(false),
+      ), 'check');
+  }
 
   /** The gate: teams cannot hand anything in here until every milestone above it is done. */
   function gateBox(m) {
