@@ -119,7 +119,7 @@ class CapsaCorrectsOrNumberTest extends TestCase
         $screen = file_get_contents(resource_path('js/financial/capsa.js'));
 
         $this->assertStringContainsString('id="c-or"', $screen, 'the OR number is an editable field while the receipt waits');
-        $this->assertStringContainsString("confirmLabel: 'Yes, verify'", $screen);
+        $this->assertStringContainsString("confirmLabel: 'Verify'", $screen);
         $this->assertStringContainsString("cancelLabel: 'No'", $screen);
         $this->assertStringContainsString('await verifyOne(selected)', $screen, 'the button and the V key both ask first');
         $this->assertSame(2, substr_count($screen, 'await verifyOne(selected)'));

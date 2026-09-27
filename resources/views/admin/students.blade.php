@@ -279,6 +279,7 @@ const CSRF_TOKEN = '{{ csrf_token() }}';
 
 // ── TOAST ──────────────────────────────────────────────
 function showToast(message, type = 'success') {
+  if (window.ctToast) { return ctToast(message, type); }
   const icons = {
     success: `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
     error: `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,

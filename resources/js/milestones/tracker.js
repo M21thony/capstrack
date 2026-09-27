@@ -180,7 +180,7 @@ function start(root) {
       syncCounts();
       render();
     } catch (e) {
-      toast(e.message);
+      toast(e.message, null, 'error');
     }
   }
 
@@ -492,7 +492,7 @@ function start(root) {
       });
       return true;
     } catch (e) {
-      toast(e.message);
+      toast(e.message, null, 'error');
       return false;
     }
   }
@@ -560,8 +560,8 @@ function start(root) {
     side.append(checks, picks);
 
     const ask = () => picks.replaceChildren(
-      btn("Yes, it's complete", 'ms-btn-gold', () => decide({ status: 'complete' }, `${r.title} closed for ${t.name}.`)),
-      btn('No, send it back', 'ms-btn-warn', sendBack),
+      btn('Complete', 'ms-btn-gold', () => decide({ status: 'complete' }, `${r.title} closed for ${t.name}.`)),
+      btn('Send back', 'ms-btn-warn', sendBack),
     );
 
     const sendBack = () => {
@@ -574,7 +574,7 @@ function start(root) {
       picks.replaceChildren(
         label,
         note,
-        btn('Send back with this note', 'ms-btn-warn', () => {
+        btn('Send back', 'ms-btn-warn', () => {
           if (!note.value.trim()) return note.focus();
           decide({ status: 'sent_back', note: note.value.trim() }, `${t.name} was asked to fix their ${r.title}.`);
         }),

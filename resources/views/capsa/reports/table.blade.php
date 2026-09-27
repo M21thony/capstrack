@@ -486,6 +486,7 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
   var scroller = document.getElementById('rp-scroll');
 
   function toast(text) {
+    if (window.ctToast) { return ctToast(text); }
     var t = document.getElementById('rp-toast');
     t.textContent = text;
     t.classList.add('show');

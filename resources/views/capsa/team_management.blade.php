@@ -444,6 +444,7 @@
           setOk = document.getElementById('setOk');
 
     const toast = (msg, ok) => {
+      if (window.ctToast) { return ctToast(msg, ok ? 'success' : 'error'); }
       const el = document.getElementById('tm-toast');
       el.textContent = msg;
       el.style.borderLeftColor = ok ? 'var(--green)' : 'var(--red)';

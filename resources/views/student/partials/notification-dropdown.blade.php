@@ -456,6 +456,7 @@ document.addEventListener('click', function(e) {
     'toastOwner' => 's'.auth('web')->id(),
   ])
 @endauth
+@include('partials.action-toast')
 
 <script src="/js/capstrack-push.js" defer></script>
 <script>

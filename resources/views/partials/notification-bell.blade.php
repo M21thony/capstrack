@@ -168,6 +168,7 @@
     'toastOwner' => 'e'.$bellExpert->expert_id,
   ])
 @endif
+@include('partials.action-toast')
 
 <script src="/js/capstrack-push.js" defer></script>
 <script>
