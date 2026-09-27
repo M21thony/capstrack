@@ -5,7 +5,7 @@
 // ── Users and roles ──────────────────────────────────────────────
 
 Table students {
-  student_id bigint [pk]
+  student_id int [pk]
   student_number varchar(20)
   f_name varchar(50)
   l_name varchar(50)
@@ -14,16 +14,16 @@ Table students {
 }
 
 Table student_s_y {
-  s_y_id bigint [pk]
-  student_id bigint [not null]
-  team_id bigint
+  s_y_id int [pk]
+  student_id int [not null]
+  team_id int
   school_year varchar(20)
   program "enum('BSIT','BSCS','BLIS','BSIS')"
   student_status "enum('Failed','Passed','Active')" [not null]
 }
 
 Table capstone_experts {
-  expert_id bigint [pk]
+  expert_id int [pk]
   email varchar(250) [not null]
   first_name varchar(50) [not null]
   last_name varchar(50) [not null]
@@ -34,54 +34,54 @@ Table capstone_experts {
 }
 
 Table roles {
-  role_id bigint [pk]
+  role_id int [pk]
   role_name varchar(100) [not null]
 }
 
 Table expert_roles {
-  expert_role_id bigint [pk]
-  expert_id bigint [not null]
-  role_id bigint [not null]
+  expert_role_id int [pk]
+  expert_id int [not null]
+  role_id int [not null]
 }
 
 Table expert_expertise {
-  expertise_id bigint [pk]
-  expert_id bigint [not null]
+  expertise_id int [pk]
+  expert_id int [not null]
   expertise_field varchar(100) [not null]
 }
 
 // ── Teams, expert applications, titles ───────────────────────────
 
 Table team {
-  team_id bigint [pk]
-  leader_id bigint
-  selected_pre_proposal_id bigint
+  team_id int [pk]
+  leader_id int
+  selected_pre_proposal_id int
   team_name varchar(100) [not null]
   project_title varchar(255)
   team_status "enum('Active','Full')" [not null]
 }
 
 Table capstone_expert_application {
-  assignment_id bigint [pk]
-  team_id bigint [not null]
-  expert_id bigint [not null]
-  expert_role_id bigint
-  pre_proposal_id bigint
+  assignment_id int [pk]
+  team_id int [not null]
+  expert_id int [not null]
+  expert_role_id int
+  pre_proposal_id int
   status varchar(191) [not null]
 }
 
 Table capstone_pre_proposals {
-  id bigint [pk]
-  team_id bigint [not null]
-  duplication_check_id bigint [not null]
+  id int [pk]
+  team_id int [not null]
+  duplication_check_id int [not null]
   title varchar(255) [not null]
   adviser_status varchar(20)
   approved_status tinyint(1) [not null]
 }
 
 Table duplication_checks {
-  id bigint [pk]
-  student_s_y_id bigint [not null]
+  id int [pk]
+  student_s_y_id int [not null]
   top_score tinyint [not null]
   verdict varchar(191) [not null]
 }
@@ -89,27 +89,27 @@ Table duplication_checks {
 // ── Documents and reviews ────────────────────────────────────────
 
 Table capstone_documents {
-  file_id bigint [pk]
-  team_id bigint
-  student_id bigint [not null]
-  deliverable_id bigint
+  file_id int [pk]
+  team_id int
+  student_id int [not null]
+  deliverable_id int
   file_name varchar(191) [not null]
   file_version int [not null]
   document_status varchar(191) [not null]
 }
 
 Table capstone_document_review {
-  review_id bigint [pk]
-  file_id bigint [not null]
-  expert_id bigint [not null]
+  review_id int [pk]
+  file_id int [not null]
+  expert_id int [not null]
   review_status "enum('To Review','Reviewing','Reviewed')" [not null]
   verdict varchar(32)
   reviewed_at timestamp
 }
 
 Table pdf_remarks {
-  id bigint [pk]
-  review_id bigint [not null]
+  id int [pk]
+  review_id int [not null]
   page_number int [not null]
   comment text
 }
@@ -117,8 +117,8 @@ Table pdf_remarks {
 // ── Consultations ────────────────────────────────────────────────
 
 Table consultation_schedule {
-  schedule_id bigint [pk]
-  expert_id bigint [not null]
+  schedule_id int [pk]
+  expert_id int [not null]
   specific_date date
   start_time time
   end_time time
@@ -136,8 +136,8 @@ Table consultation_booking {
 // ── Defenses and grading ─────────────────────────────────────────
 
 Table defense_schedule {
-  defense_id bigint [pk]
-  team_id bigint [not null]
+  defense_id int [pk]
+  team_id int [not null]
   defense_type "enum('Pre-proposal Defense','Title Defense','Pre Oral Defense','Final Oral Defense')"
   schedule_date datetime
   venue varchar(40)
@@ -145,31 +145,31 @@ Table defense_schedule {
 }
 
 Table defense_panels {
-  defense_panel_id bigint [pk]
-  defense_id bigint [not null]
-  expert_id bigint [not null]
+  defense_panel_id int [pk]
+  defense_id int [not null]
+  expert_id int [not null]
   panel_role "enum('Panel Chair','Panel Member 1','Panel Member 2')"
 }
 
 Table panel_grades {
-  grade_id bigint [pk]
-  defense_id bigint [not null]
-  expert_id bigint [not null]
-  rubric_id bigint [not null]
+  grade_id int [pk]
+  defense_id int [not null]
+  expert_id int [not null]
+  rubric_id int [not null]
   total_score decimal(6,2)
   verdict varchar(191)
 }
 
 Table grading_rubrics {
-  rubric_id bigint [pk]
+  rubric_id int [pk]
   rubric_name varchar(191) [not null]
   rubric_type varchar(191) [not null]
   total_points decimal(6,2) [not null]
 }
 
 Table rubric_criteria {
-  criterion_id bigint [pk]
-  rubric_id bigint [not null]
+  criterion_id int [pk]
+  rubric_id int [not null]
   criterion_name varchar(191) [not null]
   max_points decimal(6,2) [not null]
 }
@@ -177,47 +177,47 @@ Table rubric_criteria {
 // ── Requirements and progress ────────────────────────────────────
 
 Table checklists {
-  id bigint [pk]
-  capsa_id bigint [not null]
+  id int [pk]
+  capsa_id int [not null]
   program varchar(8) [not null]
   title varchar(191) [not null]
 }
 
 Table checklist_milestones {
-  id bigint [pk]
-  checklist_id bigint [not null]
+  id int [pk]
+  checklist_id int [not null]
   name varchar(191) [not null]
   position int [not null]
 }
 
 Table deliverables {
-  id bigint [pk]
-  checklist_milestone_id bigint [not null]
+  id int [pk]
+  checklist_milestone_id int [not null]
   title varchar(191) [not null]
   due_date date
 }
 
 Table deliverable_checks {
-  id bigint [pk]
-  deliverable_id bigint [not null]
-  team_id bigint [not null]
-  file_id bigint
+  id int [pk]
+  deliverable_id int [not null]
+  team_id int [not null]
+  file_id int
   status varchar(16) [not null]
 }
 
 // ── Fees and receipts ────────────────────────────────────────────
 
 Table expense_posts {
-  id bigint [pk]
-  admin_id bigint
+  id int [pk]
+  admin_id int
   title varchar(191) [not null]
   defense_type varchar(191)
   amount decimal(10,2) [not null]
 }
 
 Table financial_records {
-  id bigint [pk]
-  student_id bigint [not null]
+  id int [pk]
+  student_id int [not null]
   expense_post_id int
   amount decimal(10,2)
   f_record_status "enum('verified','pending','rejected')"
@@ -227,7 +227,7 @@ Table financial_records {
 // ── Archive, resources, notifications ────────────────────────────
 
 Table archived_documents {
-  archived_id bigint [pk]
+  archived_id int [pk]
   team_id int
   title varchar(255) [not null]
   abstract text
@@ -244,18 +244,18 @@ Table resources {
 }
 
 Table notifications {
-  id bigint [pk]
-  student_id bigint
-  expert_id bigint
+  id int [pk]
+  student_id int
+  expert_id int
   type varchar(50) [not null]
   title varchar(255) [not null]
   is_read tinyint(1) [not null]
 }
 
 Table announcements {
-  id bigint [pk]
-  admin_id bigint [not null]
-  team_id bigint
+  id int [pk]
+  admin_id int [not null]
+  team_id int
   title varchar(191) [not null]
   priority "enum('normal','important','urgent')" [not null]
 }
