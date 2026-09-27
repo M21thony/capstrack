@@ -320,6 +320,7 @@ function render() {
 }
 
 function showToast(msg) {
+  if (window.ctToast) { return ctToast(msg, 'error'); }
   const toast = document.getElementById('toast');
   toast.textContent = msg;
   toast.classList.add('show');

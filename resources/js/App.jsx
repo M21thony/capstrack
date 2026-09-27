@@ -72,6 +72,10 @@ function App() {
   statusRef.current = reviewStatus;
 
   const showToast = useCallback((message, opts = {}) => {
+    if (window.ctToast) {
+      window.ctToast(message, opts.type, { undo: opts.undo });
+      return;
+    }
     clearTimeout(toastTimerRef.current);
     setToast({ message, ...opts });
     toastTimerRef.current = setTimeout(() => setToast(null), 4000);

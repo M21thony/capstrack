@@ -901,7 +901,7 @@
     </div>
     <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:20px">
       <button type="button" class="btn btn-soft" onclick="closeSubmitConfirm()">Go back</button>
-      <button type="button" class="btn btn-primary" id="pp-sc-ok">Yes, submit</button>
+      <button type="button" class="btn btn-primary" id="pp-sc-ok">Submit</button>
     </div>
   </div>
 </div>
@@ -928,7 +928,7 @@
     <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:20px" id="pp-confirm-message">Are you sure?</div>
     <div style="display:flex;gap:8px">
       <button type="button" class="btn" style="flex:1;justify-content:center;background:transparent;border:1px solid var(--border);color:var(--text2)" onclick="closePpConfirmModal()">No</button>
-      <button type="button" class="btn btn-primary" style="flex:1;justify-content:center;background:#dc3545;border-color:#dc3545" id="pp-confirm-yes-btn">Yes, Remove</button>
+      <button type="button" class="btn btn-primary" style="flex:1;justify-content:center;background:#dc3545;border-color:#dc3545" id="pp-confirm-yes-btn">Remove</button>
     </div>
   </div>
 </div>
@@ -1098,6 +1098,7 @@ function renderLoadingSteps(currentIdx) {
 }
 
 function showToast(message, type) {
+  if (window.ctToast) { return ctToast(message, type); }
   const toast = document.getElementById('pp-toast');
   if (!toast) { return; }
   toast.textContent = (type === 'error' ? '✕ ' : '✓ ') + message;

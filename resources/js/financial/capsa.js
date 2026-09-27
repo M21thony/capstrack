@@ -124,7 +124,7 @@ async function decide(ids, status, reason = '', orNumber = null) {
       // Receipts with an OR number stay waiting: they are checked one at a time.
       const done = new Set(res.data?.verified ?? []);
       ids = ids.filter(m => done.has(rec(fee, m).id));
-      if (res.data?.skipped?.length) toast(res.message);
+      if (res.data?.skipped?.length) toast(res.message, 'info');
     } else {
       await send('PATCH', URLS.record.replace('__ID__', rec(fee, ids[0]).id), status === 'verified'
         ? { status: 'approved', or_confirmed: true, ...(orNumber !== null ? { receipt_number: orNumber } : {}) }
@@ -158,7 +158,7 @@ const normaliseOr = v => v.trim().replace(/\s+/g, ' ').toUpperCase();
 async function verifyOne(m) {
   const r = rec(fee, m), f = FEES.find(x => x.id === fee), field = $('#c-or');
   const number = field ? normaliseOr(field.value) : null;
-  if (field && !number) { toast('Type the OR number printed on the receipt.'); field.focus(); return; }
+  if (field && !number) { toast('Type the OR number printed on the receipt.', 'error'); field.focus(); return; }
   const changed = number !== null && number !== normaliseOr(r.or || '');
   const ok = await confirmSheet({
     title: `Verify ${NAME[m]}'s receipt?`,
@@ -166,7 +166,7 @@ async function verifyOne(m) {
       + ' A verification cannot be taken back \u2014 one made by mistake has to be sent back instead.',
     note: changed ? `You changed the OR number: the student typed ${r.or}, it will be saved as ${number}.` : '',
     noteWarn: changed,
-    confirmLabel: 'Yes, verify',
+    confirmLabel: 'Verify',
     cancelLabel: 'No',
   });
   if (!ok) return;
@@ -232,7 +232,7 @@ $('#c-insp').addEventListener('click', async e => {
   if (b.hasAttribute('data-quick')) { $('#c-reason').value = b.textContent; }
   if (b.hasAttribute('data-confirm-back')) {
     const reason = $('#c-reason').value.trim();
-    if (!reason) { toast('Say why, so the student knows what to fix.'); $('#c-reason').focus(); return; }
+    if (!reason) { toast('Say why, so the student knows what to fix.', 'error'); $('#c-reason').focus(); return; }
     const m = selected;
     if (await decide([m], 'sent_back', reason)) toast(`Sent back to ${NAME[m]}.`);
   }
@@ -244,7 +244,7 @@ document.addEventListener('keydown', async e => {
   if (k === 'k' || e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
   if (k === 'v' && selected && st(fee, selected) === 'pending') {
     const box = $('#c-or-ok');
-    if (box && !box.checked) { toast('Check the OR number against the photo and tick the box first.'); box.focus(); return; }
+    if (box && !box.checked) { toast('Check the OR number against the photo and tick the box first.', 'error'); box.focus(); return; }
     await verifyOne(selected);
   }
   if (k === 'b' && selected && st(fee, selected) === 'pending') { e.preventDefault(); sendingBack = true; renderInspector(); }
@@ -252,7 +252,7 @@ document.addEventListener('keydown', async e => {
 $('#c-new-fee').addEventListener('click', () => { $('#f-amount').value = ''; $('#f-note').value = ''; $('#fx-d-fee').showModal(); });
 $('#f-save').addEventListener('click', async () => {
   const stage = $('#f-stage').value, amount = +$('#f-amount').value, program = $('#f-program').value;
-  if (!amount) { toast('Enter the amount each member pays.'); return; }
+  if (!amount) { toast('Enter the amount each member pays.', 'error'); return; }
   try {
     await send('POST', URLS.fees, { defense_type: stage, course: program, amount, description: $('#f-note').value.trim() || null });
     reloadWith(`${stage} Fee saved.`);

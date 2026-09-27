@@ -86,7 +86,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       E.picked.clear();
       render();
     } catch (e) {
-      toast(e.message);
+      toast(e.message, null, 'error');
     }
   }
 
@@ -111,7 +111,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
         toast(message, undo ? async () => { await undo(); saved(); render(); } : null);
       }
     } catch (e) {
-      toast(e.message);
+      toast(e.message, null, 'error');
       try { await reload(); } catch { /* keep what is shown */ }
       render();
     }
@@ -174,7 +174,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
         say(message);
       }
     } catch (e) {
-      toast(e.message);
+      toast(e.message, null, 'error');
       await load(E.cl.id);
     }
   }
@@ -204,7 +204,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       }
     } catch (e) {
       // Whatever saved stays saved; what the server refused stays in the field to fix.
-      toast(e.message);
+      toast(e.message, null, 'error');
       render();
       return;
     }
@@ -328,7 +328,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       await load(checklist.id);
       toast(`Created the ${checklist.program} checklist.`);
     } catch (e) {
-      toast(e.message);
+      toast(e.message, null, 'error');
     }
   }
 
@@ -408,7 +408,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     const dueGroup = el('div', 'ms-grp');
     dueGroup.append(due, btn('Set due date', '', () => {
       if (!due.value || !due.checkValidity()) {
-        toast('Enter a due date between 2000 and 2100.');
+        toast('Enter a due date between 2000 and 2100.', null, 'error');
         return due.focus();
       }
       bulk({ due_date: due.value }, `Due date set to ${fmtDate(due.value)} for ${N}.`);
@@ -429,7 +429,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     shiftGroup.append(days, direction, btn('Move due dates', '', () => {
       const n = parseInt(days.value, 10);
       if (!n || n < 1 || n > 365) {
-        toast('Enter how many days, from 1 to 365.');
+        toast('Enter how many days, from 1 to 365.', null, 'error');
         return days.focus();
       }
       const signed = n * Number(direction.value);
@@ -766,7 +766,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
         const titles = lines.value.split('\n').map(s => s.trim()).filter(Boolean);
         if (!titles.length) return lines.focus();
         if (due.value && !due.checkValidity()) {
-          toast('Enter a due date between 2000 and 2100.');
+          toast('Enter a due date between 2000 and 2100.', null, 'error');
           return due.focus();
         }
         box.close();

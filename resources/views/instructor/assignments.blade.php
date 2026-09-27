@@ -643,7 +643,7 @@
     </div>
     <div class="ta-dialog-foot">
       <button type="button" class="ta-btn" onclick="closeModal('approve-modal')">Cancel</button>
-      <button type="button" class="ta-btn go" id="btn-confirm-approve" onclick="confirmApprove()">Yes, approve</button>
+      <button type="button" class="ta-btn go" id="btn-confirm-approve" onclick="confirmApprove()">Approve</button>
     </div>
   </div>
 </div>
@@ -718,7 +718,7 @@
     </div>
     <div class="ta-dialog-foot">
       <button type="button" class="ta-btn" onclick="closeModal('title-approve-modal')">Cancel</button>
-      <button type="submit" class="ta-btn go">Yes, approve</button>
+      <button type="submit" class="ta-btn go">Approve</button>
     </div>
   </form>
 </div>
@@ -1140,7 +1140,7 @@ function openApproveModal(id) {
   if (SLOTS.max > 0) add('Your slots', SLOTS.used + ' → ' + (SLOTS.used + 1) + ' of ' + SLOTS.max + ' used');
   const btn = document.getElementById('btn-confirm-approve');
   btn.disabled = false;
-  btn.textContent = 'Yes, approve';
+  btn.textContent = 'Approve';
   openModal('approve-modal');
   btn.focus();
 }
@@ -1166,7 +1166,7 @@ async function confirmApprove() {
     showToast('Network error. Please try again.', 'error');
   }
   btn.disabled = false;
-  btn.textContent = 'Yes, approve';
+  btn.textContent = 'Approve';
 }
 
 // ── decline ───────────────────────────────────────────────────────────────
@@ -1278,7 +1278,7 @@ function openTitleApproveModal(id) {
   form.action = t.update_url;
   const b = form.querySelector('button[type="submit"]');
   b.disabled = false;
-  b.textContent = 'Yes, approve';
+  b.textContent = 'Approve';
   document.getElementById('title-approve-title').textContent = 'Approve ' + t.team + '\'s new title?';
   document.getElementById('title-approve-sub').textContent = 'Recommended by their CaPSA · duplication check: ' + dupLine(t);
   document.getElementById('title-approve-text').textContent = t.title;
@@ -1310,6 +1310,7 @@ function validateTitleDecline() {
 
 // ── messages ──────────────────────────────────────────────────────────────
 function showToast(msg, type) {
+  if (window.ctToast) { return ctToast(msg, type); }
   const toast = document.getElementById('msg-toast');
   toast.textContent = msg;
   toast.className = 'msg-toast show ' + type;

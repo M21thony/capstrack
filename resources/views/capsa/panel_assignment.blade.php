@@ -112,7 +112,7 @@
   <div class="dx-dlg">
     <div class="dx-dlg-head"><div class="dx-grow"><h2 id="d-remove-t">Remove this panel?</h2></div><button class="dx-icon-btn" data-close aria-label="Close"><svg><use href="#dx-i-x"/></svg></button></div>
     <div class="dx-dlg-body"><p id="d-remove-text" style="margin:0"></p></div>
-    <div class="dx-dlg-foot"><span class="dx-grow"></span><button class="dx-btn" data-close>No, keep it</button><button class="dx-btn dx-btn-danger" id="d-remove-yes">Yes, remove</button></div>
+    <div class="dx-dlg-foot"><span class="dx-grow"></span><button class="dx-btn" data-close>Keep</button><button class="dx-btn dx-btn-danger" id="d-remove-yes">Remove</button></div>
   </div>
 </dialog>
 
