@@ -309,6 +309,9 @@ class TeamManagementController extends Controller
         $engagedRoles = $this->engagedRoles($teamIds);
         $papers = $this->paperChecks($capsa->expert_id, $teamIds);
 
+        // Teams waiting on her first, the latest to turn a title in at the
+        // very top: a team that just submitted sat wherever it was created,
+        // often below the fold.
         return $teams->map(fn (Team $team) => $this->summarise(
             $team,
             $scoped['teamSections'][$team->team_id] ?? SectionScope::UNASSIGNED,
@@ -317,7 +320,10 @@ class TeamManagementController extends Controller
             $engagedRoles[$team->team_id] ?? collect(),
             $papers[$team->team_id] ?? collect(),
             $defenseSchedules[$team->team_id] ?? collect(),
-        ));
+        ))->sortBy([
+            fn ($a, $b) => $b->needsCapsa <=> $a->needsCapsa,
+            fn ($a, $b) => ($b->lastSubmittedAt?->getTimestamp() ?? 0) <=> ($a->lastSubmittedAt?->getTimestamp() ?? 0),
+        ])->values();
     }
 
     /**
@@ -522,6 +528,11 @@ class TeamManagementController extends Controller
             'papersToCheck' => $papers->where('review_status', '!=', 'Reviewed')->count(),
             'proposals' => $proposals,
             'pendingProposalCount' => $pending->count(),
+            // When the newest title still waiting for her came in.
+            'lastSubmittedAt' => $pending->max('submitted_at'),
+            'needsCapsa' => $pending->isNotEmpty()
+                || ($submitted && ! $team->is_confirmed)
+                || $papers->where('review_status', '!=', 'Reviewed')->isNotEmpty(),
             'approvedProposalCount' => $approved->count(),
             'titleState' => $titleState,
             'awaitingVerification' => $submitted && ! $team->is_confirmed,
