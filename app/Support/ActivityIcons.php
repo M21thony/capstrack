@@ -53,6 +53,7 @@ final class ActivityIcons
         'team_verified' => ['shield', 'green', 'Team verified'],
         'team_updated' => ['edit', 'amber', 'Team updated'],
         'team_status_changed' => ['refresh', 'amber', 'Team status changed'],
+        'title_corrected' => ['edit', 'amber', 'Title corrected'],
         'member_count_changed' => ['sliders', 'amber', 'Team size changed'],
         'team_auto_closed' => ['lock', 'red', 'Team closed'],
         'team_locked' => ['lock', 'amber', 'Members locked'],
