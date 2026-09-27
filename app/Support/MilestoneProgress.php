@@ -174,6 +174,7 @@ class MilestoneProgress
                     ? ($unfinished ? self::names($unfinished) : null)
                     : $above;
                 $locked = $waitsFor !== null;
+                $dueOn = $milestone->due_on ?? $items->pluck('due_on')->filter()->max();
 
                 $before = collect();
 
@@ -193,9 +194,16 @@ class MilestoneProgress
                     'overdue' => $items->where('state', self::OVERDUE)->count(),
                     'percent' => $total === 0 ? 0 : (int) round($completed / $total * 100),
                     'locked' => $locked,
-                    // A milestone has no date of its own; the last thing due
-                    // inside it is the date the CaPSA means by "due".
-                    'due_on' => $items->pluck('due_on')->filter()->max(),
+                    // The milestone's own date when the CaPSA set one;
+                    // otherwise the last thing due inside it.
+                    'due_on' => $dueOn,
+                    // Its date has passed and the team has not finished it.
+                    // A closed milestone is over, so it is not called past due.
+                    'past_due' => $dueOn !== null
+                        && ! $milestone->isClosed()
+                        && $completed < $total
+                        && Carbon::parse($dueOn)->endOfDay()->isPast(),
+                    'closed' => $milestone->isClosed(),
                     // Named only when it matters: what this one is waiting for.
                     'requires' => $waitsFor,
                 ];
@@ -267,6 +275,8 @@ class MilestoneProgress
 
         return match (true) {
             $summary->total > 0 && $summary->completed === $summary->total => ['Completed', 'p-green', 'check'],
+            $summary->closed ?? false => ['Closed', 'p-gray', 'check'],
+            $summary->past_due ?? false => ['Past due', 'p-red', 'bang'],
             $states->contains(self::OVERDUE) => ['Overdue', 'p-red', 'bang'],
             $summary->completed > 0 || $states->contains(self::HANDED_IN) => ['In progress', 'p-gold', 'clock'],
             default => ['Not started', 'p-gray', 'dot'],
@@ -372,7 +382,8 @@ class MilestoneProgress
         ?DeliverableCheck $check,
         ?object $titles = null,
     ): object {
-        $due = $deliverable->due_date;
+        // A line with no date of its own falls due with its milestone.
+        $due = $deliverable->due_date ?? $deliverable->milestone?->due_on;
         $byRecommendation = $deliverable->closesOnTitleRecommendation();
 
         // Signed on the title the panel passed: before that pass, an upload or a check for it does not count.

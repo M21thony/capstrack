@@ -32,6 +32,7 @@
     'warn' => '<path d="M12 3 2 21h20Z"/><path d="M12 10v4M12 17.5v.5"/>',
     'bang' => '<path d="M12 7v6M12 17h.01"/>',
     'dot' => '<circle cx="12" cy="12" r="5"/>',
+    'flag' => '<path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/>',
     'half' => '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/>',
   ];
 @endphp

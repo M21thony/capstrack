@@ -19,6 +19,8 @@ use Illuminate\Console\Command;
  * Only the web channel. There is deliberately no email for this - it is the
  * one event the user asked for that never had one, and adding one would be
  * the spam they were trying to get away from.
+ *
+ * A milestone the CaPSA closed sends nothing: it is over, whatever is left.
  */
 class SendMilestoneReminders extends Command
 {
@@ -65,6 +67,7 @@ class SendMilestoneReminders extends Command
 
                 $due = $progress->items->filter(
                     fn ($row) => $row->due_on
+                        && ! $row->milestone->isClosed()
                         && $row->due_on->isSameDay($target)
                         && ! in_array($row->state, MilestoneProgress::COMPLETE_STATES, true)
                 )->values();

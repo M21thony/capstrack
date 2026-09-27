@@ -171,6 +171,43 @@ class ChecklistEditorTest extends TestCase
         $this->assertSame('2026-09-13', $form->fresh()->due_date->toDateString());
     }
 
+    public function test_a_milestone_takes_a_description_a_due_date_and_can_be_closed_and_reopened(): void
+    {
+        [$team] = $this->teamInSection('CapsTrack');
+        $checklist = $this->emptyChecklist($this->capsa);
+        $this->addDeliverable($checklist, ['title' => 'Signed form']);
+        $milestone = $checklist->milestones()->first();
+
+        $this->patchJson(route('capsa.checklist_milestones.update', $milestone), [
+            'description' => '  Title defense forms and the first three chapters.  ',
+            'due_on' => '2026-10-30',
+        ])
+            ->assertOk()
+            ->assertJsonPath('description', 'Title defense forms and the first three chapters.')
+            ->assertJsonPath('due_on', '2026-10-30')
+            ->assertJsonPath('closed', false);
+
+        $this->patchJson(route('capsa.checklist_milestones.update', $milestone), ['due_on' => '0200-10-30'])->assertStatus(422);
+
+        $this->patchJson(route('capsa.checklist_milestones.update', $milestone), ['closed' => true])
+            ->assertOk()
+            ->assertJsonPath('closed', true)
+            ->assertJsonPath('closed_at', now()->toDateString());
+        // Closing is not archiving: the team still has the milestone and its progress.
+        $this->assertSame(1, MilestoneProgress::forTeam($checklist, $team->team_id)->total);
+
+        $this->getJson(route('capsa.checklists.show', $checklist))
+            ->assertOk()
+            ->assertJsonPath('milestones.0.closed', true)
+            ->assertJsonPath('milestones.0.due_on', '2026-10-30');
+
+        $this->patchJson(route('capsa.checklist_milestones.update', $milestone), ['closed' => false, 'description' => '', 'due_on' => null])
+            ->assertOk()
+            ->assertJsonPath('closed', false)
+            ->assertJsonPath('description', null)
+            ->assertJsonPath('due_on', null);
+    }
+
     public function test_archiving_hides_from_teams_until_restored(): void
     {
         [$team] = $this->teamInSection('CapsTrack');
