@@ -79,6 +79,34 @@ class TitleRevision
         return self::whyNot($team) === null;
     }
 
+    /** How much of a title a correction may change: a fifth of it, never less than a few letters. */
+    public const CORRECTION_SHARE = 0.2;
+
+    public const CORRECTION_MIN = 5;
+
+    /**
+     * Whether $to only corrects $from - a misspelling, a wrong letter case,
+     * punctuation, a word or two - rather than being a different title.
+     *
+     * A leader may always fix the approved title's spelling (Update Team).
+     * Anything bigger is a new title, which goes through the CaPSA, or a
+     * revision, which the panel has to allow (whyNot()).
+     */
+    public static function isCorrection(string $from, string $to): bool
+    {
+        $normalize = fn (string $title) => trim(preg_replace('/\s+/', ' ', preg_replace('/[^a-z0-9 ]+/', ' ', mb_strtolower($title))));
+        $a = $normalize($from);
+        $b = $normalize($to);
+
+        if ($a === $b) {
+            return true;
+        }
+
+        $allowed = max(self::CORRECTION_MIN, (int) ceil(self::CORRECTION_SHARE * max(strlen($a), strlen($b))));
+
+        return levenshtein($a, $b) <= $allowed;
+    }
+
     /** Whether the panel sent the team back for a new title it has not settled yet. */
     public static function needsNewTitle(Team $team): bool
     {
