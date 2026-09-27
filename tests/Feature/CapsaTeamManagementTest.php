@@ -356,6 +356,21 @@ class CapsaTeamManagementTest extends TestCase
         $this->assertSame(1, substr_count($teams, 'class="tm-dot new"'));
     }
 
+    /** The list refreshes itself in place: the rows and counts, not the page. */
+    public function test_the_list_refreshes_itself_without_reloading_the_page(): void
+    {
+        $this->makeCapsaWithSections();
+        $this->makeTeamInSection('Team Live');
+
+        $html = $this->get(route('capsa.team_management'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('setInterval(refresh, 15000);', $html);
+        $this->assertStringContainsString("const parts = ['#tm-teams tbody', '#tm-progress tbody', '.page-head',", $html);
+        // Signed out meanwhile: nothing is swapped in.
+        $this->assertStringContainsString('if (!res.ok || res.redirected) { return; }', $html);
+        $this->assertStringNotContainsString('location.reload', $html);
+    }
+
     /** Members show their profile photo; anyone without one keeps their initials. */
     public function test_the_team_page_shows_members_profile_photos(): void
     {
