@@ -10,6 +10,15 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/team-management.css') }}"/>
 <style>
   .tm-empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.6}
+  /* A team waiting on her: gold edge, warm tint, and what it is waiting for. */
+  #tm-teams tr.tm-needs td{background:#fffbeb}
+  #tm-teams tr.tm-needs td:first-child{box-shadow:inset 4px 0 0 #d97706}
+  .tm-wait{display:inline-flex;align-items:center;gap:6px;margin-top:4px;font-size:11.5px;font-weight:700;color:#b45309}
+  .tm-wait time{font-weight:500;color:#92400e}
+  .tm-dot{width:8px;height:8px;border-radius:50%;background:#d97706;flex-shrink:0}
+  .tm-dot.new{background:#dc2626;animation:tmPulse 1.6s ease-out infinite}
+  @keyframes tmPulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.55)}100%{box-shadow:0 0 0 7px rgba(220,38,38,0)}}
+  @media (prefers-reduced-motion: reduce){.tm-dot.new{animation:none}}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
@@ -80,7 +89,7 @@
 
       $isDone = fn ($r) => $r->milestones && $r->milestones->total > 0
         && $r->milestones->completed === $r->milestones->total;
-      $needsHer = fn ($r) => $r->pendingProposalCount > 0 || $r->awaitingVerification || $r->papersToCheck > 0;
+      $needsHer = fn ($r) => $r->needsCapsa;
 
       $completedCount = $rows->filter($isDone)->count();
       $reviewCount = $rows->reject($isDone)->filter($needsHer)->count();
@@ -226,7 +235,14 @@
                   ->filter()->implode(' '));
                 $score = $defenseScores->get($row->team->team_id, collect())->last(fn ($s) => $s->average !== null);
               @endphp
-              <tr data-q="{{ $haystack }}" data-st="{{ $status }}" data-href="{{ $href }}">
+              @php
+                $waitingFor = collect([
+                  $row->pendingProposalCount ? $row->pendingProposalCount.' '.Str::plural('title', $row->pendingProposalCount).' to review' : null,
+                  $row->awaitingVerification ? 'To verify' : null,
+                  $row->papersToCheck ? $row->papersToCheck.' '.Str::plural('paper', $row->papersToCheck).' to check' : null,
+                ])->filter()->implode(' · ');
+              @endphp
+              <tr data-q="{{ $haystack }}" data-st="{{ $status }}" data-href="{{ $href }}" @class(['tm-needs' => $row->needsCapsa])>
                 <td class="tm-check"><input type="checkbox" aria-label="Select {{ $row->team->team_name }}"></td>
 
                 <td data-label="Team"><div style="display:flex;align-items:center;gap:11px">
@@ -234,6 +250,14 @@
                   <div style="min-width:0">
                     <div class="tname">{{ $row->team->team_name }}</div>
                     <div class="tsub">{{ $row->members->count() }}/{{ $maxMembers }} members &middot; {{ $row->leaderName }}</div>
+                    @if ($row->needsCapsa)
+                      <div class="tm-wait">
+                        <span @class(['tm-dot', 'new' => $row->lastSubmittedAt?->gt(now()->subDay())])></span>{{ $waitingFor }}
+                        @if ($row->lastSubmittedAt)
+                          <time datetime="{{ $row->lastSubmittedAt->toIso8601String() }}">&middot; {{ $row->lastSubmittedAt->diffForHumans() }}</time>
+                        @endif
+                      </div>
+                    @endif
                   </div>
                 </div></td>
 

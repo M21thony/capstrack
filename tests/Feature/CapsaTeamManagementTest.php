@@ -329,6 +329,33 @@ class CapsaTeamManagementTest extends TestCase
         $this->assertStringNotContainsString('tab-count', $html);
     }
 
+    /**
+     * A team that just turned a title in is the first row, marked, with how
+     * long ago - she no longer scrolls to find it.
+     */
+    public function test_the_team_that_just_submitted_is_on_top_and_marked(): void
+    {
+        $this->makeCapsaWithSections();
+        [$fresh, , $freshSy] = $this->makeTeamInSection('Team Fresh');
+        [$older, , $olderSy] = $this->makeTeamInSection('Team Older');
+        $this->makeTeamInSection('Team Quiet');
+
+        $this->addProposal($fresh, $freshSy, 1);
+        $this->addProposal($older, $olderSy, 1)->update(['submitted_at' => now()->subDays(2)]);
+
+        $html = $this->get(route('capsa.team_management'))->assertOk()->getContent();
+        $teams = substr($html, strpos($html, 'id="tm-teams"'), strpos($html, 'id="tm-progress"') - strpos($html, 'id="tm-teams"'));
+
+        $this->assertLessThan(strpos($teams, 'Team Older'), strpos($teams, 'Team Fresh'));
+        $this->assertLessThan(strpos($teams, 'Team Quiet'), strpos($teams, 'Team Older'));
+
+        $this->assertSame(2, substr_count($teams, 'class="tm-needs"'));
+        $this->assertStringContainsString('1 title to review', $teams);
+        $this->assertStringContainsString('2 days ago', $teams);
+        // Only the one from today pulses.
+        $this->assertSame(1, substr_count($teams, 'class="tm-dot new"'));
+    }
+
     /** Members show their profile photo; anyone without one keeps their initials. */
     public function test_the_team_page_shows_members_profile_photos(): void
     {
