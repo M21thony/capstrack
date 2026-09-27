@@ -15,6 +15,7 @@ use App\Models\Term;
 use App\Support\DefenseProgress;
 use App\Support\ProjectTags;
 use App\Support\StudentTeam;
+use App\Support\TitleRevision;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -546,6 +547,28 @@ class TeamController extends Controller
         $titleProposal = $hasTitle ? $team->titleProposal() : null;
         $titleTags = null;
 
+        // The title itself can be corrected here - a misspelling, a wrong
+        // case, a word or two. A reworded title needs the panel's "passed
+        // with revision"; a different one goes through the CaPSA. Checked
+        // before anything is saved, so a refused title changes nothing.
+        $oldTitle = (string) $team->project_title;
+        $newTitle = null;
+
+        if ($team->project_title && $request->filled('project_title')) {
+            $candidate = trim(preg_replace('/\s+/', ' ', (string) $request->input('project_title')));
+            $canRevise = TitleRevision::canRevise($team);
+
+            Validator::make(['project_title' => $candidate], [
+                'project_title' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) use ($oldTitle, $canRevise) {
+                    if (! $canRevise && ! TitleRevision::isCorrection($oldTitle, $value)) {
+                        $fail('That is more than a spelling fix. Only small corrections can be made here - a different title goes through your CaPSA.');
+                    }
+                }],
+            ])->validate();
+
+            $newTitle = $candidate !== $oldTitle ? $candidate : null;
+        }
+
         if ($hasTitle && $request->has('tags')) {
             $titleTags = Validator::make(
                 ['tags' => json_decode($request->input('tags'), true)],
@@ -567,6 +590,18 @@ class TeamController extends Controller
         }
 
         $originalStatus = $team->team_status;
+
+        if ($newTitle !== null) {
+            $team->update(['project_title' => $newTitle]);
+
+            // Written down, so the CaPSA can see what the approved title became.
+            $this->logActivity(
+                $studentId,
+                'title_corrected',
+                'Corrected the capstone title of <strong>'.e($team->team_name).'</strong> from <strong>'.e($oldTitle).'</strong> to <strong>'.e($newTitle).'</strong>',
+                ['team_id' => $team->team_id, 'old' => $oldTitle, 'new' => $newTitle]
+            );
+        }
 
         $team->update([
             'team_name' => $validated['team_name'],
