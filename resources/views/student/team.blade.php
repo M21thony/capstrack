@@ -39,6 +39,8 @@
   #editTeamModal .ut-msg[hidden] { display: none; }
   #editTeamModal .ut-note { margin-top: 6px; font-size: 11px; color: var(--text3); }
   #editTeamModal .ut-none { font-size: 12px; color: var(--amber, #b45309); padding: 4px 0; }
+  #editTeamModal .ut-title { display: block; width: 100%; min-height: 58px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; line-height: 1.5; resize: vertical; box-sizing: border-box; }
+  #editTeamModal .ut-title:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(201,168,44,.18); }
   #editTeamModal .ut-empty { padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--border); background: var(--bg3); font-size: 12px; line-height: 1.5; color: var(--text3); }
 
   [data-theme="dark"] .expert-removed-item { border-bottom-color: var(--border) !important; }
@@ -1257,22 +1259,36 @@
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
       <input type="text" name="team_name" id="edit-team-name" value="{{ $myTeam->team_name }}" placeholder="Enter team name..." autocomplete="off" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:0;box-sizing:border-box;">
       <div id="edit-team-name-msg" style="font-size: 11px; color: var(--red); margin: 6px 0 0; display: none;"></div>
-      {{-- Project Title is not typed here any more. It is whichever
-           pre-proposal the CAPSA approves - and when two are approved, the
-           one the team then picks - so it is shown, not edited. --}}
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin: 16px 0 8px;">Project Title</label>
+      {{-- The title comes from the pre-proposal the CaPSA approves (and, when
+           two are, the one the team picks). Once it is set the leader can
+           correct it here - a misspelling, a word or two. A reworded title
+           needs the panel's "passed with revision"; a different one goes
+           through the CaPSA (TitleRevision). --}}
+      <label for="edit-project-title" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin: 16px 0 8px;">Project Title</label>
       @php
         $approvedProposalCount = $myTeam->preProposals()->where('approved_status', true)->count();
+        $titleCanBeReworded = $myTeam->project_title && \App\Support\TitleRevision::canRevise($myTeam);
       @endphp
-      <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);font-size:13px;margin-bottom:16px;box-sizing:border-box;line-height:1.5;">
-        @if ($myTeam->project_title)
-          <span style="color:var(--text);font-weight:600;">{{ $myTeam->project_title }}</span>
-        @elseif ($approvedProposalCount >= 2)
-          <span style="color:var(--text2);">{{ $approvedProposalCount }} of your titles were approved &mdash; choose the one you want on the <a href="{{ route('student.duplication') }}" style="color:var(--accent3);font-weight:600;">Duplication Checker</a> page.</span>
-        @else
-          <span style="color:var(--text3);">Set once your CaPSA approves one of your pre-proposal titles.</span>
-        @endif
-      </div>
+      @if ($myTeam->project_title)
+        <textarea name="project_title" id="edit-project-title" class="ut-title" rows="2" maxlength="255" required
+                  data-saved="{{ $myTeam->project_title }}">{{ old('project_title', $myTeam->project_title) }}</textarea>
+        @error('project_title')<div class="ut-msg">{{ $message }}</div>@enderror
+        <div class="ut-note" style="margin-bottom:16px;">
+          @if ($titleCanBeReworded)
+            Your panel passed the title with revision, so you can reword it until the Signed Final Project Title Form is in.
+          @else
+            Fix spelling or small mistakes. A different title goes through your CaPSA.
+          @endif
+        </div>
+      @else
+        <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);font-size:13px;margin-bottom:16px;box-sizing:border-box;line-height:1.5;">
+          @if ($approvedProposalCount >= 2)
+            <span style="color:var(--text2);">{{ $approvedProposalCount }} of your titles were approved &mdash; choose the one you want on the <a href="{{ route('student.duplication') }}" style="color:var(--accent3);font-weight:600;">Duplication Checker</a> page.</span>
+          @else
+            <span style="color:var(--text3);">Set once your CaPSA approves one of your pre-proposal titles.</span>
+          @endif
+        </div>
+      @endif
 
       {{-- The capstone title's own tags - the ones the team picked on the
            pre-proposal that became its title. They come filled in; the leader
@@ -1293,7 +1309,8 @@
               <option value="{{ $option }}">{{ $option }}</option>
             @endforeach
           </select>
-          <div id="tagsMsg" class="ut-msg" role="alert" hidden></div>
+          @php $tagsError = $errors->first('tags') ?: $errors->first('tags.*'); @endphp
+          <div id="tagsMsg" class="ut-msg" role="alert" @if (! $tagsError) hidden @endif>{{ $tagsError }}</div>
           <div class="ut-note">From your capstone title. Keep at least {{ \App\Support\ProjectTags::MIN }}, up to {{ \App\Support\ProjectTags::MAX }}.</div>
         @else
           <div class="ut-empty">Tags come with your capstone title. They appear here once your CaPSA approves one of your pre-proposal titles, and you can add or remove them then.</div>
@@ -2177,18 +2194,30 @@ function validateForm(event) {
     return true;
 }
 
-// Opening the modal starts from what is saved, so a cancelled edit is gone.
+// Opening the modal starts from what is saved, so a cancelled edit is gone -
+// except right after the server refused the title, when what was typed stays.
+var keepTypedTitle = @json($errors->has('project_title'));
+var keepTagsMsg = @json($errors->has('tags') || $errors->has('tags.*'));
 var origOpenTeamModal = openEditTeamModal;
 openEditTeamModal = function() {
     origOpenTeamModal();
+    var title = document.getElementById('edit-project-title');
+    if (title && !keepTypedTitle) title.value = title.dataset.saved || '';
+    keepTypedTitle = false;
     var input = document.getElementById('tagsHiddenInput');
     if (input) {
         var saved = [];
         try { saved = JSON.parse(input.dataset.saved || '[]'); } catch (e) {}
-        showTagsMsg('');
+        if (!keepTagsMsg) showTagsMsg('');
+        keepTagsMsg = false;
         renderProjectTags(saved);
     }
 };
+
+// A refused title or tag list reopens the modal, with the reason under the field.
+@if ($errors->hasAny(['project_title', 'tags']))
+document.addEventListener('DOMContentLoaded', function () { openEditTeamModal(); });
+@endif
 
 // Cancelling an invitation is declining it - the same endpoint the invited
 // student's own Decline button uses, so there is one way for an invitation to

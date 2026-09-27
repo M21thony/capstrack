@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\CapstonePreProposal;
+use App\Models\DefenseSchedule;
 use App\Models\DuplicationCheck;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Support\DefenseOutcome;
+use App\Support\TitleRevision;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -171,22 +174,65 @@ class TeamUpdateTest extends TestCase
         $this->assertSame('Active', $team->fresh()->team_status);
     }
 
-    // A team's title is whichever pre-proposal the CAPSA approves - and when
-    // two are approved, whichever the team then picks. It used to also be
-    // typed straight into the Update Team form, which meant two sources for
-    // one fact that could disagree. Posting it here must now do nothing.
-    public function test_the_title_cannot_be_set_through_the_update_form(): void
+    // A team's title is whichever pre-proposal the CAPSA approves. The leader
+    // may correct it in Update Team - a misspelling, a word or two - but a
+    // different title is refused: that goes through the CaPSA.
+    public function test_a_different_title_cannot_be_set_through_the_update_form(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
-        $team->update(['project_title' => 'The Approved Title']);
+        $team->update(['project_title' => 'Smart Irrigation Monitoring System for Local Farmers']);
         $this->actingAs($student, 'web');
 
         $this->put(route('team.update', $team->team_id), [
             'team_name' => 'Renamed Team',
-            'project_title' => 'A Title The Leader Typed',
+            'project_title' => 'An Online Library Reservation App',
+        ])->assertSessionHasErrors('project_title');
+
+        $this->assertSame('Smart Irrigation Monitoring System for Local Farmers', $team->fresh()->project_title);
+        // Refused as a whole: nothing else on the form is saved either.
+        $this->assertSame('Original Name', $team->fresh()->team_name);
+    }
+
+    public function test_a_misspelled_title_can_be_corrected_and_the_capsa_can_see_it(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $team->update(['project_title' => 'Smart Irigation Monitering System for Local Farmers']);
+        $this->actingAs($student, 'web');
+
+        $this->put(route('team.update', $team->team_id), [
+            'team_name' => 'Original Name',
+            'project_title' => '  Smart Irrigation Monitoring System   for Local Farmers ',
         ])->assertSessionDoesntHaveErrors();
 
-        $this->assertSame('The Approved Title', $team->fresh()->project_title);
+        $this->assertSame('Smart Irrigation Monitoring System for Local Farmers', $team->fresh()->project_title);
+        $this->assertDatabaseHas('activity_log', ['student_id' => $student->student_id, 'type' => 'title_corrected']);
+    }
+
+    public function test_case_punctuation_and_a_word_are_corrections(): void
+    {
+        $from = 'CapsTrack: A Capstone Project Management System';
+
+        $this->assertTrue(TitleRevision::isCorrection($from, 'Capstrack - a capstone project management system'));
+        $this->assertTrue(TitleRevision::isCorrection($from, 'CapsTrack: A Capstone Project Monitoring System'));
+        $this->assertFalse(TitleRevision::isCorrection($from, 'BantayBaha: Flood Level Alerts via SMS'));
+    }
+
+    /** "Passed with revision" already lets the leader reword it; Update Team allows the same. */
+    public function test_a_title_passed_with_revision_can_be_reworded_here_too(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $team->update(['project_title' => 'Smart Irrigation Monitoring System for Local Farmers']);
+        DefenseSchedule::create([
+            'team_id' => $team->team_id, 'defense_type' => DefenseOutcome::PRE_PROPOSAL, 'attempt' => 1,
+            'outcome' => DefenseOutcome::PASSED_WITH_REVISION, 'outcome_recorded_at' => now()->subHour(),
+        ]);
+
+        $this->actingAs($student, 'web')->put(route('team.update', $team->team_id), [
+            'team_name' => 'Original Name',
+            'project_title' => 'IoT-Based Soil Moisture Alerts for Rice Farms in Camarines Sur',
+        ])->assertSessionDoesntHaveErrors();
+
+        $this->assertSame('IoT-Based Soil Moisture Alerts for Rice Farms in Camarines Sur', $team->fresh()->project_title);
     }
 
     public function test_the_api_also_refuses_to_set_the_title(): void
@@ -366,7 +412,7 @@ class TeamUpdateTest extends TestCase
         $this->assertSame(['Web-based'], (array) $team->fresh()->tags);
     }
 
-    public function test_the_update_form_shows_the_title_instead_of_asking_for_one(): void
+    public function test_the_update_form_offers_the_title_for_correction(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         StudentSchoolYear::firstOrCreate(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
@@ -375,8 +421,24 @@ class TeamUpdateTest extends TestCase
         $response = $this->actingAs($student, 'web')->get(route('student.team'));
 
         $response->assertStatus(200);
-        $response->assertSee('The Approved Title');
-        $response->assertDontSee('name="project_title"', false);
+        $response->assertSee('name="project_title"', false);
+        $response->assertSee('data-saved="The Approved Title"', false);
+        $response->assertSee('Fix spelling or small mistakes. A different title goes through your CaPSA.');
+    }
+
+    public function test_without_a_title_there_is_nothing_to_correct(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        StudentSchoolYear::firstOrCreate(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+        $this->actingAs($student, 'web');
+
+        $this->get(route('student.team'))->assertOk()->assertDontSee('name="project_title"', false);
+
+        // And posting one anyway sets nothing: the title comes from the CaPSA's approval.
+        $this->put(route('team.update', $team->team_id), [
+            'team_name' => 'Original Name', 'project_title' => 'A Title The Leader Typed',
+        ])->assertSessionDoesntHaveErrors();
+        $this->assertNull($team->fresh()->project_title);
     }
 
     public function test_the_form_explains_where_the_title_will_come_from_when_there_is_none(): void
