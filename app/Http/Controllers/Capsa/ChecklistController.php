@@ -147,6 +147,10 @@ class ChecklistController extends Controller
                 'name' => $milestone->name,
                 'archived' => (bool) $milestone->archived_at,
                 'requires_previous' => (bool) $milestone->requires_previous,
+                'description' => $milestone->description,
+                'due_on' => $milestone->due_on?->toDateString(),
+                'closed' => $milestone->isClosed(),
+                'closed_at' => $milestone->closed_at?->toDateString(),
                 'deliverables' => $milestone->deliverables->map(fn (Deliverable $d) => self::deliverable($d))->values(),
             ])->values(),
         ];
@@ -186,7 +190,13 @@ class ChecklistController extends Controller
         $checklist = Checklist::create(['capsa_id' => $capsaId, 'program' => $source->program, 'title' => $source->title]);
 
         foreach ($source->milestones()->active()->with(['deliverables' => fn ($q) => $q->whereNull('archived_at')])->get() as $position => $milestone) {
-            $copy = $checklist->milestones()->create(['name' => $milestone->name, 'position' => $position, 'requires_previous' => $milestone->requires_previous]);
+            $copy = $checklist->milestones()->create([
+                'name' => $milestone->name,
+                'description' => $milestone->description,
+                'due_on' => $milestone->due_on,
+                'position' => $position,
+                'requires_previous' => $milestone->requires_previous,
+            ]);
 
             foreach ($milestone->deliverables->values() as $at => $deliverable) {
                 $copy->deliverables()->create(

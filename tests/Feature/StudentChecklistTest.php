@@ -51,6 +51,25 @@ class StudentChecklistTest extends TestCase
             ->assertSee('Chapter 1 Draft');
     }
 
+    public function test_a_milestone_shows_its_description_due_date_and_past_due(): void
+    {
+        $milestone = $this->checklist()->milestones()->where('name', 'Getting started')->first();
+        $milestone->update([
+            'description' => 'Form your team and send the signed assignment form.',
+            'due_on' => now()->subDays(2)->toDateString(),
+        ]);
+
+        $this->get('/student/progress')
+            ->assertOk()
+            ->assertSee('Form your team and send the signed assignment form.')
+            ->assertSee('Due '.now()->subDays(2)->format('M j, Y'))
+            ->assertSee('Past due');
+
+        $milestone->update(['closed_at' => now()]);
+
+        $this->get('/student/progress')->assertOk()->assertDontSee('Past due');
+    }
+
     /** The CaPSA checking a signed form is what the team sees change. */
     public function test_a_form_the_capsa_checked_shows_as_closed(): void
     {

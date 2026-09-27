@@ -53,7 +53,8 @@
            and have a way back, instead of opening with no title on them. --}}
       @include('capsa.partials.team-management._crumb', ['trail' => [
         ['Team Management', route('capsa.team_management')],
-        [$tab === 'milestones' ? 'Milestones' : 'Leave Requests', null],
+        ...($tab === 'milestone_list' ? [['Milestones', route('capsa.team_management', ['tab' => 'milestones'])]] : []),
+        [match ($tab) { 'milestones' => 'Milestones', 'milestone_list' => 'All milestones', default => 'Leave Requests' }, null],
       ]])
       @include('capsa.partials.team-management.' . $tab, $tabData)
 
@@ -171,6 +172,9 @@
           <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'milestones']) }}">
             <x-tm-icon n="clip" s="16" />Milestones
             @if (($counts['milestones'] ?? 0) > 0)<span class="nb">{{ $counts['milestones'] }} to check</span>@endif
+          </a>
+          <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'milestone_list']) }}">
+            <x-tm-icon n="flag" s="16" />All milestones
           </a>
           <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'leave_requests']) }}">
             <x-tm-icon n="mail" s="16" />Leave Requests
