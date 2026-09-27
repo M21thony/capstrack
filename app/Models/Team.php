@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Jobs\SyncConsultationCancellation;
+use App\Services\GoogleCalendarService;
 use App\Services\Notifier;
 use App\Support\DefenseOutcome;
 use App\Support\MilestoneProgress;
@@ -11,6 +12,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class Team extends Model
 {
@@ -37,6 +39,20 @@ class Team extends Model
 
                 SyncConsultationCancellation::dispatch($booking->booking_id, ConsultationBooking::TEAM_REMOVED, (string) $team->team_name);
             }
+
+            $upcomingPanels = DefensePanel::whereNotNull('google_event_id')
+                ->whereIn('defense_id', DefenseSchedule::where('team_id', $team->team_id)->where('schedule_date', '>=', now())->select('defense_id'))
+                ->get();
+
+            foreach ($upcomingPanels as $panel) {
+                try {
+                    app(GoogleCalendarService::class)->cancelBookingEvent($panel->expert_id, $panel->google_event_id);
+                } catch (\Exception $e) {
+                    Log::warning('Defense panel Google Calendar cancel failed', ['defense_id' => $panel->defense_id, 'expert_id' => $panel->expert_id, 'error' => $e->getMessage()]);
+                }
+            }
+
+            DefenseSchedule::removeForTeams([$team->team_id]);
         });
     }
 
