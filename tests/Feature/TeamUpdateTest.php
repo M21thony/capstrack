@@ -8,6 +8,7 @@ use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class TeamUpdateTest extends TestCase
@@ -215,6 +216,154 @@ class TeamUpdateTest extends TestCase
         ])->assertSessionDoesntHaveErrors();
 
         $this->assertSame('Renamed Team', $team->fresh()->team_name);
+    }
+
+    /** A team whose title is settled: one approved pre-proposal, chosen, with its own tags. */
+    private function makeTeamWithTitle(array $tags = ['Web-based', 'Management System']): array
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $sy = StudentSchoolYear::firstOrCreate(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+        $check = DuplicationCheck::create([
+            'student_s_y_id' => $sy->s_y_id, 'document_path' => 'duplication-checks/title.pdf', 'concepts' => ['title' => 'T'],
+            'top_score' => 20, 'verdict' => 'Passed', 'matches' => [], 'instructors_suggested' => [],
+        ]);
+        $proposal = CapstonePreProposal::create([
+            'team_id' => $team->team_id, 'duplication_check_id' => $check->id, 'slot' => 1,
+            'title' => 'CapsTrack: A Capstone Project Monitoring System', 'sdg_goals' => 'SDG 4 – Quality Education',
+            'research_agenda' => ['Applications and Systems Development'], 'problem_statement' => 'A problem.',
+            'proposed_solution' => 'A solution.', 'scope' => 'A scope.', 'limitations' => 'A limitation.',
+            'sdm' => 'Agile Development Methodology', 'duplication_status' => 'free', 'approved_status' => true,
+            'submitted_at' => now(), 'tags' => $tags,
+        ]);
+        $team->update(['selected_pre_proposal_id' => $proposal->id, 'project_title' => $proposal->title]);
+
+        return [$student, $team->fresh(), $proposal];
+    }
+
+    public function test_the_form_starts_with_the_capstone_titles_own_tags(): void
+    {
+        [$student] = $this->makeTeamWithTitle(['Web-based', 'Management System']);
+
+        $response = $this->actingAs($student, 'web')->get(route('student.team'))->assertOk();
+
+        $response->assertSee('data-saved="'.e(json_encode(['Web-based', 'Management System'])).'"', false)
+            ->assertSee('From your capstone title. Keep at least 1, up to 5.')
+            // Only the fixed list is offered, the same one the pre-proposal form uses.
+            ->assertSee('<option value="Blockchain">Blockchain</option>', false)
+            ->assertDontSee('id="tagSearchInput"', false);
+    }
+
+    public function test_the_form_no_longer_has_team_members_or_a_status_dropdown(): void
+    {
+        [$student] = $this->makeTeamWithTitle();
+
+        $html = $this->actingAs($student, 'web')->get(route('student.team'))->assertOk()->getContent();
+        $modal = Str::between($html, 'id="editTeamModal"', '{{-- Open Slot Invite Modal --}}');
+        $modal = Str::before($modal, 'Open Slot Invite Modal');
+
+        $this->assertStringContainsString('Update Team', $modal);
+        $this->assertStringNotContainsString('Fixed at 5 members (including the leader)', $modal);
+        $this->assertStringNotContainsString('name="member_count"', $modal);
+        $this->assertStringNotContainsString('name="team_status"', $modal);
+        // The dropdown sent values the server never accepted, so every save
+        // from it failed - the name included.
+        $this->assertStringNotContainsString('id="teamStatusSelect"', $html);
+    }
+
+    public function test_saving_updates_the_titles_tags_and_the_team(): void
+    {
+        [$student, $team, $proposal] = $this->makeTeamWithTitle(['Web-based']);
+
+        $this->actingAs($student, 'web')->put(route('team.update', $team->team_id), [
+            'team_name' => 'Original Name',
+            'tags' => json_encode(['Web-based', 'AI / Machine Learning', 'Chatbot / NLP']),
+        ])->assertSessionDoesntHaveErrors();
+
+        $this->assertSame(['Web-based', 'AI / Machine Learning', 'Chatbot / NLP'], $proposal->fresh()->tags);
+        $this->assertSame(['Web-based', 'AI / Machine Learning', 'Chatbot / NLP'], (array) $team->fresh()->tags);
+    }
+
+    public function test_a_title_cannot_lose_all_its_tags(): void
+    {
+        [$student, $team, $proposal] = $this->makeTeamWithTitle(['Web-based', 'IoT']);
+
+        $this->actingAs($student, 'web')->put(route('team.update', $team->team_id), [
+            'team_name' => 'Renamed Team',
+            'tags' => '[]',
+        ])->assertSessionHasErrors(['tags' => 'Keep at least one tag on your capstone title.']);
+
+        $this->assertSame(['Web-based', 'IoT'], $proposal->fresh()->tags);
+        $this->assertSame('Original Name', $team->fresh()->team_name);
+    }
+
+    public function test_only_tags_from_the_list_and_at_most_five_are_accepted(): void
+    {
+        [$student, $team, $proposal] = $this->makeTeamWithTitle(['Web-based']);
+        $this->actingAs($student, 'web');
+
+        $this->put(route('team.update', $team->team_id), [
+            'team_name' => 'Original Name', 'tags' => json_encode(['Web-based', 'Anything I Typed']),
+        ])->assertSessionHasErrors('tags.1');
+
+        $this->put(route('team.update', $team->team_id), [
+            'team_name' => 'Original Name',
+            'tags' => json_encode(['Web-based', 'IoT', 'Blockchain', 'Mobile App', 'E-learning', 'Automation']),
+        ])->assertSessionHasErrors('tags');
+
+        $this->assertSame(['Web-based'], $proposal->fresh()->tags);
+    }
+
+    /** A title set without a pre-proposal behind it keeps its tags on the team, under the same rules. */
+    public function test_a_title_without_a_pre_proposal_keeps_its_tags_on_the_team(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam(['project_title' => 'TalaTuro: A Web-Based E-Class Record System', 'tags' => ['Web-based']]);
+        StudentSchoolYear::firstOrCreate(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+        $this->actingAs($student, 'web');
+
+        $this->get(route('student.team'))
+            ->assertOk()
+            ->assertSee('data-saved="'.e(json_encode(['Web-based'])).'"', false);
+
+        $this->put(route('team.update', $team->team_id), [
+            'team_name' => 'Original Name', 'tags' => json_encode(['Web-based', 'E-learning']),
+        ])->assertSessionDoesntHaveErrors();
+        $this->assertSame(['Web-based', 'E-learning'], (array) $team->fresh()->tags);
+
+        $this->put(route('team.update', $team->team_id), [
+            'team_name' => 'Original Name', 'tags' => '[]',
+        ])->assertSessionHasErrors('tags');
+        $this->assertSame(['Web-based', 'E-learning'], (array) $team->fresh()->tags);
+    }
+
+    /** Not chosen yet, but the title is one of its pre-proposals: that one's tags are the title's. */
+    public function test_the_pre_proposal_carrying_the_title_is_found_without_a_choice(): void
+    {
+        [$student, $team, $proposal] = $this->makeTeamWithTitle(['IoT']);
+        $team->update(['selected_pre_proposal_id' => null]);
+
+        $this->actingAs($student, 'web')->put(route('team.update', $team->team_id), [
+            'team_name' => 'Original Name', 'tags' => json_encode(['IoT', 'Automation']),
+        ])->assertSessionDoesntHaveErrors();
+
+        $this->assertSame(['IoT', 'Automation'], $proposal->fresh()->tags);
+    }
+
+    public function test_before_there_is_a_title_there_are_no_tags_to_edit(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam(['tags' => ['Web-based']]);
+        StudentSchoolYear::firstOrCreate(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+        $this->actingAs($student, 'web');
+
+        $this->get(route('student.team'))
+            ->assertOk()
+            ->assertSee('Tags come with your capstone title.')
+            ->assertDontSee('id="tagsHiddenInput"', false);
+
+        // Anything posted anyway is left alone.
+        $this->put(route('team.update', $team->team_id), [
+            'team_name' => 'Renamed Team', 'tags' => '[]',
+        ])->assertSessionDoesntHaveErrors();
+        $this->assertSame(['Web-based'], (array) $team->fresh()->tags);
     }
 
     public function test_the_update_form_shows_the_title_instead_of_asking_for_one(): void
