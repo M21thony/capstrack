@@ -35,14 +35,17 @@ class ProgressController extends Controller
         $groups = collect();
 
         if ($progress) {
-            $groups = $progress->items
-                ->groupBy(fn ($row) => $row->milestone->id)
-                ->map(fn ($rows) => (object) [
-                    'name' => $rows->first()->milestone->name,
-                    'rows' => $rows->values(),
-                    'closed' => $rows->whereIn('state', MilestoneProgress::COMPLETE_STATES)->count(),
-                    'overdue' => $rows->where('state', MilestoneProgress::OVERDUE)->count(),
-                    'dues' => $rows->pluck('due_on')->filter()->sort()->values(),
+            $groups = $progress->milestones
+                ->map(fn ($summary) => (object) [
+                    'name' => $summary->milestone->name,
+                    'description' => $summary->milestone->description,
+                    // The milestone's own date, when the CaPSA set one.
+                    'due' => $summary->milestone->due_on,
+                    'past_due' => $summary->past_due,
+                    'rows' => $summary->items,
+                    'closed' => $summary->completed,
+                    'overdue' => $summary->overdue,
+                    'dues' => $summary->items->pluck('due_on')->filter()->sort()->values(),
                 ])
                 ->values();
         }

@@ -233,6 +233,48 @@ class MilestoneProgressTest extends TestCase
         $this->assertSame(0, $after->overdue);
     }
 
+    public function test_a_milestones_own_due_date_wins_and_undated_lines_fall_due_on_it(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $dated = $this->addDeliverable($checklist, ['title' => 'Dated form', 'due_date' => now()->addWeeks(2)->toDateString()]);
+        $undated = $this->addDeliverable($checklist, ['title' => 'Undated form']);
+
+        $summary = MilestoneProgress::forTeam($checklist, $this->team->team_id)->milestones->first();
+        $this->assertTrue($summary->due_on->isSameDay(now()->addWeeks(2)));
+        $this->assertFalse($summary->past_due);
+
+        $checklist->milestones()->first()->update(['due_on' => now()->subDay()->toDateString()]);
+
+        $progress = MilestoneProgress::forTeam($checklist, $this->team->team_id);
+        $summary = $progress->milestones->first();
+        $this->assertTrue($summary->due_on->isSameDay(now()->subDay()));
+        $this->assertTrue($summary->past_due);
+        $this->assertSame(['Past due', 'p-red', 'bang'], MilestoneProgress::milestoneState($summary));
+        // The undated line takes the milestone's date; the dated one keeps its own.
+        $this->assertSame(MilestoneProgress::OVERDUE, $this->progressOf($checklist, $this->team, $undated)->state);
+        $this->assertSame(MilestoneProgress::NOT_STARTED, $this->progressOf($checklist, $this->team, $dated)->state);
+    }
+
+    public function test_a_finished_or_closed_milestone_is_not_past_due(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $form = $this->addDeliverable($checklist, ['title' => 'Form']);
+        $milestone = $checklist->milestones()->first();
+        $milestone->update(['due_on' => now()->subDays(3)->toDateString()]);
+
+        $milestone->update(['closed_at' => now()]);
+        $summary = MilestoneProgress::forTeam($checklist, $this->team->team_id)->milestones->first();
+        $this->assertTrue($summary->closed);
+        $this->assertFalse($summary->past_due);
+        $this->assertSame('Closed', MilestoneProgress::milestoneState($summary)[0]);
+
+        $milestone->update(['closed_at' => null]);
+        $this->check($form);
+        $summary = MilestoneProgress::forTeam($checklist, $this->team->team_id)->milestones->first();
+        $this->assertFalse($summary->past_due);
+        $this->assertSame('Completed', MilestoneProgress::milestoneState($summary)[0]);
+    }
+
     public function test_a_paper_sent_back_waits_on_the_team_until_they_upload_again(): void
     {
         $checklist = $this->emptyChecklist($this->capsa);

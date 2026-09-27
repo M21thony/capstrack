@@ -110,6 +110,7 @@
 .pt-g-main{flex:1;min-width:0;display:grid;gap:4px}
 .pt-g-name{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:14.5px;font-weight:700;color:var(--text)}
 .pt-g-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--text3)}
+.pt-g-desc{font-size:12.5px;line-height:1.5;color:var(--text2);white-space:pre-line;overflow-wrap:anywhere}
 .pt-mini{width:70px;height:5px;border-radius:99px;background:var(--bg3);overflow:hidden}
 .pt-mini i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .pt-group.is-done .pt-mini i{background:var(--green)}
@@ -225,7 +226,7 @@
   $groupState = function ($g) {
       $n = $g->rows->count();
       return match (true) {
-          $g->overdue > 0 => 'late',
+          $g->overdue > 0 || $g->past_due => 'late',
           $n > 0 && $g->closed === $n => 'done',
           $g->closed > 0 || $g->rows->contains(fn ($r) => ! in_array($r->state, ['not_started', 'overdue'], true)) => 'active',
           default => 'todo',
@@ -357,7 +358,8 @@
           </span>
           <span class="pt-g-main">
             <span class="pt-g-name">{{ $group->name }}
-              @if ($group->overdue)<span class="pt-pill r">{{ $group->overdue }} overdue</span>
+              @if ($group->past_due)<span class="pt-pill r">Past due</span>
+              @elseif ($group->overdue)<span class="pt-pill r">{{ $group->overdue }} overdue</span>
               @elseif ($st === 'done')<span class="pt-pill g">Done</span>
               @elseif ($isNow)<span class="pt-pill y">You are here</span>@endif
             </span>
@@ -365,11 +367,15 @@
               <span class="pt-mini"><i style="width: {{ $groupPercent }}%"></i></span>
               {{ $group->closed }} of {{ $rowCount }} closed
               <span class="pt-dot">·</span>
-              @if ($dues->isEmpty()) No due date
+              @if ($group->due) Due {{ $group->due->format('M j, Y') }}
+              @elseif ($dues->isEmpty()) No due date
               @elseif ($dues->first()->equalTo($dues->last())) Due {{ $dues->first()->format('M j') }}
               @else Due {{ $dues->first()->format('M j') }} – {{ $dues->last()->format('M j') }}
               @endif
             </span>
+            @if ($group->description)
+              <span class="pt-g-desc">{{ $group->description }}</span>
+            @endif
           </span>
           <svg class="pt-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
         </summary>
