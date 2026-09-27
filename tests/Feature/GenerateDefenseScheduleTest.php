@@ -47,7 +47,13 @@ class GenerateDefenseScheduleTest extends TestCase
         $member = Student::factory()->withCompleteProfile()->create();
         StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
 
-        foreach ($staffed ? Team::REQUIRED_EXPERT_ROLES : [] as $roleName) {
+        return $staffed ? $this->staff($team) : $team;
+    }
+
+    /** Gives a team the adviser, consultant and grammarian it needs to be ready. */
+    private function staff(Team $team): Team
+    {
+        foreach (Team::REQUIRED_EXPERT_ROLES as $roleName) {
             $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
             $role = Role::firstOrCreate(['role_name' => $roleName]);
             $expert->roles()->attach($role->role_id);
@@ -363,6 +369,95 @@ class GenerateDefenseScheduleTest extends TestCase
         $this->assertSame('2027-03-16', $row['date']);
         $this->assertSame('08:00', $row['start_time']);
         $this->assertSame('Mac Lab', $row['venue']);
+    }
+
+    /** Suggests and saves the whole draft, as the CaPSA does after reviewing it. */
+    private function generateAndSave(): array
+    {
+        $draft = $this->draft()->assertOk()->json('data.draft');
+        $this->apply(array_map(fn ($r) => ['defense_id' => $r['defense_id'], 'date' => $r['date'], 'start_time' => $r['start_time'], 'venue' => $r['venue']], $draft))->assertOk();
+
+        return collect($draft)->keyBy('team_name')->all();
+    }
+
+    public function test_a_waiting_teams_slot_in_its_panels_room_is_never_given_to_another_panel(): void
+    {
+        // Two teams share a panel; one is not ready yet (no grammarian - the
+        // same as an unpaid fee). A busy stage fills every other slot of day
+        // one, but the slot after the ready team stays empty for the waiting one.
+        $chair = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $this->panel($this->team('Ready'), $chair);
+        $waiting = $this->team('Waiting', staffed: false);
+        $this->panel($waiting, $chair);
+
+        foreach (range(1, 40) as $i) {
+            $this->panel($this->team('Other '.$i), CapstoneExpert::factory()->create(['approved_status' => true]));
+        }
+
+        $first = $this->generateAndSave();
+
+        $this->assertSame('2027-03-15 08:00 NAS Lab', $first['Ready']['date'].' '.$first['Ready']['start_time'].' '.$first['Ready']['venue']);
+        $this->assertFalse(
+            DefenseSchedule::where('venue', 'NAS Lab')->where('schedule_date', '2027-03-15 10:00:00')->exists(),
+            "the waiting team's slot stays empty"
+        );
+        $this->assertSame(31, DefenseSchedule::whereDate('schedule_date', '2027-03-15')->count(), 'every other slot that day is used');
+
+        // Once the team is ready it goes straight into the slot kept for it.
+        $this->staff($waiting);
+        $row = collect($this->draft()->assertOk()->json('data.draft'))->firstWhere('team_name', 'Waiting');
+
+        $this->assertSame('2027-03-15', $row['date']);
+        $this->assertSame('10:00', $row['start_time']);
+        $this->assertSame('NAS Lab', $row['venue']);
+    }
+
+    public function test_the_five_teams_of_one_panel_stay_on_one_day_when_two_are_ready_late(): void
+    {
+        // The case the CaPSA asked about: five teams, one panel, three ready.
+        // Hour-long defenses, so a room holds eight a day and all five fit.
+        DefenseWindow::where('defense_type', self::STAGE)->update(['duration_minutes' => 60]);
+        $chair = CapstoneExpert::factory()->create(['approved_status' => true]);
+
+        foreach (['T1', 'T2', 'T3'] as $name) {
+            $this->panel($this->team($name), $chair);
+        }
+        $late = [$this->team('T4', staffed: false), $this->team('T5', staffed: false)];
+        foreach ($late as $team) {
+            $this->panel($team, $chair);
+        }
+        foreach (range(1, 70) as $i) {
+            $this->panel($this->team('Other '.$i), CapstoneExpert::factory()->create(['approved_status' => true]));
+        }
+
+        $this->generateAndSave();
+        array_map(fn ($team) => $this->staff($team), $late);
+        $this->generateAndSave();
+
+        $panel = DefenseSchedule::whereHas('team', fn ($q) => $q->whereIn('team_name', ['T1', 'T2', 'T3', 'T4', 'T5']))->get();
+        $this->assertCount(1, $panel->map(fn ($s) => $s->schedule_date->toDateString().' '.$s->venue)->unique(), 'one day, one room');
+        $this->assertSame(['08:00', '09:00', '10:00', '11:00', '13:00'], $panel->map(fn ($s) => $s->schedule_date->format('H:i'))->sort()->values()->all());
+    }
+
+    public function test_a_panel_starts_its_day_where_all_its_teams_fit(): void
+    {
+        // Other panels already fill day one but for the last slot in two
+        // rooms. A panel with two teams (one still waiting) would be split
+        // across days there, so it starts on day two instead.
+        foreach (range(1, 30) as $i) {
+            $this->panel($this->team('Other '.$i), CapstoneExpert::factory()->create(['approved_status' => true]));
+        }
+        $this->generateAndSave();
+
+        $chair = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $this->panel($this->team('Ready'), $chair);
+        $this->panel($this->team('Waiting', staffed: false), $chair);
+
+        $row = collect($this->draft()->assertOk()->json('data.draft'))->firstWhere('team_name', 'Ready');
+
+        $this->assertSame('2027-03-16', $row['date']);
+        $this->assertSame('08:00', $row['start_time']);
+        $this->assertStringStartsWith('Not earlier: Mar 15', $row['skipped'], 'the CaPSA is told why day one was passed over');
     }
 
     public function test_a_row_outside_the_window_or_not_ready_is_skipped(): void
