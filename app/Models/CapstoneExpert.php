@@ -715,7 +715,7 @@ class CapstoneExpert extends Authenticatable
     public function deactivationBlocker(): ?string
     {
         if ($this->is_capsa && $this->sections) {
-            return "{$this->name} is still the CaPSA for ".implode(', ', $this->sections).'. Give those sections to another CaPSA first.';
+            return "{$this->name} is still the CaPSA for ".implode(', ', $this->sections).'. Take away their CaPSA role first, which frees those sections for another CaPSA.';
         }
 
         $teamNames = DefenseSchedule::whereNull('outcome')

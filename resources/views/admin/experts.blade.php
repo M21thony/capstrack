@@ -477,6 +477,15 @@
       </div>
     </div>
 
+    {{-- A section nobody holds has its checklist and its students' requests
+         going nowhere, and nothing else on the page would say so. --}}
+    @if ($uncoveredSections->isNotEmpty())
+      <p class="table-legend" style="color:var(--red)">
+        <b style="color:var(--red)">No CaPSA yet:</b> {{ $uncoveredSections->implode(', ') }}.
+        Give {{ $uncoveredSections->count() === 1 ? 'it' : 'them' }} to a CaPSA with <b>Edit sections</b> or <b>Add CaPSA</b>.
+      </p>
+    @endif
+
     {{-- Filters on their own line. They were sharing a strip with the count
          and the two buttons, which made "look for something" and "do
          something" compete for the same row. --}}
@@ -488,11 +497,12 @@
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="input" id="experts-search-input" placeholder="Search experts by name or expertise..."/>
       </div>
+      {{-- Signed in or not, and how many teams someone takes, are the
+           faculty's business; what this list is managed by is whether the
+           account is switched on. --}}
       <select class="input page-filter" id="statusFilter">
-        <option value="all">All Status</option>
-        <option value="active">Active</option>
-        <option value="full">Full</option>
-        <option value="offline">Offline</option>
+        <option value="all">All accounts</option>
+        <option value="on">Active</option>
         <option value="off">Deactivated</option>
       </select>
       <span class="page-filters-actions">
@@ -564,6 +574,9 @@
               // "offline" about it would be true and useless.
               $isOff = (bool) $expert->deactivated_at;
               $computedStatus = $isOff ? 'off' : ($isFull ? 'full' : ($isOnline ? 'active' : 'offline'));
+              // Asked up front, so the menu can say why instead of letting
+              // someone fill in the dialog only to be refused at the end.
+              $deactivationBlocker = $isOff ? null : $expert->deactivationBlocker();
               $capacityRows = $expert->parsedCapacity();
 
               // Filled counts per program, for the split-cap rows in the
@@ -603,7 +616,7 @@
               data-id="{{ $expert->expert_id }}"
               {{-- You cannot put yourself in a batch: bulk-removing your own
                    account is not a thing to be one careless drag away from. --}}
-              @if ($expert->expert_id === Auth::guard('expert')->id()) data-no-select="1" @endif
+              @if ($expert->expert_id === Auth::guard('expert')->id() || $deactivationBlocker) data-no-select="1" @endif
               data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
             <td style="padding-left:20px" data-label="Expert">
               <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
@@ -735,10 +748,15 @@
                               onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
                         <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Reactivate
                       </button>
+                    @elseif ($deactivationBlocker)
+                      <button type="button" class="rowmenu-item" disabled style="cursor:not-allowed;opacity:.55">
+                        <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate
+                      </button>
+                      <p style="margin:0;padding:2px 12px 8px;max-width:260px;font-size:11.5px;line-height:1.4;color:var(--text3);white-space:normal">{{ $deactivationBlocker }}</p>
                     @else
                       {{-- Deactivate rather than delete: a CaPSA who steps down for a
                            term should not have to be created from nothing when they
-                           come back, and their sections and history hang off the row. --}}
+                           come back, and their history hangs off the row. --}}
                       <button type="button" class="rowmenu-item danger remove-trigger"
                               data-id="{{ $expert->expert_id }}" data-name="{{ $displayName }}">
                         <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate
@@ -761,6 +779,7 @@
     function filterRows() {
       var q = searchInput ? searchInput.value.toLowerCase().trim() : '';
       var status = statusFilter ? statusFilter.value : 'all';
+      visible = 0;
 
       rows.forEach(function(row) {
         // Read off the row rather than out of the cells. Counting columns to
@@ -770,15 +789,23 @@
         var statusText = (row.dataset.status || '');
 
         var matchSearch = !q || searchText.includes(q);
-        var matchStatus = true;
-        if (status === 'active') matchStatus = statusText === 'active';
-        else if (status === 'full') matchStatus = statusText === 'full';
-        else if (status === 'offline') matchStatus = statusText === 'offline';
-        else if (status === 'off') matchStatus = statusText === 'off';
+        var matchStatus = status === 'all'
+          || (status === 'off' ? statusText === 'off' : statusText !== 'off');
 
-        row.style.display = (matchSearch && matchStatus) ? '' : 'none';
+        var shown = matchSearch && matchStatus;
+        row.style.display = shown ? '' : 'none';
+        if (shown) visible++;
       });
+
+      // A table that just goes blank reads as broken, not as "nobody matched".
+      noMatch.hidden = visible > 0;
     }
+
+    var visible = 0;
+    var noMatch = document.createElement('tr');
+    noMatch.hidden = true;
+    noMatch.innerHTML = '<td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No CaPSA matches that search.</td>';
+    rows[0]?.parentNode.appendChild(noMatch);
 
     if (searchInput) searchInput.addEventListener('input', filterRows);
     if (statusFilter) statusFilter.addEventListener('change', filterRows);
@@ -866,15 +893,11 @@
       </label>
       <textarea id="removeReasonInput" class="ct-modal-input" rows="3" placeholder="Why is this account being switched off? Every team they are working with will be told." style="resize:vertical;min-height:60px;font-family:inherit;"></textarea>
     </div>
-    <div style="margin-bottom:20px;text-align:left;">
-      <label class="ct-modal-label">
-        Type <code style="background:#fee2e2;color:#dc2626;padding:2px 6px;border-radius:4px;font-family:monospace;">deactivate</code> to confirm
-      </label>
-      <input type="text" id="removeConfirmInput" class="ct-modal-input" placeholder="type deactivate" autocomplete="off">
-    </div>
+    {{-- No "type deactivate" box: it is switched back on from the same row
+         in one click, so the typing guarded against nothing lasting. --}}
     <div class="ct-modal-actions">
       <button type="button" id="removeCancelBtn" class="ct-btn ct-btn-secondary">Cancel</button>
-      <button type="button" id="removeConfirmBtn" class="ct-btn ct-btn-danger" disabled>Deactivate</button>
+      <button type="button" id="removeConfirmBtn" class="ct-btn ct-btn-danger">Deactivate</button>
     </div>
   </div>
 </div>
@@ -1051,7 +1074,6 @@ function showToast(message, type = 'info', title = null) {
 
 // ── REMOVE EXPERT ─────────────────────────────────────────────
 const removeModal = document.getElementById('removeModal');
-const removeInput = document.getElementById('removeConfirmInput');
 const removeReason = document.getElementById('removeReasonInput');
 const removeBtn   = document.getElementById('removeConfirmBtn');
 
@@ -1059,17 +1081,12 @@ document.querySelectorAll('.remove-trigger').forEach(btn => {
   btn.addEventListener('click', function () {
     removeModal.dataset.expertId = this.dataset.id;
     document.getElementById('removeExpertName').textContent = this.dataset.name;
-    removeInput.value = '';
     removeReason.value = '';
-    removeBtn.disabled = true;
+    removeBtn.disabled = false;
     removeBtn.textContent = 'Deactivate';
     removeModal.style.display = 'flex';
     setTimeout(() => removeReason.focus(), 60);
   });
-});
-
-removeInput.addEventListener('input', function () {
-  removeBtn.disabled = this.value.trim().toLowerCase() !== 'deactivate';
 });
 
 document.getElementById('removeCancelBtn').addEventListener('click', () => {
@@ -1078,7 +1095,6 @@ document.getElementById('removeCancelBtn').addEventListener('click', () => {
 
 removeBtn.addEventListener('click', function () {
   const expertId = removeModal.dataset.expertId;
-  if (removeInput.value.trim().toLowerCase() !== 'deactivate') { return; }
 
   this.disabled = true;
   this.textContent = 'Deactivating…';
@@ -1109,7 +1125,7 @@ removeBtn.addEventListener('click', function () {
     .catch(() => {
       showToast('Network error while deactivating.', 'error');
       this.disabled = false;
-      this.textContent = 'Delete';
+      this.textContent = 'Deactivate';
     })
     .finally(() => { removeModal.style.display = 'none'; });
 });
@@ -1649,10 +1665,8 @@ onBulk('bulkRemove', function (ids, rows) {
   confirmSheet({
     title: 'Deactivate ' + ids.length + (ids.length === 1 ? ' account' : ' accounts') + '?',
     names: bulkNames(rows),
-    body: 'They can no longer sign in and cannot be assigned. Nothing is deleted - the '
-        + 'sections they cover and their history stay, and the account can be switched '
-        + 'back on from its row. To leave them signed in but without their sections, '
-        + 'use Take away the CaPSA role instead.',
+    body: 'They can no longer sign in and cannot be assigned. Nothing is deleted - their '
+        + 'history stays, and the account can be switched back on from its row.',
     confirmLabel: ids.length === 1 ? 'Deactivate account' : 'Deactivate ' + ids.length + ' accounts',
     danger: true,
   }).then(function (yes) {
@@ -1662,12 +1676,14 @@ onBulk('bulkRemove', function (ids, rows) {
       return fetch('{{ url('admin/experts') }}/' + id, {
         method: 'DELETE',
         headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-      }).then(r => r.ok).catch(() => false);
-    })).then(function (results) {
-      const ok = results.filter(Boolean).length;
-      const failed = results.length - ok;
-      showToast(failed ? ok + ' removed, ' + failed + ' could not be' : ok + ' removed',
-        failed ? 'error' : 'success');
+      }).then(r => r.ok ? null : r.json().then(d => d.message || 'Could not be deactivated.', () => 'Could not be deactivated.'))
+        .catch(() => 'Network error.');
+    })).then(function (errors) {
+      // Each refusal says why, so the ones left behind are not a mystery.
+      const failures = errors.filter(Boolean);
+      const ok = errors.length - failures.length;
+      showToast(failures.length ? ok + ' deactivated. ' + failures.join(' ') : ok + ' deactivated',
+        failures.length ? 'error' : 'success');
       setTimeout(() => window.location.reload(), 900);
     });
   });
