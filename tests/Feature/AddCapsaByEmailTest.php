@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\Student;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -25,7 +27,7 @@ class AddCapsaByEmailTest extends TestCase
 
         // The roles are reference data a real install has from its seeder;
         // without them there is nothing to point the grant at.
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(RoleSeeder::class);
     }
 
     private function admin(): CapstoneExpert
@@ -47,6 +49,54 @@ class AddCapsaByEmailTest extends TestCase
             ->where('capstone_experts.email', $email)
             ->where('roles.role_name', CapstoneExpert::CAPSA_ROLE)
             ->exists();
+    }
+
+    private function capsaWith(array $sections): CapstoneExpert
+    {
+        $capsa = CapstoneExpert::create([
+            'email' => 'holder.capsa@test.com',
+            'first_name' => 'Hol',
+            'last_name' => 'Der',
+            'approved_status' => true,
+            'sections' => $sections,
+        ]);
+        $capsa->roles()->attach(DB::table('roles')->where('role_name', CapstoneExpert::CAPSA_ROLE)->value('role_id'));
+
+        return $capsa;
+    }
+
+    /**
+     * Left on the row, capsaFor() - which reads sections, not the role - kept
+     * routing those sections to someone who was no longer a CaPSA.
+     */
+    public function test_taking_the_role_away_frees_their_sections(): void
+    {
+        $capsa = $this->capsaWith(['BSIT-3A']);
+
+        $this->actingAs($this->admin(), 'expert')
+            ->putJson(route('admin.experts.capsa.update', $capsa))
+            ->assertOk()
+            ->assertJson(['is_capsa' => false, 'sections' => []]);
+    }
+
+    /**
+     * The page names a section nobody covers, and says why Deactivate is
+     * greyed out for a CaPSA who still holds one.
+     */
+    public function test_the_page_names_uncovered_sections_and_why_a_capsa_cannot_be_deactivated(): void
+    {
+        $this->capsaWith(['BSIT-3A']);
+        Student::create([
+            'email' => 'nobody.covers@my.cspc.edu.ph', 'f_name' => 'No', 'l_name' => 'Cover',
+            'course' => 'BSIT', 'year_section' => '3rd '.json_decode('"·"').' B',
+        ]);
+
+        $this->actingAs($this->admin(), 'expert')
+            ->get(route('admin.experts'))
+            ->assertOk()
+            ->assertSee('No CaPSA yet:')
+            ->assertSee('BSIT-3B')
+            ->assertSee('is still the CaPSA for BSIT-3A', false);
     }
 
     /** An email and a section is the whole of it. */
