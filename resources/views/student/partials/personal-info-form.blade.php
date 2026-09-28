@@ -199,7 +199,7 @@
                 </div>
                 <div class="pi-field">
                     <label class="pi-label" for="section">Section</label>
-                    <input type="text" id="section" name="section" class="pi-input {{ $hasTeam ? 'pi-input-readonly' : '' }}" value="{{ old('section', $selectedSection) }}" placeholder="e.g. A" {{ $hasTeam ? 'readonly' : 'required' }} maxlength="1" {{ $hasTeam ? '' : 'oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, \'\')"' }}>
+                    <input type="text" id="section" name="section" class="pi-input {{ $hasTeam ? 'pi-input-readonly' : '' }}" value="{{ old('section', $selectedSection) }}" placeholder="e.g. A" {{ $hasTeam ? 'readonly' : 'required' }} maxlength="1" @unless ($hasTeam) oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '')" @endunless>
                     @error('section')<p class="pi-error">{{ $message }}</p>@enderror
                 </div>
             </div>
