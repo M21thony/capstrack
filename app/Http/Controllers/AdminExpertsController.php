@@ -96,6 +96,8 @@ class AdminExpertsController extends Controller
             'groupedSections' => $groupedSections,
             'laterSections' => $laterSections,
             'sectionOwners' => $sectionOwners,
+            // Sections whose checklist and requests currently reach nobody.
+            'uncoveredSections' => $available->diff(array_keys($sectionOwners))->values(),
         ]);
     }
 
@@ -386,6 +388,10 @@ class AdminExpertsController extends Controller
             ], 422);
         }
 
+        if ($blocker = $expert->deactivationBlocker()) {
+            return response()->json(['success' => false, 'message' => $blocker], 422);
+        }
+
         $reason = trim($request->input('reason', ''));
         $expertName = $expert->name;
         $notifiedTeams = 0;
@@ -433,9 +439,10 @@ class AdminExpertsController extends Controller
             'reason' => $reason,
         ], now()->addMinutes(10));
 
-        // Switched off, not thrown away: the row, their expertise, their team
-        // history and everything hanging off expert_id all stay, so somebody
-        // back from study leave is one click away rather than a re-application.
+        // Switched off, not thrown away: the row, their expertise and their
+        // grades all stay, so somebody back from study leave is one click away
+        // rather than a re-application. Their places on teams do not - see
+        // CapstoneExpert::booted().
         $expert->delete();
 
         $msg = "{$expertName}'s account has been deactivated.";
@@ -758,7 +765,15 @@ class AdminExpertsController extends Controller
                     ->delete();
             }
 
-            if (array_key_exists('sections', $validated)) {
+            // Taking the role away frees their sections too. Left on the row,
+            // TeamChecklist::capsaFor() - which reads sections, not the role -
+            // kept sending those sections' checklist and requests to someone
+            // who is no longer a CaPSA, and the picker hid them from everyone
+            // else as already covered.
+            if (! $willBeCapsa) {
+                $expert->sections = [];
+                $expert->save();
+            } elseif (array_key_exists('sections', $validated)) {
                 $expert->sections = $validated['sections'];
                 $expert->save();
             }

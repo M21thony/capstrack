@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ConsultationBooking extends Model
@@ -20,6 +23,7 @@ class ConsultationBooking extends Model
 
     protected $fillable = [
         'student_id',
+        'team_id',
         'schedule_id',
         'session_date',
         'booking_status',
@@ -48,16 +52,125 @@ class ConsultationBooking extends Model
         return $this->belongsTo(ConsultationSchedule::class, 'schedule_id', 'schedule_id');
     }
 
-    public function team()
+    /**
+     * The team the consultation was booked for - not the team the student
+     * who clicked Book happens to be in now. Asking through the student sent
+     * a moved student's old consultations along with them to their new team.
+     */
+    public function team(): BelongsTo
     {
-        return $this->hasOneThrough(
-            Team::class,
-            StudentSchoolYear::class,
-            'student_id',
-            'team_id',
-            'student_id',
-            'team_id'
-        );
+        return $this->belongsTo(Team::class, 'team_id', 'team_id');
+    }
+
+    /**
+     * The bookings a team sees on its Consultation page: only the ones booked
+     * for it. A booking whose team could not be worked out (see
+     * fillMissingTeams), or whose team no longer exists, is shown to no
+     * student at all.
+     *
+     * It used to be shown to the student who made it, wherever they are now -
+     * so a student who left their team still found their old team's session
+     * with that team's adviser on their new team's page, before the new team
+     * had any expert.
+     */
+    public function scopeForTeam(Builder $query, ?int $teamId): Builder
+    {
+        return $teamId ? $query->where('team_id', $teamId) : $query->whereRaw('1 = 0');
+    }
+
+    /**
+     * Call off every consultation a team still had coming up, when the team
+     * itself is gone. Nobody is left to attend, and the expert would
+     * otherwise keep the time free for it with no way to let it go.
+     *
+     * @return Collection<int, ConsultationBooking> the bookings cancelled
+     */
+    public static function cancelForRemovedTeam(int $teamId): Collection
+    {
+        $bookings = static::where('team_id', $teamId)->where('booking_status', 'scheduled')->get();
+
+        foreach ($bookings as $booking) {
+            $booking->forceFill([
+                'booking_status' => 'cancelled',
+                'cancellation_requested_at' => null,
+                'cancellation_reason' => self::TEAM_REMOVED,
+            ])->saveQuietly();
+
+            ConsultationSchedule::where('schedule_id', $booking->schedule_id)->update(['is_available' => true]);
+        }
+
+        return $bookings;
+    }
+
+    public const TEAM_REMOVED = 'The team no longer exists.';
+
+    /**
+     * Give every booking without a team the one it was made for.
+     *
+     * Bookings used to record only the student. Where it can be known, the
+     * team comes from the "Consultation booked" notice the expert was sent at
+     * the time, which names the team. Failing that, the student's team now -
+     * but only when that team actually has the booking's expert, since
+     * otherwise the student has moved on and the booking belongs to the team
+     * they left. Failing that, the expert's only team, if they have one.
+     * Anything still unknown is left empty rather than guessed, and no
+     * student sees it.
+     */
+    public static function fillMissingTeams(): void
+    {
+        $missing = static::whereNull('team_id')->with('schedule')->get();
+
+        if ($missing->isEmpty()) {
+            return;
+        }
+
+        $noticed = Notification::where('type', 'consultation_booked')
+            ->whereNotNull('data')
+            ->get(['data'])
+            ->mapWithKeys(fn ($n) => isset($n->data['booking_id'], $n->data['team_id'])
+                ? [(int) $n->data['booking_id'] => (int) $n->data['team_id']]
+                : [])
+            ->all();
+
+        foreach ($missing as $booking) {
+            $teamId = $noticed[$booking->booking_id] ?? null;
+
+            if (! $teamId && $booking->schedule) {
+                $current = StudentSchoolYear::where('student_id', $booking->student_id)
+                    ->orderByDesc('school_year')
+                    ->value('team_id');
+
+                $expertIsTheirs = $current && DB::table('capstone_expert_application')
+                    ->where('team_id', $current)
+                    ->where('expert_id', $booking->schedule->expert_id)
+                    ->where('status', 'approved')
+                    ->exists();
+
+                $teamId = $expertIsTheirs ? $current : null;
+            }
+
+            // The one team the expert serves, when there is only one and it
+            // already existed when the booking was made - the booking can
+            // have been for no other. Covers an expert who had their
+            // "Consultation booked" notice turned off.
+            if (! $teamId && $booking->schedule) {
+                $served = DB::table('capstone_expert_application as a')
+                    ->join('team as t', 't.team_id', '=', 'a.team_id')
+                    ->where('a.expert_id', $booking->schedule->expert_id)
+                    ->where('a.status', 'approved')
+                    ->distinct()
+                    ->get(['t.team_id', 't.created_at']);
+
+                $only = $served->count() === 1 ? $served->first() : null;
+                $existedThen = $only && (! $only->created_at || ! $booking->created_at || $booking->created_at->gte($only->created_at));
+
+                $teamId = $existedThen ? (int) $only->team_id : null;
+            }
+
+            if ($teamId && Team::whereKey($teamId)->exists()) {
+                $booking->forceFill(['team_id' => $teamId])->saveQuietly();
+            }
+        }
     }
 
     /**
@@ -90,10 +203,10 @@ class ConsultationBooking extends Model
                 // stuck as 'scheduled' forever, permanently blocking the team
                 // from booking anything else.
                 if (! $row->end_time) {
-                    return \Illuminate\Support\Carbon::parse($row->session_date)->lt($now->copy()->startOfDay());
+                    return Carbon::parse($row->session_date)->lt($now->copy()->startOfDay());
                 }
 
-                return \Illuminate\Support\Carbon::parse($row->session_date)
+                return Carbon::parse($row->session_date)
                     ->setTimeFromTimeString($row->end_time)
                     ->lt($now);
             })

@@ -272,6 +272,28 @@ class StudentListUploadTest extends TestCase
     }
 
     /**
+     * A list copied from a website, Word or a Google Form carries spaces
+     * nobody can see. The address looked right on screen and was refused:
+     * "'marempillo@my.cspc.edu.ph' is not a valid email".
+     */
+    public function test_invisible_characters_around_an_address_are_dropped(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+        [$nbsp, $zwsp, $bom] = [json_decode('"\u00a0"'), json_decode('"\u200b"'), json_decode('"\ufeff"')];
+
+        $response = $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER, [
+                ["marempillo@my.cspc.edu.ph{$nbsp}", 'Empillo, Mar', '221000101', 'BSIT', 4, 'B'],
+                ["{$bom}Ana.Cruz{$zwsp}@MY.cspc.edu.ph", 'Cruz, Ana', '221000102', 'BSIT', 4, 'B'],
+            ]),
+        ]);
+
+        $response->assertOk()->assertJson(['skipped' => 0]);
+        $this->assertNotNull(StudentRoster::where('email', 'marempillo@my.cspc.edu.ph')->first());
+        $this->assertNotNull(StudentRoster::where('email', 'ana.cruz@my.cspc.edu.ph')->first());
+    }
+
+    /**
      * Uploading again updates the stored list rather than duplicating it -
      * but a value already on the account is left where it is. The list is a
      * spreadsheet kept by hand; one stale row should not be able to move a

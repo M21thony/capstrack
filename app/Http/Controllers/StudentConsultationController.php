@@ -5,17 +5,21 @@ namespace App\Http\Controllers;
 use App\Mail\ConsultationBookedMail;
 use App\Mail\ConsultationCancelledMail;
 use App\Models\CapstoneExpert;
-use App\Models\ConsultationSchedule;
 use App\Models\ConsultationAvailability;
 use App\Models\ConsultationBooking;
+use App\Models\ConsultationSchedule;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\GoogleCalendarService;
 use App\Services\Notifier;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class StudentConsultationController extends Controller
 {
@@ -186,14 +190,12 @@ class StudentConsultationController extends Controller
         // Team-wide, not just this student's own bookings - a consultation
         // is booked once per team (whoever happened to click "Book"), so
         // every teammate needs to see it in their own Upcoming/Recent list
-        // too, not just the one member who made the booking.
-        $teamStudentIds = $teamId
-            ? StudentSchoolYear::where('team_id', $teamId)->pluck('student_id')
-            : collect([$studentId]);
-
-        $myBookings = ConsultationBooking::whereIn('student_id', $teamStudentIds)
+        // too. By the team it was booked for, not by who is in the team now:
+        // a student who joins brings no consultations with them, and the
+        // team they left keeps theirs.
+        $myBookings = ConsultationBooking::forTeam($teamId)
             ->whereIn('booking_status', ['scheduled', 'done'])
-            ->with(['schedule.expert', 'student.studentSchoolYear.team'])
+            ->with(['schedule.expert', 'team'])
             ->get();
 
         $today = now()->startOfDay();
@@ -221,7 +223,7 @@ class StudentConsultationController extends Controller
         // single yes/no across every expert, which blocked all of it.
         $bookedExpertIds = $teamId
             ? ConsultationBooking::where('booking_status', 'scheduled')
-                ->whereIn('student_id', StudentSchoolYear::where('team_id', $teamId)->pluck('student_id'))
+                ->where('team_id', $teamId)
                 ->with('schedule')
                 ->get()
                 ->pluck('schedule.expert_id')
@@ -240,7 +242,37 @@ class StudentConsultationController extends Controller
         return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'bookedExpertIds', 'bookingWindows');
     }
 
+    /**
+     * POST /student/consultation/book
+     *
+     * One booking at a time per expert. Checking a slot's capacity and then
+     * inserting the booking are two steps; two students booking the same
+     * one-person slot at the same moment both passed the check and both got
+     * in (performance test PT-04). The tables are MyISAM, so there is no
+     * transaction to lock a row in - a cache lock, held across every web
+     * worker, lines the requests up instead.
+     */
     public function book(Request $request)
+    {
+        $request->validate([
+            'schedule_id' => 'required|integer|exists:consultation_schedule,schedule_id',
+            'session_date' => 'nullable|date',
+        ]);
+
+        $expertId = ConsultationSchedule::where('schedule_id', $request->integer('schedule_id'))->value('expert_id');
+
+        try {
+            return Cache::lock('consultation-booking:expert:'.$expertId, 20)
+                ->block((int) config('capstrack.booking_lock_wait', 10), fn () => $this->bookSlot($request));
+        } catch (LockTimeoutException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Many students are booking this expert right now. Try again in a moment.',
+            ], 503);
+        }
+    }
+
+    private function bookSlot(Request $request)
     {
         $request->validate([
             'schedule_id' => 'required|integer|exists:consultation_schedule,schedule_id',
@@ -277,10 +309,8 @@ class StudentConsultationController extends Controller
         // (markPastAsDone flips it to 'done' above), so there is no separate
         // release step.
         if ($team) {
-            $teamStudentIds = StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id');
-
             $alreadyWithThisExpert = ConsultationBooking::where('booking_status', 'scheduled')
-                ->whereIn('student_id', $teamStudentIds)
+                ->where('team_id', $team->team_id)
                 ->whereHas('schedule', fn ($q) => $q->where('expert_id', $slot->expert_id))
                 ->exists();
 
@@ -384,6 +414,7 @@ class StudentConsultationController extends Controller
 
         $booking = ConsultationBooking::create([
             'student_id' => $student->student_id,
+            'team_id' => $team?->team_id,
             'schedule_id' => $request->schedule_id,
             'session_date' => $sessionDate,
             'booking_status' => 'scheduled',
@@ -515,7 +546,7 @@ class StudentConsultationController extends Controller
         // only forces JSON rendering for /api/* routes - this endpoint is
         // called via fetch() and can't follow a redirect, so the error is
         // built manually here to match every other JSON response below.
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'reason' => 'required|string|max:1000',
         ]);
 
@@ -539,12 +570,9 @@ class StudentConsultationController extends Controller
         $studentYear = StudentSchoolYear::where('student_id', $student->student_id)
             ->orderByDesc('school_year')
             ->first();
-        $teamStudentIds = $studentYear?->team_id
-            ? StudentSchoolYear::where('team_id', $studentYear->team_id)->pluck('student_id')
-            : collect([$student->student_id]);
-
+        // Only the team the consultation was booked for can call it off.
         $booking = ConsultationBooking::where('booking_id', $bookingId)
-            ->whereIn('student_id', $teamStudentIds)
+            ->forTeam($studentYear?->team_id)
             ->where('booking_status', 'scheduled')
             ->firstOrFail();
 
@@ -552,7 +580,7 @@ class StudentConsultationController extends Controller
         // deserves more notice than a day, and a team pulling out the night
         // before leaves a slot nobody else can take.
         $daysAway = now()->startOfDay()->diffInDays(
-            \Illuminate\Support\Carbon::parse($booking->session_date)->startOfDay(),
+            Carbon::parse($booking->session_date)->startOfDay(),
             false
         );
 

@@ -2639,6 +2639,7 @@ async function saveAvailability() {
 }
 
 function showToast(msg, type = 'success') {
+  if (window.ctToast) { return ctToast(msg, type); }
   const toast = document.getElementById('sched-toast');
   document.getElementById('toast-msg').textContent = msg;
   toast.style.borderLeftColor = type === 'error' ? 'var(--red,#f87171)' : 'var(--accent,#00e5ff)';
@@ -2664,7 +2665,7 @@ function decideCancellation(bookingId, decision, key) {
   document.getElementById('cd-reason-wrap').hidden = approve;
   document.getElementById('cd-reason').value = '';
   document.getElementById('cd-error').textContent = '';
-  document.getElementById('cd-yes').textContent = approve ? 'Yes, cancel it' : 'Yes, keep it';
+  document.getElementById('cd-yes').textContent = approve ? 'Cancel booking' : 'Keep booking';
   document.getElementById('cancel-decision-overlay').classList.add('open');
   if (!approve) document.getElementById('cd-reason').focus();
 }

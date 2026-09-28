@@ -162,4 +162,14 @@ class ExpertRosterProgramColumnsTest extends TestCase
 
         $this->assertNull($this->expert('neil@gmail.com')->program_slots);
     }
+
+    /** Google never issues "ñ", so "peñafiel" is read as the account "penafiel". */
+    public function test_an_accented_email_is_read_as_its_plain_google_address(): void
+    {
+        $this->upload([
+            ['Jose Peñafiel', 'jose.peñafiel@gmail.com', 'Adviser', '', '', ''],
+        ]);
+
+        $this->assertSame('Jose Peñafiel', $this->expert('jose.penafiel@gmail.com')->name);
+    }
 }

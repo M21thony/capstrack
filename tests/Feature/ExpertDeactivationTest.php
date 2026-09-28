@@ -3,7 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\DefensePanel;
+use App\Models\DefenseSchedule;
+use App\Models\ExpertRole;
 use App\Models\Role;
+use App\Models\Student;
+use App\Models\StudentSchoolYear;
+use App\Models\Team;
+use App\Models\TeamExpertAssignment;
+use App\Support\DefenseOutcome;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -62,6 +70,92 @@ class ExpertDeactivationTest extends TestCase
         // ...and still there.
         $this->assertNotNull(CapstoneExpert::withTrashed()->find($expert->expert_id));
         $this->assertNotNull(CapstoneExpert::withTrashed()->find($expert->expert_id)->deactivated_at);
+    }
+
+    /**
+     * Left approved, the team's adviser slot stayed "filled" by an account
+     * nobody could see, and applying to a replacement was refused.
+     */
+    public function test_deactivating_frees_the_role_on_the_team(): void
+    {
+        $expert = $this->expert();
+        $team = Team::create(['team_name' => 'Team Alpha', 'project_title' => 'A Capstone Project', 'tags' => []]);
+        $assignment = TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $expert->expert_id,
+            'status' => 'approved',
+            'expert_role_id' => ExpertRole::where('expert_id', $expert->expert_id)->value('expert_role_id'),
+        ]);
+        $pending = TeamExpertAssignment::create([
+            'team_id' => Team::create(['team_name' => 'Team Beta', 'project_title' => 'Another', 'tags' => []])->team_id,
+            'expert_id' => $expert->expert_id,
+            'status' => 'pending',
+        ]);
+        $this->assertNotContains('adviser', $team->missingExpertRoles());
+
+        $this->actingAs($this->capsa(), 'expert')
+            ->deleteJson(route('capsa.experts.destroy', $expert))
+            ->assertOk();
+
+        $this->assertNull(TeamExpertAssignment::find($assignment->assignment_id));
+        $this->assertContains('adviser', $team->missingExpertRoles());
+        // Only approved places are given up; nothing else is touched.
+        $this->assertNotNull(TeamExpertAssignment::find($pending->assignment_id));
+    }
+
+    /**
+     * A defense only gets its outcome once every panelist has graded, so a
+     * panelist nobody can see would hold the team there for good.
+     */
+    public function test_a_panelist_on_an_undecided_defense_cannot_be_deactivated(): void
+    {
+        $expert = $this->expert();
+        $team = Team::create(['team_name' => 'Team Alpha', 'project_title' => 'A Capstone Project', 'tags' => []]);
+        StudentSchoolYear::create([
+            'student_id' => Student::factory()->withCompleteProfile()->create()->student_id,
+            'team_id' => $team->team_id,
+        ]);
+        $schedule = DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => DefenseOutcome::TITLE_DEFENSE]);
+        DefensePanel::create(['defense_id' => $schedule->defense_id, 'expert_id' => $expert->expert_id, 'panel_role' => 'Panel Chair']);
+        $capsa = $this->capsa();
+
+        $this->actingAs($capsa, 'expert')
+            ->deleteJson(route('capsa.experts.destroy', $expert))
+            ->assertStatus(422)
+            ->assertJsonFragment(['success' => false])
+            ->assertSee('Team Alpha');
+        $this->assertNotNull(CapstoneExpert::find($expert->expert_id));
+
+        // Once the outcome is in, the panel has nothing left to do.
+        $schedule->update(['outcome' => DefenseOutcome::PASSED]);
+
+        $this->actingAs($capsa, 'expert')
+            ->deleteJson(route('capsa.experts.destroy', $expert))
+            ->assertOk();
+    }
+
+    /** A team from a past term is history, not something waiting on them. */
+    public function test_a_panel_from_a_past_term_does_not_block(): void
+    {
+        $expert = $this->expert();
+        $team = Team::create(['team_name' => 'Team Old', 'project_title' => 'Last Year', 'tags' => []]);
+        $schedule = DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => DefenseOutcome::TITLE_DEFENSE]);
+        DefensePanel::create(['defense_id' => $schedule->defense_id, 'expert_id' => $expert->expert_id, 'panel_role' => 'Panel Member 1']);
+
+        $this->assertNull($expert->deactivationBlocker());
+    }
+
+    /** Their sections' checklist and requests would reach nobody. */
+    public function test_a_capsa_still_holding_sections_cannot_be_deactivated(): void
+    {
+        $otherCapsa = $this->capsa();
+        $otherCapsa->update(['sections' => ['BSIT-4B']]);
+
+        $this->actingAs($this->capsa(), 'expert')
+            ->deleteJson(route('capsa.experts.destroy', $otherCapsa))
+            ->assertStatus(422)
+            ->assertSee('BSIT-4B');
+        $this->assertNotNull(CapstoneExpert::find($otherCapsa->expert_id));
     }
 
     public function test_it_can_be_switched_back_on(): void

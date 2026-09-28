@@ -602,7 +602,7 @@ function onFolderSelect(e){
   });
 
   if(!usable.length){
-    showToast('Nothing in that folder can be uploaded — PDF, DOCX or PPTX only.');
+    showToast('Nothing in that folder can be uploaded — PDF, DOCX or PPTX only.', 'error');
     e.target.value = '';
     return;
   }
@@ -642,8 +642,8 @@ function handleFile(file){
   if(!file) return;
   const allowed=['pdf','doc','docx','ppt','pptx'];
   const ext = file.name.split('.').pop().toLowerCase();
-  if(!allowed.includes(ext)){ showToast('? Unsupported file type. Use PDF, DOCX, or PPTX.'); return; }
-  if(file.size>25*1024*1024){ showToast('? File too large. Max 25 MB.'); return; }
+  if(!allowed.includes(ext)){ showToast('Unsupported file type. Use PDF, DOCX, or PPTX.', 'error'); return; }
+  if(file.size>25*1024*1024){ showToast('File too large. Max 25 MB.', 'error'); return; }
   selectedFile = file;
   const prev = document.getElementById('upload-preview');
   prev.classList.add('show');
@@ -697,7 +697,7 @@ function loadPicker(){
 }
 
 function openDrivePicker(){
-  if(!pickerReady){ showToast('Google Drive is still loading — try again in a moment.'); return; }
+  if(!pickerReady){ showToast('Google Drive is still loading — try again in a moment.', 'error'); return; }
 
   // A fresh browser-side token rather than the one the server keeps, so the
   // stored credentials never reach the page.
@@ -705,7 +705,7 @@ function openDrivePicker(){
     client_id: GOOGLE_CLIENT_ID,
     scope: 'https://www.googleapis.com/auth/drive.file',
     callback: function(resp){
-      if(resp.error){ showToast('Google would not grant access.'); return; }
+      if(resp.error){ showToast('Google would not grant access.', 'error'); return; }
       driveToken = resp.access_token;
       showPicker();
     },
@@ -759,7 +759,7 @@ function onPicked(data){
   // A folder is not a resource - what is wanted is what is inside it. Whether
   // Drive lets us look is the one thing Google's documentation would not say,
   // so ask, and say plainly if the answer is no.
-  showToast('Looking inside ' + folders.length + (folders.length === 1 ? ' folder…' : ' folders…'));
+  showToast('Looking inside ' + folders.length + (folders.length === 1 ? ' folder…' : ' folders…'), 'info');
 
   Promise.all(folders.map(function(f){
     return fetch(ROUTES.folderFiles(f.id), { headers: { 'Accept': 'application/json' } })
@@ -772,7 +772,7 @@ function onPicked(data){
     });
 
     if(!picked.length){
-      showToast('Google would not let us see inside that folder — pick the files themselves instead.');
+      showToast('Google would not let us see inside that folder — pick the files themselves instead.', 'error');
       return;
     }
 
@@ -917,7 +917,7 @@ function bulkRemove(){
   const gone = selectedPicked().length;
   picked = picked.filter(function(f){ return !f.sel; });
 
-  if(!picked.length){ closeImport(); showToast('Nothing left to add.'); return; }
+  if(!picked.length){ closeImport(); showToast('Nothing left to add.', 'info'); return; }
 
   renderImportList();
   showToast(gone + (gone === 1 ? ' file removed.' : ' files removed.'));
@@ -936,12 +936,12 @@ function runImport(){
 
   const missing = picked.filter(function(f){ return !f.category; }).length;
   if(missing){
-    showToast(missing + (missing === 1 ? ' file still needs' : ' files still need') + ' a category.');
+    showToast(missing + (missing === 1 ? ' file still needs' : ' files still need') + ' a category.', 'error');
     return;
   }
   if(MY_SECTIONS.length && !sections.length){
     document.getElementById('import-sections').classList.add('needs-pick');
-    showToast('Pick at least one section, so students can find these.');
+    showToast('Pick at least one section, so students can find these.', 'error');
     return;
   }
 
@@ -995,7 +995,7 @@ function runImport(){
     const added = data.resources || [];
     added.slice().reverse().forEach(function(r){ resources.unshift(mapResource(r)); });
 
-    if(!data.success){ showToast(data.message || 'Some files could not be taken on.'); }
+    if(!data.success){ showToast(data.message || 'Some files could not be taken on.', 'error'); }
 
     picked = [];
     closeImport();
@@ -1010,7 +1010,7 @@ function runImport(){
   .catch(function(){
     btn.disabled = false;
     btn.innerHTML = original;
-    showToast('Could not reach Google Drive.');
+    showToast('Could not reach Google Drive.', 'error');
   });
 }
 
@@ -1087,7 +1087,7 @@ function populateFolderFilter(){
 }
 
 function openFolderModal(){
-  if(!GDRIVE_CONNECTED){ showToast('?? Connect Google Drive first.'); return; }
+  if(!GDRIVE_CONNECTED){ showToast('Connect Google Drive first.', 'error'); return; }
   document.getElementById('new-folder-name').value = '';
   document.getElementById('folder-modal-overlay').classList.add('show');
 }
@@ -1096,7 +1096,7 @@ function closeFolderModal(){
 }
 function submitNewFolder(){
   const name = document.getElementById('new-folder-name').value.trim();
-  if(!name){ showToast('?? Enter a folder name.'); return; }
+  if(!name){ showToast('Enter a folder name.', 'error'); return; }
 
   const btn = document.getElementById('folder-modal-confirm-btn');
   btn.disabled = true;
@@ -1111,7 +1111,7 @@ function submitNewFolder(){
   .then(data => {
     btn.disabled = false;
     btn.textContent = 'Create Folder';
-    if(!data.success){ showToast('? '+(data.message||'Failed to create folder.')); return; }
+    if(!data.success){ showToast((data.message||'Failed to create folder.'), 'error'); return; }
 
     driveFolders.push({ id: data.folder.drive_folder_id, name: data.folder.name });
     populateFolderSelect();
@@ -1120,18 +1120,18 @@ function submitNewFolder(){
     const importSel = document.getElementById('import-folder');
     if (importSel) importSel.value = data.folder.drive_folder_id;
     closeFolderModal();
-    showToast('? Folder created.');
+    showToast('Folder created.');
   })
   .catch(() => {
     btn.disabled = false;
     btn.textContent = 'Create Folder';
-    showToast('? Failed to create folder.');
+    showToast('Failed to create folder.', 'error');
   });
 }
 
 // -- UPLOAD ---------------------------------------------------------------------
 function uploadResource(){
-  if(!GDRIVE_CONNECTED){ showToast('?? Connect Google Drive first.'); return; }
+  if(!GDRIVE_CONNECTED){ showToast('Connect Google Drive first.', 'error'); return; }
 
   const name = document.getElementById('res-name').value.trim();
   const category = document.getElementById('res-category').value;
@@ -1146,15 +1146,15 @@ function uploadResource(){
 
   const isFolder = false;
 
-  if(!selectedFile){ showToast('Please choose a file first.'); return; }
+  if(!selectedFile){ showToast('Please choose a file first.', 'error'); return; }
   // A folder names its own files, so a title is only asked for one at a time.
-  if(!isFolder && !name){ document.getElementById('res-name').focus(); showToast('Please enter a resource name.'); return; }
-  if(!category){ document.getElementById('res-category').focus(); showToast('Please choose a category.'); return; }
+  if(!isFolder && !name){ document.getElementById('res-name').focus(); showToast('Please enter a resource name.', 'error'); return; }
+  if(!category){ document.getElementById('res-category').focus(); showToast('Please choose a category.', 'error'); return; }
   // Ticking nothing used to quietly mean everyone, which is a decision nobody
   // knew they were making.
   if(MY_SECTIONS.length && !chosenSections.length){
     document.getElementById('res-sections').classList.add('needs-pick');
-    showToast('Pick at least one section, so students can find this.');
+    showToast('Pick at least one section, so students can find this.', 'error');
     return;
   }
 
@@ -1186,7 +1186,7 @@ function uploadResource(){
   .then(data => {
     btn.disabled = false;
     btn.innerHTML = originalHTML;
-    if(!data.success){ showToast('? '+(data.message||'Upload failed.')); return; }
+    if(!data.success){ showToast((data.message||'Upload failed.'), 'error'); return; }
 
     // One file or twenty-five, the answer is a list.
     const added = data.resources || (data.resource ? [data.resource] : []);
@@ -1202,7 +1202,7 @@ function uploadResource(){
   .catch(() => {
     btn.disabled = false;
     btn.innerHTML = originalHTML;
-    showToast('? Upload failed.');
+    showToast('Upload failed.', 'error');
   });
 }
 
@@ -1227,7 +1227,7 @@ function resetForm(){
 // -- DOWNLOAD -------------------------------------------------------------------
 function downloadResource(id, btn){
   const r = resources.find(x=>x.id===id);
-  if(!r || !r.driveLink){ showToast('? No file link available.'); return; }
+  if(!r || !r.driveLink){ showToast('No file link available.', 'error'); return; }
 
   btn.classList.add('btn-downloading');
   btn.textContent='Opening…';
@@ -1254,17 +1254,17 @@ function confirmDelete(id, name){
     .then(data => {
       confirmBtn.disabled = false;
       confirmBtn.textContent = 'Remove';
-      if(!data.success){ showToast('? '+(data.message||'Failed to remove resource.')); return; }
+      if(!data.success){ showToast((data.message||'Failed to remove resource.'), 'error'); return; }
 
       resources = resources.filter(r=>r.id!==id);
       closeModal();
       renderCards();
-      showToast('?? Resource removed.');
+      showToast('Resource removed.');
     })
     .catch(() => {
       confirmBtn.disabled = false;
       confirmBtn.textContent = 'Remove';
-      showToast('? Failed to remove resource.');
+      showToast('Failed to remove resource.', 'error');
     });
   };
 }
@@ -1283,7 +1283,8 @@ document.getElementById('folder-modal-overlay').addEventListener('click', e=>{
 
 // -- TOAST ---------------------------------------------------------------------
 let toastTimer;
-function showToast(msg){
+function showToast(msg, type){
+  if (window.ctToast) { return ctToast(msg, type); }
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
 use App\Models\Team;
+use App\Services\Notifier;
 use App\Support\ChecklistAccess;
 use App\Support\ChecklistTracker;
 use App\Support\MilestoneProgress;
@@ -55,6 +56,18 @@ class DeliverableCheckController extends Controller
                 'checked_at' => now(),
             ],
         );
+
+        // Sent back: the file stays; the team is told what to change.
+        if ($data['status'] === DeliverableCheck::SENT_BACK) {
+            Notifier::toStudents(
+                $team->members,
+                'paper_sent_back',
+                'Sent back: '.$deliverable->title,
+                'Your CaPSA sent back <strong>'.e($deliverable->title).'</strong>: “'.e(trim($data['note'])).'” Your file is kept - replace it with a corrected copy.',
+                route('student.progress'),
+                ['team_id' => $team->team_id, 'deliverable_id' => $deliverable->id],
+            );
+        }
 
         return response()->json($this->row($deliverable, $team));
     }

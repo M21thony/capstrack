@@ -146,7 +146,7 @@ async function saveAssign() {
     reloadWith(`Panel saved for ${done} ${done === 1 ? 'team' : 'teams'}.`
       + (skipped.length ? ` Skipped ${skipped.map(s => `${s.team_name} (${s.reason})`).join('; ')}` : ''));
   } catch (e) {
-    toast(e.message);
+    toast(e.message, 'error');
     btn.disabled = false;
   }
 }
@@ -179,7 +179,7 @@ async function confirmRemove() {
     await api('POST', URLS.store.replace('__ID__', t.id), { chair_expert_id: null });
     reloadWith(`Removed Team ${t.name}'s panel.`);
   } catch (e) {
-    toast(e.message);
+    toast(e.message, 'error');
     $('#d-remove-yes').disabled = false;
   }
 }

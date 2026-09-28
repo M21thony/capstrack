@@ -60,6 +60,9 @@ class StudentAccountsController extends Controller
             // the section is the letter it ends with.
             ->when(in_array($year, self::YEARS, true), fn ($q) => $q->where('year_section', 'like', $year.'%'))
             ->when($section !== '', fn ($q) => $q->where('year_section', 'like', '% '.$section))
+            // This term's row only (StudentSchoolYear's own scope), so the Team
+            // column shows the team they are on now, not one from a retake.
+            ->with('studentSchoolYear.team')
             ->orderBy('l_name')
             ->paginate(30)
             ->withQueryString();

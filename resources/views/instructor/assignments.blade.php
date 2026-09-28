@@ -15,6 +15,21 @@
 .ta-content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; padding: 22px 26px; overflow: hidden; }
 
 .ta-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.ta-tc { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg2); }
+.ta-tc-h { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+.ta-tc-item { padding: 12px 0; border-top: 1px solid var(--border); }
+.ta-tc-team { font-size: 14px; font-weight: 600; }
+.ta-tc-when { font-weight: 400; color: var(--text2); font-size: 12.5px; }
+.ta-tc-titles { display: grid; grid-template-columns: 80px 1fr; gap: 4px 12px; margin: 8px 0; font-size: 13.5px; }
+.ta-tc-titles dt { color: var(--text2); }
+.ta-tc-titles dd { margin: 0; line-height: 1.45; }
+.ta-tc-new { font-weight: 600; }
+.ta-tc-note-l { display: block; font-size: 12.5px; color: var(--text2); margin-bottom: 4px; }
+.ta-tc-note { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13.5px; background: var(--bg); color: inherit; resize: vertical; }
+.ta-tc-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.ta-tc-btn { min-height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: inherit; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.ta-tc-ok { background: #1f7a4d; border-color: #1f7a4d; color: #fff; }
+.ta-tc-err { margin-top: 6px; font-size: 12.5px; color: #b42318; }
 .ta-intro { font-size: 14px; color: var(--text2); margin: 0; max-width: 640px; line-height: 1.5; }
 
 /* Same pill for every slot, five to a row; an expert with 15 slots gets
@@ -303,6 +318,34 @@
           @endif
         </div>
       </div>
+
+      {{-- A passed team asking to change part of its title. Only an approval changes it. --}}
+      @if ($titleChanges->isNotEmpty())
+        <section class="ta-tc" aria-labelledby="ta-tc-h">
+          <h2 id="ta-tc-h" class="ta-tc-h">Title changes to approve <span class="ta-count">{{ $titleChanges->count() }}</span></h2>
+          @foreach ($titleChanges as $change)
+            <article class="ta-tc-item">
+              <div class="ta-tc-team">{{ $change->team?->team_name }} <span class="ta-tc-when">· asked {{ $change->created_at?->diffForHumans() }}{{ $change->requester ? ' by '.trim($change->requester->f_name.' '.$change->requester->l_name) : '' }}</span></div>
+              <dl class="ta-tc-titles">
+                <dt>Now</dt><dd>{{ $change->current_title }}</dd>
+                <dt>Change to</dt><dd class="ta-tc-new">{{ $change->new_title }}</dd>
+                <dt>Why</dt><dd>{{ $change->reason }}</dd>
+              </dl>
+              <form method="POST" action="{{ route('instructor.title-changes.update', $change) }}" class="ta-tc-form">
+                @csrf
+                @method('PATCH')
+                <label class="ta-tc-note-l" for="tc-note-{{ $change->id }}">Note to the team <span>(needed if you decline)</span></label>
+                <textarea id="tc-note-{{ $change->id }}" name="note" class="ta-tc-note" rows="2" maxlength="1000">{{ old('note') }}</textarea>
+                <div class="ta-tc-actions">
+                  <button type="submit" name="decision" value="decline" class="ta-tc-btn">Keep the title</button>
+                  <button type="submit" name="decision" value="approve" class="ta-tc-btn ta-tc-ok">Approve change</button>
+                </div>
+              </form>
+            </article>
+          @endforeach
+          @error('note')<div class="ta-tc-err" role="alert">{{ $message }}</div>@enderror
+        </section>
+      @endif
 
       <div class="ta-bar">
         <div class="ta-tabs" role="tablist" aria-label="Applications">
@@ -600,7 +643,7 @@
     </div>
     <div class="ta-dialog-foot">
       <button type="button" class="ta-btn" onclick="closeModal('approve-modal')">Cancel</button>
-      <button type="button" class="ta-btn go" id="btn-confirm-approve" onclick="confirmApprove()">Yes, approve</button>
+      <button type="button" class="ta-btn go" id="btn-confirm-approve" onclick="confirmApprove()">Approve</button>
     </div>
   </div>
 </div>
@@ -675,7 +718,7 @@
     </div>
     <div class="ta-dialog-foot">
       <button type="button" class="ta-btn" onclick="closeModal('title-approve-modal')">Cancel</button>
-      <button type="submit" class="ta-btn go">Yes, approve</button>
+      <button type="submit" class="ta-btn go">Approve</button>
     </div>
   </form>
 </div>
@@ -1097,7 +1140,7 @@ function openApproveModal(id) {
   if (SLOTS.max > 0) add('Your slots', SLOTS.used + ' → ' + (SLOTS.used + 1) + ' of ' + SLOTS.max + ' used');
   const btn = document.getElementById('btn-confirm-approve');
   btn.disabled = false;
-  btn.textContent = 'Yes, approve';
+  btn.textContent = 'Approve';
   openModal('approve-modal');
   btn.focus();
 }
@@ -1123,7 +1166,7 @@ async function confirmApprove() {
     showToast('Network error. Please try again.', 'error');
   }
   btn.disabled = false;
-  btn.textContent = 'Yes, approve';
+  btn.textContent = 'Approve';
 }
 
 // ── decline ───────────────────────────────────────────────────────────────
@@ -1235,7 +1278,7 @@ function openTitleApproveModal(id) {
   form.action = t.update_url;
   const b = form.querySelector('button[type="submit"]');
   b.disabled = false;
-  b.textContent = 'Yes, approve';
+  b.textContent = 'Approve';
   document.getElementById('title-approve-title').textContent = 'Approve ' + t.team + '\'s new title?';
   document.getElementById('title-approve-sub').textContent = 'Recommended by their CaPSA · duplication check: ' + dupLine(t);
   document.getElementById('title-approve-text').textContent = t.title;
@@ -1267,6 +1310,7 @@ function validateTitleDecline() {
 
 // ── messages ──────────────────────────────────────────────────────────────
 function showToast(msg, type) {
+  if (window.ctToast) { return ctToast(msg, type); }
   const toast = document.getElementById('msg-toast');
   toast.textContent = msg;
   toast.className = 'msg-toast show ' + type;

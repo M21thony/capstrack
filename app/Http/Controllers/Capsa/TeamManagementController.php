@@ -313,6 +313,9 @@ class TeamManagementController extends Controller
         $engagedRoles = $this->engagedRoles($teamIds);
         $papers = $this->paperChecks($capsa->expert_id, $teamIds);
 
+        // Teams waiting on her first, the latest to turn a title in at the
+        // very top: a team that just submitted sat wherever it was created,
+        // often below the fold.
         return $teams->map(fn (Team $team) => $this->summarise(
             $team,
             $scoped['teamSections'][$team->team_id] ?? SectionScope::UNASSIGNED,
@@ -321,7 +324,45 @@ class TeamManagementController extends Controller
             $engagedRoles[$team->team_id] ?? collect(),
             $papers[$team->team_id] ?? collect(),
             $defenseSchedules[$team->team_id] ?? collect(),
-        ));
+        ))->sortBy([
+            fn ($a, $b) => $b->needsCapsa <=> $a->needsCapsa,
+            fn ($a, $b) => ($b->lastSubmittedAt?->getTimestamp() ?? 0) <=> ($a->lastSubmittedAt?->getTimestamp() ?? 0),
+        ])->values();
+    }
+
+    /**
+     * The milestones list, GitHub style: open or closed, in the order picked.
+     *
+     * A milestone with no date sorts after every dated one, the way an
+     * undated one is the least pressing.
+     */
+    private function milestoneList(Request $request, array $capsaSections): array
+    {
+        $state = $request->query('state') === 'closed' ? 'closed' : 'open';
+        $sort = array_key_exists((string) $request->query('sort'), self::MILESTONE_SORTS) ? $request->query('sort') : 'due';
+
+        $boards = collect(app(ChecklistTracker::class)->milestoneList($capsaSections))
+            ->map(function (array $board) use ($state, $sort) {
+                [$closed, $open] = $board['milestones']->partition(fn ($row) => $row->milestone->isClosed());
+                $shown = $state === 'closed' ? $closed : $open;
+
+                $board['open_count'] = $open->count();
+                $board['closed_count'] = $closed->count();
+                $board['shown'] = (match ($sort) {
+                    'percent' => $shown->sortByDesc('percent'),
+                    'name' => $shown->sortBy(fn ($row) => mb_strtolower($row->milestone->name)),
+                    default => $shown->sortBy(fn ($row) => $row->due_on?->toDateString() ?? '9999-12-31'),
+                })->values();
+
+                return $board;
+            });
+
+        return [
+            'boards' => $boards,
+            'state' => $state,
+            'sort' => $sort,
+            'sorts' => self::MILESTONE_SORTS,
+        ];
     }
 
     /**
@@ -561,6 +602,11 @@ class TeamManagementController extends Controller
             'papersToCheck' => $papers->where('review_status', '!=', 'Reviewed')->count(),
             'proposals' => $proposals,
             'pendingProposalCount' => $pending->count(),
+            // When the newest title still waiting for her came in.
+            'lastSubmittedAt' => $pending->max('submitted_at'),
+            'needsCapsa' => $pending->isNotEmpty()
+                || ($submitted && ! $team->is_confirmed)
+                || $papers->where('review_status', '!=', 'Reviewed')->isNotEmpty(),
             'approvedProposalCount' => $approved->count(),
             'titleState' => $titleState,
             'awaitingVerification' => $submitted && ! $team->is_confirmed,

@@ -1836,7 +1836,7 @@ function confirmLeaveTeam() {
         title: 'Leave & Terminate Team',
         message: 'You are the only member. Leaving will <strong>permanently terminate</strong> <strong>{{ addslashes($myTeam->team_name) }}</strong>. This cannot be undone.',
         icon: 'leave',
-        confirmText: 'Yes, Leave & Terminate',
+        confirmText: 'Leave team',
         confirmClass: 'danger',
         onConfirm: function() {
             document.getElementById('leave-team-form').submit();
@@ -1847,7 +1847,7 @@ function confirmLeaveTeam() {
         title: 'Leave Team',
         message: 'Are you sure you want to leave <strong>{{ addslashes($myTeam->team_name) }}</strong>?<br><br>\u2022 Your recruitment post will be removed<br>\u2022 You can only rejoin if the leader invites you again<br><br>This action cannot be undone.',
         icon: 'leave',
-        confirmText: 'Yes, Leave',
+        confirmText: 'Leave',
         confirmClass: 'danger',
         onConfirm: function() {
             document.getElementById('leave-team-form').submit();
@@ -3054,6 +3054,7 @@ function submitDeleteForm() {
 }
 
 function showToast(msg, type) {
+    if (window.ctToast) { return ctToast(msg, type); }
     var el = document.getElementById('msg-toast');
     if (!el) return;
     el.textContent = msg;

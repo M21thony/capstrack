@@ -380,6 +380,7 @@
   }
 
   function toast(message, ok) {
+    if (window.ctToast) { return ctToast(message, ok ? 'success' : 'error'); }
     const el = $('rr-toast');
     el.textContent = message;
     el.style.borderLeftColor = ok ? 'var(--green)' : 'var(--red)';

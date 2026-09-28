@@ -8,10 +8,12 @@ use App\Models\Student;
 use App\Models\StudentRoster;
 use App\Models\StudentSchoolYear;
 use App\Models\Term;
+use App\Support\EmailAddress;
 use App\Support\SpreadsheetFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -129,7 +131,7 @@ class StudentRosterController extends Controller
                 // upload on insert. Add the student without it and say so,
                 // rather than losing every other row to one bad number.
                 if ($number !== null && $this->numberTakenByOther($number, null)) {
-                    $read['errors'][] = "Row {$row['row']}: student number {$number} already belongs to another account - added without it.";
+                    $read['errors'][] = "Row {$row['row']}: student number {$number} already belongs to {$this->holderOf($number)} - added without it.";
                     $number = null;
                 }
 
@@ -217,7 +219,7 @@ class StudentRosterController extends Controller
             // already belongs to a different account is dropped on import, so
             // the CaPSA sees which rows will not carry theirs.
             if ($row['student_number'] !== '' && $this->numberTakenByOther($row['student_number'], $student?->student_id)) {
-                $read['errors'][] = "Row {$row['row']}: student number {$row['student_number']} already belongs to another account.";
+                $read['errors'][] = "Row {$row['row']}: student number {$row['student_number']} already belongs to {$this->holderOf($row['student_number'])}.";
             }
 
             if (! $student) {
@@ -338,11 +340,20 @@ class StudentRosterController extends Controller
             $rowNum = $i + 2;
             $get = fn (string $key) => isset($columns[$key]) ? trim((string) ($row[$columns[$key]] ?? '')) : '';
 
-            $email = mb_strtolower($get('email'));
+            $email = EmailAddress::clean($get('email'));
             $name = trim($get('name').' '.$get('last_name').' '.$get('first_name'));
 
             if ($email === '' && $name === '') {
                 continue; // a blank line at the end of the sheet
+            }
+
+            // Google addresses are plain letters only, so a list typed from
+            // the student's name - "tobriñas" - means the account Google
+            // actually issued, "tobrinas". Read it as that, and say so.
+            $asciiEmail = Str::ascii($email);
+            if ($asciiEmail !== $email && filter_var($asciiEmail, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = "Row {$rowNum}: '{$email}' read as '{$asciiEmail}', since school Google addresses cannot have accented letters.";
+                $email = $asciiEmail;
             }
 
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -534,6 +545,20 @@ class StudentRosterController extends Controller
             fn ($value, $field) => (string) $student->{$field} !== (string) $value,
             ARRAY_FILTER_USE_BOTH
         );
+    }
+
+    /** Who holds a student number, so the CaPSA can find the account that clashes. */
+    private function holderOf(string $number): string
+    {
+        $holder = Student::where('student_number', $number)->first();
+
+        if (! $holder) {
+            return 'another account';
+        }
+
+        $name = trim("{$holder->f_name} {$holder->l_name}");
+
+        return 'another account ('.($name !== '' ? "{$name}, " : '')."{$holder->email})";
     }
 
     /**

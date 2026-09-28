@@ -382,10 +382,10 @@ class BugsFromTestingRoundTest extends TestCase
         $this->assertStringNotContainsString('permanently remove', $html);
         $this->assertStringNotContainsString('cannot be undone', $html);
 
-        // The typed word and the two gates that read it have to agree, or
-        // the button never enables at all.
-        $this->assertStringContainsString('>deactivate</code> to confirm', $html);
-        $this->assertSame(2, substr_count($html, "!== 'deactivate'"));
+        // Deactivating can be undone with Reactivate, so there is no typed
+        // word to confirm it - and no leftover gate keeping the button off.
+        $this->assertStringNotContainsString('to confirm', $html);
+        $this->assertStringNotContainsString("!== 'deactivate'", $html);
         $this->assertStringNotContainsString("!== 'remove'", $html);
     }
 }

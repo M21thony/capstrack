@@ -563,6 +563,7 @@ function addManuscriptTag(raw) {
 
 // ── Flash messages ────────────────────────────────────────────────────────
 function showToast(message, type) {
+  if (window.ctToast) { return ctToast(message, type); }
   var toast = document.getElementById('archive-toast');
   if (! toast) return;
 

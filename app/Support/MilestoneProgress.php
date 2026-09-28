@@ -534,8 +534,9 @@ class MilestoneProgress
     /**
      * [closedAt, started, waitingOn, changesRequested] for a document. It
      * runs the whole cycle - handed in, reviewed, revised, approved - and is
-     * done only once the adviser's and the consultant's latest verdicts are
-     * both approved. Uploading it is only the first step.
+     * done only once the adviser's latest verdict is approved, and the
+     * consultant's too when it was sent to them. Uploading it is only the
+     * first step.
      */
     private static function documentState(Collection $own, Collection $reviews): array
     {
@@ -555,7 +556,15 @@ class MilestoneProgress
 
         $approvals = [];
 
-        foreach (['adviser', 'consultant'] as $role) {
+        // The adviser always, and the consultant when the draft went to them.
+        // Chapters 1, 2 and 5 and both manuscripts go to the adviser and
+        // the CaPSA, not the consultant (SubmissionRecipients::rulesFor), so
+        // waiting on a consultant's verdict for them kept a team on Chapter 1
+        // for good.
+        $sentTo = $reviews->pluck('role')->all();
+        $deciders = array_values(array_filter(['adviser', 'consultant'], fn ($role) => $role === 'adviser' || in_array($role, $sentTo, true)));
+
+        foreach ($deciders as $role) {
             $last = $decided->where('role', $role)->last();
 
             if ($last?->verdict !== CapstoneDocumentReview::APPROVED) {

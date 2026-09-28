@@ -129,8 +129,19 @@ export function say(text) {
 let toastEl;
 let toastTimer;
 
-/** A message at the bottom of the screen, above any open window, with Undo when there is something to undo. */
-export function toast(text, undo = null) {
+/** A message at the top of the screen, above any open window, with Undo when there is something to undo. */
+export function toast(text, undo = null, type) {
+  if (window.ctToast) {
+    return window.ctToast(text, type, undo ? { undo: async () => {
+      try {
+        await undo();
+        say('Undone.');
+      } catch (e) {
+        toast(e.message, null, 'error');
+      }
+    } } : {});
+  }
+
   if (!toastEl) {
     toastEl = el('div', 'ms-toast');
     toastEl.setAttribute('role', 'status');
@@ -153,7 +164,7 @@ export function toast(text, undo = null) {
         await undo();
         say('Undone.');
       } catch (e) {
-        toast(e.message);
+        toast(e.message, null, 'error');
       }
     });
     toastEl.append(b);

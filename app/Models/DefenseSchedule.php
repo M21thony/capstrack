@@ -35,6 +35,37 @@ class DefenseSchedule extends Model
     ];
 
     /**
+     * A defense takes its panel and grades with it. The tables are MyISAM,
+     * so their foreign keys never cascade: removing a team's panel left the
+     * grades behind, pointing at a defense that no longer existed.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (DefenseSchedule $schedule) {
+            $schedule->grades()->delete();
+            $schedule->panels()->delete();
+        });
+    }
+
+    /**
+     * Delete these teams' defenses, with their panels and grades.
+     *
+     * A defense outliving its team showed on the scheduling board as a
+     * nameless team that could still be given a slot and a room.
+     *
+     * @param  list<int>  $teamIds
+     */
+    public static function removeForTeams(array $teamIds): int
+    {
+        $defenseIds = self::whereIn('team_id', $teamIds)->pluck('defense_id');
+
+        PanelGrade::whereIn('defense_id', $defenseIds)->delete();
+        DefensePanel::whereIn('defense_id', $defenseIds)->delete();
+
+        return self::whereIn('defense_id', $defenseIds)->delete();
+    }
+
+    /**
      * The current try at a stage.
      *
      * A team can defend the same stage more than once - a redefense is its

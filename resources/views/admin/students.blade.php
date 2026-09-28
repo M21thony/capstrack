@@ -137,8 +137,8 @@
          copy of it. Nothing on it destroys anything. --}}
     <div class="page-head">
       <div class="page-head-text">
-        <span class="page-count">{{ $students->total() ?? $students->count() }}</span>
-        <span class="page-count-noun">{{ Str::plural('student', $students->total() ?? $students->count()) }}</span>
+        <span class="page-count" id="studentCount">{{ $students->total() ?? $students->count() }}</span>
+        <span class="page-count-noun" id="studentCountNoun">{{ Str::plural('student', $students->total() ?? $students->count()) }}</span>
         <span class="page-facts">
           <span class="fact">added and edited by their CaPSA</span>
         </span>
@@ -151,7 +151,12 @@
       <form method="GET" id="studentFilters">
         <div class="experts-search">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="input" type="text" name="search" value="{{ $search }}" placeholder="Search by name, email, or student number...">
+          {{-- Searches a moment after typing stops, the same way the
+               dropdowns apply as soon as they change. The page reloads to do
+               it, so the box takes the cursor back with the caret at the end. --}}
+          <input class="input" type="text" name="search" value="{{ $search }}" placeholder="Search by name, email, or student number..."
+                 @if ($search !== '') autofocus onfocus="this.setSelectionRange(this.value.length, this.value.length)" @endif
+                 oninput="clearTimeout(this._t); this._t = setTimeout(() => this.form.submit(), 500)">
         </div>
         <select class="input page-filter" name="program" onchange="this.form.submit()">
           <option value="">All programs</option>
@@ -171,6 +176,9 @@
             <option value="{{ $letter }}" @selected($section === $letter)>Section {{ $letter }}</option>
           @endforeach
         </select>
+        @if ($search !== '' || $program || $year || $section)
+          <a class="btn btn-sm btn-ghost" href="{{ route('admin.students') }}">Clear filters</a>
+        @endif
       </form>
     </div>
 
@@ -186,6 +194,7 @@
             <th>Program</th>
             <th>Year</th>
             <th>Section</th>
+            <th>Team</th>
             <th aria-label="Actions"></th>
           </tr>
         </thead>
@@ -232,8 +241,16 @@
               </td>
               <td class="std-num" data-label="Year">{{ $year !== '' ? $year : '—' }}</td>
               <td class="std-num" data-label="Section">{{ $section !== '' ? $section : '—' }}</td>
+              @php $teamName = $student->studentSchoolYear->first()?->team?->team_name; @endphp
+              <td data-label="Team">
+                @if ($teamName)
+                  <span style="font-size:12.5px;color:var(--text)">{{ $teamName }}</span>
+                @else
+                  <span class="std-none">No team</span>
+                @endif
+              </td>
               <td style="text-align:right;padding-right:16px">
-                <button type="button" class="btn btn-sm btn-ghost std-remove"
+                <button type="button" class="btn-pill btn-remove-pill std-remove"
                         data-url="{{ route('admin.students.destroy', $student->student_id) }}"
                         data-name="{{ trim($student->f_name.' '.$student->l_name) ?: $student->email }}"
                         data-row="student-row-{{ $student->student_id }}"
@@ -241,7 +258,24 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="7" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
+            @php
+              // Say what was looked for, so an empty table reads as "nobody
+              // matched" rather than "there are no students".
+              $lookedFor = collect([
+                  $search !== '' ? '"'.$search.'"' : null,
+                  $program ?: null,
+                  $year ? $year.' year' : null,
+                  $section ? 'Section '.$section : null,
+              ])->filter();
+            @endphp
+            <tr><td colspan="8" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">
+              @if ($lookedFor->isEmpty())
+                No student accounts yet.
+              @else
+                No students match {{ $lookedFor->implode(', ') }}.
+                <a href="{{ route('admin.students') }}">Clear filters</a>
+              @endif
+            </td></tr>
           @endforelse
         </tbody>
       </table>
@@ -279,6 +313,7 @@ const CSRF_TOKEN = '{{ csrf_token() }}';
 
 // ── TOAST ──────────────────────────────────────────────
 function showToast(message, type = 'success') {
+  if (window.ctToast) { return ctToast(message, type); }
   const icons = {
     success: `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
     error: `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
@@ -325,6 +360,10 @@ async function removeStudent(button) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.success) throw new Error(data.message || 'Could not remove ' + name + '.');
     document.getElementById(button.dataset.row)?.remove();
+    const count = document.getElementById('studentCount');
+    const left = Math.max(0, parseInt(count.textContent, 10) - 1);
+    count.textContent = left;
+    document.getElementById('studentCountNoun').textContent = left === 1 ? 'student' : 'students';
     showToast(data.message, 'success');
   } catch (e) {
     button.disabled = false;

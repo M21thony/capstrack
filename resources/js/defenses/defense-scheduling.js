@@ -102,7 +102,7 @@ async function loadStage(stage) {
     updateRubricWarn();
     render();
   } catch (e) {
-    toast(e.message);
+    toast(e.message, 'error');
   }
 }
 
@@ -188,9 +188,9 @@ async function saveWindow() {
   const start = $('#w-start').value, end = $('#w-end').value;
   const custom = $('#w-length [data-custom]').classList.contains('is-on');
   const minutes = custom ? +$('#w-minutes').value : +($('#w-length .is-on')?.dataset.minutes || 120);
-  if (!start || !end || end < start) { toast('Pick a first day, and a last day on or after it.'); return; }
+  if (!start || !end || end < start) { toast('Pick a first day, and a last day on or after it.', 'error'); return; }
   const min = +$('#w-minutes').min, max = +$('#w-minutes').max;
-  if (!Number.isInteger(minutes) || minutes < min || minutes > max) { toast(`Type a length from ${min} to ${max} minutes.`); return; }
+  if (!Number.isInteger(minutes) || minutes < min || minutes > max) { toast(`Type a length from ${min} to ${max} minutes.`, 'error'); return; }
   try {
     const res = await api('PUT', URLS.window.replace('__STAGE__', encodeURIComponent(STAGE)), { start_date: start, end_date: end, duration_minutes: minutes });
     WINDOWS[STAGE] = { start: res.data.start_date, end: res.data.end_date, minutes: res.data.duration_minutes, slots: res.data.slots };
@@ -198,7 +198,7 @@ async function saveWindow() {
     render();
     toast(`${STAGE} window saved.`);
   } catch (e) {
-    toast(e.message);
+    toast(e.message, 'error');
   }
 }
 
@@ -234,7 +234,7 @@ async function pickScheduleStage(stage) {
     sc.blockers = sc.row?.blockers || [];
     sc.schedule = sc.row?.schedule || null;
   } catch (e) {
-    toast(e.message);
+    toast(e.message, 'error');
   }
   drawScheduleDialog();
 }
@@ -334,7 +334,7 @@ async function saveSchedule() {
       $('#sc-save').textContent = e.body.other_section ? 'Save schedule' : 'Save anyway';
       return;
     }
-    toast(e.message);
+    toast(e.message, 'error');
     btn.disabled = false;
     btn.textContent = 'Save schedule';
   }
@@ -348,7 +348,7 @@ async function openGenerate() {
   try {
     gen = (await api('POST', URLS.drafts, { defense_type: STAGE })).data;
   } catch (e) {
-    toast(e.message);
+    toast(e.message, 'error');
     btn.disabled = false;
     return;
   }
@@ -413,7 +413,7 @@ async function saveGenerate() {
     const skipped = res.data.skipped || [];
     reloadWith(res.message + (skipped.length ? ' ' + skipped.map(s => `${s.team_name}: ${s.reason}`).join(' ') : ''));
   } catch (e) {
-    toast(e.message);
+    toast(e.message, 'error');
     checkClashes();
   }
 }
@@ -439,12 +439,12 @@ function openOverride(id) {
 async function saveOverride() {
   const t = overriding;
   const body = { schedule_date: $('#o-date').value, start_time: $('#o-time').value, venue: $('#o-venue').value, confirm: overrideConfirm };
-  if (!body.schedule_date) { toast('Pick a date.'); return; }
+  if (!body.schedule_date) { toast('Pick a date.', 'error'); return; }
   try {
     await api('PUT', URLS.schedule.replace('__ID__', t.defense_id), body);
     reloadWith(`Moved Team ${t.name}'s defense.`);
   } catch (e) {
-    if (e.status !== 409) { toast(e.message); return; }
+    if (e.status !== 409) { toast(e.message, 'error'); return; }
     // Your own sections: keep it anyway on a second press. Another section: pick another slot.
     const other = e.body.other_section;
     $('#o-conflict-text').textContent = `${(e.body.conflicts || []).join(' ')} ${other ? 'Pick another time or room.' : 'Save again to keep it anyway.'}`;
