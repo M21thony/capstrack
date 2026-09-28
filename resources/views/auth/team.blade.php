@@ -316,6 +316,12 @@
     -webkit-user-drag: none;
     user-select: none;
   }
+  /* The photos are portraits, and on desktop the box is landscape (5:4), so a
+     centred crop cut off the tops of heads. Anchoring to the top keeps the
+     whole head in frame. Tablet and phone crop fine centred, so they keep it. */
+  @media (min-width: 1001px) {
+    .avatar img { object-position: center top; }
+  }
   .person-name {
     font-size: 14.5px;
     font-weight: 700;
