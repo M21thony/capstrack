@@ -151,7 +151,8 @@ class StudentExpertsPageRolesTest extends TestCase
 
         $this->actingAs($student, 'web')->get('/student/experts')
             ->assertOk()
-            ->assertSee(e($adviser->name))
+            // assertSee escapes it itself; e() on top made O'Keefe O&amp;#039;Keefe.
+            ->assertSee($adviser->name)
             ->assertDontSee('Unknown')
             ->assertSee('<b>1 of 3</b>', false);
     }
@@ -183,7 +184,9 @@ class StudentExpertsPageRolesTest extends TestCase
         $response->assertSee('Applications');
         $response->assertSee('request waiting on a reply');
         $response->assertSee('class="req-card"', false);
-        $response->assertSee($expert->name, false);
+        // Escaped as the page escapes it: a name like O'Keefe is O&#039;Keefe
+        // in the HTML, and compared raw the test failed whenever Faker drew one.
+        $response->assertSee($expert->name);
         $response->assertSee('Applied as consultant');
         $response->assertSee('Pending');
 
