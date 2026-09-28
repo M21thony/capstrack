@@ -433,9 +433,10 @@ class AdminExpertsController extends Controller
             'reason' => $reason,
         ], now()->addMinutes(10));
 
-        // Switched off, not thrown away: the row, their expertise, their team
-        // history and everything hanging off expert_id all stay, so somebody
-        // back from study leave is one click away rather than a re-application.
+        // Switched off, not thrown away: the row, their expertise and their
+        // grades all stay, so somebody back from study leave is one click away
+        // rather than a re-application. Their places on teams do not - see
+        // CapstoneExpert::booted().
         $expert->delete();
 
         $msg = "{$expertName}'s account has been deactivated.";

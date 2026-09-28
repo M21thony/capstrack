@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -682,6 +683,23 @@ class CapstoneExpert extends Authenticatable
             if ($expert->isDirty('credentials')) {
                 $expert->fill(self::degreeFromCredentials($expert->credentials));
             }
+        });
+
+        // A deactivated expert gives up their place on every team, the same
+        // as a CaPSA-approved removal. Left approved, the team's role stays
+        // "filled" by someone nobody can see, and applying to a replacement
+        // is refused because the role is taken.
+        static::softDeleted(function (self $expert) {
+            TeamExpertAssignment::where('expert_id', $expert->expert_id)
+                ->where('status', 'approved')
+                ->get()
+                ->each(function (TeamExpertAssignment $assignment) {
+                    if ($assignment->proposal_file) {
+                        Storage::disk('public')->delete($assignment->proposal_file);
+                    }
+
+                    $assignment->delete();
+                });
         });
     }
 
