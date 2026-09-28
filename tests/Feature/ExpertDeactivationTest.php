@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\ExpertRole;
 use App\Models\Role;
+use App\Models\Team;
+use App\Models\TeamExpertAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -62,6 +65,37 @@ class ExpertDeactivationTest extends TestCase
         // ...and still there.
         $this->assertNotNull(CapstoneExpert::withTrashed()->find($expert->expert_id));
         $this->assertNotNull(CapstoneExpert::withTrashed()->find($expert->expert_id)->deactivated_at);
+    }
+
+    /**
+     * Left approved, the team's adviser slot stayed "filled" by an account
+     * nobody could see, and applying to a replacement was refused.
+     */
+    public function test_deactivating_frees_the_role_on_the_team(): void
+    {
+        $expert = $this->expert();
+        $team = Team::create(['team_name' => 'Team Alpha', 'project_title' => 'A Capstone Project', 'tags' => []]);
+        $assignment = TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $expert->expert_id,
+            'status' => 'approved',
+            'expert_role_id' => ExpertRole::where('expert_id', $expert->expert_id)->value('expert_role_id'),
+        ]);
+        $pending = TeamExpertAssignment::create([
+            'team_id' => Team::create(['team_name' => 'Team Beta', 'project_title' => 'Another', 'tags' => []])->team_id,
+            'expert_id' => $expert->expert_id,
+            'status' => 'pending',
+        ]);
+        $this->assertNotContains('adviser', $team->missingExpertRoles());
+
+        $this->actingAs($this->capsa(), 'expert')
+            ->deleteJson(route('capsa.experts.destroy', $expert))
+            ->assertOk();
+
+        $this->assertNull(TeamExpertAssignment::find($assignment->assignment_id));
+        $this->assertContains('adviser', $team->missingExpertRoles());
+        // Only approved places are given up; nothing else is touched.
+        $this->assertNotNull(TeamExpertAssignment::find($pending->assignment_id));
     }
 
     public function test_it_can_be_switched_back_on(): void
