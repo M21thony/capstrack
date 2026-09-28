@@ -1015,7 +1015,7 @@ function updateAiPanelForType(type) {
 }
 
 var AI_FOCUS_TEMPLATES = {
-  pre_oral_defense: 'Capstone Pre-Oral Defense. Use 3 categories: Manuscript (Chapters 1-4, system design, testing), System Prototype (working features, UI, database), Oral Presentation (delivery, answering the panel).',
+  pre_oral_defense: 'Capstone Pre-Oral Defense. Use 3 categories: Manuscript (Chapters 1-5, system design, testing), System Prototype (working features, UI, database), Oral Presentation (delivery, answering the panel).',
   final_oral_defense: 'Capstone Final Oral Defense. Use 3 categories: Manuscript (complete Chapters 1-5, results, conclusions), Final System (all features working, test results, user acceptance), Oral Presentation (delivery, answering the panel).',
 };
 
