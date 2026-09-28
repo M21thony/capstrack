@@ -663,6 +663,11 @@ class AdminPanelAssignmentController extends Controller
      * panelist already sits are tried first, in that day's room, so a panel
      * judges several teams back-to-back without anyone moving rooms.
      *
+     * Slots held for other panels' waiting teams (see heldForWaitingTeams())
+     * count as taken; this panel's own held slots are free to it. A panel
+     * starting a new day is put where the room has space for all of its
+     * teams in the stage, the waiting ones too, whenever such a room exists.
+     *
      * @param  Collection<int, DefenseSchedule>|null  $held  Slots suggested in this draft but not saved.
      * @param  string|null  $skipped  Set to why the window's first slot could not be used, when it could not.
      */
@@ -680,14 +685,24 @@ class AdminPanelAssignmentController extends Controller
             ->toBase()
             ->concat($held ?? []);
 
+        $waiting = $this->waitingTeams($window->defense_type, array_filter([$excludeScheduleId, ...($held ?? collect())->pluck('defense_id')->all()]));
+        $isOwn = fn (DefenseSchedule $s) => $s->panels->whereIn('expert_id', $ids)->isNotEmpty();
+        $heldForOthers = $this->heldForWaitingTeams($window, $booked, $waiting)->reject($isOwn);
+
         $who = fn (DefenseSchedule $s) => $s->team && ! $this->board->covers($capsa, $s->team) ? 'another section' : 'Team '.($s->team?->team_name ?? '');
 
         // Null when this panel can sit in $venue at $slotStart, otherwise why not.
-        $reason = function (Carbon $slotStart, string $venue) use ($booked, $ids, $minutes, $who): ?string {
+        $reason = function (Carbon $slotStart, string $venue) use ($booked, $heldForOthers, $ids, $minutes, $who): ?string {
             $slotEnd = $slotStart->copy()->addMinutes($minutes);
 
             foreach ($booked as $s) {
                 if ($why = $this->clash($s, $ids, $slotStart, $slotEnd, $venue, $who($s))) {
+                    return $why;
+                }
+            }
+
+            foreach ($heldForOthers as $s) {
+                if ($why = $this->clash($s, $ids, $slotStart, $slotEnd, $venue, $who($s).', which has the same panel and is not ready yet')) {
                     return $why;
                 }
             }
@@ -698,7 +713,7 @@ class AdminPanelAssignmentController extends Controller
         $slot = fn (Carbon $start, string $venue) => ['schedule_date' => $start, 'end_date' => $start->copy()->addMinutes($minutes), 'venue' => $venue];
 
         $ownDays = $booked->where('defense_type', $window->defense_type)
-            ->filter(fn ($s) => $s->panels->whereIn('expert_id', $ids)->isNotEmpty())
+            ->filter($isOwn)
             ->sortBy('schedule_date')
             ->groupBy(fn ($s) => $s->schedule_date->toDateString());
 
@@ -715,8 +730,27 @@ class AdminPanelAssignmentController extends Controller
             }
         }
 
+        // This team, and every team of its panel still waiting for a slot in
+        // this stage - never more than one room holds in a day.
+        $needed = min(1 + $waiting->filter($isOwn)->count(), count($slots));
+        $fitsWholePanel = function (Carbon $date, string $venue) use ($slots, $reason, $needed): bool {
+            $free = 0;
+
+            foreach ($slots as $time) {
+                $start = $date->copy()->setTimeFromTimeString($time);
+
+                if ($this->unusableTime($start) === null && $reason($start, $venue) === null && ++$free >= $needed) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
         // On a new day the panel's own rooms go first, so it stays put where it can.
         $venues = $ownDays->flatten()->pluck('venue')->concat(self::VENUES)->unique()->values();
+        $fallback = null;
+        $skippedBeforeFallback = null;
 
         foreach (CarbonPeriod::create($window->start_date, $window->end_date) as $date) {
             foreach ($slots as $time) {
@@ -729,8 +763,18 @@ class AdminPanelAssignmentController extends Controller
                 foreach ($venues as $venue) {
                     $why = $reason($slotStart, $venue);
 
-                    if ($why === null) {
+                    if ($why === null && ($needed === 1 || $fitsWholePanel($date, $venue))) {
                         return $slot($slotStart, $venue);
+                    }
+
+                    if ($why === null) {
+                        // Free, but the rest of this panel's teams would not fit
+                        // in this room that day. Kept in case no room fits them all.
+                        if (! $fallback) {
+                            $fallback = $slot($slotStart, $venue);
+                            $skippedBeforeFallback = $skipped;
+                        }
+                        $why = "{$venue} has no room that day for all {$needed} of this panel's teams.";
                     }
 
                     $skipped ??= 'Not earlier: '.$slotStart->format('M j').', '.$slotStart->format('g:i A').', '.$why;
@@ -738,7 +782,88 @@ class AdminPanelAssignmentController extends Controller
             }
         }
 
+        if ($fallback) {
+            $skipped = $skippedBeforeFallback;
+
+            return $fallback;
+        }
+
         throw new \RuntimeException('No available slot for this panel within the window.');
+    }
+
+    /**
+     * Teams with a panel for this stage but no slot yet - usually not ready
+     * (fee unpaid, a requirement missing), or ready and waiting their turn in
+     * the draft being built. Finished defenses are not waiting for anything.
+     *
+     * @param  array<int, int>  $except  Defenses being placed or already placed in this draft.
+     * @return Collection<int, DefenseSchedule>
+     */
+    private function waitingTeams(string $type, array $except): Collection
+    {
+        return DefenseSchedule::where('defense_type', $type)
+            ->whereNull('venue')
+            ->whereNull('outcome')
+            ->whereHas('panels')
+            ->when($except, fn ($q) => $q->whereNotIn('defense_id', $except))
+            ->with(['panels.expert', 'team'])
+            ->orderBy('defense_id')
+            ->get()
+            ->toBase();
+    }
+
+    /**
+     * One slot held for each waiting team whose panel already defends in the
+     * window: the next free slot in that panel's room on the day it defends,
+     * the slot the team would get once ready. No other panel is placed there,
+     * so a panel's teams stay together even when they become ready one by
+     * one. A held slot stays empty until its team is scheduled. Nothing is
+     * saved - these are worked out again each time.
+     *
+     * @param  Collection<int, DefenseSchedule>  $booked
+     * @param  Collection<int, DefenseSchedule>  $waiting
+     * @return Collection<int, DefenseSchedule> Unsaved placeholders carrying the waiting team's panel.
+     */
+    private function heldForWaitingTeams(DefenseWindow $window, Collection $booked, Collection $waiting): Collection
+    {
+        $minutes = $window->duration_minutes;
+        $held = collect();
+
+        foreach ($waiting as $team) {
+            $ids = $team->panels->pluck('expert_id')->map(fn ($id) => (int) $id)->all();
+            $days = $booked->where('defense_type', $window->defense_type)
+                ->filter(fn ($s) => $s->panels->whereIn('expert_id', $ids)->isNotEmpty())
+                ->sortBy('schedule_date')
+                ->groupBy(fn ($s) => $s->schedule_date->toDateString());
+
+            foreach ($days as $daySchedules) {
+                $day = $daySchedules->first()->schedule_date->copy()->startOfDay();
+                $venue = $daySchedules->first()->venue;
+
+                foreach (DefenseBoard::slots($minutes) as $time) {
+                    $start = $day->copy()->setTimeFromTimeString($time);
+                    $end = $start->copy()->addMinutes($minutes);
+
+                    if ($this->unusableTime($start) !== null) {
+                        continue;
+                    }
+
+                    $taken = $booked->concat($held)->contains(fn ($s) => $this->clash($s, $ids, $start, $end, $venue, '') !== null);
+
+                    if (! $taken) {
+                        $slot = new DefenseSchedule(['defense_type' => $window->defense_type, 'schedule_date' => $start, 'end_date' => $end, 'venue' => $venue]);
+                        $slot->defense_id = $team->defense_id;
+                        $slot->setRelation('panels', $team->panels);
+                        $slot->setRelation('team', $team->team);
+                        $held->push($slot);
+
+                        continue 3;
+                    }
+                }
+            }
+        }
+
+        return $held;
     }
 
     // A team's own adviser and consultant can't evaluate them on the panel.
