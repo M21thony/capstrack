@@ -92,18 +92,17 @@
 
   <div id="real-content" style="display:none">
   <div class="content">
-    {{-- What is waiting on this expert, each a link to where it is done.
-         Totals that ask nothing of them (slots open, teams advised) went. --}}
+    {{-- What is waiting on this expert. Read-only counts: the sidebar and the
+         tab bar are the way to each page. Totals that ask nothing of them
+         (slots open, teams advised) went. --}}
     <div class="grid-3" style="margin-bottom:16px">
       <x-dashboard.stat-chip
-        :href="route('instructor.assignments')"
         value="{{ $pendingApplications + $titlesToApprove }}"
         label="Team Requests" icon="inbox"
         sub="{{ $titlesToApprove ? $titlesToApprove.' '.\Illuminate\Support\Str::plural('title', $titlesToApprove).' to approve' : ($pendingApplicationsNew ? $pendingApplicationsNew.' new this week' : 'Nothing waiting') }}"
         color="var(--accent3)"
       />
       <x-dashboard.stat-chip
-        :href="route('instructor.docreview')"
         value="{{ $docsForReview }}"
         label="Documents to Review" icon="file-review"
         {{-- Waiting since it arrived. It used to read reviewed_at, which is null
@@ -112,7 +111,6 @@
         color="var(--red)"
       />
       <x-dashboard.stat-chip
-        :href="route('instructor.grading')"
         value="{{ $gradesToSubmit }}"
         label="Grades to Submit" icon="grading"
         sub="{{ $gradesToSubmit ? 'Defenses you sat on' : 'All graded' }}"

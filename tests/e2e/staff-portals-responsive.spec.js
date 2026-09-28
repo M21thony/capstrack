@@ -161,3 +161,81 @@ for (const [at, rowSel] of [['docreview', 'tr.dr-row'], ['grading', '.gl tbody t
     });
   }
 }
+
+// The dashboard tiles: an expert's are counts only; a CaPSA's open the page
+// they name. Their addresses were written with the quotes inside them, and
+// every tile opened ".../%22http://...%22", a page that is not there.
+test('the expert dashboard tiles are counts, and a CaPSA tile opens its page', async ({ browser }) => {
+  const { context, page } = await phone(browser, 1440, 900);
+  await signIn(page, 'adviser');
+  await page.waitForTimeout(600);
+  expect(await page.locator('.content a.stat-chip').count()).toBe(0);
+  expect(await page.locator('.content div.stat-chip').count()).toBeGreaterThanOrEqual(3);
+
+  await signIn(page, 'capsa');
+  await page.waitForTimeout(600);
+  await noTour(page);
+  const tile = page.locator('a.stat-chip').first();
+  const href = await tile.getAttribute('href');
+  expect(href).not.toContain('"');
+  const [response] = await Promise.all([page.waitForNavigation(), tile.click()]);
+  expect(response.status()).toBe(200);
+  expect(new URL(page.url()).pathname).toBe(new URL(href).pathname);
+  await context.close();
+});
+
+// The profile from the floating bar on a phone: the avatar opens the menu,
+// the name card at its top opens the profile - whole, on screen, Save
+// within reach - and a tap on the page behind closes it again.
+test('on a phone the expert profile opens whole from the floating bar', async ({ browser }) => {
+  const { context, page } = await phone(browser, 360, 640);
+  await signIn(page, 'adviser', 'progress');
+  await page.waitForTimeout(900);
+  await noTour(page);
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+
+  await page.locator('.mtab .mtab-item').last().tap();
+  await expect.poll(() => page.evaluate(() => Math.round(document.querySelector('.sidebar').getBoundingClientRect().left))).toBe(0);
+  await page.locator('.sidebar .sidebar-user').tap();
+  await page.waitForTimeout(500);
+
+  const sheet = await page.locator('#ep-modal').boundingBox();
+  expect(sheet.x).toBe(0);
+  expect(sheet.width).toBe(360);
+  expect(sheet.y + sheet.height).toBeLessThanOrEqual(640);
+  const save = await page.locator('#ep-save-btn').boundingBox();
+  expect(save.y + save.height, 'Save is on the screen').toBeLessThanOrEqual(640);
+  await expect(page.locator('.mtab')).toHaveClass(/is-covered/);
+
+  await page.mouse.click(180, 30);
+  await expect(page.locator('#ep-overlay')).not.toHaveClass(/open/);
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
+test('on a phone a CaPSA name card opens My Profile', async ({ browser }) => {
+  const { context, page } = await phone(browser);
+  await signIn(page, 'capsa');
+  await page.waitForTimeout(800);
+  await noTour(page);
+  await page.locator('.mtab .mtab-item').last().tap();
+  await expect.poll(() => page.evaluate(() => Math.round(document.querySelector('.sidebar').getBoundingClientRect().left))).toBe(0);
+  await Promise.all([page.waitForURL(/\/capsa\/profile$/), page.locator('.sidebar .sidebar-user').tap()]);
+  await context.close();
+});
+
+// A tablet's menu over Grading Rubrics, whose own dimming layer sat over it.
+test('on a tablet the menu over Grading Rubrics can be tapped', async ({ browser }) => {
+  const { context, page } = await phone(browser, 820, 1180);
+  await signIn(page, 'capsa', 'rubric_management');
+  await page.waitForTimeout(800);
+  await noTour(page);
+  await page.locator('.topbar .hamburger-btn').tap();
+  await expect.poll(() => page.evaluate(() => Math.round(document.querySelector('.sidebar').getBoundingClientRect().left))).toBe(0);
+  const link = page.locator('.sidebar a.nav-item').first();
+  const box = await link.boundingBox();
+  const hit = await page.evaluate(([x, y]) => !!document.elementFromPoint(x, y)?.closest('.sidebar'), [box.x + box.width / 2, box.y + box.height / 2]);
+  expect(hit, 'the menu is on top').toBe(true);
+  await context.close();
+});

@@ -8,7 +8,11 @@
     'loading' => false,
 ])
 
-<{{ $href ? 'a' : 'div' }} {{ $href ? "href=\"{$href}\"" : '' }} {{ $attributes->merge(['class' => 'stat-chip'.($icon && ! $loading ? ' has-icon' : '')]) }}>
+{{-- The address is written as a value of its own. Built as one escaped
+     string, its quotes came out as &quot; and the browser took them into the
+     address itself: every tile opened ".../%22http://...%22", a page that is
+     not there. --}}
+<{{ $href ? 'a' : 'div' }} @if ($href) href="{{ $href }}" @endif {{ $attributes->merge(['class' => 'stat-chip'.($icon && ! $loading ? ' has-icon' : '')]) }}>
     @if ($loading)
         <div class="skeleton-box" style="width:50px;height:28px;border-radius:6px;margin-bottom:6px;"></div>
         <div class="skeleton-box" style="width:80px;height:10px;border-radius:4px;"></div>
