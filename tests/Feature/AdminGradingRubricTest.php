@@ -432,6 +432,24 @@ class AdminGradingRubricTest extends TestCase
         $response->assertViewIs('capsa.rubric_management');
     }
 
+    /**
+     * Pre-Oral and Final Oral start with a Focus Area naming their categories,
+     * and each fits the 255 characters the draft endpoint accepts.
+     */
+    public function test_the_oral_defenses_come_with_a_focus_area_template(): void
+    {
+        $html = $this->actingAs($this->admin, 'expert')
+            ->get(route('capsa.rubric_management'))
+            ->assertOk()
+            ->getContent();
+
+        foreach (['pre_oral_defense', 'final_oral_defense'] as $type) {
+            $this->assertSame(1, preg_match("/{$type}: '([^']+)'/", $html, $m));
+            $this->assertStringContainsString('Use 3 categories', $m[1]);
+            $this->assertLessThanOrEqual(255, strlen($m[1]));
+        }
+    }
+
     public function test_index_empty_when_no_rubrics(): void
     {
         $response = $this->actingAs($this->admin, 'expert')

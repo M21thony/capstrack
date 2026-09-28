@@ -1002,7 +1002,22 @@ function updateAiPanelForType(type) {
       ? 'Generates the school\'s real Pre-Proposal Defense Rubric (all 12 criteria) — just click Generate.'
       : 'Select a rubric type above, then generate a draft name, description, and criteria you can review and edit before saving. "# of Criteria" sets how many scoring criteria the draft will include.';
   }
+
+  // A bare "BSIT Capstone" left the model guessing what the stage grades, and
+  // it drafted presentation criteria only. Naming the categories fixes that.
+  // Only a blank box or another type's template is replaced, never typing.
+  var topicInput = document.getElementById('rb-ai-topic');
+  if (topicInput) {
+    var current = topicInput.value.trim();
+    var isTemplate = Object.keys(AI_FOCUS_TEMPLATES).some(function (k) { return AI_FOCUS_TEMPLATES[k] === current; });
+    if (current === '' || isTemplate) topicInput.value = AI_FOCUS_TEMPLATES[type] || '';
+  }
 }
+
+var AI_FOCUS_TEMPLATES = {
+  pre_oral_defense: 'Capstone Pre-Oral Defense. Use 3 categories: Manuscript (Chapters 1-4, system design, testing), System Prototype (working features, UI, database), Oral Presentation (delivery, answering the panel).',
+  final_oral_defense: 'Capstone Final Oral Defense. Use 3 categories: Manuscript (complete Chapters 1-5, results, conclusions), Final System (all features working, test results, user acceptance), Oral Presentation (delivery, answering the panel).',
+};
 
 // ── AI DRAFT ──────────────────────────────────────────────────────────────────
 // Drafts name/description/criteria via the same Ollama model used by the
