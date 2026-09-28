@@ -385,7 +385,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->assertStringContainsString('<img src="https://lh3.googleusercontent.com/a/ana-photo"', $html);
         $this->assertSame(1, substr_count($html, 'referrerpolicy="no-referrer" onerror="this.remove()"'));
         // Ben has no photo: his initials are what shows.
-        $this->assertMatchesRegularExpression('/>BC\s*<\/div>/', $html);
+        $this->assertMatchesRegularExpression('/>BC\s*<\/span>/', $html);
     }
 
     public function test_the_team_page_counts_titles_awaiting_review(): void
