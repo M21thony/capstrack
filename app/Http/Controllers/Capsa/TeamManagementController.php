@@ -366,41 +366,6 @@ class TeamManagementController extends Controller
     }
 
     /**
-     * The milestones list, GitHub style: open or closed, in the order picked.
-     *
-     * A milestone with no date sorts after every dated one, the way an
-     * undated one is the least pressing.
-     */
-    private function milestoneList(Request $request, array $capsaSections): array
-    {
-        $state = $request->query('state') === 'closed' ? 'closed' : 'open';
-        $sort = array_key_exists((string) $request->query('sort'), self::MILESTONE_SORTS) ? $request->query('sort') : 'due';
-
-        $boards = collect(app(ChecklistTracker::class)->milestoneList($capsaSections))
-            ->map(function (array $board) use ($state, $sort) {
-                [$closed, $open] = $board['milestones']->partition(fn ($row) => $row->milestone->isClosed());
-                $shown = $state === 'closed' ? $closed : $open;
-
-                $board['open_count'] = $open->count();
-                $board['closed_count'] = $closed->count();
-                $board['shown'] = (match ($sort) {
-                    'percent' => $shown->sortByDesc('percent'),
-                    'name' => $shown->sortBy(fn ($row) => mb_strtolower($row->milestone->name)),
-                    default => $shown->sortBy(fn ($row) => $row->due_on?->toDateString() ?? '9999-12-31'),
-                })->values();
-
-                return $board;
-            });
-
-        return [
-            'boards' => $boards,
-            'state' => $state,
-            'sort' => $sort,
-            'sorts' => self::MILESTONE_SORTS,
-        ];
-    }
-
-    /**
      * Every team in the CaPSA's sections.
      *
      * Unlike Team Verification, this is not limited to teams already marked
