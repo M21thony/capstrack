@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\ExpertExpertise;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -71,7 +72,9 @@ class AdminExpertsPageTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('CaPSA Management', false);
-        $response->assertSee('Role(s)', false);
+        // Roles sit under the name now rather than in a column of their own.
+        $response->assertSee('class="cx-roles"', false);
+        $response->assertSee('Capstone Subject Adviser', false);
         $response->assertSee('Action', false);
 
         // The CaPSA is listed; the plain expert is not.
@@ -208,7 +211,7 @@ class AdminExpertsPageTest extends TestCase
         ]));
 
         foreach (['Research Methodology', 'Data Analytics', 'Machine Learning', 'Web Development'] as $skill) {
-            \App\Models\ExpertExpertise::create(['expert_id' => $capsa->expert_id, 'expertise_field' => $skill]);
+            ExpertExpertise::create(['expert_id' => $capsa->expert_id, 'expertise_field' => $skill]);
         }
 
         $this->actingAs($admin, 'expert');
