@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use App\Models\CapstoneExpert;
-use App\Models\Milestone;
 use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentMilestone;
@@ -68,24 +67,6 @@ class AnnouncementController extends Controller
             $teams = $teams->unique('team_id')->values();
         }
 
-        $milestoneTitles = ['Capstone Team', 'Pre-Proposal', 'Title Defense', 'Pre-Oral Defense', 'Final Defense'];
-        $allMs = Milestone::whereIn('title', $milestoneTitles)
-            ->orderBy('due_date')
-            ->get(['id', 'title', 'description', 'due_date']);
-
-        $grouped = $allMs->groupBy('title');
-        $milestones = collect();
-        foreach ($milestoneTitles as $title) {
-            $first = $grouped->get($title)?->first();
-            $milestones->push([
-                'id' => $first?->id,
-                'title' => $title,
-                'description' => $first?->description,
-                'due_date' => $first?->due_date?->format('M j, Y'),
-                'due_date_raw' => $first?->due_date?->format('Y-m-d'),
-            ]);
-        }
-
         $milestoneSubmissions = StudentMilestone::with('student', 'team')
             ->get()
             ->groupBy('milestone_id')
@@ -110,7 +91,6 @@ class AnnouncementController extends Controller
             'announcements' => $announcements,
             'teams' => $teams,
             'adminSections' => $adminSections,
-            'milestones' => $milestones,
             'milestoneSubmissions' => $milestoneSubmissions,
         ]);
     }
@@ -124,21 +104,7 @@ class AnnouncementController extends Controller
             'target_audience' => 'required|array',
             'target_audience.*' => 'string',
             'team_id' => 'nullable|integer|exists:team,team_id',
-            'milestone_title' => 'nullable|string|max:255',
-            'milestone_due_date' => 'nullable|date',
         ]);
-
-        // Create milestone record if posting from Milestone tab
-        if ($data['milestone_title'] ?? null) {
-            $milestone = Milestone::create([
-                'title' => $data['milestone_title'],
-                'description' => $data['body'],
-                'due_date' => $data['milestone_due_date'] ?? null,
-                'status' => 'todo',
-                'team_id' => $data['team_id'] ?? null,
-            ]);
-            $data['milestone_id'] = $milestone->id;
-        }
 
         $announcement = Announcement::create([
             ...$data,
@@ -244,33 +210,7 @@ class AnnouncementController extends Controller
             'target_audience' => 'required|array',
             'target_audience.*' => 'string',
             'team_id' => 'nullable|integer|exists:team,team_id',
-            'milestone_title' => 'nullable|string|max:255',
-            'milestone_due_date' => 'nullable|date',
         ]);
-
-        if ($data['milestone_title'] ?? null) {
-            $data['title'] = 'Milestone Reminder: '.$data['milestone_title'];
-        }
-
-        $announcement->load('milestone');
-
-        if ($announcement->milestone && ($data['milestone_title'] ?? null)) {
-            $announcement->milestone->update([
-                'title' => $data['milestone_title'],
-                'description' => $data['body'],
-                'due_date' => $data['milestone_due_date'] ?? null,
-                'team_id' => $data['team_id'] ?? null,
-            ]);
-        } elseif ($data['milestone_title'] ?? null) {
-            $milestone = Milestone::create([
-                'title' => $data['milestone_title'],
-                'description' => $data['body'],
-                'due_date' => $data['milestone_due_date'] ?? null,
-                'status' => 'todo',
-                'team_id' => $data['team_id'] ?? null,
-            ]);
-            $data['milestone_id'] = $milestone->id;
-        }
 
         $announcement->update($data);
 

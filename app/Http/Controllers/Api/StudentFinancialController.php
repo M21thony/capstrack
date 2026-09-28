@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ExpensePost;
 use App\Models\FinancialRecord;
 use App\Models\Student;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -45,7 +46,10 @@ class StudentFinancialController extends Controller
                 'description' => $post->description,
             ]);
 
-        $submissions = $this->getSubmissionsQuery($student)->get();
+        $submissions = $this->getSubmissionsQuery($student)
+            ->orderByDesc('uploaded_at')
+            ->get()
+            ->map(fn (FinancialRecord $record) => $this->formatSubmission($record));
 
         $team = $student->team;
         $teamStatus = $team?->team_status;
@@ -99,7 +103,7 @@ class StudentFinancialController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Request completed successfully.',
-            'data' => $query->get(),
+            'data' => $query->get()->map(fn (FinancialRecord $record) => $this->formatSubmission($record))->values(),
         ]);
     }
 
@@ -205,13 +209,15 @@ class StudentFinancialController extends Controller
         ]);
     }
 
-    private function getSubmissionsQuery(Student $student)
+    /**
+     * The student's receipts, as a query - both endpoints narrow and sort it
+     * before formatting. It used to run the query itself and hand back a
+     * formatted list, so every call that went on to filter, sort or get()
+     * it was a 500.
+     */
+    private function getSubmissionsQuery(Student $student): Builder
     {
-        return FinancialRecord::with('expensePost')
-            ->where('student_id', $student->student_id)
-            ->orderByDesc('uploaded_at')
-            ->get()
-            ->map(fn ($record) => $this->formatSubmission($record));
+        return FinancialRecord::with('expensePost')->where('student_id', $student->student_id);
     }
 
     private function formatSubmission(FinancialRecord $record): array

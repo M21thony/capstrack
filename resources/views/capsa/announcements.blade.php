@@ -45,12 +45,6 @@
 .modal-btn-cancel:hover{background:#f9fafb}
 .modal-btn-danger{background:#d92d20;color:#fff}
 .modal-btn-danger:hover{background:#b42318}
-/* Tabs: the look is the shared .tab-bar/.tab-btn component; only the spot
-   this page puts the strip in is set here. */
-.tab-bar{margin-left:12px}
-.tab-btn{font-size:11.5px;padding:8px 13px}
-.tab-content{display:none}
-.tab-content.active{display:block}
 .card.inactive{opacity:0.55;border-color:var(--border2)}.card.inactive:hover{opacity:0.75}
 .badge-gray{background:var(--bg4);color:var(--text3)}
 </style>
@@ -95,50 +89,22 @@
         <div class="card" id="announcement-form-card">
           <div class="card-header">
             <span class="card-title">New Post</span>
-            <div class="tab-bar">
-              <button class="tab-btn active" data-tab="announcement" onclick="switchTab('announcement')">Announcement</button>
-              <button class="tab-btn" data-tab="milestone" onclick="switchTab('milestone')">Milestone</button>
-            </div>
             <button onclick="resetForm()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Clear</button>
           </div>
 
-          <div id="tab-announcement" class="tab-content active">
-            <div class="form-group">
-              <label class="label">Title</label>
-              <input class="input" id="ann-title" placeholder="e.g. Schedule for Title Defense" />
-            </div>
-            <div class="form-group">
-              <label class="label">Message</label>
-              <div class="mention-wrapper">
-                <textarea class="input" id="ann-message" style="min-height:220px" placeholder="Type your announcement here... Type @ to mention a team"></textarea>
-                <div class="mention-dropdown" id="mentionDropdown"></div>
-              </div>
+          <div class="form-group">
+            <label class="label">Title</label>
+            <input class="input" id="ann-title" placeholder="e.g. Schedule for Title Defense" />
+          </div>
+          <div class="form-group">
+            <label class="label">Message</label>
+            <div class="mention-wrapper">
+              <textarea class="input" id="ann-message" style="min-height:220px" placeholder="Type your announcement here... Type @ to mention a team"></textarea>
+              <div class="mention-dropdown" id="mentionDropdown"></div>
             </div>
           </div>
 
-          <div id="tab-milestone" class="tab-content">
-            <div class="form-group">
-              <label class="label">Milestone</label>
-              <select class="input" id="ms-select" onchange="onMilestoneSelect()">
-                <option value="">-- Select Milestone --</option>
-                @foreach($milestones as $ms)
-                <option value="{{ $ms['title'] }}" data-desc="{{ $ms['description'] }}" data-due="{{ $ms['due_date_raw'] }}">
-                  {{ $ms['title'] }}
-                </option>
-                @endforeach
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="label">Due Date</label>
-              <input class="input" id="ms-due" type="date" />
-            </div>
-            <div class="form-group">
-              <label class="label">Message</label>
-              <textarea class="input" id="ms-message" style="min-height:220px" placeholder="Auto-filled from milestone description"></textarea>
-            </div>
-          </div>
-
-          <div class="form-group" id="priorityGroup">
+          <div class="form-group">
             <label class="label">Priority</label>
             <select class="input" id="ann-priority">
               <option value="normal">Normal</option>
@@ -279,7 +245,6 @@
 
 <script>
 var teamsList = @json($teams);
-var milestonesList = @json($milestones);
 var adminSections = @json($adminSections);
 var milestoneSubmissions = @json($milestoneSubmissions);
 var editingId = null;
@@ -524,91 +489,22 @@ mentionTextarea.addEventListener('blur', function() {
   setTimeout(closeMention, 200);
 });
 
-// ---- Tab Switching ----
-var currentTab = 'announcement';
-
-function switchTab(tab) {
-  editingId = null;
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(function(btn) {
-    btn.classList.toggle('active', btn.dataset.tab === tab);
-  });
-  document.querySelectorAll('.tab-content').forEach(function(el) {
-    el.classList.toggle('active', el.id === 'tab-' + tab);
-  });
-  var label = document.getElementById('ann-save-label');
-  label.textContent = tab === 'announcement' ? 'Post Announcement' : 'Post Milestone';
-
-  var isMilestone = tab === 'milestone';
-  document.getElementById('priorityGroup').style.display = isMilestone ? 'none' : '';
-  var disableAudience = isMilestone;
-  ['all', 'panel', 'expert'].forEach(function(v) {
-    var opt = document.querySelector('.target-opt[data-value="' + v + '"]');
-    if (!opt) return;
-    opt.classList.toggle('disabled', disableAudience);
-    var cb = opt.querySelector('input');
-    if (cb) cb.disabled = disableAudience;
-  });
-
-  if (tab === 'milestone') {
-    setTargetAudience(['student']);
-    document.getElementById('ms-select').value = '';
-    document.getElementById('ms-due').value = '';
-    document.getElementById('ms-message').value = '';
-  } else {
-    document.getElementById('ann-title').value = '';
-    document.getElementById('ann-message').value = '';
-    document.getElementById('ann-priority').value = 'normal';
-    setTargetAudience(['all']);
-  }
-}
-
-// ---- Milestone Tab ----
-function onMilestoneSelect() {
-  var sel = document.getElementById('ms-select');
-  var opt = sel.options[sel.selectedIndex];
-  if (!opt || !opt.value) {
-    document.getElementById('ms-due').value = '';
-    document.getElementById('ms-message').value = '';
-    return;
-  }
-  document.getElementById('ms-message').value = opt.dataset.desc || '';
-  document.getElementById('ms-due').value = opt.dataset.due || '';
-}
-
 // ---- Form ----
 function resetForm() {
   document.getElementById('ann-title').value = '';
   document.getElementById('ann-message').value = '';
-  document.getElementById('ms-select').value = '';
-  document.getElementById('ms-due').value = '';
-  document.getElementById('ms-message').value = '';
   document.getElementById('ann-priority').value = 'normal';
   setTargetAudience(['all']);
   document.getElementById('ann-save-label').textContent = 'Post Announcement';
   document.getElementById('ann-cancel-btn').style.display = 'none';
   editingId = null;
-  switchTab('announcement');
 }
 
 function savePost() {
   var priority = document.getElementById('ann-priority').value;
   var targetAudience = getTargetAudience();
-  var title, body;
-
-  var milestoneTitle, milestoneDueDate;
-
-  if (currentTab === 'announcement') {
-    title = document.getElementById('ann-title').value.trim();
-    body = document.getElementById('ann-message').value.trim();
-  } else {
-    var sel = document.getElementById('ms-select');
-    var opt = sel.options[sel.selectedIndex];
-    milestoneTitle = opt && opt.value ? opt.value : '';
-    title = milestoneTitle ? 'Milestone Reminder: ' + milestoneTitle : '';
-    body = document.getElementById('ms-message').value.trim();
-    milestoneDueDate = document.getElementById('ms-due').value || null;
-  }
+  var title = document.getElementById('ann-title').value.trim();
+  var body = document.getElementById('ann-message').value.trim();
 
   if (!title) { return; }
   if (!body) { return; }
@@ -636,10 +532,6 @@ function savePost() {
   var method = editingId ? 'PUT' : 'POST';
 
   var payload = { title: title, body: body, priority: priority, target_audience: targetAudience, team_id: teamId };
-  if (milestoneTitle) {
-    payload.milestone_title = milestoneTitle;
-    payload.milestone_due_date = milestoneDueDate;
-  }
 
   fetch(url, {
     method: method,
@@ -673,27 +565,11 @@ function editAnnouncement(id) {
   var audienceEls = card.querySelectorAll('.audience-badge');
   var teamMentionEl = card.querySelector('.team-mention-badge');
 
-  var isMilestone = card.dataset.msTitle ? true : false;
-
-  if (isMilestone) {
-    switchTab('milestone');
-    var sel = document.getElementById('ms-select');
-    var msTitle = card.dataset.msTitle;
-    for (var i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value === msTitle) {
-        sel.selectedIndex = i;
-        break;
-      }
-    }
-    onMilestoneSelect();
-    document.getElementById('ms-due').value = card.dataset.msDue || '';
-    document.getElementById('ms-message').value = bodyEl ? bodyEl.textContent : '';
-  } else {
-    switchTab('announcement');
-    document.getElementById('ann-title').value = titleEl ? titleEl.textContent : '';
-    document.getElementById('ann-message').value = bodyEl ? bodyEl.textContent : '';
-    document.getElementById('ann-priority').value = badgeEl ? badgeEl.textContent.toLowerCase().trim() : 'normal';
-  }
+  document.getElementById('ann-title').value = titleEl ? titleEl.textContent : '';
+  document.getElementById('ann-message').value = bodyEl ? bodyEl.textContent : '';
+  // An old milestone post shows "Milestone" where the priority would be.
+  var priority = badgeEl ? badgeEl.textContent.toLowerCase().trim() : '';
+  document.getElementById('ann-priority').value = ['normal', 'important', 'urgent'].indexOf(priority) !== -1 ? priority : 'normal';
 
   var audiences = [];
   audienceEls.forEach(function(el) { audiences.push(el.dataset.value || el.textContent.trim().toLowerCase()); });
@@ -704,14 +580,14 @@ function editAnnouncement(id) {
   if (teamName && bodyEl) {
     var bodyText = bodyEl.textContent;
     if (bodyText.indexOf('@' + teamName) === -1) {
-      document.getElementById(isMilestone ? 'ms-message' : 'ann-message').value = bodyText + ' @' + teamName;
+      document.getElementById('ann-message').value = bodyText + ' @' + teamName;
     }
   }
 
-  document.getElementById('ann-save-label').textContent = isMilestone ? 'Update Milestone' : 'Update Announcement';
+  document.getElementById('ann-save-label').textContent = 'Update Announcement';
   document.getElementById('ann-cancel-btn').style.display = 'inline-flex';
   editingId = id;
-  (isMilestone ? document.getElementById('ms-select') : document.getElementById('ann-title')).scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('ann-title').scrollIntoView({ behavior: 'smooth' });
 }
 
 function deleteAnnouncement(id) {

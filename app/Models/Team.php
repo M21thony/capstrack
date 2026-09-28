@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Jobs\SyncConsultationCancellation;
+use App\Services\GoogleCalendarService;
+use App\Services\Notifier;
 use App\Support\DefenseOutcome;
 use App\Support\MilestoneProgress;
 use App\Support\TeamChecklist;
@@ -9,10 +12,49 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class Team extends Model
 {
     protected $table = 'team';
+
+    /**
+     * A team that is gone - its last member left, or it was deleted - can
+     * attend none of its consultations. Call them off and tell the expert,
+     * or the time stays held for a team that no longer exists.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (Team $team) {
+            foreach (ConsultationBooking::cancelForRemovedTeam($team->team_id) as $booking) {
+                Notifier::toExpert(
+                    $booking->schedule?->expert,
+                    'consultation_cancelled',
+                    'Consultation cancelled',
+                    '<strong>'.e($team->team_name).'</strong> no longer exists, so its '
+                        .$booking->session_date?->format('D, j M Y').' consultation is off.',
+                    route('instructor.schedule'),
+                    ['booking_id' => $booking->booking_id],
+                );
+
+                SyncConsultationCancellation::dispatch($booking->booking_id, ConsultationBooking::TEAM_REMOVED, (string) $team->team_name);
+            }
+
+            $upcomingPanels = DefensePanel::whereNotNull('google_event_id')
+                ->whereIn('defense_id', DefenseSchedule::where('team_id', $team->team_id)->where('schedule_date', '>=', now())->select('defense_id'))
+                ->get();
+
+            foreach ($upcomingPanels as $panel) {
+                try {
+                    app(GoogleCalendarService::class)->cancelBookingEvent($panel->expert_id, $panel->google_event_id);
+                } catch (\Exception $e) {
+                    Log::warning('Defense panel Google Calendar cancel failed', ['defense_id' => $panel->defense_id, 'expert_id' => $panel->expert_id, 'error' => $e->getMessage()]);
+                }
+            }
+
+            DefenseSchedule::removeForTeams([$team->team_id]);
+        });
+    }
 
     /** This team's Title Defense attempts, fetched once per instance. */
     private ?Collection $titleDefenseAttempts = null;
@@ -133,7 +175,7 @@ class Team extends Model
     public const TEAM_LOCKED = 'Your team passed Title Defense, so its members are locked. '
         .'A member can only leave with your CaPSA\'s approval - send the request from the Team page.';
 
-    public const NO_NEW_TEAMS ='Capstone 2 has started. Teams keep the members they '
+    public const NO_NEW_TEAMS = 'Capstone 2 has started. Teams keep the members they '
         .'finished Capstone 1 with, so new teams and recruitment posts are closed.';
 
     /**

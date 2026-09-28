@@ -1027,6 +1027,7 @@ function formatDateLabel(dateKey) {
 }
 
 function showToast(message, type) {
+  if (window.ctToast) { return ctToast(message, type); }
   type = type || 'success';
   const toast = document.getElementById('consult-toast');
   if (!toast) { return; }

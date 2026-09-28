@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -61,8 +63,8 @@ class AdminStudentAccountsPageTest extends TestCase
         $response->assertSee('title="Bachelor of Science in Information Technology"', false);
 
         // Year and section apart, from the one string they are stored in.
-        $response->assertSee('std-num">4th', false);
-        $response->assertSee('std-num">B', false);
+        $response->assertSee('data-label="Year">4th', false);
+        $response->assertSee('data-label="Section">B', false);
     }
 
     /**
@@ -85,6 +87,39 @@ class AdminStudentAccountsPageTest extends TestCase
         $response->assertSee('early@my.cspc.edu.ph', false);
         // A literal em dash, not the entity - Blade prints the character.
         $response->assertSee('—', false);
+    }
+
+    /** Which team someone is on this term, without opening anything. */
+    public function test_the_team_column_shows_the_team_or_says_there_is_none(): void
+    {
+        $this->actingAs($this->admin(), 'expert');
+
+        $team = Team::create(['team_name' => 'Team Alpha', 'project_title' => 'A Capstone Project', 'tags' => []]);
+        $onTeam = Student::create(['email' => 'onteam@my.cspc.edu.ph', 'f_name' => 'On', 'l_name' => 'Team']);
+        StudentSchoolYear::create(['student_id' => $onTeam->student_id, 'team_id' => $team->team_id]);
+        Student::create(['email' => 'alone@my.cspc.edu.ph', 'f_name' => 'All', 'l_name' => 'Alone']);
+
+        $this->get(route('admin.students'))
+            ->assertOk()
+            ->assertSee('<th>Team</th>', false)
+            ->assertSee('Team Alpha')
+            ->assertSee('No team');
+    }
+
+    /** An empty result says what was looked for, and how to undo it. */
+    public function test_an_empty_search_says_what_was_searched_and_offers_to_clear_it(): void
+    {
+        $this->actingAs($this->admin(), 'expert');
+        Student::create(['email' => 'listed@my.cspc.edu.ph', 'f_name' => 'John', 'l_name' => 'Aurillas']);
+
+        $this->get(route('admin.students', ['search' => 'zzz', 'year' => '4th']))
+            ->assertOk()
+            ->assertSee('No students match &quot;zzz&quot;, 4th year.', false)
+            ->assertSee('Clear filters');
+
+        $this->get(route('admin.students'))
+            ->assertOk()
+            ->assertDontSee('Clear filters');
     }
 
     /** Student Section List is the CaPSA's, so Admin is not offered it. */

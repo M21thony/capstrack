@@ -28,7 +28,8 @@ export async function send(method, url, body) {
 }
 
 let toastEl, toastTimer;
-export function toast(text) {
+export function toast(text, type) {
+  if (window.ctToast) { return window.ctToast(text, type); }
   if (!toastEl) {
     toastEl = document.createElement('div');
     toastEl.className = 'fx-toast';

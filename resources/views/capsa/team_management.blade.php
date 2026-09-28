@@ -10,6 +10,18 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/team-management.css') }}"/>
 <style>
   .tm-empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.6}
+  /* A team waiting on her: gold edge, warm tint, and what it is waiting for. */
+  #tm-teams tr.tm-needs td{background:#fffbeb}
+  #tm-teams tr.tm-needs td:first-child{box-shadow:inset 4px 0 0 #d97706}
+  .tm-wait{display:inline-flex;align-items:center;gap:6px;margin-top:4px;font-size:11.5px;font-weight:700;color:#b45309}
+  .tm-wait time{font-weight:500;color:#92400e}
+  .tm-dot{width:8px;height:8px;border-radius:50%;background:#d97706;flex-shrink:0}
+  .tm-dot.new{background:#dc2626;animation:tmPulse 1.6s ease-out infinite}
+  @keyframes tmPulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.55)}100%{box-shadow:0 0 0 7px rgba(220,38,38,0)}}
+  @media (prefers-reduced-motion: reduce){.tm-dot.new{animation:none}}
+  /* A row that just changed, after the list refreshed itself. */
+  #tm-teams tr.tm-flash td{animation:tmFlash 2.6s ease-out}
+  @keyframes tmFlash{0%,35%{background:#fde68a}100%{background:#fffbeb}}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
@@ -81,7 +93,7 @@
 
       $isDone = fn ($r) => $r->milestones && $r->milestones->total > 0
         && $r->milestones->completed === $r->milestones->total;
-      $needsHer = fn ($r) => $r->pendingProposalCount > 0 || $r->awaitingVerification || $r->papersToCheck > 0;
+      $needsHer = fn ($r) => $r->needsCapsa;
 
       $completedCount = $rows->filter($isDone)->count();
       $reviewCount = $rows->reject($isDone)->filter($needsHer)->count();
@@ -230,7 +242,14 @@
                   ->filter()->implode(' '));
                 $score = $defenseScores->get($row->team->team_id, collect())->last(fn ($s) => $s->average !== null);
               @endphp
-              <tr data-q="{{ $haystack }}" data-st="{{ $status }}" data-href="{{ $href }}">
+              @php
+                $waitingFor = collect([
+                  $row->pendingProposalCount ? $row->pendingProposalCount.' '.Str::plural('title', $row->pendingProposalCount).' to review' : null,
+                  $row->awaitingVerification ? 'To verify' : null,
+                  $row->papersToCheck ? $row->papersToCheck.' '.Str::plural('paper', $row->papersToCheck).' to check' : null,
+                ])->filter()->implode(' · ');
+              @endphp
+              <tr data-q="{{ $haystack }}" data-st="{{ $status }}" data-href="{{ $href }}" @class(['tm-needs' => $row->needsCapsa])>
                 <td class="tm-check"><input type="checkbox" aria-label="Select {{ $row->team->team_name }}"></td>
 
                 <td data-label="Team"><div style="display:flex;align-items:center;gap:11px">
@@ -238,6 +257,14 @@
                   <div style="min-width:0">
                     <div class="tname">{{ $row->team->team_name }}</div>
                     <div class="tsub">{{ $row->members->count() }}/{{ $maxMembers }} members &middot; {{ $row->leaderName }}</div>
+                    @if ($row->needsCapsa)
+                      <div class="tm-wait">
+                        <span @class(['tm-dot', 'new' => $row->lastSubmittedAt?->gt(now()->subDay())])></span><span class="tm-what">{{ $waitingFor }}</span>
+                        @if ($row->lastSubmittedAt)
+                          <time datetime="{{ $row->lastSubmittedAt->toIso8601String() }}">&middot; {{ $row->lastSubmittedAt->diffForHumans() }}</time>
+                        @endif
+                      </div>
+                    @endif
                   </div>
                 </div></td>
 
@@ -402,12 +429,11 @@
   (function () {
     /* Search and Status hide rows in both tables at once. Section is a real
        page load, because it decides which teams are on the page at all. */
-    const box = document.getElementById('tm-q'), status = document.getElementById('tm-st'),
-          rows = [...document.querySelectorAll('tr[data-q]')];
+    const box = document.getElementById('tm-q'), status = document.getElementById('tm-st');
 
     const apply = () => {
       const q = box.value.trim().toLowerCase(), st = status.value;
-      rows.forEach(r => { r.hidden = !(r.dataset.q.includes(q) && (!st || r.dataset.st === st)); });
+      document.querySelectorAll('tr[data-q]').forEach(r => { r.hidden = !(r.dataset.q.includes(q) && (!st || r.dataset.st === st)); });
 
       document.querySelectorAll('tbody').forEach(b => {
         const shown = [...b.querySelectorAll('tr[data-q]')].filter(r => !r.hidden).length;
@@ -422,9 +448,59 @@
     status.onchange = apply;
 
     /* Anywhere on the row opens the team, except the parts that do their own thing. */
-    document.querySelectorAll('tr[data-href]').forEach(r => r.onclick = e => {
-      if (!e.target.closest('input,a,button')) location.href = r.dataset.href;
-    });
+    /* On the table, not each row, so rows swapped in by the refresh below open too. */
+    document.getElementById('tm-teams').onclick = e => {
+      const r = e.target.closest('tr[data-href]');
+      if (r && !e.target.closest('input,a,button')) location.href = r.dataset.href;
+    };
+
+    /* The list keeps itself current: every 15 seconds, while she is looking,
+       the page is fetched quietly and only the list, the counts and the
+       badges are swapped in - search, filter and ticked boxes stay as they
+       are, and a row that changed flashes once. */
+    const parts = ['#tm-teams tbody', '#tm-progress tbody', '.page-head', '.pacts > a:nth-of-type(1)', '.pacts > a:nth-of-type(2)'];
+    const waitOf = root => new Map([...root.querySelectorAll('#tm-teams tr[data-href]')]
+      .map(r => [r.dataset.href, r.querySelector('.tm-what')?.textContent.trim() || '']));
+    const markup = root => parts.map(sel => root.querySelector(sel)?.innerHTML ?? '').join('');
+    let last = markup(document), busy = false;
+
+    const refresh = async () => {
+      if (document.hidden || busy) { return; }
+      busy = true;
+      try {
+        const res = await fetch(location.href, { headers: { Accept: 'text/html' } });
+        // Signed out meanwhile: leave the page as it is.
+        if (!res.ok || res.redirected) { return; }
+        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        if (!doc.querySelector('#tm-teams tbody') || markup(doc) === last) { return; }
+        last = markup(doc);
+
+        const before = waitOf(document);
+        const ticked = new Set([...document.querySelectorAll('#tm-teams tr[data-href]')]
+          .filter(r => r.querySelector('input[type=checkbox]')?.checked).map(r => r.dataset.href));
+
+        parts.forEach(sel => {
+          const now = document.querySelector(sel), next = doc.querySelector(sel);
+          if (now && next) { now.innerHTML = next.innerHTML; }
+        });
+
+        document.querySelectorAll('#tm-teams tr[data-href]').forEach(r => {
+          if (ticked.has(r.dataset.href)) { r.querySelector('input[type=checkbox]').checked = true; }
+          const wait = r.querySelector('.tm-what')?.textContent.trim() || '';
+          // New to the list, or waiting on something new - not just "5 minutes ago" turning 6.
+          if (!before.has(r.dataset.href) || (wait && wait !== before.get(r.dataset.href))) {
+            r.classList.add('tm-flash');
+          }
+        });
+        apply();
+      } catch (e) {
+        /* Offline for a moment: the next round tries again. */
+      } finally {
+        busy = false;
+      }
+    };
+    setInterval(refresh, 15000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { refresh(); } });
 
     const all = document.getElementById('tm-all');
     all.onchange = () => document.querySelectorAll('#tm-teams tbody tr[data-q]').forEach(r => {
@@ -448,6 +524,7 @@
           setOk = document.getElementById('setOk');
 
     const toast = (msg, ok) => {
+      if (window.ctToast) { return ctToast(msg, ok ? 'success' : 'error'); }
       const el = document.getElementById('tm-toast');
       el.textContent = msg;
       el.style.borderLeftColor = ok ? 'var(--green)' : 'var(--red)';

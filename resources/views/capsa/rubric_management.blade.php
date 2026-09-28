@@ -468,7 +468,7 @@ function fitOnScoreCommitted(index) {
   refreshPinMarkers();
 
   if (!moved && !isAtHundred(draftTotal())) {
-    toast('Every other criterion is set too, so there is nothing left to adjust.');
+    toast('Every other criterion is set too, so there is nothing left to adjust.', 'info');
   }
 }
 
@@ -578,7 +578,7 @@ async function loadRubrics() {
     }
   } catch (e) {
     console.error('Failed to load rubrics', e);
-    toast('Failed to load rubrics.');
+    toast('Failed to load rubrics.', 'error');
   }
 }
 
@@ -970,8 +970,8 @@ function goToStep1() {
 function goToStep2() {
   var name = document.getElementById('rb-name').value.trim();
   var type = document.getElementById('rb-type').value;
-  if (!name) { document.getElementById('rb-name').focus(); toast('Enter a rubric name.'); return; }
-  if (!type) { toast('Select a rubric type.'); return; }
+  if (!name) { document.getElementById('rb-name').focus(); toast('Enter a rubric name.', 'error'); return; }
+  if (!type) { toast('Select a rubric type.', 'error'); return; }
   document.getElementById('modal-step-1').style.display = 'none';
   document.getElementById('modal-step-2').style.display = 'flex';
   document.getElementById('rb-modal-box').classList.add('modal-criteria-mode');
@@ -1002,7 +1002,22 @@ function updateAiPanelForType(type) {
       ? 'Generates the school\'s real Pre-Proposal Defense Rubric (all 12 criteria) — just click Generate.'
       : 'Select a rubric type above, then generate a draft name, description, and criteria you can review and edit before saving. "# of Criteria" sets how many scoring criteria the draft will include.';
   }
+
+  // A bare "BSIT Capstone" left the model guessing what the stage grades, and
+  // it drafted presentation criteria only. Naming the categories fixes that.
+  // Only a blank box or another type's template is replaced, never typing.
+  var topicInput = document.getElementById('rb-ai-topic');
+  if (topicInput) {
+    var current = topicInput.value.trim();
+    var isTemplate = Object.keys(AI_FOCUS_TEMPLATES).some(function (k) { return AI_FOCUS_TEMPLATES[k] === current; });
+    if (current === '' || isTemplate) topicInput.value = AI_FOCUS_TEMPLATES[type] || '';
+  }
 }
+
+var AI_FOCUS_TEMPLATES = {
+  pre_oral_defense: 'Capstone Pre-Oral Defense. Use 3 categories: Manuscript (Chapters 1-5, system design, testing), System Prototype (working features, UI, database), Oral Presentation (delivery, answering the panel).',
+  final_oral_defense: 'Capstone Final Oral Defense. Use 3 categories: Manuscript (complete Chapters 1-5, results, conclusions), Final System (all features working, test results, user acceptance), Oral Presentation (delivery, answering the panel).',
+};
 
 // ── AI DRAFT ──────────────────────────────────────────────────────────────────
 // Drafts name/description/criteria via the same Ollama model used by the
@@ -1011,7 +1026,7 @@ function updateAiPanelForType(type) {
 // until the admin clicks Save/Update Rubric like any other rubric.
 async function aiGenerateRubric() {
   var type = document.getElementById('rb-type').value;
-  if (!type) { toast('Select a rubric type first.'); return; }
+  if (!type) { toast('Select a rubric type first.', 'error'); return; }
 
   var btn = document.getElementById('rb-ai-btn');
   var label = document.getElementById('rb-ai-btn-label');
@@ -1030,7 +1045,7 @@ async function aiGenerateRubric() {
     });
     var json = await res.json();
     if (!res.ok || !json.success) {
-      toast(json.message || 'AI generation failed.');
+      toast(json.message || 'AI generation failed.', 'error');
       return;
     }
 
@@ -1054,7 +1069,7 @@ async function aiGenerateRubric() {
     toast('Draft generated — review the criteria below before saving.');
     goToStep2();
   } catch (e) {
-    toast('AI generation failed. Please try again.');
+    toast('AI generation failed. Please try again.', 'error');
   } finally {
     btn.disabled = false;
     label.textContent = 'Generate';
@@ -1066,16 +1081,16 @@ async function saveRubric() {
   var name = document.getElementById('rb-name').value.trim();
   var type = document.getElementById('rb-type').value;
   var desc = document.getElementById('rb-desc').value.trim();
-  if (!name) { toast('Enter a rubric name.'); goToStep1(); return; }
-  if (!type) { toast('Select a rubric type.'); goToStep1(); return; }
-  if (!draftCriteria.length) { toast('Add at least one criterion.'); return; }
-  if (!validateCriterionNames()) { toast('Criterion Name is required for every criterion.'); openFirstProblemCriterion(); return; }
-  if (!validateLevelDescriptions()) { toast('Performance level description is required for every performance level.'); openFirstProblemCriterion(); return; }
+  if (!name) { toast('Enter a rubric name.', 'error'); goToStep1(); return; }
+  if (!type) { toast('Select a rubric type.', 'error'); goToStep1(); return; }
+  if (!draftCriteria.length) { toast('Add at least one criterion.', 'error'); return; }
+  if (!validateCriterionNames()) { toast('Criterion Name is required for every criterion.', 'error'); openFirstProblemCriterion(); return; }
+  if (!validateLevelDescriptions()) { toast('Performance level description is required for every performance level.', 'error'); openFirstProblemCriterion(); return; }
   var total = draftTotal();
   // Off 100 is allowed - the rubric is saved as it stands and the total is
   // shown wherever it is used. Warned once, not blocked.
   if (!isAtHundred(total)) {
-    toast('Saved with ' + formatPts(total) + ' points, not 100.');
+    toast('Saved with ' + formatPts(total) + ' points, not 100.', 'info');
   }
 
   var url, method;
@@ -1095,7 +1110,7 @@ async function saveRubric() {
     });
     var json = await res.json();
     if (!res.ok) {
-      toast(json.message || 'Something went wrong.');
+      toast(json.message || 'Something went wrong.', 'error');
       return;
     }
 
@@ -1120,7 +1135,7 @@ async function saveRubric() {
     });
     var syncJson = await syncRes.json();
     if (!syncRes.ok) {
-      toast(syncJson.message || 'Failed to save criteria.');
+      toast(syncJson.message || 'Failed to save criteria.', 'error');
       return;
     }
 
@@ -1128,7 +1143,7 @@ async function saveRubric() {
     await loadRubrics();
     toast(editingId ? 'Rubric updated.' : 'Rubric saved.');
   } catch (e) {
-    toast('Something went wrong.');
+    toast('Something went wrong.', 'error');
   }
 }
 
@@ -1193,9 +1208,9 @@ async function executeArchive() {
       if (res.status === 404) {
         closeDelModal();
         await loadRubrics();
-        toast('Rubric not found. List refreshed.');
+        toast('Rubric not found. List refreshed.', 'error');
       } else {
-        toast(json.message || 'Something went wrong.');
+        toast(json.message || 'Something went wrong.', 'error');
         btn.disabled = false;
         btn.textContent = 'Archive';
       }
@@ -1206,7 +1221,7 @@ async function executeArchive() {
     await loadRubrics();
     toast('Rubric archived.');
   } catch (e) {
-    toast('Something went wrong.');
+    toast('Something went wrong.', 'error');
     btn.disabled = false;
     btn.textContent = 'Archive';
   }
@@ -1242,9 +1257,9 @@ async function executeRestore() {
       if (res.status === 404) {
         closeDelModal();
         await loadRubrics();
-        toast('Rubric not found. List refreshed.');
+        toast('Rubric not found. List refreshed.', 'error');
       } else {
-        toast(json.message || 'Something went wrong.');
+        toast(json.message || 'Something went wrong.', 'error');
         btn.disabled = false;
         btn.textContent = 'Restore';
       }
@@ -1255,7 +1270,7 @@ async function executeRestore() {
     await loadRubrics();
     toast('Rubric restored.');
   } catch (e) {
-    toast('Something went wrong.');
+    toast('Something went wrong.', 'error');
     btn.disabled = false;
     btn.textContent = 'Restore';
   }
@@ -1432,7 +1447,8 @@ function updateStats() {
   document.getElementById('stat-types').textContent = new Set(visible.map(function(r) { return r.type; })).size;
 }
 
-function toast(msg) {
+function toast(msg, type) {
+  if (window.ctToast) { return ctToast(msg, type); }
   var t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');

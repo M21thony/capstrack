@@ -26,7 +26,9 @@ class GoogleDriveController extends Controller
         $expert = Auth::guard('expert')->user();
         $route = $expert && $expert->is_admin ? 'capsa.resources' : 'instructor.docreview';
 
-        if ($request->has('error')) {
+        // Cancelled on Google's screen, or opened without the code Google
+        // sends back - either way there is nothing to connect with.
+        if ($request->has('error') || ! $request->filled('code')) {
             return redirect()->route($route)->with('error', 'Google Drive connection was cancelled.');
         }
 

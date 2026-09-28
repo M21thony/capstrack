@@ -1092,7 +1092,7 @@
 
     <div class="modal-actions" style="margin-top: 18px;">
       <button class="btn btn-soft" onclick="closeRemoveModal()">Cancel</button>
-      <button class="btn btn-solid-red" id="btn-confirm-remove" onclick="confirmRemove()" disabled>Yes, Remove</button>
+      <button class="btn btn-solid-red" id="btn-confirm-remove" onclick="confirmRemove()" disabled>Remove</button>
     </div>
   </div>
 </div>
@@ -1712,7 +1712,7 @@ function confirmRemove() {
   var btn = document.getElementById('btn-confirm-remove');
   btn.disabled = true;
   btn.textContent = 'Removing...';
-  var idleLabel = 'Yes, Remove';
+  var idleLabel = 'Remove';
 
   fetch('/api/assignments/' + currentRemoveId, {
     method: 'DELETE',
@@ -1744,6 +1744,7 @@ function confirmRemove() {
 }
 
 function showToast(msg, type) {
+  if (window.ctToast) { return ctToast(msg, type); }
   const toast = document.getElementById('msg-toast');
   toast.textContent = msg;
   toast.className = 'msg-toast show ' + type;

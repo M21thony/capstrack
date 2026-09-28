@@ -77,6 +77,8 @@ class StudentRosterDuplicateNumberTest extends TestCase
         $errors = implode(' ', $response->json('errors'));
         $this->assertStringContainsString('221001135', $errors);
         $this->assertStringContainsString('another account', $errors);
+        // Named, so the CaPSA can find the account that holds it.
+        $this->assertStringContainsString('someone.else@my.cspc.edu.ph', $errors);
     }
 
     public function test_the_preview_warns_about_a_reused_number_before_upload(): void
@@ -111,5 +113,38 @@ class StudentRosterDuplicateNumberTest extends TestCase
         $response->assertJson(['success' => true, 'created' => 1]);
 
         $this->assertSame('221009999', Student::where('email', 'maria.santos@my.cspc.edu.ph')->value('student_number'));
+    }
+
+    /** Google never issues "ñ", so "tobriñas" is read as the account "tobrinas". */
+    public function test_an_accented_email_is_read_as_its_plain_google_address(): void
+    {
+        $response = $this->actingAs($this->capsa(), 'expert')
+            ->post(route('capsa.rosters.students.store'), [
+                'file' => $this->sheet([
+                    ['Tobriñas@my.cspc.edu.ph', 'Tobriñas', 'Ana', 'Reyes', '221001140', 'BSIT', 4, 'A'],
+                ]),
+            ])
+            ->assertSuccessful();
+
+        $response->assertJson(['success' => true, 'created' => 1]);
+        $this->assertTrue(Student::where('email', 'tobrinas@my.cspc.edu.ph')->exists());
+
+        $errors = implode(' ', $response->json('errors'));
+        $this->assertStringContainsString("read as 'tobrinas@my.cspc.edu.ph'", $errors);
+        $this->assertStringNotContainsString('not a valid email', $errors);
+    }
+
+    public function test_an_email_that_is_still_invalid_is_skipped(): void
+    {
+        $response = $this->actingAs($this->capsa(), 'expert')
+            ->post(route('capsa.rosters.students.store'), [
+                'file' => $this->sheet([
+                    ['tobriñas at my.cspc.edu.ph', 'Tobriñas', 'Ana', 'Reyes', '221001140', 'BSIT', 4, 'A'],
+                ]),
+            ])
+            ->assertSuccessful();
+
+        $this->assertSame(0, Student::count());
+        $this->assertStringContainsString('not a valid email', implode(' ', $response->json('errors')));
     }
 }

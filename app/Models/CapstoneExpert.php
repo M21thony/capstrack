@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -683,6 +684,56 @@ class CapstoneExpert extends Authenticatable
                 $expert->fill(self::degreeFromCredentials($expert->credentials));
             }
         });
+
+        // A deactivated expert gives up their place on every team, the same
+        // as a CaPSA-approved removal. Left approved, the team's role stays
+        // "filled" by someone nobody can see, and applying to a replacement
+        // is refused because the role is taken.
+        static::softDeleted(function (self $expert) {
+            TeamExpertAssignment::where('expert_id', $expert->expert_id)
+                ->where('status', 'approved')
+                ->get()
+                ->each(function (TeamExpertAssignment $assignment) {
+                    if ($assignment->proposal_file) {
+                        Storage::disk('public')->delete($assignment->proposal_file);
+                    }
+
+                    $assignment->delete();
+                });
+        });
+    }
+
+    /**
+     * Why this account cannot be switched off yet, or null when it can.
+     *
+     * Unlike a team place, these cannot simply be given up: a CaPSA's
+     * sections would be left with nobody to own their checklist or receive
+     * their requests, and a defense only gets its outcome once every panelist
+     * has graded and the chair has recorded it. Both need a person chosen, so
+     * the admin is sent to choose one first.
+     */
+    public function deactivationBlocker(): ?string
+    {
+        if ($this->is_capsa && $this->sections) {
+            return "{$this->name} is still the CaPSA for ".implode(', ', $this->sections).'. Take away their CaPSA role first, which frees those sections for another CaPSA.';
+        }
+
+        $teamNames = DefenseSchedule::whereNull('outcome')
+            ->whereHas('panels', fn ($q) => $q->where('expert_id', $this->expert_id))
+            ->whereIn('team_id', StudentSchoolYear::query()->select('team_id'))
+            ->with('team')
+            ->get()
+            ->pluck('team.team_name')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($teamNames->isNotEmpty()) {
+            return "{$this->name} is still on the defense panel of ".$teamNames->implode(', ').'. Put someone else on those panels first.';
+        }
+
+        return null;
     }
 
     /** What a list shows after the name: MIT, PhD - or the level when only that is on record. */

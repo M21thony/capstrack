@@ -890,6 +890,7 @@ function zoom(box, step) {
 
 // ── The notice after a send, and the page's own toast ───────────────
 export function showToast(message, type) {
+  if (window.ctToast) { return window.ctToast(message, type); }
   type = type || 'success';
   const toast = document.getElementById('submission-toast');
   if (!toast) return;
