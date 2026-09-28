@@ -68,7 +68,7 @@ class AuthController extends Controller
                     'name' => 'Ian Cyrus',
                     'initials' => 'IC',
                     'role' => 'UI/UX Designer',
-                    'image' => 'images/team/ian-cyrus.jpeg',
+                    'image' => 'images/team/ian-cyrus.jpg',
                     'facebook' => 'https://www.facebook.com/iancyrus.tumambing',
                     'email' => 'iatumambing@my.cspc.edu.ph',
                 ],
