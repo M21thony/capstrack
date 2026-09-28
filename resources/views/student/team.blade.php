@@ -27,6 +27,21 @@
   [data-theme="dark"] #editTeamModal .edit-team-save-btn:hover { background: #343a47 !important; }
   [data-theme="dark"] #editTeamModal .edit-team-cancel-btn { background: #1e222b !important; color: #fff !important; border-color: rgba(255,255,255,0.08) !important; }
   [data-theme="dark"] #editTeamModal .edit-team-cancel-btn:hover { background: #262b36 !important; }
+  /* Project tags in Update Team: the title's tags as chips, and a list to add from. */
+  #editTeamModal .ut-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  #editTeamModal .ut-tags .selected-tag { padding: 5px 6px 5px 10px; font-size: 12px; }
+  #editTeamModal .ut-x { width: 18px; height: 18px; display: inline-grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 14px; line-height: 1; cursor: pointer; opacity: .65; padding: 0; }
+  #editTeamModal .ut-x:hover { opacity: 1; background: rgba(29,78,216,.12); }
+  #editTeamModal .ut-x[hidden] { display: none; }
+  #editTeamModal .ut-add { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px dashed var(--border2, var(--border)); background: var(--bg2); color: var(--text2); font: inherit; font-size: 12.5px; cursor: pointer; box-sizing: border-box; }
+  #editTeamModal .ut-add:disabled { cursor: not-allowed; opacity: .6; }
+  #editTeamModal .ut-msg { margin-top: 6px; font-size: 11.5px; color: var(--red); }
+  #editTeamModal .ut-msg[hidden] { display: none; }
+  #editTeamModal .ut-note { margin-top: 6px; font-size: 11px; color: var(--text3); }
+  #editTeamModal .ut-none { font-size: 12px; color: var(--amber, #b45309); padding: 4px 0; }
+  #editTeamModal .ut-title { display: block; width: 100%; min-height: 58px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; line-height: 1.5; resize: vertical; box-sizing: border-box; }
+  #editTeamModal .ut-title:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(201,168,44,.18); }
+  #editTeamModal .ut-empty { padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--border); background: var(--bg3); font-size: 12px; line-height: 1.5; color: var(--text3); }
 
   [data-theme="dark"] .expert-removed-item { border-bottom-color: var(--border) !important; }
   [data-theme="dark"] #expertRemovedModal > div { background: var(--bg2) !important; box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important; }
@@ -1243,77 +1258,64 @@
       @method('PUT')
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
       <input type="text" name="team_name" id="edit-team-name" value="{{ $myTeam->team_name }}" placeholder="Enter team name..." autocomplete="off" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:0;box-sizing:border-box;">
-      <div id="edit-team-name-msg" style="font-size: 11px; color: var(--red); margin: 6px 0 16px; display: none;"></div>
-      {{-- Project Title is not typed here any more. It is whichever
-           pre-proposal the CAPSA approves - and when two are approved, the
-           one the team then picks - so it is shown, not edited. --}}
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Project Title</label>
+      <div id="edit-team-name-msg" style="font-size: 11px; color: var(--red); margin: 6px 0 0; display: none;"></div>
+      {{-- The title comes from the pre-proposal the CaPSA approves (and, when
+           two are, the one the team picks). Once it is set the leader can
+           correct it here - a misspelling, a word or two. A reworded title
+           needs the panel's "passed with revision"; a different one goes
+           through the CaPSA (TitleRevision). --}}
+      <label for="edit-project-title" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin: 16px 0 8px;">Project Title</label>
       @php
         $approvedProposalCount = $myTeam->preProposals()->where('approved_status', true)->count();
+        $titleCanBeReworded = $myTeam->project_title && \App\Support\TitleRevision::canRevise($myTeam);
       @endphp
-      <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);font-size:13px;margin-bottom:16px;box-sizing:border-box;line-height:1.5;">
-        @if ($myTeam->project_title)
-          <span style="color:var(--text);font-weight:600;">{{ $myTeam->project_title }}</span>
-        @elseif ($approvedProposalCount >= 2)
-          <span style="color:var(--text2);">{{ $approvedProposalCount }} of your titles were approved &mdash; choose the one you want on the <a href="{{ route('student.duplication') }}" style="color:var(--accent3);font-weight:600;">Duplication Checker</a> page.</span>
-        @else
-          <span style="color:var(--text3);">Set once your CaPSA approves one of your pre-proposal titles.</span>
-        @endif
-      </div>
-
-      <div id="tagsSection" style="margin-bottom:16px;">
-        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">
-          Project Tags <span style="font-weight:400;text-transform:none;color:var(--text3);">(optional)</span>
-        </label>
-        <div style="position:relative;display:flex;gap:6px;margin-bottom:8px;">
-          <div style="position:relative;flex:1;">
-            <input type="text" id="tagSearchInput" placeholder="Search or type a tag..." autocomplete="off" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;box-sizing:border-box;" oninput="filterCommonTags(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomTag();}if(event.key==='Escape'){closeTagDropdown();}" onblur="setTimeout(closeTagDropdown,180)" onfocus="filterCommonTags(this.value)">
-            <div id="tagDropdown" style="display:none;position:absolute;top:100%;left:0;width:100%;max-height:180px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border);border-radius:8px;z-index:20;margin-top:4px;box-shadow:0 6px 20px rgba(0,0,0,0.1);">
-            </div>
-          </div>
-          <button type="button" onclick="addCustomTag()" style="padding:7px 14px;border-radius:7px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;">Add</button>
+      @if ($myTeam->project_title)
+        <textarea name="project_title" id="edit-project-title" class="ut-title" rows="2" maxlength="255" required
+                  data-saved="{{ $myTeam->project_title }}">{{ old('project_title', $myTeam->project_title) }}</textarea>
+        @error('project_title')<div class="ut-msg">{{ $message }}</div>@enderror
+        <div class="ut-note" style="margin-bottom:16px;">
+          @if ($titleCanBeReworded)
+            Your panel passed the title with revision, so you can reword it until the Signed Final Project Title Form is in.
+          @else
+            Fix spelling or small mistakes. A different title goes through your CaPSA.
+          @endif
         </div>
-        @php $teamTags = is_array($myTeam->tags) ? $myTeam->tags : []; @endphp
-        <input type="hidden" name="tags" id="tagsHiddenInput" value='{{ json_encode($teamTags) }}'>
-        <div id="selectedTagsDisplay" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;">
-          @foreach($teamTags as $tag)
-            <span class="selected-tag" data-tag="{{ $tag }}">{{ $tag }} <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span></span>
-          @endforeach
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:6px;">Tags help other students find your project in the recruitment feed.</div>
-      </div>
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Members</label>
-      <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text3);font-size:12px;margin-bottom:16px;box-sizing:border-box;">
-        Fixed at 5 members (including the leader). Slots fill automatically as members join.
-      </div>
-      <input type="hidden" name="member_count" value="{{ \App\Models\Team::maxMembers() }}">
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Status</label>
-      @if($isTeamFull)
-      <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e;">
-        <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/{{ \App\Models\Team::maxMembers() }} members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
-      </div>
-      @endif
-      <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:8px;box-sizing:border-box;@if($myTeam->is_confirmed) cursor:not-allowed;opacity:0.6;@endif" @if($myTeam->is_confirmed) disabled @endif>
-        <option value="on-going" id="ongoingStatusOption" @if($myTeam->team_status === 'on-going') selected @endif @if($isTeamFull) disabled @endif>On-going</option>
-        {{-- Complete is not set by hand any more: submitting your
-             pre-proposals for checking is what marks the team complete, so
-             there is one way to turn in rather than two. It stays listed,
-             disabled, while it IS the current status, so the dropdown does
-             not silently show the wrong thing. --}}
-        @if($myTeam->team_status === 'complete')
-          <option value="complete" id="completeStatusOption" selected disabled>Complete</option>
-        @endif
-        <option value="closed" id="closedStatusOption" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
-      </select>
-      <div id="completeGateHint" style="display:none;font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5;"></div>
-      @if($myTeam->is_confirmed)
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:20px;font-size:12px;color:#6b7280;">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>Team is verified — status cannot be changed.</span>
-      </div>
       @else
-      <div style="margin-bottom:20px;"></div>
+        <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);font-size:13px;margin-bottom:16px;box-sizing:border-box;line-height:1.5;">
+          @if ($approvedProposalCount >= 2)
+            <span style="color:var(--text2);">{{ $approvedProposalCount }} of your titles were approved &mdash; choose the one you want on the <a href="{{ route('student.duplication') }}" style="color:var(--accent3);font-weight:600;">Duplication Checker</a> page.</span>
+          @else
+            <span style="color:var(--text3);">Set once your CaPSA approves one of your pre-proposal titles.</span>
+          @endif
+        </div>
       @endif
+
+      {{-- The capstone title's own tags - the ones the team picked on the
+           pre-proposal that became its title. They come filled in; the leader
+           adds from the same fixed list or removes, and a title always keeps
+           at least one. Before there is a title there is nothing to tag. --}}
+      @php
+        $hasTitle = (bool) ($myTeam->project_title || $myTeam->selectedPreProposal);
+        $titleTags = $myTeam->titleTags();
+      @endphp
+      <div id="tagsSection" style="margin-bottom:20px;">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Project Tags</label>
+        @if ($hasTitle)
+          <input type="hidden" name="tags" id="tagsHiddenInput" value="{{ json_encode($titleTags) }}" data-saved="{{ json_encode($titleTags) }}">
+          <div id="selectedTagsDisplay" class="ut-tags" aria-live="polite"></div>
+          <select id="tagAddSelect" class="ut-add" aria-label="Add a tag" onchange="addProjectTag(this.value)">
+            <option value="">+ Add a tag…</option>
+            @foreach (\App\Support\ProjectTags::OPTIONS as $option)
+              <option value="{{ $option }}">{{ $option }}</option>
+            @endforeach
+          </select>
+          @php $tagsError = $errors->first('tags') ?: $errors->first('tags.*'); @endphp
+          <div id="tagsMsg" class="ut-msg" role="alert" @if (! $tagsError) hidden @endif>{{ $tagsError }}</div>
+          <div class="ut-note">From your capstone title. Keep at least {{ \App\Support\ProjectTags::MIN }}, up to {{ \App\Support\ProjectTags::MAX }}.</div>
+        @else
+          <div class="ut-empty">Tags come with your capstone title. They appear here once your CaPSA approves one of your pre-proposal titles, and you can add or remove them then.</div>
+        @endif
+      </div>
       <div class="modal-actions modal-actions--dual" style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
         <button type="submit" class="btn-primary edit-team-save-btn" style="width:100%;">Save Changes</button>
         <button type="button" class="google-btn edit-team-cancel-btn" style="width:100%;border:none;background:transparent;" onclick="closeEditTeamModal()">Cancel</button>
@@ -1737,13 +1739,6 @@ function pickRole(roleId, btn) {
 </div>
 
 <script>
-@if($myTeam)
-// How many pre-proposal titles this team has submitted - the real gate on
-// marking the team Complete, mirrored from TeamController::update().
-window.PRE_PROPOSAL_COUNT = {{ $myTeam->preProposals()->count() }};
-window.PRE_PROPOSAL_RECOMMENDED = {{ \App\Http\Controllers\PreProposalController::RECOMMENDED_PROPOSALS }};
-@endif
-
 const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
 const currentStudentId = {{ auth()->user()->student_id }};
 const myRecruitmentGoal = '{{ $myRecruitmentGoal ?? '' }}';
@@ -2105,124 +2100,82 @@ function countMeaningfulWords(text) {
     }).length;
 }
 
-// Complete is reached by submitting your pre-proposals for checking, not by
-// picking it here, so this only explains where it comes from.
-function updateCompleteOption() {
-    var hint = document.getElementById('completeGateHint');
-    if (!hint) return;
+// ── Project tags in Update Team ─────────────────────────────────────
+// The capstone title's own tags, from the fixed list the pre-proposal form
+// uses. At least one always stays: the last chip cannot be removed.
+var TAG_MIN = {{ \App\Support\ProjectTags::MIN }};
+var TAG_MAX = {{ \App\Support\ProjectTags::MAX }};
 
-    var saved = window.PRE_PROPOSAL_COUNT || 0;
-    var recommended = window.PRE_PROPOSAL_RECOMMENDED || 4;
-
-    hint.style.display = '';
-
-    // Any number of saved titles can be submitted; the number is advice.
-    hint.textContent = saved === 0
-        ? 'Save a pre-proposal title on the Duplication Checker page, then submit it for '
-          + 'checking to mark your team Complete.'
-        : saved >= recommended
-            ? 'Your team is marked Complete by submitting your pre-proposals for checking, on the Duplication Checker page.'
-            : saved + ' pre-proposal ' + (saved === 1 ? 'title' : 'titles') + ' saved - we suggest '
-              + recommended + '. Submit them for checking on the Duplication Checker page to mark '
-              + 'your team Complete.';
+function currentProjectTags() {
+    var input = document.getElementById('tagsHiddenInput');
+    if (!input) return [];
+    try { return JSON.parse(input.value || '[]'); } catch (e) { return []; }
 }
 
-function addCustomTag() {
-    var input = document.getElementById('tagSearchInput');
-    var val = input.value.trim().replace(/\s+/g, ' ');
-    if (!val || isTagSelected(val)) {
-        input.value = '';
-        closeTagDropdown();
-        return;
-    }
+function showTagsMsg(text) {
+    var msg = document.getElementById('tagsMsg');
+    if (!msg) return;
+    msg.textContent = text || '';
+    msg.hidden = !text;
+}
+
+// Draws the chips and the "Add a tag" list from the hidden input, so the
+// two can never disagree.
+function renderProjectTags(tags) {
+    var input = document.getElementById('tagsHiddenInput');
     var display = document.getElementById('selectedTagsDisplay');
-    var span = document.createElement('span');
-    span.className = 'selected-tag';
-    span.setAttribute('data-tag', val);
-    span.innerHTML = val + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
-    display.appendChild(span);
-    input.value = '';
-    closeTagDropdown();
-    updateTagsHiddenInput();
-}
+    var select = document.getElementById('tagAddSelect');
+    if (!input || !display) return;
 
-function getSelectedTags() {
-    var tags = [];
-    document.querySelectorAll('#selectedTagsDisplay .selected-tag').forEach(function(el) {
-        tags.push((el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim()).toLowerCase());
-    });
-    return tags;
-}
-
-function isTagSelected(val) {
-    var selected = getSelectedTags();
-    return selected.indexOf(val.toLowerCase().trim()) !== -1;
-}
-
-var COMMON_TAGS = [
-    'Artificial Intelligence', 'Machine Learning', 'Web Development',
-    'Mobile App', 'Data Analytics', 'Cybersecurity', 
-    'AI', 'Database Systems', 'UI/UX Design', 'Network Systems'
-];
-
-function filterCommonTags(query) {
-    var dropdown = document.getElementById('tagDropdown');
-    var q = query.toLowerCase().trim();
-    if (!q) {
-        dropdown.innerHTML = '';
-        dropdown.style.display = 'none';
-        return;
+    input.value = JSON.stringify(tags);
+    display.textContent = '';
+    if (!tags.length) {
+        var none = document.createElement('span');
+        none.className = 'ut-none';
+        none.textContent = 'No tags yet — add at least one.';
+        display.appendChild(none);
     }
-    var selected = getSelectedTags();
-    var matches = COMMON_TAGS.filter(function(t) {
-        return t.toLowerCase().indexOf(q) !== -1 && selected.indexOf(t.toLowerCase()) === -1;
+    tags.forEach(function (tag) {
+        var chip = document.createElement('span');
+        chip.className = 'selected-tag';
+        chip.setAttribute('data-tag', tag);
+        chip.appendChild(document.createTextNode(tag));
+        var x = document.createElement('button');
+        x.type = 'button';
+        x.className = 'ut-x';
+        x.setAttribute('aria-label', 'Remove ' + tag);
+        x.textContent = '×';
+        x.hidden = tags.length <= TAG_MIN;
+        x.addEventListener('click', function () { removeProjectTag(tag); });
+        chip.appendChild(x);
+        display.appendChild(chip);
     });
-    if (matches.length === 0) {
-        dropdown.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--text3);">' + (selected.indexOf(q) !== -1 ? 'Already added' : 'No matching tags') + '</div>';
-        dropdown.style.display = 'block';
-        return;
+
+    if (select) {
+        Array.prototype.forEach.call(select.options, function (opt) {
+            if (opt.value) opt.hidden = opt.disabled = tags.indexOf(opt.value) !== -1;
+        });
+        select.value = '';
+        select.disabled = tags.length >= TAG_MAX;
+        select.options[0].textContent = tags.length >= TAG_MAX ? 'Up to ' + TAG_MAX + ' tags' : '+ Add a tag…';
     }
-    var html = '';
-    matches.forEach(function(t) {
-        html += '<div onclick="selectTagFromDropdown(\'' + t.replace(/'/g, "\\'") + '\')" style="padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'transparent\'">' + t + '</div>';
-    });
-    dropdown.innerHTML = html;
-    dropdown.style.display = 'block';
 }
 
-function closeTagDropdown() {
-    var dropdown = document.getElementById('tagDropdown');
-    if (dropdown) dropdown.style.display = 'none';
+function addProjectTag(tag) {
+    var tags = currentProjectTags();
+    if (!tag || tags.indexOf(tag) !== -1) { renderProjectTags(tags); return; }
+    if (tags.length >= TAG_MAX) { showTagsMsg('Pick at most ' + TAG_MAX + ' tags.'); renderProjectTags(tags); return; }
+    tags.push(tag);
+    showTagsMsg('');
+    renderProjectTags(tags);
 }
 
-function selectTagFromDropdown(val) {
-    if (isTagSelected(val)) {
-        closeTagDropdown();
-        document.getElementById('tagSearchInput').value = '';
-        return;
-    }
-    var display = document.getElementById('selectedTagsDisplay');
-    var span = document.createElement('span');
-    span.className = 'selected-tag';
-    span.setAttribute('data-tag', val);
-    span.innerHTML = val + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
-    display.appendChild(span);
-    document.getElementById('tagSearchInput').value = '';
-    closeTagDropdown();
-    updateTagsHiddenInput();
-}
-
-function removeProjectTag(el) {
-    el.parentElement.remove();
-    updateTagsHiddenInput();
-}
-
-function updateTagsHiddenInput() {
-    var tags = [];
-    document.querySelectorAll('#selectedTagsDisplay .selected-tag').forEach(function(el) {
-        tags.push(el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim());
-    });
-    document.getElementById('tagsHiddenInput').value = JSON.stringify(tags);
+function removeProjectTag(tag) {
+    var tags = currentProjectTags();
+    if (tags.length <= TAG_MIN) { showTagsMsg('Keep at least one tag on your capstone title.'); return; }
+    tags = tags.filter(function (t) { return t !== tag; });
+    showTagsMsg('');
+    renderProjectTags(tags);
 }
 
 function validateForm(event) {
@@ -2233,47 +2186,38 @@ function validateForm(event) {
         editName.focus();
         return false;
     }
+    if (document.getElementById('tagsHiddenInput') && currentProjectTags().length < TAG_MIN) {
+        event.preventDefault();
+        showTagsMsg('Keep at least one tag on your capstone title.');
+        return false;
+    }
     return true;
 }
 
-// Override openEditTeamModal to refresh the status gate and sync tags
+// Opening the modal starts from what is saved, so a cancelled edit is gone -
+// except right after the server refused the title, when what was typed stays.
+var keepTypedTitle = @json($errors->has('project_title'));
+var keepTagsMsg = @json($errors->has('tags') || $errors->has('tags.*'));
 var origOpenTeamModal = openEditTeamModal;
 openEditTeamModal = function() {
     origOpenTeamModal();
-    setTimeout(function() {
-        updateCompleteOption();
-        syncTagUI();
-    }, 50);
+    var title = document.getElementById('edit-project-title');
+    if (title && !keepTypedTitle) title.value = title.dataset.saved || '';
+    keepTypedTitle = false;
+    var input = document.getElementById('tagsHiddenInput');
+    if (input) {
+        var saved = [];
+        try { saved = JSON.parse(input.dataset.saved || '[]'); } catch (e) {}
+        if (!keepTagsMsg) showTagsMsg('');
+        keepTagsMsg = false;
+        renderProjectTags(saved);
+    }
 };
 
-function syncTagUI() {
-    var tagsInput = document.getElementById('tagsHiddenInput');
-    if (!tagsInput) return;
-    var tags = [];
-    try { tags = JSON.parse(tagsInput.value || '[]'); } catch(e) {}
-    var display = document.getElementById('selectedTagsDisplay');
-    var existing = display.querySelectorAll('.selected-tag');
-    existing.forEach(function(el) {
-        var txt = el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim();
-        if (tags.indexOf(txt) === -1) {
-            el.remove();
-        }
-    });
-    tags.forEach(function(t) {
-        var found = false;
-        display.querySelectorAll('.selected-tag').forEach(function(el) {
-            var txt = el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim();
-            if (txt.toLowerCase() === t.toLowerCase()) found = true;
-        });
-        if (!found) {
-            var span = document.createElement('span');
-            span.className = 'selected-tag';
-            span.setAttribute('data-tag', t);
-            span.innerHTML = t + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
-            display.appendChild(span);
-        }
-    });
-}
+// A refused title or tag list reopens the modal, with the reason under the field.
+@if ($errors->hasAny(['project_title', 'tags']))
+document.addEventListener('DOMContentLoaded', function () { openEditTeamModal(); });
+@endif
 
 // Cancelling an invitation is declining it - the same endpoint the invited
 // student's own Decline button uses, so there is one way for an invitation to
