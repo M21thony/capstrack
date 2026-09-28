@@ -22,7 +22,52 @@
   .cx-dot-active{background:var(--green)}
   .cx-dot-full{background:var(--amber)}
   .cx-dot-offline{background:var(--border2)}
-  .cx-sections{font-size:11.5px;color:var(--text2);white-space:nowrap}
+  /* Sections as ranges, a line per program: "BSIT 3A – 3H" rather than
+     eight names on one line pushing the table off the side of the screen. */
+  .cx-sections{font-size:12.5px;color:var(--text2)}
+  .cx-secs{display:flex;flex-direction:column;gap:6px}
+  .cx-sec{display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .cx-sec-prog{width:38px;font-weight:700;color:var(--text)}
+  .cx-sec-run{display:inline-flex;align-items:center;height:26px;padding:0 9px;border-radius:7px;
+              background:var(--bg4);font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+  .cx-sec-n{font-size:11.5px;color:var(--text3)}
+  /* Status in words beside the name: the dot alone said nothing to anyone
+     who had not been told what its colours mean. */
+  .cx-state{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--text3);white-space:nowrap}
+  .cx-state-active{color:var(--green)}
+  .cx-state-full{color:var(--amber)}
+  .cx-namerow{display:flex;align-items:center;gap:8px;min-width:0}
+  .cx-roles{font-size:11.5px;color:var(--text2);margin-top:3px;white-space:normal}
+  /* The page's count and its one action on one line. */
+  .cm-count-line{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .cm-count-line .page-count{font-size:26px}
+  .cm-covering{font-size:13.5px;color:var(--text3)}
+  .cm-covering.warn{color:var(--amber);font-weight:600}
+  /* Sections nobody holds: a notice you cannot read past, not a red line. */
+  .cm-notice{display:flex;align-items:center;gap:14px;padding:13px 16px;margin-bottom:14px;border-radius:12px;
+             background:#fdf3ea;border:1px solid rgba(180,83,9,.28);color:#7a3806}
+  .cm-notice-ic{width:36px;height:36px;flex-shrink:0;border-radius:10px;background:rgba(180,83,9,.12);
+                display:flex;align-items:center;justify-content:center}
+  .cm-notice-ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .cm-notice-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13px}
+  .cm-notice-text b{font-size:14px}
+  .cm-notice-tags{display:flex;flex-wrap:wrap;gap:6px;max-width:50%}
+  .cm-notice-tags span{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:7px;background:#fff;
+                       border:1px solid rgba(180,83,9,.3);font-size:12.5px;font-weight:700}
+  /* All / Active / Deactivated as three buttons, not a dropdown to open. */
+  .cm-seg{display:inline-flex;padding:3px;gap:2px;border-radius:10px;background:var(--bg4);flex-shrink:0}
+  .cm-seg button{height:34px;padding:0 14px;border:none;border-radius:8px;background:transparent;color:var(--text3);
+                 font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .cm-seg button[aria-pressed="true"]{background:var(--bg2);color:var(--text);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .cm-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .cm-edit{height:34px;padding:0 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);
+           font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .cm-edit:hover{border-color:var(--border2);background:var(--bg3)}
+  @media (max-width:760px){
+    .cm-notice{flex-wrap:wrap;align-items:flex-start}
+    .cm-notice-text{flex:1 1 calc(100% - 50px)}
+    .cm-notice-tags{max-width:none;flex-basis:100%;padding-left:50px}
+  }
   .cx-skills{max-width:240px}
   .cx-chip{display:inline-block;max-width:150px;padding:2px 8px;margin:1px 3px 1px 0;border-radius:6px;
            background:var(--bg4);color:var(--text2);font-size:11px;font-weight:500;
@@ -464,26 +509,37 @@
     {{-- The title is already in the bar above; this line says what the page
          holds, and the two things you can do to it sit opposite. --}}
     <div class="page-head">
-      <div class="page-head-text">
+      <div class="page-head-text cm-count-line">
         <span class="page-count">{{ $experts->count() }}</span>
         <span class="page-count-noun">{{ Str::plural('CaPSA', $experts->count()) }}</span>
-        <span class="page-facts">
-          @if ($sectionsCovered)
-            <span class="fact">{{ $sectionsCovered }} {{ Str::plural('section', $sectionsCovered) }} covered</span>
-          @else
-            <span class="fact fact-warn">no sections covered yet</span>
-          @endif
-        </span>
+        @if ($sectionsCovered)
+          <span class="cm-covering">covering {{ $sectionsCovered }} {{ Str::plural('section', $sectionsCovered) }}</span>
+        @else
+          <span class="cm-covering warn">no sections covered yet</span>
+        @endif
+      </div>
+      {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
+           into the system is the CaPSA's, from their own copy of this page,
+           so the list upload and the one-off Add Expert form are not offered
+           twice. --}}
+      <div class="page-head-actions">
+        <button type="button" class="btn btn-primary" onclick="addCapsa()"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add CaPSA</button>
       </div>
     </div>
 
     {{-- A section nobody holds has its checklist and its students' requests
          going nowhere, and nothing else on the page would say so. --}}
     @if ($uncoveredSections->isNotEmpty())
-      <p class="table-legend" style="color:var(--red)">
-        <b style="color:var(--red)">No CaPSA yet:</b> {{ $uncoveredSections->implode(', ') }}.
-        Give {{ $uncoveredSections->count() === 1 ? 'it' : 'them' }} to a CaPSA with <b>Edit sections</b> or <b>Add CaPSA</b>.
-      </p>
+      <div class="cm-notice" role="note">
+        <span class="cm-notice-ic"><svg viewBox="0 0 24 24"><path d="M12 3 2 21h20Z"/><path d="M12 10v4M12 17.5v.5"/></svg></span>
+        <span class="cm-notice-text">
+          <b>No CaPSA yet: {{ $uncoveredSections->count() }} {{ Str::plural('section', $uncoveredSections->count()) }}</b>
+          <span>Give {{ $uncoveredSections->count() === 1 ? 'it' : 'them' }} to a CaPSA with Edit sections or Add CaPSA.</span>
+        </span>
+        <span class="cm-notice-tags">
+          @foreach ($uncoveredSections as $uncovered)<span>{{ $uncovered }}</span>@endforeach
+        </span>
+      </div>
     @endif
 
     {{-- Filters on their own line. They were sharing a strip with the count
@@ -500,18 +556,11 @@
       {{-- Signed in or not, and how many teams someone takes, are the
            faculty's business; what this list is managed by is whether the
            account is switched on. --}}
-      <select class="input page-filter" id="statusFilter">
-        <option value="all">All accounts</option>
-        <option value="on">Active</option>
-        <option value="off">Deactivated</option>
-      </select>
-      <span class="page-filters-actions">
-        {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
-             into the system is the CaPSA's, from their own copy of this page,
-             so the list upload and the one-off Add Expert form are not offered
-             twice. --}}
-        <button type="button" class="btn btn-primary" onclick="addCapsa()"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add CaPSA</button>
-      </span>
+      <div class="cm-seg" role="group" aria-label="Show" id="statusFilter" data-value="all">
+        <button type="button" data-v="all" aria-pressed="true">All</button>
+        <button type="button" data-v="on" aria-pressed="false">Active</button>
+        <button type="button" data-v="off" aria-pressed="false">Deactivated</button>
+      </div>
     </div>
 
     @include('partials.row-select', [
@@ -529,8 +578,7 @@
             {{-- Status is a dot beside the name rather than a column of its
                  own: it carries one bit, and a whole column to say "Offline"
                  is width the sections and the expertise need more. --}}
-            <th style="padding-left:20px">Expert</th>
-            <th>Role(s)</th>
+            <th style="padding-left:20px">CaPSA</th>
             <th>Sections</th>
             <th>Expertise</th>
             <th>Accepts <span class="th-owner">expert sets</span></th>
@@ -538,6 +586,46 @@
           </tr>
         </thead>
         <tbody>
+          @php
+            // "BSIT-3A".."BSIT-3H" as one line per program: BSIT 3A – 3H.
+            // A gap starts a new run, so BSIT-3D missing reads 3A – 3C, 3E – 3H.
+            $sectionRuns = function (array $sections): array {
+                $byProgram = [];
+                foreach ($sections as $label) {
+                    if (preg_match('/^([A-Z]+)-(\d+)([A-Z]?)$/', $label, $m)) {
+                        $byProgram[$m[1]][] = [$m[2], $m[3]];
+                    } else {
+                        $byProgram[$label][] = null;
+                    }
+                }
+                ksort($byProgram);
+
+                $lines = [];
+                foreach ($byProgram as $program => $items) {
+                    $items = array_filter($items);
+                    usort($items, fn ($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
+                    $runs = [];
+                    foreach ($items as [$year, $letter]) {
+                        $i = count($runs) - 1;
+                        if ($i >= 0 && $runs[$i]['year'] === $year && $letter !== '' && $runs[$i]['to'] !== ''
+                            && ord($letter) === ord($runs[$i]['to']) + 1) {
+                            $runs[$i]['to'] = $letter;
+                        } else {
+                            $runs[] = ['year' => $year, 'from' => $letter, 'to' => $letter];
+                        }
+                    }
+                    $lines[] = [
+                        'program' => $program,
+                        'runs' => collect($runs)->map(fn ($r) => $r['from'] === $r['to']
+                            ? $r['year'].$r['from']
+                            : $r['year'].$r['from'].' – '.$r['year'].$r['to'])->implode(', '),
+                        'count' => count($items),
+                    ];
+                }
+
+                return $lines;
+            };
+          @endphp
           @foreach($experts as $expert)
           @php
               // Whatever a dialog should call this person. An account added by
@@ -620,7 +708,6 @@
               data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
             <td style="padding-left:20px" data-label="Expert">
               <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
-                <span class="cx-dot cx-dot-{{ $computedStatus }}" title="{{ $isOff ? 'Deactivated' : ucfirst($computedStatus) }}"></span>
                 <img src="{{ $expert->avatarUrl() }}" alt="" loading="lazy" class="cx-av"
                      onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
                 @if ($isOff)<span class="cx-off-tag">Deactivated</span>@endif
@@ -632,36 +719,45 @@
                        before anybody knows whose it is. The address stands in
                        as the name until they sign in, when Google hands over
                        the one they actually go by. --}}
+                  <span class="cx-namerow">
+                    <span class="td-main">{{ $expert->name === '' ? $expert->email : $expert->name }}</span>
+                    @unless ($isOff)
+                      <span class="cx-state cx-state-{{ $computedStatus }}"><span class="cx-dot cx-dot-{{ $computedStatus }}"></span>{{ ['active' => 'Online', 'full' => 'Full', 'offline' => 'Offline'][$computedStatus] }}</span>
+                    @endunless
+                  </span>
                   @if ($expert->name === '')
-                    <span class="td-main">{{ $expert->email }}</span>
                     <span class="cx-await">Name fills in when they first sign in</span>
                   @else
-                    <span class="td-main">{{ $expert->name }}</span>
                     <span class="cx-mail">{{ $expert->email }}</span>
                   @endif
-                </span>
-              </div>
-            </td>
-            <td data-label="Role">
-              <div class="expert-role-stack">
-                <div class="expert-role-badges">
-                  {{-- No separate "CAPSA" badge here - toggleCapsa() keeps the
-                       capstone_adviser role in sync with is_capsa, so the
-                       "Capstone Subject Adviser" badge below already says it;
-                       a second blue badge just repeated the same fact. --}}
-                  @forelse ($expert->roles as $role)
-                    <span class="badge badge-gold expert-role-badge">{{ $roleLabel($role->role_name) }}</span>
-                  @empty
-                    @if (! $expert->is_capsa)
-                      <span class="badge badge-gray expert-role-badge">No Role</span>
+                  {{-- No separate "CAPSA" label - toggleCapsa() keeps the
+                       capstone_adviser role in sync with is_capsa, so
+                       "Capstone Subject Adviser" already says it. --}}
+                  <span class="cx-roles">
+                    @if ($expert->roles->isNotEmpty())
+                      {{ $expert->roles->map(fn ($role) => $roleLabel($role->role_name))->implode(' · ') }}
+                    @elseif (! $expert->is_capsa)
+                      No role
                     @endif
-                  @endforelse
-                </div>
+                  </span>
+                </span>
               </div>
             </td>
             <td data-label="Sections" class="cx-sections">
               @if ($expert->is_capsa)
-                {{ !empty($expert->sections) ? implode(', ', $expert->sections) : 'none set' }}
+                @if (! empty($expert->sections))
+                  <div class="cx-secs">
+                    @foreach ($sectionRuns($expert->sections) as $line)
+                      <span class="cx-sec">
+                        <span class="cx-sec-prog">{{ $line['program'] }}</span>
+                        @if ($line['runs'] !== '')<span class="cx-sec-run">{{ $line['runs'] }}</span>@endif
+                        <span class="cx-sec-n">{{ $line['count'] }} {{ Str::plural('section', $line['count']) }}</span>
+                      </span>
+                    @endforeach
+                  </div>
+                @else
+                  none set
+                @endif
               @else
                 <span style="color:var(--text3)">&mdash;</span>
               @endif
@@ -717,6 +813,10 @@
 
             <td data-label="Action">
               <div class="expert-actions">
+                @if ($expert->is_capsa)
+                  <button type="button" class="cm-edit"
+                          onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">Edit sections</button>
+                @endif
                 {{-- Three actions, and two of them used to be a person with a
                      plus and a person with a minus - the shape of an add-friend
                      button, saying nothing about capstone. They carry their
@@ -728,16 +828,6 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
                   </button>
                   <div class="rowmenu-pop" hidden>
-                    @if ($expert->is_capsa)
-                      {{-- Only for someone who already holds the role: changing
-                           which sections they cover is not a change of role, and
-                           doing it through the toggle meant removing them as
-                           CaPSA and making them one again. --}}
-                      <button type="button" class="rowmenu-item"
-                              onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">
-                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg> Edit sections
-                      </button>
-                    @endif
                     <button type="button" class="rowmenu-item warn"
                             onclick="toggleCapsa({{ $expert->expert_id }}, {{ $expert->is_capsa ? 'true' : 'false' }}, {{ Illuminate\Support\Js::from($displayName) }})">
                       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg> {{ $expert->is_capsa ? 'Remove CaPSA role' : 'Make CaPSA' }}
@@ -778,7 +868,7 @@
 
     function filterRows() {
       var q = searchInput ? searchInput.value.toLowerCase().trim() : '';
-      var status = statusFilter ? statusFilter.value : 'all';
+      var status = statusFilter ? statusFilter.dataset.value : 'all';
       visible = 0;
 
       rows.forEach(function(row) {
@@ -804,11 +894,21 @@
     var visible = 0;
     var noMatch = document.createElement('tr');
     noMatch.hidden = true;
-    noMatch.innerHTML = '<td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No CaPSA matches that search.</td>';
+    noMatch.innerHTML = '<td colspan="5" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No CaPSA matches that search.</td>';
     rows[0]?.parentNode.appendChild(noMatch);
 
     if (searchInput) searchInput.addEventListener('input', filterRows);
-    if (statusFilter) statusFilter.addEventListener('change', filterRows);
+    if (statusFilter) {
+      statusFilter.querySelectorAll('button').forEach(function (button) {
+        button.addEventListener('click', function () {
+          statusFilter.dataset.value = button.dataset.v;
+          statusFilter.querySelectorAll('button').forEach(function (b) {
+            b.setAttribute('aria-pressed', b === button ? 'true' : 'false');
+          });
+          filterRows();
+        });
+      });
+    }
   })();
 </script>
         </tbody>
