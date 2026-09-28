@@ -36,6 +36,8 @@ class AdminHasNoRoleManagementTest extends TestCase
 
     public function test_the_page_offers_no_way_to_set_roles(): void
     {
+        $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true]));
+
         $html = $this->actingAs($this->admin(), 'expert')
             ->get(route('admin.experts'))
             ->assertOk()
@@ -46,9 +48,9 @@ class AdminHasNoRoleManagementTest extends TestCase
         $this->assertStringNotContainsString('bulkRoles', $html);
         $this->assertStringNotContainsString('experts-role-filter', $html);
 
-        // The column stays: a CaPSA who also advises says so there, and it is
-        // read-only either way.
-        $this->assertStringContainsString('Role(s)', $html);
+        // The roles are still shown, under each name: a CaPSA who also
+        // advises says so there, and it is read-only either way.
+        $this->assertStringContainsString('class="cx-roles"', $html);
     }
 
     public function test_there_is_no_admin_address_for_it(): void
