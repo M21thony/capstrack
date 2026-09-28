@@ -23,6 +23,10 @@ class AdminExpertController extends Controller
 
     public function destroy(CapstoneExpert $expert): JsonResponse
     {
+        if ($blocker = $expert->deactivationBlocker()) {
+            return response()->json(['success' => false, 'message' => $blocker], 422);
+        }
+
         $expert->delete();
 
         return response()->json([

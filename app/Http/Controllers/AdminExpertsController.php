@@ -386,6 +386,10 @@ class AdminExpertsController extends Controller
             ], 422);
         }
 
+        if ($blocker = $expert->deactivationBlocker()) {
+            return response()->json(['success' => false, 'message' => $blocker], 422);
+        }
+
         $reason = trim($request->input('reason', ''));
         $expertName = $expert->name;
         $notifiedTeams = 0;
