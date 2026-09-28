@@ -233,9 +233,9 @@ class AdminSectionsSettingTest extends TestCase
         $response = $this->get(route('admin.settings'));
 
         $response->assertOk();
-        $response->assertSee('<th>Course</th>', false);
-        $response->assertSee('<th>Year</th>', false);
-        $response->assertSee('<th>Sections</th>', false);
         $response->assertSee('sec-prog">BSIT', false);
+        $response->assertSee('4th year');
+        $response->assertSee('aria-label="Remove BSIT-4A"', false);
+        $response->assertDontSee('>BSIT-4A<', false);
     }
 }
