@@ -51,10 +51,12 @@
 .fx-status i{width:8px;height:8px;border-radius:50%;flex:none}
 .fx-s-pending i{background:var(--fx-wait)} .fx-s-verified i{background:var(--fx-ok)} .fx-s-sent_back i{background:var(--fx-bad)} .fx-s-none i{background:var(--fx-line2)}
 .fx-s-sent_back{color:var(--fx-bad)}
+/* Uploaded, and waiting on the team leader to send the team's receipts. */
+.fx-s-held i{background:var(--fx-brand)}
 
 .fx-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--fx-sunk);min-width:120px}
 .fx-bar span{display:block;height:100%}
-.fx-bar .fx-v{background:var(--fx-ok)} .fx-bar .fx-w{background:var(--fx-brand)} .fx-bar .fx-b{background:var(--fx-bad)}
+.fx-bar .fx-v{background:var(--fx-ok)} .fx-bar .fx-w{background:var(--fx-brand)} .fx-bar .fx-b{background:var(--fx-bad)} .fx-bar .fx-h{background:var(--fx-line2)}
 
 /* CaPSA */
 .fx-summary{display:flex;align-items:center;gap:20px;padding:10px 20px;background:var(--fx-surface);border-bottom:1px solid var(--fx-line);flex-wrap:wrap}

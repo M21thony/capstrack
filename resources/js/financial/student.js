@@ -1,6 +1,9 @@
 /*
  * A student's Financial Records: one short row for their own receipt (the
  * button offers the camera or the photo library on a phone) and the team's list below it.
+ *
+ * A receipt goes to the team leader, not the CaPSA. Once every member has one
+ * in hand the leader's "Send to CaPSA" button lights up and sends them all.
  */
 import { $, esc, peso, statusHtml, barHtml, send, toast, wireDialogs } from './shared.js';
 
@@ -10,10 +13,14 @@ const URLS = JSON.parse(root.dataset.urls);
 const FEES = S.fees;
 const R = S.receipts;
 const ME = S.me;
+const LEADER = !!S.is_leader;
 let fee = FEES[0]?.id ?? null;
 
 const rec = (f, m) => R[`${f}:${m}`];
 const st = (f, m) => rec(f, m)?.status || 'none';
+// The leader holds a member's receipt themselves; everyone else says whose it is with.
+const statusFor = s => statusHtml(s, s === 'held' && LEADER ? 'With you' : undefined);
+const editable = s => ['none', 'held', 'sent_back'].includes(s);
 
 function render() {
   $('#s-fees').innerHTML = FEES.map(x => `<button role="tab" data-fee="${x.id}" aria-selected="${x.id === fee}">${esc(x.stage)} <span class="fx-num fx-muted">${peso(x.amount)}</span></button>`).join('');
@@ -29,17 +36,20 @@ function render() {
       ? `<strong>Upload your ${esc(f.stage)} Fee receipt</strong><span class="fx-muted">${S.team ? 'Your team leader has to submit your pre-proposals for checking on the Duplication Checker page first.' : 'Join a team first.'}</span>`
       : {
         none: `<strong>Upload your ${esc(f.stage)} Fee receipt</strong><span class="fx-muted">Pay ${peso(f.amount)}${where}, then enter the OR number and take a photo of the official receipt.</span>`,
-        pending: `<strong>${statusHtml('pending')}</strong><span class="fx-muted">Uploaded ${esc(r?.at || '')}${or}. Your CaPSA is checking it.</span>`,
+        held: LEADER
+          ? `<strong>${statusHtml('held', 'With you')}</strong><span class="fx-muted">Uploaded ${esc(r?.at || '')}${or}. Send the team's receipts to the CaPSA once everyone has uploaded theirs.</span>`
+          : `<strong>${statusHtml('held')}</strong><span class="fx-muted">Uploaded ${esc(r?.at || '')}${or}. Your team leader sends everyone's receipts to the CaPSA together.</span>`,
+        pending: `<strong>${statusHtml('pending')}</strong><span class="fx-muted">Uploaded ${esc(r?.at || '')}${or}. Sent to your CaPSA, who is checking it.</span>`,
         verified: `<strong>${statusHtml('verified')}</strong><span class="fx-muted">Checked on ${esc(r?.on || '')}${or}. Nothing else to do.</span>`,
         sent_back: `<strong>${statusHtml('sent_back')}</strong><span class="fx-reason">${esc(r?.reason || '')}</span>`,
       }[s];
     const label = S.can_submit ? {
       none: '<svg><use href="#fx-i-camera"/></svg>Upload receipt',
       sent_back: '<svg><use href="#fx-i-camera"/></svg>Upload again',
-      pending: '<svg><use href="#fx-i-upload"/></svg>Replace',
+      held: '<svg><use href="#fx-i-upload"/></svg>Replace',
     }[s] : null;
     $('#s-mine').innerHTML = thumb + `<div class="fx-mine-text">${text}</div>`
-      + (label ? `<button type="button" class="fx-btn ${s === 'pending' ? '' : 'fx-btn-primary'}" data-fx-upload>${label}</button>` : '');
+      + (label ? `<button type="button" class="fx-btn ${s === 'held' ? '' : 'fx-btn-primary'}" data-fx-upload>${label}</button>` : '');
     // A photo whose file is gone shows a plain placeholder, not the browser's
     // broken-image box, and no longer opens an empty viewer.
     $('#s-mine').querySelectorAll('.fx-mine-thumb img').forEach(img => img.addEventListener('error', () => {
@@ -52,12 +62,48 @@ function render() {
     }));
   }
 
-  const members = S.members, c = { pending: 0, verified: 0, sent_back: 0, none: 0 };
+  const members = S.members, c = { pending: 0, verified: 0, sent_back: 0, none: 0, held: 0 };
   members.forEach(m => c[fee ? st(fee, m.id) : 'none']++);
   $('#s-bar').innerHTML = barHtml(c, Math.max(members.length, 1));
   $('#s-count').textContent = `${c.verified}/${members.length}`;
-  $('#s-team').innerHTML = members.map(m => `<tr><td>${esc(m.name)}${m.id === ME ? '<span class="fx-leader">You</span>' : m.id === S.team?.leader ? '<span class="fx-leader">Leader</span>' : ''}</td><td>${statusHtml(fee ? st(fee, m.id) : 'none')}</td><td class="fx-col-up fx-num fx-muted">${esc((fee && rec(fee, m.id)?.at) || '—')}</td></tr>`).join('');
+  renderTeamSubmit(members);
+  $('#s-team').innerHTML = members.map(m => `<tr><td>${esc(m.name)}${m.id === ME ? '<span class="fx-leader">You</span>' : m.id === S.team?.leader ? '<span class="fx-leader">Leader</span>' : ''}</td><td>${statusFor(fee ? st(fee, m.id) : 'none')}</td><td class="fx-col-up fx-num fx-muted">${esc((fee && rec(fee, m.id)?.at) || '—')}</td></tr>`).join('');
 }
+
+/* ---------- The leader sends the team's receipts to the CaPSA together ---------- */
+function renderTeamSubmit(members) {
+  const btn = $('#s-team-submit'), note = $('#s-team-note');
+  const have = fee ? members.filter(m => ['held', 'pending', 'verified'].includes(st(fee, m.id))).length : 0;
+  const held = fee ? members.filter(m => st(fee, m.id) === 'held').length : 0;
+
+  if (!LEADER) {
+    btn.hidden = true;
+    note.textContent = S.team ? "Your team leader sends everyone's receipts to the CaPSA together." : '';
+
+    return;
+  }
+
+  btn.hidden = false;
+  btn.disabled = !S.can_submit || !fee || have < members.length || held === 0;
+  btn.textContent = held === 0 && have === members.length && fee ? 'Sent to CaPSA' : 'Send to CaPSA';
+  note.textContent = !fee ? '' : have < members.length
+    ? `${have} of ${members.length} receipts in. You can send once every member has uploaded theirs.`
+    : held === 0 ? 'Every receipt for this fee is already with the CaPSA.' : `All ${members.length} receipts are in. Send them to the CaPSA.`;
+}
+
+$('#s-team-submit').addEventListener('click', async e => {
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  try {
+    const res = await send('POST', URLS.submitTeam, { expense_post_id: fee });
+    S.members.forEach(m => { if (st(fee, m.id) === 'held') R[`${fee}:${m.id}`].status = 'pending'; });
+    toast(res.message);
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    render();
+  }
+});
 
 /* ---------- Upload: the OR number and the photo go together ---------- */
 const dlg = $('#fx-d-upload');
@@ -81,6 +127,7 @@ function pick(file) {
 
 function openUpload(file) {
   chosen = null;
+  $('#u-send-t').textContent = LEADER ? 'Save receipt' : 'Give to team leader';
   $('#u-or').value = '';
   $('#u-file').value = '';
   $('#u-preview').hidden = true;
@@ -104,10 +151,10 @@ async function upload() {
   btn.disabled = true;
   try {
     const res = await send('POST', URLS.upload, form);
-    R[`${fee}:${ME}`] = { id: res.data.id, status: 'pending', img: res.data.receipt_image, or: res.data.receipt_number, at: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) };
+    R[`${fee}:${ME}`] = { id: res.data.id, status: 'held', img: res.data.receipt_image, or: res.data.receipt_number, at: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) };
     dlg.close();
     render();
-    toast(was === 'pending' ? 'Replaced. Your CaPSA sees the new one.' : 'Sent. Your CaPSA will check the OR number against the photo.');
+    toast(was === 'held' ? 'Replaced.' : LEADER ? "Saved. Send the team's receipts to the CaPSA once everyone has uploaded." : "Saved. Your team leader sends it to the CaPSA with everyone else's.");
   } catch (e) {
     uploadError(e.message);
   } finally {
@@ -124,9 +171,9 @@ $('#u-or').addEventListener('keydown', e => { if (e.key === 'Enter') { e.prevent
 $('#s-mine').addEventListener('click', e => { if (e.target.closest('[data-fx-upload]')) openUpload(); });
 
 $('#s-fees').addEventListener('click', e => { const b = e.target.closest('[data-fee]'); if (b) { fee = +b.dataset.fee; render(); } });
-$('#s-mine').addEventListener('dragover', e => { if (S.can_submit && fee && st(fee, ME) !== 'verified') { e.preventDefault(); $('#s-mine').classList.add('fx-drag'); } });
+$('#s-mine').addEventListener('dragover', e => { if (S.can_submit && fee && editable(st(fee, ME))) { e.preventDefault(); $('#s-mine').classList.add('fx-drag'); } });
 $('#s-mine').addEventListener('dragleave', () => $('#s-mine').classList.remove('fx-drag'));
-$('#s-mine').addEventListener('drop', e => { e.preventDefault(); $('#s-mine').classList.remove('fx-drag'); if (S.can_submit && fee && st(fee, ME) !== 'verified') openUpload(e.dataTransfer.files[0]); });
+$('#s-mine').addEventListener('drop', e => { e.preventDefault(); $('#s-mine').classList.remove('fx-drag'); if (S.can_submit && fee && editable(st(fee, ME))) openUpload(e.dataTransfer.files[0]); });
 
 wireDialogs();
 render();

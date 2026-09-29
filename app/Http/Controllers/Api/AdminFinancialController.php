@@ -186,6 +186,13 @@ class AdminFinancialController extends Controller
             ], 422);
         }
 
+        if ($financialRecord->f_record_status === FinancialRecord::HELD) {
+            return response()->json([
+                'success' => false,
+                'message' => "This receipt is still with the team leader, who has not sent the team's receipts yet.",
+            ], 422);
+        }
+
         // The point of the OR number: somebody looked at the photo and saw it.
         if ($financialRecord->receipt_number && ! $request->boolean('or_confirmed')) {
             return response()->json([
@@ -222,6 +229,13 @@ class AdminFinancialController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot reject a receipt that has already been verified.',
+            ], 422);
+        }
+
+        if ($financialRecord->f_record_status === FinancialRecord::HELD) {
+            return response()->json([
+                'success' => false,
+                'message' => "This receipt is still with the team leader, who has not sent the team's receipts yet.",
             ], 422);
         }
 
@@ -425,7 +439,7 @@ class AdminFinancialController extends Controller
         $totalStudents = Student::count();
         $totalTeams = $teams->count();
 
-        $allStudentIdsWithRecords = FinancialRecord::distinct()->pluck('student_id');
+        $allStudentIdsWithRecords = FinancialRecord::sentToCapsa()->distinct()->pluck('student_id');
         $verifiedStudentIds = FinancialRecord::where('f_record_status', 'verified')->distinct()->pluck('student_id');
 
         $paidStudents = $verifiedStudentIds->count();
@@ -605,7 +619,8 @@ class AdminFinancialController extends Controller
 
     private function getFinancialRecords(Request $request): array
     {
-        $query = FinancialRecord::with(['student', 'expensePost'])
+        $query = FinancialRecord::sentToCapsa()
+            ->with(['student', 'expensePost'])
             ->orderByDesc('uploaded_at');
 
         if ($request->filled('status')) {

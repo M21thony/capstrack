@@ -12,7 +12,8 @@ use Illuminate\View\View;
 
 /**
  * A student's Financial Records: each defense fee, their own receipt for it,
- * and where each teammate stands. Each member uploads their own receipt.
+ * and where each teammate stands. Each member uploads their own receipt to
+ * their team leader, who sends the team's receipts to the CaPSA together.
  */
 class StudentFinancialController extends Controller
 {
@@ -46,6 +47,6 @@ class StudentFinancialController extends Controller
 
         FinancialRecord::submitFor($student, ExpensePost::findOrFail($validated['expense_post_id']), $request->file('receipt_image'), $validated['receipt_number']);
 
-        return redirect()->back()->with('success', 'Receipt sent to your CaPSA.');
+        return redirect()->back()->with('success', 'Receipt saved. Your team leader sends it to the CaPSA with everyone else\'s.');
     }
 }
