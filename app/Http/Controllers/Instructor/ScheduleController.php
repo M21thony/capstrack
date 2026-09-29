@@ -339,6 +339,11 @@ class ScheduleController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
 
+        if ($request->recur === 'once' && $request->specific_date
+            && Carbon::parse($request->specific_date.' '.$request->end_time)->isPast()) {
+            return response()->json(['error' => 'That time has already passed.'], 422);
+        }
+
         $expert = Auth::guard('expert')->user();
 
         $nextDate = $this->getNextDateForDay($request->available_date);

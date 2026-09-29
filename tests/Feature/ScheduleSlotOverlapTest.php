@@ -51,6 +51,23 @@ class ScheduleSlotOverlapTest extends TestCase
         $this->assertSame(1, DB::table('consultation_schedule')->count());
     }
 
+    public function test_a_one_time_slot_cannot_be_added_on_a_day_that_has_ended(): void
+    {
+        $expert = $this->makeExpert();
+        $yesterday = now()->subDay();
+
+        $this->actingAs($expert, 'expert')->postJson('/instructor/schedule/slots', [
+            'available_date' => $yesterday->format('l'),
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'consultation_limit' => 1,
+            'recur' => 'once',
+            'specific_date' => $yesterday->toDateString(),
+        ])->assertStatus(422);
+
+        $this->assertSame(0, DB::table('consultation_schedule')->count());
+    }
+
     public function test_a_once_slot_is_not_blocked_by_an_unrelated_once_slot_on_a_different_date(): void
     {
         $expert = $this->makeExpert();
@@ -66,7 +83,7 @@ class ScheduleSlotOverlapTest extends TestCase
             'consultation_limit' => 1,
             'is_available' => true,
             'recur' => 'once',
-            'specific_date' => '2026-07-01',
+            'specific_date' => '2027-07-07',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -77,7 +94,7 @@ class ScheduleSlotOverlapTest extends TestCase
             'end_time' => '10:00',
             'consultation_limit' => 1,
             'recur' => 'once',
-            'specific_date' => '2026-08-05',
+            'specific_date' => '2027-08-04',
         ]);
 
         $response->assertOk();
@@ -106,7 +123,7 @@ class ScheduleSlotOverlapTest extends TestCase
             'end_time' => '10:00',
             'consultation_limit' => 1,
             'recur' => 'once',
-            'specific_date' => '2026-08-05',
+            'specific_date' => '2027-08-04',
         ]);
 
         $response->assertOk();
@@ -125,7 +142,7 @@ class ScheduleSlotOverlapTest extends TestCase
             'consultation_limit' => 1,
             'is_available' => true,
             'recur' => 'once',
-            'specific_date' => '2026-08-05',
+            'specific_date' => '2027-08-04',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -136,7 +153,7 @@ class ScheduleSlotOverlapTest extends TestCase
             'end_time' => '10:30',
             'consultation_limit' => 1,
             'recur' => 'once',
-            'specific_date' => '2026-08-05',
+            'specific_date' => '2027-08-04',
         ]);
 
         $response->assertOk();

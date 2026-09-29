@@ -1710,6 +1710,12 @@ async function saveSlot() {
   const end   = document.getElementById('f-end').value;
   if (start >= end) { showToast('End time must be after start time.', 'error'); return; }
 
+  // A new slot, or a one-time one, on a day (or part of a day) that is over.
+  if ((!editingSlotId || document.getElementById('f-recur').value === 'once') && isSlotDone({ end_time: end }, selectedDate)) {
+    showToast('That time has already passed. Pick a later time or date.', 'error');
+    return;
+  }
+
   // Prevent overlap with existing slots on the selected date — when
   // editing, the slot being edited doesn't count as its own conflict.
   const daySlots = (slots[selectedDate] || []).filter(s => !editingSlotId || s.schedule_id !== editingSlotId);
