@@ -337,6 +337,12 @@ class StudentConsultationController extends Controller
             return response()->json(['success' => false, 'message' => 'That date is not a valid occurrence of this slot.'], 422);
         }
 
+        // The page never offers a time that has already ended, but a request
+        // can still name one directly.
+        if (Carbon::parse($sessionDate.' '.($slot->end_time ?: '23:59:59'))->isPast()) {
+            return response()->json(['success' => false, 'message' => 'That time has already passed. Pick a later date or time.'], 422);
+        }
+
         // Scoped by session_date, not just schedule_id — a recurring slot's
         // schedule_id is shared across every future occurrence, so a student
         // booking a later date on the same weekly slot is a different

@@ -745,8 +745,17 @@ function matchesDate(s, dayName, dateKey) {
   return s.available_date === dayName;
 }
 
+// Whether this occurrence has already finished ('YYYY-MM-DD HH:MM' compares as text).
+function hasEnded(dateKey, endTime) {
+  const n = new Date();
+  const nowKey = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0')
+    + ' ' + String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
+  return dateKey + ' ' + String(endTime || '23:59').slice(0, 5) <= nowKey;
+}
+
 function getSlotsForDate(expertId, dayName, dateKey) {
   return getSlotsForExpert(expertId).filter(s => matchesDate(s, dayName, dateKey) && s.is_available
+    && !hasEnded(dateKey, s.end_time)
     && !isOccurrenceFull(s.schedule_id, dateKey) && withinWindow(expertId, dateKey, s.start_time));
 }
 
