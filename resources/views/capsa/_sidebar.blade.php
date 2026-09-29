@@ -61,7 +61,8 @@
 
     $archivedCount = App\Models\ArchivedDocument::count();
 
-    $pendingReceiptIds = App\Models\FinancialRecord::whereNull('verified_at')
+    $pendingReceiptIds = App\Models\FinancialRecord::sentToCapsa()
+        ->whereNull('verified_at')
         ->whereNotNull('receipt_image')
         ->pluck('id')
         ->toArray();
@@ -320,12 +321,6 @@
         <span class="nav-badge red">{{ $badge($unseenActivityCount) }}</span>
       @endif
     </a>
-
-    <div class="nav-section">Help</div>
-    <button type="button" class="nav-item" onclick="openPortalTour()" style="cursor:pointer;width:100%;background:none;border:0;border-left:2px solid transparent;font-family:inherit;text-align:left">
-      <x-portal-icon name="tour" />
-      Portal Tour
-    </button>
 
     <div class="nav-section">Account</div>
     @if ($isAdmin)
