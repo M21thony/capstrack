@@ -64,15 +64,15 @@ class StudentPortalTourTest extends TestCase
         $this->assertSame($firstFinished, $student->fresh()->tutorial_completed_at->toDateTimeString());
     }
 
-    public function test_an_account_that_has_seen_it_can_still_open_it_from_the_sidebar(): void
+    public function test_an_account_that_has_seen_it_is_not_shown_it_and_the_sidebar_has_no_button_for_it(): void
     {
         $student = Student::factory()->withCompleteProfile()->withTourCompleted()->create();
 
         $this->actingAs($student, 'web')->get(route('student.dashboard'))
             ->assertOk()
             ->assertSee('data-auto-open="0"', false)
-            ->assertSee('onclick="openPortalTour()"', false)
-            ->assertSee('Portal Tour');
+            ->assertDontSee('onclick="openPortalTour()"', false)
+            ->assertDontSee('data-tour-target="portal-tour"', false);
     }
 
     public function test_a_fresh_google_sign_in_gets_it_before_the_profile_is_filled_in(): void

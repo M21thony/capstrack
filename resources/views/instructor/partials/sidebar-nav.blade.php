@@ -42,11 +42,6 @@
       <span class="nav-badge red">{{ $unseenDocReviewCount > 99 ? '99+' : $unseenDocReviewCount }}</span>
     @endif
   </a>
-  <div class="nav-section">Help</div>
-  <button type="button" class="nav-item" onclick="openPortalTour()" style="cursor:pointer;width:100%;background:none;border:0;border-left:2px solid transparent;font-family:inherit;text-align:left">
-    <x-portal-icon name="tour" />
-    Portal Tour
-  </button>
   <div class="nav-section">Account</div>
   <form id="expert-logout-form" action="{{ route('expert.logout') }}" method="POST" style="display: none;">
     @csrf

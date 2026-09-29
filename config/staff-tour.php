@@ -8,7 +8,7 @@
 | The same walkthrough students get (config/student-tour.php), one for each
 | of the other portals: the screen dims, one part of the portal is outlined,
 | and a short note with an arrow says what it is. Shown once to an account
-| that has not seen it; after that from Portal Tour in the sidebar.
+| that has not seen it. There is no button to replay it.
 |
 | 'target' is what gets outlined. A route name is that page's link in the
 | sidebar; any other string is a CSS selector. A step whose target is not on
@@ -47,7 +47,7 @@ return [
         ['key' => 'bell', 'label' => 'Your notifications', 'target' => ['#notif-btn'],
             'body' => 'Requests and updates that need you arrive here.'],
         ['key' => 'done', 'label' => 'You are all set', 'target' => [],
-            'body' => 'You can take this tour again any time from Portal Tour in the menu.'],
+            'body' => 'That is everything. Welcome to CapsTrack!'],
     ],
 
     'admin' => [
@@ -68,7 +68,7 @@ return [
         ['key' => 'bell', 'label' => 'Your notifications', 'target' => ['#notif-btn'],
             'body' => 'Anything that needs you arrives here.'],
         ['key' => 'done', 'label' => 'You are all set', 'target' => [],
-            'body' => 'You can take this tour again any time from Portal Tour in the menu.'],
+            'body' => 'That is everything. Welcome to CapsTrack!'],
     ],
 
     'expert' => [
@@ -91,6 +91,6 @@ return [
         ['key' => 'bell', 'label' => 'Your notifications', 'target' => ['#notif-btn'],
             'body' => 'New applications, documents and bookings arrive here.'],
         ['key' => 'done', 'label' => 'You are all set', 'target' => [],
-            'body' => 'You can take this tour again any time from Portal Tour in the menu.'],
+            'body' => 'That is everything. Welcome to CapsTrack!'],
     ],
 ];

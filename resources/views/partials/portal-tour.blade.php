@@ -1,8 +1,8 @@
 {{-- The guided tour, for every portal. The screen dims, one part of the
      portal is outlined, and a short note with an arrow says what it is -
      pointing at the real thing, so a newcomer learns where it is and not just
-     that it exists. Opens by itself once for a new account; after that only
-     from Portal Tour in the sidebar.
+     that it exists. Opens by itself once for a new account and never again;
+     there is no sidebar button to replay it.
 
      Each portal's sidebar includes a small wrapper that works out its steps
      and passes:
