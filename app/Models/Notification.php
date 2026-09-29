@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\NotificationMailer;
 use Illuminate\Database\Eloquent\Model;
 
 class Notification extends Model
@@ -37,6 +38,12 @@ class Notification extends Model
     {
         static::creating(function (Notification $notification): void {
             $notification->created_at ??= now();
+        });
+
+        // Every portal writes its bell rows through this model, so this is the
+        // one place that keeps the email copy from being forgotten somewhere.
+        static::created(function (Notification $notification): void {
+            NotificationMailer::forNotification($notification);
         });
     }
 }
