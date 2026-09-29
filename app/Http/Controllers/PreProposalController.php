@@ -393,13 +393,10 @@ class PreProposalController extends Controller
      */
     public function destroyCheck(Request $request, DuplicationCheck $check): JsonResponse
     {
-        $team = $this->currentTeam($request);
-
-        $mine = $team && StudentSchoolYear::where('team_id', $team->team_id)
-            ->where('s_y_id', $check->student_s_y_id)
-            ->exists();
-
-        if (! $mine) {
+        // The same test as ownCheck(). Team-only refused a scan openScan()
+        // shows the student - one recorded on their other enrolment row -
+        // so its Clear button could never work.
+        if (! $this->isOwnCheck($request, $check)) {
             return response()->json([
                 'success' => false,
                 'message' => 'That check does not belong to your team.',
@@ -429,25 +426,26 @@ class PreProposalController extends Controller
         return response()->json(['success' => true, 'message' => 'Result cleared.']);
     }
 
-    /**
-     * A check the signed-in student is allowed to read.
-     *
-     * The same test destroyCheck() makes - their team's check - widened to
-     * their own row as well, so a student who has since left a team can
-     * still open a scan they ran themselves.
-     */
+    /** A check the signed-in student is allowed to read. */
     private function ownCheck(Request $request, DuplicationCheck $check): void
+    {
+        abort_unless($this->isOwnCheck($request, $check), 403);
+    }
+
+    /**
+     * Their team's check, or one they ran themselves - so a student who has
+     * since left a team can still open, or clear, a scan of their own.
+     */
+    private function isOwnCheck(Request $request, DuplicationCheck $check): bool
     {
         $team = $this->currentTeam($request);
 
-        $mine = ($team && StudentSchoolYear::where('team_id', $team->team_id)
+        return ($team && StudentSchoolYear::where('team_id', $team->team_id)
             ->where('s_y_id', $check->student_s_y_id)
             ->exists())
             || StudentSchoolYear::where('student_id', $request->user()->student_id)
                 ->where('s_y_id', $check->student_s_y_id)
                 ->exists();
-
-        abort_unless($mine, 403);
     }
 
     /** SDG goals and tags are saved as lists; the page reads them as a line. */
