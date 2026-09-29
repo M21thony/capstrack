@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DefenseSchedule;
 use App\Models\MemberLeaveRequest;
 use App\Models\Notification;
 use App\Models\Recruitment;
@@ -11,12 +12,16 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\Term;
+use App\Support\DefenseProgress;
+use App\Support\ProjectTags;
 use App\Support\StudentTeam;
+use App\Support\TitleRevision;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class TeamController extends Controller
@@ -187,7 +192,7 @@ class TeamController extends Controller
         // removing a member.
         $teamLocked = $myTeam?->isTeamLocked() ?? false;
         $leaveRequests = $myTeam
-            ? \App\Models\MemberLeaveRequest::with(['student', 'requester'])
+            ? MemberLeaveRequest::with(['student', 'requester'])
                 ->pending()
                 ->where('team_id', $myTeam->team_id)
                 ->oldest()
@@ -235,16 +240,16 @@ class TeamController extends Controller
         $panelDefenseType = null;
 
         if ($myTeam) {
-            $stage = (new \App\Support\DefenseProgress)->currentStage($myTeam);
+            $stage = (new DefenseProgress)->currentStage($myTeam);
 
-            $schedule = \App\Models\DefenseSchedule::where('team_id', $myTeam->team_id)
+            $schedule = DefenseSchedule::where('team_id', $myTeam->team_id)
                 ->when($stage, fn ($q) => $q->where('defense_type', $stage))
                 ->latestAttempt()
                 ->with('panels.expert')
                 ->first();
 
             if (! $schedule || $schedule->panels->isEmpty()) {
-                $schedule = \App\Models\DefenseSchedule::where('team_id', $myTeam->team_id)
+                $schedule = DefenseSchedule::where('team_id', $myTeam->team_id)
                     ->whereHas('panels')
                     ->with('panels.expert')
                     ->latest('defense_id')
@@ -533,24 +538,76 @@ class TeamController extends Controller
             'tags' => ['nullable', 'json'],
         ]);
 
-        // The title used to be typed here, and tags were demanded once it ran
-        // past 11 words. Both are gone: the title is now whichever pre-proposal
-        // the CAPSA approves (or, when two are approved, whichever the team
-        // then picks), so a title typed here could only ever contradict it.
-        // Tags survive on their own terms - they describe the project for the
-        // recruitment feed - and are simply optional.
-        $tags = $request->input('tags');
-        $tagsArray = $tags ? json_decode($tags, true) : null;
+        // The tags are the capstone title's own: the ones the team picked on
+        // the pre-proposal that became its title (or kept on the team, for a
+        // title set without one). They are edited here, from the same fixed
+        // list, and a title always keeps at least one. Before there is a
+        // title there is nothing to tag, so tags are left alone.
+        $hasTitle = (bool) ($team->project_title || $team->selectedPreProposal);
+        $titleProposal = $hasTitle ? $team->titleProposal() : null;
+        $titleTags = null;
 
-        if (is_array($tagsArray)) {
-            $validated['tags'] = $tagsArray;
+        // The title itself can be corrected here - a misspelling, a wrong
+        // case, a word or two. A reworded title needs the panel's "passed
+        // with revision"; a different one goes through the CaPSA. Checked
+        // before anything is saved, so a refused title changes nothing.
+        $oldTitle = (string) $team->project_title;
+        $newTitle = null;
+
+        if ($team->project_title && $request->filled('project_title')) {
+            $candidate = trim(preg_replace('/\s+/', ' ', (string) $request->input('project_title')));
+            $canRevise = TitleRevision::canRevise($team);
+
+            Validator::make(['project_title' => $candidate], [
+                'project_title' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) use ($oldTitle, $canRevise) {
+                    if (! $canRevise && ! TitleRevision::isCorrection($oldTitle, $value)) {
+                        $fail('That is more than a spelling fix. Only small corrections can be made here - a different title goes through your CaPSA.');
+                    }
+                }],
+            ])->validate();
+
+            $newTitle = $candidate !== $oldTitle ? $candidate : null;
+        }
+
+        if ($hasTitle && $request->has('tags')) {
+            $titleTags = Validator::make(
+                ['tags' => json_decode($request->input('tags'), true)],
+                [
+                    'tags' => ['required', 'array', 'min:'.ProjectTags::MIN, 'max:'.ProjectTags::MAX],
+                    'tags.*' => ['string', 'distinct', Rule::in(ProjectTags::OPTIONS)],
+                ],
+                [
+                    'tags.required' => 'Keep at least one tag on your capstone title.',
+                    'tags.array' => 'Keep at least one tag on your capstone title.',
+                    'tags.min' => 'Keep at least one tag on your capstone title.',
+                    'tags.max' => 'Pick at most '.ProjectTags::MAX.' tags.',
+                    'tags.*.in' => 'Pick tags from the list.',
+                    'tags.*.distinct' => 'Each tag can only be added once.',
+                ],
+            )->validate()['tags'];
+
+            $titleProposal?->update(['tags' => array_values($titleTags)]);
         }
 
         $originalStatus = $team->team_status;
 
+        if ($newTitle !== null) {
+            $team->update(['project_title' => $newTitle]);
+
+            // Written down, so the CaPSA can see what the approved title became.
+            $this->logActivity(
+                $studentId,
+                'title_corrected',
+                'Corrected the capstone title of <strong>'.e($team->team_name).'</strong> from <strong>'.e($oldTitle).'</strong> to <strong>'.e($newTitle).'</strong>',
+                ['team_id' => $team->team_id, 'old' => $oldTitle, 'new' => $newTitle]
+            );
+        }
+
         $team->update([
             'team_name' => $validated['team_name'],
-            'tags' => $validated['tags'] ?? $team->tags,
+            // Mirrored onto the team, which panel suggestions and the CaPSA's
+            // team list read.
+            'tags' => $titleTags !== null ? array_values($titleTags) : $team->tags,
             'team_status' => $validated['team_status'] ?? $team->team_status,
             'member_count' => 5,
         ]);

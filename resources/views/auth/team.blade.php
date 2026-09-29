@@ -258,6 +258,146 @@
     transition: transform 0.22s cubic-bezier(.2,.8,.2,1), box-shadow 0.22s ease;
   }
   .person-card:nth-child(4) { grid-column: 2 / span 2; }
+
+  /* ── The flip ──
+     On tablet and phone a tap turns the card over. Both faces sit in
+     .card-inner, which is what rotates; the gold frame is the card itself, so
+     it stays put and frames whichever side is showing. */
+  .person-card { perspective: 1200px; }
+  .card-inner {
+    position: relative;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(.2,.8,.2,1);
+  }
+  .person-card.is-flipped .card-inner { transform: rotateY(180deg); }
+  .card-face,
+  .card-back {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* ── The card back ──
+     A Pokémon-style back in CSPC's own colours: a blue sunburst, the CSPC seal
+     in the middle where the ball would be, the CCS shield pinned to it, and
+     the wordmark and college names in gold. */
+  .card-back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+    border-radius: 15px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 20px 14px 18px;
+    text-align: center;
+    color: #fff;
+    background:
+      radial-gradient(circle at 50% 46%, rgba(255,210,63,0.32), transparent 36%),
+      repeating-conic-gradient(from 0deg at 50% 46%, rgba(255,255,255,0.07) 0deg 5deg, transparent 5deg 10deg),
+      radial-gradient(circle at 50% 46%, #2458c4 0%, #0c2f7d 52%, #051640 100%);
+  }
+  /* The gold inner border every trading-card back has. */
+  .card-back::before {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border: 1.5px solid rgba(255,210,63,0.6);
+    border-radius: 10px;
+    pointer-events: none;
+  }
+  /* A faint diamond weave over the whole back, so it reads as printed card stock. */
+  .card-back::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,0.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.035) 75%),
+      linear-gradient(45deg, rgba(255,255,255,0.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.035) 75%);
+    background-size: 14px 14px;
+    background-position: 0 0, 7px 7px;
+  }
+  .back-top,
+  .back-emblem,
+  .back-foot { position: relative; z-index: 1; }
+  .back-top {
+    font-family: 'Geist Pixel', monospace;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.35);
+  }
+  .back-emblem {
+    position: relative;
+    width: 62%;
+    aspect-ratio: 1 / 1;
+    margin-bottom: 14px;
+  }
+  .back-seal {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #fff;
+    display: grid;
+    place-items: center;
+    box-shadow:
+      0 0 0 3px var(--gold-bright),
+      0 0 0 7px rgba(255,210,63,0.28),
+      0 12px 30px rgba(0,0,0,0.45);
+  }
+  .back-seal img {
+    width: 84%;
+    height: 84%;
+    object-fit: contain;
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+  /* The CCS shield, pinned to the foot of the seal like a badge. */
+  .back-ccs {
+    position: absolute;
+    left: 50%;
+    bottom: -16px;
+    width: 38%;
+    aspect-ratio: 1 / 1;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: #0c2f7d;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 0 0 2.5px var(--gold-bright), 0 6px 14px rgba(0,0,0,0.4);
+  }
+  .back-ccs img {
+    width: 64%;
+    height: 64%;
+    object-fit: contain;
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+  .back-foot {
+    display: grid;
+    gap: 3px;
+  }
+  .back-foot b {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+  }
+  .back-foot span {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.72);
+  }
+
+  /* The flip is for tablet and phone; the tap hint says so there only. */
+  .flip-hint { display: none; }
+
   .card-face {
     position: relative;
     height: 100%;
@@ -315,6 +455,13 @@
     display: block;
     -webkit-user-drag: none;
     user-select: none;
+  }
+  /* The photos are portraits, and on desktop and tablet the box is landscape
+     (5:4), so a centred crop cut off the tops of heads. Anchoring to the top
+     keeps the whole head in frame. Phones use a square box and crop fine
+     centred, so they keep it. */
+  @media (min-width: 601px) {
+    .avatar img { object-position: center top; }
   }
   .person-name {
     font-size: 14.5px;
@@ -464,7 +611,7 @@
     .copy-toast.show { transform: translate(-50%, 0); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .copy-toast, .person-card, .card-sheen { transition: none; }
+    .copy-toast, .person-card, .card-sheen, .card-inner { transition: none; }
   }
 
   /* ══════════════════════ TABLET (601–1000px) ══════════════════════ */
@@ -479,6 +626,14 @@
     .trend-motif { width: 46%; opacity: 0.25; }
     .people-panel { flex: 1; justify-content: flex-start; padding: 40px clamp(20px, 5vw, 48px) 56px; overflow-y: visible; }
     .people-grid { grid-template-columns: repeat(6, minmax(64px, 104px)); }
+    .person-card { cursor: pointer; }
+    .flip-hint {
+      display: block;
+      margin: -6px 0 0;
+      font-size: 11.5px;
+      color: var(--ink-soft);
+      text-align: center;
+    }
   }
   @media (max-width: 760px) and (min-width: 601px) {
     /* Two across, the odd one out centred under them. */
@@ -523,6 +678,8 @@
       -webkit-user-select: none;
     }
     .person-card.is-top { cursor: grab; }
+    /* The phone's deck hint already says "tap to flip", so the tablet's goes. */
+    .flip-hint { display: none; }
     .person-card.is-dragging { transition: none; cursor: grabbing; }
     .person-card.is-still { transition: none; }
     .avatar { font-size: 40px; aspect-ratio: 1 / 1; }
@@ -599,10 +756,12 @@
       <h2>Meet the Team</h2>
       <p>{{ count($team) }} members of team Bulbasaur</p>
     </div>
+    <p class="flip-hint">Tap a card to flip it over</p>
 
     <div class="people-grid" id="team-deck" aria-roledescription="deck of cards" aria-label="Team members">
       @foreach ($team as $member)
         <article class="person-card" data-card="{{ $loop->index }}" aria-label="{{ $member['name'] }}, {{ $member['role'] }}">
+          <div class="card-inner">
           <div class="card-face">
             <div class="card-top">
               <span class="card-no">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}/{{ str_pad(count($team), 2, '0', STR_PAD_LEFT) }}</span>
@@ -640,6 +799,18 @@
             </div>
             <span class="card-sheen" aria-hidden="true"></span>
           </div>
+          <div class="card-back" aria-hidden="true">
+            <span class="back-top">CapsTrack</span>
+            <div class="back-emblem">
+              <div class="back-seal"><img src="{{ asset('images/brand/cspc.png') }}" alt="" draggable="false"></div>
+              <div class="back-ccs"><img src="{{ asset('images/brand/ccs.png') }}" alt="" draggable="false"></div>
+            </div>
+            <div class="back-foot">
+              <b>College of Computer Studies</b>
+              <span>Camarines Sur Polytechnic Colleges</span>
+            </div>
+          </div>
+          </div>
         </article>
       @endforeach
     </div>
@@ -651,7 +822,7 @@
       <span class="deck-count" id="deck-count" aria-live="polite">1 / {{ count($team) }}</span>
       <button type="button" class="deck-btn" id="deck-next" aria-label="Next member"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
     </div>
-    <p class="deck-hint deck-nav">Swipe the card to see the next one</p>
+    <p class="deck-hint deck-nav">Swipe for the next card · tap it to flip it over</p>
   </div>
 </div>
 
@@ -729,7 +900,10 @@
     var cards = Array.prototype.slice.call(deck.querySelectorAll('.person-card'));
     var count = document.getElementById('deck-count');
     var phone = window.matchMedia('(max-width: 600px)');
+    var small = window.matchMedia('(max-width: 1000px)');
     var still = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // A swipe ends in a click too; this keeps it from also flipping the card.
+    var suppressClick = false;
     var order = cards.map(function (card, i) { return i; });
     var TILTS = [0, -3, 3];
     var busy = false;
@@ -771,6 +945,7 @@
       var card = cards[order[0]];
       var dir = direction || 1;
       if (still.matches) {
+        card.classList.remove('is-flipped');
         order.push(order.shift());
         lay();
         return;
@@ -781,6 +956,8 @@
       setTimeout(function () {
         still1(card, function () {
           card.style.transform = '';
+          // Back to the bottom of the deck face up, the way it was dealt.
+          card.classList.remove('is-flipped');
           order.push(order.shift());
           lay();
         });
@@ -792,9 +969,10 @@
       if (busy) return;
       order.unshift(order.pop());
       var card = cards[order[0]];
-      if (still.matches) { lay(); return; }
+      if (still.matches) { card.classList.remove('is-flipped'); lay(); return; }
       busy = true;
       still1(card, function () {
+        card.classList.remove('is-flipped');
         lay();
         card.style.transform = 'translateX(-130%) rotate(-22deg)';
       });
@@ -834,6 +1012,8 @@
       var d = drag;
       drag = null;
       if (!d.moving) return;
+      suppressClick = true;
+      setTimeout(function () { suppressClick = false; }, 400);
       var speed = Math.abs(d.dx) / Math.max(1, Date.now() - d.t);
       if (Math.abs(d.dx) > 80 || speed > 0.6) {
         next(d.dx < 0 ? -1 : 1);
@@ -847,7 +1027,29 @@
 
     document.getElementById('deck-next').addEventListener('click', function () { next(-1); });
     document.getElementById('deck-prev').addEventListener('click', previous);
+    // ── Flip, on tablet and phone ──
+    // A tap anywhere on a card turns it over - except on its Facebook link or
+    // copy-email button, which keep doing their own thing. On the phone only
+    // the top card can be flipped; the ones under it are inert.
+    function flip(card) {
+      if (!card || card.inert || busy) return;
+      card.classList.toggle('is-flipped');
+    }
+    deck.addEventListener('click', function (e) {
+      if (!small.matches) return;
+      if (suppressClick) { suppressClick = false; return; }
+      if (e.target.closest('a, button')) return;
+      flip(e.target.closest('.person-card'));
+    });
+
     deck.addEventListener('keydown', function (e) {
+      var flipKey = e.key === 'Enter' || e.key === ' ';
+      if (flipKey && small.matches && !e.target.closest('a, button')) {
+        // On the phone the deck holds focus, so it's the top card that turns.
+        var card = phone.matches ? cards[order[0]] : e.target.closest('.person-card');
+        if (card) { e.preventDefault(); flip(card); }
+        return;
+      }
       if (!phone.matches) return;
       if (e.key === 'ArrowRight') { e.preventDefault(); next(-1); }
       if (e.key === 'ArrowLeft') { e.preventDefault(); previous(); }
@@ -861,10 +1063,19 @@
         deck.removeAttribute('tabindex');
         unlay();
       }
+      // On the tablet grid each card takes focus of its own, so it can be
+      // flipped from the keyboard; on desktop the cards don't flip at all.
+      cards.forEach(function (card) {
+        if (small.matches && !phone.matches) card.tabIndex = 0;
+        else card.removeAttribute('tabindex');
+        if (!small.matches) card.classList.remove('is-flipped');
+      });
     }
     apply();
-    if (phone.addEventListener) phone.addEventListener('change', apply);
-    else phone.addListener(apply);
+    [phone, small].forEach(function (mq) {
+      if (mq.addEventListener) mq.addEventListener('change', apply);
+      else mq.addListener(apply);
+    });
   })();
 </script>
 

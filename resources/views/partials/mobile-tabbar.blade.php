@@ -431,7 +431,7 @@
     // A pop-up open over the page: the bar steps out of its way, as it does
     // for the keyboard. Many pop-ups sit lower than the bar, which covered
     // their last button - Review & Submit on the expert application, say.
-    var SHELLS = '.modal-overlay, .upload-scrim, .ct-modal-overlay, .profile-overlay, .pp-modal-overlay, .popover-overlay, dialog[open], [aria-modal="true"]';
+    var SHELLS = '.modal-overlay, .upload-scrim, .ct-modal-overlay, .profile-overlay, .ep-overlay, .pp-modal-overlay, .popover-overlay, dialog[open], [aria-modal="true"]';
     var isOpen = function (el) {
       if (el.hidden || el.closest('.mtab, #portal-tour, .gt')) return false;
       var cs = getComputedStyle(el);
