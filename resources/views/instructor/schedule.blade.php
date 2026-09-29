@@ -1386,6 +1386,7 @@ function openQuickDay(key, anchor) {
 
   ['qa-delete', 'qa-skip', 'qa-avail', 'qa-back'].forEach((id) => { document.getElementById(id).hidden = true; });
   bubbleMode('list');
+  document.getElementById('qa-add').hidden = isSlotDone({ end_time: '23:59' }, key);
   showBubble(anchor);
 }
 
@@ -1407,7 +1408,30 @@ function openQuickAdd(key, startMinutes, anchor) {
   quickAnchor = anchor || quickAnchor;
   cancelEdit();
 
-  const start = startMinutes != null ? minutesToTime(startMinutes) : firstFreeStart(quickAddKey);
+  // A day that is over cannot take a consultation, so say so before any of
+  // the form is filled in rather than after.
+  if (isSlotDone({ end_time: '23:59' }, quickAddKey)) {
+    closeQuickAdd();
+    showToast('That day has already ended. Pick today or a later date.', 'error');
+
+    return;
+  }
+
+  // Today: never offer a start that has already gone by.
+  let first = startMinutes != null ? startMinutes : timeToMinutes(firstFreeStart(quickAddKey));
+  const nowDate = new Date();
+  if (quickAddKey === formatKey(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate())) {
+    const nextHalfHour = Math.ceil((nowDate.getHours() * 60 + nowDate.getMinutes() + 1) / 30) * 30;
+    first = Math.max(first, nextHalfHour);
+  }
+  if (first >= 24 * 60 - 30) {
+    closeQuickAdd();
+    showToast('That day has already ended. Pick a later date.', 'error');
+
+    return;
+  }
+
+  const start = minutesToTime(first);
 
   document.getElementById('qa-title').textContent = 'New consultation';
   document.getElementById('qa-start').value = start;
@@ -1542,6 +1566,15 @@ function quickAddChanged() {
 
   if (!start || !end || timeToMinutes(end) <= timeToMinutes(start)) {
     note.textContent = 'The end time has to be after the start.';
+    note.classList.add('is-bad');
+    save.disabled = true;
+
+    return;
+  }
+
+  // Same rule saveSlot() enforces, shown while the time is being picked.
+  if ((!quickSlot || (quickSlot.slot.recur || 'weekly') === 'once') && isSlotDone({ end_time: end }, quickAddKey)) {
+    note.textContent = 'That time has already passed. Pick a later time.';
     note.classList.add('is-bad');
     save.disabled = true;
 
