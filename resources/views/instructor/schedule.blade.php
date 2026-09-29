@@ -1408,11 +1408,10 @@ function openQuickAdd(key, startMinutes, anchor) {
   quickAnchor = anchor || quickAnchor;
   cancelEdit();
 
-  // A day that is over cannot take a consultation, so say so before any of
-  // the form is filled in rather than after.
+  // A day that is over cannot take a consultation. Those days are already
+  // dimmed, so a click on one simply does nothing instead of raising an error.
   if (isSlotDone({ end_time: '23:59' }, quickAddKey)) {
     closeQuickAdd();
-    showToast('That day has already ended. Pick today or a later date.', 'error');
 
     return;
   }
@@ -1426,7 +1425,7 @@ function openQuickAdd(key, startMinutes, anchor) {
   }
   if (first >= 24 * 60 - 30) {
     closeQuickAdd();
-    showToast('That day has already ended. Pick a later date.', 'error');
+    showToast('No time left today. Pick a later date.', 'info');
 
     return;
   }
@@ -1464,15 +1463,18 @@ function openQuickEdit(s, key, index, anchor) {
   document.getElementById('qa-end').value = (s.end_time || s.end || '').slice(0, 5);
 
   // A slot a team has booked is not the adviser's to move; the booking is
-  // cancelled first.
-  ['qa-start', 'qa-end'].forEach((id) => { document.getElementById(id).disabled = !!s.hasBooking; });
-  document.getElementById('qa-save').hidden = !!s.hasBooking;
-  document.getElementById('qa-delete').hidden = !!s.hasBooking || !s.schedule_id;
-  document.getElementById('qa-skip').hidden = !repeats || !!s.hasBooking || !s.schedule_id;
+  // cancelled first. One that has already ended cannot be changed either.
+  const ended = isSlotDone(s, key);
+  const locked = !!s.hasBooking || ended;
+  if (ended && !s.hasBooking) document.getElementById('qa-title').textContent = 'Ended consultation';
+  ['qa-start', 'qa-end'].forEach((id) => { document.getElementById(id).disabled = locked; });
+  document.getElementById('qa-save').hidden = locked;
+  document.getElementById('qa-delete').hidden = locked || !s.schedule_id;
+  document.getElementById('qa-skip').hidden = !repeats || locked || !s.schedule_id;
   document.getElementById('qa-back').hidden = (slots[key] || []).length < 2;
 
   const avail = document.getElementById('qa-avail');
-  avail.hidden = !!s.hasBooking || !s.schedule_id;
+  avail.hidden = locked || !s.schedule_id;
   avail.textContent = s.is_available ? 'Mark unavailable' : 'Mark available';
 
   const booked = document.getElementById('qa-booked');
