@@ -17,8 +17,9 @@ use Illuminate\Support\Collection;
  * stage, a redefense needs no second payment, and Pre-proposal Defense has no
  * fee at all. Scheduling reads the same records (DefenseBoard::paidTeamIds).
  *
- * Each member uploads their own receipt, and the CaPSA verifies it or sends
- * it back. Only the latest upload per member per fee counts.
+ * Each member uploads their own receipt to their team leader. Once every
+ * member has, the leader sends them to the CaPSA together, who verifies each
+ * or sends it back. Only the latest upload per member per fee counts.
  */
 class FeeBoard
 {
@@ -47,7 +48,8 @@ class FeeBoard
         return [
             'fees' => $fees->map(fn (ExpensePost $p) => $this->fee($p))->values(),
             'teams' => $teamRows,
-            'receipts' => $this->receipts($fees->pluck('id'), $teamRows->pluck('members')->flatten(1)->pluck('id')),
+            // A receipt still with its team leader is not the CaPSA's yet.
+            'receipts' => $this->receipts($fees->pluck('id'), $teamRows->pluck('members')->flatten(1)->pluck('id'), false),
             'sections' => $capsa->sections ?? [],
         ];
     }
@@ -74,6 +76,7 @@ class FeeBoard
         return [
             'me' => (int) $student->student_id,
             'team' => $team ? ['name' => $team->team_name, 'leader' => $team->leader_id ? (int) $team->leader_id : null] : null,
+            'is_leader' => (bool) $team && (int) $team->leader_id === (int) $student->student_id,
             'section' => $team ? (app(SectionScope::class)->sectionFor($team) ?: null) : null,
             'fees' => $fees->map(fn (ExpensePost $p) => $this->fee($p))->values(),
             'members' => $members,
@@ -110,9 +113,12 @@ class FeeBoard
     /**
      * The latest receipt per member per fee, keyed "feeId:studentId".
      *
+     * $withHeld says whether receipts still with a team leader are included:
+     * the team sees them, the CaPSA does not.
+     *
      * @return array<string, array<string, mixed>>
      */
-    public function receipts(Collection $feeIds, Collection $studentIds): array
+    public function receipts(Collection $feeIds, Collection $studentIds, bool $withHeld = true): array
     {
         if ($feeIds->isEmpty() || $studentIds->isEmpty()) {
             return [];
@@ -120,6 +126,7 @@ class FeeBoard
 
         $latest = FinancialRecord::whereIn('expense_post_id', $feeIds)
             ->whereIn('student_id', $studentIds)
+            ->when(! $withHeld, fn ($q) => $q->sentToCapsa())
             ->orderByDesc('id')
             ->get()
             ->unique(fn (FinancialRecord $r) => $r->expense_post_id.':'.$r->student_id);
@@ -129,6 +136,7 @@ class FeeBoard
         // for two students on one receipt is real.
         $numbers = $latest->pluck('receipt_number')->filter()->unique()->values();
         $usedBy = $numbers->isEmpty() ? collect() : FinancialRecord::whereIn('receipt_number', $numbers)
+            ->when(! $withHeld, fn ($q) => $q->sentToCapsa())
             ->where(fn ($q) => $q->whereNull('f_record_status')->orWhere('f_record_status', '!=', 'rejected'))
             ->with('student:student_id,f_name,l_name')
             ->get(['id', 'student_id', 'receipt_number'])
