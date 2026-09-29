@@ -669,6 +669,30 @@ class PreProposalControllerTest extends TestCase
         $this->assertNotNull(DuplicationCheck::find($check->id));
     }
 
+    /**
+     * The page shows the student's latest scan whichever of their enrolment
+     * rows it was recorded on; Clear only accepted the one their team is on,
+     * so a scan on their other row stayed on the page after every refresh.
+     */
+    public function test_a_scan_on_the_students_other_enrolment_row_can_be_cleared(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $otherRow = StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => null]);
+
+        $check = DuplicationCheck::create([
+            'student_s_y_id' => $otherRow->s_y_id, 'document_path' => 'x.pdf', 'concepts' => [],
+            'top_score' => 20, 'verdict' => 'Passed', 'matches' => [], 'instructors_suggested' => [],
+        ]);
+
+        $this->actingAs($student, 'web');
+        $this->get(route('student.duplication'))->assertViewHas('lastCheck', fn ($c) => $c?->id === $check->id);
+
+        $this->deleteJson(route('student.pre-proposal.check.destroy', $check->id))->assertOk();
+
+        $this->assertNull(DuplicationCheck::find($check->id));
+        $this->get(route('student.duplication'))->assertViewHas('lastCheck', null);
+    }
+
     public function test_a_non_member_cannot_remove_another_teams_proposal(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
