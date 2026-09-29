@@ -7,6 +7,7 @@ use App\Services\GoogleCalendarService;
 use App\Services\Notifier;
 use App\Support\DefenseOutcome;
 use App\Support\MilestoneProgress;
+use App\Support\ProjectTags;
 use App\Support\TeamChecklist;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -515,6 +516,39 @@ class Team extends Model
     public function selectedPreProposal()
     {
         return $this->belongsTo(CapstonePreProposal::class, 'selected_pre_proposal_id');
+    }
+
+    /**
+     * The pre-proposal the team's capstone title came from: the one chosen,
+     * else the one whose title it carries. Null when there is no title, or
+     * when the title was set without a pre-proposal behind it.
+     */
+    public function titleProposal(): ?CapstonePreProposal
+    {
+        if ($this->selectedPreProposal) {
+            return $this->selectedPreProposal;
+        }
+
+        return $this->project_title
+            ? $this->preProposals()->where('title', $this->project_title)->first()
+            : null;
+    }
+
+    /**
+     * The capstone title's tags, from the fixed list: its pre-proposal's
+     * when there is one, else the team's own. Empty when there is no title.
+     *
+     * @return array<int, string>
+     */
+    public function titleTags(): array
+    {
+        if (! $this->project_title && ! $this->selectedPreProposal) {
+            return [];
+        }
+
+        $tags = (array) ($this->titleProposal()?->tags ?: $this->tags);
+
+        return array_values(array_intersect(ProjectTags::OPTIONS, array_map(fn ($t) => trim((string) $t), $tags)));
     }
 
     public static function nameExists(string $name, ?int $ignoreTeamId = null): bool

@@ -125,8 +125,14 @@
        instructor sidebar has (instructor/partials/expert-profile.blade.php)
        - only when this account actually holds an expert role, since that
        panel's fields (Team Capacity, Areas of Expertise) don't apply to a
-       plain Admin/CaPSA account with no expert duties. --}}
-  <div class="sidebar-user" @if ($adminHasExpertRole) id="ep-trigger" onclick="openExpertProfile()" style="cursor:pointer" @endif>
+       plain Admin/CaPSA account with no expert duties. Such an account's card
+       opens its own profile page instead: it used to do nothing at all, and
+       on a phone the menu is the only way there. --}}
+  @if ($adminHasExpertRole)
+  <div class="sidebar-user" id="ep-trigger" onclick="openExpertProfile()" style="cursor:pointer">
+  @else
+  <a class="sidebar-user sidebar-user-link" href="{{ route($rolePrefix.'profile') }}" aria-label="My profile" @if ($currentRoute === $rolePrefix.'profile') aria-current="page" @endif>
+  @endif
     <div class="avatar" style="padding:0;overflow:hidden;">
       <img
         src="{{ $admin?->avatarUrl() ?? asset('images/default-avatar.jpg') }}"
@@ -148,7 +154,11 @@
       <div class="user-role" title="{{ $adminEmail }}">CCS · CSPC</div>
     </div>
     <div class="status-dot"></div>
+  @if ($adminHasExpertRole)
   </div>
+  @else
+  </a>
+  @endif
   <nav class="nav">
     @php
       // Sorted by what the page is about, not by which hat the account wears.

@@ -124,6 +124,33 @@
   .role-capstone_adviser{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(29,78,216,0.2)}
   .role-consultant{background:var(--cyan-bg);color:var(--cyan);border:1px solid rgba(8,145,178,0.2)}
   .role-grammarian{background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2)}
+
+  /* A phone: the panel sat 250px from the left, beside a sidebar that is not
+     there on a phone, so most of it - the fields, Save - ran off the screen.
+     It rises from the bottom instead, the full width, over a dimmed page, as
+     the student profile does; a tap on the dimmed page closes it. */
+  @media (max-width:768px){
+    .ep-overlay{z-index:1100!important}
+    .ep-overlay.open{background:rgba(15,17,23,.45);pointer-events:all}
+    .ep-modal{
+      left:0!important;right:0;top:auto!important;bottom:0;
+      width:100%!important;height:auto!important;max-height:88vh;max-height:88dvh;
+      border-right:0;border-radius:18px 18px 0 0;
+      transform:translateY(24px)!important;
+      box-shadow:0 -12px 40px rgba(0,0,0,.25);
+      padding-bottom:env(safe-area-inset-bottom);
+      z-index:1101!important;
+    }
+    .ep-overlay.open .ep-modal{transform:none!important}
+  }
+  /* A tablet: the sidebar is a drawer there. The panel still opens beside
+     it, and the page behind is dimmed so a tap on it closes the panel
+     rather than leaving it standing on its own once the drawer has gone. */
+  @media (min-width:769px) and (max-width:1024px){
+    .ep-overlay{z-index:600}
+    .ep-overlay.open{background:rgba(15,17,23,.3);pointer-events:all}
+    .ep-modal{z-index:601}
+  }
 </style>
 @endonce
 

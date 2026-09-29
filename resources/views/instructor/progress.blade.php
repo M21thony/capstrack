@@ -38,6 +38,10 @@
   </div>
   </div>
 </div>
+{{-- The panel the sidebar's name card opens, as on every other expert page:
+     without it, tapping the card here threw "openExpertProfile is not
+     defined" and nothing opened. --}}
+@include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 @vite('resources/js/milestones/tracker.js')
 <script>
