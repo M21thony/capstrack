@@ -68,6 +68,56 @@ class ScheduleSlotOverlapTest extends TestCase
         $this->assertSame(0, DB::table('consultation_schedule')->count());
     }
 
+    private function onceSlot(CapstoneExpert $expert, string $date): int
+    {
+        return DB::table('consultation_schedule')->insertGetId([
+            'expert_id' => $expert->expert_id,
+            'available_date' => now()->parse($date)->format('l'),
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+            'consultation_limit' => 1,
+            'is_available' => true,
+            'recur' => 'once',
+            'specific_date' => $date,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    public function test_a_one_time_slot_that_has_ended_cannot_be_edited(): void
+    {
+        $expert = $this->makeExpert();
+        $id = $this->onceSlot($expert, now()->subDay()->toDateString());
+
+        $this->actingAs($expert, 'expert')
+            ->patchJson("/instructor/schedule/slots/{$id}", ['consultation_limit' => 3])
+            ->assertStatus(422);
+
+        $this->assertSame(1, (int) DB::table('consultation_schedule')->where('schedule_id', $id)->value('consultation_limit'));
+    }
+
+    public function test_a_one_time_slot_cannot_be_moved_to_a_time_that_has_passed(): void
+    {
+        $expert = $this->makeExpert();
+        $id = $this->onceSlot($expert, now()->addDays(3)->toDateString());
+
+        $this->actingAs($expert, 'expert')
+            ->patchJson("/instructor/schedule/slots/{$id}", ['specific_date' => now()->subDay()->toDateString()])
+            ->assertStatus(422);
+    }
+
+    public function test_a_one_time_slot_still_to_come_can_be_edited(): void
+    {
+        $expert = $this->makeExpert();
+        $id = $this->onceSlot($expert, now()->addDays(3)->toDateString());
+
+        $this->actingAs($expert, 'expert')
+            ->patchJson("/instructor/schedule/slots/{$id}", ['consultation_limit' => 3])
+            ->assertOk();
+
+        $this->assertSame(3, (int) DB::table('consultation_schedule')->where('schedule_id', $id)->value('consultation_limit'));
+    }
+
     public function test_a_once_slot_is_not_blocked_by_an_unrelated_once_slot_on_a_different_date(): void
     {
         $expert = $this->makeExpert();

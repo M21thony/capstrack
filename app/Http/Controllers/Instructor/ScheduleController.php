@@ -480,6 +480,19 @@ class ScheduleController extends Controller
             return response()->json(['error' => 'A one-time slot needs a date.'], 422);
         }
 
+        // A one-time slot that has ended is history, and an edit cannot move
+        // one to a time that has already passed either.
+        $hasEnded = fn (?string $date, string $end) => $date
+            && Carbon::parse($date.' '.$end)->isPast();
+
+        if ($slot->recur === 'once' && $hasEnded($slot->specific_date, substr((string) $slot->end_time, 0, 5))) {
+            return response()->json(['error' => 'That consultation has already ended and can no longer be edited.'], 422);
+        }
+
+        if ($newRecur === 'once' && $hasEnded($newDate, $newEnd)) {
+            return response()->json(['error' => 'That time has already passed.'], 422);
+        }
+
         // The same collision check addSlot makes. Without it an edit could
         // walk a slot straight into an overlap that adding it would have
         // refused - itself excluded, since a slot cannot clash with itself.
