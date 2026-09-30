@@ -151,7 +151,7 @@
       <select class="input" id="dr-team" style="width:160px">
         <option value="">All Teams</option>
         @foreach ($teams as $team)
-          <option value="{{ $team->team_name }}">{{ $team->team_name }}</option>
+          <option value="{{ $team }}">{{ $team }}</option>
         @endforeach
       </select>
       <select class="input" id="dr-status" style="width:150px">
@@ -177,7 +177,19 @@
           </tr>
         </thead>
         <tbody>
-          @forelse ($reviews as $review)
+          {{-- Each team's files under its own name, the team that has waited
+               longest first. A heading, not a fold: nothing opens or closes. --}}
+          @forelse ($reviewsByTeam as $teamName => $teamReviews)
+            @php $teamWaiting = $teamReviews->where('review_status', '!=', 'Reviewed')->count(); @endphp
+            <tr class="dr-group" data-team="{{ $teamName }}">
+              <td colspan="6" style="padding:10px 20px;background:var(--bg3);font-size:12px;font-weight:700;color:var(--text)">
+                {{ $teamName !== '' ? $teamName : 'No team' }}
+                <span style="font-weight:400;color:var(--text3)">
+                  &middot; {{ $teamWaiting ? $teamWaiting.' waiting on you' : 'All reviewed' }}
+                </span>
+              </td>
+            </tr>
+          @foreach ($teamReviews as $review)
             @php
               $waitingDays = (int) \Illuminate\Support\Carbon::parse($review->submitted_at)->diffInDays(now());
               $rowState = $review->review_status === 'Reviewed'
@@ -195,13 +207,13 @@
                   </div>
                   <div>
                     <div class="td-main">{{ $review->file_name }}</div>
-                    <div style="font-size:11px;color:var(--text3)">{{ ucfirst($review->role) }} review &middot; v{{ $review->file_version }}</div>
+                    <div style="font-size:11px;color:var(--text3)">{{ ucfirst($review->role) }} review{{ (int) $review->file_version > 1 ? ' · earlier versions inside' : '' }}</div>
                   </div>
                 </div>
               </td>
               <td><span class="badge badge-gold">{{ $review->team_name ?? '—' }}</span></td>
               <td style="font-size:12px;font-variant-numeric:tabular-nums">{{ \Illuminate\Support\Carbon::parse($review->submitted_at)->format('M j, Y') }}</td>
-              <td style="font-variant-numeric:tabular-nums;font-size:12px">v{{ $review->version ?? '1.0' }}</td>
+              <td style="font-variant-numeric:tabular-nums;font-size:12px">v{{ max(1, (int) $review->file_version) }}</td>
               <td>
                 @if ($review->review_status === 'Reviewed')
                   <span class="badge badge-green">Reviewed</span>
@@ -248,6 +260,7 @@
                 </div>
               </td>
             </tr>
+          @endforeach
           @empty
             <tr>
               <td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">No documents assigned for review yet.</td>
@@ -291,6 +304,7 @@
   var count  = document.getElementById('dr-count');
   var noMatch = document.getElementById('dr-no-match');
   var rows = Array.prototype.slice.call(document.querySelectorAll('tr.dr-row'));
+  var groups = Array.prototype.slice.call(document.querySelectorAll('tr.dr-group'));
 
   if (!rows.length) return;
 
@@ -314,6 +328,13 @@
         shown++;
         if (row.dataset.status === 'pending') pending++;
       }
+    });
+
+    // A team's heading stays only while one of its files is showing.
+    groups.forEach(function (group) {
+      group.style.display = rows.some(function (row) {
+        return row.dataset.team === group.dataset.team && row.style.display !== 'none';
+      }) ? '' : 'none';
     });
 
     if (noMatch) noMatch.style.display = shown ? 'none' : '';
