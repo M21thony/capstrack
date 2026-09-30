@@ -86,7 +86,7 @@
           <label class="dx-toggle" id="others-toggle" hidden><input type="checkbox" id="s-others" checked>Show other sections' defense schedules</label>
           <label class="dx-field dx-search"><svg><use href="#dx-i-search"/></svg><input id="s-search" type="search" placeholder="Search team" aria-label="Search teams"></label>
         </div>
-        <div class="dx-table-wrap"><table id="sched-table"></table></div>
+        <div class="dx-table-wrap"><table id="sched-table" data-export="Defense Schedule"></table></div>
       </section>
     </div>
   </div>
@@ -97,8 +97,8 @@
     <div class="dx-dlg-head"><div class="dx-grow"><h2 id="d-window-t">Defense window</h2><p id="w-sub"></p></div><button class="dx-icon-btn" data-close aria-label="Close"><svg><use href="#dx-i-x"/></svg></button></div>
     <div class="dx-dlg-body dx-stack">
       <div class="dx-two">
-        <div><label class="dx-lbl" for="w-start">First day</label><input class="dx-field" type="date" id="w-start" style="width:100%"></div>
-        <div><label class="dx-lbl" for="w-end">Last day</label><input class="dx-field" type="date" id="w-end" style="width:100%"></div>
+        <div><label class="dx-lbl" for="w-start">First day</label><input class="dx-field" type="date" id="w-start" min="{{ today()->toDateString() }}" style="width:100%"></div>
+        <div><label class="dx-lbl" for="w-end">Last day</label><input class="dx-field" type="date" id="w-end" min="{{ today()->toDateString() }}" style="width:100%"></div>
       </div>
       <div>
         <label class="dx-lbl">Length of each defense</label>

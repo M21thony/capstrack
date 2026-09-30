@@ -69,7 +69,7 @@
             <button class="fx-btn fx-btn-ok" id="c-bulk-verify"><svg><use href="#fx-i-check"/></svg>Verify selected</button>
           </div>
           <div class="fx-scroll" tabindex="0" aria-label="Receipt list, use J and K or the arrow keys to move">
-            <table>
+            <table data-export="Receipts">
               <colgroup><col style="width:52px"><col><col class="fx-col-team" style="width:150px"><col class="fx-col-up" style="width:130px"><col style="width:150px"></colgroup>
               <thead><tr><th><input type="checkbox" id="c-all" aria-label="Select every waiting receipt shown"></th><th>Member</th><th class="fx-col-team">Section</th><th class="fx-col-up">Uploaded</th><th>Status</th></tr></thead>
               <tbody id="c-rows"></tbody>

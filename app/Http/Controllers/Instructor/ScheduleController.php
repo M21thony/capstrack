@@ -335,6 +335,12 @@ class ScheduleController extends Controller
             'specific_date' => 'nullable|date',
         ]);
 
+        $validator->after(function ($validator) use ($request) {
+            if ($request->recur === 'once' && $request->specific_date && Carbon::parse($request->specific_date)->lt(today())) {
+                $validator->errors()->add('specific_date', 'That day has already passed. Pick today or a later date.');
+            }
+        });
+
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }

@@ -736,6 +736,9 @@ body.edit-mode-active .calendar-day.expert-view:hover {
 .cal-cell.is-blocked::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(-45deg,transparent,transparent 5px,rgba(220,38,38,0.08) 5px,rgba(220,38,38,0.08) 10px);pointer-events:none}
 .cal-cell.has-slot{background:rgba(201,168,44,0.03)}
 .cal-cell.past-day{opacity:0.45;cursor:not-allowed!important}
+/* A day in the week or day view that is already over. */
+.wk-col.is-past{opacity:0.45;cursor:not-allowed}
+.wk-col.is-past .wk-slot{cursor:default}
 .cal-cell.selected{background:rgba(29,78,216,0.06)!important;box-shadow:inset 0 0 0 2px rgba(29,78,216,0.35)!important}
 .cal-date-num{font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;color:var(--text3);line-height:1;margin-bottom:2px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
 

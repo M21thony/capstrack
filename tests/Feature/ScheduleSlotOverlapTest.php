@@ -11,6 +11,12 @@ class ScheduleSlotOverlapTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** These slots are added through the endpoint, which refuses a day that has passed. */
+    private function aFutureWednesday(): string
+    {
+        return today()->modify('next wednesday')->toDateString();
+    }
+
     private function makeExpert(): CapstoneExpert
     {
         return CapstoneExpert::create([
@@ -144,7 +150,7 @@ class ScheduleSlotOverlapTest extends TestCase
             'end_time' => '10:00',
             'consultation_limit' => 1,
             'recur' => 'once',
-            'specific_date' => '2027-08-04',
+            'specific_date' => $this->aFutureWednesday(),
         ]);
 
         $response->assertOk();
@@ -173,7 +179,7 @@ class ScheduleSlotOverlapTest extends TestCase
             'end_time' => '10:00',
             'consultation_limit' => 1,
             'recur' => 'once',
-            'specific_date' => '2027-08-04',
+            'specific_date' => $this->aFutureWednesday(),
         ]);
 
         $response->assertOk();
@@ -192,7 +198,7 @@ class ScheduleSlotOverlapTest extends TestCase
             'consultation_limit' => 1,
             'is_available' => true,
             'recur' => 'once',
-            'specific_date' => '2027-08-04',
+            'specific_date' => $this->aFutureWednesday(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -203,7 +209,7 @@ class ScheduleSlotOverlapTest extends TestCase
             'end_time' => '10:30',
             'consultation_limit' => 1,
             'recur' => 'once',
-            'specific_date' => '2027-08-04',
+            'specific_date' => $this->aFutureWednesday(),
         ]);
 
         $response->assertOk();

@@ -85,5 +85,6 @@
         'icon' => App\Support\PortalIcons::paths('grading')],
 ]])
 @include('partials.staff-portal-tour', ['tourKey' => 'expert', 'expert' => $expert])
+@include('partials.table-export')
 @include('partials.sidebar-scroll-restore')
 @endif

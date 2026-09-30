@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\CapstoneExpert;
 use App\Models\DefenseSchedule;
 use App\Models\ExpensePost;
+use App\Models\Role;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
@@ -39,13 +40,28 @@ class CapsaReports
         'results' => ['Defense Results', "Every team's verdict and average panel score at one defense, by section."],
         'fees' => ['Fee Collection', 'Receipts handed in, approved and still to check for one defense fee, with the money collected.'],
         'experts' => ['Expert Load', 'How many teams each expert handles this school year, by role, next to another school year. Use it to spread teams fairly.'],
+        'expert_list' => ['Expert List', 'The Expert Management table as a report: each expert with their roles, expertise and team slots. Pick only the columns you need, then download it as Excel or PDF.'],
         'schedule' => ['Defense Schedule', 'Date, time, room and panel of every defense in the period, ready to post or hand to the panel.'],
     ];
 
     /** One row per team: these can be shown as section totals and merged with each other. */
     public const TEAM_REPORTS = ['progress', 'master', 'results', 'fees'];
 
-    public const NEW_REPORTS = ['master', 'experts', 'schedule'];
+    public const NEW_REPORTS = ['master', 'experts', 'schedule', 'expert_list'];
+
+    /** The Expert List's columns, key => heading. Expert Management offers these to pick from before a download. */
+    public const EXPERT_LIST_COLUMNS = [
+        'expert' => 'Name',
+        'email' => 'Email',
+        'roles' => 'Role(s)',
+        'expertise' => 'Expertise',
+        'accepts' => 'Accept slots',
+        'capacity' => 'Slots per program',
+        'program' => 'Program',
+        'sections' => 'Sections',
+        'degree' => 'Highest degree',
+        'status' => 'Status',
+    ];
 
     /** The colour a merged report's column band is drawn in. */
     public const BANDS = ['progress' => 'grey', 'master' => 'gold', 'results' => 'blue', 'fees' => 'green'];
@@ -202,6 +218,7 @@ class CapsaReports
             'results' => $bySection ? $this->resultsBySection($ctx) : $this->results($ctx),
             'fees' => $bySection ? $this->feesBySection($ctx) : $this->fees($ctx),
             'experts' => $this->experts($ctx),
+            'expert_list' => $this->expertList(),
             'schedule' => $this->schedule($ctx),
         };
     }
@@ -659,6 +676,58 @@ class CapsaReports
                 + collect(self::ROLES)->mapWithKeys(fn ($l, $key) => [$key => ['b', (string) $rows->sum(fn ($r) => $r['cells'][$key][1])]])->all()
                 + ['now' => ['b', (string) $nowTotal], 'slots' => '', 'last' => ['b', (string) $lastTotal], 'change' => $this->change($nowTotal, $lastTotal), 'teams' => ''],
             'summary' => $this->count($rows->count(), 'expert').' · '.$nowTotal.' team roles in S.Y. '.$ctx['year'].', '.$lastTotal.' in S.Y. '.$ctx['compare'].'. A team counts once for each role the expert holds on it.',
+            'empty' => 'No experts to show yet.',
+        ];
+    }
+
+    /**
+     * The people on the Expert Management page, one row each, with every
+     * column that page shows or hides. Same people as that page: approved
+     * experts who are not the system admin, deactivated ones included and
+     * marked as such.
+     */
+    private function expertList(): array
+    {
+        $rows = CapstoneExpert::withTrashed()
+            ->where('approved_status', true)
+            ->where('is_admin', false)
+            ->with('expertise', 'roles')
+            ->withCount(['teamAssignments' => fn ($q) => $q->where('status', 'approved')])
+            ->get()
+            ->sortBy(fn (CapstoneExpert $e) => mb_strtolower((string) $e->name))
+            ->map(function (CapstoneExpert $e) {
+                $takesTeams = $e->roles->pluck('role_name')->intersect(CapstoneExpert::STUDENT_FACING_ROLES)->isNotEmpty();
+                $slotsSet = $e->max_teams !== null || filled($e->program_slots);
+                $teams = (int) ($e->team_assignments_count ?? 0);
+                $full = $takesTeams && $slotsSet && $teams >= (int) $e->max_teams;
+                [$status, $tone] = match (true) {
+                    (bool) $e->deactivated_at => ['Deactivated', 'bad'],
+                    $full => ['Full', 'warn'],
+                    $e->is_online => ['Active', 'ok'],
+                    default => ['Offline', 'none'],
+                };
+                $capacity = $takesTeams && $slotsSet ? collect($e->parsedCapacity())->map(fn ($row) => $row[0].': max '.$row[1])->all() : [];
+
+                return ['id' => null, 'cells' => [
+                    'expert' => ['b', (string) $e->name],
+                    'email' => $e->email ?: self::DASH,
+                    'roles' => $e->roles->isEmpty() ? self::DASH : $e->roles->pluck('role_name')->map(fn ($r) => Role::labelFor($r))->implode(', '),
+                    'expertise' => $e->expertise->isEmpty() ? self::DASH : $e->expertise->pluck('expertise_field')->implode(', '),
+                    'accepts' => ! $takesTeams ? self::DASH : (! $slotsSet ? 'Not set' : ['slots', $teams, (int) $e->max_teams]),
+                    'capacity' => $capacity ? ['lines', $capacity] : self::DASH,
+                    'program' => $e->program ?: self::DASH,
+                    'sections' => $e->sections ? implode(', ', $e->sections) : self::DASH,
+                    'degree' => trim(($e->highest_degree ?? '').' '.($e->degree_title ? '('.$e->degree_title.')' : '')) ?: self::DASH,
+                    'status' => ['chip', $status, $tone],
+                ]];
+            })
+            ->values();
+
+        return [
+            'columns' => $this->cols(self::EXPERT_LIST_COLUMNS, []),
+            'rows' => $rows->all(),
+            'total' => null,
+            'summary' => $this->count($rows->count(), 'expert').' on the Expert Management page.',
             'empty' => 'No experts to show yet.',
         ];
     }

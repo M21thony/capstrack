@@ -386,7 +386,7 @@
               </div>
             @else
               <div class="ta-scroll">
-                <table class="ta-table">
+                <table class="ta-table" data-export="Teams Waiting for You">
                   <colgroup><col><col style="width:122px"><col class="ta-col-leader" style="width:140px"><col style="width:112px"></colgroup>
                   <thead><tr><th scope="col">Team</th><th scope="col">Role</th><th scope="col" class="ta-col-leader">Leader</th><th scope="col" class="ta-right">Waiting</th></tr></thead>
                   <tbody>
@@ -445,7 +445,7 @@
               </div>
             @else
               <div class="ta-scroll">
-                <table class="ta-table">
+                <table class="ta-table" data-export="Approved Teams">
                   <colgroup><col><col style="width:122px"><col class="ta-col-leader" style="width:140px"><col style="width:132px"></colgroup>
                   <thead><tr><th scope="col">Team</th><th scope="col">Role</th><th scope="col" class="ta-col-leader">Leader</th><th scope="col" class="ta-right">Assigned</th></tr></thead>
                   <tbody>
@@ -486,7 +486,7 @@
               </div>
             @else
               <div class="ta-scroll">
-                <table class="ta-table">
+                <table class="ta-table" data-export="Declined Requests">
                   <colgroup><col><col style="width:122px"><col class="ta-col-leader" style="width:140px"><col style="width:132px"></colgroup>
                   <thead><tr><th scope="col">Team</th><th scope="col">Role</th><th scope="col" class="ta-col-leader">Leader</th><th scope="col" class="ta-right">Declined</th></tr></thead>
                   <tbody>

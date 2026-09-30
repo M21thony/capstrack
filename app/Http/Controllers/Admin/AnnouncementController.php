@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\StudentMilestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Services\NotificationMailer;
 use App\Services\Notifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -182,6 +183,31 @@ class AnnouncementController extends Controller
             foreach ($studentNotifs->chunk(100) as $chunk) {
                 Notification::insert($chunk->toArray());
             }
+
+            // insert() writes no model events, so the bell's own email hook
+            // never sees these rows. A team mention is always mailed; a plain
+            // announcement only when it was posted as important or urgent.
+            $mailable = $data['priority'] === 'normal'
+                ? $studentNotifs->where('type', '!=', 'announcement')
+                : $studentNotifs;
+
+            $students = Student::whereIn('student_id', $mailable->pluck('student_id'))
+                ->get()
+                ->keyBy('student_id');
+
+            foreach ($mailable as $row) {
+                $student = $students->get($row['student_id']);
+
+                if (! $student) {
+                    continue;
+                }
+
+                if ($row['type'] === 'announcement') {
+                    NotificationMailer::sendAnnouncement($student, $row['title'], $row['message'], $row['link']);
+                } else {
+                    NotificationMailer::send($student, $row['type'], $row['title'], $row['message'], $row['link']);
+                }
+            }
         }
 
         // Experts read these on their dashboard; the bell now tells them one was posted.
@@ -189,13 +215,15 @@ class AnnouncementController extends Controller
             CapstoneExpert::where('approved_status', true)
                 ->where('expert_id', '!=', $announcement->admin_id)
                 ->get()
-                ->each(fn (CapstoneExpert $expert) => Notifier::toExpert(
-                    $expert,
-                    'announcement',
-                    $data['title'],
-                    Str::limit(strip_tags($data['body']), 120),
-                    route('instructor.dashboard'),
-                ));
+                ->each(function (CapstoneExpert $expert) use ($data) {
+                    $summary = Str::limit(strip_tags($data['body']), 120);
+
+                    Notifier::toExpert($expert, 'announcement', $data['title'], $summary, route('instructor.dashboard'));
+
+                    if ($data['priority'] !== 'normal') {
+                        NotificationMailer::sendAnnouncement($expert, $data['title'], $summary, route('instructor.dashboard'));
+                    }
+                });
         }
 
         return response()->json($announcement);

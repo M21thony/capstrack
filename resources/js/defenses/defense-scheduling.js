@@ -11,6 +11,14 @@
 import { $, esc, initials, fmtDay, fmtShort, slotLabel, addMinutes, isWeekend, api, toast, reloadWith, showFlash, clashWith, wireDialogs } from './shared.js';
 
 const root = document.getElementById('dx-sched');
+
+/** Today as YYYY-MM-DD, on the clock of the browser: a defense cannot be set on a day that is over. */
+const todayKey = () => {
+  const n = new Date();
+
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+};
+const notBeforeToday = date => (date && date > todayKey() ? date : todayKey());
 let S = JSON.parse(root.dataset.state);
 const URLS = JSON.parse(root.dataset.urls);
 let STAGE = S.stage;
@@ -368,7 +376,7 @@ function drawGenerate() {
         <td><input type="checkbox" data-g="on" ${s.on ? 'checked' : ''} aria-label="Include ${esc(s.team.name)}"></td>
         <td><span class="dx-strong">${esc(s.team.name)}</span><span class="dx-muted" style="display:block">${esc(s.team.section)}</span><span class="dx-skip-note" data-skip>${esc(s.skipped)}</span><span class="dx-clash-note" data-clash></span></td>
         <td class="dx-panel-names">${panelNames(s.team)}</td>
-        <td><input type="date" data-g="date" value="${s.date}" min="${w.start_date}" max="${w.end_date}" aria-label="Date for ${esc(s.team.name)}"></td>
+        <td><input type="date" data-g="date" value="${s.date}" min="${notBeforeToday(w.start_date)}" max="${w.end_date}" aria-label="Date for ${esc(s.team.name)}"></td>
         <td><select data-g="time" aria-label="Time for ${esc(s.team.name)}">${gen.time_slots.map(x => `<option value="${x}" ${x === s.time ? 'selected' : ''}>${slotLabel(x, addMinutes(x, gen.minutes))}</option>`).join('')}</select></td>
         <td><select data-g="venue" aria-label="Venue for ${esc(s.team.name)}">${gen.venues.map(v => `<option ${v === s.venue ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></td>
       </tr>`).join('')}</tbody></table>`
@@ -428,7 +436,7 @@ function openOverride(id) {
   const minutes = w.minutes || 120;
   $('#o-time').innerHTML = (w.slots || S.slots).map(x => `<option value="${x}">${slotLabel(x, addMinutes(x, minutes))}</option>`).join('');
   $('#o-venue').innerHTML = S.venues.map(v => `<option>${esc(v)}</option>`).join('');
-  Object.assign($('#o-date'), { value: t.schedule.date, min: w.start || '', max: w.end || '' });
+  Object.assign($('#o-date'), { value: t.schedule.date, min: notBeforeToday(w.start), max: w.end || '' });
   $('#o-time').value = t.schedule.time;
   $('#o-venue').value = t.schedule.venue;
   $('#o-conflict').hidden = true;

@@ -424,7 +424,7 @@
       </div>
 
       <div class="an-twin an-scroll">
-        <table class="an-tbl">
+        <table class="an-tbl" data-export="Teams Passing Each Defense">
           <thead><tr><th>Stage</th><th class="num">Teams</th>@foreach ($status as $s)<th class="num">{{ $s['label'] }}</th>@endforeach<th class="num">Pass rate</th><th class="num">First-try rate</th></tr></thead>
           <tbody>
             @foreach ($stageNames as $stage)
@@ -451,7 +451,7 @@
       @else
       <div class="an-chart">
         <div class="an-scroll">
-          <table class="an-heat">
+          <table class="an-heat" data-export="Pass Rate by Project Type (by Stage)">
             <thead>
               <tr>
                 <th>Project type</th><th>Teams</th>
@@ -507,7 +507,7 @@
       </div>
 
       <div class="an-twin an-scroll">
-        <table class="an-tbl">
+        <table class="an-tbl" data-export="Pass Rate by Project Type">
           <thead><tr><th>Project type</th><th class="num">Teams</th>@foreach ($stageNames as $stage)<th class="num">{{ $stage }}</th>@endforeach<th class="num">All stages</th></tr></thead>
           <tbody>
             @foreach ($a['byTag'] as $row)
@@ -572,7 +572,7 @@
       </div>
 
       <div class="an-twin an-scroll">
-        <table class="an-tbl">
+        <table class="an-tbl" data-export="Pass Rate by School Year">
           <thead><tr><th>School year</th>@foreach ($stageNames as $stage)<th class="num">{{ $stage }}</th>@endforeach</tr></thead>
           <tbody>
             @foreach ($a['byYear'] as $year => $yStages)
@@ -632,7 +632,7 @@
       </div>
 
       <div class="an-twin an-scroll">
-        <table class="an-tbl">
+        <table class="an-tbl" data-export="Archived Capstones by Year and Project Type">
           <thead><tr><th>Academic year</th><th class="num">Capstones</th>@foreach ($archiveKinds as $kind)<th class="num">{{ $kind }}</th>@endforeach</tr></thead>
           <tbody>
             @foreach ($archive['years'] as $year => $y)
@@ -655,7 +655,7 @@
         <input class="an-search" type="search" id="an-team-search" placeholder="Search a team or project" aria-label="Search teams">
       </div>
       <div class="an-scroll">
-        <table class="an-tbl" id="an-team-table">
+        <table class="an-tbl" id="an-team-table" data-export="Team by Team">
           <thead>
             <tr><th>Team</th><th>Section</th><th>Project type</th>@foreach ($stageNames as $stage)<th>{{ \App\Support\DefenseAnalytics::SHORT[$stage] }}</th>@endforeach</tr>
           </thead>

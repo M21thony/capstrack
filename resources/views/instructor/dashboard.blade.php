@@ -92,6 +92,8 @@
 
   <div id="real-content" style="display:none">
   <div class="content">
+    @include('instructor.partials.dashboard-summary')
+
     {{-- What is waiting on this expert. Read-only counts: the sidebar and the
          tab bar are the way to each page. Totals that ask nothing of them
          (slots open, teams advised) went. --}}

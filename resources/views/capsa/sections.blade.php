@@ -279,7 +279,7 @@
             </div>
           </div>
         @endif
-        <table class="table">
+        <table class="table" data-export="Student List">
           <thead>
             <tr>
               {{-- The unique key first: a student number is the one thing on
