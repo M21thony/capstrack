@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneExpert;
 use App\Models\MemberLeaveRequest;
 use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\TeamExpertAssignment;
 use App\Models\Term;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -92,6 +94,33 @@ class TeamCreationTest extends TestCase
         $this->assertDatabaseMissing('recruitment', ['student_id' => $student->student_id]);
 
         // Verify team is deleted since it became empty
+        $this->assertDatabaseMissing('team', ['team_id' => $team->team_id]);
+    }
+
+    /** Ending the team would leave an expert who took it on with nothing, so the CaPSA releases them first. */
+    public function test_a_leader_on_their_own_cannot_end_a_team_an_expert_took_on(): void
+    {
+        $student = Student::create(['email' => 'solo.expert@my.cspc.edu.ph', 'f_name' => 'Solo', 'l_name' => 'Leader']);
+        $team = Team::create(['team_name' => 'Team Expert', 'team_status' => 'Active', 'leader_id' => $student->student_id]);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+        $assignment = TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => CapstoneExpert::factory()->create(['approved_status' => true])->expert_id,
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($student, 'web');
+
+        $this->delete('/team')->assertSessionHas('error', Team::HAS_EXPERT);
+        $this->deleteJson('/api/teams/'.$team->team_id)->assertStatus(422)->assertJson(['message' => Team::HAS_EXPERT]);
+
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id]);
+        $this->assertSame($team->team_id, StudentSchoolYear::where('student_id', $student->student_id)->value('team_id'));
+
+        // Once the CaPSA has released the expert, the team can end.
+        $assignment->delete();
+
+        $this->delete('/team')->assertSessionHas('status', 'You have left the team and the team has been terminated.');
         $this->assertDatabaseMissing('team', ['team_id' => $team->team_id]);
     }
 

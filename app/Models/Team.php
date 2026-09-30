@@ -176,6 +176,10 @@ class Team extends Model
     public const TEAM_LOCKED = 'Your team passed Title Defense, so its members are locked. '
         .'A member can only leave with your CaPSA\'s approval - send the request from the Team page.';
 
+    /** Said to a leader on their own whose team an expert already took on. */
+    public const HAS_EXPERT = 'An expert has already taken on your team, so leaving would end the team and leave them '
+        .'with nothing. Ask your CaPSA to change the expert on the Experts page first.';
+
     public const NO_NEW_TEAMS = 'Capstone 2 has started. Teams keep the members they '
         .'finished Capstone 1 with, so new teams and recruitment posts are closed.';
 
