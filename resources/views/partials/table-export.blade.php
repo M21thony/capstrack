@@ -177,7 +177,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
     }).catch(function () {
       button.disabled = false;
       button.innerHTML = label;
-      window.alert('Could not open the report. Try again.');
+      window.ctToast('Could not open the report. Try again.', 'error');
     });
   }
 
