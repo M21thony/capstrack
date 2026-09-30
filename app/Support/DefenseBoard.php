@@ -354,13 +354,36 @@ class DefenseBoard
         return $s->end_date?->gt($s->schedule_date) ? $s->end_date : $s->schedule_date->copy()->addMinutes(self::DEFAULT_MINUTES);
     }
 
-    /** Whether panelists will find a rubric to grade this stage with. */
-    public static function hasRubric(string $stage): bool
+    /**
+     * Whether panelists will find a rubric to grade this stage with.
+     *
+     * With $programs, one for each of them; without, any at all.
+     *
+     * @param  list<string>  $programs
+     */
+    public static function hasRubric(string $stage, array $programs = []): bool
     {
-        return GradingRubric::whereRaw('LOWER(rubric_type) = ?', [mb_strtolower($stage)])
-            ->where('is_active', true)
-            ->where('is_archived', false)
-            ->exists();
+        return $programs === []
+            ? GradingRubric::inUseFor($stage)->exists()
+            : self::programsWithoutRubric($stage, $programs) === [];
+    }
+
+    /**
+     * Which of $programs have no rubric for this stage - neither their own
+     * nor one for every program.
+     *
+     * @param  list<string>  $programs
+     * @return list<string>
+     */
+    public static function programsWithoutRubric(string $stage, array $programs): array
+    {
+        $covered = GradingRubric::inUseFor($stage)->pluck('program');
+
+        if ($covered->contains(null)) {
+            return [];
+        }
+
+        return array_values(array_diff($programs, $covered->all()));
     }
 
     /**

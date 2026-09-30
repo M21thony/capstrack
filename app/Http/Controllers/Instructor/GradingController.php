@@ -189,7 +189,7 @@ class GradingController extends Controller
     {
         $panel = $this->panelFor($defense);
 
-        $rubric = $this->rubricFor($defense->defense_type);
+        $rubric = $this->rubricFor($defense);
 
         if (! $rubric) {
             return redirect()->route('instructor.grading')->with(
@@ -257,7 +257,7 @@ class GradingController extends Controller
             ], 422);
         }
 
-        $rubric = $this->rubricFor($defense->defense_type);
+        $rubric = $this->rubricFor($defense);
 
         if (! $rubric) {
             return response()->json(['success' => false, 'message' => 'No active rubric is configured for this defense stage.'], 422);
@@ -331,7 +331,7 @@ class GradingController extends Controller
     {
         $panel = $this->panelFor($defense);
 
-        $rubric = $this->rubricFor($defense->defense_type);
+        $rubric = $this->rubricFor($defense);
 
         if (! $rubric) {
             return response()->json([
@@ -528,18 +528,9 @@ class GradingController extends Controller
         return $panel;
     }
 
-    // defense_schedule.defense_type and grading_rubrics.rubric_type were
-    // built by two different features that never coordinated their exact
-    // wording (e.g. "Pre-proposal Defense" vs "Pre-Proposal Defense") —
-    // matched case-insensitively rather than relying on them being
-    // byte-identical.
-    private function rubricFor(string $defenseType): ?GradingRubric
+    /** The rubric this defense is graded with: its team's program's own, else the stage's for every program. */
+    private function rubricFor(DefenseSchedule $defense): ?GradingRubric
     {
-        // An archived rubric is out of use, whatever its active flag says.
-        return GradingRubric::whereRaw('LOWER(rubric_type) = ?', [mb_strtolower($defenseType)])
-            ->where('is_active', true)
-            ->where('is_archived', false)
-            ->latest('rubric_id')
-            ->first();
+        return GradingRubric::forStage($defense->defense_type, $defense->team?->program());
     }
 }
