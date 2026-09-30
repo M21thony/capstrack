@@ -321,12 +321,6 @@
       @endif
     </a>
 
-    <div class="nav-section">Help</div>
-    <button type="button" class="nav-item" onclick="openPortalTour()" style="cursor:pointer;width:100%;background:none;border:0;border-left:2px solid transparent;font-family:inherit;text-align:left">
-      <x-portal-icon name="tour" />
-      Portal Tour
-    </button>
-
     <div class="nav-section">Account</div>
     @if ($isAdmin)
     <a href="{{ route('admin.settings') }}" class="nav-item {{ $currentRoute === 'admin.settings' ? 'active' : '' }}">

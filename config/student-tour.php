@@ -86,12 +86,6 @@ return [
             'target' => ['#notif-btn'],
         ],
         [
-            'key' => 'replay',
-            'label' => 'Watch this again anytime',
-            'body' => 'Tap Portal Tour whenever you need a refresher.',
-            'target' => ['portal-tour'],
-        ],
-        [
             'key' => 'done',
             'label' => 'You are all set!',
             'body' => 'That is everything. Good luck with your capstone!',
