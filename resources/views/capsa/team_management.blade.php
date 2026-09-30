@@ -66,7 +66,7 @@
       @include('capsa.partials.team-management._crumb', ['trail' => [
         ['Team Management', route('capsa.team_management')],
         ...($tab === 'milestone_list' ? [['Milestones', route('capsa.team_management', ['tab' => 'milestones'])]] : []),
-        [match ($tab) { 'milestones' => 'Milestones', 'milestone_list' => 'All milestones', default => 'Leave Requests' }, null],
+        [match ($tab) { 'milestones' => 'Milestones', 'milestone_list' => 'Manage milestones', default => 'Leave Requests' }, null],
       ]])
       @include('capsa.partials.team-management.' . $tab, $tabData)
 
@@ -186,7 +186,7 @@
             @if (($counts['milestones'] ?? 0) > 0)<span class="nb">{{ $counts['milestones'] }} to check</span>@endif
           </a>
           <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'milestone_list']) }}">
-            <x-tm-icon n="flag" s="16" />All milestones
+            <x-tm-icon n="flag" s="16" />Manage milestones
           </a>
           <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'leave_requests']) }}">
             <x-tm-icon n="mail" s="16" />Leave Requests

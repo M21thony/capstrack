@@ -1,72 +1,52 @@
-{{-- All milestones, GitHub style.
+{{-- Manage milestones, GitHub style.
 
-     Every milestone on the checklists her sections follow, open or closed,
-     each with its due date and how many teams have finished
-     it. Closing one takes it off the open list and stops its reminders;
-     every team's progress on it stays as it is. The details are edited in
-     the Edit milestones window on the tracker. --}}
-<style>
-  .ml-page{max-width:980px}
-  .ml-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
-  .ml-title{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.01em}
-  .ml-sub{font-size:13px;color:var(--text3);margin-top:3px;max-width:62ch;line-height:1.5}
-  .ml-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-  .ml-tabs{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--border);border-radius:10px;background:var(--bg2)}
-  .ml-tab{font-size:13px;font-weight:600;padding:7px 14px;border-radius:7px;color:var(--text3);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-  .ml-tab[aria-current="page"]{background:var(--bg3);color:var(--text)}
-  .ml-count{font-variant-numeric:tabular-nums;padding:1px 7px;border-radius:999px;background:var(--bg4);font-size:11px}
-  .ml-sort{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text3)}
-  .ml-sort select{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text)}
-  .ml-board{margin-bottom:22px}
-  .ml-board h2{font-size:14px;font-weight:700;color:var(--text2);margin:0 0 8px}
-  .ml-board h2 small{font-weight:500;color:var(--text3);margin-left:6px}
-  .ml-list{border:1px solid var(--border);border-radius:12px;background:var(--bg2);overflow:hidden}
-  .ml-row{display:flex;gap:16px;align-items:flex-start;padding:16px 18px;border-top:1px solid var(--border)}
-  .ml-row:first-child{border-top:0}
-  .ml-main{flex:1;min-width:0;display:grid;gap:5px}
-  .ml-name{font-size:15.5px;font-weight:700;color:var(--text);line-height:1.3}
-  .ml-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:12.5px;color:var(--text3)}
-  .ml-late{color:var(--red);font-weight:600}
-  .ml-prog{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:3px;font-size:12.5px;color:var(--text3)}
-  .ml-prog b{color:var(--text);font-variant-numeric:tabular-nums}
-  .ml-meter{width:220px;max-width:100%;height:8px;border-radius:999px;background:var(--bg4);overflow:hidden}
-  .ml-meter i{display:block;height:100%;border-radius:999px;background:var(--green)}
-  .ml-acts{display:flex;gap:8px;flex:none}
-  .ml-btn{font:inherit;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;text-decoration:none;
-          border:1px solid var(--border);background:var(--bg2);color:var(--text2)}
-  .ml-btn:hover:not([disabled]){color:var(--text);border-color:var(--text3)}
-  .ml-btn[disabled]{opacity:.6;cursor:default}
-  .ml-empty{padding:28px 18px;text-align:center;font-size:13px;color:var(--text3)}
-  @media (max-width:640px){
-    .ml-row{flex-direction:column}
-    .ml-acts{width:100%}
-    .ml-acts .ml-btn{flex:1;text-align:center}
-  }
-</style>
+     Every milestone on the checklists her sections follow, each with its
+     due date and how many teams are done with it. The name opens the
+     milestone's own page; Edit, New milestone and the setup card open forms
+     of their own. In checklist order the open ones can be dragged; marking
+     one finished moves it to Finished and stops its reminders, and every
+     team's progress on it stays as it is. --}}
+@include('capsa.partials.team-management._milestone_kit')
 
 @php
   $link = fn (array $change) => route('capsa.team_management', array_merge(['tab' => 'milestone_list', 'state' => $state, 'sort' => $sort], $change));
   $openTotal = $boards->sum('open_count');
-  $closedTotal = $boards->sum('closed_count');
-  $editUrl = route('capsa.team_management', ['tab' => 'milestones']);
+  $finishedTotal = $boards->sum('finished_count');
+  $single = $boards->count() === 1;
+  $canDrag = $state === 'open' && $sort === 'order';
 @endphp
 
 <div class="ml-page">
   <div class="ml-head">
     <div>
-      <div class="ml-title">All milestones</div>
-      <div class="ml-sub">Each milestone's due date and how many teams have finished it. A closed milestone leaves this list and sends no more reminders; the teams' progress on it stays as it is.</div>
+      <h1 class="ml-title">Milestones</h1>
+      <div class="ml-sub">The steps your teams go through, and how many teams are done with each.</div>
     </div>
-    <a class="ml-btn" href="{{ $editUrl }}">Edit milestones</a>
+    @if ($single)
+      <a class="ml-btn ml-gold" href="{{ route('capsa.team_management.milestones.create', $boards->first()['checklist']) }}"><x-tm-icon n="plus" s="14" />New milestone</a>
+    @endif
   </div>
 
+  @foreach ($setups as $program => $programSections)
+    @php $many = count($programSections) > 1; @endphp
+    <div class="ml-setup">
+      <div>
+        <b>{{ implode(', ', $programSections) ?: $program }} {{ $many ? 'have' : 'has' }} no milestones yet.</b>
+        {{ $many ? 'Their' : 'Its' }} teams see nothing until you set them up.
+      </div>
+      <a class="ml-btn" href="{{ route('capsa.team_management.milestones.setup', $program) }}">Set up {{ $program }} milestones</a>
+    </div>
+  @endforeach
+
   @if ($boards->isEmpty())
-    <div class="ml-list"><div class="ml-empty">None of your sections has a checklist yet. Make one under Milestones → Edit milestones.</div></div>
+    @if (! $setups)
+      <div class="ml-list"><div class="ml-empty">None of your sections follows a checklist yet.</div></div>
+    @endif
   @else
     <div class="ml-bar">
-      <nav class="ml-tabs" aria-label="Open or closed">
+      <nav class="ml-tabs" aria-label="Open or finished">
         <a class="ml-tab" href="{{ $link(['state' => 'open']) }}" @if ($state === 'open') aria-current="page" @endif>Open <span class="ml-count">{{ $openTotal }}</span></a>
-        <a class="ml-tab" href="{{ $link(['state' => 'closed']) }}" @if ($state === 'closed') aria-current="page" @endif>Closed <span class="ml-count">{{ $closedTotal }}</span></a>
+        <a class="ml-tab" href="{{ $link(['state' => 'finished']) }}" @if ($state === 'finished') aria-current="page" @endif>Finished <span class="ml-count">{{ $finishedTotal }}</span></a>
       </nav>
       <form class="ml-sort" method="get" action="{{ route('capsa.team_management') }}">
         <input type="hidden" name="tab" value="milestone_list">
@@ -82,55 +62,41 @@
     </div>
 
     @foreach ($boards as $board)
-      <section class="ml-board" aria-label="{{ $board['checklist']->title }}">
-        @if ($boards->count() > 1)
-          <h2>{{ $board['checklist']->title }}<small>{{ implode(', ', $board['sections']) }} · {{ $board['teams'] }} {{ \Illuminate\Support\Str::plural('team', $board['teams']) }}</small></h2>
-        @endif
-        <div class="ml-list">
+      @php $checklist = $board['checklist']; $captioned = false; @endphp
+      <section class="ml-board" aria-label="{{ $checklist->program }} {{ $checklist->title }}">
+        <div class="ml-board-h">
+          <h2>{{ $checklist->program }} · {{ $checklist->title }}<small>{{ implode(', ', $board['sections']) }} · {{ $board['teams'] }} {{ \Illuminate\Support\Str::plural('team', $board['teams']) }}</small></h2>
+          @unless ($single)
+            <a class="ml-btn ml-gold" href="{{ route('capsa.team_management.milestones.create', $checklist) }}"><x-tm-icon n="plus" s="14" />New milestone</a>
+          @endunless
+        </div>
+        <div class="ml-list"
+             @if ($canDrag) data-order="{{ json_encode($board['order']) }}" data-url="{{ route('capsa.checklists.order.update', $checklist) }}" @endif>
           @forelse ($board['shown'] as $row)
-            @php
-              $m = $row->milestone;
-              $days = $row->due_on ? (int) today()->diffInDays($row->due_on->copy()->startOfDay(), false) : null;
-            @endphp
-            <div class="ml-row" data-milestone="{{ $m->id }}">
+            @php $m = $row->milestone; @endphp
+            @if ($sort === 'order' && $row->capstone2 && ! $captioned)
+              @php $captioned = true; @endphp
+              <div class="ml-cap">CAPSTONE 2</div>
+            @endif
+            <div class="ml-row" @if ($canDrag) data-id="{{ $m->id }}" @endif>
+              @if ($canDrag)
+                <button class="ml-grip" type="button" title="Drag to move" aria-label="Move {{ $m->name }}: drag, or use the up and down arrow keys"><x-tm-icon n="grip" s="18" bold /></button>
+              @endif
               <div class="ml-main">
-                <div class="ml-name">{{ $m->name }}</div>
-                <div class="ml-meta">
-                  @if ($m->isClosed())
-                    <span>Closed {{ $m->closed_at->format('M j, Y') }}</span>
-                  @endif
-                  @if ($row->due_on)
-                    <span>Due {{ $row->due_on->format('M j, Y') }}</span>
-                    @if (! $m->isClosed())
-                      @if ($days < 0 && $row->past_due > 0)
-                        <span class="ml-late">Past due for {{ $row->past_due }} {{ \Illuminate\Support\Str::plural('team', $row->past_due) }}</span>
-                      @elseif ($days === 0)
-                        <span>Due today</span>
-                      @elseif ($days > 0)
-                        <span>in {{ $days }} {{ \Illuminate\Support\Str::plural('day', $days) }}</span>
-                      @endif
-                    @endif
-                  @else
-                    <span>No due date</span>
-                  @endif
-                  @if ($m->requires_previous)
-                    <span>Opens after the milestone before it</span>
-                  @endif
-                </div>
-                <div class="ml-prog">
-                  <span class="ml-meter"><i style="width:{{ $row->percent }}%"></i></span>
-                  <b>{{ $row->percent }}%</b>
-                  <span>{{ $row->complete }} of {{ $row->teams }} {{ \Illuminate\Support\Str::plural('team', $row->teams) }} complete · {{ $row->open }} open · {{ $row->deliverables }} {{ \Illuminate\Support\Str::plural('deliverable', $row->deliverables) }}</span>
-                </div>
+                <a class="ml-name" href="{{ route('capsa.team_management.milestones.show', $m) }}">{{ $sort === 'order' && $row->number ? $row->number.'. ' : '' }}{{ $m->name }}</a>
+                @include('capsa.partials.team-management._milestone_meta', ['row' => $row])
               </div>
               <div class="ml-acts">
-                <button class="ml-btn" type="button"
-                        data-close-url="{{ route('capsa.checklist_milestones.update', $m->id) }}"
-                        data-closed="{{ $m->isClosed() ? '0' : '1' }}">{{ $m->isClosed() ? 'Reopen' : 'Close' }}</button>
+                <a class="ml-btn" href="{{ route('capsa.team_management.milestones.edit', $m) }}">Edit</a>
+                @if ($m->archived_at)
+                  <button class="ml-btn" type="button" data-patch="{{ route('capsa.checklist_milestones.update', $m) }}" data-body='{"archived":false}'>Show to teams again</button>
+                @else
+                  <button class="ml-btn" type="button" data-patch="{{ route('capsa.checklist_milestones.update', $m) }}" data-body='{"closed":{{ $m->isClosed() ? 'false' : 'true' }}}'>{{ $m->isClosed() ? 'Reopen' : 'Mark finished' }}</button>
+                @endif
               </div>
             </div>
           @empty
-            <div class="ml-empty">{{ $state === 'closed' ? 'No closed milestones.' : 'No open milestones.' }}</div>
+            <div class="ml-empty">{{ $state === 'finished' ? 'No finished milestones yet.' : 'No open milestones.' }}</div>
           @endforelse
         </div>
       </section>
@@ -139,26 +105,28 @@
 </div>
 
 <script>
-  // Close or reopen, then show the list again: the milestone moves tabs.
-  document.querySelectorAll('[data-close-url]').forEach(button => {
+  // Finish, reopen or show again, then the list again: the milestone moves tabs.
+  document.querySelectorAll('.ml-page [data-patch]').forEach(button => {
     button.addEventListener('click', async () => {
       button.disabled = true;
-      const response = await fetch(button.dataset.closeUrl, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-        },
-        body: JSON.stringify({ closed: button.dataset.closed === '1' }),
-      });
-      if (response.ok) {
+      try {
+        await mlSend(button.dataset.patch, 'PATCH', JSON.parse(button.dataset.body));
         location.reload();
-        return;
+      } catch (error) {
+        button.disabled = false;
+        mlFail(error);
       }
-      button.disabled = false;
-      const body = await response.json().catch(() => ({}));
-      outcomeDialog({ tone: 'error', title: 'That did not save', reason: body.message || 'Please try again.' });
     });
   });
+
+  // Only the open ones are on screen, so they swap among the places they
+  // already hold; finished and hidden ones keep theirs.
+  document.querySelectorAll('.ml-page .ml-list[data-order]').forEach(list => mlSortable(list, async ids => {
+    const order = JSON.parse(list.dataset.order);
+    const byId = new Map(order.map(milestone => [milestone.id, milestone]));
+    const moved = new Set(ids);
+    let next = 0;
+    await mlSend(list.dataset.url, 'PUT', { milestones: order.map(milestone => moved.has(milestone.id) ? byId.get(ids[next++]) : milestone) });
+    location.reload();
+  }));
 </script>

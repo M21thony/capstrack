@@ -21,10 +21,16 @@ class ChecklistMilestoneController extends Controller
     {
         $this->access->checklist($checklist);
 
-        $data = $request->validate(['name' => ['required', 'string', 'max:255']]);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'due_on' => ['nullable', 'date', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
+            'requires_previous' => ['sometimes', 'boolean'],
+        ]);
 
         $milestone = $checklist->milestones()->create([
             'name' => trim($data['name']),
+            'due_on' => $data['due_on'] ?? null,
+            'requires_previous' => $data['requires_previous'] ?? false,
             'position' => (int) $checklist->milestones()->withTrashed()->max('position') + 1,
         ]);
 

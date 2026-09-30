@@ -24,6 +24,7 @@ use App\Http\Controllers\Capsa\DeliverableController;
 use App\Http\Controllers\Capsa\DocumentFileController;
 use App\Http\Controllers\Capsa\ExpertRemovalRequestController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
+use App\Http\Controllers\Capsa\MilestonePageController;
 use App\Http\Controllers\Capsa\RemovalController;
 use App\Http\Controllers\Capsa\ReportController;
 use App\Http\Controllers\Capsa\SectionProgressController;
@@ -205,6 +206,14 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // route names so nothing that links to them breaks, but its page
         // redirects here - it was only ever half of this.
         Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
+        // Manage milestones: a page per milestone and a page per form. Before
+        // the {team} pages, so "milestones" is never read as a team.
+        Route::get('/team-management/milestones/setup/{program}', [MilestonePageController::class, 'setup'])->name('team_management.milestones.setup');
+        Route::get('/team-management/checklists/{checklist}/milestones/new', [MilestonePageController::class, 'create'])->name('team_management.milestones.create');
+        Route::get('/team-management/milestones/{milestone}', [MilestonePageController::class, 'show'])->name('team_management.milestones.show');
+        Route::get('/team-management/milestones/{milestone}/edit', [MilestonePageController::class, 'edit'])->name('team_management.milestones.edit');
+        Route::get('/team-management/milestones/{milestone}/requirements/new', [MilestonePageController::class, 'createRequirement'])->name('team_management.milestones.requirements.create');
+        Route::get('/team-management/requirements/{deliverable}/edit', [MilestonePageController::class, 'editRequirement'])->name('team_management.milestones.requirements.edit');
         // One page per level of detail, each an ordinary URL, so the browser's
         // Back button, a reload, a new tab and a bookmark all work on their own.
         Route::get('/team-management/{team}', [TeamManagementController::class, 'show'])->name('team_management.show');

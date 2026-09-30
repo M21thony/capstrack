@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
+use App\Models\Checklist;
 use App\Models\DefenseSchedule;
 use App\Models\ExpertRemovalRequest;
 use App\Models\MemberLeaveRequest;
@@ -43,7 +44,7 @@ class TeamManagementController extends Controller
     public const TABS = ['teams', 'pre_proposals', 'verification', 'papers', 'milestones', 'milestone_list', 'leave_requests', 'rules'];
 
     /** How the milestones list can be ordered. The first is the default. */
-    public const MILESTONE_SORTS = ['due' => 'Due date', 'percent' => 'Most complete', 'name' => 'Name'];
+    public const MILESTONE_SORTS = ['order' => 'Checklist order', 'due' => 'Due date', 'percent' => 'Most complete', 'name' => 'Name'];
 
     /**
      * The tabs that became pages of their own.
@@ -331,37 +332,52 @@ class TeamManagementController extends Controller
     }
 
     /**
-     * The milestones list, GitHub style: open or closed, in the order picked.
+     * The milestones list, GitHub style: open or finished, in the order picked.
      *
-     * A milestone with no date sorts after every dated one, the way an
-     * undated one is the least pressing.
+     * Finished is closed or hidden from teams. A milestone with no date sorts
+     * after every dated one, the way an undated one is the least pressing.
      */
     private function milestoneList(Request $request, array $capsaSections): array
     {
-        $state = $request->query('state') === 'closed' ? 'closed' : 'open';
-        $sort = array_key_exists((string) $request->query('sort'), self::MILESTONE_SORTS) ? $request->query('sort') : 'due';
+        $state = in_array($request->query('state'), ['finished', 'closed'], true) ? 'finished' : 'open';
+        $sort = array_key_exists((string) $request->query('sort'), self::MILESTONE_SORTS) ? $request->query('sort') : 'order';
 
         $boards = collect(app(ChecklistTracker::class)->milestoneList($capsaSections))
             ->map(function (array $board) use ($state, $sort) {
-                [$closed, $open] = $board['milestones']->partition(fn ($row) => $row->milestone->isClosed());
-                $shown = $state === 'closed' ? $closed : $open;
+                [$finished, $open] = $board['milestones']->partition(fn ($row) => $row->milestone->isClosed() || $row->milestone->archived_at);
+                $shown = $state === 'finished' ? $finished : $open;
 
                 $board['open_count'] = $open->count();
-                $board['closed_count'] = $closed->count();
+                $board['finished_count'] = $finished->count();
+                $board['order'] = MilestonePageController::orderOf($board['checklist']);
                 $board['shown'] = (match ($sort) {
                     'percent' => $shown->sortByDesc('percent'),
                     'name' => $shown->sortBy(fn ($row) => mb_strtolower($row->milestone->name)),
-                    default => $shown->sortBy(fn ($row) => $row->due_on?->toDateString() ?? '9999-12-31'),
+                    'due' => $shown->sortBy(fn ($row) => $row->due_on?->toDateString() ?? '9999-12-31'),
+                    default => $shown,
                 })->values();
 
                 return $board;
             });
+
+        /** @var CapstoneExpert $capsa */
+        $capsa = auth('expert')->user();
+        $mine = Checklist::where('capsa_id', $capsa->expert_id)->pluck('program');
 
         return [
             'boards' => $boards,
             'state' => $state,
             'sort' => $sort,
             'sorts' => self::MILESTONE_SORTS,
+            // The programs she handles with no checklist of her own yet, each
+            // with the sections of it she has.
+            'setups' => collect($capsa->handledPrograms())
+                ->diff($mine)
+                ->mapWithKeys(fn (string $program) => [$program => collect($capsaSections)
+                    ->filter(fn ($section) => TeamChecklist::programOf($section) === $program)
+                    ->values()
+                    ->all()])
+                ->all(),
         ];
     }
 

@@ -34,6 +34,8 @@
     'dot' => '<circle cx="12" cy="12" r="5"/>',
     'flag' => '<path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/>',
     'half' => '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/>',
+    'grip' => '<path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01"/>',
+    'plus' => '<path d="M12 5v14M5 12h14"/>',
   ];
 @endphp
 <svg width="{{ $s }}" height="{{ $s }}" viewBox="0 0 24 24" fill="none" stroke="currentColor"
