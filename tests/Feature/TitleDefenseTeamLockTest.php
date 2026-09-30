@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\TeamExpertAssignment;
 use App\Models\TeamInvitation;
 use App\Services\DefenseOutcomeRecorder;
 use App\Support\DefenseOutcome;
@@ -452,6 +453,50 @@ class TitleDefenseTeamLockTest extends TestCase
             ->assertStatus(422);
 
         $this->assertTrue($this->inTeam($a, $team));
+    }
+
+    private function approvedExpert(Team $team): CapstoneExpert
+    {
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
+        TeamExpertAssignment::create(['team_id' => $team->team_id, 'expert_id' => $expert->expert_id, 'status' => 'approved']);
+
+        return $expert;
+    }
+
+    /** A leader on their own whose team an expert took on asks the CaPSA; approving ends the team and tells the expert. */
+    public function test_a_solo_leader_with_an_expert_leaves_only_with_the_capsa(): void
+    {
+        [$team, $leader, $a, $b] = $this->team();
+        StudentSchoolYear::whereIn('student_id', [$a->student_id, $b->student_id])->update(['team_id' => null]);
+
+        // No expert yet: Leave Team is the way out, not the CaPSA.
+        $this->askToLeave($leader)->assertStatus(422);
+
+        $expert = $this->approvedExpert($team);
+        $this->askToLeave($leader)->assertCreated();
+        $this->assertTrue($this->inTeam($leader, $team), 'asking is not leaving');
+
+        $this->actingAs($this->capsa(), 'expert')
+            ->patchJson(route('capsa.leave_requests.update', MemberLeaveRequest::first()), ['status' => 'approved'])
+            ->assertOk();
+
+        $this->assertNull(Team::find($team->team_id));
+        $this->assertSame(0, TeamExpertAssignment::where('team_id', $team->team_id)->count());
+        $this->assertTrue(Notification::where('expert_id', $expert->expert_id)->where('type', 'team_ended')->exists());
+    }
+
+    public function test_the_expert_hears_when_a_member_leaves_with_the_capsa(): void
+    {
+        [$team, , $a] = $this->team();
+        $expert = $this->approvedExpert($team);
+        $this->askToLeave($a);
+
+        $this->actingAs($this->capsa(), 'expert')
+            ->patchJson(route('capsa.leave_requests.update', MemberLeaveRequest::first()), ['status' => 'approved'])
+            ->assertOk();
+
+        $this->assertNotNull(Team::find($team->team_id));
+        $this->assertTrue(Notification::where('expert_id', $expert->expert_id)->where('type', 'team_member_left')->exists());
     }
 
     public function test_the_page_shows_what_is_waiting_and_what_approving_does(): void

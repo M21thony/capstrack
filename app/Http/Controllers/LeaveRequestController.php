@@ -47,9 +47,17 @@ class LeaveRequestController extends Controller
 
         if ($validated['type'] === MemberLeaveRequest::LEAVE) {
             // The leader cannot be the one to go: a team with nobody leading it
-            // has nobody to schedule, submit or answer for it.
+            // has nobody to schedule, submit or answer for it. A leader on
+            // their own ends the team by leaving, which needs the CaPSA only
+            // once an expert has taken the team on.
             if ($isLeader) {
-                return $this->refuse($request, 'You lead the team. Hand leadership to another member first, then ask to leave.');
+                if (StudentSchoolYear::where('team_id', $team->team_id)->count() > 1) {
+                    return $this->refuse($request, 'You lead the team. Hand leadership to another member first, then ask to leave.');
+                }
+
+                if (! $team->hasApprovedExpert()) {
+                    return $this->refuse($request, 'No expert has taken your team on yet, so you can leave with Leave Team.');
+                }
             }
 
             $subjectId = (int) $me->student_id;
@@ -93,15 +101,9 @@ class LeaveRequestController extends Controller
         $teamName = '<strong>'.e($team->team_name).'</strong>';
 
         // Whoever it concerns hears about it from the system, not second hand.
-        Notification::create($validated['type'] === MemberLeaveRequest::LEAVE
-            ? [
-                'student_id' => $team->leader_id,
-                'type' => 'leave_request_sent',
-                'title' => 'Member asked to leave',
-                'message' => '<strong>'.$myName.'</strong> asked your CaPSA to let them leave '.$teamName.'.',
-                'link' => route('student.team'),
-            ]
-            : [
+        // A leader leaving is the only one it concerns, so nobody else is told.
+        if ($validated['type'] === MemberLeaveRequest::REMOVE) {
+            Notification::create([
                 'student_id' => $subjectId,
                 'type' => 'leave_request_sent',
                 'title' => 'Removal requested',
@@ -109,6 +111,15 @@ class LeaveRequestController extends Controller
                     .'Their reason: "'.e($leaveRequest->reason).'" You stay on the team unless your CaPSA approves.',
                 'link' => route('student.team'),
             ]);
+        } elseif (! $isLeader) {
+            Notification::create([
+                'student_id' => $team->leader_id,
+                'type' => 'leave_request_sent',
+                'title' => 'Member asked to leave',
+                'message' => '<strong>'.$myName.'</strong> asked your CaPSA to let them leave '.$teamName.'.',
+                'link' => route('student.team'),
+            ]);
+        }
 
         $subject = Student::find($subjectId);
         $this->notifyCapsa($team, $leaveRequest, $myName, e(trim(($subject->f_name ?? '').' '.($subject->l_name ?? ''))));

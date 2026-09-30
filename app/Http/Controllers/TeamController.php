@@ -685,7 +685,7 @@ class TeamController extends Controller
                     ->with('error', 'As the team leader, you cannot leave directly. Transfer leadership to another member first.');
             }
 
-            if ($team->expertAssignments()->where('status', 'approved')->exists()) {
+            if ($team->hasApprovedExpert()) {
                 return redirect()->route('student.team')->with('error', Team::HAS_EXPERT);
             }
 

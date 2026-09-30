@@ -54,7 +54,29 @@ class Team extends Model
             }
 
             DefenseSchedule::removeForTeams([$team->team_id]);
+
+            // The experts who took the team on hear it ended and are free of
+            // it. The table is MyISAM, so its foreign key never cascades.
+            foreach ($team->expertAssignments()->where('status', 'approved')->with('expert')->get() as $assignment) {
+                Notifier::toExpert(
+                    $assignment->expert,
+                    'team_ended',
+                    'Team ended',
+                    '<strong>'.e($team->team_name).'</strong> no longer exists, so you are no longer its '
+                        .($assignment->engaged_role_name ?: 'expert').'.',
+                    route('instructor.teams'),
+                    ['team_id' => $team->team_id],
+                );
+            }
+
+            $team->expertAssignments()->delete();
         });
+    }
+
+    /** Whether an expert has already taken this team on. */
+    public function hasApprovedExpert(): bool
+    {
+        return $this->expertAssignments()->where('status', 'approved')->exists();
     }
 
     /** This team's Title Defense attempts, fetched once per instance. */
@@ -177,8 +199,8 @@ class Team extends Model
         .'A member can only leave with your CaPSA\'s approval - send the request from the Team page.';
 
     /** Said to a leader on their own whose team an expert already took on. */
-    public const HAS_EXPERT = 'An expert has already taken on your team, so leaving would end the team and leave them '
-        .'with nothing. Ask your CaPSA to change the expert on the Experts page first.';
+    public const HAS_EXPERT = 'An expert has already taken on your team, so leaving needs your CaPSA\'s approval. '
+        .'Use Ask CaPSA to Leave on the Team page.';
 
     public const NO_NEW_TEAMS = 'Capstone 2 has started. Teams keep the members they '
         .'finished Capstone 1 with, so new teams and recruitment posts are closed.';
