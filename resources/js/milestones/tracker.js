@@ -208,6 +208,7 @@ function start(root) {
       blocks,
       late,
       overdue: late.length,
+      all: counts(t.rows),
       check: CAPSA ? counts(t.rows).check : 0,
       done: blocks.filter(b => b.closed === b.total).length,
       current: blocks.find(b => b.closed < b.total),
@@ -255,7 +256,7 @@ function start(root) {
     if (shown.length) {
       const table = el('table', 'ms-table');
       const labels = table.createTHead().insertRow();
-      ['Team', 'Now on', 'Milestones done', 'Late', ''].forEach(label => {
+      ['Team', 'Now on', 'Progress', 'Milestones done', 'Late', ''].forEach(label => {
         const th = el('th', '', label);
         th.scope = 'col';
         labels.append(th);
@@ -308,7 +309,10 @@ function start(root) {
       act.append(check);
     }
 
-    row.append(team, now, el('td', '', `${x.done} of ${x.blocks.length}`), late, act);
+    const bar = el('td');
+    bar.append(progress(x.all));
+
+    row.append(team, now, bar, el('td', '', `${x.done} of ${x.blocks.length}`), late, act);
     return row;
   }
 
