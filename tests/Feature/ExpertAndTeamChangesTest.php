@@ -81,8 +81,8 @@ class ExpertAndTeamChangesTest extends TestCase
     public function test_panel_suggestions_show_the_degree_and_nothing_when_there_is_none(): void
     {
         $role = Role::firstOrCreate(['role_name' => 'adviser']);
-        $withDegree = CapstoneExpert::factory()->create(['approved_status' => true, 'degree_title' => 'MIT', 'highest_degree' => 'master', 'credentials' => 'MIT']);
-        $without = CapstoneExpert::factory()->create(['approved_status' => true, 'highest_degree' => null]);
+        $withDegree = CapstoneExpert::factory()->create(['approved_status' => true, 'first_login_at' => now(), 'degree_title' => 'MIT', 'highest_degree' => 'master', 'credentials' => 'MIT']);
+        $without = CapstoneExpert::factory()->create(['approved_status' => true, 'first_login_at' => now(), 'highest_degree' => null]);
         $withDegree->roles()->attach($role->role_id);
         $without->roles()->attach($role->role_id);
 

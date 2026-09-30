@@ -210,8 +210,8 @@ class PanelChairAndReadinessTest extends TestCase
         $team = $this->team('Sensor Team');
         $team->update(['tags' => ['IoT']]);
 
-        $match = CapstoneExpert::factory()->create(['approved_status' => true]);
-        $other = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $match = CapstoneExpert::factory()->create(['approved_status' => true, 'first_login_at' => now()]);
+        $other = CapstoneExpert::factory()->create(['approved_status' => true, 'first_login_at' => now()]);
         foreach ([[$match, 'Internet of Things (IoT)'], [$other, 'Accounting']] as [$expert, $field]) {
             $expert->roles()->attach(Role::firstOrCreate(['role_name' => 'adviser'])->role_id);
             ExpertExpertise::create(['expert_id' => $expert->expert_id, 'expertise_field' => $field]);
@@ -221,5 +221,29 @@ class PanelChairAndReadinessTest extends TestCase
             ->get(route('capsa.panel_assignment'))
             ->assertOk()
             ->assertViewHas('state', fn ($state) => collect($state['teams'])->firstWhere('id', $team->team_id)['suggested']->all() === [$match->expert_id]);
+    }
+
+    /** An expert added by email who never signed in has no name to pick - a blank row. */
+    public function test_only_experts_who_have_signed_in_can_be_picked(): void
+    {
+        $adviser = Role::firstOrCreate(['role_name' => 'adviser'])->role_id;
+        $never = CapstoneExpert::factory()->create(['approved_status' => true, 'first_name' => '', 'last_name' => '', 'first_login_at' => null, 'last_seen_at' => null]);
+        $signedIn = CapstoneExpert::factory()->create(['approved_status' => true, 'first_login_at' => now()]);
+        $beforeFirstLoginWasKept = CapstoneExpert::factory()->create(['approved_status' => true, 'first_login_at' => null, 'last_seen_at' => now()->subMonth()]);
+
+        foreach ([$never, $signedIn, $beforeFirstLoginWasKept] as $expert) {
+            $expert->roles()->attach($adviser);
+        }
+
+        $this->actingAs($this->capsa, 'expert')
+            ->get(route('capsa.panel_assignment'))
+            ->assertOk()
+            ->assertViewHas('state', function ($state) use ($never, $signedIn, $beforeFirstLoginWasKept) {
+                $ids = collect($state['experts'])->pluck('id');
+
+                return ! $ids->contains($never->expert_id)
+                    && $ids->contains($signedIn->expert_id)
+                    && $ids->contains($beforeFirstLoginWasKept->expert_id);
+            });
     }
 }
