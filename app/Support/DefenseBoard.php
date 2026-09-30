@@ -265,7 +265,9 @@ class DefenseBoard
     }
 
     /**
-     * Everyone who can sit on a panel: approved advisers and consultants.
+     * Everyone who can sit on a panel: approved advisers and consultants who
+     * have signed in. An expert added by email who never has is a blank row
+     * with no name, and nobody to tell about the defense.
      * Grammarians check the writing and never sit on a panel.
      *
      * @return Collection<int, array{id: int, name: string, degree: string, chair: bool, tags: array<int, string>}>
@@ -275,6 +277,7 @@ class DefenseBoard
         $roleIds = Role::whereIn('role_name', ['adviser', 'consultant'])->pluck('role_id');
 
         return CapstoneExpert::where('approved_status', true)
+            ->where(fn ($q) => $q->whereNotNull('first_login_at')->orWhereNotNull('last_seen_at'))
             ->whereHas('roles', fn ($q) => $q->whereIn('roles.role_id', $roleIds))
             ->with('expertise')
             ->orderBy('last_name')->orderBy('first_name')
