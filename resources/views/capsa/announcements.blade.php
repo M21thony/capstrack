@@ -130,7 +130,7 @@
             </div>
             <div class="form-group">
               <label class="label">Due Date</label>
-              <input class="input" id="ms-due" type="date" />
+              <input class="input" id="ms-due" type="date" min="{{ today()->toDateString() }}" />
             </div>
             <div class="form-group">
               <label class="label">Message</label>

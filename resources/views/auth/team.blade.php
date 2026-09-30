@@ -366,14 +366,14 @@
     aspect-ratio: 1 / 1;
     transform: translateX(-50%);
     border-radius: 50%;
-    background: #0c2f7d;
+    background: #fff;
     display: grid;
     place-items: center;
     box-shadow: 0 0 0 2.5px var(--gold-bright), 0 6px 14px rgba(0,0,0,0.4);
   }
   .back-ccs img {
-    width: 64%;
-    height: 64%;
+    width: 68%;
+    height: 68%;
     object-fit: contain;
     -webkit-user-drag: none;
     user-select: none;

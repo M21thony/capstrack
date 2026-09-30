@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SyncConsultationCancellation;
-use App\Models\Notification;
-use App\Models\StudentSchoolYear;
 use App\Models\ConsultationAvailability;
 use App\Models\ConsultationBooking;
 use App\Models\ConsultationSchedule;
+use App\Models\Notification;
+use App\Models\StudentSchoolYear;
 use App\Services\GoogleCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -334,6 +334,12 @@ class ScheduleController extends Controller
             'specific_date' => 'nullable|date',
         ]);
 
+        $validator->after(function ($validator) use ($request) {
+            if ($request->recur === 'once' && $request->specific_date && Carbon::parse($request->specific_date)->lt(today())) {
+                $validator->errors()->add('specific_date', 'That day has already passed. Pick today or a later date.');
+            }
+        });
+
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
@@ -343,7 +349,7 @@ class ScheduleController extends Controller
         $nextDate = $this->getNextDateForDay($request->available_date);
 
         $newRecur = $request->recur ?? 'weekly';
-        $newDate  = $newRecur === 'once' ? $request->specific_date : null;
+        $newDate = $newRecur === 'once' ? $request->specific_date : null;
 
         // A slot identical to one that already exists is nobody's intention.
         // It used to be inserted anyway, then flagged unavailable by the
@@ -455,7 +461,6 @@ class ScheduleController extends Controller
         if (! $slot) {
             return response()->json(['error' => 'Slot not found.'], 404);
         }
-
 
         // What the slot will look like once this edit lands - the new value
         // where one was sent, the current one where it was not.
@@ -881,7 +886,7 @@ class ScheduleController extends Controller
         // Remaining combinations involve at least one biweekly side —
         // check whether the dates align on the same 14-day cadence.
         $biweeklyDate = $recurA === 'biweekly' ? $dateA : $dateB;
-        $otherDate    = $recurA === 'biweekly' ? $dateB : $dateA;
+        $otherDate = $recurA === 'biweekly' ? $dateB : $dateA;
 
         if (! $biweeklyDate || ! $otherDate) {
             return true; // can't verify alignment — fail safe
