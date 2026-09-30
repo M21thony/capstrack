@@ -6,6 +6,8 @@ use App\Models\CapstoneExpert;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\DefenseWindow;
+use App\Models\Deliverable;
+use App\Models\DeliverableCheck;
 use App\Models\ExpertRole;
 use App\Models\Role;
 use App\Models\Student;
@@ -16,7 +18,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 
 /**
- * Dummy BSIT-3C/3D teams for showing Generate schedule on the Pre-proposal
+ * Dummy BSIT-3A/3B teams for showing Generate schedule on the Pre-proposal
  * Defense: eight ready teams across three panels, plus one team with no panel
  * and one with no grammarian, so the "not ready" list has something too.
  * Every account is @example.test, so saving a schedule emails no real person.
@@ -29,16 +31,16 @@ class ScheduleDemoSeeder extends Seeder
 
     /** Team name => [project title, section letter, panel (null = none), has grammarian]. */
     private const TEAMS = [
-        'Demo Byte Builders' => ['Smart Parking Finder for the Campus', 'C', 'A', true],
-        'Demo Code Crafters' => ['Online Canteen Ordering with Queue Numbers', 'C', 'A', true],
-        'Demo Pixel Pioneers' => ['Barangay Clearance Request Tracker', 'C', 'A', true],
-        'Demo Logic Legends' => ['Clinic Appointment and Medicine Inventory System', 'C', 'B', true],
-        'Demo Stack Squad' => ['Library Book Reservation with SMS Alerts', 'D', 'B', true],
-        'Demo Data Dragons' => ['Evacuation Center Monitoring System', 'D', 'B', true],
-        'Demo Cloud Coders' => ['Tricycle Fare Calculator and Route Guide', 'D', 'C', true],
-        'Demo Net Ninjas' => ['Farm Produce Price Board', 'D', 'C', true],
-        'Demo Bug Busters' => ['Scholarship Application Tracker', 'C', null, true],
-        'Demo Script Kiddos' => ['Lost and Found Board for the Campus', 'D', 'C', false],
+        'Demo Byte Builders' => ['Smart Parking Finder for the Campus', 'A', 'A', true],
+        'Demo Code Crafters' => ['Online Canteen Ordering with Queue Numbers', 'A', 'A', true],
+        'Demo Pixel Pioneers' => ['Barangay Clearance Request Tracker', 'A', 'A', true],
+        'Demo Logic Legends' => ['Clinic Appointment and Medicine Inventory System', 'A', 'B', true],
+        'Demo Stack Squad' => ['Library Book Reservation with SMS Alerts', 'B', 'B', true],
+        'Demo Data Dragons' => ['Evacuation Center Monitoring System', 'B', 'B', true],
+        'Demo Cloud Coders' => ['Tricycle Fare Calculator and Route Guide', 'B', 'C', true],
+        'Demo Net Ninjas' => ['Farm Produce Price Board', 'B', 'C', true],
+        'Demo Bug Busters' => ['Scholarship Application Tracker', 'A', null, true],
+        'Demo Script Kiddos' => ['Lost and Found Board for the Campus', 'B', 'C', false],
     ];
 
     /** Panel => [chair, member 1, member 2], each [first name, last name, highest degree, degree title]. */
@@ -75,6 +77,7 @@ class ScheduleDemoSeeder extends Seeder
         $number = 0;
         foreach (self::TEAMS as $name => [$title, $section, $panel, $hasGrammarian]) {
             $team = $this->team($name, $title, $section, ++$number);
+            $this->checkOffRequirementsBeforeTheDefense($team);
 
             foreach ($staff as $roleName => $expert) {
                 if ($roleName === 'grammarian' && ! $hasGrammarian) {
@@ -143,6 +146,25 @@ class ScheduleDemoSeeder extends Seeder
         }
 
         return $expert;
+    }
+
+    /**
+     * Marks done every checklist line before the Pre-proposal Defense, so the
+     * section CaPSA's checklist does not hold the demo teams back.
+     * ponytail: a CaPSA check closes forms and tasks, not documents - enough for the BSIT checklist.
+     */
+    public function checkOffRequirementsBeforeTheDefense(Team $team): void
+    {
+        foreach ($team->checklistProgress()?->items ?? [] as $row) {
+            if ($row->item->kind === Deliverable::DEFENSE && $row->item->defense_type === self::STAGE) {
+                return;
+            }
+
+            DeliverableCheck::updateOrCreate(
+                ['deliverable_id' => $row->item->id, 'team_id' => $team->team_id],
+                ['status' => DeliverableCheck::COMPLETE, 'checked_at' => now()],
+            );
+        }
     }
 
     private function team(string $name, string $title, string $section, int $number): Team
