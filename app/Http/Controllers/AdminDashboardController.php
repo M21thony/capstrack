@@ -10,39 +10,49 @@ use App\Models\MemberLeaveRequest;
 use App\Models\Setting;
 use App\Models\Student;
 use App\Support\CapsaReports;
+use App\Support\DashboardStats;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 /**
- * The first page an Admin or a CaPSA sees: what is waiting on them, and
- * nothing else.
+ * The first page an Admin or a CaPSA sees: how things stand, then what is
+ * waiting on them.
  *
- * It used to open on archive charts and all-time totals, which ask nothing of
- * anybody and already live on Analytics. A CaPSA now sees the work waiting in
- * their own sections and the defenses coming up; an Admin sees what the
- * system still needs from them, like a section nobody covers.
+ * The summary comes first - totals, how far along the teams are, how the
+ * defenses are going, what the fees stand at (DashboardStats) - because that is
+ * what a dashboard is for. What needs doing keeps its own strip beneath it: a
+ * CaPSA's work waiting in their sections and the defenses coming up; an
+ * Admin's setup that is still missing, like a section nobody covers.
  */
 class AdminDashboardController extends Controller
 {
-    public function __construct(private CapsaReports $reports) {}
+    public function __construct(private CapsaReports $reports, private DashboardStats $stats) {}
 
     public function index(): View
     {
         /** @var CapstoneExpert $viewer */
         $viewer = Auth::guard('expert')->user();
 
+        // The running term, the CaPSA's sections - the same teams Reports counts.
+        $ctx = $viewer->is_capsa ? $this->reports->context($viewer, []) : null;
+
         return view('capsa.dashboard', [
             'viewer' => $viewer,
-            'capsa' => $viewer->is_capsa ? $this->forCapsa($viewer) : null,
+            'capsa' => $ctx ? $this->forCapsa($viewer, $ctx) : null,
             'admin' => $viewer->is_admin ? $this->forAdmin() : null,
+            'stats' => [
+                'capsa' => $ctx ? $this->stats->capsa($viewer, $ctx) : null,
+                'admin' => $viewer->is_admin ? $this->stats->admin($viewer) : null,
+            ],
         ]);
     }
 
-    /** @return array<string, mixed> */
-    private function forCapsa(CapstoneExpert $capsa): array
+    /**
+     * @param  array<string, mixed>  $ctx
+     * @return array<string, mixed>
+     */
+    private function forCapsa(CapstoneExpert $capsa, array $ctx): array
     {
-        // The running term, the CaPSA's sections - the same teams Reports counts.
-        $ctx = $this->reports->context($capsa, []);
         $teams = $ctx['teams'];
         $teamIds = $teams->pluck('team_id');
         $studentIds = $ctx['records']->toBase()->only($teamIds->all())->flatten(1)->pluck('student_id')->unique();

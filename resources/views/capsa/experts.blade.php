@@ -213,6 +213,22 @@
      .ct-modal-card shell so it looks and behaves like every other dialog
      here. Shared markup/behavior with the other copy of this page. */
   .expert-name-trigger{cursor:pointer}
+
+  /* Download Excel: which columns go in the file. */
+  .xp-cols{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;text-align:left;margin:4px 0 6px}
+  .xp-col{display:flex;align-items:center;gap:8px;font-size:13px;color:#1e293b;padding:7px 4px;cursor:pointer}
+  .xp-col input{width:15px;height:15px;accent-color:#2563eb;flex-shrink:0}
+  .xp-always{font-size:10.5px;color:#94a3b8;margin-left:auto}
+  .xp-quick{display:flex;gap:14px;margin:0 0 18px}
+  .xp-quick button{background:none;border:0;padding:0;font-size:12px;font-weight:600;color:#2563eb;cursor:pointer}
+  @media (max-width:520px){.xp-cols{grid-template-columns:1fr}}
+  /* View Report is a link, so it gets the look the other buttons here take from the browser. */
+  .page-filters-actions a.btn{background:ButtonFace;color:ButtonText}
+  /* Four buttons do not fit on one line on a phone: two by two instead. */
+  @media (max-width:600px){
+    .page-filters-actions{flex-wrap:wrap}
+    .page-filters-actions .btn{flex:1 1 calc(50% - 4px)}
+  }
   .expert-detail-head{
     display:flex;align-items:flex-start;gap:12px;text-align:left;
     padding-bottom:16px;border-bottom:1px solid #f1f5f9;margin-bottom:18px;
@@ -451,6 +467,10 @@
       <span class="page-filters-actions">
         {{-- The list is for a whole faculty at once. The other is for the one
              it missed, so admitting a late arrival is not a spreadsheet. --}}
+        {{-- The same table as a report: View Report opens it with the column
+             picker, Download Excel asks which columns first. --}}
+        <a class="btn" href="{{ route('capsa.reports.show', 'expert_list') }}">View Report</a>
+        <button type="button" class="btn" onclick="openExpertExportModal()">Download Excel</button>
         <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
         <button type="button" class="btn btn-primary" onclick="openAddExpertModal()"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Expert</button>
       </span>
@@ -927,6 +947,45 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
   </div>
 </div>
 
+{{-- ══════════════════════════════════════════
+     DOWNLOAD EXCEL — pick the columns first
+══════════════════════════════════════════ --}}
+<div id="expertExportModal" class="ct-modal-overlay" style="display:none;">
+  <div class="ct-modal-card ct-upload-card" style="max-width:460px">
+    <div class="ct-up-head">
+      <span class="ct-up-head-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+      </span>
+      <span class="ct-up-head-text">
+        <span class="ct-modal-title">Download Excel</span>
+        <span class="ct-up-sub">Tick the columns you want in the file.</span>
+      </span>
+      <button type="button" class="ct-up-close" onclick="closeExpertExportModal()" aria-label="Close">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="xp-cols" id="expertExportCols">
+      @foreach (\App\Support\CapsaReports::EXPERT_LIST_COLUMNS as $key => $label)
+        {{-- Name is what names the row, so it is always in the file. --}}
+        <label class="xp-col">
+          <input type="checkbox" value="{{ $key }}" checked @disabled($loop->first) onchange="syncExpertExport()">
+          {{ $label }}@if ($loop->first) <span class="xp-always">always included</span>@endif
+        </label>
+      @endforeach
+    </div>
+    <div class="xp-quick">
+      <button type="button" onclick="pickExpertExportCols(true)">Select all</button>
+      <button type="button" onclick="pickExpertExportCols(false)">Name only</button>
+    </div>
+
+    <div class="ct-modal-actions">
+      <button type="button" class="ct-btn ct-btn-secondary" onclick="closeExpertExportModal()">Cancel</button>
+      <a id="expertExportGo" class="ct-btn ct-btn-primary" href="#" onclick="closeExpertExportModal()" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Download Excel</a>
+    </div>
+  </div>
+</div>
+
 <div id="expertRosterModal" class="ct-modal-overlay" style="display:none;">
   <div class="ct-modal-card ct-upload-card">
     <div class="ct-up-head">
@@ -1022,6 +1081,34 @@ function openAddExpertModal() {
 
 function closeAddExpertModal() {
   addExpertModal.style.display = 'none';
+}
+
+// ── Download Excel: the Expert List report, with only the ticked columns ──
+const expertExportModal = document.getElementById('expertExportModal');
+const expertExportUrl = @json(route('capsa.reports.show', 'expert_list'));
+
+function openExpertExportModal() {
+  syncExpertExport();
+  expertExportModal.style.display = 'flex';
+}
+
+function closeExpertExportModal() {
+  expertExportModal.style.display = 'none';
+}
+
+function pickExpertExportCols(all) {
+  document.querySelectorAll('#expertExportCols input:not(:disabled)').forEach(function (box) { box.checked = all; });
+  syncExpertExport();
+}
+
+// The report hides what is named in ?hide=, so the link lists the unticked ones.
+function syncExpertExport() {
+  const hidden = Array.from(document.querySelectorAll('#expertExportCols input:not(:disabled)'))
+    .filter(function (box) { return !box.checked; })
+    .map(function (box) { return box.value; });
+  const query = new URLSearchParams({ download: 'xlsx' });
+  if (hidden.length) { query.set('hide', hidden.join(',')); }
+  document.getElementById('expertExportGo').href = expertExportUrl + '?' + query.toString();
 }
 
 function addExpert() {

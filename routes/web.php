@@ -68,6 +68,8 @@ use App\Http\Controllers\StudentFinancialController;
 use App\Http\Controllers\StudentReviewController;
 use App\Http\Controllers\StudentSectionController;
 use App\Http\Controllers\SubmissionController;
+use App\Http\Controllers\TableExportController;
+use App\Http\Controllers\TableReportController;
 use App\Http\Controllers\TeamController;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
@@ -501,6 +503,21 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     // The browser hands us the address its push service gave it.
     Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
 });
+// Download as Excel for any table on a CaPSA, Admin or Expert page: the page
+// sends the columns and rows it is showing (partials/table-export).
+Route::post('table-export', [TableExportController::class, 'download'])
+    ->middleware(['expert.auth'])
+    ->name('table.export');
+
+// View Report for any table: the page sends what it shows, and the Reports'
+// own screen (column picker, Preview PDF, PDF and Excel) opens over it.
+Route::post('table-report', [TableReportController::class, 'store'])
+    ->middleware(['expert.auth'])
+    ->name('table.report.store');
+Route::get('table-report/{token}', [ReportController::class, 'snapshot'])
+    ->middleware(['expert.auth', 'no.cache'])
+    ->name('table.report.show');
+
 // The bell on every expert page - CaPSA, admin and instructor alike, since one
 // person is often more than one of those. Deliberately not behind
 // expert.approved: an unapproved expert still needs to hear a team apply to them.

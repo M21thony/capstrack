@@ -11,9 +11,10 @@ use Illuminate\Support\Facades\Log;
 /**
  * The one way CapsTrack tells somebody something on the web.
  *
- * Two things happen per call: a row goes in the notifications table (what the
- * bell shows) and a desktop notification is pushed to whatever browsers that
- * person has allowed. Both are skipped if they have turned this kind off.
+ * Three things happen per call: a row goes in the notifications table (what the
+ * bell shows), a desktop notification is pushed to whatever browsers that
+ * person has allowed, and - for the important kinds - a copy is emailed
+ * (NotificationMailer). Each is skipped if they have turned it off.
  *
  * Nothing here is allowed to throw. A notification is a courtesy on top of
  * whatever the student was actually doing - booking a consultation, sending a
@@ -70,7 +71,12 @@ class Notifier
         array $data,
     ): void {
         try {
+            // Bell and email are separate switches. Writing the row is what
+            // sends the email (see Notification::booted), so when the bell is
+            // off the email has to be sent here or it would be lost with it.
             if (! $person->wants($type, 'web')) {
+                NotificationMailer::send($person, $type, $title, $message, $link);
+
                 return;
             }
 

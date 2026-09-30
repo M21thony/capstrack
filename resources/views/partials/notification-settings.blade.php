@@ -58,7 +58,8 @@
 
     <p class="notif-prefs-intro">
       Desktop notifications pop up in the corner of your screen even when CapsTrack
-      is not the window you are looking at. Emails keep working as they always have.
+      is not the window you are looking at. Important notifications are also sent to your
+      Google email; switch off any you do not want in the Email column.
     </p>
 
     {{-- What the browser itself allows. Nothing below matters if it says no. --}}
@@ -104,8 +105,13 @@
       <div class="notif-prefs-row">
         <span class="notif-prefs-label">{{ $prefsMeta['label'] }}</span>
         <span class="notif-prefs-cell">
-          <input type="checkbox" data-key="web.{{ $prefsType }}"
-                 {{ ($prefsSaved['web.'.$prefsType] ?? true) !== false ? 'checked' : '' }}>
+          @if ($prefsMeta['web'] ?? true)
+            <input type="checkbox" data-key="web.{{ $prefsType }}"
+                   {{ ($prefsSaved['web.'.$prefsType] ?? true) !== false ? 'checked' : '' }}>
+          @else
+            {{-- Written straight to the bell, so no desktop popup exists to switch. --}}
+            <span class="notif-prefs-none" title="Shows in the bell only">&mdash;</span>
+          @endif
         </span>
         <span class="notif-prefs-cell">
           @if ($prefsMeta['email'])

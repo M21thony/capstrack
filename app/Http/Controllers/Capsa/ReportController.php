@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Capsa;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\TableReportController;
 use App\Support\CapsaReports;
 use App\Support\SectionScope;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -91,6 +92,80 @@ class ReportController extends Controller
             [$table, $groups] = $this->merge($table, $report, $merged, $ctx);
         }
 
+        return $this->present($request, [
+            'report' => $report,
+            'name' => CapsaReports::REPORTS[$report][0],
+            'about' => CapsaReports::REPORTS[$report][1],
+            'scope' => $this->scopeLine($report, $ctx, $bySection, $merged),
+            'fileTag' => $ctx['year'],
+            'ctx' => $ctx,
+            'table' => $table,
+            'groups' => $groups,
+            'teamReport' => $teamReport,
+            'bySection' => $bySection,
+            'merged' => $merged,
+        ]);
+    }
+
+    /**
+     * A table from any staff page, opened as a report. The page sent what it
+     * was showing (TableReportController); this is the same report screen the
+     * Reports use - column picker, search and sort, Preview PDF, and a PDF or
+     * Excel download - over that table. Open to the Expert and Admin portals
+     * as well as the CaPSA's.
+     */
+    public function snapshot(Request $request, string $token): View|Response
+    {
+        $saved = TableReportController::recall(auth('expert')->id(), $token);
+
+        if ($saved === null) {
+            return response()->view('capsa.reports.expired', ['back' => TableReportController::safeBack($request->query('back'))], 410);
+        }
+
+        // Columns are c0, c1, ... so two columns with the same heading stay apart.
+        $columns = [];
+        foreach ($saved['headings'] as $i => $heading) {
+            $columns['c'.$i] = ['label' => $heading, 'align' => 'left'];
+        }
+        $rows = array_map(fn ($line) => ['id' => null, 'cells' => array_combine(array_keys($columns), $line)], $saved['rows']);
+
+        return $this->present($request, [
+            'report' => 'snapshot',
+            'name' => $saved['title'],
+            'about' => 'Exactly what the page showed when you opened this report. Pick the columns you want, then preview or download it.',
+            'scope' => $saved['scope'],
+            'fileTag' => null,
+            // A table kept from a page has no school year or section to look up, so the
+            // report opens without the queries that would build them - it is the same
+            // screen, and it comes up as fast as the page it was opened from.
+            'ctx' => [
+                'year' => '', 'term' => '', 'program' => '', 'section' => '', 'compare' => '', 'stage' => '', 'fee' => '',
+                'years' => [], 'termOptions' => [], 'programOptions' => [], 'sectionOptions' => [], 'compareOptions' => [],
+                'teams' => collect(), 'teamSections' => [],
+            ],
+            'table' => [
+                'columns' => $columns,
+                'rows' => $rows,
+                'total' => null,
+                'summary' => count($rows).' '.Str::plural('row', count($rows)),
+                'empty' => 'The table had no rows when this report was opened.',
+            ],
+            'groups' => [],
+            'teamReport' => false,
+            'bySection' => false,
+            'merged' => [],
+            'baseUrl' => route('table.report.show', $token),
+            'back' => $saved['back'],
+            'portal' => $saved['portal'],
+        ]);
+    }
+
+    /** @param  array<string, mixed>  $r */
+    private function present(Request $request, array $r): View|Response
+    {
+        ['report' => $report, 'name' => $name, 'scope' => $scope, 'ctx' => $ctx, 'table' => $table, 'groups' => $groups,
+            'teamReport' => $teamReport, 'bySection' => $bySection, 'merged' => $merged] = $r;
+
         // Column order and which are hidden; the first column names the row and always shows first.
         $keys = array_keys($table['columns']);
         $first = $keys[0];
@@ -99,13 +174,11 @@ class ReportController extends Controller
         $hidden = array_values(array_diff(array_intersect($this->list($request, 'hide'), $keys), [$first]));
         $visible = array_values(array_diff($order, $hidden));
 
-        $name = CapsaReports::REPORTS[$report][0];
-        $scope = $this->scopeLine($report, $ctx, $bySection, $merged);
         $download = $this->text($request, 'download');
 
         if ($download === 'pdf' || $download === 'xlsx') {
             $rows = $this->searchAndSort($table['rows'], $visible, $this->text($request, 'q'), $this->text($request, 'sort'), $this->text($request, 'dir') === 'desc');
-            $fileName = Str::slug($name).'_'.$ctx['year'].'_'.now()->toDateString();
+            $fileName = Str::slug($name).'_'.($r['fileTag'] ? $r['fileTag'].'_' : '').now()->toDateString();
             $sheet = $this->plain($table, $rows, $visible, $groups);
 
             if ($download === 'xlsx') {
@@ -128,10 +201,14 @@ class ReportController extends Controller
         $baseKeys = $teamReport ? array_keys(CapsaReports::TEAM_COLUMNS[$report]) : [];
 
         return view('capsa.reports.table', [
+            // Where the download links point, and which portal's frame to draw it in.
+            'baseUrl' => $r['baseUrl'] ?? route('capsa.reports.show', $report),
+            'back' => $r['back'] ?? null,
+            'portal' => $r['portal'] ?? 'capsa',
             'ctx' => $ctx,
             'report' => $report,
             'name' => $name,
-            'about' => CapsaReports::REPORTS[$report][1],
+            'about' => $r['about'],
             'table' => $table,
             'groups' => $groups,
             'order' => $order,
@@ -150,7 +227,7 @@ class ReportController extends Controller
             'scope' => $scope,
             'search' => $this->text($request, 'q'),
             'period' => $this->periodQuery($ctx),
-            'details' => $bySection || $report === 'experts' ? [] : $this->reports->teamDetails($ctx, array_values(array_filter(array_column($table['rows'], 'id')))),
+            'details' => $bySection || in_array($report, ['experts', 'expert_list', 'snapshot'], true) ? [] : $this->reports->teamDetails($ctx, array_values(array_filter(array_column($table['rows'], 'id')))),
         ]);
     }
 
@@ -224,6 +301,11 @@ class ReportController extends Controller
 
     private function scopeLine(string $report, array $ctx, bool $bySection, array $merged): string
     {
+        // A list of people as they are today, not a school year's numbers.
+        if ($report === 'expert_list') {
+            return 'All approved experts';
+        }
+
         return implode(' · ', array_filter([
             'S.Y. '.$ctx['year'],
             $report === 'experts' ? 'compared with S.Y. '.$ctx['compare'] : $ctx['termOptions'][$ctx['term']],

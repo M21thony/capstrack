@@ -44,9 +44,10 @@ class StaffProfileAndDashboardTilesTest extends TestCase
     {
         $html = $this->actingAs($this->adviser(), 'expert')->get(route('instructor.dashboard'))->assertOk()->getContent();
 
-        $this->assertSame(3, preg_match_all('#<div\s+class="stat-chip has-icon">#', $html));
+        // Four summary tiles, then the three that are waiting on the expert. All counts.
+        $this->assertSame(7, preg_match_all('#<div\s+class="stat-chip has-icon">#', $html));
         $this->assertDoesNotMatchRegularExpression('#<a\s[^>]*class="stat-chip#', $html);
-        foreach (['Team Requests', 'Documents to Review', 'Grades to Submit'] as $label) {
+        foreach (['Teams You Advise', 'Documents Reviewed', 'Consultations Held', 'Defenses Graded', 'Team Requests', 'Documents to Review', 'Grades to Submit'] as $label) {
             $this->assertStringContainsString('<div class="stat-l">'.$label.'</div>', $html);
         }
     }

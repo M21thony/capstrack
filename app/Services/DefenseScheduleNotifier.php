@@ -83,7 +83,12 @@ class DefenseScheduleNotifier
             ]);
         }
 
-        $this->email(Student::whereIn('student_id', $memberIds)->pluck('email'), $schedule, $rescheduled, false);
+        $this->email(
+            Student::whereIn('student_id', $memberIds)->get()
+                ->filter(fn (Student $student) => $student->wants('defense_scheduled', 'email'))
+                ->pluck('email'),
+            $schedule, $rescheduled, false,
+        );
         $this->email($schedule->panels->pluck('expert.email'), $schedule, $rescheduled, true);
     }
 

@@ -135,7 +135,7 @@
           </div>
         </div>
         <div class="gl-scroll">
-          <table>
+          <table data-export="Grading">
             <thead><tr><th>Team</th><th>Defense</th><th>Your seat</th><th>When</th><th>Your grade</th><th></th></tr></thead>
             <tbody id="grading-tbody">
               @foreach($rows as $row)
