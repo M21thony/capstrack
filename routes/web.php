@@ -459,7 +459,6 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/dashboard', [DashboardController::class, 'index'])->name('student.dashboard');
             Route::get('/team', [TeamController::class, 'index'])->name('student.team');
             Route::get('/experts', [StudentExpertController::class, 'index'])->name('student.experts');
-            Route::get('/experts/{assignment}/role-acceptance-form', [StudentExpertController::class, 'roleAcceptanceForm'])->name('student.experts.role-acceptance');
             Route::get('/submission', [SubmissionController::class, 'create'])->name('student.submission');
             // Handles the actual file upload + multi-recipient Drive delivery
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
