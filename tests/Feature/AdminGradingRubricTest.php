@@ -1739,10 +1739,6 @@ class AdminGradingRubricTest extends TestCase
 
     public function test_ai_generate_returns_draft_with_scores_totaling_exactly_100(): void
     {
-        // pre_oral_defense (not title_defense) - title_defense now has a
-        // real reference rubric and goes through exact-reproduction
-        // (scoreTitleDefenseCriteria), so it wouldn't exercise the generic
-        // free-generation budget-split engine this test is actually about.
         $fakeResponse = json_encode([
             'rubric_name' => 'Pre Oral Defense Rubric',
             'description' => 'Evaluates project title clarity and feasibility.',
@@ -2063,81 +2059,50 @@ class AdminGradingRubricTest extends TestCase
         $this->assertSame(100, $grandTotal);
     }
 
-    public function test_ai_generate_title_defense_returns_all_27_criteria_without_calling_ai(): void
+    public function test_ai_generate_title_defense_is_drafted_by_the_ai_with_the_focus_area_and_count(): void
     {
-        // Title Defense skips the AI call entirely (unlike Pre-Proposal,
-        // which still echoes wording through the model) - a real
-        // reproduction call was tested against the live model and silently
-        // dropped 16 of 27 criteria, so the draft is now built directly
-        // from TITLE_DEFENSE_CRITERIA. ->never() on both methods proves
-        // that bypass actually happens, not just that the numbers end up
-        // right.
+        $criterion = fn (string $name) => ['criterion_name' => $name, 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']];
+
         $mock = Mockery::mock(OllamaSSHClient::class);
-        $mock->shouldReceive('warmup')->never();
-        $mock->shouldReceive('generate')->never();
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
+        $mock->shouldReceive('generate')->once()
+            ->withArgs(fn (string $prompt) => str_contains($prompt, 'Title Defense')
+                && str_contains($prompt, 'Focus area / program context: BSIS Capstone Title Defense'))
+            ->andReturn(json_encode([
+                'rubric_name' => 'BSIS Title Defense Rubric',
+                'criteria' => [$criterion('C1'), $criterion('C2'), $criterion('C3'), $criterion('C4')],
+            ]));
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'title_defense',
+                'topic' => 'BSIS Capstone Title Defense',
+                'criteria_count' => 3,
             ]);
 
         $response->assertStatus(200)->assertJson(['success' => true]);
-
-        $criteria = $response->json('data.criteria');
-        $this->assertCount(27, $criteria);
-
-        $categories = $response->json('data.categories');
-        $this->assertSame([
-            ['name' => 'Chapter 1', 'max_points' => 20],
-            ['name' => 'Chapter 2', 'max_points' => 15],
-            ['name' => 'Chapter 3', 'max_points' => 20],
-            ['name' => 'Grammar and Spelling', 'max_points' => 10],
-            ['name' => 'Oral Examination/Presentation', 'max_points' => 20],
-            ['name' => 'Research Instrument', 'max_points' => 10],
-            ['name' => 'Timeliness', 'max_points' => 5],
-        ], $categories);
-
-        $grandTotal = array_sum(array_column($criteria, 'max_points'));
-        $this->assertSame(100.0, $grandTotal);
-
-        foreach ($criteria as $c) {
-            $this->assertCount(3, $c['levels']);
-            $this->assertSame(['Excellent', 'Fair', 'Poor'], array_column($c['levels'], 'label'));
-        }
+        $this->assertSame('BSIS Title Defense Rubric', $response->json('data.rubric_name'));
+        $this->assertCount(3, $response->json('data.criteria'));
+        $this->assertEquals(100, array_sum(array_column($response->json('data.criteria'), 'max_points')));
     }
 
-    public function test_ai_generate_title_defense_keeps_duplicate_named_criteria_in_their_own_category(): void
+    public function test_ai_generate_title_defense_no_longer_falls_back_to_the_27_bsit_criteria(): void
     {
-        // Regression test: TITLE_DEFENSE_CRITERIA legitimately reuses
-        // "Notes Page" as a criterion name in Chapter 1, 2, AND 3 (each
-        // chapter ends with its own notes-page row). An earlier version of
-        // scoreTitleDefenseCriteria() matched by criterion name alone,
-        // which collapsed all three into whichever was listed last -
-        // confirmed directly to skew Chapter 1/2/3 totals to 19/13/22
-        // instead of 20/15/20. Matching is now scoped by category+name.
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/drafts', [
-                'rubric_type' => 'title_defense',
-            ]);
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
+        $mock->shouldReceive('generate')->once()->andThrow(new \RuntimeException('tunnel down'));
+        $this->app->instance(OllamaSSHClient::class, $mock);
 
-        $response->assertStatus(200);
-
-        $notesPages = collect($response->json('data.criteria'))
-            ->filter(fn ($c) => $c['criterion_name'] === 'Notes Page')
-            ->values();
-
-        $this->assertCount(3, $notesPages);
-        $this->assertSame(['Chapter 1', 'Chapter 2', 'Chapter 3'], $notesPages->pluck('category')->all());
-        $this->assertSame([1, 2, 1], $notesPages->pluck('max_points')->all());
+        $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/drafts', ['rubric_type' => 'title_defense'])
+            ->assertStatus(502)
+            ->assertJson(['success' => false, 'message' => 'Could not reach the AI model. Please try again.']);
     }
 
     public function test_ai_generate_falls_back_to_flat_when_categories_missing_for_non_preproposal_type(): void
     {
-        // pre_oral_defense (not title_defense) - title_defense now has its
-        // own fixed real categories (Chapter 1, Chapter 2, ...), so it
-        // would no longer fall back to a flat/uncategorized draft the way
-        // this test expects. No "categories" key at all in the response -
+        // No "categories" key at all in the response -
         // should behave exactly like before categories existed (single
         // implicit group).
         $fakeResponse = json_encode([
