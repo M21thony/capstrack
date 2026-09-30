@@ -11,6 +11,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\Term;
+use Database\Seeders\StudentRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -31,7 +32,7 @@ class TeamRulesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        (new \Database\Seeders\StudentRoleSeeder)->run();
+        (new StudentRoleSeeder)->run();
     }
 
     private function capsa(): CapstoneExpert
@@ -175,6 +176,27 @@ class TeamRulesTest extends TestCase
             ->assertJson(['message' => Team::CREATION_CLOSED]);
 
         $this->assertSame(0, Team::count());
+    }
+
+    /** Starting a team settles the founder's open invites and join requests, as accepting one would. */
+    public function test_creating_a_team_clears_the_founders_pending_invites_and_requests(): void
+    {
+        $founder = $this->student('founder@my.cspc.edu.ph');
+        $otherLeader = $this->student('other@my.cspc.edu.ph');
+        $otherTeam = $this->teamLedBy($otherLeader);
+
+        $invite = $this->invitation($otherLeader, $founder, $otherTeam);
+        $request = TeamInvitation::create([
+            'sender_id' => $founder->student_id, 'receiver_id' => $otherLeader->student_id,
+            'team_id' => $otherTeam->team_id, 'type' => 'request', 'status' => 'pending',
+        ]);
+
+        $this->actingAs($founder, 'web')
+            ->postJson(route('team.store'), ['team_name' => 'Fresh Start'])
+            ->assertCreated();
+
+        $this->assertSame('declined', $invite->fresh()->status);
+        $this->assertSame('declined', $request->fresh()->status);
     }
 
     /** A named build-a-team post creates the team as it posts - the same rule by another door. */

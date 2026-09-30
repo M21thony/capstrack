@@ -26,6 +26,17 @@ class Team extends Model
      */
     protected static function booted(): void
     {
+        // Starting a team settles the founder's open invites and join requests,
+        // the same as accepting one does. Every way of creating a team goes
+        // through here, so none of them can leave the old ones showing.
+        static::created(function (Team $team) {
+            if ($team->leader_id) {
+                TeamInvitation::where('status', 'pending')
+                    ->where(fn ($q) => $q->where('receiver_id', $team->leader_id)->orWhere('sender_id', $team->leader_id))
+                    ->update(['status' => 'declined']);
+            }
+        });
+
         static::deleting(function (Team $team) {
             foreach (ConsultationBooking::cancelForRemovedTeam($team->team_id) as $booking) {
                 Notifier::toExpert(
