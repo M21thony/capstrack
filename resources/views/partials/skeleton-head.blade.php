@@ -5,8 +5,9 @@
      ever stood in front of content that was already there - for 400 to
      600ms on a first visit, and on the expert pages it then jumped the whole
      page up as it left. It is no longer shown: the class below hides it and
-     shows the content at once, settling in with a short fade. Each page's
-     own reveal script sees the class and simply removes its skeleton.
+     shows the content at once, with no fade - a fade-in on every page read
+     as a flash. Each page's own reveal script sees the class and simply
+     removes its skeleton.
 
      A stylesheet !important beats a plain inline style, which is how this
      wins against the display:none each page sets on its content inline. --}}
@@ -15,21 +16,8 @@
 <style>
   html.sk-seen #skeleton-content { display: none !important; }
 @if (($skReveal ?? 'block') === 'opacity')
-  html.sk-seen #real-content { opacity: 1 !important; transition: none !important; animation: sk-page-in .2s ease-out; }
+  html.sk-seen #real-content { opacity: 1 !important; transition: none !important; }
 @else
-  html.sk-seen #real-content { display: {{ $skReveal ?? 'block' }} !important; opacity: 1 !important; transition: none !important; animation: sk-page-in .2s ease-out; }
+  html.sk-seen #real-content { display: {{ $skReveal ?? 'block' }} !important; opacity: 1 !important; transition: none !important; }
 @endif
-  /* A fade through filter, not opacity: opacity is held at 1 above, and the
-     animation keeps nothing once it ends - an animation held on opacity would
-     leave the content its own layer, and a pop-up inside it under the tab
-     bar and the sidebar. */
-  @keyframes sk-page-in { from { filter: opacity(0); } to { filter: opacity(1); } }
-  /* A browser with view transitions cross-fades the whole page already
-     (partials/smooth-navigation); a second fade inside it would dim twice. */
-  @supports (view-transition-name: none) {
-    html.sk-seen #real-content { animation: none; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    html.sk-seen #real-content { animation: none; }
-  }
 </style>

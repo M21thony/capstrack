@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 /**
  * Moving between pages is smooth: no skeleton standing in front of content
- * that is already there, a cross-fade from page to page, the next page
+ * that is already there, no fade that reads as a flash, the next page
  * loading as the link is pointed at, and taps that land at once.
  */
 class SmoothNavigationTest extends TestCase
@@ -28,15 +28,14 @@ class SmoothNavigationTest extends TestCase
         return $this->actingAs($student)->get(route('student.dashboard'))->assertOk()->getContent();
     }
 
-    public function test_pages_cross_fade_and_the_next_one_loads_early(): void
+    /** The page-to-page cross-fade read as the screen flashing on every click, so there is none. */
+    public function test_pages_do_not_fade_and_the_next_one_loads_early(): void
     {
         $html = $this->studentPage();
-        $head = substr($html, 0, strpos($html, '</head>'));
 
-        // In <head>, so the new page has opted in before it first paints.
-        $this->assertStringContainsString('@view-transition { navigation: auto; }', $head);
-        $this->assertSame(1, substr_count($html, '@view-transition { navigation: auto; }'), 'once per page');
-        $this->assertSame(1, substr_count($html, '<script type="speculationrules">'));
+        $this->assertStringNotContainsString('@view-transition', $html);
+        $this->assertStringNotContainsString('::view-transition', $html);
+        $this->assertSame(1, substr_count($html, '<script type="speculationrules">'), 'once per page');
 
         preg_match('/<script type="speculationrules">(.*?)<\/script>/s', $html, $rules);
         $json = json_decode($rules[1], true);
@@ -47,7 +46,8 @@ class SmoothNavigationTest extends TestCase
 
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
         $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk()
-            ->assertSee('@view-transition { navigation: auto; }', false);
+            ->assertSee('<script type="speculationrules">', false)
+            ->assertDontSee('@view-transition', false);
     }
 
     /** Nothing is given a view-transition-name: it would lift the top bar's notifications under sticky headings. */
@@ -69,9 +69,8 @@ class SmoothNavigationTest extends TestCase
         $this->assertStringContainsString("<script>document.documentElement.className += ' sk-seen';</script>", $html);
         $this->assertStringNotContainsString('sessionStorage.getItem(key)', File::get(resource_path('views/partials/skeleton-head.blade.php')));
         $this->assertStringContainsString('html.sk-seen #skeleton-content { display: none !important; }', $html);
-        // The fade is through filter and holds nothing after it ends.
-        $this->assertStringContainsString('@keyframes sk-page-in { from { filter: opacity(0); } to { filter: opacity(1); } }', $html);
-        $this->assertStringContainsString('animation: sk-page-in .2s ease-out;', $html);
+        // No fade-in either: on every page it read as a flash.
+        $this->assertStringNotContainsString('sk-page-in', $html);
     }
 
     /** The schedule's month grid keeps its room until it is drawn, so the page below it holds still. */
