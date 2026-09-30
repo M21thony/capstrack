@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstonePreProposal;
+use App\Models\DuplicationCheck;
 use App\Models\Recruitment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
+use Database\Seeders\StudentRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,7 +24,7 @@ class RecruitmentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        (new \Database\Seeders\StudentRoleSeeder)->run();
+        (new StudentRoleSeeder)->run();
     }
 
     public function test_student_can_publish_build_a_team_post(): void
@@ -290,6 +293,55 @@ class RecruitmentTest extends TestCase
         $otherRecruitments = $response->viewData('otherRecruitments');
         $this->assertEquals(1, $otherRecruitments->count());
         $this->assertEquals($otherSame->student_id, $otherRecruitments->first()->student_id);
+    }
+
+    /**
+     * Turning the pre-proposals in does not stop a team taking members, so
+     * its post stays on the feed until the team is actually Full.
+     */
+    public function test_a_team_that_submitted_its_pre_proposals_but_has_room_stays_on_the_feed(): void
+    {
+        $sectionmate = fn (string $name) => Student::create([
+            'email' => $name.'@my.cspc.edu.ph',
+            'f_name' => $name,
+            'l_name' => 'Student',
+            'course' => 'Bachelor of Science in Information Technology',
+            'year_section' => '3rd · B',
+            'p_picture' => 'avatar-01',
+        ]);
+
+        $viewer = $sectionmate('viewer');
+        StudentSchoolYear::create(['student_id' => $viewer->student_id, 'school_year' => 2026, 'program' => 'BSIT']);
+
+        $postTeam = function (string $name, string $status) use ($sectionmate): Student {
+            $leader = $sectionmate($name);
+            $team = Team::create(['team_name' => $name, 'team_status' => $status, 'leader_id' => $leader->student_id]);
+            $sy = StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id, 'school_year' => 2026, 'program' => 'BSIT']);
+            $check = DuplicationCheck::create([
+                'student_s_y_id' => $sy->s_y_id, 'document_path' => 'checks/1.pdf', 'concepts' => [],
+                'top_score' => 10, 'verdict' => 'Passed', 'matches' => [], 'instructors_suggested' => [],
+            ]);
+            CapstonePreProposal::create([
+                'team_id' => $team->team_id, 'duplication_check_id' => $check->id, 'slot' => 1, 'title' => $name.' title',
+                'sdg_goals' => 'SDG 2', 'research_agenda' => ['x'], 'problem_statement' => 'p', 'proposed_solution' => 's',
+                'scope' => 'sc', 'limitations' => 'l', 'sdm' => 'Agile', 'submitted_at' => now(),
+            ]);
+            Recruitment::create([
+                'student_id' => $leader->student_id,
+                'recruitment_goal' => 'build_a_team',
+                'roles' => ['QA Tester/Documentation Writer'],
+                'member_count' => 5,
+            ]);
+
+            return $leader;
+        };
+
+        $hasRoom = $postTeam('hasroom', 'Active');
+        $postTeam('full', 'Full');
+
+        $feed = $this->actingAs($viewer)->get('/student/team')->viewData('otherRecruitments');
+
+        $this->assertSame([$hasRoom->student_id], $feed->pluck('student_id')->all());
     }
 
     public function test_student_can_send_team_invite(): void

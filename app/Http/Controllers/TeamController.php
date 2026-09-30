@@ -94,7 +94,7 @@ class TeamController extends Controller
         $teamFull = $myTeam && ! $myTeam->is_confirmed && $isLeader && $teamMembers->count() >= $memberCount;
         $isTeamFull = $myTeam && $teamMembers->count() >= $memberCount;
         $isConfirmed = $myTeam && $myTeam->is_confirmed;
-        $postHidden = $myTeam && ($myTeam->team_status === 'Full' || $myTeam->hasSubmittedPreProposals());
+        $postHidden = $myTeam && $myTeam->team_status === 'Full';
 
         $fullTeamStudentIds = Recruitment::where('recruitment_goal', 'build_a_team')
             ->with('student.team')
@@ -142,11 +142,10 @@ class TeamController extends Controller
             ->where('student_id', '!=', $studentId)
             ->whereNotIn('student_id', $fullTeamStudentIds)
             ->whereDoesntHave('student.team', function ($q) {
-                // Off the feed once the team stops taking members OR has
-                // turned its pre-proposals in - two separate reasons, which
-                // is exactly what one status column used to blur.
-                $q->where('team_status', 'Full')
-                    ->orWhereHas('preProposals', fn ($p) => $p->whereNotNull('submitted_at'));
+                // Off the feed only once the team stops taking members. A
+                // team that has turned its pre-proposals in but still has
+                // room can still be joined, so it stays visible.
+                $q->where('team_status', 'Full');
             })
             ->whereIn('student_id', function ($query) use ($student, $currentSchoolYear) {
                 $query->select('student_s_y.student_id')
