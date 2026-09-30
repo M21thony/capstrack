@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -14,6 +15,7 @@ class GradingRubric extends Model
     protected $fillable = [
         'rubric_name',
         'rubric_type',
+        'program',
         'description',
         'total_points',
         'is_active',
@@ -34,5 +36,36 @@ class GradingRubric extends Model
     public function criteria(): HasMany
     {
         return $this->hasMany(RubricCriterion::class, 'rubric_id', 'rubric_id');
+    }
+
+    /**
+     * Rubrics panelists can grade a stage with.
+     *
+     * defense_schedule.defense_type and rubric_type were built by two
+     * features that never agreed on exact wording ("Pre-proposal Defense" vs
+     * "Pre-Proposal Defense"), so they are matched case-insensitively. An
+     * archived rubric is out of use, whatever its active flag says.
+     */
+    public function scopeInUseFor(Builder $query, string $stage): Builder
+    {
+        return $query->whereRaw('LOWER(rubric_type) = ?', [mb_strtolower($stage)])
+            ->where('is_active', true)
+            ->where('is_archived', false);
+    }
+
+    /**
+     * The rubric a team in $program is graded with at $stage.
+     *
+     * One written for the team's program wins; otherwise the stage's rubric
+     * for every program. The newest wins a tie.
+     */
+    public static function forStage(string $stage, ?string $program): ?self
+    {
+        return self::inUseFor($stage)
+            ->where(fn (Builder $q) => $q->whereNull('program')
+                ->when($program, fn (Builder $q) => $q->orWhere('program', $program)))
+            ->orderByRaw('program IS NULL')
+            ->latest('rubric_id')
+            ->first();
     }
 }
