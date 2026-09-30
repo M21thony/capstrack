@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TeamResource;
+use App\Models\MemberLeaveRequest;
 use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Student;
@@ -167,7 +168,7 @@ class TeamController extends Controller
         $team->update([
             'team_name' => $validated['team_name'],
             'team_status' => $validated['team_status'] ?? $team->team_status,
-            'member_count' => \App\Models\Team::maxMembers(),
+            'member_count' => Team::maxMembers(),
         ]);
 
         Recruitment::where('student_id', $studentId)
@@ -235,6 +236,10 @@ class TeamController extends Controller
                 ], 422);
             }
 
+            if ($team->expertAssignments()->where('status', 'approved')->exists()) {
+                return response()->json(['message' => Team::HAS_EXPERT], 422);
+            }
+
             // Solo leader — terminate the team
             StudentSchoolYear::where('team_id', $team->team_id)->update([
                 'team_id' => null,
@@ -248,7 +253,7 @@ class TeamController extends Controller
         }
 
         // A member leaves only with their CaPSA's approval.
-        return response()->json(['message' => \App\Models\MemberLeaveRequest::ASK_CAPSA], 422);
+        return response()->json(['message' => MemberLeaveRequest::ASK_CAPSA], 422);
     }
 
     public function transferLeadership(Request $request, Team $team): JsonResponse
