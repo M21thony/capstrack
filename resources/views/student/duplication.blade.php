@@ -1194,6 +1194,11 @@ function ppProblems(form, commit) {
     if (el && !String(el.value || '').trim()) problems.push([n[0], n[2]]);
   });
 
+  const representative = document.getElementById('client_representative');
+  if (representative && /\d/.test(representative.value)) {
+    problems.push(['client_representative', "A representative's name has no numbers."]);
+  }
+
   // Laid out order, whatever order they were found in.
   const order = Array.from(form.querySelectorAll('[data-field]')).map(function (f) { return f.dataset.field; });
   return problems.sort(function (x, y) { return order.indexOf(x[0]) - order.indexOf(y[0]); });

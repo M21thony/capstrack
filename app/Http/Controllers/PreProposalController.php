@@ -641,7 +641,8 @@ class PreProposalController extends Controller
             'sdm' => ['required', 'string', 'max:255'],
             'clients' => ['required', 'string', 'max:255'],
             'client_address' => ['required', 'string', 'max:255'],
-            'client_representative' => ['required', 'string', 'max:255'],
+            // A person's name. The organization can have numbers ("Barangay 5").
+            'client_representative' => ['required', 'string', 'max:255', 'not_regex:/\d/'],
             'client_position' => ['required', 'string', 'max:255'],
             'tags' => ['required', 'array', 'min:'.ProjectTags::MIN, 'max:'.ProjectTags::MAX],
             'tags.*' => ['string', 'distinct', Rule::in(ProjectTags::OPTIONS)],
@@ -655,6 +656,7 @@ class PreProposalController extends Controller
             'sdg_goals.min' => 'Choose at least one Sustainable Development Goal.',
             'research_agenda.required' => 'Add at least one research agenda or priority area.',
             'title.required' => 'Give your pre-proposal a title.',
+            'client_representative.not_regex' => "A representative's name has no numbers.",
         ]);
 
         $check = DuplicationCheck::whereHas(
