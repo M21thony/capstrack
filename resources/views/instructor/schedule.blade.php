@@ -644,6 +644,18 @@ function formatKey(y, m, d) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
+/** Today as a date key, on the clock of the browser the instructor is using. */
+function todayDateKey() {
+  const now = new Date();
+
+  return formatKey(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+/** A day that is over: nothing can be added to it, so nothing on it is clickable. */
+function isPastKey(key) {
+  return key < todayDateKey();
+}
+
 const hr12 = t => {
   if (!t) return '';
   const [h, mm] = t.split(':');
@@ -1051,7 +1063,10 @@ function renderCalendar() {
     if (key === selectedDate) el.classList.add('is-selected');
 
     el.dataset.key = key;
-    el.onclick = (ev) => handleCellClick(key, d, isPast || isWeekend, dayName, ev.currentTarget);
+    // A day that is over does nothing when clicked.
+    if (!isPast) {
+      el.onclick = (ev) => handleCellClick(key, d, isPast || isWeekend, dayName, ev.currentTarget);
+    }
 
     const dateEl = document.createElement('div');
     dateEl.className   = 'cal-date-num';
@@ -1224,13 +1239,19 @@ function renderWeek() {
     head.appendChild(th);
 
     const col = document.createElement('div');
+    const isPastDay = isPastKey(key);
     col.className = 'wk-col'
+      + (isPastDay ? ' is-past' : '')
       + (key === selectedDate ? ' is-selected' : '');
     col.style.height = ((WK_LAST_HOUR - WK_FIRST_HOUR + 1) * WK_HOUR_PX) + 'px';
 
     // Clicking an empty stretch of the day adds a slot starting at the hour
     // clicked, the way dragging out a time on Google Calendar does.
     col.addEventListener('click', (event) => {
+      if (isPastDay) {
+        return;
+      }
+
       const offset = event.clientY - col.getBoundingClientRect().top;
       const minutes = WK_FIRST_HOUR * 60 + Math.max(0, Math.floor(offset / WK_HOUR_PX * 2)) * 30;
 
@@ -1270,6 +1291,11 @@ function renderWeek() {
         // Otherwise the column underneath also takes the click and opens the
         // "new slot" card over the one being read.
         event.stopPropagation();
+
+        if (isPastDay) {
+          return;
+        }
+
         // Not redrawn here: the card is placed beside this very element, and
         // redrawing would replace it mid-click.
         selectedDate = key;
@@ -1290,6 +1316,10 @@ function renderWeek() {
 //  and the form only appears when a slot is actually being added or changed.
 // ══════════════════════════════════════════════════════════════
 function handleCellClick(key, dayNum, isDisabled, dayName, cell) {
+  if (isPastKey(key)) {
+    return;
+  }
+
   // Clicking a date offers to add a slot on it, where you clicked. It does not
   // jump to the day view - Google Calendar does not either.
   selectedDate = key;
@@ -1400,6 +1430,10 @@ function backToDay() {
 }
 
 function openQuickAdd(key, startMinutes, anchor) {
+  if (key && isPastKey(key)) {
+    return;
+  }
+
   const now = weekAnchor || new Date();
 
   quickAddKey = key || selectedDate || formatKey(now.getFullYear(), now.getMonth(), now.getDate());
@@ -2410,6 +2444,8 @@ function gaDraw() {
   document.querySelectorAll('input[name="ga-duration"]').forEach((r) => { r.checked = r.value === preset; });
   document.getElementById('ga-custom').value = ga.duration_minutes;
   document.querySelectorAll('input[name="ga-range"]').forEach((r) => { r.checked = r.value === ga.range; });
+  document.getElementById('ga-starts').min = todayDateKey();
+  document.getElementById('ga-ends').min = todayDateKey();
   document.getElementById('ga-starts').value = ga.starts_on;
   document.getElementById('ga-ends').value = ga.ends_on;
   document.getElementById('ga-max-on').checked = ga.max_on;
