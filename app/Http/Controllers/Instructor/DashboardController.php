@@ -12,6 +12,7 @@ use App\Models\DefensePanel;
 use App\Models\PanelGrade;
 use App\Models\TeamExpertAssignment;
 use App\Services\RecipientResolver;
+use App\Support\DashboardStats;
 use App\Support\TitleRevision;
 use Carbon\Carbon;
 
@@ -147,7 +148,11 @@ class DashboardController extends Controller
                 ]))
             ->sortBy('when')->take(6)->values();
 
+        // How this expert's work stands, above what is waiting on them.
+        $stats = app(DashboardStats::class)->expert($expert);
+
         return view('instructor.dashboard', compact(
+            'stats',
             'pendingApplications',
             'pendingApplicationsNew',
             'titlesToApprove',
