@@ -112,6 +112,9 @@ class StudentReviewController extends Controller
             'requirement' => $item?->title,
             // The submit panel opens on this page; it needs the line, not a URL.
             'itemId' => $item?->id,
+            // With no line, the file is still this upload's next version, and
+            // is checked against it.
+            'fileId' => $document->file_id,
         ];
     }
 
