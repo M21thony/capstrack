@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\ConsultationBooking;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -59,8 +61,8 @@ class ConsultationBookingDateTest extends TestCase
 
         $this->assertNotNull($booking->session_date, 'session_date must be captured at booking time.');
         $this->assertSame(
-            \Illuminate\Support\Carbon::parse($booking->session_date)->dayOfWeek,
-            \Illuminate\Support\Carbon::parse('Tuesday')->dayOfWeek,
+            Carbon::parse($booking->session_date)->dayOfWeek,
+            Carbon::parse('Tuesday')->dayOfWeek,
             'The stored date must actually fall on the slot\'s weekday.'
         );
     }
@@ -86,7 +88,7 @@ class ConsultationBookingDateTest extends TestCase
             'consultation_limit' => 1,
             'is_available' => true,
             'recur' => 'once',
-            'specific_date' => '2026-07-15',
+            'specific_date' => $date = now()->addMonth()->next(Carbon::WEDNESDAY)->toDateString(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -98,7 +100,7 @@ class ConsultationBookingDateTest extends TestCase
         $response->assertOk();
 
         $booking = DB::table('consultation_booking')->where('schedule_id', $scheduleId)->first();
-        $this->assertSame('2026-07-15', \Illuminate\Support\Carbon::parse($booking->session_date)->toDateString());
+        $this->assertSame($date, Carbon::parse($booking->session_date)->toDateString());
     }
 
     public function test_booking_a_later_occurrence_of_a_recurring_slot_succeeds_once_the_first_is_done(): void
@@ -126,8 +128,8 @@ class ConsultationBookingDateTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $firstTuesday = \Illuminate\Support\Carbon::parse('next Tuesday')->toDateString();
-        $secondTuesday = \Illuminate\Support\Carbon::parse('next Tuesday')->addWeek()->toDateString();
+        $firstTuesday = Carbon::parse('next Tuesday')->toDateString();
+        $secondTuesday = Carbon::parse('next Tuesday')->addWeek()->toDateString();
 
         // Book the nearest occurrence first.
         $first = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
@@ -160,7 +162,7 @@ class ConsultationBookingDateTest extends TestCase
         $second->assertJson(['success' => true]);
 
         $booking = DB::table('consultation_booking')->where('schedule_id', $scheduleId)->where('booking_status', 'scheduled')->first();
-        $this->assertSame($secondTuesday, \Illuminate\Support\Carbon::parse($booking->session_date)->toDateString());
+        $this->assertSame($secondTuesday, Carbon::parse($booking->session_date)->toDateString());
     }
 
     /**
@@ -228,7 +230,7 @@ class ConsultationBookingDateTest extends TestCase
         // depending purely on what time of day the tests happen to run.
         $first = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
             'schedule_id' => $scheduleId,
-            'session_date' => \Illuminate\Support\Carbon::parse('next Thursday')->toDateString(),
+            'session_date' => Carbon::parse('next Thursday')->toDateString(),
         ]);
         $first->assertOk();
         $first->assertJson(['success' => true]);
@@ -236,7 +238,7 @@ class ConsultationBookingDateTest extends TestCase
         // The other expert goes through.
         $other = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
             'schedule_id' => $otherScheduleId,
-            'session_date' => \Illuminate\Support\Carbon::parse('next Friday')->toDateString(),
+            'session_date' => Carbon::parse('next Friday')->toDateString(),
         ]);
         $other->assertOk();
         $other->assertJson(['success' => true]);
@@ -244,7 +246,7 @@ class ConsultationBookingDateTest extends TestCase
         // The same expert again does not, while that session is still ahead.
         $sameAgain = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
             'schedule_id' => $scheduleId,
-            'session_date' => \Illuminate\Support\Carbon::parse('next Thursday')->addWeek()->toDateString(),
+            'session_date' => Carbon::parse('next Thursday')->addWeek()->toDateString(),
         ]);
         $sameAgain->assertStatus(422);
         $sameAgain->assertJson(['success' => false]);
@@ -254,7 +256,7 @@ class ConsultationBookingDateTest extends TestCase
 
         $afterCancel = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
             'schedule_id' => $scheduleId,
-            'session_date' => \Illuminate\Support\Carbon::parse('next Thursday')->addWeek()->toDateString(),
+            'session_date' => Carbon::parse('next Thursday')->addWeek()->toDateString(),
         ]);
         $afterCancel->assertOk();
         $afterCancel->assertJson(['success' => true]);
@@ -306,7 +308,7 @@ class ConsultationBookingDateTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $booking = \App\Models\ConsultationBooking::find($bookingId);
+        $booking = ConsultationBooking::find($bookingId);
         $booking->setRelation('schedule', null);
         $orphanedBookings = collect([$booking]);
 
