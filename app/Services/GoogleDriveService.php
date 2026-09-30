@@ -208,12 +208,14 @@ class GoogleDriveService
 
         $file = $service->files->get($fileId, [
             'fields' => 'id, name, mimeType, size, webViewLink',
+            // The picker offers shared drives too; without this their files are "not found".
+            'supportsAllDrives' => true,
         ]);
 
         $service->permissions->create($fileId, new Permission([
             'type' => 'anyone',
             'role' => 'reader',
-        ]));
+        ]), ['supportsAllDrives' => true]);
 
         return [
             'id' => $file->getId(),
