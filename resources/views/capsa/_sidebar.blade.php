@@ -377,6 +377,7 @@
 @include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => $admin ? ['url' => $admin->hasAvatarImage() ? $admin->avatarUrl() : null, 'initials' => $admin->avatarInitials()] : null, 'tabs' => array_slice($phoneTabs, 0, 4)])
 {{-- The guided tour: the CaPSA's, or the Admin's for an admin who is not also a CaPSA. --}}
 @include('partials.staff-portal-tour', ['tourKey' => $isCapsa ? 'capsa' : 'admin', 'expert' => $admin])
+@include('partials.table-export')
 @if ($adminHasExpertRole)
   @include('instructor.partials.expert-profile')
 @endif

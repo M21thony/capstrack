@@ -55,7 +55,7 @@
       <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px">Filter</button>
     </form>
     <div class="card list-card">
-      <table class="table">
+      <table class="table" data-export="Activity Log">
         <thead>
           <tr>
             <th style="padding-left:20px">ID</th>
