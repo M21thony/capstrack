@@ -197,21 +197,20 @@ function start(root) {
     return box;
   }
 
-  /** One team at a glance: where it is, what is late, and a block per milestone. */
+  /** One team at a glance, counted in milestones: where it is, how many are done and late. */
   function summary(d, t) {
     const blocks = d.milestones
       .map(name => ({ name, ...counts(t.rows.filter(r => r.milestone === name)) }))
       .filter(b => b.total);
-    const all = counts(t.rows);
+    const late = blocks.filter(b => b.overdue);
     return {
       t,
       blocks,
-      behind: blocks.filter(b => b.overdue).map(b => b.name),
-      overdue: all.overdue,
-      check: CAPSA ? all.check : 0,
-      closed: all.closed,
-      total: all.total,
-      current: blocks.find(b => b.closed < b.total)?.name,
+      late,
+      overdue: late.length,
+      check: CAPSA ? counts(t.rows).check : 0,
+      done: blocks.filter(b => b.closed === b.total).length,
+      current: blocks.find(b => b.closed < b.total),
     };
   }
 
@@ -253,62 +252,63 @@ function start(root) {
 
     const scroll = el('div', 'ms-scroll');
     scroll.dataset.scroll = 'track:' + d.section;
-    shown.forEach(x => scroll.append(teamRow(d, x)));
-    if (!shown.length) scroll.append(el('div', 'ms-empty', d.teams.length ? 'No teams here.' : 'No teams in this section yet.'));
+    if (shown.length) {
+      const table = el('table', 'ms-table');
+      const labels = table.createTHead().insertRow();
+      ['Team', 'Now on', 'Milestones done', 'Late', ''].forEach(label => {
+        const th = el('th', '', label);
+        th.scope = 'col';
+        labels.append(th);
+      });
+      const body = table.createTBody();
+      shown.forEach(x => body.append(teamRow(d, x)));
+      scroll.append(table);
+    } else {
+      scroll.append(el('div', 'ms-empty', d.teams.length ? 'No teams here.' : 'No teams in this section yet.'));
+    }
 
-    const legend = el('div', 'ms-panel-foot ms-legend');
-    [['ms-sw-done', 'Done'], ['ms-sw-late', 'Past due'], ['', 'Not yet']].forEach(([cls, label]) => {
-      const key = el('span');
-      key.append(el('i', ('ms-sw ' + cls).trim()), label);
-      legend.append(key);
-    });
-    legend.append(el('span', '', 'Each block is one milestone, in checklist order. Hover to see which.'));
-
-    panel.append(head, scroll, legend);
+    panel.append(head, scroll, el('div', 'ms-panel-foot', 'Late counts the milestones with a requirement past its due date. Click a team to see all of its milestones and requirements.'));
     return panel;
   }
 
+  /** A team's line in the table; anywhere on it opens the team's page. */
   function teamRow(d, x) {
-    const row = el('div', 'ms-trow');
+    const row = el('tr', 'ms-team-row');
+    row.addEventListener('click', e => { if (!e.target.closest('button')) openTeam(x.t); });
 
-    const top = el('div', 'ms-trow-top');
     const name = el('button', 'ms-tname', x.t.name);
     name.type = 'button';
     name.dataset.key = 'team-' + d.section + ':' + x.t.id;
     name.addEventListener('click', () => openTeam(x.t));
-    top.append(name);
+    const team = el('td');
+    team.append(name);
+
+    const now = el('td');
+    if (x.current) {
+      now.append(x.current.name, el('small', 'ms-tsub', `${x.current.closed} of ${plural(x.current.total, 'requirement')} done`));
+    } else {
+      now.append(x.blocks.length ? 'All done' : 'Nothing to do yet');
+    }
+
+    const late = el('td');
+    if (x.overdue) {
+      const count = el('span', 'ms-late', x.overdue + ' late');
+      count.title = x.late.map(b => b.name).join(', ');
+      late.append(count, el('small', 'ms-tsub', x.late.slice(0, 2).map(b => b.name).join(', ') + (x.overdue > 2 ? ` and ${x.overdue - 2} more` : '')));
+    } else {
+      late.append(el('span', 'ms-hint', 'None'));
+    }
+
+    const act = el('td', 'ms-tact');
     if (x.check) {
       const first = x.t.rows.find(r => r.to_check && r.file_url);
       const check = el('button', 'ms-tcheck', 'Check ' + plural(x.check, 'paper'));
       check.type = 'button';
       check.addEventListener('click', () => (first ? openCheck(first, x.t) : openTeam(x.t)));
-      top.append(check);
+      act.append(check);
     }
 
-    const meta = el('div', 'ms-tmeta');
-    if (x.overdue) {
-      const more = x.behind.length > 2 ? ` and ${x.behind.length - 2} more` : '';
-      meta.append(el('span', 'ms-late', `Behind on ${x.behind.slice(0, 2).join(', ')}${more} · ${x.overdue} overdue`));
-    } else {
-      meta.append(x.current ? 'Working on ' + x.current : x.total ? 'All done' : 'Nothing to do yet');
-    }
-    meta.append(` · ${x.closed} of ${x.total} done`);
-
-    const strip = el('div', 'ms-strip');
-    strip.setAttribute('aria-hidden', 'true');
-    x.blocks.forEach(b => {
-      const block = el('span', 'ms-seg' + (b.overdue ? ' ms-seg-late' : ''));
-      block.style.flex = String(b.total);
-      block.title = `${b.name}: ${b.closed} of ${b.total} done`;
-      const done = el('i');
-      done.style.width = Math.round(b.closed / b.total * 100) + '%';
-      block.append(done);
-      // A block opens the team's page at that milestone.
-      block.addEventListener('click', () => openTeam(x.t, b.name));
-      strip.append(block);
-    });
-
-    row.append(top, meta, strip);
+    row.append(team, now, el('td', '', `${x.done} of ${x.blocks.length}`), late, act);
     return row;
   }
 
