@@ -21,12 +21,15 @@ class DocReviewController extends Controller
         // The team a file was sent for, not the uploader's team today: a
         // student who moved took their old files to the new team's name, or
         // to a dash if they have none now. Files from before uploads recorded
-        // a team fall back to the uploader's current one.
+        // a team fall back to the uploader's current one. A file whose team
+        // is gone belongs to nobody and is left out, as in
+        // CapstoneDocumentReview::ofExistingTeam().
         $reviews = DB::table('capstone_document_review as r')
             ->join('capstone_documents as d', 'd.file_id', '=', 'r.file_id')
             ->leftJoin('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
             ->leftJoin('team as t', 't.team_id', '=', DB::raw('COALESCE(d.team_id, sy.team_id)'))
             ->where('r.expert_id', $expertId)
+            ->whereNotNull('t.team_id')
             ->select([
                 'r.review_id',
                 'r.file_id',

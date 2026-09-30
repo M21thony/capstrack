@@ -58,6 +58,22 @@ class CapstoneDocumentReview extends Model
         return $query->whereIn('review_status', [self::AWAITING, self::IN_PROGRESS]);
     }
 
+    /**
+     * Reviews of a file some team still owns: the team it was sent for, or -
+     * for a file from before uploads recorded one - the uploader's team now.
+     * A team removed since (a sample team, one that disbanded) leaves its
+     * files with nobody, and they are left out of the reviewer's list.
+     */
+    public function scopeOfExistingTeam($query)
+    {
+        $teams = Team::select('team_id');
+
+        return $query->whereHas('document', fn ($document) => $document->where(fn ($document) => $document
+            ->whereIn('team_id', $teams)
+            ->orWhere(fn ($document) => $document->whereNull('team_id')
+                ->whereIn('student_id', StudentSchoolYear::whereIn('team_id', $teams)->select('student_id')))));
+    }
+
     /** Finished with. Says nothing about whether the reviewer was happy. */
     public function scopeReviewed($query)
     {

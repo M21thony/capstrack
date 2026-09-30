@@ -147,7 +147,7 @@ final class DashboardStats
         $teamCount = $assignments->pluck('team_id')->unique()->count();
         $slots = (int) ($expert->max_teams ?? 0);
 
-        $reviews = CapstoneDocumentReview::where('expert_id', $expert->expert_id)->get(['review_status']);
+        $reviews = CapstoneDocumentReview::where('expert_id', $expert->expert_id)->ofExistingTeam()->get(['review_status']);
         $reviewed = $reviews->where('review_status', CapstoneDocumentReview::REVIEWED)->count();
         $waiting = $reviews->count() - $reviewed;
 

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -108,5 +109,33 @@ class DocReviewListTest extends TestCase
         // The team filter lists each team once, by the team the files were sent for.
         $page->assertSee('<option value="Alpha">', false);
         $this->assertSame(1, substr_count($page->getContent(), '<option value="Bravo">'));
+    }
+
+    /** A file whose team was removed, or whose uploader has no team, is nobody's to review. */
+    public function test_files_with_no_team_behind_them_are_left_out(): void
+    {
+        $kept = $this->member('Delta');
+        $this->sent($kept, StudentSchoolYear::where('student_id', $kept->student_id)->value('team_id'), 'DeltaChapter.pdf', 1, 'To Review', 2);
+
+        // Sent for a team that has since been removed.
+        $gone = $this->member('Echo');
+        $goneTeamId = StudentSchoolYear::where('student_id', $gone->student_id)->value('team_id');
+        $this->sent($gone, $goneTeamId, 'EchoChapter.pdf', 1, 'To Review', 3);
+        Team::where('team_id', $goneTeamId)->delete();
+
+        // From before teams were recorded, by a student on no team now.
+        $loner = Student::create([
+            'email' => 'loner@my.cspc.edu.ph', 'f_name' => 'L', 'l_name' => 'N', 'course' => 'BSIT', 'year_section' => '3rd · A',
+        ]);
+        $this->sent($loner, null, 'LonerChapter.pdf', 1, 'To Review', 4);
+
+        $this->actingAs($this->expert, 'expert')->get('/instructor/docreview')->assertOk()
+            ->assertSee('DeltaChapter.pdf')
+            ->assertDontSee('EchoChapter.pdf')
+            ->assertDontSee('LonerChapter.pdf')
+            ->assertDontSee('No team');
+
+        // The dashboard counts the same files the list shows.
+        $this->assertSame(1, CapstoneDocumentReview::where('expert_id', $this->expert->expert_id)->ofExistingTeam()->count());
     }
 }
