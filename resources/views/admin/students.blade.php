@@ -175,7 +175,7 @@
     </div>
 
     <div class="card list-card">
-      <table class="table std-table">
+      <table class="table std-table" data-export="Student Accounts">
         <thead>
           <tr>
             {{-- The unique key first: a student number names exactly one

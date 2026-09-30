@@ -6,7 +6,7 @@
 <title>{{ $name }} - Reports - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
-<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url($portal === 'instructor' ? 'css/expert.css' : 'css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 @include('capsa.reports._styles')
 <style>
@@ -151,7 +151,7 @@
 </head>
 <body>
 
-@include('capsa._sidebar')
+@include($portal === 'instructor' ? 'instructor.partials.sidebar' : 'capsa._sidebar', $portal === 'instructor' ? ['currentPage' => ''] : [])
 @include('partials.sidebar-toggle')
 @php
   use App\Support\CapsaReports;
@@ -205,6 +205,9 @@
       return is_string($s) ? 's:'.$s : 'n:'.$s;
   };
   $hasRows = (bool) $table['rows'];
+  // A list of people, not a school year's numbers: no period to pick.
+  $ownList = in_array($report, ['expert_list', 'snapshot'], true);
+  $isSnapshot = $report === 'snapshot';
   $keepQuery = request()->except(['download', 'inline']);
   $link = fn (array $change) => route('capsa.reports.show', ['report' => $report] + array_filter(array_merge($keepQuery, $change), fn ($v) => $v !== null));
 @endphp
@@ -214,12 +217,19 @@
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <nav class="crumbs" aria-label="Breadcrumb">
-      <a href="{{ route('capsa.reports', $period) }}">Reports</a>
-      <span class="sep">›</span>
-      <span class="here" aria-current="page">{{ $name }}</span>
+      @if ($isSnapshot)
+        {{-- A table from another page: back to that page, not to the report list. --}}
+        <a href="{{ $back ?? url('/') }}" data-back>&larr; Back to the page</a>
+        <span class="sep">›</span>
+        <span class="here" aria-current="page">{{ $name }}</span>
+      @else
+        <a href="{{ route('capsa.reports', $period) }}">Reports</a>
+        <span class="sep">›</span>
+        <span class="here" aria-current="page">{{ $name }}</span>
+      @endif
     </nav>
     <div class="topbar-actions">
-      @include('capsa.partials.notification-dropdown')
+      @include($portal === 'instructor' ? 'instructor.partials.notification-dropdown' : 'capsa.partials.notification-dropdown')
     </div>
   </div>
 
@@ -238,10 +248,11 @@
         <p>{{ $ctx['section'] !== '' && $report === 'progress' ? $name.' for '.$ctx['section'].'.' : $about }}</p>
       </header>
 
-      <form method="GET" action="{{ route('capsa.reports.show', $report) }}" class="rp-filters" id="period" aria-label="Report period">
+      <form method="GET" action="{{ $baseUrl }}" class="rp-filters" id="period" aria-label="Report period" @if ($ownList) hidden @endif>
         @foreach (request()->except(['year', 'term', 'program', 'section', 'stage', 'fee', 'compare', 'download', 'inline']) as $k => $v)
           @if (is_string($v))<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endif
         @endforeach
+        @unless ($ownList)
         <label class="rp-field">School year
           <select name="year" data-resets-term>
             @foreach ($ctx['years'] as $y)
@@ -249,7 +260,8 @@
             @endforeach
           </select>
         </label>
-        @if ($report !== 'experts')
+        @endunless
+        @if ($report !== 'experts' && ! $ownList)
           <label class="rp-field wide">Semester
             <select name="term">
               @foreach ($ctx['termOptions'] as $v => $label)
@@ -465,6 +477,24 @@
 
 <div class="rp-toast" id="rp-toast" role="status" aria-live="polite"></div>
 
+{{-- Back to the page it was opened from: when that is the page before this one, step back
+     in history, so it returns as it was (scroll and all) instead of loading again. --}}
+<script>
+document.querySelectorAll('a[data-back]').forEach(function (link) {
+  link.addEventListener('click', function (e) {
+    try {
+      if (history.length > 1 && document.referrer && new URL(document.referrer).pathname === new URL(link.href, location.href).pathname) {
+        e.preventDefault();
+        history.back();
+      }
+    } catch (err) { /* follow the link */ }
+  });
+});
+</script>
+{{-- The Expert portal's sidebar opens the profile panel from here. --}}
+@if ($portal === 'instructor')
+  @include('instructor.partials.expert-profile')
+@endif
 @include('capsa.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
 <script>
 var REPORT = {
@@ -474,7 +504,7 @@ var REPORT = {
   groupOf: @json(collect($groupOf)->map(fn ($g) => $g['label'])),
   details: @json((object) $details),
   merged: @json($merged),
-  baseUrl: @json(route('capsa.reports.show', $report)),
+  baseUrl: @json($baseUrl),
 };
 
 function closeDim(el) { el.classList.remove('active'); document.body.style.overflow = ''; }

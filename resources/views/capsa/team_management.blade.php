@@ -209,7 +209,7 @@
       </div>
 
       <div class="tcard" id="tm-teams">
-        <div class="tscroll"><table>
+        <div class="tscroll"><table data-export="Teams">
           <thead><tr>
             <th style="width:44px"><input type="checkbox" id="tm-all" aria-label="Select all teams"></th>
             <th>Team</th><th>Section</th><th>Title</th><th>Experts</th>
@@ -315,7 +315,7 @@
       </div>
 
       <div class="tcard" id="tm-progress" hidden>
-        <div class="tscroll"><table class="pg">
+        <div class="tscroll"><table class="pg" data-export="Milestone Progress">
           <thead><tr>
             <th>Team</th>
             @foreach ($columns as $name => $col)

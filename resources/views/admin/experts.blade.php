@@ -513,7 +513,7 @@
     ])
 
     <div class="card list-card">
-      <table class="table">
+      <table class="table" data-export="CaPSA List">
         <thead>
           <tr>
             {{-- Status is a dot beside the name rather than a column of its

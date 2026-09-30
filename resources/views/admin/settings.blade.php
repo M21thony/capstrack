@@ -162,7 +162,7 @@
               $grouped[$m[1] ?? $label][$m[2] ?? ''][] = ['letter' => $m[3] ?? '', 'label' => $label];
           }
         @endphp
-        <table class="sec-table">
+        <table class="sec-table" data-export="Sections">
           <thead><tr><th>Course</th><th>Year</th><th>Sections</th></tr></thead>
           <tbody>
             @foreach ($grouped as $program => $byYear)
