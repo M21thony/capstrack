@@ -82,7 +82,8 @@ class AdminPanelAssignmentController extends Controller
             'sections' => $capsa->sections ?? [],
             'other' => $other,
             'windows' => $this->board->windows(),
-            'has_rubric' => DefenseBoard::hasRubric($stage),
+            'has_rubric' => DefenseBoard::hasRubric($stage, $capsa->handledPrograms()),
+            'rubric_missing_programs' => DefenseBoard::programsWithoutRubric($stage, $capsa->handledPrograms()),
             'slots' => DefenseBoard::slots(DefenseBoard::minutesFor($stage)),
             'venues' => DefenseBoard::VENUES,
         ]]);

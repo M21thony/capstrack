@@ -68,7 +68,7 @@
            stage until a rubric exists. Redrawn when the stage changes. The
            text prints only when this stage actually has none - a page with
            a rubric must not carry the warning at all, hidden or not. --}}
-      <div class="dx-info dx-gold" id="rubric-warn" role="status" data-rubric-url="{{ route('capsa.rubric_management') }}" @if ($state['has_rubric']) hidden @endif><svg><use href="#dx-i-info"/></svg><span id="rubric-warn-text">@unless ($state['has_rubric']) No active grading rubric for {{ $state['stage'] }} yet. Panelists can't grade these defenses until one is set up in <a href="{{ route('capsa.rubric_management') }}">Grading Rubrics</a>. @endunless</span></div>
+      <div class="dx-info dx-gold" id="rubric-warn" role="status" data-rubric-url="{{ route('capsa.rubric_management') }}" @if ($state['has_rubric']) hidden @endif><svg><use href="#dx-i-info"/></svg><span id="rubric-warn-text">@unless ($state['has_rubric']) No active grading rubric for {{ $state['stage'] }}@if ($state['rubric_missing_programs']) for {{ implode(', ', $state['rubric_missing_programs']) }}@endif yet. Panelists can't grade these defenses until one is set up in <a href="{{ route('capsa.rubric_management') }}">Grading Rubrics</a>. @endunless</span></div>
     </div>
 
     <div class="dx-sched-main">

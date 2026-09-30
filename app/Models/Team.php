@@ -511,6 +511,33 @@ class Team extends Model
         return $query->whereDoesntHave('preProposals', fn ($q) => $q->whereNotNull('submitted_at'));
     }
 
+    /**
+     * The program code (BSIT, BSCS, ...) the team is in, or null when no
+     * member's course names one.
+     *
+     * Read off the members' courses first, since the enrolment row's program
+     * column is often empty; that column is the fallback. Every member of a
+     * team is in the same program, so the first one found is the team's.
+     */
+    public function program(): ?string
+    {
+        $enrolments = StudentSchoolYear::where('team_id', $this->team_id)->with('student')->get();
+
+        foreach ($enrolments as $enrolment) {
+            if ($program = Student::mapCourseToProgram((string) ($enrolment->student?->course ?? ''))) {
+                return $program;
+            }
+        }
+
+        foreach ($enrolments as $enrolment) {
+            if ($program = Student::mapCourseToProgram((string) ($enrolment->program ?? ''))) {
+                return $program;
+            }
+        }
+
+        return null;
+    }
+
     public function members()
     {
         return $this->hasManyThrough(

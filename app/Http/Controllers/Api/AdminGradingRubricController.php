@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CapstoneExpert;
 use App\Models\GradingRubric;
 use App\Models\RubricCriterion;
 use App\Services\OllamaSSHClient;
@@ -12,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class AdminGradingRubricController extends Controller
 {
@@ -1168,6 +1170,8 @@ class AdminGradingRubricController extends Controller
         $validated = $request->validate([
             'rubric_name' => ['required', 'string', 'max:255'],
             'rubric_type' => ['required', 'string', 'in:'.implode(',', array_keys(self::TYPE_MAP))],
+            // Empty is every program's rubric for the stage.
+            'program' => ['nullable', 'string', Rule::in(CapstoneExpert::PROGRAMS)],
             'description' => ['nullable', 'string', 'max:5000'],
             'total_points' => $this->totalPointsRule(),
             'is_active' => ['nullable', 'boolean'],
@@ -1178,6 +1182,7 @@ class AdminGradingRubricController extends Controller
         $rubric = GradingRubric::create([
             'rubric_name' => $validated['rubric_name'],
             'rubric_type' => $dbType,
+            'program' => $validated['program'] ?? null,
             'description' => $validated['description'] ?? null,
             'total_points' => $validated['total_points'] ?? 100.00,
             'is_active' => $validated['is_active'] ?? true,
@@ -1195,6 +1200,8 @@ class AdminGradingRubricController extends Controller
         $validated = $request->validate([
             'rubric_name' => ['required', 'string', 'max:255'],
             'rubric_type' => ['required', 'string', 'in:'.implode(',', array_keys(self::TYPE_MAP))],
+            // Empty is every program's rubric for the stage.
+            'program' => ['nullable', 'string', Rule::in(CapstoneExpert::PROGRAMS)],
             'description' => ['nullable', 'string', 'max:5000'],
             'total_points' => $this->totalPointsRule(),
             'is_active' => ['nullable', 'boolean'],
@@ -1205,6 +1212,7 @@ class AdminGradingRubricController extends Controller
         $gradingRubric->update([
             'rubric_name' => $validated['rubric_name'],
             'rubric_type' => $dbType,
+            'program' => $validated['program'] ?? null,
             'description' => $validated['description'] ?? null,
             'total_points' => $validated['total_points'] ?? 100.00,
             // Editing an archived rubric must not quietly put it back into use -
@@ -1628,6 +1636,7 @@ class AdminGradingRubricController extends Controller
             'rubric_name' => $rubric->rubric_name,
             'rubric_type' => $slug,
             'rubric_type_label' => $rubric->rubric_type,
+            'program' => $rubric->program,
             'description' => $rubric->description,
             'total_points' => (float) ($rubric->total_points ?? 100),
             'is_active' => (bool) $rubric->is_active,

@@ -103,6 +103,16 @@
         </div>
         <input type="hidden" id="rb-type" value=""/>
       </div>
+      <div class="form-group">
+        <label class="label" for="rb-program">Program</label>
+        <select class="input" id="rb-program">
+          <option value="">All programs</option>
+          @foreach (\App\Models\CapstoneExpert::PROGRAMS as $program)
+            <option value="{{ $program }}">{{ $program }} &ndash; {{ \App\Models\Student::PROGRAM_COURSES[$program] ?? $program }}</option>
+          @endforeach
+        </select>
+        <div class="input-hint">Teams in this program are graded with it. A program with no rubric of its own for this stage uses the one for all programs.</div>
+      </div>
 
       <div class="rb-ai-panel">
         <div class="rb-ai-panel-header">
@@ -587,6 +597,7 @@ function normalizeRubric(r) {
     id: r.rubric_id,
     name: r.rubric_name,
     type: r.rubric_type,
+    program: r.program || '',
     description: r.description || '',
     isArchived: r.is_archived || false,
     criteria: (r.criteria || []).map(normalizeCriterion),
@@ -932,6 +943,7 @@ function openNewRubricModal() {
   editingId = null;
   document.getElementById('rb-name').value = '';
   document.getElementById('rb-type').value = '';
+  document.getElementById('rb-program').value = '';
   document.getElementById('rb-desc').value = '';
   document.querySelectorAll('.rb-type-opt').forEach(function(o) { o.classList.remove('selected'); });
   document.querySelectorAll('input[name=rb-type-radio]').forEach(function(r) { r.checked = false; });
@@ -1080,6 +1092,7 @@ async function aiGenerateRubric() {
 async function saveRubric() {
   var name = document.getElementById('rb-name').value.trim();
   var type = document.getElementById('rb-type').value;
+  var program = document.getElementById('rb-program').value;
   var desc = document.getElementById('rb-desc').value.trim();
   if (!name) { toast('Enter a rubric name.', 'error'); goToStep1(); return; }
   if (!type) { toast('Select a rubric type.', 'error'); goToStep1(); return; }
@@ -1106,7 +1119,7 @@ async function saveRubric() {
     var res = await fetch(url, {
       method: method,
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rubric_name: name, rubric_type: type, description: desc, total_points: 100 }),
+      body: JSON.stringify({ rubric_name: name, rubric_type: type, program: program || null, description: desc, total_points: 100 }),
     });
     var json = await res.json();
     if (!res.ok) {
@@ -1154,6 +1167,7 @@ function editRubric(id) {
   editingId = id;
   document.getElementById('rb-name').value = rb.name;
   document.getElementById('rb-type').value = rb.type;
+  document.getElementById('rb-program').value = rb.program || '';
   document.getElementById('rb-desc').value = rb.description || '';
   document.getElementById('modal-form-title').textContent = 'Edit Rubric';
   document.getElementById('modal-form-sub').textContent = 'Update the rubric details and criteria below.';
@@ -1312,7 +1326,8 @@ function getFiltered() {
     list = list.filter(function(r) {
       return r.name.toLowerCase().includes(q) ||
         (r.description || '').toLowerCase().includes(q) ||
-        (TYPE_LABEL[r.type] || '').toLowerCase().includes(q);
+        (TYPE_LABEL[r.type] || '').toLowerCase().includes(q) ||
+        (r.program || 'all programs').toLowerCase().includes(q);
     });
   }
   return list;
@@ -1369,7 +1384,8 @@ function renderList() {
     return '<div class="card rb-rubric-card' + (open ? ' open' : '') + '" style="padding:0;overflow:hidden' + (rb.isArchived ? ';opacity:0.6' : '') + '">' +
       '<div class="rb-rubric-header">' +
       '<div style="flex:1;min-width:0">' +
-      '<div style="margin-bottom:6px"><span class="badge" style="background:' + bg + ';color:' + col + ';font-size:10px;font-weight:600">' + (TYPE_LABEL[rb.type] || rb.type) + '</span>' + (rb.isArchived ? ' <span class="badge" style="background:var(--amber-bg);color:var(--amber);font-size:9px;font-weight:600;border:1px solid rgba(217,119,6,0.2)">ARCHIVED</span>' : '') + '</div>' +
+      '<div style="margin-bottom:6px"><span class="badge" style="background:' + bg + ';color:' + col + ';font-size:10px;font-weight:600">' + (TYPE_LABEL[rb.type] || rb.type) + '</span>' +
+        ' <span class="badge" style="background:var(--bg4);color:var(--text2);font-size:10px;font-weight:600">' + escHtml(rb.program || 'All programs') + '</span>' + (rb.isArchived ? ' <span class="badge" style="background:var(--amber-bg);color:var(--amber);font-size:9px;font-weight:600;border:1px solid rgba(217,119,6,0.2)">ARCHIVED</span>' : '') + '</div>' +
       '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px">' + rb.name + '</div>' +
       (rb.description ? '<div style="font-size:12px;color:var(--text3)">' + rb.description + '</div>' : '') +
       '</div>' +

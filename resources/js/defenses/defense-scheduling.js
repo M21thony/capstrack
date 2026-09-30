@@ -91,7 +91,8 @@ function updateRubricWarn() {
   if (!warn) return;
   warn.hidden = !!S.has_rubric;
   const link = warn.dataset.rubricUrl ? `<a href="${esc(warn.dataset.rubricUrl)}">Grading Rubrics</a>` : 'Grading Rubrics';
-  $('#rubric-warn-text').innerHTML = `No active grading rubric for ${esc(STAGE)} yet. Panelists can't grade these defenses until one is set up in ${link}.`;
+  const programs = (S.rubric_missing_programs || []).length ? ` for ${esc(S.rubric_missing_programs.join(', '))}` : '';
+  $('#rubric-warn-text').innerHTML = `No active grading rubric for ${esc(STAGE)}${programs} yet. Panelists can't grade these defenses until one is set up in ${link}.`;
 }
 
 async function loadStage(stage) {
