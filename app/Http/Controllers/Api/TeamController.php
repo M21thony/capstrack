@@ -236,7 +236,7 @@ class TeamController extends Controller
                 ], 422);
             }
 
-            if ($team->expertAssignments()->where('status', 'approved')->exists()) {
+            if ($team->hasApprovedExpert()) {
                 return response()->json(['message' => Team::HAS_EXPERT], 422);
             }
 

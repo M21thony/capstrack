@@ -102,12 +102,16 @@ class LeaveRequestController extends Controller
                 return $this->fail($memberName.' is no longer on this team, so there is nothing to approve. The request has been closed.', 409);
             }
 
-            if ((int) $team->leader_id === (int) $leaveRequest->student_id) {
+            $members = StudentSchoolYear::where('team_id', $team->team_id)->count();
+
+            // A leader on their own may go: the team ends with them.
+            if ((int) $team->leader_id === (int) $leaveRequest->student_id && $members > 1) {
                 return $this->fail($memberName.' leads the team now. Leadership has to pass to another member before they can leave.', 422);
             }
 
             $lock->release($leaveRequest, $capsa, $note);
-            $message = 'Approved. '.$memberName.' is no longer on '.$team->team_name.'.';
+            $message = 'Approved. '.$memberName.' is no longer on '.$team->team_name.'.'
+                .($members === 1 ? ' The team has ended and its experts were told.' : '');
         } else {
             $leaveRequest->update([
                 'status' => MemberLeaveRequest::DECLINED,

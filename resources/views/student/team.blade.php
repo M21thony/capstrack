@@ -683,7 +683,9 @@
         @if($isLeader)
           <button type="button" onclick="openEditTeamModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--blue); background: var(--blue-bg); color: var(--blue); font-size: 10px; font-weight: 700; cursor: pointer;">Update Team</button>
         @endif
-        @if($isLeader)
+        {{-- A leader on their own ends the team by leaving; once an expert took it on, that is the CaPSA's call. --}}
+        @php $leaderAsksCapsa = $isLeader && $teamMembers->count() === 1 && $myTeam->hasApprovedExpert(); @endphp
+        @if($isLeader && ! $leaderAsksCapsa)
           <form method="POST" action="{{ route('team.destroy') }}" id="leave-team-form" style="display: inline;">
             @csrf
             @method('DELETE')
@@ -1887,7 +1889,9 @@ function openCapsaLeaveModal(type, studentId, name) {
         ? 'Leaving a team needs your CaPSA\'s approval. Your CaPSA reads your reason and decides whether you can leave.'
         : 'Your team passed Title Defense, so you cannot remove members yourself. Your CaPSA reads your reason and decides.';
 
-    var effects = leave
+    var effects = leave && {{ ($leaderAsksCapsa ?? false) ? 'true' : 'false' }}
+        ? ['Once your CaPSA approves, the team ends and your experts are told.', 'You stay on the team unless your CaPSA approves.', 'You can withdraw the request while it is waiting.']
+        : leave
         ? ['Your team leader is told you asked.', 'You stay on the team unless your CaPSA approves.', 'You can withdraw the request while it is waiting.']
         : [name + ' is told you asked, and sees your reason.', name + ' stays on the team unless your CaPSA approves.', 'No one can be added to replace them.'];
     var list = document.getElementById('rrm-effects');

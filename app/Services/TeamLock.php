@@ -141,5 +141,24 @@ class TeamLock
             'metadata' => ['team_id' => $request->team_id, 'leave_request_id' => $request->id],
             'created_at' => now(),
         ]);
+
+        // The last one out ends the team; deleting it tells its experts.
+        if (! StudentSchoolYear::where('team_id', $request->team_id)->exists()) {
+            $team->delete();
+
+            return;
+        }
+
+        // The experts working with the team hear who is no longer on it.
+        foreach ($team->expertAssignments()->where('status', 'approved')->with('expert')->get() as $assignment) {
+            Notifier::toExpert(
+                $assignment->expert,
+                'team_member_left',
+                'Member left a team',
+                '<strong>'.$name.'</strong> is no longer on '.$teamName.'. Their CaPSA approved it.',
+                route('instructor.teams'),
+                ['team_id' => $team->team_id],
+            );
+        }
     }
 }
