@@ -8,7 +8,7 @@ use Tests\TestCase;
 
 /**
  * The CaPSA, Admin and Expert portals get the guided tour students have: their
- * own steps, open by themselves once, and replayable from Portal Tour.
+ * own steps and open by themselves once. There is no sidebar button to replay it.
  */
 class StaffPortalTourTest extends TestCase
 {
@@ -32,7 +32,7 @@ class StaffPortalTourTest extends TestCase
             ->assertSee('data-tour-key="capsa"', false)
             ->assertSee('data-auto-open="1"', false)
             ->assertSee('data-save-url="'.route('instructor.tour.update').'"', false)
-            ->assertSee('onclick="openPortalTour()"', false)
+            ->assertDontSee('onclick="openPortalTour()"', false)
             ->assertSee(asset('css/portal-tour.css'), false)
             ->getContent();
 
@@ -61,7 +61,7 @@ class StaffPortalTourTest extends TestCase
         $html = $this->actingAs($expert, 'expert')->get(route('instructor.grading'))
             ->assertOk()
             ->assertSee('data-tour-key="expert"', false)
-            ->assertSee('onclick="openPortalTour()"', false)
+            ->assertDontSee('onclick="openPortalTour()"', false)
             ->getContent();
 
         $this->assertSame(
@@ -70,7 +70,7 @@ class StaffPortalTourTest extends TestCase
         );
     }
 
-    public function test_finishing_it_stops_it_opening_by_itself_but_it_can_still_be_replayed(): void
+    public function test_finishing_it_stops_it_opening_by_itself(): void
     {
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
 
@@ -78,7 +78,7 @@ class StaffPortalTourTest extends TestCase
         $first = $expert->fresh()->tour_completed_at;
         $this->assertNotNull($first);
 
-        // A replay later keeps the first time.
+        // Finishing it again keeps the first time.
         $this->travel(2)->days();
         $this->actingAs($expert, 'expert')->putJson(route('instructor.tour.update'))->assertOk();
         $this->assertTrue($first->equalTo($expert->fresh()->tour_completed_at));

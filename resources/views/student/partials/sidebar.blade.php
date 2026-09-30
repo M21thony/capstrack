@@ -171,11 +171,6 @@
       <x-portal-icon name="archive" />
       Archived Capstones
     </a>
-    <div class="nav-section">Help</div>
-    <button type="button" class="nav-item nav-item-button" data-tour-target="portal-tour" onclick="openPortalTour()" style="cursor:pointer">
-      <x-portal-icon name="tour" />
-      Portal Tour
-    </button>
     <form id="logout-form" action="{{ route('logout') }}" method="POST">
         @csrf
         <button type="submit" class="nav-item nav-item-button">

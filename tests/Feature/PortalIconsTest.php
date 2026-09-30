@@ -63,7 +63,6 @@ class PortalIconsTest extends TestCase
                 'data-icon="receipt"', 'Financial Records',
                 'data-icon="book"', 'Resources',
                 'data-icon="archive"', 'Archived Capstones',
-                'data-icon="tour"', 'Portal Tour',
                 'data-icon="sign-out"', 'Sign Out',
             ], false)
             ->getContent();
@@ -159,9 +158,7 @@ class PortalIconsTest extends TestCase
             ->getContent();
 
         $this->assertEveryNavItemHasAnIcon($html);
-        // The Portal Tour button takes its size from .nav-item like its
-        // neighbours, instead of the whole font of the list around it.
-        $this->assertStringContainsString('class="nav-item" onclick="openPortalTour()" style="cursor:pointer;width:100%;background:none;border:0;border-left:2px solid transparent;font-family:inherit;', $html);
+        $this->assertStringNotContainsString('openPortalTour()', $html, 'The sidebar has no Portal Tour button.');
     }
 
     public function test_an_empty_card_with_no_icon_named_shows_the_inbox(): void
