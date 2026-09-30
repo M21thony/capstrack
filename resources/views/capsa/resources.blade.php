@@ -704,6 +704,10 @@ function openDrivePicker(){
   const client = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
     scope: 'https://www.googleapis.com/auth/drive.file',
+    // The account Drive is connected with, and no chooser once it has agreed:
+    // a file picked in another account is "not found" to the server.
+    login_hint: @json(auth('expert')->user()?->email),
+    prompt: '',
     callback: function(resp){
       if(resp.error){ showToast('Google would not grant access.', 'error'); return; }
       driveToken = resp.access_token;
@@ -732,6 +736,10 @@ function showPicker(){
     .setTitle('Choose templates and lessons')
     .setDeveloperKey(PICKER_KEY)
     .setOAuthToken(driveToken)
+    // The project number, which heads the client id. Without it the drive.file
+    // grant for a picked file never reaches this app, and the server's read
+    // of that file comes back "File not found".
+    .setAppId(GOOGLE_CLIENT_ID.split('-')[0])
     .addView(view)
     .addView(new google.picker.DocsView(google.picker.ViewId.DOCS).setEnableDrives(true))
     .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
