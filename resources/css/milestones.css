@@ -98,23 +98,18 @@
 .ms-ftab[aria-pressed="true"] { background: var(--bg3); border-color: var(--border2); color: var(--text); }
 .ms-ftab small { font-size: 11px; color: var(--text3); }
 
-/* One team: its name, a line on where it is, and a block per milestone. */
-.ms-trow { padding: 10px 14px; border-bottom: 1px solid var(--border); display: grid; gap: 4px; }
-.ms-trow-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* The teams, one line each, counted in milestones. */
+.ms-table { width: 100%; border-collapse: collapse; }
+.ms-table th { position: sticky; top: 0; z-index: 1; background: var(--bg3); text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text3); font-weight: 600; padding: 7px 14px; border-bottom: 1px solid var(--border); }
+.ms-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.ms-team-row { cursor: pointer; }
+.ms-team-row:hover td { background: var(--bg3); }
 .ms-tname { border: 0; background: none; padding: 0; cursor: pointer; font-weight: 700; font-size: 14px; text-align: left; }
-.ms-tname:hover { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.ms-team-row:hover .ms-tname { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.ms-tsub { display: block; font-size: 12px; color: var(--text3); }
+.ms-tact { text-align: right; white-space: nowrap; }
 .ms-tcheck { border: 0; background: none; padding: 0; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--accent3); text-decoration: underline; text-underline-offset: 3px; }
-.ms-tmeta { font-size: 12.5px; color: var(--text2); }
 .ms-late { color: var(--red); font-weight: 600; }
-.ms-strip { display: flex; gap: 2px; height: 10px; margin-top: 2px; }
-.ms-seg { background: var(--bg4); min-width: 6px; border-radius: 2px; overflow: hidden; cursor: pointer; }
-.ms-seg i { display: block; height: 100%; background: var(--green); }
-.ms-seg-late, .ms-sw-late { background: var(--red-bg); box-shadow: inset 0 0 0 1px var(--red); }
-.ms-legend { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; }
-.ms-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.ms-sw { display: inline-block; width: 12px; height: 10px; border-radius: 2px; background: var(--bg4); }
-.ms-sw.ms-sw-done { background: var(--green); }
-.ms-sw.ms-sw-late { background: var(--red-bg); }
 
 .ms-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 11px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .ms-panel-head { display: flex; align-items: center; gap: 7px; padding: 7px 13px; border-bottom: 1px solid var(--border); flex-wrap: wrap; min-height: 47px; }
