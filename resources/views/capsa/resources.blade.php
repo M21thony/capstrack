@@ -17,8 +17,8 @@
 <!-- DELETE CONFIRM MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-box">
-    <div class="modal-title">Remove Resource?</div>
-    <div class="modal-sub" id="modal-sub">This will permanently delete the file and it will no longer be visible to users.</div>
+    <div class="modal-title">Remove from CapsTrack?</div>
+    <div class="modal-sub" id="modal-sub">Students will no longer see it here. The file itself stays in your Google Drive.</div>
     <div class="modal-actions">
       <button class="btn btn-ghost" style="color:var(--text2);border-color:var(--border)" onclick="closeModal()">Cancel</button>
       <button class="btn btn-danger" id="modal-confirm-btn">Remove</button>
@@ -343,7 +343,16 @@
     </div>
 
     {{-- The strip that stops anyone having to ask what the labels mean. --}}
+    <div class="import-bulk" id="lib-bulk" hidden>
+      <span class="import-bulk-count" id="lib-bulk-count">0 selected</span>
+      <button class="btn btn-ghost import-bulk-drop" onclick="confirmDeleteSelected()">Remove from CapsTrack</button>
+    </div>
+
     <div class="lib-head-row" id="lib-head-row" hidden>
+      <label class="pick-box" title="Select all">
+        <input type="checkbox" id="lib-all" onchange="toggleAllLib(this.checked)">
+        <span class="pick-tick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+      </label>
       <span class="h-file">File</span>
       <span class="h-who">Shared with</span>
       <span class="h-when">Added</span>
@@ -495,6 +504,8 @@ function renderCards(){
   });
 
   updateStats(filtered.length);
+  libShown = filtered.map(r=>r.id);
+  refreshLibBulk();
 
   if(!filtered.length){
     headRow.hidden = true;
@@ -520,7 +531,11 @@ function renderCards(){
   headRow.hidden = false;
 
   list.innerHTML = '<div class="lib-list">' + filtered.map(r=>`
-    <div class="lib-row" id="rcard-${r.id}">
+    <div class="lib-row${libSelected.has(r.id) ? ' is-picked' : ''}" id="rcard-${r.id}">
+      <label class="pick-box">
+        <input type="checkbox" ${libSelected.has(r.id) ? 'checked ' : ''}onchange="toggleLib(${r.id}, this.checked)">
+        <span class="pick-tick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+      </label>
       <span class="lib-file">
         ${extIcon(r.ext)}
         <span class="lib-file-text">
@@ -540,6 +555,41 @@ function renderCards(){
       </span>
     </div>
   `).join('') + '</div>';
+}
+
+// ── ticking several library rows ──
+// What is ticked but filtered out stays ticked, and is not what gets removed:
+// only rows on screen are acted on, so nothing goes that the CaPSA cannot see.
+let libSelected = new Set();
+let libShown = [];
+
+function libPicked(){
+  return libShown.filter(id => libSelected.has(id));
+}
+
+function toggleLib(id, on){
+  on ? libSelected.add(id) : libSelected.delete(id);
+  refreshLibBulk();
+}
+
+function toggleAllLib(on){
+  libShown.forEach(id => on ? libSelected.add(id) : libSelected.delete(id));
+  renderCards();
+}
+
+function refreshLibBulk(){
+  const n = libPicked().length;
+  document.getElementById('lib-bulk').hidden = n === 0;
+  document.getElementById('lib-bulk-count').textContent = n + (n === 1 ? ' file selected' : ' files selected');
+
+  const all = document.getElementById('lib-all');
+  all.checked = n > 0 && n === libShown.length;
+  all.indeterminate = n > 0 && n < libShown.length;
+
+  libShown.forEach(id => {
+    const row = document.getElementById('rcard-' + id);
+    if(row) row.classList.toggle('is-picked', libSelected.has(id));
+  });
 }
 
 function clearFilters(){
@@ -1245,35 +1295,51 @@ function downloadResource(id, btn){
 
 // -- DELETE ---------------------------------------------------------------------
 function confirmDelete(id, name){
-  pendingDeleteId = id;
-  document.getElementById('modal-sub').textContent = `"${name}" will be permanently removed from Google Drive and users will no longer be able to access it.`;
-  const overlay = document.getElementById('modal-overlay');
-  overlay.classList.add('show');
-  document.getElementById('modal-confirm-btn').onclick = () => {
+  askToRemove([id], `"${name}" will be taken off CapsTrack and students will no longer see it here. The file itself stays in your Google Drive.`);
+}
+
+function confirmDeleteSelected(){
+  const ids = libPicked();
+  if(!ids.length) return;
+  askToRemove(ids, ids.length + (ids.length === 1 ? ' file' : ' files')
+    + ' will be taken off CapsTrack and students will no longer see them here. The files themselves stay in your Google Drive.');
+}
+
+function askToRemove(ids, message){
+  pendingDeleteId = ids[0];
+  document.getElementById('modal-sub').textContent = message;
+  document.getElementById('modal-overlay').classList.add('show');
+
+  document.getElementById('modal-confirm-btn').onclick = async () => {
     const confirmBtn = document.getElementById('modal-confirm-btn');
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Removing…';
 
-    fetch(ROUTES.destroy(id), {
-      method: 'DELETE',
-      headers: { 'X-CSRF-TOKEN': CSRF_TOKEN },
-    })
-    .then(r => r.json())
-    .then(data => {
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Remove';
-      if(!data.success){ showToast((data.message||'Failed to remove resource.'), 'error'); return; }
+    // One at a time through the same route a single Remove uses, so a batch
+    // is checked exactly like one file is.
+    let removed = 0;
+    for (const id of ids) {
+      try {
+        const res = await fetch(ROUTES.destroy(id), {
+          method: 'DELETE',
+          headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+        });
+        const data = await res.json();
+        if(!data.success) continue;
+        resources = resources.filter(r => r.id !== id);
+        libSelected.delete(id);
+        removed++;
+      } catch (e) { /* counted below as not removed */ }
+    }
 
-      resources = resources.filter(r=>r.id!==id);
-      closeModal();
-      renderCards();
-      showToast('Resource removed.');
-    })
-    .catch(() => {
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Remove';
-      showToast('Failed to remove resource.', 'error');
-    });
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = 'Remove';
+    closeModal();
+    renderCards();
+
+    const left = ids.length - removed;
+    if(left){ showToast(left + (left === 1 ? ' file could not be removed.' : ' files could not be removed.'), 'error'); }
+    if(removed){ showToast(removed === 1 ? 'Removed from CapsTrack.' : removed + ' files removed from CapsTrack.'); }
   };
 }
 

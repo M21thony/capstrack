@@ -6,6 +6,7 @@ use App\Models\CapstoneExpert;
 use App\Models\Resource;
 use App\Models\Role;
 use App\Services\GoogleDriveService;
+use Google\Service\Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
@@ -183,6 +184,57 @@ class DriveImportTest extends TestCase
         $this->assertSame('pre-proposal', Resource::where('drive_file_id', 'a')->value('category'));
         $this->assertSame('ch1-3', Resource::where('drive_file_id', 'b')->value('category'));
         $this->assertSame('forms', Resource::where('drive_file_id', 'c')->value('category'));
+    }
+
+    /** A file Google will not share is named in one plain line, and the rest of the batch still goes in. */
+    public function test_a_file_google_refuses_does_not_stop_the_rest(): void
+    {
+        $drive = Mockery::mock(GoogleDriveService::class);
+        $drive->shouldReceive('importFile')->andReturnUsing(function ($userId, $fileId) {
+            if ($fileId === 'view-only') {
+                throw new Exception('{"error":{"code":403}}', 403, null, [
+                    ['message' => 'The user does not have sufficient permissions for this file.', 'reason' => 'insufficientFilePermissions'],
+                ]);
+            }
+
+            return ['id' => $fileId, 'name' => 'Rubric.pdf', 'mime_type' => 'application/pdf', 'size' => 10, 'web_view_link' => 'https://drive.example/'.$fileId];
+        });
+        $this->instance(GoogleDriveService::class, $drive);
+
+        $response = $this->actingAs($this->capsa(), 'expert')->postJson(route('gdrive.imports.store'), [
+            'files' => [
+                ['drive_file_id' => 'view-only', 'category' => 'forms', 'sections' => ['BSIT-4A']],
+                ['drive_file_id' => 'mine', 'category' => 'forms', 'sections' => ['BSIT-4A']],
+            ],
+        ]);
+
+        $response->assertStatus(422)->assertJson([
+            'success' => false,
+            'message' => 'The user does not have sufficient permissions for this file.',
+        ]);
+        $this->assertSame(['mine'], Resource::pluck('drive_file_id')->all());
+    }
+
+    /** Removing takes it off CapsTrack only - the file in Drive is never touched. */
+    public function test_removing_a_resource_leaves_the_drive_file_alone(): void
+    {
+        $drive = Mockery::mock(GoogleDriveService::class);
+        $drive->shouldNotReceive('deleteFile');
+        $this->instance(GoogleDriveService::class, $drive);
+
+        $capsa = $this->capsa();
+        $resource = Resource::create([
+            'resource_type' => 'form', 'category' => 'forms', 'title' => 'Rubric', 'file_name' => 'Rubric.pdf',
+            'content_type' => 'file', 'drive_file_id' => 'file-1', 'uploaded_by' => $capsa->expert_id,
+        ]);
+        $resource->sections()->create(['section' => 'BSIT-4A']);
+
+        $this->actingAs($capsa, 'expert')
+            ->deleteJson(route('gdrive.resources.destroy', $resource))
+            ->assertOk()->assertJson(['success' => true]);
+
+        $this->assertSame(0, Resource::count());
+        $this->assertSame(0, $resource->sections()->count());
     }
 
     public function test_more_than_twenty_five_is_refused(): void

@@ -348,9 +348,11 @@ class GoogleDriveController extends Controller
 
         $created = [];
         $skipped = [];
+        $failed = [];
 
-        try {
-            foreach ($validated['files'] as $entry) {
+        foreach ($validated['files'] as $entry) {
+            // One file Google refuses is no reason to drop the rest of the batch.
+            try {
                 $driveFileId = $entry['drive_file_id'];
 
                 // Importing the same file twice would give students two rows
@@ -410,24 +412,20 @@ class GoogleDriveController extends Controller
                 }
 
                 $created[] = $resource->load('sections');
+            } catch (\Exception $e) {
+                $failed[] = GoogleDriveService::messageFrom($e);
             }
-
-            return response()->json([
-                'success' => true,
-                'resources' => $created,
-                'skipped' => count($skipped),
-            ]);
-        } catch (\Exception $e) {
-            // Whatever was taken on before the failure stays - it is already
-            // shared and recorded, and rolling it back would unshare a file
-            // the CaPSA owns.
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-                'resources' => $created,
-                'skipped' => count($skipped),
-            ], 422);
         }
+
+        // Whatever was taken on stays - it is already shared and recorded.
+        return response()->json([
+            'success' => ! $failed,
+            'message' => $failed
+                ? $failed[0].(count($failed) > 1 ? ' ('.(count($failed) - 1).' more could not be taken on.)' : '')
+                : null,
+            'resources' => $created,
+            'skipped' => count($skipped),
+        ], $failed ? 422 : 200);
     }
 
     /**
@@ -463,15 +461,12 @@ class GoogleDriveController extends Controller
             ], 403);
         }
 
-        try {
-            if ($resource->drive_file_id) {
-                $this->drive->deleteFile(Auth::guard('expert')->id(), $resource->drive_file_id);
-            }
-            $resource->delete();
+        // Off CapsTrack only. The file itself stays in Drive, untouched - it
+        // may be the CaPSA's own original, and Drive refused to bin the ones
+        // this account does not own anyway.
+        $resource->sections()->delete();
+        $resource->delete();
 
-            return response()->json(['success' => true]);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
-        }
+        return response()->json(['success' => true]);
     }
 }

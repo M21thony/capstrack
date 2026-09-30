@@ -207,10 +207,17 @@ class GoogleDriveService
         $service = new GoogleDrive($client);
 
         $file = $service->files->get($fileId, [
-            'fields' => 'id, name, mimeType, size, webViewLink',
+            'fields' => 'id, name, mimeType, size, webViewLink, capabilities(canShare)',
             // The picker offers shared drives too; without this their files are "not found".
             'supportsAllDrives' => true,
         ]);
+
+        // Shared with this account to view only: Google refuses to change who
+        // can open it, and students would get a link that asks for access.
+        if ($file->getMimeType() !== self::FOLDER_MIME && ! $file->getCapabilities()?->getCanShare()) {
+            throw new \RuntimeException('"'.$file->getName().'" is only shared with you to view, so it cannot be shared with students. '
+                .'Make a copy in your Drive (File, then Make a copy) and pick the copy.');
+        }
 
         $service->permissions->create($fileId, new Permission([
             'type' => 'anyone',
@@ -226,6 +233,19 @@ class GoogleDriveService
             'size' => $file->getSize() ? (int) $file->getSize() : null,
             'web_view_link' => $file->getWebViewLink(),
         ];
+    }
+
+    /**
+     * What went wrong, in one line. Google's own failures carry their JSON
+     * body as the message, which is what reached the page before.
+     */
+    public static function messageFrom(\Throwable $e): string
+    {
+        if ($e instanceof \Google\Service\Exception) {
+            return $e->getErrors()[0]['message'] ?? 'Google Drive refused the request.';
+        }
+
+        return $e->getMessage();
     }
 
     public function uploadFile(int $userId, string $localPath, string $filename, string $mimeType, ?string $folderId = null): array
