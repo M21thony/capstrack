@@ -1,7 +1,7 @@
 {{-- All milestones, GitHub style.
 
      Every milestone on the checklists her sections follow, open or closed,
-     each with its due date, what it is for, and how many teams have finished
+     each with its due date and how many teams have finished
      it. Closing one takes it off the open list and stops its reminders;
      every team's progress on it stays as it is. The details are edited in
      the Edit milestones window on the tracker. --}}
@@ -27,7 +27,6 @@
   .ml-name{font-size:15.5px;font-weight:700;color:var(--text);line-height:1.3}
   .ml-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:12.5px;color:var(--text3)}
   .ml-late{color:var(--red);font-weight:600}
-  .ml-desc{font-size:13px;color:var(--text2);line-height:1.5;white-space:pre-line;overflow-wrap:anywhere}
   .ml-prog{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:3px;font-size:12.5px;color:var(--text3)}
   .ml-prog b{color:var(--text);font-variant-numeric:tabular-nums}
   .ml-meter{width:220px;max-width:100%;height:8px;border-radius:999px;background:var(--bg4);overflow:hidden}
@@ -118,9 +117,6 @@
                     <span>Opens after the milestone before it</span>
                   @endif
                 </div>
-                @if ($m->description)
-                  <div class="ml-desc">{{ $m->description }}</div>
-                @endif
                 <div class="ml-prog">
                   <span class="ml-meter"><i style="width:{{ $row->percent }}%"></i></span>
                   <b>{{ $row->percent }}%</b>

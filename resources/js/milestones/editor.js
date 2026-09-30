@@ -925,10 +925,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
 
   // ── Small helpers ─────────────────────────────────────────────────────
 
-  /**
-   * A milestone's own due date and description, saved as soon as they change:
-   * the date when it is picked, the description when the box is left.
-   */
+  /** A milestone's own due date, saved as soon as it is picked. */
   function detailsRow(m) {
     const row = el('div', 'ms-emeta');
     const set = change => api('PATCH', fill(urls.milestone, m.id), change).then(reload);
@@ -949,24 +946,9 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       );
     });
 
-    const desc = el('textarea', 'ms-emeta-desc');
-    desc.rows = 1;
-    desc.maxLength = 2000;
-    desc.value = m.description || '';
-    desc.placeholder = 'What this milestone is for (optional)';
-    desc.dataset.key = 'desc-' + m.id;
-    desc.setAttribute('aria-label', `Description of ${m.name}`);
-    desc.addEventListener('change', () => {
-      const before = m.description || null;
-      const after = desc.value.trim() || null;
-      if (after === before) return;
-      E.focusKey = 'desc-' + m.id;
-      run(() => set({ description: after }), `Saved the description of ${m.name}.`, () => set({ description: before }));
-    });
-
     const dueLabel = el('label', 'ms-emeta-field');
     dueLabel.append(el('span', '', 'Due'), due);
-    row.append(dueLabel, desc);
+    row.append(dueLabel);
     return row;
   }
 

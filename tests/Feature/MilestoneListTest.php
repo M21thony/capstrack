@@ -52,13 +52,14 @@ class MilestoneListTest extends TestCase
         return $this->get(route('capsa.team_management', ['tab' => 'milestone_list'] + $query));
     }
 
-    public function test_open_milestones_show_due_date_description_and_how_many_teams_finished(): void
+    /** No description on screen: it is not part of the milestone the system documents. */
+    public function test_open_milestones_show_due_date_and_how_many_teams_finished_but_no_description(): void
     {
         $this->page()
             ->assertOk()
             ->assertSee('All milestones')
             ->assertSee('Chapter 1-3 Submission')
-            ->assertSee('Title defense forms and the first three chapters.')
+            ->assertDontSee('Title defense forms and the first three chapters.')
             ->assertSee('Due '.now()->subDays(3)->format('M j, Y'))
             ->assertSee('Past due for 1 team')
             ->assertSee('1 of 2 teams complete')
