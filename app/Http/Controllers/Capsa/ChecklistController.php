@@ -51,7 +51,7 @@ class ChecklistController extends Controller
         ]);
     }
 
-    /** Start one from the department checklist, or copy another CaPSA's for the same program. */
+    /** Start one from the department checklist, copy another CaPSA's for the same program, or start empty. */
     public function store(Request $request): JsonResponse
     {
         $capsa = $this->access->capsa();
@@ -59,6 +59,7 @@ class ChecklistController extends Controller
         $data = $request->validate([
             'program' => ['required', Rule::in($capsa->handledPrograms())],
             'copy_of' => ['nullable', 'integer', 'exists:checklists,id'],
+            'empty' => ['sometimes', 'boolean'],
         ]);
 
         if (Checklist::where('capsa_id', $capsa->expert_id)->where('program', $data['program'])->exists()) {
@@ -73,6 +74,8 @@ class ChecklistController extends Controller
             }
 
             $checklist = $this->copy($source, $capsa->expert_id);
+        } elseif ($request->boolean('empty')) {
+            $checklist = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => $data['program'], 'title' => 'Capstone 1 Checklist']);
         } else {
             $checklist = MilestoneTemplate::createChecklist($capsa->expert_id, $data['program']);
         }

@@ -65,7 +65,7 @@ class ChecklistTracker
      * gathered under their checklist and its teams counted together.
      *
      * @param  array<int, string>  $sections
-     * @return array<int, array{checklist: Checklist, sections: array<int, string>, teams: int, milestones: Collection<int, object>}>
+     * @return array<int, array{checklist: Checklist, sections: array<int, string>, teams: int, milestones: Collection<int, object>, done: array<int, int>}>
      */
     public function milestoneList(array $sections): array
     {
@@ -86,38 +86,69 @@ class ChecklistTracker
                 ->merge($bySection->get($section, collect())->pluck('team_id'));
         }
 
-        return collect($boards)->map(function (array $board) {
-            $progress = MilestoneProgress::forTeams($board['checklist'], $board['teamIds']);
-            $teams = count($progress);
+        return collect($boards)
+            ->map(fn (array $board) => $this->board($board['checklist'], $board['teamIds'], $board['sections']))
+            ->values()
+            ->all();
+    }
 
-            $milestones = $board['checklist']->milestones()->active()
-                ->with(['deliverables' => fn ($query) => $query->whereNull('archived_at')])
-                ->get()
-                ->map(function (ChecklistMilestone $milestone) use ($progress, $teams) {
-                    $summaries = collect($progress)
-                        ->map(fn ($team) => $team->milestones->first(fn ($m) => $m->milestone->id === $milestone->id))
-                        ->filter();
-                    $complete = $summaries->filter(fn ($m) => $m->total > 0 && $m->completed === $m->total)->count();
+    /**
+     * One checklist's milestones and how far the given teams are with each.
+     *
+     * @param  Collection<int, int>  $teamIds
+     * @param  array<int, string>  $sections
+     * @return array{checklist: Checklist, sections: array<int, string>, teams: int, milestones: Collection<int, object>, done: array<int, int>}
+     */
+    public function board(Checklist $checklist, Collection $teamIds, array $sections = []): array
+    {
+        $progress = MilestoneProgress::forTeams($checklist, $teamIds);
+        $teams = count($progress);
+        $number = 0;
+        $previous = null;
 
-                    return (object) [
-                        'milestone' => $milestone,
-                        'deliverables' => $milestone->deliverables->count(),
-                        'due_on' => $milestone->due_on ?? $milestone->deliverables->pluck('due_date')->filter()->max(),
-                        'teams' => $teams,
-                        'complete' => $complete,
-                        'open' => $teams - $complete,
-                        'percent' => $teams === 0 ? 0 : (int) round($complete / $teams * 100),
-                        'past_due' => $summaries->where('past_due', true)->count(),
-                    ];
-                });
+        // Hidden ones too: they are listed as finished, so they can be shown again.
+        $milestones = $checklist->milestones()
+            ->with(['deliverables' => fn ($query) => $query->whereNull('archived_at')])
+            ->get()
+            ->map(function (ChecklistMilestone $milestone) use ($progress, $teams, &$number, &$previous) {
+                $summaries = collect($progress)
+                    ->map(fn ($team) => $team->milestones->first(fn ($m) => $m->milestone->id === $milestone->id))
+                    ->filter();
+                $complete = $summaries->filter(fn ($m) => $m->total > 0 && $m->completed === $m->total)->count();
+                $hidden = $milestone->archived_at !== null;
 
-            return [
-                'checklist' => $board['checklist'],
-                'sections' => $board['sections'],
-                'teams' => $teams,
-                'milestones' => $milestones,
-            ];
-        })->values()->all();
+                $row = (object) [
+                    'milestone' => $milestone,
+                    // Numbered as teams see the list, which leaves hidden ones out.
+                    'number' => $hidden ? null : ++$number,
+                    'previous' => $previous,
+                    'capstone2' => $milestone->deliverables->contains(fn ($d) => str_starts_with((string) $d->template_key, 'c2_')),
+                    'deliverables' => $milestone->deliverables->count(),
+                    'due_on' => $milestone->due_on ?? $milestone->deliverables->pluck('due_date')->filter()->max(),
+                    'teams' => $teams,
+                    'complete' => $complete,
+                    'open' => $teams - $complete,
+                    'percent' => $teams === 0 ? 0 : (int) round($complete / $teams * 100),
+                    'past_due' => $summaries->where('past_due', true)->count(),
+                ];
+
+                $previous = $hidden ? $previous : $milestone->name;
+
+                return $row;
+            });
+
+        return [
+            'checklist' => $checklist,
+            'sections' => $sections,
+            'teams' => $teams,
+            'milestones' => $milestones,
+            // How many teams have finished each requirement, by its id.
+            'done' => collect($progress)
+                ->flatMap(fn ($team) => $team->items)
+                ->filter(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
+                ->countBy(fn ($row) => $row->item->id)
+                ->all(),
+        ];
     }
 
     /** One section in full. */

@@ -1,7 +1,6 @@
 import '../../css/milestones.css';
 import * as pdfjsLib from 'pdfjs-dist';
 import { el, btn, icon, fmtDate, plural, ordinal, fill, api, toast, redraw } from './common.js';
-import { openEditor } from './editor.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
@@ -36,9 +35,12 @@ async function drawPdf(box, url, label) {
 /*
  * The milestone tracker.
  *
- * A CaPSA sees one section at a time: its teams in a table, each opening a
- * page of its own - reached by a breadcrumb, not a dropdown - with every
- * milestone and deliverable, and the signed papers waiting for her check. An adviser sees the teams they advise or consult for, read-only.
+ * A CaPSA sees one section at a time: a row per team with one strip of
+ * blocks, a block per milestone. A team's name opens a page of its own -
+ * reached by a breadcrumb, not a dropdown - with every milestone and
+ * deliverable, and the signed papers waiting for her check. Changing the
+ * milestones themselves is Manage milestones, pages of their own. An
+ * adviser sees the teams they advise or consult for, read-only.
  * Only the lists scroll, never the page.
  */
 
@@ -107,11 +109,13 @@ function start(root) {
   function draw() {
     const d = S.data;
     const top = el('div', 'ms-top');
-    top.append(el('h2', 'ms-h', CAPSA ? 'Milestones' : 'Milestone progress'));
-    if (CAPSA) top.append(btn('Edit milestones', 'ms-btn-gold', edit));
-    top.append(el('span', 'ms-spacer'));
-    if ((overview.sections || []).length) top.append(sectionTabs());
-    root.append(top);
+    top.append(el('h2', 'ms-h', CAPSA ? 'Milestones' : 'Milestone progress'), el('span', 'ms-spacer'));
+    if (CAPSA && URLS.manage) {
+      const manage = el('a', 'ms-btn', 'Manage milestones');
+      manage.href = URLS.manage;
+      top.append(manage);
+    }
+    root.append(top, sectionTabs());
 
     if (!d) {
       root.append(el('div', 'ms-panel ms-empty', CAPSA
@@ -126,7 +130,6 @@ function start(root) {
       return;
     }
 
-    root.append(band(d));
     root.append(d.checklist ? teamsPanel(d) : noChecklist(d));
   }
 
@@ -137,34 +140,20 @@ function start(root) {
     render();
   }
 
-  function edit() {
-    openEditor({
-      urls: URLS,
-      checklistId: S.data?.checklist?.id ?? null,
-      onClose: () => { if (S.data) loadSection(S.data.section); },
-    });
-  }
-
   // ── Sections ──────────────────────────────────────────────────────────
 
   function sectionTabs() {
-    const nav = el('div', 'ms-choices');
-    nav.setAttribute('role', 'tablist');
-    nav.setAttribute('aria-label', 'Section');
-    nav.append(el('span', 'ms-lab', CAPSA ? 'Your sections' : 'Sections'));
+    const nav = el('nav', 'ms-secs');
+    nav.setAttribute('aria-label', 'Sections');
 
-    overview.sections.forEach(s => {
-      const b = el('button', 'ms-choice');
+    (overview.sections || []).forEach(s => {
+      const b = el('button', 'ms-sec', s.name);
       b.type = 'button';
-      b.setAttribute('role', 'tab');
-      b.setAttribute('aria-selected', String(s.name === S.data?.section));
-      b.append(el('b', '', s.name), el('small', '', plural(s.teams, 'team')));
-      if (CAPSA && s.to_check) {
-        const badge = el('span', 'ms-badge', String(s.to_check));
-        badge.title = plural(s.to_check, 'signed paper') + ' to check';
-        b.append(badge);
-      }
-      b.setAttribute('aria-label', `${s.name}, ${plural(s.teams, 'team')}` + (CAPSA ? `, ${plural(s.to_check, 'signed paper')} to check` : ''));
+      b.dataset.key = 'sec:' + s.name;
+      if (s.name === S.data?.section) b.setAttribute('aria-current', 'true');
+      b.append(el('small', '', String(s.teams)));
+      if (CAPSA && s.to_check) b.append(el('small', 'ms-sec-check', `${s.to_check} to check`));
+      b.setAttribute('aria-label', `${s.name}, ${plural(s.teams, 'team')}` + (CAPSA && s.to_check ? `, ${plural(s.to_check, 'signed paper')} to check` : ''));
       b.addEventListener('click', () => loadSection(s.name));
       nav.append(b);
     });
@@ -176,6 +165,7 @@ function start(root) {
     try {
       S.data = overview.all?.[name] ?? await api('GET', fill(URLS.section, name));
       S.q = '';
+      S.filter = 'all';
       S.team = null;
       syncCounts();
       render();
@@ -191,62 +181,62 @@ function start(root) {
     entry.to_check = S.data.teams.reduce((n, t) => n + t.rows.filter(r => r.to_check).length, 0);
   }
 
-  // ── Section summary ───────────────────────────────────────────────────
-
-  function band(d) {
-    const all = d.teams.flatMap(t => t.rows);
-    const box = el('div', 'ms-band');
-    const now = el('div', 'ms-now');
-    now.append(
-      el('small', '', CAPSA ? 'You are viewing section' : 'Section'),
-      el('b', '', d.section),
-      el('span', '', (d.checklist ? `${d.checklist.program} ${d.checklist.title} · ` : '') + plural(d.teams.length, 'team')),
-    );
-    box.append(now);
-
-    if (d.checklist) {
-      const stats = el('div', 'ms-stats');
-      const stat = (cls, n, label) => {
-        const s = el('div', ('ms-stat ' + cls).trim());
-        s.append(el('b', '', String(n)), el('span', '', label));
-        stats.append(s);
-      };
-      stat('', (all.length ? Math.round(all.filter(closed).length / all.length * 100) : 0) + '%', 'closed');
-      stat('ms-stat-red', d.teams.filter(t => t.rows.some(r => r.state === 'overdue')).length, 'teams with overdue items');
-      if (CAPSA) stat('ms-stat-gold', all.filter(r => r.to_check).length, 'signed papers to check');
-      stat('', d.teams.filter(t => !t.rows.some(r => r.state === 'overdue' || r.to_check)).length, 'teams on track');
-      box.append(stats);
-    }
-
-    return box;
-  }
+  // ── The teams ─────────────────────────────────────────────────────────
 
   function noChecklist(d) {
     const box = el('div', 'ms-panel ms-empty');
     const program = d.section.split('-')[0];
-    box.append(el('p', '', `There is no ${program} checklist yet, so the teams in ${d.section} have nothing to track.`));
-    if (CAPSA) {
-      box.append(btn(`Set up the ${program} checklist`, 'ms-btn-gold', edit));
+    box.append(el('p', '', `There are no ${program} milestones yet, so the teams in ${d.section} have nothing to track.`));
+    if (CAPSA && URLS.setup) {
+      const setup = el('a', 'ms-btn ms-btn-gold', `Set up ${program} milestones`);
+      setup.href = fill(URLS.setup, program);
+      box.append(setup);
     } else {
-      box.append(el('p', 'ms-hint', 'Their CaPSA has not set one up yet.'));
+      box.append(el('p', 'ms-hint', 'Their CaPSA has not set them up yet.'));
     }
     return box;
   }
 
-  // ── Teams table ───────────────────────────────────────────────────────
+  /** One team at a glance: where it is, what is late, and a block per milestone. */
+  function summary(d, t) {
+    const blocks = d.milestones
+      .map(name => ({ name, ...counts(t.rows.filter(r => r.milestone === name)) }))
+      .filter(b => b.total);
+    const all = counts(t.rows);
+    return {
+      t,
+      blocks,
+      behind: blocks.filter(b => b.overdue).map(b => b.name),
+      overdue: all.overdue,
+      check: CAPSA ? all.check : 0,
+      closed: all.closed,
+      total: all.total,
+      current: blocks.find(b => b.closed < b.total)?.name,
+    };
+  }
 
   function teamsPanel(d) {
+    const teams = d.teams.map(t => summary(d, t));
+    const groups = [
+      ['all', 'All teams', teams],
+      ['behind', 'Behind', teams.filter(x => x.overdue)],
+      ...(CAPSA ? [['check', 'Papers to check', teams.filter(x => x.check)]] : []),
+      ['track', 'On track', teams.filter(x => !x.overdue && !x.check)],
+    ];
+
     const panel = el('section', 'ms-panel');
     panel.setAttribute('aria-label', 'Teams in ' + d.section);
 
     const head = el('div', 'ms-panel-head');
-    head.append(el('b', '', d.checklist.title), el('span', 'ms-spacer'));
-    [['all', 'All'], ['overdue', 'Overdue'], ...(CAPSA ? [['check', 'Papers to check']] : [])].forEach(([key, label]) => {
-      const chip = el('button', 'ms-chip', label);
-      chip.type = 'button';
-      chip.setAttribute('aria-pressed', String(S.filter === key));
-      chip.addEventListener('click', () => { S.filter = key; render(); });
-      head.append(chip);
+    const tabs = el('div', 'ms-ftabs');
+    groups.forEach(([key, label, list]) => {
+      const tab = el('button', 'ms-ftab', label);
+      tab.type = 'button';
+      tab.dataset.key = 'filter:' + key;
+      tab.setAttribute('aria-pressed', String(S.filter === key));
+      tab.append(el('small', '', String(list.length)));
+      tab.addEventListener('click', () => { S.filter = key; S.focusKey = 'filter:' + key; render(); });
+      tabs.append(tab);
     });
     const search = el('input', 'ms-search');
     search.type = 'search';
@@ -255,81 +245,71 @@ function start(root) {
     search.dataset.key = 'search';
     search.setAttribute('aria-label', 'Find a team');
     search.addEventListener('input', () => { S.q = search.value; S.focusKey = 'search'; render(); });
-    head.append(search);
+    head.append(tabs, el('span', 'ms-spacer'), search);
 
-    const summaries = d.teams.map(t => ({ t, c: counts(t.rows) }));
-    const shown = summaries
-      .filter(({ c }) => S.filter === 'all' || (S.filter === 'overdue' ? c.overdue : c.check))
-      .filter(({ t }) => t.name.toLowerCase().includes(S.q.toLowerCase()))
-      .sort((a, b) => (b.c.overdue - a.c.overdue) || (b.c.check - a.c.check) || a.t.name.localeCompare(b.t.name));
+    const shown = (groups.find(([key]) => key === S.filter) || groups[0])[2]
+      .filter(x => x.t.name.toLowerCase().includes(S.q.toLowerCase()))
+      .sort((a, b) => (b.overdue - a.overdue) || (b.check - a.check) || a.t.name.localeCompare(b.t.name));
 
     const scroll = el('div', 'ms-scroll');
     scroll.dataset.scroll = 'track:' + d.section;
-    const foot = el('div', 'ms-panel-foot', `${plural(shown.length, 'team')} · click a team to open its milestones`);
-    panel.append(head, scroll, foot);
+    shown.forEach(x => scroll.append(teamRow(d, x)));
+    if (!shown.length) scroll.append(el('div', 'ms-empty', d.teams.length ? 'No teams here.' : 'No teams in this section yet.'));
 
-    const table = el('table', 'ms-table');
-    const headRow = el('tr');
-    headRow.append(el('th', 'ms-w-team', 'Team'));
-    d.milestones.forEach(name => headRow.append(el('th', '', name)));
-    headRow.append(el('th', 'ms-w-total', 'Total'), el('th', 'ms-w-st', ''));
-    const thead = el('thead');
-    thead.append(headRow);
-    table.append(thead);
-    scroll.append(table);
+    const legend = el('div', 'ms-panel-foot ms-legend');
+    [['ms-sw-done', 'Done'], ['ms-sw-late', 'Past due'], ['', 'Not yet']].forEach(([cls, label]) => {
+      const key = el('span');
+      key.append(el('i', ('ms-sw ' + cls).trim()), label);
+      legend.append(key);
+    });
+    legend.append(el('span', '', 'Each block is one milestone, in checklist order. Hover to see which.'));
 
-    if (!shown.length) {
-      const body = el('tbody');
-      const tr = el('tr');
-      const td = el('td', 'ms-none', d.teams.length ? 'No teams match.' : 'No teams in this section yet.');
-      td.colSpan = d.milestones.length + 3;
-      tr.append(td);
-      body.append(tr);
-      table.append(body);
-    }
-
-    const body = el('tbody');
-    shown.forEach(({ t, c }) => body.append(teamRow(d, t, c)));
-    table.append(body);
-
+    panel.append(head, scroll, legend);
     return panel;
   }
 
-  function teamRow(d, t, c) {
-    const tr = el('tr', 'ms-team-row');
-    const first = el('td');
-    const name = el('button', 'ms-expander');
-    name.type = 'button';
-    name.dataset.key = 'team-' + d.section + ':' + t.id;
-    name.append(el('span', '', t.name));
-    first.append(name);
-    tr.append(first);
+  function teamRow(d, x) {
+    const row = el('div', 'ms-trow');
 
-    d.milestones.forEach(name => {
-      const pc = counts(t.rows.filter(r => r.milestone === name));
-      const full = pc.total > 0 && pc.closed === pc.total;
-      const cls = pc.overdue ? 'ms-cell-late' : full ? 'ms-cell-full' : pc.handed ? 'ms-cell-wait' : pc.closed ? 'ms-cell-part' : '';
-      const td = el('td');
-      const cell = el('span', ('ms-cell ' + cls).trim(), (pc.overdue ? '! ' : full ? '✓ ' : '') + `${pc.closed}/${pc.total}`);
-      cell.title = `${name}: ${pc.closed} closed, ${pc.handed} waiting, ${pc.overdue} overdue. Click to open it.`;
-      // Clicking a count opens this team's page at that milestone.
-      td.addEventListener('click', e => { e.stopPropagation(); openTeam(t, name); });
-      td.append(cell);
-      tr.append(td);
+    const top = el('div', 'ms-trow-top');
+    const name = el('button', 'ms-tname', x.t.name);
+    name.type = 'button';
+    name.dataset.key = 'team-' + d.section + ':' + x.t.id;
+    name.addEventListener('click', () => openTeam(x.t));
+    top.append(name);
+    if (x.check) {
+      const first = x.t.rows.find(r => r.to_check && r.file_url);
+      const check = el('button', 'ms-tcheck', 'Check ' + plural(x.check, 'paper'));
+      check.type = 'button';
+      check.addEventListener('click', () => (first ? openCheck(first, x.t) : openTeam(x.t)));
+      top.append(check);
+    }
+
+    const meta = el('div', 'ms-tmeta');
+    if (x.overdue) {
+      const more = x.behind.length > 2 ? ` and ${x.behind.length - 2} more` : '';
+      meta.append(el('span', 'ms-late', `Behind on ${x.behind.slice(0, 2).join(', ')}${more} · ${x.overdue} overdue`));
+    } else {
+      meta.append(x.current ? 'Working on ' + x.current : x.total ? 'All done' : 'Nothing to do yet');
+    }
+    meta.append(` · ${x.closed} of ${x.total} done`);
+
+    const strip = el('div', 'ms-strip');
+    strip.setAttribute('aria-hidden', 'true');
+    x.blocks.forEach(b => {
+      const block = el('span', 'ms-seg' + (b.overdue ? ' ms-seg-late' : ''));
+      block.style.flex = String(b.total);
+      block.title = `${b.name}: ${b.closed} of ${b.total} done`;
+      const done = el('i');
+      done.style.width = Math.round(b.closed / b.total * 100) + '%';
+      block.append(done);
+      // A block opens the team's page at that milestone.
+      block.addEventListener('click', () => openTeam(x.t, b.name));
+      strip.append(block);
     });
 
-    const total = el('td');
-    total.append(progress(c));
-    tr.append(total);
-
-    const status = el('td');
-    status.append(c.overdue
-      ? pill('ms-pill-red', c.overdue + ' overdue')
-      : c.check ? pill('ms-pill-amb', c.check + ' to check') : pill('ms-pill-grn', 'On track'));
-    tr.append(status);
-
-    tr.addEventListener('click', () => openTeam(t));
-    return tr;
+    row.append(top, meta, strip);
+    return row;
   }
 
   // ── One team's page ───────────────────────────────────────────────────
@@ -624,9 +604,5 @@ function start(root) {
     track.append(done, waiting);
     wrap.append(track, el('span', '', `${c.closed}/${c.total}`));
     return wrap;
-  }
-
-  function pill(cls, text) {
-    return el('span', 'ms-pill ' + cls, text);
   }
 }

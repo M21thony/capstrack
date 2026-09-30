@@ -1,5 +1,5 @@
 /*
- * The milestone tracker, the check window and the Edit milestones window.
+ * The milestone tracker, the check window and the old Edit milestones window.
  * Everything is prefixed ms- so none of it collides with the admin and
  * expert stylesheets it sits inside. Colours come from those pages' own
  * tokens: gold only for selection and the one action; green, amber and red
@@ -60,11 +60,7 @@
 .ms-btn-link { border-color: transparent; background: none; }
 .ms-x { background: none; border: 1px solid rgba(255,255,255,.2); color: #fff; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 17px; line-height: 1; flex: none; }
 
-/* Pills and chips */
-.ms-pill { display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
-.ms-pill-red { background: var(--red-bg); color: var(--red); }
-.ms-pill-amb { background: var(--amber-bg); color: var(--amber); }
-.ms-pill-grn { background: var(--green-bg); color: var(--green); }
+/* Chips */
 .ms-chip { border: 1px solid var(--border); background: var(--bg2); border-radius: 999px; padding: 3px 11px; font-size: 12.5px; font-weight: 600; color: var(--text2); cursor: pointer; min-height: 30px; }
 .ms-chip[aria-pressed="true"] { border-color: var(--accent); background: #f5ecd0; color: var(--accent3); }
 .ms-search { border: 1px solid var(--border2); border-radius: 8px; padding: 4px 10px; min-height: 31px; width: 175px; background: var(--bg2); }
@@ -81,22 +77,44 @@
 .ms-choice small { font-size: 11px; color: var(--text3); }
 .ms-choice[aria-selected="true"] { background: var(--navy-dark, #18191f); border-color: var(--navy-dark, #18191f); color: #fff; box-shadow: inset 0 -3px 0 var(--accent); }
 .ms-choice[aria-selected="true"] small { color: rgba(255,255,255,.65); }
-.ms-badge { position: absolute; top: -7px; right: -7px; min-width: 19px; height: 19px; border-radius: 999px; background: var(--accent); color: var(--navy-dark, #18191f); font-size: 10.5px; font-weight: 700; display: grid; place-items: center; padding: 0 5px; border: 2px solid var(--bg); }
 
 /* ── Tracker ─────────────────────────────────────────────────────────── */
 .ms-app { height: var(--ms-h, 70vh);height: var(--ms-h, 70dvh); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; font-size: 13.5px; line-height: 1.5; }
 .ms-top { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
 .ms-h { font-size: 19.5px; margin: 0; letter-spacing: -.01em; font-weight: 600; }
-.ms-band { display: flex; align-items: center; gap: 12px 26px; flex-wrap: wrap; background: var(--accent-light); border: 1px solid #e3d08f; border-radius: 11px; padding: 8px 16px; }
-.ms-now { display: grid; line-height: 1.15; }
-.ms-now small { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent3); font-weight: 700; }
-.ms-now b { font-size: 23px; letter-spacing: -.01em; }
-.ms-now span { font-size: 12.5px; color: var(--text2); }
-.ms-stats { display: flex; gap: 24px; margin-left: auto; flex-wrap: wrap; }
-.ms-stat b { display: block; font-size: 17.5px; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.ms-stat span { font-size: 11.5px; color: var(--text3); }
-.ms-stat-red b { color: var(--red); }
-.ms-stat-gold b { color: var(--accent3); }
+
+/* Section tabs, underlined; the count sits beside each name. */
+.ms-secs { display: flex; gap: 2px 18px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+.ms-sec { border: 0; background: none; padding: 6px 2px 8px; cursor: pointer; font-weight: 600; color: var(--text2); display: inline-flex; align-items: baseline; gap: 6px; box-shadow: inset 0 -2px 0 transparent; }
+.ms-sec:hover { color: var(--text); }
+.ms-sec[aria-current="true"] { color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }
+.ms-sec small { font-size: 11.5px; color: var(--text3); font-weight: 600; }
+.ms-sec .ms-sec-check { color: var(--accent3); }
+
+/* Filter tabs over the team list */
+.ms-ftabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.ms-ftab { border: 1px solid transparent; background: none; border-radius: 7px; padding: 3px 10px; min-height: 30px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text2); display: inline-flex; align-items: baseline; gap: 6px; }
+.ms-ftab:hover { background: var(--bg3); color: var(--text); }
+.ms-ftab[aria-pressed="true"] { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+.ms-ftab small { font-size: 11px; color: var(--text3); }
+
+/* One team: its name, a line on where it is, and a block per milestone. */
+.ms-trow { padding: 10px 14px; border-bottom: 1px solid var(--border); display: grid; gap: 4px; }
+.ms-trow-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ms-tname { border: 0; background: none; padding: 0; cursor: pointer; font-weight: 700; font-size: 14px; text-align: left; }
+.ms-tname:hover { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.ms-tcheck { border: 0; background: none; padding: 0; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--accent3); text-decoration: underline; text-underline-offset: 3px; }
+.ms-tmeta { font-size: 12.5px; color: var(--text2); }
+.ms-late { color: var(--red); font-weight: 600; }
+.ms-strip { display: flex; gap: 2px; height: 10px; margin-top: 2px; }
+.ms-seg { background: var(--bg4); min-width: 6px; border-radius: 2px; overflow: hidden; cursor: pointer; }
+.ms-seg i { display: block; height: 100%; background: var(--green); }
+.ms-seg-late, .ms-sw-late { background: var(--red-bg); box-shadow: inset 0 0 0 1px var(--red); }
+.ms-legend { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; }
+.ms-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.ms-sw { display: inline-block; width: 12px; height: 10px; border-radius: 2px; background: var(--bg4); }
+.ms-sw.ms-sw-done { background: var(--green); }
+.ms-sw.ms-sw-late { background: var(--red-bg); }
 
 .ms-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 11px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .ms-panel-head { display: flex; align-items: center; gap: 7px; padding: 7px 13px; border-bottom: 1px solid var(--border); flex-wrap: wrap; min-height: 47px; }
@@ -104,22 +122,6 @@
 /* The only thing that scrolls. */
 .ms-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
 
-.ms-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.ms-table thead th { position: sticky; top: 0; z-index: 3; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text3); text-align: left; padding: 6px 8px; background: var(--bg3); border-bottom: 1px solid var(--border); line-height: 1.25; font-weight: 600; }
-.ms-table th.ms-w-team { width: 190px; }
-.ms-table th.ms-w-total { width: 92px; }
-.ms-table th.ms-w-st { width: 106px; }
-.ms-table td { padding: 0 8px; height: 41px; border-bottom: 1px solid var(--border); font-size: 12.5px; vertical-align: middle; overflow: hidden; white-space: nowrap; }
-.ms-table td.ms-none { color: var(--text3); padding: 14px; }
-.ms-team-row { cursor: pointer; }
-.ms-team-row:hover td { background: var(--bg3); }
-.ms-expander { border: none; background: none; cursor: pointer; display: flex; gap: 5px; align-items: center; text-align: left; padding: 0; font-weight: 700; font-size: 13.5px; min-height: 31px; max-width: 100%; min-width: 0; }
-.ms-expander span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ms-cell { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; padding: 2px 6px; border-radius: 6px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--bg3); color: var(--text3); white-space: nowrap; cursor: pointer; font-variant-numeric: tabular-nums; }
-.ms-cell-full { background: var(--green-bg); border-color: #aee0c0; color: var(--green); }
-.ms-cell-part { background: var(--bg2); color: var(--text2); }
-.ms-cell-late { background: var(--red-bg); border-color: #f1b5b5; color: var(--red); }
-.ms-cell-wait { background: var(--amber-bg); border-color: #e7c99d; color: var(--amber); }
 .ms-prog { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ms-track { height: 6px; border-radius: 999px; background: var(--bg4); overflow: hidden; display: flex; width: 48px; flex: none; }
 .ms-track i { display: block; height: 100%; }

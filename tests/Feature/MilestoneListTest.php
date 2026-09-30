@@ -11,7 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
-/** The CaPSA's list of every milestone, open or closed, with how many teams finished each. */
+/** Manage milestones: every milestone, open or finished, with how many teams are done with each. */
 class MilestoneListTest extends TestCase
 {
     use BuildsChecklists;
@@ -57,12 +57,12 @@ class MilestoneListTest extends TestCase
     {
         $this->page()
             ->assertOk()
-            ->assertSee('All milestones')
+            ->assertSee('Manage milestones')
             ->assertSee('Chapter 1-3 Submission')
             ->assertDontSee('Title defense forms and the first three chapters.')
             ->assertSee('Due '.now()->subDays(3)->format('M j, Y'))
             ->assertSee('Past due for 1 team')
-            ->assertSee('1 of 2 teams complete')
+            ->assertSee('1 of 2 teams done')
             ->assertSee('50%')
             ->assertSee('in 28 days');
     }
@@ -71,12 +71,13 @@ class MilestoneListTest extends TestCase
     {
         $this->checklist->milestones()->where('name', 'Chapter 1-3 Submission')->update(['due_on' => now()->addDays(40)->toDateString()]);
 
-        $this->page()->assertSeeInOrder(['Pre-Oral Defense Requirements', 'Chapter 1-3 Submission']);
+        $this->page()->assertSeeInOrder(['1. Chapter 1-3 Submission', '2. Pre-Oral Defense Requirements']);
+        $this->page(['sort' => 'due'])->assertSeeInOrder(['Pre-Oral Defense Requirements', 'Chapter 1-3 Submission']);
         $this->page(['sort' => 'percent'])->assertSeeInOrder(['Chapter 1-3 Submission', 'Pre-Oral Defense Requirements']);
         $this->page(['sort' => 'name'])->assertSeeInOrder(['Chapter 1-3 Submission', 'Pre-Oral Defense Requirements']);
     }
 
-    public function test_a_closed_milestone_moves_to_the_closed_tab(): void
+    public function test_a_finished_milestone_moves_to_the_finished_tab(): void
     {
         $this->checklist->milestones()->where('name', 'Pre-Oral Defense Requirements')->update(['closed_at' => now()]);
 
@@ -85,19 +86,33 @@ class MilestoneListTest extends TestCase
             ->assertSee('Chapter 1-3 Submission')
             ->assertDontSee('Pre-Oral Defense Requirements');
 
-        $this->page(['state' => 'closed'])
+        $this->page(['state' => 'finished'])
             ->assertOk()
             ->assertSee('Pre-Oral Defense Requirements')
-            ->assertSee('Closed '.now()->format('M j, Y'))
+            ->assertSee('Finished '.now()->format('M j, Y'))
             ->assertSee('Reopen')
             ->assertDontSee('Chapter 1-3 Submission');
     }
 
-    public function test_a_capsa_with_no_checklist_is_told_so(): void
+    public function test_a_hidden_milestone_is_with_the_finished_ones_and_can_be_shown_again(): void
+    {
+        $this->checklist->milestones()->where('name', 'Pre-Oral Defense Requirements')->update(['archived_at' => now()]);
+
+        $this->page()->assertDontSee('Pre-Oral Defense Requirements');
+        $this->page(['state' => 'finished'])
+            ->assertSee('Pre-Oral Defense Requirements')
+            ->assertSee('Hidden from teams')
+            ->assertSee('Show to teams again');
+    }
+
+    public function test_a_capsa_with_no_checklist_is_offered_the_setup(): void
     {
         $this->checklist->delete();
 
-        $this->page()->assertOk()->assertSee('None of your sections has a checklist yet.');
+        $this->page()
+            ->assertOk()
+            ->assertSee('BSIT-3A has no milestones yet.')
+            ->assertSee(route('capsa.team_management.milestones.setup', 'BSIT'), false);
     }
 
     public function test_the_team_list_links_to_it(): void
