@@ -417,11 +417,25 @@ class PreProposalController extends Controller
             ], 422);
         }
 
-        if ($check->document_path) {
-            Storage::delete($check->document_path);
-        }
+        // Every older unsaved scan of theirs goes too. openScan() shows the
+        // latest unsaved one, so clearing only this one brought the previous
+        // scan straight back, and Clear looked like it did nothing.
+        $cleared = DuplicationCheck::whereIn(
+            'student_s_y_id',
+            StudentSchoolYear::where('student_id', $request->user()->student_id)->select('s_y_id')
+        )
+            ->where('id', '<', $check->id)
+            ->whereNotIn('id', CapstonePreProposal::whereNotNull('duplication_check_id')->select('duplication_check_id'))
+            ->get()
+            ->push($check);
 
-        $check->delete();
+        foreach ($cleared as $scan) {
+            if ($scan->document_path) {
+                Storage::delete($scan->document_path);
+            }
+
+            $scan->delete();
+        }
 
         return response()->json(['success' => true, 'message' => 'Result cleared.']);
     }
