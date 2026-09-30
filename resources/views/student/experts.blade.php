@@ -546,6 +546,12 @@
                 <span class="yx-who">
                   <span class="yx-top">
                     <span class="yx-role">{{ $tile['label'] }}</span>
+                    @if($a)<span class="yx-acts">@endif
+                    {{-- Any member can print it: the whole team signs the form. --}}
+                    @if($a && $tile['slot'])
+                      <a class="yx-act" href="{{ route('student.experts.role-acceptance', $a->assignment_id) }}"
+                         title="Download the Role Acceptance Form, filled in, to print and have signed">Print form</a>
+                    @endif
                     @if($a && $isLeader)
                       @php $pendingRemoval = collect($pendingRemovalIds)->firstWhere('assignment', (int) $a->assignment_id); @endphp
                       @if($pendingRemoval)
@@ -556,6 +562,7 @@
                                 onclick="openChangeExpertModal({{ $a->assignment_id }}, '{{ addslashes($ex?->name ?? '') }}', '{{ addslashes(ucfirst($a->engaged_role_name ?? 'expert')) }}')">Change</button>
                       @endif
                     @endif
+                    @if($a)</span>@endif
                   </span>
                   <span class="yx-name">{{ $a ? ($ex?->name ?? 'Unknown') : 'Not chosen yet' }}</span>
                 </span>

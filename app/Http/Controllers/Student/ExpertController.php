@@ -11,6 +11,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
 use App\Support\SectionScope;
 use App\Support\SkillCatalog;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -296,6 +297,46 @@ class ExpertController extends Controller
             'search' => $search,
             'roleCounts' => $roleCounts,
         ]);
+    }
+
+    /**
+     * The Role Acceptance Form for an expert who approved the team, filled in
+     * from what CapsTrack already knows. The CCS still wants it signed on
+     * paper - no e-signatures - so this only saves the team the typing.
+     */
+    public function roleAcceptanceForm(TeamExpertAssignment $assignment)
+    {
+        $teamId = StudentSchoolYear::where('student_id', Auth::id())->whereNotNull('team_id')->value('team_id');
+
+        abort_unless($teamId && (int) $assignment->team_id === (int) $teamId, 403);
+        abort_unless($assignment->status === 'approved' && $assignment->expert && $assignment->engaged_role_name, 404);
+
+        $team = $assignment->team;
+
+        $members = Student::whereIn('student_id', StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id'))
+            ->orderBy('l_name')
+            ->get()
+            // The leader signs first, as on the paper form.
+            ->sortByDesc(fn ($s) => $s->student_id === $team->leader_id)
+            ->values();
+
+        $course = $members->first()?->course ?? '';
+        $role = ucfirst($assignment->engaged_role_name);
+
+        return Pdf::loadView('student.pdf.role-acceptance', [
+            'date' => $assignment->created_at,
+            'expertName' => mb_strtoupper($assignment->expert->name),
+            'course' => Student::PROGRAM_COURSES[Student::mapCourseToProgram($course)] ?? $course,
+            'members' => $members->map(fn ($s) => implode(' ', array_filter([
+                $s->f_name,
+                $s->m_name ? mb_substr($s->m_name, 0, 1).'.' : null,
+                $s->l_name,
+                $s->suffix,
+            ]))),
+            'role' => $role,
+            'teamName' => $team->team_name,
+        ])->setPaper('letter', 'portrait')
+            ->download('Role_Acceptance_Form_'.$role.'_'.str_replace(' ', '_', $team->team_name).'.pdf');
     }
 
     /**
