@@ -188,6 +188,21 @@ class TeamSeesItsOwnSubmissionsTest extends TestCase
             ->assertForbidden();
     }
 
+    /** An approved paper's form says APPROVED and nothing after it - not the date it was approved. */
+    public function test_an_approved_consultation_log_carries_no_approval_date(): void
+    {
+        $approvedAt = now()->subDays(3);
+
+        $html = view('instructor.pdf.consultation-log', [
+            'projectTitle' => 'A Capstone Project', 'alias' => 'Team', 'proponents' => collect(['Mark Cruz']),
+            'chapter' => '1', 'consultationDate' => now(), 'deadline' => null, 'approvedAt' => $approvedAt,
+            'remarksBySection' => [], 'remarks' => [], 'generalRemarks' => [],
+        ])->render();
+
+        $this->assertStringContainsString('APPROVED', $html);
+        $this->assertStringNotContainsString($approvedAt->format('F j, Y'), $html);
+    }
+
     /**
      * A chapter is the team's, so its version count is too. Both members
      * sending "Chapter 1" used to be told they were on Version 1 of it.

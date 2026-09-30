@@ -139,7 +139,8 @@
         };
 
         if ($approvedAt) {
-            $push(true, 'APPROVED — '.\Illuminate\Support\Carbon::parse($approvedAt)->format('F j, Y'));
+            // The word alone, no date after it.
+            $push(true, 'APPROVED');
         }
 
         if (! empty($generalRemarks) && count($generalRemarks)) {
