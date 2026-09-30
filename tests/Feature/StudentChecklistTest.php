@@ -51,7 +51,8 @@ class StudentChecklistTest extends TestCase
             ->assertSee('Chapter 1 Draft');
     }
 
-    public function test_a_milestone_shows_its_description_due_date_and_past_due(): void
+    /** No description on screen: it is not part of the milestone the system documents. */
+    public function test_a_milestone_shows_its_due_date_and_past_due_but_no_description(): void
     {
         $milestone = $this->checklist()->milestones()->where('name', 'Getting started')->first();
         $milestone->update([
@@ -61,7 +62,7 @@ class StudentChecklistTest extends TestCase
 
         $this->get('/student/progress')
             ->assertOk()
-            ->assertSee('Form your team and send the signed assignment form.')
+            ->assertDontSee('Form your team and send the signed assignment form.')
             ->assertSee('Due '.now()->subDays(2)->format('M j, Y'))
             ->assertSee('Past due');
 

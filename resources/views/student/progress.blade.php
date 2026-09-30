@@ -110,7 +110,6 @@
 .pt-g-main{flex:1;min-width:0;display:grid;gap:4px}
 .pt-g-name{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:14.5px;font-weight:700;color:var(--text)}
 .pt-g-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--text3)}
-.pt-g-desc{font-size:12.5px;line-height:1.5;color:var(--text2);white-space:pre-line;overflow-wrap:anywhere}
 .pt-mini{width:70px;height:5px;border-radius:99px;background:var(--bg3);overflow:hidden}
 .pt-mini i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .pt-group.is-done .pt-mini i{background:var(--green)}
@@ -373,9 +372,6 @@
               @else Due {{ $dues->first()->format('M j') }} – {{ $dues->last()->format('M j') }}
               @endif
             </span>
-            @if ($group->description)
-              <span class="pt-g-desc">{{ $group->description }}</span>
-            @endif
           </span>
           <svg class="pt-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
         </summary>
