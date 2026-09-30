@@ -79,6 +79,26 @@ class StudentExpertRoleAndSearchTest extends TestCase
     }
 
     /**
+     * The list view showed only initials even for an expert with a photo,
+     * while the cards showed it.
+     */
+    public function test_the_list_view_shows_an_experts_own_photo_over_their_initials(): void
+    {
+        [$student] = $this->leader();
+
+        $withPhoto = $this->expert('Neil', 'Inocencio', ['adviser']);
+        $withPhoto->update(['profile_picture' => 'https://lh3.googleusercontent.com/neil.jpg']);
+        $this->expert('Ramon', 'Salazar', ['adviser']);
+
+        $html = $this->actingAs($student, 'web')->get('/student/experts?role=adviser')->getContent();
+        $list = substr($html, strpos($html, 'class="listwrap"'));
+        $list = substr($list, 0, strpos($list, '</table>'));
+
+        $this->assertSame(1, substr_count($list, 'class="avatar-photo"'));
+        $this->assertStringContainsString('src="https://lh3.googleusercontent.com/neil.jpg"', $list);
+    }
+
+    /**
      * The count printed on each role card has to be the number choosing that
      * role actually shows, or it is worse than no number at all.
      */

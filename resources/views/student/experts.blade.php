@@ -780,7 +780,7 @@
           @endphp
                   <tr>
                     <td><span class="lname">
-                      <span class="expert-avatar-wrap sm"><span class="avatar" style="width:100%;height:100%;font-size:10px;">{{ $expert->avatarInitials() }}</span></span>
+                      <span class="expert-avatar-wrap sm"><span class="avatar" style="width:100%;height:100%;font-size:10px;">{{ $expert->avatarInitials() }}@if($expert->hasAvatarImage())<img class="avatar-photo" src="{{ $expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span></span>
                       <span>{{ $expert->name }}</span>
                     </span></td>
                     <td>
