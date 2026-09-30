@@ -89,6 +89,42 @@ class PreProposalOpenScanTest extends TestCase
             ->assertDontSee('Abandoned Scan');
     }
 
+    /**
+     * Clearing only the latest scan let openScan() fall back to the one
+     * before it, so the result never went away however often it was cleared.
+     */
+    public function test_clearing_a_scan_does_not_bring_back_an_older_one(): void
+    {
+        $saved = $this->scan($this->leader, 'Saved Scan');
+        $this->save($saved, 1);
+        $this->scan($this->leader, 'First Try');
+        $latest = $this->scan($this->leader, 'Second Try');
+        $teammates = $this->scan($this->member(), 'Teammate Scan');
+
+        $this->actingAs($this->leader)
+            ->deleteJson(route('student.pre-proposal.check.destroy', $latest))
+            ->assertOk();
+
+        $this->actingAs($this->leader)->get(route('student.duplication'))
+            ->assertViewHas('lastCheck', null)
+            ->assertDontSee('First Try');
+
+        $this->assertModelExists($saved);
+        $this->assertModelExists($teammates);
+    }
+
+    public function test_a_new_account_with_no_team_sees_no_ones_scan(): void
+    {
+        $this->scan($this->leader, 'Leader Scan');
+        $newcomer = Student::factory()->withCompleteProfile()->create();
+        StudentSchoolYear::create(['student_id' => $newcomer->student_id]);
+
+        $this->actingAs($newcomer)->get(route('student.duplication'))
+            ->assertOk()
+            ->assertViewHas('lastCheck', null)
+            ->assertDontSee('Leader Scan');
+    }
+
     public function test_a_newer_scan_replaces_an_older_unsaved_one(): void
     {
         $this->scan($this->leader, 'First Try');
