@@ -512,6 +512,26 @@ class PreProposalControllerTest extends TestCase
         $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => 1, 'title' => self::TITLE]);
     }
 
+    /** A representative is a person; the organization may carry a number ("Barangay 5"). */
+    public function test_a_representatives_name_cannot_have_numbers(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $checkId = $this->post(route('student.pre-proposal.check'), [
+            'document' => UploadedFile::fake()->create('proposal.pdf', 10, 'application/pdf'),
+        ])->json('duplication_check_id');
+
+        $this->post(route('student.pre-proposal.store'), ['client_representative' => 'Ana Cruz 2'] + $this->payload($checkId))
+            ->assertSessionHasErrors(['client_representative' => "A representative's name has no numbers."]);
+        $this->assertSame(0, $team->preProposals()->count());
+
+        $this->post(route('student.pre-proposal.store'), ['clients' => 'Barangay 5'] + $this->payload($checkId))
+            ->assertSessionHasNoErrors();
+        $this->assertSame(1, $team->preProposals()->count());
+    }
+
     public function test_edit_page_hides_the_choose_title_button_from_non_leader_members(): void
     {
         [$leader, $team] = $this->makeLeaderWithTeam();
