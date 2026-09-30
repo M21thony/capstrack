@@ -93,7 +93,7 @@ class ReaderScreensTest extends TestCase
             ->assertSee('Chapter2_final')
             ->assertSee('Needs revision')
             ->assertSee('Submit 2nd revision')
-            ->assertSee("openSubmission('{$this->item->id}', this)", false)
+            ->assertSee("openSubmission('{$this->item->id}', this, ".DB::table('capstone_documents')->value('file_id').')', false)
             ->assertSee('Add three local studies.')
             ->assertSee('Consultant · still reviewing');
     }
