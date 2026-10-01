@@ -8,7 +8,7 @@
 @php
   $icons = ['title' => 'file', 'adviser_title' => 'file', 'verify' => 'shield', 'paper' => 'clip', 'signed' => 'star',
             'review' => 'file', 'leave' => 'users', 'expert' => 'user', 'invite' => 'mail', 'grade' => 'trophy'];
-  $hatName = fn ($hat) => $hat === 'capsa' ? 'CaPSA' : $hat;
+  $hatName = fn ($hat) => $hat === 'capsa' ? 'CaPSA' : ucfirst($hat);
   $resultTone = fn ($r) => preg_match('/Approved|Verified|Accepted|Checked|Recommended|Reviewed|Submitted/', $r) ? 'ok'
     : (preg_match('/Turned|Declined|Rejected/', $r) ? 'bad' : 'idle');
   $hubRoute = $portal === 'capsa' ? 'capsa.team_management' : 'instructor.teams';
@@ -16,11 +16,11 @@
 
 <div class="tools">
   <div class="seg" role="group" aria-label="Show">
-    <button type="button" data-todo-mode="waiting" aria-pressed="true">Waiting on you <span class="sn">{{ $todo->count() }}</span></button>
+    <button type="button" data-todo-mode="waiting" aria-pressed="true">Pending <span class="sn">{{ $todo->count() }}</span></button>
     <button type="button" data-todo-mode="decided" aria-pressed="false">Decided</button>
   </div>
   @if ($portal === 'capsa')
-    <a class="tm-link" href="{{ route('capsa.team_management', ['tab' => 'leave_requests']) }}">All leave and expert requests</a>
+    <a class="tm-link" href="{{ route('capsa.team_management', ['tab' => 'leave_requests']) }}">All leave and change requests</a>
   @endif
 </div>
 
@@ -38,7 +38,7 @@
                 <span>
                   @if ($item->teamUrl)<a class="team" href="{{ $item->teamUrl }}">Team {{ $item->teamName }}</a>@else Team {{ $item->teamName }}@endif
                   @if ($item->section) · {{ $item->section }}@endif
-                  @if ($twoHats) · <b class="hat">As {{ $hatName($item->hat) }}</b>@endif
+                  @if ($twoHats) · <b class="hat">{{ $hatName($item->hat) }}</b>@endif
                   · {{ $item->why }} ·
                   @if ($item->age >= \App\Support\TeamTodo::LATE_AFTER_DAYS)
                     <span class="late">Waiting {{ $item->age }} days</span>
@@ -71,8 +71,8 @@
       @empty
         <div class="tm-empty">
           <b>All caught up</b>
-          Nothing is waiting on you. New titles, papers and requests will show up here.<br><br>
-          <a class="btn btn-o" href="{{ route($hubRoute, ['tab' => 'teams', 'quick' => 'behind']) }}" data-hub-tab="teams" data-quick-go="behind">See teams behind schedule</a>
+          Nothing to do right now. New titles, papers and requests show up here.<br><br>
+          <a class="btn btn-o" href="{{ route($hubRoute, ['tab' => 'teams', 'quick' => 'behind']) }}" data-hub-tab="teams" data-quick-go="behind">See overdue teams</a>
         </div>
       @endforelse
     </div>

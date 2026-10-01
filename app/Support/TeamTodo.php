@@ -203,7 +203,7 @@ class TeamTodo
                     'url' => route('capsa.expert_removal_requests.update', $request),
                     'field' => 'status', 'approve' => ExpertRemovalRequest::APPROVED, 'decline' => ExpertRemovalRequest::DECLINED,
                     'note' => 'note', 'min' => 1,
-                    'effect' => 'The '.$role.' seat opens and the team can ask a new '.$role.'. The expert and the team are told.',
+                    'effect' => 'The '.$role.' seat opens and the team can ask a new '.$role.'. Everyone involved is told.',
                 ],
             ]));
         }
@@ -242,7 +242,7 @@ class TeamTodo
                 'teamId' => (int) $assignment->team_id, 'teamName' => $assignment->team->team_name,
                 'section' => $byTeam->get((int) $assignment->team_id)?->section ?? '',
                 'teamUrl' => $teamUrl((int) $assignment->team_id),
-                'what' => 'Be their '.$role,
+                'what' => 'Invited as '.$role,
                 'why' => $assignment->team->project_title ?: 'They asked you to take them on',
                 'at' => $assignment->created_at,
                 'label' => 'Accept',
@@ -323,7 +323,7 @@ class TeamTodo
         foreach (ExpertRemovalRequest::visibleTo($capsa, ExpertRemovalRequest::with(['team', 'expert'])
             ->whereIn('status', [ExpertRemovalRequest::APPROVED, ExpertRemovalRequest::DECLINED])
             ->latest('updated_at')->limit(30)->get()) as $request) {
-            $done->push($this->done($request->team, 'Change of expert ('.($request->expert?->name ?? 'expert').')',
+            $done->push($this->done($request->team, 'Change of '.($request->expert?->name ?? 'adviser'),
                 ucfirst($request->status), $request->decided_at ?? $request->updated_at, 'capsa'));
         }
 

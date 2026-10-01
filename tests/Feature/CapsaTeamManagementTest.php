@@ -347,7 +347,7 @@ class CapsaTeamManagementTest extends TestCase
             ->assertOk()->getContent();
 
         // The summary names the waiting work, and To do lists it.
-        $this->assertStringContainsString('1 waiting on you', $html);
+        $this->assertStringContainsString('1 to do', $html);
         $this->assertStringContainsString('Review 1 title', $html);
 
         // The old strip and its red badges are gone with it.
@@ -376,7 +376,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->assertLessThan(strpos($teams, 'Team Quiet'), strpos($teams, 'Team Older'));
 
         $this->assertSame(2, substr_count($teams, 'class="tm-needs"'));
-        $this->assertStringContainsString('Waiting on you: Review 1 title', $teams);
+        $this->assertStringContainsString('To do: Review 1 title', $teams);
         $this->assertStringContainsString('2 days ago', $teams);
         // Only the one from today pulses.
         $this->assertSame(1, substr_count($teams, 'class="tm-dot new"'));

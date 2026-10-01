@@ -21,13 +21,12 @@
     <h1>{{ $capsaPortal ? 'Teams' : 'My Teams' }}</h1>
     <p class="hub-sum">
       @if ($todo->isNotEmpty())
-        <b class="w">{{ $todo->count() }} waiting on you</b>@if ($late), <b class="late">{{ $late }} for 3+ days</b>@endif ·
+        <b class="w">{{ $todo->count() }} to do</b>@if ($late), <b class="late">{{ $late }} waiting 3+ days</b>@endif ·
       @endif
       {{ $rows->count() }} {{ \Illuminate\Support\Str::plural('team', $rows->count()) }} · {{ $verified }} verified
       @if ($capsaPortal)
         @if ($allSections !== []) · {{ implode(', ', $allSections) }}@endif
       @else
-        · where you are adviser, consultant, grammarian or panel
       @endif
     </p>
   </div>
