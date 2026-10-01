@@ -349,6 +349,7 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
     Route::delete('/{review}/general-remarks/{remark}', [PdfAnnotationController::class, 'generalDestroy'])->name('general-remarks.destroy');
     Route::get('/{review}/status', [PdfAnnotationController::class, 'showStatus'])->name('status.show');
     Route::post('/{review}/status', [PdfAnnotationController::class, 'updateStatus'])->name('status.update');
+    Route::post('/{review}/figures-checked', [PdfAnnotationController::class, 'updateFiguresChecked'])->name('figures-checked.update');
     Route::put('/{review}/drive-file', [PdfAnnotationController::class, 'syncDrive'])->name('sync-drive');
     // The team's earlier uploads of the same requirement, to compare against.
     Route::get('/{review}/versions/{document}/file', [PdfAnnotationController::class, 'versionFile'])->name('versions.file');

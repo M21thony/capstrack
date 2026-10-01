@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
+use App\Models\PdfRemark;
 use App\Models\Student;
 use App\Services\GoogleDriveService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -614,5 +615,171 @@ class PdfAnnotationTest extends TestCase
         );
 
         $response->assertStatus(422);
+    }
+
+    public function test_stores_a_box_remark_with_every_box_and_its_figure(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(30, $expert->expert_id, 'Reviewing');
+
+        $this->postJson("/reviews/{$reviewId}/remarks", ['comments' => [[
+            'type' => 'box',
+            'page_number' => 2,
+            'text' => 'Foreign key is not shown.',
+            'color' => 'pink',
+            'figure_label' => 'Figure 3.2',
+            'diagram_type' => 'ERD',
+            'highlightRects' => [
+                ['top_position' => 0.2, 'left_position' => 0.1, 'highlight_width' => 0.3, 'highlight_height' => 0.1],
+                ['top_position' => 0.4, 'left_position' => 0.5, 'highlight_width' => 0.2, 'highlight_height' => 0.1],
+            ],
+        ]]])->assertOk();
+
+        $remark = PdfRemark::where('review_id', $reviewId)->sole();
+        $this->assertSame('box', $remark->mark_type);
+        $this->assertSame('Figure 3.2', $remark->figure_label);
+        $this->assertSame('ERD', $remark->diagram_type);
+        // Both boxes come back as two boxes...
+        $this->assertCount(2, $remark->rects);
+        // ...and the four position columns hold the box around both of them.
+        $this->assertEqualsWithDelta(0.2, (float) $remark->top_position, 1e-6);
+        $this->assertEqualsWithDelta(0.1, (float) $remark->left_position, 1e-6);
+        $this->assertEqualsWithDelta(0.6, (float) $remark->highlight_width, 1e-6);
+        $this->assertEqualsWithDelta(0.3, (float) $remark->highlight_height, 1e-6);
+
+        $this->getJson("/reviews/{$reviewId}/remarks")
+            ->assertOk()
+            ->assertJsonPath('0.mark_type', 'box')
+            ->assertJsonPath('0.figure_label', 'Figure 3.2')
+            ->assertJsonCount(2, '0.rects');
+    }
+
+    public function test_stores_a_pin_as_a_point(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(31, $expert->expert_id, 'Reviewing');
+
+        $this->postJson("/reviews/{$reviewId}/remarks", ['comments' => [[
+            'type' => 'pin',
+            'page_number' => 1,
+            'text' => 'Label this data flow.',
+            'color' => 'yellow',
+            'figure_label' => 'Figure 3.1',
+            'diagram_type' => 'DFD',
+            'highlightRects' => [],
+            'x_position' => 0.35,
+            'y_position' => 0.62,
+        ]]])->assertOk();
+
+        $remark = PdfRemark::where('review_id', $reviewId)->sole();
+        $this->assertSame('pin', $remark->mark_type);
+        $this->assertEqualsWithDelta(0.35, (float) $remark->left_position, 1e-6);
+        $this->assertEqualsWithDelta(0.62, (float) $remark->top_position, 1e-6);
+        $this->assertEqualsWithDelta(0.0, (float) $remark->highlight_width, 1e-6);
+        $this->assertNull($remark->rects);
+    }
+
+    public function test_a_text_remark_keeps_no_figure_number(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(32, $expert->expert_id, 'Reviewing');
+
+        // A remark sent without a type is a text remark, as every remark was before.
+        $this->postJson("/reviews/{$reviewId}/remarks", ['comments' => [[
+            'page_number' => 1,
+            'text' => 'Reword this.',
+            'selectedText' => 'the words',
+            'figure_label' => 'Figure 9',
+            'highlightRects' => [['top_position' => 0.1, 'left_position' => 0.1, 'highlight_width' => 0.4, 'highlight_height' => 0.02]],
+        ]]])->assertOk();
+
+        $remark = PdfRemark::where('review_id', $reviewId)->sole();
+        $this->assertSame('text', $remark->mark_type);
+        $this->assertNull($remark->figure_label);
+        $this->assertSame('the words', $remark->selected_text);
+        $this->assertNull($remark->rects);
+    }
+
+    public function test_refuses_an_unknown_mark_or_diagram_type(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(33, $expert->expert_id, 'Reviewing');
+
+        $this->postJson("/reviews/{$reviewId}/remarks", ['comments' => [[
+            'type' => 'circle', 'page_number' => 1, 'text' => 'x',
+        ]]])->assertStatus(422)->assertJsonValidationErrors('comments.0.type');
+
+        $this->postJson("/reviews/{$reviewId}/remarks", ['comments' => [[
+            'type' => 'box', 'page_number' => 1, 'text' => 'x', 'diagram_type' => 'Venn',
+        ]]])->assertStatus(422)->assertJsonValidationErrors('comments.0.diagram_type');
+    }
+
+    public function test_saves_the_figures_the_reviewer_checked(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(34, $expert->expert_id, 'Reviewing');
+
+        $this->getJson("/reviews/{$reviewId}/status")->assertJsonPath('figures_checked', []);
+
+        $this->postJson("/reviews/{$reviewId}/figures-checked", ['figures' => ['Figure 3.1', 'Figure 3.4', 'Figure 3.1']])
+            ->assertOk()
+            ->assertJsonPath('figures_checked', ['Figure 3.1', 'Figure 3.4']);
+
+        $this->getJson("/reviews/{$reviewId}/status")->assertJsonPath('figures_checked', ['Figure 3.1', 'Figure 3.4']);
+    }
+
+    public function test_cannot_check_figures_on_another_experts_review(): void
+    {
+        $this->loginAsApprovedExpert();
+
+        $otherExpert = CapstoneExpert::create([
+            'email' => 'figures.other@gmail.com',
+            'first_name' => 'Other',
+            'last_name' => 'Expert',
+            'is_admin' => false,
+            'approved_status' => true,
+        ]);
+        $reviewId = $this->makeReview(35, $otherExpert->expert_id, 'Reviewing');
+
+        $this->postJson("/reviews/{$reviewId}/figures-checked", ['figures' => ['Figure 1']])->assertForbidden();
+        $this->assertNull(CapstoneDocumentReview::find($reviewId)->figures_checked);
+    }
+
+    public function test_the_clf_says_which_figure_a_remark_is_about(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(36, $expert->expert_id, 'Reviewed');
+
+        $this->postJson("/reviews/{$reviewId}/remarks", ['comments' => [
+            [
+                'type' => 'box', 'page_number' => 2, 'text' => 'Foreign key is not shown.', 'section' => '3.3 Data Design',
+                'figure_label' => 'Figure 3.2', 'diagram_type' => 'ERD',
+                'highlightRects' => [['top_position' => 0.2, 'left_position' => 0.1, 'highlight_width' => 0.3, 'highlight_height' => 0.1]],
+            ],
+            [
+                'page_number' => 1, 'text' => 'Name the Agile framework.', 'selectedText' => 'Agile model',
+                'highlightRects' => [['top_position' => 0.1, 'left_position' => 0.1, 'highlight_width' => 0.2, 'highlight_height' => 0.02]],
+            ],
+        ]])->assertOk();
+
+        $grouped = PdfRemark::groupedForReview($reviewId);
+        $html = view('instructor.pdf.consultation-log', [
+            'projectTitle' => 'BarangayConnect',
+            'alias' => 'Team BarangayConnect',
+            'proponents' => collect(['Juan Dela Cruz']),
+            'chapter' => 'Chapter 3',
+            'consultationDate' => now(),
+            'deadline' => null,
+            'approvedAt' => null,
+            'remarksBySection' => $grouped['bySection'],
+            'remarks' => $grouped['remarks'],
+            'generalRemarks' => $grouped['general'],
+        ])->render();
+
+        // Just the figure number in front - no brackets, nothing highlighted.
+        $this->assertStringContainsString('• Figure 3.2: Foreign key is not shown.', $html);
+        // A remark on words prints as it always has.
+        $this->assertStringContainsString('• Name the Agile framework.', $html);
+        $this->assertStringNotContainsString('Figure 3.2: Name', $html);
     }
 }
