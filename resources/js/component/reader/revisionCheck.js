@@ -177,6 +177,25 @@ function locateFigure(remark, ctx) {
 }
 
 /**
+ * What the words inside a figure say about it at a place in this version:
+ * the labels that are new or gone, inside the marked area only. `changed`
+ * is null when there are no words there at all (a diagram that is a picture).
+ */
+export function labelsAt(remark, target, oldWords, newWords) {
+  const area = remark.type === "pin"
+    ? { top_position: remark.y_position - 0.06, left_position: remark.x_position - 0.1, highlight_width: 0.2, highlight_height: 0.12 }
+    : boundsOf(remark.highlightRects);
+  const moved = remark.type === "pin"
+    ? { top_position: target.y - 0.06, left_position: target.x - 0.1, highlight_width: 0.2, highlight_height: 0.12 }
+    : boundsOf(target.rects);
+  const oldIdx = wordsInside(oldWords, remark.page_number, area, 0.003);
+  const newIdx = wordsInside(newWords, target.page, moved, 0.003);
+  if (!oldIdx.length && !newIdx.length) return { changed: null, removedWords: "", addedWords: "" };
+  const words = labelChanges(oldWords, oldIdx, newWords, newIdx);
+  return { changed: Boolean(words.removed || words.added), removedWords: words.removed, addedWords: words.added };
+}
+
+/**
  * Every remark from the earlier version ({id, type, page_number,
  * highlightRects, x/y_position, selectedText, figure_label, text, ...}),
  * with where it is in this version and what changed there.
@@ -204,21 +223,13 @@ export function checkRevision(remarks, oldWords, newWords, { removed, added }) {
       const target = remark.type === "pin"
         ? { page: at.page, x: remark.x_position, y: clamp(remark.y_position + at.dy), rects: [] }
         : { page: at.page, rects: remark.highlightRects.map(shift) };
-      const area = remark.type === "pin"
-        ? { top_position: remark.y_position - 0.06, left_position: remark.x_position - 0.1, highlight_width: 0.2, highlight_height: 0.12 }
-        : boundsOf(remark.highlightRects);
-      const oldIdx = wordsInside(oldWords, remark.page_number, area, 0.003);
-      const newIdx = wordsInside(newWords, at.page, shift(area), 0.003);
-      const words = labelChanges(oldWords, oldIdx, newWords, newIdx);
-      const hasWords = oldIdx.length > 0 || newIdx.length > 0;
+      const words = labelsAt(remark, target, oldWords, newWords);
       return {
         ...remark,
         target,
         foundBy: at.how,
         figureNow: at.label || remark.figure_label || null,
-        changed: hasWords ? Boolean(words.removed || words.added) : null,
-        removedWords: words.removed,
-        addedWords: words.added,
+        ...words,
       };
     }
 
@@ -367,8 +378,8 @@ export const PICTURE_FOUND = 0.6;
 
 /**
  * Where a picture (tpl, grey) is on a page (grey, same scale): the top-left
- * corner where the two are most alike. Every place is tried on every other
- * pixel, then the best is refined on every pixel. `found` is false when even
+ * corner where the two are most alike, to a fraction of a pixel. Every place
+ * is tried on every other pixel, then the best is refined on every pixel. `found` is false when even
  * the best place is not clearly the picture.
  */
 export function findPicture(pageGrey, pageW, pageH, tplGrey, tplW, tplH) {
@@ -390,5 +401,15 @@ export function findPicture(pageGrey, pageW, pageH, tplGrey, tplW, tplH) {
       if (score > best.score) best = { x, y, score };
     }
   }
-  return { ...best, found: best.score >= PICTURE_FOUND };
+  // Between pixels: a parabola through the scores either side of the best
+  // place puts it to a fraction of a pixel, so the two pictures can be laid
+  // over each other without every thin line looking moved by half a pixel.
+  const at = (x, y) => likeness(page, pageW, tpl, tplW, tplH, x, y, 1);
+  const between = (before, after) => {
+    const bend = before - 2 * best.score + after;
+    return bend < 0 ? Math.max(-0.5, Math.min(0.5, (before - after) / (2 * bend))) : 0;
+  };
+  const x = best.x > 0 && best.x < pageW - tplW ? best.x + between(at(best.x - 1, best.y), at(best.x + 1, best.y)) : best.x;
+  const y = best.y > 0 && best.y < pageH - tplH ? best.y + between(at(best.x, best.y - 1), at(best.x, best.y + 1)) : best.y;
+  return { x, y, score: best.score, found: best.score >= PICTURE_FOUND };
 }
