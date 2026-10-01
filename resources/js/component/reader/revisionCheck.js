@@ -301,3 +301,94 @@ export function pictureDifference(a, b, width, height, { maxShift = 3, cell = 4,
 
 /** Above this share of clearly different blocks, a picture counts as changed. */
 export const PICTURE_CHANGED = 0.001;
+
+/** Grey levels (0 black - 255 white) of an RGBA image. */
+export function greyOf(rgba, width, height) {
+  const g = new Float32Array(width * height);
+  for (let i = 0; i < g.length; i++) g[i] = 0.299 * rgba[i * 4] + 0.587 * rgba[i * 4 + 1] + 0.114 * rgba[i * 4 + 2];
+  return g;
+}
+
+
+/** A 3 x 3 average, so a line one pixel off still overlaps itself. */
+function soften(g, width, height) {
+  const out = new Float32Array(g.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let total = 0;
+      let n = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const yy = y + dy;
+          const xx = x + dx;
+          if (yy >= 0 && yy < height && xx >= 0 && xx < width) { total += g[yy * width + xx]; n++; }
+        }
+      }
+      out[y * width + x] = total / n;
+    }
+  }
+  return out;
+}
+
+/**
+ * How alike a picture is to the part of a page at (x, y): normalised
+ * correlation, from 1 (the same pattern of dark and light) down. It compares
+ * the shape of the drawing, not how dark it is, so a faint thin-lined diagram
+ * scores as well as a bold one, and blank paper scores 0.
+ */
+function likeness(page, pageW, tpl, tplW, tplH, x, y, step) {
+  let n = 0;
+  let st = 0;
+  let sp = 0;
+  for (let ty = 0; ty < tplH; ty += step) {
+    const row = (y + ty) * pageW + x;
+    for (let tx = 0; tx < tplW; tx += step) { st += tpl[ty * tplW + tx]; sp += page[row + tx]; n++; }
+  }
+  const mt = st / n;
+  const mp = sp / n;
+  let cov = 0;
+  let vt = 0;
+  let vp = 0;
+  for (let ty = 0; ty < tplH; ty += step) {
+    const row = (y + ty) * pageW + x;
+    for (let tx = 0; tx < tplW; tx += step) {
+      const a = tpl[ty * tplW + tx] - mt;
+      const b = page[row + tx] - mp;
+      cov += a * b;
+      vt += a * a;
+      vp += b * b;
+    }
+  }
+  return vt > 0 && vp > 0 ? cov / Math.sqrt(vt * vp) : 0;
+}
+
+/** At or above this likeness, the picture is taken to be there. */
+export const PICTURE_FOUND = 0.6;
+
+/**
+ * Where a picture (tpl, grey) is on a page (grey, same scale): the top-left
+ * corner where the two are most alike. Every place is tried on every other
+ * pixel, then the best is refined on every pixel. `found` is false when even
+ * the best place is not clearly the picture.
+ */
+export function findPicture(pageGrey, pageW, pageH, tplGrey, tplW, tplH) {
+  if (tplW > pageW || tplH > pageH) return { found: false, x: 0, y: 0, score: 0 };
+  const page = soften(pageGrey, pageW, pageH);
+  const tpl = soften(tplGrey, tplW, tplH);
+  let best = { x: 0, y: 0, score: -Infinity };
+  for (let y = 0; y + tplH <= pageH; y++) {
+    for (let x = 0; x + tplW <= pageW; x++) {
+      const score = likeness(page, pageW, tpl, tplW, tplH, x, y, 2);
+      if (score > best.score) best = { x, y, score };
+    }
+  }
+  const around = best;
+  best = { x: around.x, y: around.y, score: likeness(page, pageW, tpl, tplW, tplH, around.x, around.y, 1) };
+  for (let y = Math.max(0, around.y - 2); y <= Math.min(pageH - tplH, around.y + 2); y++) {
+    for (let x = Math.max(0, around.x - 2); x <= Math.min(pageW - tplW, around.x + 2); x++) {
+      const score = likeness(page, pageW, tpl, tplW, tplH, x, y, 1);
+      if (score > best.score) best = { x, y, score };
+    }
+  }
+  return { ...best, found: best.score >= PICTURE_FOUND };
+}
