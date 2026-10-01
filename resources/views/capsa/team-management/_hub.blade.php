@@ -3,7 +3,7 @@
   Teams): To do, Teams, and for a CaPSA a Milestones tab that sets up the
   checklist.
 --}}
-<div class="tmx tm-list tm-hub" data-portal="{{ $portal }}">
+<div class="tmx tm-hub" data-portal="{{ $portal }}">
   @include('capsa.team-management._hub-head')
 
   @if (in_array($tab, ['todo', 'teams'], true))

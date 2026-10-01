@@ -24,15 +24,21 @@
   .tp-facts dt{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
   .tp-facts dd{margin:2px 0 0;font-size:13px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
   .tp-acts{display:flex;gap:8px;flex-wrap:wrap}
-  .tp-acts .btn{height:38px;padding:0 14px}
+  .tp-acts .btn{padding:7px 13px;font-size:12.5px;border-radius:8px;box-shadow:none}
 
   /* What on this team is waiting on her: the first thing, and how many more. */
-  .tp-needs{display:flex;align-items:center;gap:16px;padding:7px 16px;border:1px solid var(--amber);background:var(--amber-bg);border-radius:12px;flex-wrap:wrap}
-  .tp-needs-h{display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--amber);white-space:nowrap}
-  .tp-needs-h a{font-size:12px;letter-spacing:0;text-transform:none;font-weight:600;color:var(--ink2)}
-  .tp-needs-what{flex:1;min-width:200px;font-size:12.5px;color:var(--mut)}
+  .tp-needs{display:flex;align-items:center;gap:14px;padding:10px 18px;border:1px solid #b45309;background:#fffbeb;border-radius:12px;flex-wrap:wrap}
+  .tp-needs-h{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#b45309;white-space:nowrap}
+  .tp-needs-h a{font-size:12px;letter-spacing:0;text-transform:none;font-weight:600;color:var(--ink2);text-decoration:underline;text-underline-offset:2px}
+  .tp-needs-ico{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;background:var(--tint);color:var(--accent3);flex:none}
+  .tp-needs-what{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--mut)}
   .tp-needs-what b{font-size:13.5px;color:var(--ink)}
-  .tp-needs .btn{padding:5px 14px}
+  .tp-needs .btn{padding:7px 13px;font-size:12.5px;border-radius:8px;box-shadow:none}
+  .tp-st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--mut);letter-spacing:0}
+  .tp-st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+  .tp-st.ok{color:var(--green)} .tp-st.warn{color:#b45309}
+  .tp-facts dd.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+  .tp .btn{box-shadow:none}
 
   .tp-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:stretch}
   .tp-col{display:flex;flex-direction:column;gap:16px;min-width:0}
@@ -111,7 +117,7 @@
      at all rather than cut in half. */
   @media (min-width:1101px){
     .content:has(.tp){display:flex;flex-direction:column}
-    .content:has(.tp) > .tmx{flex:1 0 auto;display:flex;flex-direction:column;padding-block:12px}
+    .content:has(.tp) > .tmx{flex:1 0 auto;display:flex;flex-direction:column;padding-block:20px}
     .content:has(.tp) > .tmx > .crumb{margin-bottom:8px}
     .tp{flex:1 0 auto}
     .tp-grid{flex:1}
@@ -192,15 +198,15 @@
 
 <div class="tp">
   <div class="tp-head">
-    <span class="tp-tav" style="background:linear-gradient(135deg,{{ $row->gradient }})" aria-hidden="true">{{ $row->initials }}</span>
+    <span class="tp-tav" style="background:{{ Str::before($row->gradient, ',') }}" aria-hidden="true">{{ $row->initials }}</span>
     <div class="grow">
       <h1>{{ $team->team_name }}
         @if ($team->is_confirmed)
-          <span class="pill p-green">Verified</span>
+          <span class="tp-st ok">Verified</span>
         @elseif ($row->awaitingVerification)
-          <span class="pill p-amber">To verify</span>
+          <span class="tp-st warn">To verify</span>
         @else
-          <span class="pill p-gray">{{ ucfirst($team->team_status) }}</span>
+          <span class="tp-st">{{ ucfirst($team->team_status) }}</span>
         @endif
       </h1>
       <div class="tp-meta">
@@ -212,7 +218,7 @@
       <dl class="tp-facts">
         <div><dt>Section</dt><dd>{{ $row->section }}</dd></div>
         <div><dt>Next</dt><dd>{{ $next }}</dd></div>
-        <div><dt>Latest score{{ $score ? ' · '.$score->label : '' }}</dt><dd>{{ $score ? \App\Support\DefenseScores::format($score->average) : 'None yet' }}</dd></div>
+        <div><dt>Latest score{{ $score ? ' · '.$score->label : '' }}</dt><dd @class(['mono' => $score])>{{ $score ? \App\Support\DefenseScores::format($score->average) : 'None yet' }}</dd></div>
       </dl>
     </div>
     <div class="tp-acts">
@@ -234,7 +240,9 @@
           <a href="{{ route($hubRoute, ['tab' => 'todo']) }}">+{{ $waiting->count() - 1 }} more in To do</a>
         @endif
       </div>
-      <div class="tp-needs-what"><b>{{ $first->what }}</b> · {{ $first->why }}</div>
+      @php $needIcons = ['title' => 'file', 'verify' => 'shield', 'paper' => 'clip', 'signed' => 'star', 'review' => 'file']; @endphp
+      <span class="tp-needs-ico"><x-tm-icon :n="$needIcons[$first->kind] ?? 'dot'" s="18" /></span>
+      <div class="tp-needs-what"><b>{{ $first->what }}</b><span>{{ $first->why }}</span></div>
       <a class="btn btn-p" href="{{ $first->url }}">{{ $first->label }}</a>
     </div>
   @endif

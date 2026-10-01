@@ -19,10 +19,10 @@
   $waitsBy = $todo->groupBy('teamId');
 
   // Said once, so the Status column and the Status filter cannot disagree.
-  $statusOf = fn ($r) => $r->team->is_confirmed ? 'Verified'
-    : ($r->awaitingVerification ? 'To verify' : ucfirst($r->team->team_status));
-  $statusPill = ['Verified' => 'p-green', 'To verify' => 'p-amber'];
-  $statusRank = ['To verify' => 1, 'Verified' => 3];
+  $statusOf = fn ($r) => $r->failedStage ? 'Missed deadline'
+    : ($r->team->is_confirmed ? 'Verified' : ($r->awaitingVerification ? 'To verify' : ucfirst($r->team->team_status)));
+  $statusTone = ['Verified' => 'st-ok', 'To verify' => 'st-warn', 'Missed deadline' => 'st-bad'];
+  $statusRank = ['Missed deadline' => 0, 'To verify' => 1, 'Verified' => 3];
 
   $behind = fn ($r) => ($r->milestones?->overdue ?? 0) > 0 || $r->failedStage;
   $quick = array_filter([
@@ -36,11 +36,11 @@
 <div class="tools">
   <div class="seg tm-quick" role="group" aria-label="Quick view">
     @foreach ($quick as $key => [$label, $n])
-      <button type="button" data-quick="{{ $key }}" aria-pressed="{{ $key === 'all' ? 'true' : 'false' }}">{{ $label }} <span class="sn">{{ $n }}</span></button>
+      <button type="button" data-quick="{{ $key }}" aria-pressed="{{ $key === 'all' ? 'true' : 'false' }}">{{ $label }} <span class="num muted">{{ $n }}</span></button>
     @endforeach
   </div>
 
-  <label class="fs">
+  <label class="search">
     <x-tm-icon n="search" s="16" />
     <input type="search" id="tm-q" placeholder="Search team, title or member (press /)" aria-label="Search teams">
   </label>
@@ -70,14 +70,11 @@
     @endforeach
   </select>
 
-  <button type="button" class="btn btn-o" data-clear hidden>Clear filters</button>
-  @unless ($capsaPortal)
-    <a class="tm-link" href="{{ route('instructor.progress') }}">Milestone tracker</a>
-  @endunless
+  <button type="button" class="btn" data-clear hidden>Clear filters</button>
 </div>
 
-<div class="tcard" id="tm-teams">
-  <div class="tscroll"><table data-export="Teams">
+<div class="card" id="tm-teams">
+  <div class="tscroll"><table data-export="Teams" data-export-into="#tm-teams .tx-host">
     <thead><tr>
       <th aria-sort="none"><button type="button" class="sort" data-sort="name">Team<span aria-hidden="true">↕</span></button></th>
       <th class="c-adv" aria-sort="none"><button type="button" class="sort" data-sort="adviser">Adviser<span aria-hidden="true">↕</span></button></th>
@@ -118,29 +115,25 @@
             'awaiting_review' => $row->inSections ? 'Titles to review' : 'Titles with the CaPSA',
             'all_rejected' => 'All titles turned down - the team is writing new ones',
           ][$row->titleState] ?? 'No titles yet';
-          $newest = $waits->max('at');
         @endphp
         <tr data-href="{{ $href }}" data-q="{{ $haystack }}" data-st="{{ $status }}"
             data-needs="{{ $waits->isNotEmpty() ? 1 : 0 }}" data-behind="{{ $behind($row) ? 1 : 0 }}"
             data-mine="{{ $row->myRole ? 1 : 0 }}" data-role="{{ $row->myRole }}"
             data-name="{{ Str::lower($team->team_name) }}" data-adviser="{{ Str::lower($adviser?->name ?? '~') }}"
             data-progress="{{ $done }}" data-rank="{{ $statusRank[$status] ?? 2 }}"
-            @class(['tm-needs' => $waits->isNotEmpty()])>
+            @class(['wait' => $waits->isNotEmpty()])>
           <td data-label="Team"><div class="tm">
-            <div class="av" style="background:linear-gradient(135deg,{{ $row->gradient }})">{{ $row->initials }}</div>
+            <div class="av" style="background:{{ Str::before($row->gradient, ',') }}">{{ $row->initials }}</div>
             <div style="min-width:0">
               <a class="tn" href="{{ $href }}">{{ $team->team_name }}</a>
               <span class="tt" title="{{ $team->project_title ?: $untitled }}">@if ($team->project_title){{ $team->project_title }}@else<i>{{ $untitled }}</i>@endif</span>
               <small>@if ($row->myRole && ($twoHats || ! $capsaPortal))<b class="hat">{{ ucfirst($row->myRole) }}</b> · @endif{{ $row->section }} · {{ $row->members->count() }} of {{ $maxMembers }} members</small>
               @if ($waits->isNotEmpty())
-                <span class="tm-wait">
-                  <span @class(['tm-dot', 'new' => $newest?->gt(now()->subDay())])></span><span class="tm-what">To do: {{ $waits->pluck('what')->implode(' · ') }}</span>
-                  @if ($newest)<time datetime="{{ $newest->toIso8601String() }}">&middot; {{ $newest->diffForHumans() }}</time>@endif
-                </span>
+                <span class="w tm-what">To do: {{ $waits->pluck('what')->implode(' · ') }}</span>
               @endif
             </div>
           </div></td>
-          <td class="c-adv" data-label="Adviser">@if ($adviser){{ $adviser->name }}@else<span class="tsub">None yet</span>@endif</td>
+          <td class="c-adv" data-label="Adviser">@if ($adviser){{ $adviser->name }}@else<span class="muted">None yet</span>@endif</td>
           <td data-label="Progress">
             @if ($milestones->isNotEmpty())
               <div class="prog">
@@ -150,26 +143,23 @@
                 <small @class(['od' => $overdue])>@if ($overdue){{ $overdue }} overdue · @endif{{ $done }} of {{ $milestones->count() }} · {{ $current ? $current->milestone->name : 'All done' }}</small>
               </div>
             @elseif ($row->milestones === null && $row->myRole && ! $row->inSections && ! in_array($row->myRole, \App\Support\TeamRows::FOLLOWS_PROGRESS, true))
-              <span class="tsub">Followed by its adviser and consultant</span>
+              <span class="muted">Followed by its adviser and consultant</span>
             @else
-              <span class="tsub">No checklist yet</span>
+              <span class="muted">No checklist yet</span>
             @endif
           </td>
           <td data-label="Next">{{ $next }}
             @if ($score)
-              <div class="tsub" aria-label="Defense scores">{{ \App\Support\DefenseScores::format($score->average) }} at the {{ $score->label }}</div>
+              <div class="muted" style="font-size:12px" aria-label="Defense scores">{{ \App\Support\DefenseScores::format($score->average) }} at the {{ $score->label }}</div>
             @endif
           </td>
           <td data-label="Status">
-            <span class="pill {{ $statusPill[$status] ?? 'p-gray' }}">{{ $status }}</span>
-            @if ($row->failedStage)
-              <div class="od-note">Missed {{ Str::before($row->failedStage, ' Defense') }} deadline</div>
-            @endif
+            <span class="state {{ $statusTone[$status] ?? 'st-idle' }}">{{ $status }}</span>
           </td>
         </tr>
       @endforeach
       <tr class="tm-none" @if ($rows->isNotEmpty()) hidden @endif>
-        <td colspan="5" class="tm-empty">
+        <td colspan="5" class="empty">
           @if ($rows->isEmpty())
             @if ($capsaPortal)
               No teams in {{ $selectedSection ? 'section '.$selectedSection : 'your sections' }} yet.
@@ -177,7 +167,7 @@
               No teams yet. Teams you accept as adviser, consultant or grammarian, and teams you sit on a panel for, show up here.
             @endif
           @else
-            No teams match. <button type="button" class="btn btn-o" data-clear style="margin-left:8px">Clear filters</button>
+            No teams match. <button type="button" class="btn" data-clear style="margin-left:8px">Clear filters</button>
           @endif
         </td>
       </tr>
@@ -190,5 +180,5 @@
     <span><span class="strip"><i class="s-n"></i></span>Not started</span>
     <span><span class="strip"><i class="s-k"></i></span>Locked until the one before is done</span>
   </div>
-  <div class="tfoot"><span class="c" data-count>{{ $rows->count() }} {{ Str::plural('team', $rows->count()) }}</span></div>
+  <div class="foot"><span data-count>{{ $rows->count() }} {{ Str::plural('team', $rows->count()) }}</span><span class="tx-host"></span></div>
 </div>
