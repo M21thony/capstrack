@@ -3,7 +3,7 @@ import { pdfjs } from "react-pdf";
 import { Icon, KIND_LABEL, PagedList, figureTitle, kindOf } from "./Reader";
 import FigureCrop, { regionPixels } from "./FigureCrop";
 import { boundsOf, isFigureRemark } from "./figures";
-import { PICTURE_CHANGED, pictureDifference } from "./revisionCheck";
+import { PICTURE_CHANGED, findPicture, greyOf, pictureDifference } from "./revisionCheck";
 
 /** A remark from the earlier version, placed where it is now. */
 const atTarget = (r) => ({
@@ -14,7 +14,55 @@ const atTarget = (r) => ({
   y_position: r.target.y ?? r.y_position,
 });
 
+const clamp = (n) => Math.min(1, Math.max(0, n));
+
+/** A remark moved to where its diagram was found, or to the page the reviewer chose. */
+const relocate = (r, m) => (m.keep ? r : r.type === "text" ? {
+  ...r,
+  foundBy: m.how,
+  changed: null,
+  target: { page: m.page, rects: (r.highlightRects || []).map((x) => ({ ...x, left_position: clamp(x.left_position + m.dx), top_position: clamp(x.top_position + m.dy) })) },
+} : {
+  ...r,
+  foundBy: m.how,
+  // What the words said was about the old place; the picture decides here.
+  ...(m.how === "picture" || m.how === "picked" ? { changed: null, removedWords: "", addedWords: "" } : {}),
+  target: r.type === "pin"
+    ? { page: m.page, x: clamp(r.x_position + m.dx), y: clamp(r.y_position + m.dy), rects: [] }
+    : { page: m.page, rects: r.highlightRects.map((x) => ({ ...x, left_position: clamp(x.left_position + m.dx), top_position: clamp(x.top_position + m.dy) })) },
+});
+
+/**
+ * Looks for a remark's diagram on some pages of this version by its picture,
+ * and says where it is - wherever it sits on the page. Null when it is not
+ * clearly on any of them.
+ */
+async function searchPages(r, oldPdf, newPdf, pages) {
+  const area = compared(r);
+  const tplW = 100;
+  const t = await regionPixels(oldPdf, r.page_number, area, tplW);
+  const tpl = greyOf(t.data, t.width, t.height);
+  const { width: oldWidth } = (await oldPdf.getPage(Number(r.page_number))).getViewport({ scale: 1 });
+  const scale = tplW / (area.width * oldWidth);
+  let best = null;
+  for (const n of pages) {
+    if (n < 1 || n > newPdf.numPages) continue;
+    const { width } = (await newPdf.getPage(n)).getViewport({ scale: 1 });
+    const p = await regionPixels(newPdf, n, { left: 0, top: 0, width: 1, height: 1 }, Math.round(width * scale));
+    const hit = findPicture(greyOf(p.data, p.width, p.height), p.width, p.height, tpl, t.width, t.height);
+    if (hit.found && (!best || hit.score < best.score)) {
+      best = { page: n, dx: hit.x / p.width - area.left, dy: hit.y / p.height - area.top, score: hit.score };
+    }
+  }
+  return best;
+}
+
 const FOUND_BY = {
+  picture: (r) => `Found by its picture · p.${r.target.page}`,
+  picked: (r) => `You chose p.${r.target.page} · found the diagram there`,
+  "picked, not matched": (r) => `You chose p.${r.target.page} · the diagram was not recognised there, so this is the same place on that page`,
+  "not found": (r) => `Not found by its text or its picture · showing the same place, p.${r.target.page}`,
+  "picked place": (r) => `You chose p.${r.target.page} · showing the same place on that page`,
   caption: (r) => `Found by its caption${r.figureNow && r.figureNow !== r.figure_label ? `, now ${r.figureNow}` : ""} · p.${r.target.page}`,
   labels: (r) => `Found by the labels inside it · p.${r.target.page}`,
   "nearby text": (r) => `Found by the text around it · p.${r.target.page}`,
@@ -63,7 +111,7 @@ function usePictureChecks(items, oldPdf, newPdf) {
     (async () => {
       for (const r of items) {
         if (!alive) return;
-        if (!isFigureRemark(r) || !r.target) continue;
+        if (!isFigureRemark(r) || !r.target || LOST.includes(r.foundBy) || r.unsettled) continue;
         try {
           // Only what the reviewer marked: the box itself, or a little around a
           // pin - not the margin a snapshot shows, which can catch the text
@@ -83,9 +131,15 @@ function usePictureChecks(items, oldPdf, newPdf) {
   return checks;
 }
 
+/** Places the check could not confirm: it shows them, but says nothing about what changed there. */
+const LOST = ["not found", "picked, not matched", "picked place"];
+
 /** What was found at a remark's place, in words. */
-function finding(r, picture) {
-  if (!r.target) return { tone: "", text: "Could not find these words in this version. Look for them, then decide." };
+function finding(r, picture, pending = false) {
+  if (pending) return { tone: "", text: "Looking for this diagram by its picture…" };
+  if (!r.target) return { tone: "", text: "Could not find these words in this version. Use the page arrows in Compare to look for them, then decide." };
+  if (r.foundBy === "picked place") return { tone: "", text: "The words could not be checked here. Look, then decide." };
+  if (LOST.includes(r.foundBy)) return { tone: "", text: "Could not find this diagram in this version. Use the page arrows in Compare to look for it, then decide." };
   if (!isFigureRemark(r)) {
     if (!r.changed) return { tone: "", text: "The quoted words did not change." };
     return { tone: "mod", text: "The quoted words changed.", removed: r.removedWords, added: r.addedWords };
@@ -121,7 +175,7 @@ function Verdict({ status, onSet, round }) {
 }
 
 /** Before and after, side by side, for one remark. */
-function Compare({ item, oldPdf, newPdf, picture, status, onSet, onClose, base }) {
+function Compare({ item, oldPdf, newPdf, picture, status, onSet, onClose, base, onPage, looking }) {
   const ref = useRef(null);
   useEffect(() => {
     const d = ref.current;
@@ -146,7 +200,12 @@ function Compare({ item, oldPdf, newPdf, picture, status, onSet, onClose, base }
               {oldPdf && <FigureCrop pdf={oldPdf} remark={item} maxWidth={width} maxHeight={300} pad={0.04} />}
             </div>
             <div>
-              <span className="rr-muted">This version · {item.target ? `p.${item.target.page}` : "not found"}</span>
+              <span className="rr-muted rr-pagepick">
+                This version ·
+                <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page before" disabled={looking || (item.target?.page ?? item.page_number) <= 1} onClick={() => onPage(-1)}><Icon name="left" /></button>
+                {looking ? "looking…" : item.target ? `p.${item.target.page}` : "not found"}
+                <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page after" disabled={looking || (item.target?.page ?? item.page_number) >= (newPdf?.numPages || 1)} onClick={() => onPage(1)}><Icon name="right" /></button>
+              </span>
               {newPdf && item.target && <FigureCrop pdf={newPdf} remark={atTarget(item)} maxWidth={width} maxHeight={300} pad={0.04} pending />}
             </div>
           </div>
@@ -172,11 +231,56 @@ export default function ChangesPanel({
 }) {
   const ready = diff.status === "ready";
   const changes = ready ? diff.changes : [];
-  const revision = diff.revision || [];
+  // Where the reviewer, or the picture search, put a remark instead.
+  const [moved, setMoved] = useState({});
+  const [looking, setLooking] = useState(null);
+  const revision = (diff.revision || []).map((r) => (moved[r.id]
+    ? relocate(r, moved[r.id])
+    : isFigureRemark(r) && ["same place", "nearby text", "labels"].includes(r.foundBy) ? { ...r, unsettled: true } : r));
   const [filter, setFilter] = useState("remarks");
   const [comparing, setComparing] = useState(null);
   const oldPdf = useEarlierPdf(revision.length ? base?.file : null);
   const pictures = usePictureChecks(revision, oldPdf, pdf);
+
+  // Only a caption is sure enough on its own. A diagram placed any other way
+  // - by the labels inside it, the text around it, or nowhere - is looked for
+  // by its picture, on the pages around where the words put it and where it
+  // was before, anywhere on each page: a diagram pushed down a page lands at
+  // a different height. Text around a figure can be reworded into the same
+  // phrases somewhere else, so it never decides alone: if the picture is not
+  // found, the remark says so instead of pointing at the wrong place. Labels
+  // inside a drawn diagram are its own words, so they still stand.
+  const unsure = (r) => isFigureRemark(r) && ["same place", "nearby text", "labels"].includes(r.foundBy);
+  const unplaced = (diff.revision || []).filter((r) => unsure(r) && !moved[r.id]).map((r) => r.id).join(",");
+  useEffect(() => {
+    if (!oldPdf || !pdf || !unplaced) return undefined;
+    let alive = true;
+    (async () => {
+      for (const r of diff.revision) {
+        if (!alive || !unsure(r) || moved[r.id]) continue;
+        const at = r.target.page;
+        const was = r.page_number;
+        const pages = [...new Set([at, was, at + 1, at - 1, was + 1, was + 2])];
+        const hit = await searchPages(r, oldPdf, pdf, pages).catch(() => null);
+        if (!alive) return;
+        const place = hit
+          ? { page: hit.page, dx: hit.dx, dy: hit.dy, how: "picture" }
+          : r.foundBy === "labels" ? { keep: true } : { page: was, dx: 0, dy: 0, how: "not found" };
+        setMoved((m) => ({ ...m, [r.id]: place }));
+      }
+    })();
+    return () => { alive = false; };
+  }, [oldPdf, pdf, unplaced]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The reviewer points to another page: the diagram is looked for there.
+  const pickPage = async (r, step) => {
+    const page = (r.target?.page ?? r.page_number) + step;
+    setLooking(r.id);
+    const hit = isFigureRemark(r) && oldPdf && pdf ? await searchPages(r, oldPdf, pdf, [page]).catch(() => null) : null;
+    const missed = isFigureRemark(r) ? "picked, not matched" : "picked place";
+    setMoved((m) => ({ ...m, [r.id]: hit ? { page, dx: hit.dx, dy: hit.dy, how: "picked" } : { page, dx: 0, dy: 0, how: missed } }));
+    setLooking(null);
+  };
   const statusOf = (r) => (r.id in revisionStatus ? revisionStatus[r.id] : r.revision_status) || null;
   const fixed = revision.filter((r) => statusOf(r) === "fixed").length;
   const notFixed = revision.filter((r) => statusOf(r) === "not_fixed").length;
@@ -260,7 +364,7 @@ export default function ChangesPanel({
                   noun="remark"
                   empty={<><b>No remarks on {base?.round}</b><span>You left no remarks on that version.</span></>}
                   renderItem={(r, measuring) => {
-                    const f = finding(r, pictures[r.id]);
+                    const f = finding(r, pictures[r.id], unsure(r) && !moved[r.id]);
                     const status = statusOf(r);
                     return (
                       <div
@@ -275,7 +379,7 @@ export default function ChangesPanel({
                           {isFigureRemark(r)
                             ? <span className="rr-tag fig">{r.type === "pin" ? "Pin" : "Figure"}</span>
                             : <span className="rr-tag">Highlighted text</span>}
-                          <span className={`rr-tag ${f.tone || ""}`}>{f.tone ? "Changed" : r.target ? "No change" : "Not found"}</span>
+                          <span className={`rr-tag ${f.tone || ""}`}>{f.tone ? "Changed" : r.target && !LOST.includes(r.foundBy) ? "No change" : "Not found"}</span>
                           <span className="rr-where">p.{r.page_number} on {base?.round}</span>
                         </div>
                         {isFigureRemark(r) ? <b className="rr-figname">{figureTitle(r)}</b> : r.selectedText && <div className="rr-q">“{r.selectedText}”</div>}
@@ -306,6 +410,8 @@ export default function ChangesPanel({
         onSet={(v) => comparingItem && onRevision(comparingItem, v)}
         onClose={() => setComparing(null)}
         base={base}
+        onPage={(step) => comparingItem && pickPage(comparingItem, step)}
+        looking={comparingItem != null && looking === comparingItem.id}
       />
     </aside>
   );

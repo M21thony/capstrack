@@ -154,3 +154,47 @@ test("a line added to a picture is a change", () => {
   const b = picture(120, 80, [[20, 20, 100, 30], [20, 40, 70, 44]]);
   assert.ok(pictureDifference(a, b, 120, 80).share > PICTURE_CHANGED);
 });
+
+import { findPicture, greyOf } from "../../resources/js/component/reader/revisionCheck.js";
+
+// A white page with a diagram drawn on it at (x, y): two boxes joined by a line.
+const pageWith = (w, h, at, extra = false) => {
+  const d = new Uint8ClampedArray(w * h * 4).fill(255);
+  const ink = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = (y * w + x) * 4; d[i] = d[i + 1] = d[i + 2] = 0; } };
+  if (at) {
+    const [x, y] = at;
+    ink(x, y, x + 30, y + 2); ink(x, y + 18, x + 30, y + 20); ink(x, y, x + 2, y + 20); ink(x + 28, y, x + 30, y + 20);
+    ink(x + 50, y, x + 80, y + 2); ink(x + 50, y + 18, x + 80, y + 20); ink(x + 50, y, x + 52, y + 20); ink(x + 78, y, x + 80, y + 20);
+    ink(x + 30, y + 9, x + 50, y + 11);
+    if (extra) ink(x + 30, y + 15, x + 50, y + 16);
+  }
+  return greyOf(d, w, h);
+};
+const cut = (g, w, x, y, cw, ch) => {
+  const out = new Float32Array(cw * ch);
+  for (let r = 0; r < ch; r++) for (let c = 0; c < cw; c++) out[r * cw + c] = g[(y + r) * w + x + c];
+  return out;
+};
+
+test("finds a diagram pushed to the top of the next page", () => {
+  // On the old page it sat low down; on the new page it is near the top.
+  const oldPage = pageWith(160, 200, [30, 140]);
+  const tpl = cut(oldPage, 160, 25, 135, 90, 30);
+  const next = pageWith(160, 200, [40, 20]);
+  const hit = findPicture(next, 160, 200, tpl, 90, 30);
+  assert.equal(hit.found, true);
+  assert.deepEqual([hit.x, hit.y], [35, 15]);
+});
+
+test("finds a diagram that changed a little", () => {
+  const oldPage = pageWith(160, 200, [30, 60]);
+  const tpl = cut(oldPage, 160, 25, 55, 90, 30);
+  const hit = findPicture(pageWith(160, 200, [30, 100], true), 160, 200, tpl, 90, 30);
+  assert.equal(hit.found, true);
+  assert.deepEqual([hit.x, hit.y], [25, 95]);
+});
+
+test("does not claim to find a diagram on a page without it", () => {
+  const tpl = cut(pageWith(160, 200, [30, 60]), 160, 25, 55, 90, 30);
+  assert.equal(findPicture(pageWith(160, 200, null), 160, 200, tpl, 90, 30).found, false);
+});

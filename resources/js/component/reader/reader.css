@@ -238,6 +238,7 @@ select.rr-input{padding:4px 6px;min-height:30px;font-size:12.5px}
 .rr-card.is-notyet{border-left:3px solid #d97706}
 .rr-compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:#f2f3f5;border-radius:8px;padding:12px}
 .rr-compare > div{display:grid;gap:6px;justify-items:start;align-content:start;min-width:0}
+.rr-pagepick{display:inline-flex;align-items:center;gap:2px}
 @media (max-width:700px){.rr-compare{grid-template-columns:1fr}}
 
 @media (max-width:1100px){.rr-work{grid-template-columns:60px minmax(0,1fr) 310px}}
