@@ -2,10 +2,14 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import {
-  Highlights, KINDS, PageStrip, ReaderTools, RemarksPanel,
+  FigureZoom, Highlights, KINDS, PageStrip, ReaderTools, RemarksPanel,
   kindOf, mergeRectsByLine, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
 import ChangesPanel from "../reader/ChangesPanel";
+import FigureCrop from "../reader/FigureCrop";
+import {
+  DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, uniqueFigures,
+} from "../reader/figures";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -20,27 +24,101 @@ const NAV_KEYS = new Set([
   "PageUp", "PageDown", "Shift", "Control", "Meta", "Alt", "Tab", "Escape",
 ]);
 const block = (e) => e.preventDefault();
+const clamp = (n) => Math.min(1, Math.max(0, n));
+
+const HINTS = {
+  box: "Drag over a figure to add a remark",
+  pin: "Click one spot on a figure to add a remark",
+};
+
+/**
+ * Every captioned figure in the document, and whether it has been looked at:
+ * it has a remark, or the reviewer marked it checked. So a figure is never
+ * missed in a long chapter.
+ */
+function FiguresPanel({ top, figures, comments, checked, onToggle, onGo }) {
+  const count = (label) => comments.filter((c) => c.figure_label === label).length;
+  const done = figures.filter((f) => count(f.label) || checked.includes(f.label)).length;
+  return (
+    <aside className="rr-side" aria-label="Figures">
+      {top}
+      {figures.length ? (
+        <>
+          <p className="rr-help">
+            <b>{done} of {figures.length}</b> figures reviewed. A figure counts once it has a remark, or once you mark it checked.
+            <span className="rr-progress" aria-hidden="true"><i style={{ width: `${(done / figures.length) * 100}%` }} /></span>
+          </p>
+          <div className="rr-figlist">
+            {figures.map((f) => {
+              const n = count(f.label);
+              const isChecked = checked.includes(f.label);
+              return (
+                <div
+                  key={f.label}
+                  className="rr-frow"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Go to ${f.label} on page ${f.page}`}
+                  onClick={() => onGo(f)}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onGo(f); }
+                  }}
+                >
+                  <div><b>{f.label}</b> <small>· p.{f.page}</small><div className="rr-ft">{f.title || "Untitled"}</div></div>
+                  {!n && (
+                    <button type="button" className="rr-btn sm" aria-pressed={isChecked} onClick={(e) => { e.stopPropagation(); onToggle(f.label); }}>
+                      {isChecked ? "Undo check" : "Mark checked"}
+                    </button>
+                  )}
+                  <div className="rr-fstat">
+                    {n
+                      ? <span className="rr-chip gold">{n} {n === 1 ? "remark" : "remarks"}</span>
+                      : isChecked ? <span className="rr-chip ok">Checked, no remarks</span> : <span className="rr-chip">Not reviewed</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="rr-empty" style={{ margin: "24px auto" }}>
+          <b>No figure captions found</b>
+          <span>Captions that start with “Figure 3.1” or “Fig. 2:” are listed here so none is missed.</span>
+        </div>
+      )}
+    </aside>
+  );
+}
 
 /**
  * The document being reviewed, with the remarks on it.
  *
  * Select words - with the mouse, or Shift and the arrow keys then Enter - and
  * they stay highlighted while a box beside the page takes the remark. The
- * page itself never moves to make room.
+ * page itself never moves to make room. For a figure, Box draws a box over
+ * it (or several) and Pin marks one spot; the remark box then also takes
+ * which figure it is and what kind of diagram.
  */
 function PDFChecker({
   pdfUrl, comments, setComments, generalComments, onAddGeneral, onDeleteGeneral,
   onDeleteComment, selectedId, setSelectedId, notify, base = null, showChanges = true,
   diff = { status: "idle" }, onFocusChange,
+  startMode = "text", startTab = "remarks", checkedFigures = [], onToggleFigure = () => {},
+  revisionStatus = {}, onRevision = () => {},
 }) {
   const [numPages, setNumPages] = useState(null);
+  const [pdf, setPdf] = useState(null);
+  const [figures, setFigures] = useState([]);
+  const [mode, setMode] = useState(startMode);
+  const [zoomId, setZoomId] = useState(null);
   const [error, setError] = useState(null);
   const [rendered, setRendered] = useState(() => new Set());
   const col = usePageColumn(numPages);
 
   // Changes since an earlier version are only drawn, never kept as remarks.
   // Opening one also moves the earlier version, when it is open beside this.
-  const [tab, setTab] = useState("remarks");
+  const [tab, setTab] = useState(startTab);
   const [changeId, setChangeId] = useState(null);
   const marks = showChanges && diff.status === "ready" ? diff.marks : {};
   const openChange = (c) => {
@@ -54,9 +132,34 @@ function PDFChecker({
     const c = diff.changes?.find((x) => x.id === r.changeIds[0]);
     if (c) onFocusChange?.(c);
   };
-  const tabs = base && (
+  // The captions, read once from the PDF's own text.
+  useEffect(() => {
+    if (!pdf) return undefined;
+    let alive = true;
+    (async () => {
+      const found = [];
+      for (let n = 1; n <= pdf.numPages && alive; n++) {
+        try {
+          const page = await pdf.getPage(n);
+          const { height } = page.getViewport({ scale: 1 });
+          found.push(...captionsOnPage((await page.getTextContent()).items, height, n));
+        } catch { /* a page with no text */ }
+      }
+      if (alive) setFigures(uniqueFigures(found));
+    })();
+    return () => { alive = false; };
+  }, [pdf]);
+
+  const toCheck = (diff.revision || []).filter((r) => !((r.id in revisionStatus ? revisionStatus[r.id] : r.revision_status))).length;
+  const figuresDone = figures.filter((f) => checkedFigures.includes(f.label) || comments.some((c) => c.figure_label === f.label)).length;
+  const tabList = [
+    ["remarks", "Remarks"],
+    ["figures", figures.length ? `Figures ${figuresDone}/${figures.length}` : "Figures"],
+    ...(base ? [["changes", toCheck ? `What changed · ${toCheck} to check` : "What changed"]] : []),
+  ];
+  const tabs = (
     <div className="rr-tabs" role="tablist" aria-label="Side panel">
-      {[["remarks", "Remarks"], ["changes", "What changed"]].map(([k, label]) => (
+      {tabList.map(([k, label]) => (
         <button key={k} type="button" role="tab" className="rr-tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>
       ))}
     </div>
@@ -67,6 +170,11 @@ function PDFChecker({
   const [kind, setKind] = useState("pink");
   const [text, setText] = useState("");
   const [section, setSection] = useState("");
+  const [figure, setFigure] = useState("");
+  const [diagramType, setDiagramType] = useState("");
+  // Drawing another box onto the same remark: the remark box steps aside meanwhile.
+  const [adding, setAdding] = useState(false);
+  const drawing = useRef(null);
   const [popPos, setPopPos] = useState(null);
   const [selecting, setSelecting] = useState(false);
   const popRef = useRef(null);
@@ -79,7 +187,8 @@ function PDFChecker({
     return c;
   }, [comments]);
   const editing = editingId != null ? comments.find((c) => c.id === editingId) : null;
-  const composing = Boolean(draft || editing);
+  // A remark being written or edited always has a draft: where it is on the page.
+  const composing = Boolean(draft) && !draft.drawing && !adding;
   const composingRef = useRef(false);
   composingRef.current = composing;
 
@@ -98,11 +207,107 @@ function PDFChecker({
   const closeBox = () => {
     setDraft(null);
     setEditingId(null);
+    setAdding(false);
     setPopPos(null);
   };
 
+  // A new remark on a mark: empty fields, and the figure guessed from the caption under it.
+  const beginRemark = (d) => {
+    const onFigure = d.type !== "text";
+    const label = onFigure ? figureFor(figures, d.pageNumber, marksOf(d)) || "" : "";
+    setDraft(d);
+    setText("");
+    setSection("");
+    setFigure(label);
+    setDiagramType(onFigure ? guessDiagramType(figures.find((f) => f.label === label)?.title) : "");
+    setPopPos(null);
+  };
+
+  const changeMode = (next) => {
+    if (next !== "box" && adding) { setAdding(false); setPopPos(null); }
+    if (next !== "text") window.getSelection()?.removeAllRanges();
+    setMode(next);
+  };
+
+  // T, B and P switch how the page is marked; Esc finishes adding boxes.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (document.querySelector("dialog[open]")) return;
+      if (e.key === "Escape" && adding) { setAdding(false); setPopPos(null); return; }
+      if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.("input, textarea, select")) return;
+      const next = { t: "text", b: "box", p: "pin" }[e.key.toLowerCase()];
+      if (next) changeMode(next);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
+
+  const pointOn = (e, pageEl) => {
+    const b = (pageEl.querySelector(".react-pdf__Page") || pageEl).getBoundingClientRect();
+    return { x: clamp((e.clientX - b.left) / b.width), y: clamp((e.clientY - b.top) / b.height), b };
+  };
+
+  const onMarkDown = (e, n) => {
+    if (mode === "text" || e.button !== 0 || e.target.closest(".rr-num, .rr-pin")) return;
+    if (adding) {
+      if (n !== draft.pageNumber) { notify(`Boxes on one remark stay on one page. Draw on page ${draft.pageNumber}.`, { type: "error" }); return; }
+    } else if (composingRef.current) { closeBox(); return; }
+    e.preventDefault();
+    const { x, y, b } = pointOn(e, e.currentTarget);
+    if (mode === "pin") {
+      setSelectedId(null);
+      beginRemark({ type: "pin", pageNumber: n, highlightRects: [], x_position: x, y_position: y });
+      return;
+    }
+    drawing.current = { n, b, x, y, id: e.pointerId };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const start = { top_position: y, left_position: x, highlight_width: 0, highlight_height: 0 };
+    if (adding) setDraft((d) => ({ ...d, highlightRects: [...d.highlightRects, start] }));
+    else {
+      setSelectedId(null);
+      setDraft({ type: "box", pageNumber: n, highlightRects: [start], drawing: true });
+    }
+  };
+
+  const onMarkMove = (e) => {
+    const d0 = drawing.current;
+    if (!d0 || e.pointerId !== d0.id) return;
+    const x = clamp((e.clientX - d0.b.left) / d0.b.width);
+    const y = clamp((e.clientY - d0.b.top) / d0.b.height);
+    const rect = { top_position: Math.min(y, d0.y), left_position: Math.min(x, d0.x), highlight_width: Math.abs(x - d0.x), highlight_height: Math.abs(y - d0.y) };
+    setDraft((d) => (d ? { ...d, highlightRects: [...d.highlightRects.slice(0, -1), rect] } : d));
+  };
+
+  const onMarkUp = (e) => {
+    const d0 = drawing.current;
+    if (!d0 || e.pointerId !== d0.id) return;
+    drawing.current = null;
+    const last = draft.highlightRects[draft.highlightRects.length - 1];
+    const tooSmall = last.highlight_width < 0.02 || last.highlight_height < 0.015;
+    if (adding) {
+      if (tooSmall) { setDraft((d) => ({ ...d, highlightRects: d.highlightRects.slice(0, -1) })); notify("Drag across the area to draw the box."); return; }
+      setAdding(false);
+      setPopPos(null);
+      return;
+    }
+    if (tooSmall) { setDraft(null); notify("Drag across the figure to draw a box around it."); return; }
+    beginRemark({ ...draft, drawing: false });
+  };
+
+  const onMarkCancel = () => {
+    if (!drawing.current) return;
+    drawing.current = null;
+    if (adding) setDraft((d) => ({ ...d, highlightRects: d.highlightRects.slice(0, -1) }));
+    else setDraft(null);
+  };
+
+  const addQuick = (q) => {
+    setText((t) => (t.includes(q) ? t : (t.trim() ? `${t.trim()} ${q}` : q)));
+    textRef.current?.focus();
+  };
+
   const startFromSelection = () => {
-    if (composingRef.current) return;
+    if (mode !== "text" || composingRef.current) return;
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const range = sel.getRangeAt(0);
@@ -131,21 +336,28 @@ function PDFChecker({
 
     sel.removeAllRanges();
     setSelectedId(null);
-    setDraft({ pageNumber: Number(pageEl.dataset.page), selectedText, highlightRects: rects });
-    setText("");
-    setSection("");
-    setPopPos(null);
+    beginRemark({ type: "text", pageNumber: Number(pageEl.dataset.page), selectedText, highlightRects: rects });
   };
 
   const startEdit = (id) => {
     const c = comments.find((x) => x.id === id);
     if (!c) return;
-    setDraft(null);
+    setAdding(false);
+    setDraft({
+      type: c.type || "text",
+      pageNumber: c.page_number,
+      selectedText: c.selectedText,
+      highlightRects: (c.highlightRects || []).map((r) => ({ ...r })),
+      x_position: c.x_position,
+      y_position: c.y_position,
+    });
     setSelectedId(id);
     setEditingId(id);
     setKind(kindOf(c.color));
     setText(c.text || "");
     setSection(c.section || "");
+    setFigure(c.figure_label || "");
+    setDiagramType(c.diagram_type || "");
     setPopPos(null);
     col.goToRect(c.page_number, c.highlightRects?.[0] || { top_position: c.y_position }, false);
   };
@@ -160,24 +372,30 @@ function PDFChecker({
     const body = text.trim();
     if (!body) { textRef.current?.focus(); return; }
     const sectionValue = section.trim() || null;
+    const onFigure = draft.type !== "text";
+    const figureFields = { figure_label: onFigure ? figure || null : null, diagram_type: onFigure ? diagramType || null : null };
     if (editing) {
-      setComments((prev) => prev.map((c) => (c.id === editing.id ? { ...c, text: body, color: kind, section: sectionValue } : c)));
+      setComments((prev) => prev.map((c) => (c.id === editing.id
+        ? { ...c, text: body, color: kind, section: sectionValue, ...figureFields, ...(draft.type === "box" ? { highlightRects: draft.highlightRects } : {}) }
+        : c)));
       setSelectedId(editing.id);
     } else {
       const id = `new-${Date.now()}`;
       const first = draft.highlightRects[0];
       setComments((prev) => [...prev, {
         id,
+        type: draft.type,
         page_number: draft.pageNumber,
-        x_position: first.left_position,
-        y_position: first.top_position,
+        x_position: draft.type === "pin" ? draft.x_position : first.left_position,
+        y_position: draft.type === "pin" ? draft.y_position : first.top_position,
         text: body,
         author: "Reviewer",
         timestamp: new Date().toISOString(),
-        selectedText: draft.selectedText,
+        selectedText: onFigure ? null : draft.selectedText,
         section: sectionValue,
         highlightRects: draft.highlightRects,
         color: kind,
+        ...figureFields,
       }]);
       setSelectedId(id);
     }
@@ -189,12 +407,11 @@ function PDFChecker({
   useLayoutEffect(() => {
     if (!composing || popPos) return;
     const canvas = col.canvasRef.current;
-    const pageNumber = draft ? draft.pageNumber : editing.page_number;
-    const wrapper = col.pageRefs.current[pageNumber];
+    const wrapper = col.pageRefs.current[draft.pageNumber];
     const pop = popRef.current;
     if (!canvas || !wrapper || !pop) return;
-    const anchor = (draft ? draft.highlightRects : editing.highlightRects)?.[0]
-      || { top_position: Number(editing?.y_position) || 0, left_position: 0.5, highlight_width: 0, highlight_height: 0 };
+    const anchor = draft.highlightRects?.[0]
+      || { top_position: Number(draft.y_position) || 0, left_position: Number(draft.x_position) || 0.5, highlight_width: 0, highlight_height: 0 };
     const c = canvas.getBoundingClientRect();
     const p = (wrapper.querySelector(".react-pdf__Page") || wrapper).getBoundingClientRect();
     const w = pop.offsetWidth;
@@ -228,16 +445,22 @@ function PDFChecker({
     if (e.key === "Enter") startFromSelection();
   };
 
-  const quote = draft ? draft.selectedText : editing?.selectedText;
+  const quote = draft?.type === "text" ? draft.selectedText : null;
+  const onFigure = draft && draft.type !== "text";
+  const draftRemark = draft && { ...draft, page_number: draft.pageNumber, color: kind };
+  const where = draft ? (draft.type === "pin" ? `Pin on page ${draft.pageNumber}` : `${draft.highlightRects.length > 1 ? `${draft.highlightRects.length} boxes` : "Box"} on page ${draft.pageNumber}`) : "";
+  const figureOptions = figure && !figures.some((f) => f.label === figure) ? [...figures, { label: figure, page: draft?.pageNumber }] : figures;
+  const zoomRemark = zoomId != null ? comments.find((c) => c.id === zoomId) : null;
+  const hint = mode === "text"
+    ? (selecting ? "Press Enter to add a remark on the selected words" : "Select text to add a remark")
+    : adding ? `Draw another box on page ${draft?.pageNumber} · Esc when done` : HINTS[mode];
 
   return (
     <div className="rr-work">
       <PageStrip numPages={numPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} />
 
       <section className="rr-viewer" aria-label="Document">
-        <div className="rr-hint">
-          {selecting ? "Press Enter to add a remark on the selected words" : "Select text to add a remark"}
-        </div>
+        <div className="rr-hint">{hint}</div>
         <div
           className="rr-canvas"
           ref={col.canvasRef}
@@ -250,7 +473,7 @@ function PDFChecker({
           {pdfUrl && (
             <Document
               file={pdfUrl}
-              onLoadSuccess={({ numPages: n }) => { setNumPages(n); setError(null); }}
+              onLoadSuccess={(doc) => { setNumPages(doc.numPages); setPdf(doc); setError(null); }}
               onLoadError={(err) => setError(err.message)}
               loading={<div className="rr-loading">Loading document…</div>}
             >
@@ -262,9 +485,13 @@ function PDFChecker({
                     key={n}
                     ref={(el) => { col.pageRefs.current[n] = el; }}
                     data-page={n}
-                    className="rr-page"
+                    className={`rr-page${mode !== "text" ? " marking" : ""}${mode === "pin" ? " pinning" : ""}`}
                     style={{ width: col.pageWidth, minHeight: rendered.has(n) ? undefined : Math.round((col.pageWidth * 11) / 8.5) }}
-                    contentEditable
+                    onPointerDown={(e) => onMarkDown(e, n)}
+                    onPointerMove={onMarkMove}
+                    onPointerUp={onMarkUp}
+                    onPointerCancel={onMarkCancel}
+                    contentEditable={mode === "text"}
                     suppressContentEditableWarning
                     spellCheck={false}
                     aria-readonly="true"
@@ -295,11 +522,21 @@ function PDFChecker({
                         numbers={numbers}
                         selectedId={selectedId}
                         onSelect={openRemark}
-                        override={editing ? { id: editing.id, kind } : null}
+                        override={editing ? { id: editing.id, kind, rects: draft?.type === "box" ? draft.highlightRects : null } : null}
                       />
-                      {draft && draft.pageNumber === n && draft.highlightRects.map((r, idx) => (
+                      {draft && !editing && draft.pageNumber === n && draft.type === "text" && draft.highlightRects.map((r, idx) => (
                         <div key={idx} className={`rr-hl pending c-${kind}`} style={rectStyle(r)} />
                       ))}
+                      {draft && !editing && draft.pageNumber === n && draft.type === "box" && draft.highlightRects.map((r, idx) => (
+                        <div key={idx} className="rr-box pending" style={rectStyle(r)} />
+                      ))}
+                      {draft && !editing && draft.pageNumber === n && draft.type === "pin" && (
+                        <div className="rr-pin pending" style={{ top: `${draft.y_position * 100}%`, left: `${draft.x_position * 100}%` }}><span /></div>
+                      )}
+                      {draft?.drawing && draft.pageNumber === n && (() => {
+                        const r = draft.highlightRects[draft.highlightRects.length - 1];
+                        return <div className="rr-size" style={{ top: `${(r.top_position + r.highlight_height) * 100}%`, left: `${(r.left_position + r.highlight_width) * 100}%` }}>{Math.round(r.highlight_width * 100)}% × {Math.round(r.highlight_height * 100)}% of the page</div>;
+                      })()}
                     </div>
                   </div>
                 );
@@ -310,13 +547,42 @@ function PDFChecker({
           {composing && (
             <div
               ref={popRef}
-              className={`rr-pop${popPos?.flip ? " flip" : ""}`}
+              className={`rr-pop${popPos?.flip ? " flip" : ""}${onFigure ? " fig" : ""}`}
               role="dialog"
               aria-label={editing ? "Edit remark" : "Add a remark"}
               style={{ left: popPos?.left ?? 0, top: popPos?.top ?? 0, visibility: popPos ? "visible" : "hidden", "--ay": `${popPos?.ay ?? 24}px` }}
               onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); closeBox(); } }}
             >
               {quote && <div className="rr-pop-quote">“{quote}”</div>}
+              {onFigure && (
+                <>
+                  <div className="rr-pop-fig">
+                    <span className="rr-pop-thumb">{pdf && <FigureCrop pdf={pdf} remark={draftRemark} maxWidth={64} maxHeight={46} pending />}</span>
+                    <div><b>{figure || where}</b><small>{figure ? where : "Not a numbered figure"}</small></div>
+                  </div>
+                  <div className="rr-pair">
+                    <label className="rr-fld">Figure
+                      <select
+                        className="rr-input"
+                        value={figure}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setFigure(next);
+                          if (!diagramType) setDiagramType(guessDiagramType(figures.find((f) => f.label === next)?.title));
+                        }}
+                      >
+                        <option value="">Not a numbered figure</option>
+                        {figureOptions.map((f) => <option key={f.label} value={f.label}>{f.label}{f.page ? ` (p. ${f.page})` : ""}</option>)}
+                      </select>
+                    </label>
+                    <label className="rr-fld">Diagram type
+                      <select className="rr-input" value={diagramType} onChange={(e) => setDiagramType(e.target.value)}>
+                        {DIAGRAM_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                </>
+              )}
               <div className="rr-kinds" role="group" aria-label="Kind of remark">
                 {KINDS.map((k) => (
                   <button key={k.id} type="button" className="rr-kind" aria-pressed={kind === k.id} onClick={() => setKind(k.id)}>
@@ -333,6 +599,13 @@ function PDFChecker({
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveBox(); } }}
               />
+              {onFigure && (
+                <div className="rr-quick" role="group" aria-label="Quick remarks">
+                  {quickRemarksFor(diagramType).map((q) => (
+                    <button key={q} type="button" className="rr-qchip" onClick={() => addQuick(q)}>{q}</button>
+                  ))}
+                </div>
+              )}
               <input
                 className="rr-input"
                 placeholder="Section, e.g. 2.3 Related Studies (optional)"
@@ -341,7 +614,9 @@ function PDFChecker({
                 onChange={(e) => setSection(e.target.value)}
               />
               <div className="rr-row">
-                <span className="rr-muted">Ctrl+Enter to add</span>
+                {draft.type === "box"
+                  ? <button type="button" className="rr-btn sm ghost" onClick={() => { setAdding(true); changeMode("box"); }}>+ Box</button>
+                  : <span className="rr-muted">Ctrl+Enter to add</span>}
                 <span className="rr-spacer" />
                 <button type="button" className="rr-btn sm" onClick={closeBox}>Cancel</button>
                 <button type="button" className="rr-btn sm tint" onClick={saveBox}>{editing ? "Save remark" : "Add remark"}</button>
@@ -349,11 +624,34 @@ function PDFChecker({
             </div>
           )}
         </div>
-        <ReaderTools currentPage={col.currentPage} numPages={numPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} />
+        <ReaderTools currentPage={col.currentPage} numPages={numPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} mode={mode} onMode={changeMode} />
       </section>
 
-      {tabs && tab === "changes" ? (
-        <ChangesPanel top={tabs} base={base} diff={diff} selectedChange={changeId} onOpenChange={openChange} onOpenRemark={openOldRemark} />
+      {base && tab === "changes" ? (
+        <ChangesPanel
+          top={tabs}
+          base={base}
+          diff={diff}
+          selectedChange={changeId}
+          onOpenChange={openChange}
+          onOpenRemark={openOldRemark}
+          pdf={pdf}
+          revisionStatus={revisionStatus}
+          onRevision={onRevision}
+          onOpenRevision={(r) => {
+            col.goToRect(r.target.page, r.target.rects[0] || { top_position: r.target.y });
+            onFocusChange?.({ id: `r${r.id}`, oldPage: r.page_number, oldRect: r.highlightRects[0] || { top_position: r.y_position } });
+          }}
+        />
+      ) : tab === "figures" ? (
+        <FiguresPanel
+          top={tabs}
+          figures={figures}
+          comments={comments}
+          checked={checkedFigures}
+          onToggle={onToggleFigure}
+          onGo={(f) => col.goToRect(f.page, { top_position: Math.max(0, f.y - 0.25) })}
+        />
       ) : (
       <RemarksPanel
         top={tabs}
@@ -367,8 +665,11 @@ function PDFChecker({
         onDelete={onDeleteComment}
         onAddGeneral={onAddGeneral}
         onDeleteGeneral={onDeleteGeneral}
+        pdf={pdf}
+        onZoom={setZoomId}
       />
       )}
+      <FigureZoom pdf={pdf} remark={zoomRemark} number={zoomRemark ? numbers[zoomRemark.id] : null} onClose={() => setZoomId(null)} />
     </div>
   );
 }

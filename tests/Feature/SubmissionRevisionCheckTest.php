@@ -154,14 +154,104 @@ class SubmissionRevisionCheckTest extends TestCase
             'verdict' => CapstoneDocumentReview::NEEDS_REVISION, 'reviewed_at' => now(), 'verdict_at' => now(),
         ]);
 
+        $fileId = \DB::table('capstone_documents')->value('file_id');
+
         $this->actingAs($this->student, 'web')->get(route('student.review', ['review_id' => $review->review_id]))
             ->assertOk()
-            ->assertSee("window.openSubmission('{$line->id}', this)", false)
+            ->assertSee("window.openSubmission('{$line->id}', this, {$fileId})", false)
             ->assertSee('Submit 1st revision')
             ->assertSee('window.confirmSheet', false);
 
         // and what that drawer sends is checked like any other.
         $this->assertSame(['heading', 'unrelated'], $this->types($this->check($this->pdf('Chapter 3', self::CHAPTER_3), $line)));
+    }
+
+    /** An upload sent with no checklist line, the way "feedback only" stores one. */
+    private function looseUpload(UploadedFile $file, string $name = 'Chapter 1 Bulbasaur', ?int $teamId = null): int
+    {
+        return \DB::table('capstone_documents')->insertGetId([
+            'student_id' => $this->student->student_id, 'team_id' => $teamId, 'file_name' => $name, 'chapter' => 'Chapter 1',
+            'file_path' => $file->store('submissions', 'local'), 'deliverable_id' => null, 'file_version' => 3,
+            'document_status' => 'Reviewed', 'created_at' => now(), 'updated_at' => now(),
+        ], 'file_id');
+    }
+
+    private function checkRevisionOf(UploadedFile $file, int $fileId)
+    {
+        return $this->actingAs($this->student, 'web')
+            ->postJson(route('student.submission.warnings'), ['file' => $file, 'revises' => $fileId])
+            ->assertOk();
+    }
+
+    /** "Submit revision" on an upload with no line still says which upload the file revises. */
+    public function test_submit_revision_on_an_upload_with_no_line_names_that_upload(): void
+    {
+        $fileId = $this->looseUpload($this->pdf('Chapter 1', self::CHAPTER_1));
+        $review = CapstoneDocumentReview::create([
+            'file_id' => $fileId,
+            'expert_id' => CapstoneExpert::factory()->create(['approved_status' => true])->expert_id,
+            'role' => 'adviser', 'review_status' => CapstoneDocumentReview::REVIEWED,
+            'verdict' => CapstoneDocumentReview::NEEDS_REVISION, 'reviewed_at' => now(), 'verdict_at' => now(),
+        ]);
+
+        $this->actingAs($this->student, 'web')->get(route('student.review', ['review_id' => $review->review_id]))
+            ->assertOk()
+            ->assertSee("window.openSubmission('', this, {$fileId})", false);
+    }
+
+    public function test_chapter_3_sent_as_a_revision_of_an_upload_with_no_line_is_caught(): void
+    {
+        $fileId = $this->looseUpload($this->pdf('Chapter 1', self::CHAPTER_1));
+
+        $response = $this->checkRevisionOf($this->pdf('Chapter 3', self::CHAPTER_3), $fileId);
+
+        $this->assertSame(['heading', 'unrelated'], $this->types($response));
+        $this->assertStringContainsString('you are sending it as “Chapter 1 Bulbasaur”', $response->json('warnings.0.message'));
+        $this->assertStringContainsString('(version 3)', $response->json('warnings.1.message'));
+    }
+
+    /** No chapter heading on its first page: the file name and the text still give it away. */
+    public function test_a_revision_whose_name_says_another_chapter_is_caught(): void
+    {
+        $fileId = $this->looseUpload($this->pdf('Chapter 1', self::CHAPTER_1));
+
+        $response = $this->checkRevisionOf($this->pdf('Methodology', self::CHAPTER_3, 'Chapter_3_Bulbasaur_Revised.pdf'), $fileId);
+
+        $this->assertSame(['name', 'unrelated'], $this->types($response));
+        $this->assertStringContainsString('says Chapter 3', $response->json('warnings.0.message'));
+    }
+
+    public function test_a_real_revision_of_an_upload_with_no_line_passes(): void
+    {
+        $fileId = $this->looseUpload($this->pdf('Chapter 1', self::CHAPTER_1));
+        $revised = str_replace('which delays feedback and loses records', 'which slows feedback and misplaces records', self::CHAPTER_1);
+
+        $this->assertSame([], $this->types($this->checkRevisionOf($this->pdf('Chapter 1', $revised, 'Chapter_1_Bulbasaur_Revised.pdf'), $fileId)));
+    }
+
+    public function test_the_same_file_again_is_caught_on_an_upload_with_no_line(): void
+    {
+        $file = $this->pdf('Chapter 1', self::CHAPTER_1);
+        $fileId = $this->looseUpload($file);
+
+        $this->checkRevisionOf($file, $fileId)->assertJsonPath('same', 3);
+    }
+
+    /** Another team's upload is nothing to compare with - and not a way to read it. */
+    public function test_another_teams_upload_is_not_compared(): void
+    {
+        $fileId = $this->looseUpload($this->pdf('Chapter 1', self::CHAPTER_1), 'Their Chapter 1', 999999);
+
+        $this->checkRevisionOf($this->pdf('Chapter 3', self::CHAPTER_3), $fileId)
+            ->assertExactJson(['warnings' => [], 'same' => null]);
+    }
+
+    public function test_the_check_needs_a_line_or_an_upload_to_go_by(): void
+    {
+        $this->actingAs($this->student, 'web')
+            ->postJson(route('student.submission.warnings'), ['file' => $this->pdf('Chapter 3', self::CHAPTER_3)])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['deliverable_id', 'revises']);
     }
 
     /** Opened from a line, the pop-up does not ask which line it is for; opened from the menu it does. */

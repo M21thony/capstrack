@@ -6,6 +6,7 @@ import StudentPdfViewer from "./component/pages/StudentPdfViewer";
 import FinishReview from "./component/FinishReview";
 import { useVersionDiff } from "./component/reader/useVersionDiff";
 import { Toast } from "./component/reader/Reader";
+import { remarkFromServer } from "./component/reader/figures";
 import "./component/reader/reader.css";
 import "./App.css";
 
@@ -61,6 +62,10 @@ function App() {
   const [driveSyncState, setDriveSyncState] = useState("idle");
   const [driveSyncError, setDriveSyncError] = useState(null);
   const driveSyncRef = useRef({ inFlight: false, pending: false });
+  // The consultant is the one who checks the diagrams, so their review opens ready for figures.
+  const checksDiagrams = ctx.role === "consultant";
+  // Figures the reviewer looked at and had nothing to say about.
+  const [checkedFigures, setCheckedFigures] = useState([]);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   const [finishing, setFinishing] = useState(false);
@@ -70,6 +75,63 @@ function App() {
   commentsRef.current = comments;
   const statusRef = useRef(reviewStatus);
   statusRef.current = reviewStatus;
+
+  // Checking a revision: what the reviewer found for each remark on the
+  // earlier version. Kept on that remark; a remark still not fixed is carried
+  // into this review, at its place in this version, so the team sees it again.
+  const [revisionStatus, setRevisionStatus] = useState({});
+  const setRevision = async (item, chosen) => {
+    const before = item.id in revisionStatus ? revisionStatus[item.id] : item.revision_status || null;
+    const next = before === chosen ? null : chosen;
+    setRevisionStatus((m) => ({ ...m, [item.id]: next }));
+    try {
+      const response = await request(`/reviews/${reviewId}/versions/${baseVersion.id}/remarks/${item.id}/revision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!response.ok) throw new Error();
+    } catch {
+      setRevisionStatus((m) => ({ ...m, [item.id]: before }));
+      showToast("That was not saved. Try again.", { type: "error" });
+      return;
+    }
+    const carried = (c) => String(c.carried_from_id) === String(item.id);
+    if (next === "not_fixed" && item.target && !commentsRef.current.some(carried)) {
+      const t = item.target;
+      setComments((prev) => [...prev, {
+        id: `new-${Date.now()}`,
+        type: item.type,
+        page_number: t.page,
+        x_position: item.type === "pin" ? t.x : t.rects[0]?.left_position ?? 0,
+        y_position: item.type === "pin" ? t.y : t.rects[0]?.top_position ?? 0,
+        highlightRects: item.type === "pin" ? [] : t.rects,
+        text: `Still not fixed (from ${baseVersion.round || "the last version"}): ${item.text}`,
+        author: "Reviewer",
+        timestamp: new Date().toISOString(),
+        selectedText: item.type === "text" ? item.quoteNow || item.selectedText : null,
+        section: item.section || null,
+        color: item.color,
+        figure_label: item.type === "text" ? null : item.figureNow || item.figure_label,
+        diagram_type: item.type === "text" ? null : item.diagram_type,
+        carried_from_id: item.id,
+      }]);
+      showToast("Added to this review as still not fixed.");
+    } else if (next !== "not_fixed" && commentsRef.current.some(carried)) {
+      setComments((prev) => prev.filter((c) => !carried(c)));
+    }
+  };
+
+  const toggleFigure = (label) => {
+    const next = checkedFigures.includes(label) ? checkedFigures.filter((f) => f !== label) : [...checkedFigures, label];
+    setCheckedFigures(next);
+    request(`/reviews/${reviewId}/figures-checked`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ figures: next }),
+    }).then((r) => { if (!r.ok) throw new Error(); })
+      .catch(() => { setCheckedFigures(checkedFigures); showToast("That was not saved. Try again.", { type: "error" }); });
+  };
 
   const showToast = useCallback((message, opts = {}) => {
     if (window.ctToast) {
@@ -94,29 +156,11 @@ function App() {
       .then((data) => {
         if (data?.review_status) setReviewStatus(data.review_status);
         if (data?.verdict) setReviewVerdict(data.verdict);
+        if (Array.isArray(data?.figures_checked)) setCheckedFigures(data.figures_checked);
       });
     const remarks = request(`/reviews/${reviewId}/remarks`)
       .then((r) => r.json())
-      .then((data) => setComments(data.map((r) => ({
-        id: r.id,
-        page_number: Number(r.page_number),
-        y_position: Number(r.top_position),
-        x_position: Number(r.left_position),
-        text: r.comment,
-        author: "Reviewer",
-        timestamp: r.created_at,
-        selectedText: r.selected_text,
-        section: r.section,
-        color: r.color,
-        highlightRects: Number(r.highlight_width) > 0
-          ? [{
-              top_position: Number(r.top_position),
-              left_position: Number(r.left_position),
-              highlight_width: Number(r.highlight_width),
-              highlight_height: Number(r.highlight_height),
-            }]
-          : [],
-      }))));
+      .then((data) => setComments(data.map(remarkFromServer)));
     const general = request(`/reviews/${reviewId}/general-remarks`)
       .then((r) => r.json())
       .then((data) => setGeneralComments(data.map((r) => ({ id: r.id, text: r.comment, section: r.section }))));
@@ -136,15 +180,33 @@ function App() {
     return response.json();
   };
 
-  // The endpoint replaces every page remark for this review in one request.
-  const saveRemarks = async (list) => {
-    const response = await request(`/reviews/${reviewId}/remarks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ comments: list }),
+  // The endpoint takes every page remark for this review in one request and
+  // keeps each remark's id, so a remark is the same remark from one save to
+  // the next. A new remark is told its id in the reply; until the screen has
+  // caught up, idMap carries it, so a remark is never created twice. Saves
+  // run one after another for the same reason.
+  const idMap = useRef({});
+  const saveChain = useRef(Promise.resolve());
+  const saveRemarks = (list) => {
+    const run = saveChain.current.catch(() => {}).then(async () => {
+      const comments = list.map((c) => ({ ...c, id: idMap.current[c.id] ?? c.id }));
+      const response = await request(`/reviews/${reviewId}/remarks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comments }),
+      });
+      if (!response.ok) throw new Error(`Save failed: ${response.status}`);
+      const data = await response.json();
+      const ids = data.ids || {};
+      if (Object.keys(ids).length) {
+        Object.assign(idMap.current, ids);
+        setComments((prev) => prev.map((c) => (ids[c.id] != null ? { ...c, id: ids[c.id] } : c)));
+        setSelectedId((id) => (ids[id] != null ? ids[id] : id));
+      }
+      return data;
     });
-    if (!response.ok) throw new Error(`Save failed: ${response.status}`);
-    return response.json();
+    saveChain.current = run;
+    return run;
   };
 
   // Remarks save themselves shortly after every change, so there is no Save
@@ -237,8 +299,31 @@ function App() {
 
       pageComments.forEach((comment, cIdx) => {
         const highlightColor = HIGHLIGHT_COLOR_MAP[comment.color] || HIGHLIGHT_COLOR_MAP.yellow;
+        if (comment.type === "pin") {
+          // A pin is a spot, not an area: a dot where it was dropped.
+          try {
+            page.drawCircle({
+              x: (comment.x_position || 0) * width, y: height - (comment.y_position || 0) * height,
+              size: 4, color: highlightColor, borderColor: rgb(1, 1, 1), borderWidth: 1,
+            });
+          } catch (e) {
+            console.warn("Error drawing pin:", e);
+          }
+        }
         (comment.highlightRects || []).forEach((rect) => {
           try {
+            if (comment.type === "box") {
+              // An outline, so the diagram under it stays readable.
+              page.drawRectangle({
+                x: (rect.left_position || 0) * width,
+                y: height - (rect.top_position || 0) * height - (rect.highlight_height || 0) * height,
+                width: (rect.highlight_width || 0) * width,
+                height: (rect.highlight_height || 0) * height,
+                borderColor: highlightColor,
+                borderWidth: 1.5,
+              });
+              return;
+            }
             page.drawRectangle({
               x: (rect.left_position || 0) * width,
               y: height - (rect.top_position || 0) * height - (rect.highlight_height || 0.05) * height,
@@ -252,7 +337,8 @@ function App() {
           }
         });
 
-        const firstRect = (comment.highlightRects || [])[0];
+        const firstRect = (comment.highlightRects || [])[0]
+          || (comment.type === "pin" ? { left_position: comment.x_position, top_position: comment.y_position } : null);
         if (firstRect) {
           try {
             const badgeX = (firstRect.left_position || 0) * width;
@@ -301,7 +387,7 @@ function App() {
               x: boxX + 9, y: boxY + commentBoxHeight - 15, size: 7, font: helveticaBoldFont, color: rgb(1, 1, 1),
             });
 
-            const words = (comment.text || "").split(" ");
+            const words = `${comment.figure_label ? `${comment.figure_label}: ` : ""}${comment.text || ""}`.split(" ");
             const lines = [];
             let line = "";
             words.forEach((word) => {
@@ -444,6 +530,12 @@ function App() {
           showChanges={showChanges}
           diff={diff}
           onFocusChange={(c) => setFocus({ id: c.id, page: c.oldPage, rect: c.oldRect, at: Date.now() })}
+          startMode={checksDiagrams ? "box" : "text"}
+          startTab={checksDiagrams ? "figures" : "remarks"}
+          checkedFigures={checkedFigures}
+          onToggleFigure={toggleFigure}
+          revisionStatus={revisionStatus}
+          onRevision={setRevision}
         />
         {compareVersion && (
           <div className="an-pane-head">

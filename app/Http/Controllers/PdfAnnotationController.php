@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class PdfAnnotationController extends Controller
 {
@@ -66,6 +67,36 @@ class PdfAnnotationController extends Controller
         return $earlier ? $earlier->pdfRemarks()->where('is_general', false)->get() : collect();
     }
 
+    /**
+     * POST /reviews/{review}/versions/{document}/remarks/{remark}/revision -
+     * whether a remark left on an earlier version was fixed in this one.
+     * Only the reviewer's own remarks on that version, and only from the
+     * review of the version that came after it.
+     */
+    public function updateRevisionStatus(Request $request, CapstoneDocumentReview $review, CapstoneDocument $document, PdfRemark $remark)
+    {
+        $this->authorizeVersion($review, $document);
+
+        $earlier = CapstoneDocumentReview::where('file_id', $document->file_id)->where('expert_id', $review->expert_id)->first();
+        abort_unless($earlier && (int) $remark->review_id === (int) $earlier->review_id && ! $remark->is_general, 404);
+
+        $validated = $request->validate([
+            'status' => ['nullable', Rule::in(PdfRemark::REVISION_STATUSES)],
+        ]);
+
+        $status = $validated['status'] ?? null;
+
+        $remark->update([
+            'revision_status' => $status,
+            'revision_checked_at' => $status ? now() : null,
+        ]);
+
+        return response()->json([
+            'id' => $remark->id,
+            'revision_status' => $remark->revision_status,
+        ]);
+    }
+
     /** Only the reviewer of this review, and only the team's earlier uploads of this requirement. */
     private function authorizeVersion(CapstoneDocumentReview $review, CapstoneDocument $document): void
     {
@@ -93,6 +124,9 @@ class PdfAnnotationController extends Controller
             'comments.*.selectedText' => 'nullable|string',
             'comments.*.section' => 'nullable|string|max:150',
             'comments.*.color' => 'nullable|string',
+            'comments.*.type' => ['nullable', Rule::in(PdfRemark::MARK_TYPES)],
+            'comments.*.figure_label' => 'nullable|string|max:40',
+            'comments.*.diagram_type' => ['nullable', Rule::in(PdfRemark::DIAGRAM_TYPES)],
             'comments.*.highlightRects' => 'nullable|array',
             'comments.*.highlightRects.*.top_position' => 'nullable|numeric',
             'comments.*.highlightRects.*.left_position' => 'nullable|numeric',
@@ -100,49 +134,108 @@ class PdfAnnotationController extends Controller
             'comments.*.highlightRects.*.highlight_height' => 'nullable|numeric',
             'comments.*.y_position' => 'nullable|numeric',
             'comments.*.x_position' => 'nullable|numeric',
+            'comments.*.id' => 'nullable',
+            'comments.*.carried_from_id' => 'nullable|integer',
         ]);
 
-        $review->pdfRemarks()->where('is_general', false)->delete();
+        // Remarks are updated where they are, not deleted and written again:
+        // a remark keeps its id from one save to the next, which is what lets
+        // a later round record whether it was fixed. Whatever the screen no
+        // longer has is deleted; whatever it has that is new is created, and
+        // the screen is told the id each new one got.
+        $existing = $review->pdfRemarks()->where('is_general', false)->get()->keyBy('id');
+        $kept = [];
+        $ids = [];
 
         foreach ($validated['comments'] as $comment) {
             $rects = $comment['highlightRects'] ?? [];
+            $type = $comment['type'] ?? 'text';
+            $onFigure = $type !== 'text';
 
-            if (! empty($rects)) {
+            $remark = [
+                'page_number' => $comment['page_number'],
+                'color' => $comment['color'] ?? 'yellow',
+                'comment' => $comment['text'] ?? $comment['comment'] ?? '',
+                'selected_text' => $onFigure ? null : ($comment['selectedText'] ?? null),
+                'section' => $comment['section'] ?? null,
+                'mark_type' => $type,
+                // A figure number only means something on a box or a pin.
+                'figure_label' => $onFigure ? ($comment['figure_label'] ?? null) : null,
+                'diagram_type' => $onFigure ? ($comment['diagram_type'] ?? null) : null,
+                'carried_from_id' => $comment['carried_from_id'] ?? null,
+            ];
+
+            if ($type !== 'pin' && ! empty($rects)) {
+                // The box around all of them, which is what everything that
+                // reads a remark's position already uses.
                 $minTop = min(array_column($rects, 'top_position'));
                 $minLeft = min(array_column($rects, 'left_position'));
                 $maxBottom = max(array_map(fn ($r) => $r['top_position'] + ($r['highlight_height'] ?? 0), $rects));
                 $maxRight = max(array_map(fn ($r) => $r['left_position'] + ($r['highlight_width'] ?? 0), $rects));
 
-                $review->pdfRemarks()->create([
-                    'page_number' => $comment['page_number'],
+                $remark += [
                     'top_position' => $minTop,
                     'left_position' => $minLeft,
                     'highlight_width' => $maxRight - $minLeft,
                     'highlight_height' => $maxBottom - $minTop,
-                    'color' => $comment['color'] ?? 'yellow',
-                    'comment' => $comment['text'] ?? $comment['comment'] ?? '',
-                    'selected_text' => $comment['selectedText'] ?? null,
-                    'section' => $comment['section'] ?? null,
-                ]);
+                    // Each box of a figure remark, so two boxes on one remark
+                    // come back as two boxes instead of one around both.
+                    'rects' => $type === 'box' ? array_values($rects) : null,
+                ];
             } else {
-                $review->pdfRemarks()->create([
-                    'page_number' => $comment['page_number'],
+                // A pin, or a remark with no highlight: a point on the page.
+                $remark += [
                     'top_position' => $comment['y_position'] ?? 0,
                     'left_position' => $comment['x_position'] ?? 0,
                     'highlight_width' => 0,
                     'highlight_height' => 0,
-                    'color' => $comment['color'] ?? 'yellow',
-                    'comment' => $comment['text'] ?? $comment['comment'] ?? '',
-                    'selected_text' => $comment['selectedText'] ?? null,
-                    'section' => $comment['section'] ?? null,
-                ]);
+                    'rects' => null,
+                ];
+            }
+
+            $clientId = $comment['id'] ?? null;
+            $saved = is_numeric($clientId) ? $existing->get((int) $clientId) : null;
+
+            // The same remark twice in one request is saved once.
+            if ($saved && ! in_array($saved->id, $kept, true)) {
+                $saved->update($remark);
+            } else {
+                $saved = $review->pdfRemarks()->create($remark);
+            }
+
+            $kept[] = $saved->id;
+
+            if ($clientId !== null && (string) $clientId !== (string) $saved->id) {
+                $ids[(string) $clientId] = $saved->id;
             }
         }
+
+        $review->pdfRemarks()->where('is_general', false)->whereNotIn('id', $kept)->delete();
 
         return response()->json([
             'success' => true,
             'counts' => ['remarks' => count($validated['comments'])],
+            'ids' => (object) $ids,
         ]);
+    }
+
+    /**
+     * POST /reviews/{review}/figures-checked - the figures the reviewer looked
+     * at and had nothing to say about, so the Figures list counts them as
+     * reviewed. A figure with a remark on it counts already.
+     */
+    public function updateFiguresChecked(Request $request, CapstoneDocumentReview $review)
+    {
+        $this->authorizeReview($review);
+
+        $validated = $request->validate([
+            'figures' => 'present|array|max:300',
+            'figures.*' => 'string|max:40',
+        ]);
+
+        $review->update(['figures_checked' => array_values(array_unique($validated['figures']))]);
+
+        return response()->json(['figures_checked' => $review->figures_checked]);
     }
 
     /**
@@ -198,6 +291,7 @@ class PdfAnnotationController extends Controller
         return response()->json([
             'review_status' => $review->review_status,
             'verdict' => $review->verdict,
+            'figures_checked' => $review->figures_checked ?? [],
         ]);
     }
 
