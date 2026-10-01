@@ -67,6 +67,36 @@ class PdfAnnotationController extends Controller
         return $earlier ? $earlier->pdfRemarks()->where('is_general', false)->get() : collect();
     }
 
+    /**
+     * POST /reviews/{review}/versions/{document}/remarks/{remark}/revision -
+     * whether a remark left on an earlier version was fixed in this one.
+     * Only the reviewer's own remarks on that version, and only from the
+     * review of the version that came after it.
+     */
+    public function updateRevisionStatus(Request $request, CapstoneDocumentReview $review, CapstoneDocument $document, PdfRemark $remark)
+    {
+        $this->authorizeVersion($review, $document);
+
+        $earlier = CapstoneDocumentReview::where('file_id', $document->file_id)->where('expert_id', $review->expert_id)->first();
+        abort_unless($earlier && (int) $remark->review_id === (int) $earlier->review_id && ! $remark->is_general, 404);
+
+        $validated = $request->validate([
+            'status' => ['nullable', Rule::in(PdfRemark::REVISION_STATUSES)],
+        ]);
+
+        $status = $validated['status'] ?? null;
+
+        $remark->update([
+            'revision_status' => $status,
+            'revision_checked_at' => $status ? now() : null,
+        ]);
+
+        return response()->json([
+            'id' => $remark->id,
+            'revision_status' => $remark->revision_status,
+        ]);
+    }
+
     /** Only the reviewer of this review, and only the team's earlier uploads of this requirement. */
     private function authorizeVersion(CapstoneDocumentReview $review, CapstoneDocument $document): void
     {
@@ -104,9 +134,18 @@ class PdfAnnotationController extends Controller
             'comments.*.highlightRects.*.highlight_height' => 'nullable|numeric',
             'comments.*.y_position' => 'nullable|numeric',
             'comments.*.x_position' => 'nullable|numeric',
+            'comments.*.id' => 'nullable',
+            'comments.*.carried_from_id' => 'nullable|integer',
         ]);
 
-        $review->pdfRemarks()->where('is_general', false)->delete();
+        // Remarks are updated where they are, not deleted and written again:
+        // a remark keeps its id from one save to the next, which is what lets
+        // a later round record whether it was fixed. Whatever the screen no
+        // longer has is deleted; whatever it has that is new is created, and
+        // the screen is told the id each new one got.
+        $existing = $review->pdfRemarks()->where('is_general', false)->get()->keyBy('id');
+        $kept = [];
+        $ids = [];
 
         foreach ($validated['comments'] as $comment) {
             $rects = $comment['highlightRects'] ?? [];
@@ -123,6 +162,7 @@ class PdfAnnotationController extends Controller
                 // A figure number only means something on a box or a pin.
                 'figure_label' => $onFigure ? ($comment['figure_label'] ?? null) : null,
                 'diagram_type' => $onFigure ? ($comment['diagram_type'] ?? null) : null,
+                'carried_from_id' => $comment['carried_from_id'] ?? null,
             ];
 
             if ($type !== 'pin' && ! empty($rects)) {
@@ -133,7 +173,7 @@ class PdfAnnotationController extends Controller
                 $maxBottom = max(array_map(fn ($r) => $r['top_position'] + ($r['highlight_height'] ?? 0), $rects));
                 $maxRight = max(array_map(fn ($r) => $r['left_position'] + ($r['highlight_width'] ?? 0), $rects));
 
-                $review->pdfRemarks()->create($remark + [
+                $remark += [
                     'top_position' => $minTop,
                     'left_position' => $minLeft,
                     'highlight_width' => $maxRight - $minLeft,
@@ -141,21 +181,41 @@ class PdfAnnotationController extends Controller
                     // Each box of a figure remark, so two boxes on one remark
                     // come back as two boxes instead of one around both.
                     'rects' => $type === 'box' ? array_values($rects) : null,
-                ]);
+                ];
             } else {
                 // A pin, or a remark with no highlight: a point on the page.
-                $review->pdfRemarks()->create($remark + [
+                $remark += [
                     'top_position' => $comment['y_position'] ?? 0,
                     'left_position' => $comment['x_position'] ?? 0,
                     'highlight_width' => 0,
                     'highlight_height' => 0,
-                ]);
+                    'rects' => null,
+                ];
+            }
+
+            $clientId = $comment['id'] ?? null;
+            $saved = is_numeric($clientId) ? $existing->get((int) $clientId) : null;
+
+            // The same remark twice in one request is saved once.
+            if ($saved && ! in_array($saved->id, $kept, true)) {
+                $saved->update($remark);
+            } else {
+                $saved = $review->pdfRemarks()->create($remark);
+            }
+
+            $kept[] = $saved->id;
+
+            if ($clientId !== null && (string) $clientId !== (string) $saved->id) {
+                $ids[(string) $clientId] = $saved->id;
             }
         }
+
+        $review->pdfRemarks()->where('is_general', false)->whereNotIn('id', $kept)->delete();
 
         return response()->json([
             'success' => true,
             'counts' => ['remarks' => count($validated['comments'])],
+            'ids' => (object) $ids,
         ]);
     }
 

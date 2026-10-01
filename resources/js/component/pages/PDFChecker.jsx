@@ -105,6 +105,7 @@ function PDFChecker({
   onDeleteComment, selectedId, setSelectedId, notify, base = null, showChanges = true,
   diff = { status: "idle" }, onFocusChange,
   startMode = "text", startTab = "remarks", checkedFigures = [], onToggleFigure = () => {},
+  revisionStatus = {}, onRevision = () => {},
 }) {
   const [numPages, setNumPages] = useState(null);
   const [pdf, setPdf] = useState(null);
@@ -149,11 +150,12 @@ function PDFChecker({
     return () => { alive = false; };
   }, [pdf]);
 
+  const toCheck = (diff.revision || []).filter((r) => !((r.id in revisionStatus ? revisionStatus[r.id] : r.revision_status))).length;
   const figuresDone = figures.filter((f) => checkedFigures.includes(f.label) || comments.some((c) => c.figure_label === f.label)).length;
   const tabList = [
     ["remarks", "Remarks"],
     ["figures", figures.length ? `Figures ${figuresDone}/${figures.length}` : "Figures"],
-    ...(base ? [["changes", "What changed"]] : []),
+    ...(base ? [["changes", toCheck ? `What changed · ${toCheck} to check` : "What changed"]] : []),
   ];
   const tabs = (
     <div className="rr-tabs" role="tablist" aria-label="Side panel">
@@ -626,7 +628,21 @@ function PDFChecker({
       </section>
 
       {base && tab === "changes" ? (
-        <ChangesPanel top={tabs} base={base} diff={diff} selectedChange={changeId} onOpenChange={openChange} onOpenRemark={openOldRemark} />
+        <ChangesPanel
+          top={tabs}
+          base={base}
+          diff={diff}
+          selectedChange={changeId}
+          onOpenChange={openChange}
+          onOpenRemark={openOldRemark}
+          pdf={pdf}
+          revisionStatus={revisionStatus}
+          onRevision={onRevision}
+          onOpenRevision={(r) => {
+            col.goToRect(r.target.page, r.target.rects[0] || { top_position: r.target.y });
+            onFocusChange?.({ id: `r${r.id}`, oldPage: r.page_number, oldRect: r.highlightRects[0] || { top_position: r.y_position } });
+          }}
+        />
       ) : tab === "figures" ? (
         <FiguresPanel
           top={tabs}

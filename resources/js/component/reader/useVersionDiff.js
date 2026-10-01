@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { pdfjs } from "react-pdf";
 import { compareVersions, remarksNearChanges, sharedPhrases, MIN_SHARED } from "./versionDiff";
+import { checkRevision } from "./revisionCheck";
+import { remarkFromServer } from "./figures";
 
 const normalise = (s) => s.toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, "");
 // A page number in the header or footer would count as changed whenever pages
@@ -98,13 +100,24 @@ export function useVersionDiff(currentUrl, base) {
     ])
       .then(([oldWords, newWords, remarks]) => {
         if (!live) return;
-        if (!oldWords.length || !newWords.length) { setState({ status: "notext" }); return; }
+        const earlier = remarks.map(remarkFromServer);
+        if (!oldWords.length || !newWords.length) {
+          // No text to line up - a scanned or diagrams-only PDF. Figure remarks
+          // are still checked, in the same place, by comparing the pictures.
+          const none = { removed: new Uint8Array(oldWords.length), added: new Uint8Array(newWords.length) };
+          setState({ status: "notext", revision: checkRevision(earlier, oldWords, newWords, none) });
+          return;
+        }
         // Every word would show as changed, which tells the reviewer nothing.
         const shared = sharedPhrases(oldWords, newWords);
         if (shared !== null && shared < MIN_SHARED) { setState({ status: "unrelated", shared }); return; }
         // ponytail: runs on the main thread; move to a worker if long documents freeze the page.
         const diff = compareVersions(oldWords, newWords);
-        setState({ status: "ready", changes: diff.changes, marks: diff.marks, oldMarks: diff.oldMarks, remarks: remarksNearChanges(remarks, oldWords, newWords, diff) });
+        setState({
+          status: "ready", changes: diff.changes, marks: diff.marks, oldMarks: diff.oldMarks,
+          remarks: remarksNearChanges(remarks, oldWords, newWords, diff),
+          revision: checkRevision(earlier, oldWords, newWords, diff),
+        });
       })
       .catch(() => { if (live) setState({ status: "error" }); });
     return () => { live = false; };

@@ -76,6 +76,52 @@ function App() {
   const statusRef = useRef(reviewStatus);
   statusRef.current = reviewStatus;
 
+  // Checking a revision: what the reviewer found for each remark on the
+  // earlier version. Kept on that remark; a remark still not fixed is carried
+  // into this review, at its place in this version, so the team sees it again.
+  const [revisionStatus, setRevisionStatus] = useState({});
+  const setRevision = async (item, chosen) => {
+    const before = item.id in revisionStatus ? revisionStatus[item.id] : item.revision_status || null;
+    const next = before === chosen ? null : chosen;
+    setRevisionStatus((m) => ({ ...m, [item.id]: next }));
+    try {
+      const response = await request(`/reviews/${reviewId}/versions/${baseVersion.id}/remarks/${item.id}/revision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!response.ok) throw new Error();
+    } catch {
+      setRevisionStatus((m) => ({ ...m, [item.id]: before }));
+      showToast("That was not saved. Try again.", { type: "error" });
+      return;
+    }
+    const carried = (c) => String(c.carried_from_id) === String(item.id);
+    if (next === "not_fixed" && item.target && !commentsRef.current.some(carried)) {
+      const t = item.target;
+      setComments((prev) => [...prev, {
+        id: `new-${Date.now()}`,
+        type: item.type,
+        page_number: t.page,
+        x_position: item.type === "pin" ? t.x : t.rects[0]?.left_position ?? 0,
+        y_position: item.type === "pin" ? t.y : t.rects[0]?.top_position ?? 0,
+        highlightRects: item.type === "pin" ? [] : t.rects,
+        text: `Still not fixed (from ${baseVersion.round || "the last version"}): ${item.text}`,
+        author: "Reviewer",
+        timestamp: new Date().toISOString(),
+        selectedText: item.type === "text" ? item.quoteNow || item.selectedText : null,
+        section: item.section || null,
+        color: item.color,
+        figure_label: item.type === "text" ? null : item.figureNow || item.figure_label,
+        diagram_type: item.type === "text" ? null : item.diagram_type,
+        carried_from_id: item.id,
+      }]);
+      showToast("Added to this review as still not fixed.");
+    } else if (next !== "not_fixed" && commentsRef.current.some(carried)) {
+      setComments((prev) => prev.filter((c) => !carried(c)));
+    }
+  };
+
   const toggleFigure = (label) => {
     const next = checkedFigures.includes(label) ? checkedFigures.filter((f) => f !== label) : [...checkedFigures, label];
     setCheckedFigures(next);
@@ -134,15 +180,33 @@ function App() {
     return response.json();
   };
 
-  // The endpoint replaces every page remark for this review in one request.
-  const saveRemarks = async (list) => {
-    const response = await request(`/reviews/${reviewId}/remarks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ comments: list }),
+  // The endpoint takes every page remark for this review in one request and
+  // keeps each remark's id, so a remark is the same remark from one save to
+  // the next. A new remark is told its id in the reply; until the screen has
+  // caught up, idMap carries it, so a remark is never created twice. Saves
+  // run one after another for the same reason.
+  const idMap = useRef({});
+  const saveChain = useRef(Promise.resolve());
+  const saveRemarks = (list) => {
+    const run = saveChain.current.catch(() => {}).then(async () => {
+      const comments = list.map((c) => ({ ...c, id: idMap.current[c.id] ?? c.id }));
+      const response = await request(`/reviews/${reviewId}/remarks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comments }),
+      });
+      if (!response.ok) throw new Error(`Save failed: ${response.status}`);
+      const data = await response.json();
+      const ids = data.ids || {};
+      if (Object.keys(ids).length) {
+        Object.assign(idMap.current, ids);
+        setComments((prev) => prev.map((c) => (ids[c.id] != null ? { ...c, id: ids[c.id] } : c)));
+        setSelectedId((id) => (ids[id] != null ? ids[id] : id));
+      }
+      return data;
     });
-    if (!response.ok) throw new Error(`Save failed: ${response.status}`);
-    return response.json();
+    saveChain.current = run;
+    return run;
   };
 
   // Remarks save themselves shortly after every change, so there is no Save
@@ -470,6 +534,8 @@ function App() {
           startTab={checksDiagrams ? "figures" : "remarks"}
           checkedFigures={checkedFigures}
           onToggleFigure={toggleFigure}
+          revisionStatus={revisionStatus}
+          onRevision={setRevision}
         />
         {compareVersion && (
           <div className="an-pane-head">
