@@ -65,7 +65,7 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
     <div class="content" style="padding:0">
-      <div class="tmx">
+      <div class="tmx tm-page">
         @yield('tm-content')
       </div>
     </div>

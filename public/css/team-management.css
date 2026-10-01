@@ -762,3 +762,7 @@
 .tm-topcrumb a:hover{color:var(--navy-text,#fff);text-decoration:underline}
 .tm-topcrumb .sep{color:rgba(255,255,255,.3)}
 .tm-topcrumb [aria-current]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Every page below the hub is as wide as the hub: 1180px of content,
+   centred, as the redesign has it - not stretched across a wide screen. */
+.content > .tmx.tm-page{width:100%;max-width:1228px;margin-inline:auto;box-sizing:border-box}
