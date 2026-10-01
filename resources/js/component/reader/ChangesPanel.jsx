@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { pdfjs } from "react-pdf";
 import { Icon, KIND_LABEL, PagedList, figureTitle, kindOf } from "./Reader";
 import FigureCrop, { regionPixels } from "./FigureCrop";
-import { boundsOf, isFigureRemark } from "./figures";
-import { PICTURE_CHANGED, findPicture, greyOf, pictureDifference } from "./revisionCheck";
+import { boundsOf, isFigureRemark, marksOf } from "./figures";
+import { PICTURE_CHANGED, findPicture, greyOf, labelsAt, pictureDifference } from "./revisionCheck";
 
 /** A remark from the earlier version, placed where it is now. */
 const atTarget = (r) => ({
@@ -16,21 +16,25 @@ const atTarget = (r) => ({
 
 const clamp = (n) => Math.min(1, Math.max(0, n));
 
-/** A remark moved to where its diagram was found, or to the page the reviewer chose. */
-const relocate = (r, m) => (m.keep ? r : r.type === "text" ? {
-  ...r,
-  foundBy: m.how,
-  changed: null,
-  target: { page: m.page, rects: (r.highlightRects || []).map((x) => ({ ...x, left_position: clamp(x.left_position + m.dx), top_position: clamp(x.top_position + m.dy) })) },
-} : {
-  ...r,
-  foundBy: m.how,
-  // What the words said was about the old place; the picture decides here.
-  ...(m.how === "picture" || m.how === "picked" ? { changed: null, removedWords: "", addedWords: "" } : {}),
-  target: r.type === "pin"
+/**
+ * A remark moved to where its diagram was found, or to the page the reviewer
+ * chose. The labels inside a figure are compared again at the new place,
+ * when the versions have words to compare.
+ */
+const relocate = (r, m, words) => {
+  if (m.keep) return r;
+  const move = (x) => ({ ...x, left_position: clamp(x.left_position + m.dx), top_position: clamp(x.top_position + m.dy) });
+  if (r.type === "text") {
+    return { ...r, foundBy: m.how, changed: null, target: { page: m.page, rects: (r.highlightRects || []).map(move) } };
+  }
+  const target = r.type === "pin"
     ? { page: m.page, x: clamp(r.x_position + m.dx), y: clamp(r.y_position + m.dy), rects: [] }
-    : { page: m.page, rects: r.highlightRects.map((x) => ({ ...x, left_position: clamp(x.left_position + m.dx), top_position: clamp(x.top_position + m.dy) })) },
-});
+    : { page: m.page, rects: r.highlightRects.map(move) };
+  const labels = words?.oldWords?.length || words?.newWords?.length
+    ? labelsAt(r, target, words.oldWords, words.newWords)
+    : { changed: null, removedWords: "", addedWords: "" };
+  return { ...r, foundBy: m.how, target, ...labels };
+};
 
 /**
  * Looks for a remark's diagram on some pages of this version by its picture,
@@ -50,11 +54,50 @@ async function searchPages(r, oldPdf, newPdf, pages) {
     const { width } = (await newPdf.getPage(n)).getViewport({ scale: 1 });
     const p = await regionPixels(newPdf, n, { left: 0, top: 0, width: 1, height: 1 }, Math.round(width * scale));
     const hit = findPicture(greyOf(p.data, p.width, p.height), p.width, p.height, tpl, t.width, t.height);
-    if (hit.found && (!best || hit.score < best.score)) {
+    if (hit.found && (!best || hit.score > best.score)) {
       best = { page: n, dx: hit.x / p.width - area.left, dy: hit.y / p.height - area.top, score: hit.score };
     }
   }
-  return best;
+  return best && (await lineUp(r, area, oldPdf, newPdf, best)) || best;
+}
+
+/**
+ * True when the picture was found where the caption already put the figure,
+ * to within a couple of pixels. The caption's place is then kept: text moves
+ * by exact amounts, so it lays the two pictures over each other better than
+ * a search can.
+ */
+const agrees = (r, hit) => {
+  if (!hit.pixel || hit.page !== r.target.page) return false;
+  const was = marksOf(r)[0];
+  const now = r.type === "pin" ? { left_position: r.target.x, top_position: r.target.y } : r.target.rects[0];
+  return Math.abs(now.left_position - was.left_position - hit.dx) <= hit.pixel.x * 2
+    && Math.abs(now.top_position - was.top_position - hit.dy) <= hit.pixel.y * 2;
+};
+
+/**
+ * A picture found on a whole page is only placed to within a few points,
+ * since the page is searched small. That is enough to find it but not to lay
+ * the two over each other, so it is looked for again, drawn at the size the
+ * pictures are compared at, in a small window around where it was found.
+ */
+async function lineUp(r, area, oldPdf, newPdf, hit) {
+  const fine = 400;
+  const margin = 0.015;
+  const t = await regionPixels(oldPdf, r.page_number, area, fine);
+  const { width: oldWidth } = (await oldPdf.getPage(Number(r.page_number))).getViewport({ scale: 1 });
+  const { width } = (await newPdf.getPage(hit.page)).getViewport({ scale: 1 });
+  const scale = fine / (area.width * oldWidth);
+  const win = { left: area.left + hit.dx - margin, top: area.top + hit.dy - margin, width: area.width + margin * 2, height: area.height + margin * 2 };
+  const p = await regionPixels(newPdf, hit.page, win, Math.round(win.width * width * scale));
+  const found = findPicture(greyOf(p.data, p.width, p.height), p.width, p.height, greyOf(t.data, t.width, t.height), t.width, t.height);
+  if (!found.found) return null;
+  return {
+    ...hit,
+    dx: win.left + (found.x / p.width) * win.width - area.left,
+    dy: win.top + (found.y / p.height) * win.height - area.top,
+    pixel: { x: win.width / p.width, y: win.height / p.height },
+  };
 }
 
 const FOUND_BY = {
@@ -103,7 +146,8 @@ function useEarlierPdf(url) {
  */
 function usePictureChecks(items, oldPdf, newPdf) {
   const [checks, setChecks] = useState({});
-  const key = items.map((r) => `${r.id}:${r.target?.page}:${r.target?.rects?.[0]?.top_position ?? r.target?.y}`).join("|");
+  // A figure still being placed is checked once it is placed, even where it stays.
+  const key = items.map((r) => `${r.id}:${r.unsettled ? "?" : ""}${r.target?.page}:${r.target?.rects?.[0]?.top_position ?? r.target?.y}`).join("|");
   useEffect(() => {
     if (!oldPdf || !newPdf) return undefined;
     let alive = true;
@@ -120,8 +164,20 @@ function usePictureChecks(items, oldPdf, newPdf) {
           const after = compared(atTarget(r));
           const width = 400;
           const a = await regionPixels(oldPdf, r.page_number, before, width);
-          const b = await regionPixels(newPdf, r.target.page, { ...after, width: before.width, height: before.height }, width, a.height);
-          const { share } = pictureDifference(a.data, b.data, a.width, a.height);
+          const differs = async (x, y) => {
+            const at = { left: after.left + (x * before.width) / width, top: after.top + (y * before.height) / a.height, width: before.width, height: before.height };
+            const b = await regionPixels(newPdf, r.target.page, at, width, a.height);
+            return pictureDifference(a.data, b.data, a.width, a.height).share;
+          };
+          // A figure found by its picture is placed to a fraction of a pixel,
+          // and half a pixel off is enough to make every thin line differ. So
+          // a picture that looks changed is laid over again half a pixel each
+          // way: a real change stays, a misplacement does not.
+          let share = await differs(0, 0);
+          for (const [x, y] of [[0, -0.5], [0, 0.5], [-0.5, 0], [0.5, 0], [-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) {
+            if (share <= PICTURE_CHANGED || !alive) break;
+            share = Math.min(share, await differs(x, y));
+          }
           if (alive) setChecks((c) => ({ ...c, [r.id]: { share, changed: share > PICTURE_CHANGED } }));
         } catch { /* a page that would not draw: the words still speak */ }
       }
@@ -235,22 +291,25 @@ export default function ChangesPanel({
   const [moved, setMoved] = useState({});
   const [looking, setLooking] = useState(null);
   const revision = (diff.revision || []).map((r) => (moved[r.id]
-    ? relocate(r, moved[r.id])
-    : isFigureRemark(r) && ["same place", "nearby text", "labels"].includes(r.foundBy) ? { ...r, unsettled: true } : r));
+    ? relocate(r, moved[r.id], diff)
+    : isFigureRemark(r) && ["same place", "nearby text", "labels", "caption"].includes(r.foundBy) ? { ...r, unsettled: true } : r));
   const [filter, setFilter] = useState("remarks");
   const [comparing, setComparing] = useState(null);
   const oldPdf = useEarlierPdf(revision.length ? base?.file : null);
   const pictures = usePictureChecks(revision, oldPdf, pdf);
 
-  // Only a caption is sure enough on its own. A diagram placed any other way
-  // - by the labels inside it, the text around it, or nowhere - is looked for
-  // by its picture, on the pages around where the words put it and where it
-  // was before, anywhere on each page: a diagram pushed down a page lands at
-  // a different height. Text around a figure can be reworded into the same
-  // phrases somewhere else, so it never decides alone: if the picture is not
-  // found, the remark says so instead of pointing at the wrong place. Labels
-  // inside a drawn diagram are its own words, so they still stand.
-  const unsure = (r) => isFigureRemark(r) && ["same place", "nearby text", "labels"].includes(r.foundBy);
+  // Every figure is lined up by its picture. A caption is sure about the
+  // page, so its figure is only looked for on that page, to place the box
+  // exactly: a figure that grew taller moves its caption down further than
+  // its top, and moving the box by the caption alone would catch the text
+  // above it. Placed any other way - by the labels inside it, the text around
+  // it, or nowhere - it is looked for on the pages around where the words put
+  // it and where it was before, anywhere on each page. Text around a figure
+  // can be reworded into the same phrases somewhere else, so it never decides
+  // alone: if the picture is not found, the remark says so instead of
+  // pointing at the wrong place. A caption, or labels inside a drawn diagram,
+  // still stand when the picture changed too much to be recognised.
+  const unsure = (r) => isFigureRemark(r) && ["same place", "nearby text", "labels", "caption"].includes(r.foundBy);
   const unplaced = (diff.revision || []).filter((r) => unsure(r) && !moved[r.id]).map((r) => r.id).join(",");
   useEffect(() => {
     if (!oldPdf || !pdf || !unplaced) return undefined;
@@ -260,12 +319,14 @@ export default function ChangesPanel({
         if (!alive || !unsure(r) || moved[r.id]) continue;
         const at = r.target.page;
         const was = r.page_number;
-        const pages = [...new Set([at, was, at + 1, at - 1, was + 1, was + 2])];
+        const pages = r.foundBy === "caption" ? [at] : [...new Set([at, was, at + 1, at - 1, was + 1, was + 2])];
         const hit = await searchPages(r, oldPdf, pdf, pages).catch(() => null);
         if (!alive) return;
-        const place = hit
-          ? { page: hit.page, dx: hit.dx, dy: hit.dy, how: "picture" }
-          : r.foundBy === "labels" ? { keep: true } : { page: was, dx: 0, dy: 0, how: "not found" };
+        const stands = r.foundBy === "caption" || r.foundBy === "labels";
+        const place = !hit
+          ? stands ? { keep: true } : { page: was, dx: 0, dy: 0, how: "not found" }
+          : r.foundBy === "caption" && agrees(r, hit) ? { keep: true }
+            : { page: hit.page, dx: hit.dx, dy: hit.dy, how: r.foundBy === "caption" ? "caption" : "picture" };
         setMoved((m) => ({ ...m, [r.id]: place }));
       }
     })();
