@@ -72,9 +72,13 @@ class EveryStaffPageStillOpensTest extends TestCase
     {
         $expert = $this->everyHat();
 
-        foreach (['instructor.teams', 'instructor.grading', 'instructor.assignments', 'instructor.schedule', 'instructor.docreview'] as $route) {
+        foreach (['instructor.grading', 'instructor.assignments', 'instructor.schedule', 'instructor.docreview'] as $route) {
             $this->actingAs($expert, 'expert')->get(route($route))->assertOk();
         }
+
+        // A CaPSA's expert teams are on Team Management: one Teams page, not two.
+        $this->actingAs($expert, 'expert')->get(route('instructor.teams'))
+            ->assertRedirect(route('capsa.team_management', ['tab' => 'teams']));
     }
 
     public function test_the_sidebar_is_in_topic_order(): void
@@ -85,7 +89,7 @@ class EveryStaffPageStillOpensTest extends TestCase
             ->assertSeeInOrder([
                 'Overview', 'Dashboard', 'Announcements',
                 'People', 'Expert Management', 'Student Section List', 'Student Accounts',
-                'Teams', 'Team Management', 'My Teams', 'Team Assignments',
+                'Teams', 'Team Management', 'Team Assignments',
                 'Defenses', 'Panel Assignment', 'Team Grading', 'Grading Rubrics',
                 'Advising', 'My Schedule', 'Document Review',
                 'Records', 'Financial Records', 'Archived Capstones', 'Templates &amp; Lessons',

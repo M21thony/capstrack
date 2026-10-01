@@ -122,9 +122,9 @@ class DefenseScoresTest extends TestCase
         $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'sections' => ['BSIT-3A']]));
 
         $this->actingAs($capsa, 'expert')
-            ->get(route('capsa.team_management'))
+            ->get(route('capsa.team_management', ['tab' => 'teams']))
             ->assertOk()
-            ->assertSee('Defense Score')
+            ->assertSee('aria-label="Defense scores"', false)
             ->assertSeeInOrder(['Scored Team', '75', 'Title']);
     }
 
