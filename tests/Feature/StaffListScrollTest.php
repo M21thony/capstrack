@@ -37,7 +37,7 @@ class StaffListScrollTest extends TestCase
 
         $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'sections' => ['BSIT-3A']]));
         $this->actingAs($capsa, 'expert')->get(route('capsa.team_management'))->assertOk()
-            ->assertSee('<div class="tmx tm-list tm-hub" data-portal="capsa">', false)
+            ->assertSee('<div class="tmx tm-hub" data-portal="capsa">', false)
             // One line on what is waiting, Team rules beside the title, then the tabs.
             ->assertSeeInOrder(['class="hub-sum"', 'id="setBtn"', 'class="hub-tabs"', 'To do', 'Teams', 'Milestones'], false)
             ->assertSeeInOrder(['id="tm-todo"', 'id="tm-q"', 'id="tm-teams"'], false)

@@ -38,7 +38,17 @@
     <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="page-title">{{ $portal === 'capsa' ? 'Team Management' : 'My Teams' }}</div>
+    {{-- Where you are, as a path you can click back along - in the top bar,
+         as the redesign has it, rather than a row of its own. --}}
+    <nav class="page-title tm-topcrumb" aria-label="Breadcrumb">
+      @foreach ($trail as [$label, $url])
+        @if ($url && ! $loop->last)
+          <a href="{{ $url }}">{{ $label }}</a><span class="sep" aria-hidden="true">›</span>
+        @else
+          <span aria-current="page">{{ $label }}</span>
+        @endif
+      @endforeach
+    </nav>
     <div class="topbar-actions">
       @include($portal === 'capsa' ? 'capsa.partials.notification-dropdown' : 'instructor.partials.notification-dropdown')
     </div>
@@ -56,7 +66,6 @@
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
     <div class="content" style="padding:0">
       <div class="tmx">
-        @include('capsa.partials.team-management._crumb', ['trail' => $trail])
         @yield('tm-content')
       </div>
     </div>

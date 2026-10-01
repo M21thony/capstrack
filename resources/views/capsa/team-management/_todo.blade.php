@@ -16,16 +16,13 @@
 
 <div class="tools">
   <div class="seg" role="group" aria-label="Show">
-    <button type="button" data-todo-mode="waiting" aria-pressed="true">Pending <span class="sn">{{ $todo->count() }}</span></button>
+    <button type="button" data-todo-mode="waiting" aria-pressed="true">Pending</button>
     <button type="button" data-todo-mode="decided" aria-pressed="false">Decided</button>
   </div>
-  @if ($portal === 'capsa')
-    <a class="tm-link" href="{{ route('capsa.team_management', ['tab' => 'leave_requests']) }}">All leave and change requests</a>
-  @endif
 </div>
 
-<div class="tcard">
-  <div class="tscroll">
+<div class="card">
+  <div>
     <div id="tm-todo-waiting">
       @forelse (\App\Support\TeamTodo::grouped($todo) as $group => $items)
         <div class="group-h">{{ $group }}</div>
@@ -50,36 +47,36 @@
               <div class="acts">
                 @if ($item->decide)
                   @php $decide = $item->decide; @endphp
-                  <button type="button" class="btn btn-o" data-decide="decline"
+                  <button type="button" class="btn" data-decide="decline"
                           data-url="{{ $decide['url'] }}" data-field="{{ $decide['field'] }}" data-value="{{ $decide['decline'] }}"
                           data-note="{{ $decide['note'] }}" data-min="{{ $decide['min'] }}"
                           data-title="Decline: {{ $item->what }}" data-sub="Team {{ $item->teamName }}">Decline</button>
-                  <button type="button" class="btn btn-p" data-decide="approve"
+                  <button type="button" data-decide="approve"
                           data-url="{{ $decide['url'] }}" data-field="{{ $decide['field'] }}" data-value="{{ $decide['approve'] }}"
                           data-note="{{ $decide['note'] }}" data-effect="{{ $decide['effect'] }}"
-                          data-title="{{ $item->what }}" data-sub="Team {{ $item->teamName }} · {{ $item->why }}">{{ $item->label }}</button>
+                          data-title="{{ $item->what }}" data-sub="Team {{ $item->teamName }} · {{ $item->why }}" class="btn p">{{ $item->label }}</button>
                 @elseif ($item->kind === 'verify')
-                  <a class="btn btn-o" href="{{ $item->teamUrl }}">Open team</a>
-                  <a class="btn btn-p" href="{{ $item->url }}">{{ $item->label }}</a>
+                  <a class="btn" href="{{ $item->teamUrl }}">Open team</a>
+                  <a class="btn p" href="{{ $item->url }}">{{ $item->label }}</a>
                 @else
-                  <a class="btn btn-p" href="{{ $item->url }}">{{ $item->label }}</a>
+                  <a class="btn p" href="{{ $item->url }}">{{ $item->label }}</a>
                 @endif
               </div>
             </li>
           @endforeach
         </ul>
       @empty
-        <div class="tm-empty">
+        <div class="empty">
           <b>All caught up</b>
           Nothing to do right now. New titles, papers and requests show up here.<br><br>
-          <a class="btn btn-o" href="{{ route($hubRoute, ['tab' => 'teams', 'quick' => 'behind']) }}" data-hub-tab="teams" data-quick-go="behind">See overdue teams</a>
+          <a class="btn" href="{{ route($hubRoute, ['tab' => 'teams', 'quick' => 'behind']) }}" data-hub-tab="teams" data-quick-go="behind">See overdue teams</a>
         </div>
       @endforelse
     </div>
 
     <div id="tm-todo-decided" hidden>
       @if ($decided->isEmpty())
-        <div class="tm-empty"><b>Nothing decided yet</b>What you approve, decline or check shows up here.</div>
+        <div class="empty"><b>Nothing decided yet</b>What you approve, decline or check shows up here.</div>
       @else
         <ul class="todo">
           @foreach ($decided as $done)

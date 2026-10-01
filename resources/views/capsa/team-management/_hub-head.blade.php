@@ -35,8 +35,8 @@
     {{-- The three team rules are three small answers, so they open in a
          menu under their button rather than sending her away. --}}
     <div class="setw">
-      <button class="btn btn-o" type="button" id="setBtn" aria-expanded="false" aria-controls="setMenu">
-        <x-tm-icon n="gear" s="16" />Team rules
+      <button class="btn" type="button" id="setBtn" aria-expanded="false" aria-controls="setMenu">
+        <x-tm-icon n="gear" s="15" />Team rules
       </button>
       {{-- On a phone the panel is a bottom sheet; this dims the page behind it,
            and tapping it cancels the same as clicking away does. --}}

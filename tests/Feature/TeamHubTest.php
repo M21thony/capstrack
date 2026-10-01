@@ -152,7 +152,7 @@ class TeamHubTest extends TestCase
 
         $this->actingAs($expert, 'expert')->get(route('instructor.teams'))
             ->assertOk()
-            ->assertSee('<div class="tmx tm-list tm-hub" data-portal="expert">', false)
+            ->assertSee('<div class="tmx tm-hub" data-portal="expert">', false)
             ->assertSeeInOrder(['class="group-h">Invitations', 'Invited as consultant', 'Team Habi'], false)
             ->assertSee('data-url="'.route('instructor.assignments.update', $invite->assignment_id).'"', false)
             ->assertSee('data-note="reason" data-min="20"', false)

@@ -375,11 +375,11 @@ class CapsaTeamManagementTest extends TestCase
         $this->assertLessThan(strpos($teams, 'Team Older'), strpos($teams, 'Team Fresh'));
         $this->assertLessThan(strpos($teams, 'Team Quiet'), strpos($teams, 'Team Older'));
 
-        $this->assertSame(2, substr_count($teams, 'class="tm-needs"'));
+        $this->assertSame(2, substr_count($teams, 'class="wait"'));
         $this->assertStringContainsString('To do: Review 1 title', $teams);
-        $this->assertStringContainsString('2 days ago', $teams);
-        // Only the one from today pulses.
-        $this->assertSame(1, substr_count($teams, 'class="tm-dot new"'));
+        // To do says how long each has waited, and marks only today's as new.
+        $this->assertStringContainsString('2 days ago', $html);
+        $this->assertSame(1, substr_count($html, 'class="new" aria-label="New"'));
     }
 
     /** The list refreshes itself in place: the rows and counts, not the page. */
