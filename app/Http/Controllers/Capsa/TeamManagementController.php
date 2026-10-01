@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Capsa;
 
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\Controller;
+use App\Models\CapstoneDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\Checklist;
+use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
+use App\Models\Deliverable;
 use App\Models\ExpertRemovalRequest;
 use App\Models\MemberLeaveRequest;
 use App\Models\StudentSchoolYear;
@@ -22,8 +25,10 @@ use App\Support\SectionScope;
 use App\Support\TeamChecklist;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -129,7 +134,16 @@ class TeamManagementController extends Controller
      */
     public function show(Request $request, Team $team): View
     {
-        $row = $this->teamRow($team);
+        /** @var CapstoneExpert $capsa */
+        $capsa = auth('expert')->user();
+        $rows = $this->buildRows($capsa, null);
+        $position = $rows->search(fn ($row) => (int) $row->team->team_id === (int) $team->team_id);
+
+        if ($position === false) {
+            abort(404);
+        }
+
+        $row = $rows[$position];
         $milestones = $row->milestones?->milestones ?? collect();
 
         $selected = $request->integer('milestone');
@@ -149,7 +163,159 @@ class TeamManagementController extends Controller
             'selected' => $milestones->get($selected),
             'defenseSchedules' => DefenseSchedule::where('team_id', $team->team_id)
                 ->orderBy('schedule_date')->get(),
+            'panel' => $this->panelFor($team),
+            'activity' => $this->activityFor($row),
+            'waiting' => $this->waitingFor($row, $milestones),
+            'viewerId' => (int) $capsa->expert_id,
+            // Previous and Next walk the list in the order it is shown, and
+            // wrap around, so she can go through every team without going back.
+            'previousTeam' => $rows->count() > 1 ? $rows[($position - 1 + $rows->count()) % $rows->count()]->team : null,
+            'nextTeam' => $rows->count() > 1 ? $rows[($position + 1) % $rows->count()]->team : null,
         ]);
+    }
+
+    /**
+     * The whole list behind a team page's "See all": every paper sent to her,
+     * or every update. The team page itself only shows what fits.
+     */
+    public function log(Team $team, string $log): View
+    {
+        $row = $this->teamRow($team);
+
+        return view('capsa.team-management.log', [
+            'row' => $row,
+            'trail' => $this->trail($row, [[$log === 'papers' ? 'Papers' : 'Activity', null]]),
+            'log' => $log,
+            'activity' => $log === 'activity' ? $this->activityFor($row) : collect(),
+        ]);
+    }
+
+    /**
+     * The panel of the team's latest defense that has one.
+     *
+     * @return object{panelists: Collection<int, DefensePanel>}|null
+     */
+    private function panelFor(Team $team): ?object
+    {
+        $schedule = DefenseSchedule::where('team_id', $team->team_id)
+            ->whereHas('panels')
+            ->with('panels.expert')
+            ->orderByDesc('schedule_date')
+            ->first();
+
+        if (! $schedule) {
+            return null;
+        }
+
+        return (object) [
+            'panelists' => $schedule->panels->filter(fn (DefensePanel $panel) => $panel->expert)->values(),
+        ];
+    }
+
+    /**
+     * What happened on this team, newest first: files sent, titles turned in,
+     * defenses held, and the day it was formed. Read off the records
+     * themselves, so there is no separate log to keep in step.
+     *
+     * @return Collection<int, object{who: string, student: ?object, did: string, at: Carbon}>
+     */
+    private function activityFor(object $row): Collection
+    {
+        $team = $row->team;
+        $members = $row->members->keyBy('student_id');
+        $nameOf = fn ($student) => $student ? trim(($student->f_name ?? '').' '.($student->l_name ?? '')) : 'A former member';
+        $event = fn (?object $student, string $who, string $did, $at) => (object) [
+            'who' => $who, 'student' => $student, 'did' => $did, 'at' => Carbon::parse($at),
+        ];
+
+        $files = CapstoneDocument::ofTeam($team->team_id)
+            ->get(['student_id', 'file_name', 'chapter', 'file_version', 'created_at'])
+            ->filter(fn ($file) => $file->created_at)
+            ->map(fn ($file) => $event(
+                $members->get($file->student_id),
+                $nameOf($members->get($file->student_id)),
+                'sent '.($file->chapter ?: $file->file_name).' · v'.$file->file_version,
+                $file->created_at,
+            ));
+
+        $titles = $row->proposals->map(fn ($proposal) => $event(
+            null, 'The team', 'turned in title #'.$proposal->slot, $proposal->submitted_at,
+        ));
+
+        $defenses = DefenseSchedule::where('team_id', $team->team_id)
+            ->where('schedule_date', '<=', now())
+            ->get()
+            ->map(fn ($schedule) => $event(null, 'The team', 'had its '.$schedule->defense_type, $schedule->schedule_date));
+
+        $formed = $team->created_at
+            ? [$event($members->get($team->leader_id), $nameOf($members->get($team->leader_id)), 'formed the team', $team->created_at)]
+            : [];
+
+        return $files->concat($titles)->concat($defenses)->concat($formed)
+            ->sortByDesc(fn ($e) => $e->at->getTimestamp())
+            ->values();
+    }
+
+    /**
+     * What on this team is waiting on her, each with where it is done.
+     *
+     * @return Collection<int, object{what: string, why: string, label: string, url: string}>
+     */
+    private function waitingFor(object $row, Collection $milestones): Collection
+    {
+        $team = $row->team;
+        $waiting = collect();
+
+        $pending = $row->proposals->filter(fn ($p) => ! $p->approved_status && ! $p->rejection_reason);
+
+        if ($pending->isNotEmpty()) {
+            $waiting->push((object) [
+                'what' => $pending->count().' '.Str::plural('title', $pending->count()).' to review',
+                'why' => 'The team cannot ask an adviser until you recommend one.',
+                'label' => 'Review titles',
+                'url' => route('capsa.team_management.title', [$team->team_id, $pending->first()->id]),
+            ]);
+        }
+
+        if ($row->canVerify) {
+            $waiting->push((object) [
+                'what' => 'Ready to verify',
+                'why' => 'Every title has a decision and the team has its final title.',
+                'label' => 'Verify team',
+                'url' => route('capsa.team_management.pre_proposals', $team->team_id),
+            ]);
+        }
+
+        $unchecked = $row->papers->where('review_status', '!=', 'Reviewed');
+
+        if ($unchecked->isNotEmpty()) {
+            $waiting->push((object) [
+                'what' => $unchecked->count().' '.Str::plural('paper', $unchecked->count()).' to check',
+                'why' => 'Sent to you for the format check.',
+                'label' => 'Check format',
+                'url' => route('instructor.docreview.annotate', $unchecked->first()->review_id),
+            ]);
+        }
+
+        foreach ($milestones as $milestone) {
+            foreach ($milestone->items as $item) {
+                if ($item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA
+                    && in_array($item->item->kind, Deliverable::CHECKED_BY_CAPSA, true)) {
+                    $waiting->push((object) [
+                        'what' => $item->item->title,
+                        'why' => 'Signed paper handed in for '.$milestone->milestone->name.'.',
+                        'label' => 'Check',
+                        'url' => route('capsa.team_management', [
+                            'tab' => 'milestones', 'section' => $row->section,
+                            'team' => $team->team_id, 'check' => $item->item->id,
+                            'return' => route('capsa.team_management.show', $team->team_id, false),
+                        ]),
+                    ]);
+                }
+            }
+        }
+
+        return $waiting;
     }
 
     /** Every title this team turned in, one line each. */
