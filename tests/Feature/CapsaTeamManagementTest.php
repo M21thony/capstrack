@@ -169,10 +169,11 @@ class CapsaTeamManagementTest extends TestCase
             }
         }
 
-        $response = $this->get(route('capsa.team_management'));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'teams']));
 
         $response->assertOk();
-        $response->assertSee('2/4');
+        // One block per requirement-bearing milestone, and a line saying how far along.
+        $response->assertSee('aria-label="0 of 1 milestones complete"', false);
         $response->assertSee('1 overdue');
     }
 
@@ -253,13 +254,14 @@ class CapsaTeamManagementTest extends TestCase
             'status' => 'approved',
         ]);
 
-        $response = $this->get(route('capsa.team_management'));
+        $response = $this->get(route('capsa.team_management.show', $team->team_id));
 
         $response->assertOk();
         // The filled seat names the role the team engaged them AS, not every
         // role they hold; the two empty seats say which role is still open.
-        $response->assertSee('Consultant: '.$expert->name);
+        $response->assertSeeInOrder([$expert->name, 'Consultant', 'No grammarian yet']);
         $response->assertSee('No adviser yet');
+        $response->assertDontSee('<small>Adviser</small>', false);
     }
 
     // Two approved titles is the state that otherwise looks like an
@@ -344,9 +346,9 @@ class CapsaTeamManagementTest extends TestCase
         $html = $this->get(route('capsa.team_management'))
             ->assertOk()->getContent();
 
-        // The summary names the waiting work.
-        $this->assertStringContainsString('Waiting on you', $html);
-        $this->assertStringContainsString('1 title to review', $html);
+        // The summary names the waiting work, and To do lists it.
+        $this->assertStringContainsString('1 waiting on you', $html);
+        $this->assertStringContainsString('Review 1 title', $html);
 
         // The old strip and its red badges are gone with it.
         $this->assertStringNotContainsString('tm-toolbar', $html);
@@ -368,13 +370,13 @@ class CapsaTeamManagementTest extends TestCase
         $this->addProposal($older, $olderSy, 1)->update(['submitted_at' => now()->subDays(2)]);
 
         $html = $this->get(route('capsa.team_management'))->assertOk()->getContent();
-        $teams = substr($html, strpos($html, 'id="tm-teams"'), strpos($html, 'id="tm-progress"') - strpos($html, 'id="tm-teams"'));
+        $teams = substr($html, strpos($html, 'id="tm-teams"'), strpos($html, 'class="legend"') - strpos($html, 'id="tm-teams"'));
 
         $this->assertLessThan(strpos($teams, 'Team Older'), strpos($teams, 'Team Fresh'));
         $this->assertLessThan(strpos($teams, 'Team Quiet'), strpos($teams, 'Team Older'));
 
         $this->assertSame(2, substr_count($teams, 'class="tm-needs"'));
-        $this->assertStringContainsString('1 title to review', $teams);
+        $this->assertStringContainsString('Waiting on you: Review 1 title', $teams);
         $this->assertStringContainsString('2 days ago', $teams);
         // Only the one from today pulses.
         $this->assertSame(1, substr_count($teams, 'class="tm-dot new"'));
@@ -389,7 +391,7 @@ class CapsaTeamManagementTest extends TestCase
         $html = $this->get(route('capsa.team_management'))->assertOk()->getContent();
 
         $this->assertStringContainsString('setInterval(refresh, 15000);', $html);
-        $this->assertStringContainsString("const parts = ['#tm-teams tbody', '#tm-progress tbody', '.page-head',", $html);
+        $this->assertStringContainsString("const parts = ['#tm-todo-waiting', '#tm-todo-decided', '#tm-teams tbody',", $html);
         // Signed out meanwhile: nothing is swapped in.
         $this->assertStringContainsString('if (!res.ok || res.redirected) { return; }', $html);
         $this->assertStringNotContainsString('location.reload', $html);
@@ -534,7 +536,7 @@ class CapsaTeamManagementTest extends TestCase
         $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
 
         $response->assertSee('Waiting on you');
-        $response->assertSee('2 titles to review');
+        $response->assertSee('Review 2 titles');
         $response->assertSee('href="'.route('capsa.team_management.title', [$team->team_id, $first->id]).'">Review titles', false);
     }
 

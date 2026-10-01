@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CapstoneExpert;
 use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -43,13 +44,13 @@ class ExpertPagesStillRenderTest extends TestCase
         ];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('pages')]
+    #[DataProvider('pages')]
     public function test_the_page_renders(string $url): void
     {
         $this->actingAs($this->expert, 'expert')->get($url)->assertOk();
     }
 
-    /** Milestone progress is the CaPSA's tracker, read-only, and Team Overview links to it. */
+    /** Milestone progress is the CaPSA's tracker, read-only, and My Teams links to it. */
     public function test_milestone_progress_renders_and_is_linked_from_team_overview(): void
     {
         $this->actingAs($this->expert, 'expert')
@@ -62,15 +63,17 @@ class ExpertPagesStillRenderTest extends TestCase
             ->assertSee(route('instructor.progress'), false);
     }
 
-    /** And the team's own numbers arrived on the page that took it over. */
-    public function test_team_overview_carries_the_progress_numbers(): void
+    /** My Teams is the expert's hub: To do and Teams, the same as a CaPSA's. */
+    public function test_my_teams_is_the_to_do_and_teams_hub(): void
     {
-        $html = $this->actingAs($this->expert, 'expert')->get('/instructor/teams')->content();
-
-        // The tiles became one summary line, so these are its words now.
-        $this->assertStringContainsString('average completion', $html);
-        $this->assertStringContainsString('overdue', $html);
-        $this->assertStringContainsString('teams-summary', $html);
+        $this->actingAs($this->expert, 'expert')->get('/instructor/teams')
+            ->assertOk()
+            ->assertSee('<div class="tmx tm-list tm-hub" data-portal="expert">', false)
+            ->assertSeeInOrder(['class="hub-tabs"', 'To do', 'Teams', 'id="tm-todo"', 'id="tm-teams"'], false)
+            ->assertSee('All caught up')
+            // No CaPSA controls on an expert's page.
+            ->assertDontSee('id="setBtn"', false)
+            ->assertDontSee('Milestones</a>', false);
     }
 
     /** The controls the redesign must not lose. */

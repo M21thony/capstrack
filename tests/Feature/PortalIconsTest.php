@@ -146,7 +146,7 @@ class PortalIconsTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder([
                 'data-icon="dashboard"', 'Dashboard',
-                'data-icon="team"', 'Team Overview',
+                'data-icon="team"', 'My Teams',
                 'data-icon="grading"', 'Team Grading',
                 'data-icon="inbox"', 'Team Assignments',
                 'data-icon="consultation"', 'Schedule Management',

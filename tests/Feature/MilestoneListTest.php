@@ -57,7 +57,8 @@ class MilestoneListTest extends TestCase
     {
         $this->page()
             ->assertOk()
-            ->assertSee('Manage milestones')
+            ->assertSee('class="hub-tabs"', false)
+            ->assertSee('Milestones')
             ->assertSee('Chapter 1-3 Submission')
             ->assertDontSee('Title defense forms and the first three chapters.')
             ->assertSee('Due '.now()->subDays(3)->format('M j, Y'))

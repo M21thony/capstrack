@@ -215,7 +215,7 @@
     <div class="nav-section">Teams</div>
     @endif
     @if ($isCapsa)
-    <a href="{{ route('capsa.team_management') }}" class="nav-item {{ $currentRoute === 'capsa.team_management' ? 'active' : '' }}">
+    <a href="{{ route('capsa.team_management') }}" class="nav-item {{ str_starts_with($currentRoute ?? '', 'capsa.team_management') ? 'active' : '' }}">
       <x-portal-icon name="teams-manage" />
       Team Management
       @if ($teamManagementBadge > 0)
@@ -224,10 +224,13 @@
     </a>
     @endif
     @if ($isExpert)
-    <a href="{{ route('instructor.teams') }}" class="nav-item {{ $currentRoute === 'instructor.teams' ? 'active' : '' }}">
+    {{-- A CaPSA's expert work is on Team Management too: one Teams page, not two. --}}
+    @unless ($isCapsa)
+    <a href="{{ route('instructor.teams') }}" class="nav-item {{ str_starts_with($currentRoute ?? '', 'instructor.teams') ? 'active' : '' }}">
       <x-portal-icon name="team" />
       My Teams
     </a>
+    @endunless
     <a href="{{ route('instructor.assignments') }}" class="nav-item {{ $currentRoute === 'instructor.assignments' ? 'active' : '' }}">
       <x-portal-icon name="inbox" />
       Team Assignments
