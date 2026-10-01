@@ -82,9 +82,11 @@ function problemWith(file, accept) {
 let S = null; // the open upload's state
 let dialog = null;
 
-function freshState(itemId, from) {
+function freshState(itemId, from, revises) {
   return {
     itemId: itemId || '',
+    // The upload a "Submit revision" is the next version of.
+    revises: revises || null,
     from,
     fixedLine: !!itemId,
     plan: null,
@@ -112,11 +114,11 @@ function freshState(itemId, from) {
   };
 }
 
-export async function openSubmission(itemId, from) {
+export async function openSubmission(itemId, from, revises) {
   if (!CONFIG.plan) return;
   if (dialog?.open) closeNow();
 
-  S = freshState(itemId, from);
+  S = freshState(itemId, from, revises);
   dialog = document.createElement('dialog');
   dialog.className = 'up';
   dialog.setAttribute('aria-labelledby', 'up-title');
@@ -274,10 +276,12 @@ async function readImage(file) {
 
 /** The server's read of the file: the same file as last time, another chapter's heading, unrelated text. */
 async function serverCheck(file) {
-  if (!CONFIG.check || !S.plan?.item) return;
+  // With no line, a revision is still checked against the upload it revises.
+  if (!CONFIG.check || !(S.plan?.item || S.revises)) return;
   const fd = new FormData();
   fd.append('file', file);
-  fd.append('deliverable_id', S.plan.item.id);
+  if (S.plan.item) fd.append('deliverable_id', S.plan.item.id);
+  else fd.append('revises', S.revises);
   try {
     const data = await fetch(CONFIG.check, {
       method: 'POST',

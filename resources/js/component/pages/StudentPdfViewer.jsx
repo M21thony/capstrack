@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import {
-  Highlights, PageStrip, ReaderTools, RemarksPanel, numberRemarks, rectStyle, usePageColumn,
+  FigureZoom, Highlights, PageStrip, ReaderTools, RemarksPanel, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
+import { remarkFromServer } from "../reader/figures";
 import "../reader/reader.css";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -58,6 +59,8 @@ function StudentPdfViewer({
   const [error, setError] = useState(null);
   const [remarks, setRemarks] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [pdf, setPdf] = useState(null);
+  const [zoomId, setZoomId] = useState(null);
   const col = usePageColumn(numPages);
 
   useEffect(() => {
@@ -68,23 +71,7 @@ function StudentPdfViewer({
     if (!remarksUrl) return;
     fetch(remarksUrl, { headers: { Accept: "application/json" } })
       .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setRemarks(data.map((r) => ({
-        id: r.id,
-        page_number: Number(r.page_number),
-        color: r.color,
-        text: r.comment,
-        selectedText: r.selected_text,
-        section: r.section,
-        y_position: Number(r.top_position),
-        highlightRects: Number(r.highlight_width) > 0
-          ? [{
-              top_position: Number(r.top_position),
-              left_position: Number(r.left_position),
-              highlight_width: Number(r.highlight_width),
-              highlight_height: Number(r.highlight_height),
-            }]
-          : [],
-      }))))
+      .then((data) => setRemarks(data.map(remarkFromServer)))
       .catch(() => setRemarks([]));
   }, [remarksUrl]);
 
@@ -125,7 +112,7 @@ function StudentPdfViewer({
           {error && <div className="rr-error">Could not load the document: {error}</div>}
           <Document
             file={pdfUrl}
-            onLoadSuccess={({ numPages: n }) => { setNumPages(n); setError(null); }}
+            onLoadSuccess={(doc) => { setNumPages(doc.numPages); setPdf(doc); setError(null); }}
             onLoadError={(err) => setError(err.message)}
             loading={<div className="rr-loading">Loading document…</div>}
           >
@@ -171,6 +158,14 @@ function StudentPdfViewer({
         onOpen={open}
         readOnly
         top={top}
+        pdf={pdf}
+        onZoom={setZoomId}
+      />
+      <FigureZoom
+        pdf={pdf}
+        remark={zoomId != null ? remarks.find((r) => r.id === zoomId) : null}
+        number={zoomId != null ? numbers[zoomId] : null}
+        onClose={() => setZoomId(null)}
       />
     </div>
   );

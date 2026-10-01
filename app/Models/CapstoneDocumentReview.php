@@ -50,6 +50,7 @@ class CapstoneDocumentReview extends Model
     protected $casts = [
         'reviewed_at' => 'datetime',
         'verdict_at' => 'datetime',
+        'figures_checked' => 'array',
     ];
 
     /** Still on someone's plate - not yet finished with. */
@@ -95,6 +96,7 @@ class CapstoneDocumentReview extends Model
         'verdict',
         'reviewed_at',
         'verdict_at',
+        'figures_checked',
         'version',
         'drive_file_id',
         'drive_web_view_link',

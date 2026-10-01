@@ -51,21 +51,61 @@ class RevisionCheck
             return [];
         }
 
+        $last = CapstoneDocument::ofTeam($teamId)
+            ->where('deliverable_id', $item->id)
+            ->orderByDesc('file_version')
+            ->first();
+
+        return self::against($pages, $fileName, self::chapterNumber($item->chapter), $item->title, $last);
+    }
+
+    /**
+     * The same questions for a file sent as the next version of $document -
+     * "Submit revision" in the Review Viewer on an upload that was never for
+     * a checklist line, so there is no line to go by, only the document.
+     *
+     * A third question as well, since the pop-up only reads the file name
+     * against a line: does the name say another chapter.
+     *
+     * @return array<int, array{type: string, message: string}>
+     */
+    public static function warningsForRevisionOf(string $path, string $fileName, CapstoneDocument $document): array
+    {
+        $pages = self::pages($path);
+
+        if ($pages === []) {
+            return [];
+        }
+
+        $expected = self::chapterNumber($document->chapter) ?? self::chapterInName((string) $document->file_name);
+        $warnings = self::against($pages, $fileName, $expected, (string) $document->file_name, $document);
+        $named = self::chapterInName($fileName);
+
+        if ($expected !== null && $named !== null && $named !== $expected && ! in_array('heading', array_column($warnings, 'type'), true)) {
+            array_unshift($warnings, [
+                'type' => 'name',
+                'message' => "The file name {$fileName} says Chapter {$named}, but you are sending it as the next version of “{$document->file_name}”.",
+            ]);
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * @param  string[]  $pages
+     * @return array<int, array{type: string, message: string}>
+     */
+    private static function against(array $pages, string $fileName, ?int $expected, string $title, ?CapstoneDocument $last): array
+    {
         $warnings = [];
-        $expected = self::chapterNumber($item->chapter);
         $found = self::chapterHeading($pages);
 
         if ($expected !== null && $found !== null && $found !== $expected) {
             $warnings[] = [
                 'type' => 'heading',
-                'message' => "The first page of {$fileName} says Chapter {$found}, but you are sending it as “{$item->title}”.",
+                'message' => "The first page of {$fileName} says Chapter {$found}, but you are sending it as “{$title}”.",
             ];
         }
-
-        $last = CapstoneDocument::ofTeam($teamId)
-            ->where('deliverable_id', $item->id)
-            ->orderByDesc('file_version')
-            ->first();
 
         if ($last && str_ends_with(strtolower($last->file_path), '.pdf') && Storage::disk('local')->exists($last->file_path)) {
             $shared = self::shared(implode(' ', self::pages(Storage::disk('local')->path($last->file_path))), implode(' ', $pages));
@@ -73,13 +113,20 @@ class RevisionCheck
             if ($shared !== null && $shared < self::MIN_SHARED) {
                 $warnings[] = [
                     'type' => 'unrelated',
-                    'message' => "{$fileName} shares almost no text with your last “{$item->title}” (version {$last->file_version}). "
+                    'message' => "{$fileName} shares almost no text with your last “{$title}” (version {$last->file_version}). "
                         .'A revision keeps most of its words, so this may be the wrong file.',
                 ];
             }
         }
 
         return $warnings;
+    }
+
+    /** "Chapter3_Rev1.pdf" is 3; null when the name names no chapter. */
+    public static function chapterInName(string $name): ?int
+    {
+        // (?!\d) rather than \b: "_" is a word character, so "Chapter1_Final" has no \b after the 1.
+        return preg_match('/\b(?:chapter|chap|ch)[\s_-]*([0-9]{1,2})(?!\d)/i', $name, $m) ? (int) $m[1] : null;
     }
 
     /** @return string[] each page's text, or none when the PDF cannot be read */

@@ -1,4 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import FigureCrop from "./FigureCrop";
+import { DIAGRAM_LABEL, isFigureRemark } from "./figures";
 
 /*
  * The pieces the reviewer's annotator and the student's Review Viewer share:
@@ -50,6 +52,9 @@ const PATHS = {
   x: (<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>),
   edit: (<><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>),
   download: (<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>),
+  text: (<><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></>),
+  box: <rect x="4" y="5" width="16" height="14" rx="1" strokeDasharray="3 2.5" />,
+  pin: (<><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z" /><circle cx="12" cy="10" r="2" /></>),
 };
 export function Icon({ name }) {
   return (
@@ -57,14 +62,38 @@ export function Icon({ name }) {
   );
 }
 
-/** A page's remarks: the highlighted words, and their number in the margin beside them. */
+/**
+ * A page's remarks: the highlighted words with their number in the margin,
+ * a box (or several) drawn over a figure with its number on the corner, or a
+ * pin with the number on it.
+ */
 export function Highlights({ remarks, numbers, selectedId, onSelect, clickable = false, override = null }) {
   return remarks.map((r) => {
-    const rects = r.highlightRects || [];
+    const kind = override && override.id === r.id ? override.kind : kindOf(r.color);
+    const rects = override && override.id === r.id && override.rects ? override.rects : (r.highlightRects || []);
+    const on = selectedId === r.id;
+    const select = (e) => { e.stopPropagation(); onSelect(r.id); };
+    const label = `Remark ${numbers[r.id]}: ${r.text}`;
+    const title = `${KIND_LABEL[kind]}: ${r.text}`;
+    if (r.type === "pin") {
+      return (
+        <button key={r.id} type="button" className={`rr-pin c-${kind}${on ? " on" : ""}`} style={{ top: pct(r.y_position), left: pct(r.x_position) }} onClick={select} aria-label={label} title={title}>
+          <span>{numbers[r.id]}</span>
+        </button>
+      );
+    }
     if (!rects.length) return null;
     const first = rects[0];
-    const kind = override && override.id === r.id ? override.kind : kindOf(r.color);
-    const on = selectedId === r.id;
+    if (r.type === "box") {
+      return (
+        <React.Fragment key={r.id}>
+          {rects.map((rect, i) => <div key={i} className={`rr-box c-${kind}${on ? " on" : ""}`} style={rectStyle(rect)} />)}
+          <button type="button" className={`rr-num rr-boxn c-${kind}${on ? " on" : ""}`} style={{ top: pct(first.top_position), left: pct(first.left_position) }} onClick={select} aria-label={label} title={title}>
+            {numbers[r.id]}
+          </button>
+        </React.Fragment>
+      );
+    }
     return (
       <React.Fragment key={r.id}>
         {rects.map((rect, i) => (
@@ -72,22 +101,60 @@ export function Highlights({ remarks, numbers, selectedId, onSelect, clickable =
             key={i}
             className={`rr-hl c-${kind}${on ? " on" : ""}${clickable ? " click" : ""}`}
             style={rectStyle(rect)}
-            onClick={clickable ? (e) => { e.stopPropagation(); onSelect(r.id); } : undefined}
+            onClick={clickable ? select : undefined}
           />
         ))}
         <button
           type="button"
           className={`rr-num${on ? " on" : ""}`}
           style={{ top: pct(Number(first.top_position) + Number(first.highlight_height) / 2) }}
-          onClick={(e) => { e.stopPropagation(); onSelect(r.id); }}
-          aria-label={`Remark ${numbers[r.id]}: ${r.text}`}
-          title={`${KIND_LABEL[kind]}: ${r.text}`}
+          onClick={select}
+          aria-label={label}
+          title={title}
         >
           {numbers[r.id]}
         </button>
       </React.Fragment>
     );
   });
+}
+
+/** What a remark on a figure is about: its figure number, or where it is. */
+export const figureTitle = (r) => r.figure_label || (r.type === "pin" ? "Pin" : "Boxed area");
+export const figureDetail = (r) => [
+  r.type === "pin" ? "Pin" : (r.highlightRects?.length > 1 ? `${r.highlightRects.length} boxes` : "Box"),
+  DIAGRAM_LABEL[r.diagram_type] || "",
+].filter(Boolean).join(" · ");
+
+/** A figure remark enlarged, so a small diagram can be read. */
+export function FigureZoom({ pdf, remark, number, onClose }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (remark && !dialog.open) dialog.showModal();
+    if (!remark && dialog.open) dialog.close();
+  }, [remark]);
+  const width = Math.min(940, (typeof window !== "undefined" ? window.innerWidth : 1000) - 80);
+  const height = Math.max(220, (typeof window !== "undefined" ? window.innerHeight : 800) * 0.6);
+  return (
+    <dialog ref={ref} className="rr-dialog rr-zoom" aria-labelledby="rr-zoom-title" onClose={onClose} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      {remark && (
+        <div className="rr-dlg">
+          <div className="rr-zoom-head">
+            <div>
+              <h2 id="rr-zoom-title">{figureTitle(remark)}</h2>
+              <p className="rr-muted">Page {remark.page_number} · {figureDetail(remark)}</p>
+            </div>
+            <button type="button" className="rr-btn icon sm ghost" aria-label="Close" onClick={onClose}><Icon name="x" /></button>
+          </div>
+          <div className="rr-zoom-view"><FigureCrop pdf={pdf} remark={remark} maxWidth={width} maxHeight={height} pad={0.04} /></div>
+          <div className="rr-card-r1"><span className="rr-no">{number}</span><span className="rr-lbl"><span className={`rr-sw c-${kindOf(remark.color)}`} />{KIND_LABEL[kindOf(remark.color)]}</span></div>
+          <div className="rr-t rr-t-full">{remark.text}</div>
+        </div>
+      )}
+    </dialog>
+  );
 }
 
 /**
@@ -162,7 +229,7 @@ export function PagedList({ items, keyOf, renderItem, noun, empty, focusKey }) {
   );
 }
 
-function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measuring }) {
+function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measuring, pdf, onZoom }) {
   const kind = kindOf(r.color);
   const open = () => onOpen(r.id);
   return (
@@ -180,7 +247,9 @@ function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measur
     >
       <div className="rr-card-r1">
         <span className="rr-no">{n}</span>
-        <span className="rr-tag">Highlighted text</span>
+        {isFigureRemark(r)
+          ? <span className="rr-tag fig">{r.type === "pin" ? "Pin" : "Figure"}</span>
+          : <span className="rr-tag">Highlighted text</span>}
         <span className="rr-where">p.{r.page_number}{r.section ? ` · ${r.section}` : ""}</span>
         {!readOnly && (
           <span className="rr-acts">
@@ -189,7 +258,20 @@ function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measur
           </span>
         )}
       </div>
-      {r.selectedText && <div className="rr-q">“{r.selectedText}”</div>}
+      {isFigureRemark(r) ? (
+        <div className="rr-cfig">
+          <button
+            type="button"
+            className="rr-cthumb"
+            tabIndex={measuring ? -1 : 0}
+            aria-label={`Zoom into ${figureTitle(r)}`}
+            onClick={(e) => { e.stopPropagation(); onZoom?.(r.id); }}
+          >
+            {!measuring && pdf && <FigureCrop pdf={pdf} remark={r} maxWidth={76} maxHeight={56} />}
+          </button>
+          <div className="rr-cfig-t"><b>{figureTitle(r)}</b><span>{figureDetail(r)}</span></div>
+        </div>
+      ) : r.selectedText && <div className="rr-q">“{r.selectedText}”</div>}
       <div className="rr-t">{r.text}</div>
       <span className="rr-lbl"><span className={`rr-sw c-${kind}`} />{KIND_LABEL[kind]}</span>
     </div>
@@ -219,7 +301,7 @@ function GeneralCard({ g, readOnly, onDelete, measuring }) {
  */
 export function RemarksPanel({
   title, remarks, general, numbers, selectedId, onOpen, readOnly = false,
-  onEdit, onDelete, onAddGeneral, onDeleteGeneral, top = null, empty = null,
+  onEdit, onDelete, onAddGeneral, onDeleteGeneral, top = null, empty = null, pdf = null, onZoom = null,
 }) {
   const [filter, setFilter] = useState("all");
   const [writing, setWriting] = useState(false);
@@ -230,10 +312,12 @@ export function RemarksPanel({
 
   useEffect(() => { if (writing) textRef.current?.focus(); }, [writing]);
 
+  const figures = remarks.filter(isFigureRemark);
   const items = [
-    ...(filter !== "text" ? general.map((g) => ({ type: "general", key: `g${g.id}`, g })) : []),
+    ...(filter === "all" || filter === "general" ? general.map((g) => ({ type: "general", key: `g${g.id}`, g })) : []),
     ...(filter !== "general"
       ? [...remarks]
+          .filter((r) => filter === "all" || (filter === "figures" ? isFigureRemark(r) : !isFigureRemark(r)))
           .sort((a, b) => Number(a.page_number) - Number(b.page_number) || numbers[a.id] - numbers[b.id])
           .map((r) => ({ type: "text", key: `r${r.id}`, r }))
       : []),
@@ -249,6 +333,7 @@ export function RemarksPanel({
     all: readOnly ? ["No remarks", "Your reviewer left no remarks on this document."] : ["No remarks yet", "Select text on a page to comment on it, or add a general remark about the whole document."],
     text: ["No highlighted text", readOnly ? "Nothing on this document was highlighted." : "Select words on a page — with the mouse, or Shift and the arrow keys then Enter."],
     general: ["No general remarks", readOnly ? "Your reviewer left no general remarks." : "Use + General remark for comments about the whole document."],
+    figures: ["No remarks on figures", readOnly ? "Nothing on a figure was marked." : "Use Box or Pin in the page toolbar to mark a figure."],
   }[filter];
 
   return (
@@ -262,11 +347,11 @@ export function RemarksPanel({
         )}
       </div>
       {!readOnly && (
-        <p className="rr-help">Select text on a page to comment on those words. Use <b>General remark</b> for comments about the whole document.</p>
+        <p className="rr-help">Select text on a page to comment on those words. Use <b>Box</b> or <b>Pin</b> in the page toolbar for a figure. Use <b>General remark</b> for comments about the whole document.</p>
       )}
       <div className="rr-side-body">
         <div className="rr-filter" role="group" aria-label="Show">
-          {[["all", "All", total], ["text", "Highlighted text", remarks.length], ["general", "General", general.length]].map(([k, label, n]) => (
+          {[["all", "All", total], ["text", "Highlighted text", remarks.length - figures.length], ["figures", "On figures", figures.length], ["general", "General", general.length]].map(([k, label, n]) => (
             <button key={k} type="button" className="rr-fbtn" aria-pressed={filter === k} onClick={() => setFilter(k)}>
               {label} <span className="rr-fc">{n}</span>
             </button>
@@ -315,6 +400,8 @@ export function RemarksPanel({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 measuring={measuring}
+                pdf={pdf}
+                onZoom={onZoom}
               />
             )
           }
@@ -354,9 +441,19 @@ export function PageStrip({ numPages, currentPage, counts, onGo }) {
 }
 
 /** Page and zoom controls, floating over the bottom of the document. */
-export function ReaderTools({ currentPage, numPages, zoom, onGo, onZoom }) {
+const MODES = [["text", "Select text", "T"], ["box", "Draw a box over a figure", "B"], ["pin", "Pin one spot", "P"]];
+
+export function ReaderTools({ currentPage, numPages, zoom, onGo, onZoom, mode = null, onMode = null }) {
   return (
     <div className="rr-tools" role="toolbar" aria-label="Pages">
+      {onMode && (
+        <>
+          {MODES.map(([m, label, key]) => (
+            <button key={m} type="button" className={`rr-btn icon ghost${mode === m ? " on" : ""}`} aria-pressed={mode === m} aria-label={label} title={`${label} (${key})`} onClick={() => onMode(m)}><Icon name={m} /></button>
+          ))}
+          <span className="rr-sep" aria-hidden="true" />
+        </>
+      )}
       <button type="button" className="rr-btn icon ghost" aria-label="Previous page" disabled={currentPage <= 1} onClick={() => onGo(currentPage - 1)}><Icon name="up" /></button>
       <span className="rr-pg">{numPages ? `${currentPage} / ${numPages}` : "–"}</span>
       <button type="button" className="rr-btn icon ghost" aria-label="Next page" disabled={!numPages || currentPage >= numPages} onClick={() => onGo(currentPage + 1)}><Icon name="down" /></button>

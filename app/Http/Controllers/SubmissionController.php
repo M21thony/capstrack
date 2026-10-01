@@ -247,17 +247,39 @@ class SubmissionController extends Controller
      */
     public function warnings(Request $request): JsonResponse
     {
+        // revises: the upload a "Submit revision" in the Review Viewer is the
+        // next version of, for one that was never sent for a checklist line.
         $request->validate([
             'file' => 'required|file|max:25600',
-            'deliverable_id' => 'required|integer',
+            'deliverable_id' => 'required_without:revises|nullable|integer',
+            'revises' => 'required_without:deliverable_id|nullable|integer',
         ]);
 
         $file = $request->file('file');
-        $item = Deliverable::active()->find($request->integer('deliverable_id'));
+        $item = $request->filled('deliverable_id') ? Deliverable::active()->find($request->integer('deliverable_id')) : null;
         $teamId = StudentTeam::idFor(Auth::id());
 
-        if (! $item || $teamId === null) {
+        if ($teamId === null) {
             return response()->json(['warnings' => [], 'same' => null]);
+        }
+
+        if (! $item) {
+            $document = $request->filled('revises')
+                ? CapstoneDocument::ofTeam($teamId)->find($request->integer('revises'))
+                : null;
+
+            if (! $document) {
+                return response()->json(['warnings' => [], 'same' => null]);
+            }
+
+            $same = $this->sameAsAny($file->getRealPath(), $document->earlierVersions()->prepend($document));
+
+            return response()->json([
+                'warnings' => ! $same && strtolower($file->getClientOriginalExtension()) === 'pdf'
+                    ? RevisionCheck::warningsForRevisionOf($file->getRealPath(), $file->getClientOriginalName(), $document)
+                    : [],
+                'same' => $same,
+            ]);
         }
 
         // The very file that was sent back: never worth sending again.
@@ -373,16 +395,24 @@ class SubmissionController extends Controller
      */
     private function sameAsLast(string $path, Deliverable $item, int $teamId): ?int
     {
+        return $this->sameAsAny($path, CapstoneDocument::ofTeam($teamId)
+            ->where('deliverable_id', $item->id)
+            ->orderByDesc('file_version')
+            ->get(['file_path', 'file_version']));
+    }
+
+    /**
+     * The version among $earlier the file is identical to, if any.
+     *
+     * @param  iterable<int, CapstoneDocument>  $earlier
+     */
+    private function sameAsAny(string $path, iterable $earlier): ?int
+    {
         $hash = @sha1_file($path);
 
         if (! $hash) {
             return null;
         }
-
-        $earlier = CapstoneDocument::ofTeam($teamId)
-            ->where('deliverable_id', $item->id)
-            ->orderByDesc('file_version')
-            ->get(['file_path', 'file_version']);
 
         foreach ($earlier as $document) {
             if ($document->file_path && Storage::disk('local')->exists($document->file_path)

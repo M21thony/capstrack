@@ -155,12 +155,12 @@
             $push(true, $section);
 
             foreach ($items as $item) {
-                $push(false, '• '.$item->comment);
+                $push(false, '• '.$item->printedComment());
             }
         }
 
         foreach ($remarks as $remark) {
-            $push(false, '• '.$remark->comment);
+            $push(false, '• '.$remark->printedComment());
         }
 
         // An approved paper with nothing written on it says APPROVED and leaves
