@@ -105,7 +105,7 @@ export function useVersionDiff(currentUrl, base) {
           // No text to line up - a scanned or diagrams-only PDF. Figure remarks
           // are still checked, in the same place, by comparing the pictures.
           const none = { removed: new Uint8Array(oldWords.length), added: new Uint8Array(newWords.length) };
-          setState({ status: "notext", revision: checkRevision(earlier, oldWords, newWords, none) });
+          setState({ status: "notext", revision: checkRevision(earlier, oldWords, newWords, none), oldWords, newWords });
           return;
         }
         // Every word would show as changed, which tells the reviewer nothing.
@@ -117,6 +117,7 @@ export function useVersionDiff(currentUrl, base) {
           status: "ready", changes: diff.changes, marks: diff.marks, oldMarks: diff.oldMarks,
           remarks: remarksNearChanges(remarks, oldWords, newWords, diff),
           revision: checkRevision(earlier, oldWords, newWords, diff),
+          oldWords, newWords,
         });
       })
       .catch(() => { if (live) setState({ status: "error" }); });
