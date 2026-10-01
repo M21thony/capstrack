@@ -220,6 +220,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::get('/team-management/{team}/pre-proposals', [TeamManagementController::class, 'preProposals'])->name('team_management.pre_proposals');
         Route::get('/team-management/{team}/pre-proposals/{preProposal}', [TeamManagementController::class, 'title'])->name('team_management.title');
         Route::get('/team-management/{team}/pre-proposals/{preProposal}/similar/{rank}', [TeamManagementController::class, 'similar'])->name('team_management.similar');
+        Route::get('/team-management/{team}/{log}', [TeamManagementController::class, 'log'])->whereIn('log', ['papers', 'activity'])->name('team_management.log');
         // The rules every team is formed under: its size, and whether students
         // may create or join one. One resource, replaced whole on save.
         Route::get('/team-rules', [TeamRulesController::class, 'show'])->name('team_rules');
