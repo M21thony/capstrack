@@ -168,6 +168,7 @@ class StudentReviewController extends Controller
         return $review->pdfRemarks()->where('is_general', false)->get([
             'id', 'page_number', 'top_position', 'left_position',
             'highlight_width', 'highlight_height', 'color', 'comment', 'selected_text', 'section',
+            'mark_type', 'rects', 'figure_label', 'diagram_type',
         ]);
     }
 }

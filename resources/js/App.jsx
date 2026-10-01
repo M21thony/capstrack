@@ -6,6 +6,7 @@ import StudentPdfViewer from "./component/pages/StudentPdfViewer";
 import FinishReview from "./component/FinishReview";
 import { useVersionDiff } from "./component/reader/useVersionDiff";
 import { Toast } from "./component/reader/Reader";
+import { remarkFromServer } from "./component/reader/figures";
 import "./component/reader/reader.css";
 import "./App.css";
 
@@ -61,6 +62,10 @@ function App() {
   const [driveSyncState, setDriveSyncState] = useState("idle");
   const [driveSyncError, setDriveSyncError] = useState(null);
   const driveSyncRef = useRef({ inFlight: false, pending: false });
+  // The consultant is the one who checks the diagrams, so their review opens ready for figures.
+  const checksDiagrams = ctx.role === "consultant";
+  // Figures the reviewer looked at and had nothing to say about.
+  const [checkedFigures, setCheckedFigures] = useState([]);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   const [finishing, setFinishing] = useState(false);
@@ -70,6 +75,17 @@ function App() {
   commentsRef.current = comments;
   const statusRef = useRef(reviewStatus);
   statusRef.current = reviewStatus;
+
+  const toggleFigure = (label) => {
+    const next = checkedFigures.includes(label) ? checkedFigures.filter((f) => f !== label) : [...checkedFigures, label];
+    setCheckedFigures(next);
+    request(`/reviews/${reviewId}/figures-checked`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ figures: next }),
+    }).then((r) => { if (!r.ok) throw new Error(); })
+      .catch(() => { setCheckedFigures(checkedFigures); showToast("That was not saved. Try again.", { type: "error" }); });
+  };
 
   const showToast = useCallback((message, opts = {}) => {
     if (window.ctToast) {
@@ -94,29 +110,11 @@ function App() {
       .then((data) => {
         if (data?.review_status) setReviewStatus(data.review_status);
         if (data?.verdict) setReviewVerdict(data.verdict);
+        if (Array.isArray(data?.figures_checked)) setCheckedFigures(data.figures_checked);
       });
     const remarks = request(`/reviews/${reviewId}/remarks`)
       .then((r) => r.json())
-      .then((data) => setComments(data.map((r) => ({
-        id: r.id,
-        page_number: Number(r.page_number),
-        y_position: Number(r.top_position),
-        x_position: Number(r.left_position),
-        text: r.comment,
-        author: "Reviewer",
-        timestamp: r.created_at,
-        selectedText: r.selected_text,
-        section: r.section,
-        color: r.color,
-        highlightRects: Number(r.highlight_width) > 0
-          ? [{
-              top_position: Number(r.top_position),
-              left_position: Number(r.left_position),
-              highlight_width: Number(r.highlight_width),
-              highlight_height: Number(r.highlight_height),
-            }]
-          : [],
-      }))));
+      .then((data) => setComments(data.map(remarkFromServer)));
     const general = request(`/reviews/${reviewId}/general-remarks`)
       .then((r) => r.json())
       .then((data) => setGeneralComments(data.map((r) => ({ id: r.id, text: r.comment, section: r.section }))));
@@ -237,8 +235,31 @@ function App() {
 
       pageComments.forEach((comment, cIdx) => {
         const highlightColor = HIGHLIGHT_COLOR_MAP[comment.color] || HIGHLIGHT_COLOR_MAP.yellow;
+        if (comment.type === "pin") {
+          // A pin is a spot, not an area: a dot where it was dropped.
+          try {
+            page.drawCircle({
+              x: (comment.x_position || 0) * width, y: height - (comment.y_position || 0) * height,
+              size: 4, color: highlightColor, borderColor: rgb(1, 1, 1), borderWidth: 1,
+            });
+          } catch (e) {
+            console.warn("Error drawing pin:", e);
+          }
+        }
         (comment.highlightRects || []).forEach((rect) => {
           try {
+            if (comment.type === "box") {
+              // An outline, so the diagram under it stays readable.
+              page.drawRectangle({
+                x: (rect.left_position || 0) * width,
+                y: height - (rect.top_position || 0) * height - (rect.highlight_height || 0) * height,
+                width: (rect.highlight_width || 0) * width,
+                height: (rect.highlight_height || 0) * height,
+                borderColor: highlightColor,
+                borderWidth: 1.5,
+              });
+              return;
+            }
             page.drawRectangle({
               x: (rect.left_position || 0) * width,
               y: height - (rect.top_position || 0) * height - (rect.highlight_height || 0.05) * height,
@@ -252,7 +273,8 @@ function App() {
           }
         });
 
-        const firstRect = (comment.highlightRects || [])[0];
+        const firstRect = (comment.highlightRects || [])[0]
+          || (comment.type === "pin" ? { left_position: comment.x_position, top_position: comment.y_position } : null);
         if (firstRect) {
           try {
             const badgeX = (firstRect.left_position || 0) * width;
@@ -301,7 +323,7 @@ function App() {
               x: boxX + 9, y: boxY + commentBoxHeight - 15, size: 7, font: helveticaBoldFont, color: rgb(1, 1, 1),
             });
 
-            const words = (comment.text || "").split(" ");
+            const words = `${comment.figure_label ? `${comment.figure_label}: ` : ""}${comment.text || ""}`.split(" ");
             const lines = [];
             let line = "";
             words.forEach((word) => {
@@ -444,6 +466,10 @@ function App() {
           showChanges={showChanges}
           diff={diff}
           onFocusChange={(c) => setFocus({ id: c.id, page: c.oldPage, rect: c.oldRect, at: Date.now() })}
+          startMode={checksDiagrams ? "box" : "text"}
+          startTab={checksDiagrams ? "figures" : "remarks"}
+          checkedFigures={checkedFigures}
+          onToggleFigure={toggleFigure}
         />
         {compareVersion && (
           <div className="an-pane-head">
