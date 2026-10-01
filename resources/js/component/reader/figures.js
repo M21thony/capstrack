@@ -103,7 +103,9 @@ export const marksOf = (remark) => (remark.highlightRects?.length
 
 /**
  * The figure a mark is most likely on: the nearest caption below it on the
- * same page, since captions sit under figures. Null when none is close.
+ * same page, since a figure's caption sits under it. A caption above a mark
+ * is the caption of some other figure, so it is never taken; with nothing
+ * below, the mark is not on a numbered figure.
  */
 export function figureFor(figures, page, rects) {
   const captions = figures.filter((f) => f.page === page);
@@ -111,9 +113,7 @@ export function figureFor(figures, page, rects) {
   const b = boundsOf(rects);
   const middle = b.top_position + b.highlight_height / 2;
   const below = captions.filter((c) => c.y >= middle - 0.04).sort((a, z) => a.y - z.y);
-  if (below.length && below[0].y - middle < 0.55) return below[0].label;
-  const nearest = [...captions].sort((a, z) => Math.abs(a.y - middle) - Math.abs(z.y - middle))[0];
-  return Math.abs(nearest.y - middle) < 0.3 ? nearest.label : null;
+  return below.length && below[0].y - middle < 0.55 ? below[0].label : null;
 }
 
 const clamp = (n) => Math.min(1, Math.max(0, n));
