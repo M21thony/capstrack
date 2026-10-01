@@ -614,3 +614,36 @@
 @keyframes setFade{from{opacity:0}to{opacity:1}}
 @keyframes setRise{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.tmx .menu,.tmx .set-scrim{animation:none!important}}
+
+/* A team's page and its "See all" pages: plain cards, and people, papers
+   and updates as one-line rows. */
+  .tp-panel{background:var(--card);border:1px solid var(--line);border-radius:12px;min-width:0}
+  .tp-panel-h{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .tp-panel-h h2{margin:0;font-size:14.5px;font-weight:700;flex:1}
+  .tp-panel-h small{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+
+  .tp-ppl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .tp-ppl li{display:flex;gap:10px;align-items:center;min-width:0}
+  .tp-ppl .who{flex:1;min-width:0}
+  .tp-ppl b{font-size:13px;font-weight:600;color:var(--ink);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tp-ppl small{font-size:11.5px;color:var(--mut)}
+  .tp-ppl .lead{margin-left:auto;font-size:11px;font-weight:700;color:var(--accent3)}
+  .tp-ppl .you{color:var(--accent3);font-weight:700}
+  .tp-av{width:30px;height:30px;border-radius:50%;flex:none;position:relative;overflow:hidden;
+         display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+  .tp-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .tp-av.seat{border:1.5px dashed var(--line2);background:none;color:var(--mut)}
+  .tp-ppl .empty b{font-weight:500;color:var(--mut)}
+  .tp-none{font-size:12.5px;color:var(--mut);margin:0}
+
+  /* Activity: one line each, who and what, the date on the right. */
+  .tp-feed .tp-av{width:24px;height:24px;font-size:9.5px}
+  .tp-feed .line{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;color:var(--ink2)}
+  .tp-feed .line b{display:inline;color:var(--ink)}
+  .tp-feed time{flex:none;font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+  .tp-papers .tp-paper{flex:1;min-width:0}
+  .tp-papers .ok{color:var(--green);font-weight:600}
+  .tp-papers .due{color:var(--amber);font-weight:600}
+  .tp-papers .btn{flex:none;padding:5px 12px}
+  .tp-more{display:block;margin-top:10px;font-size:12.5px;font-weight:600;color:var(--ink2);text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:2px}
+
