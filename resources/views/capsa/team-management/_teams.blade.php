@@ -27,9 +27,9 @@
   $behind = fn ($r) => ($r->milestones?->overdue ?? 0) > 0 || $r->failedStage;
   $quick = array_filter([
     'all' => ['All teams', $rows->count()],
-    'mine' => $twoHats ? ['You are an expert', $rows->filter(fn ($r) => $r->myRole)->count()] : null,
-    'you' => ['Needs you', $rows->filter(fn ($r) => $waitsBy->has((int) $r->team->team_id))->count()],
-    'behind' => ['Behind schedule', $rows->filter($behind)->count()],
+    'mine' => $twoHats ? ['My teams', $rows->filter(fn ($r) => $r->myRole)->count()] : null,
+    'you' => ['To do', $rows->filter(fn ($r) => $waitsBy->has((int) $r->team->team_id))->count()],
+    'behind' => ['Overdue', $rows->filter($behind)->count()],
   ]);
 @endphp
 
@@ -115,7 +115,7 @@
           $untitled = [
             'awaiting_team_choice' => $row->approvedProposalCount.' recommended - the team is choosing',
             'settling' => 'One title recommended, waiting for the adviser',
-            'awaiting_review' => $row->inSections ? 'Titles waiting on your review' : 'Titles waiting on the CaPSA',
+            'awaiting_review' => $row->inSections ? 'Titles to review' : 'Titles with the CaPSA',
             'all_rejected' => 'All titles turned down - the team is writing new ones',
           ][$row->titleState] ?? 'No titles yet';
           $newest = $waits->max('at');
@@ -131,10 +131,10 @@
             <div style="min-width:0">
               <a class="tn" href="{{ $href }}">{{ $team->team_name }}</a>
               <span class="tt" title="{{ $team->project_title ?: $untitled }}">@if ($team->project_title){{ $team->project_title }}@else<i>{{ $untitled }}</i>@endif</span>
-              <small>@if ($row->myRole && ($twoHats || ! $capsaPortal))<b class="hat">{{ $capsaPortal ? 'You: ' : '' }}{{ ucfirst($row->myRole) }}</b> · @endif{{ $row->section }} · {{ $row->members->count() }} of {{ $maxMembers }} members</small>
+              <small>@if ($row->myRole && ($twoHats || ! $capsaPortal))<b class="hat">{{ ucfirst($row->myRole) }}</b> · @endif{{ $row->section }} · {{ $row->members->count() }} of {{ $maxMembers }} members</small>
               @if ($waits->isNotEmpty())
                 <span class="tm-wait">
-                  <span @class(['tm-dot', 'new' => $newest?->gt(now()->subDay())])></span><span class="tm-what">Waiting on you: {{ $waits->pluck('what')->implode(' · ') }}</span>
+                  <span @class(['tm-dot', 'new' => $newest?->gt(now()->subDay())])></span><span class="tm-what">To do: {{ $waits->pluck('what')->implode(' · ') }}</span>
                   @if ($newest)<time datetime="{{ $newest->toIso8601String() }}">&middot; {{ $newest->diffForHumans() }}</time>@endif
                 </span>
               @endif

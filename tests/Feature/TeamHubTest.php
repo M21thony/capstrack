@@ -107,9 +107,9 @@ class TeamHubTest extends TestCase
         $response->assertOk()
             ->assertSeeInOrder(['class="group-h">Titles', 'Review 2 titles', 'Team Kalinga', 'BSIT-3A'], false)
             ->assertSee('href="'.route('capsa.team_management.title', [$team->team_id, $first->id]).'">Review titles', false)
-            ->assertSee('1 waiting on you')
+            ->assertSee('1 to do')
             // The same team in Teams says what it is waiting for.
-            ->assertSee('Waiting on you: Review 2 titles');
+            ->assertSee('To do: Review 2 titles');
     }
 
     public function test_a_leave_request_is_decided_from_to_do(): void
@@ -153,7 +153,7 @@ class TeamHubTest extends TestCase
         $this->actingAs($expert, 'expert')->get(route('instructor.teams'))
             ->assertOk()
             ->assertSee('<div class="tmx tm-list tm-hub" data-portal="expert">', false)
-            ->assertSeeInOrder(['class="group-h">Invitations', 'Be their consultant', 'Team Habi'], false)
+            ->assertSeeInOrder(['class="group-h">Invitations', 'Invited as consultant', 'Team Habi'], false)
             ->assertSee('data-url="'.route('instructor.assignments.update', $invite->assignment_id).'"', false)
             ->assertSee('data-note="reason" data-min="20"', false)
             // Teams: the one they advise, with their seat; not the others.
@@ -202,8 +202,10 @@ class TeamHubTest extends TestCase
             ->assertOk()
             ->assertSee('href="'.route('capsa.team_management.show', $mine->team_id).'"', false)
             ->assertSee('href="'.route('capsa.team_management.show', $advised->team_id).'"', false)
-            ->assertSee('You are an expert')
-            ->assertSee('<b class="hat">You: Adviser</b>', false)
+            ->assertSee('data-quick="mine"', false)
+            ->assertSee('<b class="hat">Adviser</b>', false)
+            // The labels say the seat, never "expert".
+            ->assertDontSee('You are an expert')
             // Not her section, so its titles are not hers to review.
             ->assertDontSee('Review 1 title');
 
