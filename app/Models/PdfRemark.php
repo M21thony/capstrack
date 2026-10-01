@@ -12,16 +12,25 @@ class PdfRemark extends Model
     /** The kinds of diagram a figure remark can be about; the quick remarks follow them. */
     public const DIAGRAM_TYPES = ['ERD', 'DFD', 'UseCase', 'Flowchart', 'Architecture', 'UI'];
 
+    /** What the reviewer found when the team sent the next version. */
+    public const FIXED = 'fixed';
+
+    public const NOT_FIXED = 'not_fixed';
+
+    public const REVISION_STATUSES = [self::FIXED, self::NOT_FIXED];
+
     protected $fillable = [
         'review_id', 'page_number', 'top_position', 'left_position',
         'highlight_width', 'highlight_height', 'color', 'comment',
         'selected_text', 'is_general', 'section',
         'mark_type', 'rects', 'figure_label', 'diagram_type',
+        'revision_status', 'revision_checked_at', 'carried_from_id',
     ];
 
     protected $casts = [
         'is_general' => 'boolean',
         'rects' => 'array',
+        'revision_checked_at' => 'datetime',
     ];
 
     /**

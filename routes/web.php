@@ -354,6 +354,7 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
     // The team's earlier uploads of the same requirement, to compare against.
     Route::get('/{review}/versions/{document}/file', [PdfAnnotationController::class, 'versionFile'])->name('versions.file');
     Route::get('/{review}/versions/{document}/remarks', [PdfAnnotationController::class, 'versionRemarks'])->name('versions.remarks');
+    Route::post('/{review}/versions/{document}/remarks/{remark}/revision', [PdfAnnotationController::class, 'updateRevisionStatus'])->name('versions.remarks.revision');
 });
 
 Route::get('/', function () {

@@ -25,6 +25,29 @@ function pageCanvas(page, scale) {
 }
 
 /**
+ * The pixels of one region of a page (fractions of the page), drawn at a
+ * fixed size. The region is drawn straight from the PDF with its corner on
+ * pixel (0, 0), so the same content in two versions lands on the same pixels
+ * however far it moved - cutting it out of a whole drawn page would leave the
+ * two a fraction of a pixel apart, and every line edge would look changed.
+ */
+export async function regionPixels(pdf, pageNumber, crop, width = 240, height = null) {
+  const page = await pdf.getPage(Number(pageNumber));
+  const base = page.getViewport({ scale: 1 });
+  const scale = width / (crop.width * base.width);
+  const h = height ?? Math.max(1, Math.round(crop.height * base.height * scale));
+  const viewport = page.getViewport({ scale, offsetX: -crop.left * base.width * scale, offsetY: -crop.top * base.height * scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, width, h);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  return { data: ctx.getImageData(0, 0, width, h).data, width, height: h };
+}
+
+/**
  * A snapshot of the part of the page a remark is on, with the remark drawn
  * over it: the box, the pin, or the highlighted words. Cut from the PDF itself,
  * so it shows exactly what the reviewer marked.

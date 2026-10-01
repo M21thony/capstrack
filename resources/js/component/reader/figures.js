@@ -166,6 +166,8 @@ export const remarkFromServer = (r) => {
     color: r.color,
     figure_label: r.figure_label || null,
     diagram_type: r.diagram_type || null,
+    revision_status: r.revision_status || null,
+    carried_from_id: r.carried_from_id ?? null,
     highlightRects: rects,
   };
 };
