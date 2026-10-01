@@ -6,6 +6,7 @@ use App\Models\CapstoneDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\Checklist;
+use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
@@ -173,6 +174,29 @@ class CapsaTeamManagementTest extends TestCase
         $response->assertOk();
         $response->assertSee('2/4');
         $response->assertSee('1 overdue');
+    }
+
+    /**
+     * The team page draws only the requirements that fit the window; the
+     * rest sit behind "See all", which opens the team in the tracker.
+     */
+    public function test_the_team_page_links_a_milestones_requirements_to_the_tracker(): void
+    {
+        $capsa = $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Team Long Milestone');
+
+        $milestone = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist'])
+            ->milestones()->create(['name' => 'Getting started', 'position' => 0]);
+
+        foreach (range(0, 6) as $i) {
+            $milestone->deliverables()->create(['title' => "Deliverable {$i}", 'kind' => Deliverable::FORM, 'position' => $i]);
+        }
+
+        $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
+
+        $response->assertSee('data-tp-more="7" hidden', false);
+        $response->assertSee('See all 7 requirements');
+        $response->assertSee(e(route('capsa.team_management', ['tab' => 'milestones', 'section' => self::SECTION, 'team' => $team->team_id])), false);
     }
 
     /**
@@ -446,6 +470,159 @@ class CapsaTeamManagementTest extends TestCase
         $response->assertSee('Chapter 1 Format.pdf');
         $response->assertDontSee('Chapter 2 Content.pdf');
         $this->assertNotSame($formatCheck, $adviserWork);
+    }
+
+    /** The panel sits under Experts, and her own seat on it reads "You". */
+    public function test_the_team_page_lists_the_panel_and_marks_her_own_seat(): void
+    {
+        $capsa = $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Team Panel');
+        $other = CapstoneExpert::factory()->create(['approved_status' => true, 'first_name' => 'Lara', 'last_name' => 'Santos']);
+
+        $schedule = DefenseSchedule::create([
+            'team_id' => $team->team_id,
+            'defense_type' => 'Title Defense',
+            'attempt' => 1,
+            'schedule_date' => now()->addWeek(),
+            'end_date' => now()->addWeek()->addHours(2),
+            'venue' => 'Mac Lab',
+        ]);
+        DefensePanel::create(['defense_id' => $schedule->defense_id, 'expert_id' => $capsa->expert_id, 'panel_role' => 'Panel Chair']);
+        DefensePanel::create(['defense_id' => $schedule->defense_id, 'expert_id' => $other->expert_id, 'panel_role' => null]);
+
+        $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
+
+        $response->assertSeeInOrder(['Experts', 'Panel', 'Lara Santos']);
+        // No stage label beside it; the stage is already in Progress and Next.
+        $response->assertSee('id="tp-pan">Panel</h3>', false);
+        $response->assertSee('<span class="you">You</span> · Panel Chair', false);
+        $response->assertSeeInOrder(['Lara Santos', 'Panelist']);
+    }
+
+    /** Previous and Next walk every team in her sections, and wrap around. */
+    public function test_the_team_page_links_to_the_previous_and_next_team(): void
+    {
+        $this->makeCapsaWithSections();
+        [$alpha] = $this->makeTeamInSection('Team Alpha');
+        [$beta] = $this->makeTeamInSection('Team Beta');
+
+        $html = $this->get(route('capsa.team_management.show', $alpha->team_id))->assertOk()->getContent();
+
+        $this->assertStringContainsString('href="'.route('capsa.team_management.show', $beta->team_id).'"', $html);
+        $this->assertStringContainsString('Next team, Team Beta', $html);
+        $this->assertStringContainsString('Previous team, Team Beta', $html);
+    }
+
+    public function test_a_lone_team_has_no_previous_or_next(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Team Alone');
+
+        $this->get(route('capsa.team_management.show', $team->team_id))
+            ->assertOk()
+            ->assertDontSee('Next team,');
+    }
+
+    /** What waits on her shows once, at the top, with the button that does it. */
+    public function test_the_team_page_says_what_is_waiting_on_her(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, , $sy] = $this->makeTeamInSection('Team Waiting');
+        $first = $this->addProposal($team, $sy, 1);
+        $this->addProposal($team, $sy, 2);
+
+        $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
+
+        $response->assertSee('Waiting on you');
+        $response->assertSee('2 titles to review');
+        $response->assertSee('href="'.route('capsa.team_management.title', [$team->team_id, $first->id]).'">Review titles', false);
+    }
+
+    public function test_nothing_waiting_means_no_banner(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Team Quiet');
+
+        $this->get(route('capsa.team_management.show', $team->team_id))
+            ->assertOk()
+            ->assertDontSee('Waiting on you');
+    }
+
+    /** Untitled: the titles open first in the card under Progress, beside Activity. */
+    public function test_an_untitled_team_shows_its_titles_on_the_team_page(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, , $sy] = $this->makeTeamInSection('Team Untitled');
+        $proposal = $this->addProposal($team, $sy, 1);
+
+        $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
+
+        $response->assertSee('data-tp-pane="tp-titles" aria-pressed="true"', false);
+        $response->assertSee($proposal->title);
+        $response->assertSee('data-tp-pane="tp-activity"', false);
+        $response->assertDontSee('data-tp-pane="tp-papers"', false);
+    }
+
+    /** Titled: Papers and Activity share one card, Papers open first. */
+    public function test_a_titled_team_shows_papers_and_activity_as_tabs(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Team Titled', ['project_title' => 'A Library Kiosk']);
+
+        $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
+
+        $response->assertSee('data-tp-pane="tp-papers" aria-pressed="true"', false);
+        $response->assertSee('<div class="tp-pane" id="tp-activity" hidden>', false);
+        $response->assertDontSee('data-tp-pane="tp-titles"', false);
+    }
+
+    /** Activity is read off the records: files sent, titles turned in, the day it was formed. */
+    public function test_the_activity_page_lists_every_update(): void
+    {
+        $capsa = $this->makeCapsaWithSections();
+        [$team, $leader, $sy] = $this->makeTeamInSection('Team Busy');
+        $leader->update(['f_name' => 'Ana', 'l_name' => 'Reyes']);
+        $this->addProposal($team, $sy, 1);
+        $this->makeDocumentReview($capsa, $leader, 'Chapter 1 Format.pdf', 'subject_adviser');
+
+        $response = $this->get(route('capsa.team_management.log', [$team->team_id, 'activity']))->assertOk();
+
+        $response->assertSee('Ana Reyes');
+        $response->assertSee('sent Chapter 1 · v1');
+        $response->assertSee('turned in title #1');
+        $response->assertSee('formed the team');
+    }
+
+    public function test_the_papers_page_lists_every_paper_sent_to_her(): void
+    {
+        $capsa = $this->makeCapsaWithSections();
+        [$team, $leader] = $this->makeTeamInSection('Team Many Papers');
+        foreach (range(1, 5) as $n) {
+            $this->makeDocumentReview($capsa, $leader, "Chapter {$n} Format.pdf", 'subject_adviser');
+        }
+
+        $response = $this->get(route('capsa.team_management.log', [$team->team_id, 'papers']))->assertOk();
+
+        $response->assertSee('5 papers, 5 to check');
+        foreach (range(1, 5) as $n) {
+            $response->assertSee("Chapter {$n} Format.pdf");
+        }
+    }
+
+    public function test_a_see_all_page_only_exists_for_papers_and_activity(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Team Logs');
+
+        $this->get('/capsa/team-management/'.$team->team_id.'/members')->assertNotFound();
+    }
+
+    public function test_a_see_all_page_is_closed_to_teams_outside_her_sections(): void
+    {
+        $this->makeCapsaWithSections(['BSIT-4B']);
+        [$team] = $this->makeTeamInSection('Team Elsewhere');
+
+        $this->get(route('capsa.team_management.log', [$team->team_id, 'activity']))->assertNotFound();
     }
 
     private function makeDocumentReview(CapstoneExpert $expert, Student $student, string $fileName, string $role): int

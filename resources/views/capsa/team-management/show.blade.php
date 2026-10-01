@@ -1,11 +1,9 @@
 {{--
-  One team, whole. Everything the seven tabs used to spread out - who is in
-  it, which experts accepted, and how far along every milestone is - on the
-  page you land on by clicking the team's row.
+  One team, whole: who is in it, who advises and grades it, how far along
+  every milestone is, and what it has sent or done lately.
 
-  On a desktop it fits the window: the page itself never scrolls. The team
-  column and the milestone list each keep to their own panel, and only a
-  panel whose content is taller than the window scrolls inside itself.
+  On a desktop it fits the window and never grows. Papers and Activity show
+  only the rows that fit; "See all" opens the rest on a page of its own.
 --}}
 @extends('capsa.team-management._shell')
 
@@ -13,123 +11,129 @@
 
 @push('head')
 <style>
-  .tp{display:flex;flex-direction:column;gap:16px}
-  .tp-head{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap}
-  .tp-head-text{flex:1;min-width:260px;display:flex;flex-direction:column;gap:5px}
-  .tp-name{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .tp-name h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.4px;line-height:1.15}
-  .tp-meta{font-size:13.5px;color:var(--ink2)}
-  .tp-meta .sep{color:var(--line2);margin:0 6px}
-  .tp-head .btn{height:42px;padding:0 16px}
+  .tp{display:flex;flex-direction:column;gap:10px}
 
-  .tp-grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
-  .tp-panel{background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .tp-head{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .tp-tav{width:52px;height:52px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff}
+  .tp-head .grow{flex:1;min-width:240px}
+  .tp-head h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.4px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;line-height:1.2}
+  .tp-meta{font-size:13px;color:var(--ink2);margin-top:3px;display:flex;gap:4px;white-space:nowrap;min-width:0}
+  .tp-meta .t{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .tp-meta a{color:var(--ink2);font-weight:600;text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:2px}
+  .tp-facts{display:flex;flex-wrap:wrap;gap:6px 28px;margin:6px 0 0}
+  .tp-facts dt{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
+  .tp-facts dd{margin:2px 0 0;font-size:13px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .tp-acts{display:flex;gap:8px;flex-wrap:wrap}
+  .tp-acts .btn{height:38px;padding:0 14px}
 
-  /* The team: members, experts, papers - one card, rows not boxes. */
-  .tp-side{padding:2px 18px}
-  .tp-sec{padding:14px 0;border-bottom:1px solid var(--line)}
-  .tp-sec:last-child{border-bottom:none}
-  .tp-sec-h{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 10px}
-  .tp-sec-h h2{margin:0;font-size:13.5px;font-weight:700;color:var(--ink)}
-  .tp-sec-h span{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
-  .tp-av{width:30px;height:30px;border-radius:50%;flex:none;position:relative;overflow:hidden;
-         display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:#fff}
-  .tp-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-  .tp-people{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
-  .tp-people li{display:flex;align-items:center;gap:10px;min-width:0}
-  .tp-people b{flex:1;min-width:0;font-size:13.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .tp-lead{font-size:11.5px;font-weight:700;color:var(--accent3)}
-  .tp-expert{display:flex;gap:10px;align-items:flex-start}
-  .tp-expert + .tp-expert{margin-top:12px}
-  .tp-expert-body{min-width:0;display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--ink2)}
-  .tp-expert-body b{font-size:13.5px;font-weight:600;color:var(--ink)}
-  .tp-expert-body .fields{color:var(--mut)}
-  .tp-expert-body a{color:var(--accent3);word-break:break-all}
-  .tp-seats{display:flex;flex-direction:column;gap:5px;margin-top:12px;font-size:12.5px;color:var(--mut)}
-  .tp-seats div{display:flex;justify-content:space-between;gap:10px}
-  .tp-papers{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-  .tp-papers li{display:flex;align-items:center;gap:10px}
-  .tp-papers .fn{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;font-size:13px;font-weight:600;color:var(--ink);word-break:break-word}
-  .tp-papers small{font-size:11.5px;font-weight:500;color:var(--mut)}
-  .tp-papers .ok{color:var(--green);font-weight:600}
-  .tp-papers .due{color:var(--amber);font-weight:600}
-  .tp-papers .btn{flex:none;padding:6px 12px}
-  .tp-none{font-size:12.5px;color:var(--mut)}
+  /* What on this team is waiting on her: the first thing, and how many more. */
+  .tp-needs{display:flex;align-items:center;gap:16px;padding:7px 16px;border:1px solid var(--amber);background:var(--amber-bg);border-radius:12px;flex-wrap:wrap}
+  .tp-needs-h{display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--amber);white-space:nowrap}
+  .tp-needs-h a{font-size:12px;letter-spacing:0;text-transform:none;font-weight:600;color:var(--ink2)}
+  .tp-needs-what{flex:1;min-width:200px;font-size:12.5px;color:var(--mut)}
+  .tp-needs-what b{font-size:13.5px;color:var(--ink)}
+  .tp-needs .btn{padding:5px 14px}
 
-  /* Milestones: a numbered list on the left, the chosen one on the right. */
-  .tp-ms{display:flex;flex-direction:column;min-height:0}
-  .tp-ms-h{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
-  .tp-ms-h h2{margin:0;flex:1;font-size:15px;font-weight:700}
-  .tp-ms-h .cnt{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
-  .tp-bar{width:120px;height:6px;border-radius:99px;background:var(--tint2);overflow:hidden}
-  .tp-bar i{display:block;height:100%;border-radius:99px;background:var(--green)}
-  .tp-ms-body{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:0}
-  .tp-nav{list-style:none;margin:0;padding:8px;border-right:1px solid var(--line)}
-  .tp-nav a{display:flex;align-items:center;gap:9px;min-height:33px;padding:3px 9px;border-radius:8px;
-            font-size:13px;font-weight:500;color:var(--ink2);text-decoration:none}
+  .tp-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:stretch}
+  .tp-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .tp-col > :last-child{flex:1}
+  .tp-sec{padding:12px 18px;border-top:1px solid var(--line)}
+  .tp-sec:first-child{border-top:0}
+  .tp-sec h3{margin:0 0 9px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:8px}
+  .tp-sec h3 small{font-weight:500;color:var(--mut);font-variant-numeric:tabular-nums}
+  .tp-note{margin:9px 0 0;font-size:12px;color:var(--mut)}
+
+  /* Progress: a numbered list on the left, the chosen milestone on the right. */
+  .tp-strip{display:flex;gap:3px;align-items:center}
+  .tp-strip i{width:14px;height:6px;border-radius:3px;background:var(--tint2)}
+  .tp-strip .t-d{background:var(--green)} .tp-strip .t-o{background:var(--red)} .tp-strip .t-p{background:var(--accent)}
+  .tp-ms{display:grid;grid-template-columns:220px minmax(0,1fr)}
+  .tp-nav{list-style:none;margin:0;padding:4px 8px;border-right:1px solid var(--line)}
+  .tp-nav a{display:flex;align-items:center;gap:9px;padding:1px 8px;border-radius:7px;font-size:12.5px;font-weight:500;color:var(--ink2);text-decoration:none}
   .tp-nav a:hover{background:var(--tint)}
   .tp-nav a[aria-current="true"]{background:var(--accent-bg);color:var(--ink);font-weight:700}
-  .tp-nav .n{width:22px;height:22px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;
-             font-size:11px;font-weight:700;background:var(--tint2);color:var(--mut)}
+  .tp-nav .n{width:20px;height:20px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;
+             font-size:10.5px;font-weight:700;background:var(--tint2);color:var(--mut)}
   .tp-nav .t-d .n{background:var(--green);color:#fff}
   .tp-nav .t-o .n{background:var(--red);color:#fff}
-  .tp-nav .t-p .n{background:var(--ink);color:#fff}
-  .tp-nav a[aria-current="true"] .n{background:var(--accent);color:#18191f}
-  .tp-nav .nm{flex:1;min-width:0;line-height:1.3}
-  .tp-nav .mt{display:inline-flex;align-items:center;font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums}
-
-  .tp-detail{padding:16px 22px;min-width:0}
-  .tp-detail-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-  .tp-detail-h h3{margin:0;font-size:18px;font-weight:700}
-  .tp-detail-h span{font-size:13px;color:var(--mut)}
-  .tp-gate{display:flex;align-items:center;gap:10px;margin:12px 0 4px;padding:11px 14px;border-radius:10px;
-           background:var(--tint);font-size:13px;color:var(--ink2)}
+  .tp-nav .t-p .n{background:var(--accent);color:#18191f}
+  .tp-nav .nm{flex:1;min-width:0;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tp-detail{padding:12px 18px;min-width:0}
+  .tp-detail h3{margin:0;font-size:17px;font-weight:700}
+  .tp-detail .sub{font-size:12.5px;color:var(--mut);margin-top:2px}
+  .tp-gate{display:flex;align-items:center;gap:9px;margin-top:10px;padding:10px 12px;border-radius:9px;background:var(--tint);font-size:12.5px;color:var(--ink2)}
   .tp-gate b{color:var(--ink)}
   .tp-items{list-style:none;margin:6px 0 0;padding:0}
-  .tp-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start;
-           padding:9px 0;border-bottom:1px solid var(--line)}
-  .tp-item:last-child{border-bottom:none}
+  .tp-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:start;padding:6px 0;border-top:1px solid var(--line)}
+  .tp-item:first-child{border-top:0}
   .tp-item .tt{min-width:0;display:flex;flex-direction:column;gap:2px}
-  .tp-item .tt b{font-size:14px;font-weight:600;color:var(--ink)}
+  .tp-item .tt b{font-size:13.5px;font-weight:600;color:var(--ink)}
   .tp-item .tt small{font-size:12px;color:var(--mut)}
   .tp-item.lk .tt b{color:var(--ink2)}
-  .tp-steps{list-style:none;margin:5px 0 0;padding:0;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-  .tp-steps li{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border-radius:99px;
-               font-size:11.5px;font-weight:600;white-space:nowrap;border:1.5px solid var(--line);color:var(--mut);background:var(--card)}
-  .tp-steps li + li::before{content:"";width:0}
-  .tp-steps .y{border-color:transparent;background:var(--green-bg);color:var(--green)}
-  .tp-steps .c{border-color:var(--accent);background:var(--accent-bg);color:var(--accent3)}
-  .tp-steps .x{border-color:rgba(220,38,38,.45);color:var(--red)}
-  .tp-steps .ar{border:none;background:none;padding:0;height:auto;color:var(--line2)}
+  .tp-steps{list-style:none;margin:3px 0 0;padding:0;display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;font-size:11.5px;color:var(--mut)}
+  .tp-steps li{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .tp-steps .y{color:var(--green);font-weight:600}
+  .tp-steps .c{color:var(--accent3);font-weight:700}
+  .tp-steps .x{color:var(--red);font-weight:600}
+  .tp-steps .ar{color:var(--line2)}
   .tp-state{justify-self:end;display:inline-flex;align-items:center;gap:5px;margin-top:2px;font-size:12.5px;font-weight:600;white-space:nowrap}
-  .tp-state.d{color:var(--green)}
-  .tp-state.l{color:var(--green)}
+  .tp-state.d,.tp-state.l{color:var(--green)}
   .tp-state.h{color:var(--blue)}
   .tp-state.o{color:var(--red)}
   .tp-state.n,.tp-state.lk{color:var(--mut)}
-  .tp-item .btn{justify-self:end;padding:6px 14px}
-  .tp-sched{display:flex;align-items:center;gap:10px;padding:12px 22px;border-top:1px solid var(--line);
-            font-size:13px;color:var(--ink2);flex:none}
-  .tp-sched b{color:var(--ink)}
+  .tp-item .btn{justify-self:end;padding:5px 14px}
 
-  /* Desktop: the page is exactly the window. Each panel keeps its own
-     scroll, so nothing below the fold has to be scrolled to. */
-  @media (min-width:1101px) and (min-height:640px){
-    .content:has(.tp){overflow:hidden;display:flex;flex-direction:column}
-    .content:has(.tp) > .tmx{flex:1;min-height:0;display:flex;flex-direction:column}
-    .tp{flex:1;min-height:0}
-    .tp-grid{flex:1;min-height:0;align-items:stretch}
-    .tp-side,.tp-nav,.tp-detail{overflow-y:auto;scrollbar-width:thin}
-    .tp-side{max-height:100%;align-self:start}
-    .tp-ms{max-height:100%;overflow:hidden}
-    .tp-ms-body{flex:1;min-height:0}
+  /* Titles, while the team has none settled. */
+  .tp-slots{list-style:none;margin:0;padding:0}
+  .tp-slots li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 18px;border-top:1px solid var(--line)}
+  .tp-slots li:first-child{border-top:0}
+  .tp-slots .k{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+  .tp-slots b{font-size:13.5px;display:block;color:var(--ink)}
+  .tp-slots small{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:6px;margin-top:3px}
+  .tp-slots .end{display:flex;gap:8px;align-items:center}
+  .tp-slots .st{font-size:12.5px;font-weight:600;white-space:nowrap}
+  .tp-slots .st.ok{color:var(--green)} .tp-slots .st.wait{color:var(--amber)} .tp-slots .st.bad{color:var(--red)}
+  .tp-slots .btn{padding:5px 14px}
+
+  /* Papers | Activity. */
+  .tp-tabs{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--tint);border:1px solid var(--line)}
+  .tp-tabs button{border:0;background:none;padding:4px 12px;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer;white-space:nowrap}
+  .tp-tabs button span{font-weight:500;color:var(--mut);font-variant-numeric:tabular-nums}
+  .tp-tabs button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .tp-pane{padding:6px 18px}
+  .tp-pane .tp-slots li{padding:9px 0}
+
+  /* Phones and narrow windows: three rows each, the rest behind "See all". */
+  .tp-fill > li:nth-child(n+4){display:none}
+
+  /* Desktop: the page is the window. Lists take whatever height is left and
+     show only the rows that fit in it; a row that does not fit is not drawn
+     at all rather than cut in half. */
+  @media (min-width:1101px){
+    .content:has(.tp){display:flex;flex-direction:column}
+    .content:has(.tp) > .tmx{flex:1 0 auto;display:flex;flex-direction:column;padding-block:12px}
+    .content:has(.tp) > .tmx > .crumb{margin-bottom:8px}
+    .tp{flex:1 0 auto}
+    .tp-grid{flex:1}
+    .tp-col > .tp-panel,.tp-grow,.tp-grow > .tp-pane{display:flex;flex-direction:column}
+    .tp-grow,.tp-grow > .tp-pane{flex:1;min-height:0}
+    .tp-grow > .tp-pane[hidden]{display:none}
+    .tp-fill{flex:1;min-height:98px;contain:size;display:grid;grid-template-rows:repeat(auto-fill,49px);grid-auto-rows:0;row-gap:0;overflow:hidden}
+    .tp-fill.tp-feed{grid-template-rows:repeat(auto-fill,32px);min-height:96px}
+    .tp-fill > li,.tp-fill > li:nth-child(n+4){display:flex;overflow:hidden;align-items:flex-start}
+    .tp-fill.tp-feed > li{align-items:center}
+    .tp-more{flex:none}
+    .tp-col > .tp-panel:has(.tp-ms){flex:1 1 0}
+    .tp-ms{flex:1;min-height:0}
+    .tp-detail{display:flex;flex-direction:column}
+    .tp-items{flex:1;min-height:70px;contain:size;overflow:hidden;position:relative}
   }
   @media (max-width:1100px){
     .tp-grid{grid-template-columns:minmax(0,1fr)}
   }
   @media (max-width:700px){
-    .tp-ms-body{grid-template-columns:minmax(0,1fr)}
-    .tp-nav{border-right:none;border-bottom:1px solid var(--line);display:flex;gap:4px;overflow-x:auto}
+    .tp-ms{grid-template-columns:minmax(0,1fr)}
+    .tp-nav{border-right:none;border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto}
     .tp-nav li{flex:none}
     .tp-nav .nm{white-space:nowrap}
   }
@@ -139,6 +143,8 @@
 @section('tm-content')
 @php
   use App\Support\MilestoneProgress;
+  use Illuminate\Support\Carbon;
+  use Illuminate\Support\Str;
 
   $team = $row->team;
   $maxMembers = \App\Models\Team::maxMembers();
@@ -149,16 +155,38 @@
 
   // The panel's average at the latest stage they have actually been graded on.
   $score = $defenseScores->get($team->team_id, collect())->last(fn ($s) => $s->average !== null);
-  $filled = collect($experts)->filter(fn ($seat) => $seat->expert);
-  $empty = collect($experts)->reject(fn ($seat) => $seat->expert);
-  $percent = $row->milestones?->percent ?? 0;
+  $titled = (bool) $team->project_title;
+  // Papers normally start after the title, but one sent early still shows.
+  $showPapers = $titled || $row->papers->isNotEmpty();
+
+  // Next: the coming defense if one is set, else the first milestone not done.
+  $nextDefense = $defenseSchedules->first(fn ($s) => $s->schedule_date && $s->schedule_date->isFuture());
+  $states = $milestones->map(fn ($ms) => MilestoneProgress::milestoneState($ms)[0]);
+  $toneOf = fn ($word) => ['Completed' => 'd', 'Overdue' => 'o', 'Past due' => 'o', 'In progress' => 'p'][$word] ?? 'n';
+  $nextMilestone = $milestones->first(fn ($ms, $i) => $states[$i] !== 'Completed');
+  $next = match (true) {
+      (bool) $nextDefense => $nextDefense->defense_type.' · '.$nextDefense->schedule_date->format('M j, Y'),
+      (bool) $nextMilestone => $nextMilestone->milestone->name.($nextMilestone->due_on ? ' · due '.Carbon::parse($nextMilestone->due_on)->format('M j') : ''),
+      default => 'Nothing scheduled',
+  };
+
+  $untitledNote = [
+      'none_submitted' => 'No titles turned in yet',
+      'awaiting_review' => 'Titles waiting for your review',
+      'all_rejected' => 'Every title was rejected; waiting for new ones',
+      'settling' => 'One title recommended; waiting for the adviser',
+      'awaiting_team_choice' => $row->approvedProposalCount.' recommended - the team is choosing',
+  ][$row->titleState] ?? 'No final title yet';
+
+  // Below the desktop width only this many rows show before "See all".
+  $shown = 3;
 @endphp
 
 <div class="tp">
   <div class="tp-head">
-    <div class="tp-head-text">
-      <div class="tp-name">
-        <h1>{{ $team->team_name }}</h1>
+    <span class="tp-tav" style="background:linear-gradient(135deg,{{ $row->gradient }})" aria-hidden="true">{{ $row->initials }}</span>
+    <div class="grow">
+      <h1>{{ $team->team_name }}
         @if ($team->is_confirmed)
           <span class="pill p-green">Verified</span>
         @elseif ($row->awaitingVerification)
@@ -166,195 +194,277 @@
         @else
           <span class="pill p-gray">{{ ucfirst($team->team_status) }}</span>
         @endif
-      </div>
+      </h1>
       <div class="tp-meta">
-        {{ $team->project_title ?: 'No final title yet' }}<span class="sep">·</span>{{ $row->section }}<span class="sep">·</span>@if ($score){{ \App\Support\DefenseScores::format($score->average) }} at {{ $score->label }}@else No defense yet @endif<span class="sep">·</span>Formed {{ $team->created_at ? \Illuminate\Support\Carbon::parse($team->created_at)->format('M j, Y') : 'date unknown' }}
+        <span class="t" title="{{ $titled ? $team->project_title : $untitledNote }}">{{ $titled ? $team->project_title : $untitledNote }}</span>
+        @if ($titled && $row->proposals->isNotEmpty())
+          <span>·</span> <a href="{{ route('capsa.team_management.pre_proposals', $team->team_id) }}">See all {{ $row->proposals->count() }} submitted titles</a>
+        @endif
       </div>
+      <dl class="tp-facts">
+        <div><dt>Section</dt><dd>{{ $row->section }}</dd></div>
+        <div><dt>Next</dt><dd>{{ $next }}</dd></div>
+        <div><dt>Latest score{{ $score ? ' · '.$score->label : '' }}</dt><dd>{{ $score ? \App\Support\DefenseScores::format($score->average) : 'None yet' }}</dd></div>
+      </dl>
     </div>
-    <a class="btn {{ $row->pendingProposalCount ? 'btn-p' : 'btn-o' }}"
-       href="{{ route('capsa.team_management.pre_proposals', $team->team_id) }}">
-      <x-tm-icon n="file" s="15" />Check Pre-proposals
-      @if ($row->pendingProposalCount)
-        <span class="nb">{{ $row->pendingProposalCount }} waiting</span>
+    <div class="tp-acts">
+      @if ($row->canVerify)
+        <a class="btn btn-p" href="{{ route('capsa.team_management.pre_proposals', $team->team_id) }}"><x-tm-icon n="shield" s="14" />Verify team</a>
       @endif
-    </a>
+      @if ($previousTeam)
+        <a class="btn btn-o" href="{{ route('capsa.team_management.show', $previousTeam->team_id) }}" aria-label="Previous team, {{ $previousTeam->team_name }}">← {{ $previousTeam->team_name }}</a>
+        <a class="btn btn-o" href="{{ route('capsa.team_management.show', $nextTeam->team_id) }}" aria-label="Next team, {{ $nextTeam->team_name }}">{{ $nextTeam->team_name }} →</a>
+      @endif
+    </div>
   </div>
 
-  <div class="tp-grid">
-    <div class="tp-panel tp-side">
-      <section class="tp-sec" aria-labelledby="tp-mem">
-        <div class="tp-sec-h"><h2 id="tp-mem">Members</h2><span>{{ $row->members->count() }} of {{ $maxMembers }}</span></div>
-        <ul class="tp-people">
-          {{-- The leader first: the one thing about this list that is not just the roster order. --}}
-          @forelse ($row->members->sortByDesc(fn ($m) => (int) $m->student_id === (int) $team->leader_id) as $member)
-            @php
-              $name = trim(($member->f_name ?? '').' '.($member->l_name ?? ''));
-              $isLeader = (int) $member->student_id === (int) $team->leader_id;
-            @endphp
-            <li>
-              <span class="tp-av" style="background:{{ $avatar($member->student_id) }}">{{ $initialsOf($name) }}@include('capsa.team-management._photo', ['url' => $member->avatarUrl()])</span>
-              <b>{{ $name ?: 'Unnamed student' }}</b>
-              @if ($isLeader)<span class="tp-lead">Leader</span>@endif
-            </li>
-          @empty
-            <li class="tp-none">No members yet</li>
-          @endforelse
-        </ul>
-      </section>
+  @if ($waiting->isNotEmpty())
+    @php $first = $waiting->first(); @endphp
+    <div class="tp-needs">
+      <div class="tp-needs-h">Waiting on you
+        @if ($waiting->count() > 1)
+          <a href="{{ route('capsa.team_management') }}">+{{ $waiting->count() - 1 }} more in To do</a>
+        @endif
+      </div>
+      <div class="tp-needs-what"><b>{{ $first->what }}</b> · {{ $first->why }}</div>
+      <a class="btn btn-p" href="{{ $first->url }}">{{ $first->label }}</a>
+    </div>
+  @endif
 
-      <section class="tp-sec" aria-labelledby="tp-exp">
-        <div class="tp-sec-h"><h2 id="tp-exp">Experts</h2></div>
-        @foreach ($filled as $seat)
-          <div class="tp-expert">
-            <span class="tp-av" style="background:{{ $avatar($seat->expert->expert_id) }}">{{ $initialsOf($seat->expert->name) }}@include('capsa.team-management._photo', ['url' => $seat->expert->avatarUrl()])</span>
-            <div class="tp-expert-body">
-              <b>{{ $seat->expert->name }}</b>
-              <span>{{ ucfirst($seat->role) }}@if ($seat->degree) · {{ $seat->degree }}@endif</span>
-              @if ($seat->expertise->isNotEmpty())<span class="fields">{{ $seat->expertise->implode(', ') }}</span>@endif
-              <a href="mailto:{{ $seat->expert->email }}">{{ $seat->expert->email }}</a>
-            </div>
-          </div>
-        @endforeach
-        {{-- All three seats, always: an empty one is information too. --}}
-        @if ($empty->isNotEmpty())
-          <div class="tp-seats" @if ($filled->isEmpty()) style="margin-top:0" @endif>
-            @foreach ($empty as $seat)
-              <div><span>{{ ucfirst($seat->role) }}</span><span>No {{ $seat->role }} yet</span></div>
+  <div class="tp-grid">
+    <div class="tp-col">
+      <div class="tp-panel">
+        <section class="tp-sec" aria-labelledby="tp-mem">
+          <h3 id="tp-mem">Members <small>{{ $row->members->count() }} of {{ $maxMembers }}</small></h3>
+          <ul class="tp-ppl">
+            {{-- The leader first: the one thing about this list that is not just the roster order. --}}
+            @forelse ($row->members->sortByDesc(fn ($m) => (int) $m->student_id === (int) $team->leader_id) as $member)
+              @php $name = trim(($member->f_name ?? '').' '.($member->l_name ?? '')); @endphp
+              <li>
+                <span class="tp-av" style="background:{{ $avatar($member->student_id) }}">{{ $initialsOf($name) }}@include('capsa.team-management._photo', ['url' => $member->avatarUrl()])</span>
+                <b>{{ $name ?: 'Unnamed student' }}</b>
+                @if ((int) $member->student_id === (int) $team->leader_id)<span class="lead">Leader</span>@endif
+              </li>
+            @empty
+              <li class="tp-none">No members yet</li>
+            @endforelse
+          </ul>
+        </section>
+
+        <section class="tp-sec" aria-labelledby="tp-exp">
+          <h3 id="tp-exp">Experts</h3>
+          {{-- All three seats, always: an empty one is information too. --}}
+          <ul class="tp-ppl">
+            @foreach ($experts as $seat)
+              @if ($seat->expert)
+                <li>
+                  <span class="tp-av" style="background:{{ $avatar($seat->expert->expert_id) }}">{{ $initialsOf($seat->expert->name) }}@include('capsa.team-management._photo', ['url' => $seat->expert->avatarUrl()])</span>
+                  <div class="who"><b>{{ $seat->expert->name }}</b><small>{{ ucfirst($seat->role) }}</small></div>
+                </li>
+              @else
+                <li class="empty"><span class="tp-av seat">–</span><div class="who"><b>No {{ $seat->role }} yet</b></div></li>
+              @endif
             @endforeach
+          </ul>
+          @unless ($titled)
+            <p class="tp-note">The team can apply to an adviser once you recommend one of its titles.</p>
+          @endunless
+        </section>
+
+        @if ($panel)
+          <section class="tp-sec" aria-labelledby="tp-pan">
+            <h3 id="tp-pan">Panel</h3>
+            <ul class="tp-ppl">
+              @foreach ($panel->panelists as $panelist)
+                <li>
+                  <span class="tp-av" style="background:{{ $avatar($panelist->expert->expert_id) }}">{{ $initialsOf($panelist->expert->name) }}@include('capsa.team-management._photo', ['url' => $panelist->expert->avatarUrl()])</span>
+                  <div class="who"><b>{{ $panelist->expert->name }}</b>
+                    <small>@if ((int) $panelist->expert->expert_id === $viewerId)<span class="you">You</span> · @endif{{ $panelist->panel_role ?: 'Panelist' }}</small></div>
+                </li>
+              @endforeach
+            </ul>
+          </section>
+        @endif
+
+      </div>
+    </div>
+
+    <div class="tp-col">
+      <section class="tp-panel" aria-labelledby="tp-ms-h">
+        <div class="tp-panel-h">
+          <h2 id="tp-ms-h">Progress</h2>
+          <small>{{ $states->filter(fn ($w) => $w === 'Completed')->count() }} of {{ $milestones->count() }} milestones</small>
+          <span class="tp-strip" aria-hidden="true">@foreach ($states as $word)<i class="t-{{ $toneOf($word) }}"></i>@endforeach</span>
+        </div>
+
+        @if ($milestones->isEmpty())
+          <p class="tp-none" style="padding:14px 18px">This section has no checklist yet, so there is nothing to track.</p>
+        @else
+          <div class="tp-ms">
+            <ol class="tp-nav" aria-label="Milestones">
+              @foreach ($milestones as $i => $ms)
+                @php $tone = $toneOf($states[$i]); @endphp
+                <li class="t-{{ $tone }}">
+                  <a href="{{ route('capsa.team_management.show', [$team->team_id, 'milestone' => $i]) }}"
+                     aria-current="{{ $i === $selectedIndex ? 'true' : 'false' }}"
+                     aria-label="{{ $ms->milestone->name }}: {{ $states[$i] }}{{ $ms->locked ? '' : ", {$ms->completed} of {$ms->total} done" }}">
+                    <span class="n">@if ($tone === 'd')<x-tm-icon n="check" s="11" bold />@elseif ($ms->locked)<x-tm-icon n="lock" s="11" />@else{{ $i + 1 }}@endif</span>
+                    <span class="nm" title="{{ $ms->milestone->name }}">{{ $ms->milestone->name }}</span>
+                  </a>
+                </li>
+              @endforeach
+            </ol>
+
+            <div class="tp-detail">
+              <h3>{{ $selected->milestone->name }}</h3>
+              <div class="sub">@if ($selected->due_on)Due {{ Carbon::parse($selected->due_on)->format('M j, Y') }} · @endif{{ $selected->completed }} of {{ $selected->total }} {{ Str::plural('requirement', $selected->total) }} done</div>
+
+              @if ($selected->locked)
+                {{-- One line for the whole milestone rather than a lock and a
+                     red "missed" mark on every row: while it is locked the team
+                     cannot hand anything in, so nothing here is theirs to miss. --}}
+                <div class="tp-gate"><x-tm-icon n="lock" s="16" />
+                  <span><b>Opens once {{ $selected->requires }} {{ Str::contains($selected->requires, ' and ') ? 'are' : 'is' }} complete.</b> Until then the team can't hand anything in here.</span></div>
+              @endif
+
+              <ul class="tp-items">
+                @foreach ($selected->items as $item)
+                  @php
+                    $short = ['done' => 'd', 'done_late' => 'l', 'handed_in' => 'h', 'overdue' => 'o'][$item->state] ?? 'n';
+                    $word = ['d' => 'Done', 'l' => 'Done late', 'h' => 'Handed in', 'o' => 'Overdue', 'n' => 'Not started'][$short];
+                    $note = MilestoneProgress::itemNote($item, $item->locked, $item->waits_for);
+                    $steps = MilestoneProgress::steps($item->item->kind, $item->state, $item->waiting_on);
+                    $stepsDone = collect($steps)->where('state', 'done')->count();
+                  @endphp
+                  <li class="tp-item{{ $item->locked ? ' lk' : '' }}">
+                    <div class="tt"><b>{{ $item->item->title }}</b>@if ($note)<small>{{ $note }}</small>@endif
+                    <ol class="tp-steps" aria-label="{{ $stepsDone }} of {{ count($steps) }} steps done">
+                      @foreach ($steps as $s => $step)
+                        @php
+                          $dot = ['done' => 'y', 'current' => 'c', 'missed' => 'x'][$step['state']] ?? '';
+                          // Locked: nothing could be handed in, so nothing was missed.
+                          if ($item->locked && $dot === 'x') { $dot = ''; }
+                        @endphp
+                        @if ($s > 0)<li class="ar" aria-hidden="true">→</li>@endif
+                        <li class="{{ $dot }}">@if ($dot === 'y')<x-tm-icon n="check" s="11" bold />@else○@endif {{ $step['label'] }}</li>
+                      @endforeach
+                    </ol>
+                    </div>
+                    @if ($item->locked && $item->state !== 'handed_in')
+                      <span class="tp-state lk"><x-tm-icon n="lock" s="12" />Locked</span>
+                    @elseif ($item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
+                      {{-- A signed paper closes on the CaPSA's check, and the check
+                           itself lives in the Milestones tracker. Once it is
+                           checked, or put down, the tracker brings her back
+                           here (return). --}}
+                      <a class="btn btn-p" href="{{ route('capsa.team_management', [
+                           'tab' => 'milestones', 'section' => $row->section,
+                           'team' => $team->team_id, 'check' => $item->item->id,
+                           'return' => route('capsa.team_management.show', $team->team_id, false),
+                         ]) }}">Check</a>
+                    @else
+                      <span class="tp-state {{ $short }}">{{ $word }}</span>
+                    @endif
+                  </li>
+                @endforeach
+              </ul>
+              <a class="tp-more" data-tp-more="{{ $selected->items->count() }}" hidden
+                 href="{{ route('capsa.team_management', ['tab' => 'milestones', 'section' => $row->section, 'team' => $team->team_id]) }}">See all {{ $selected->items->count() }} requirements</a>
+            </div>
           </div>
         @endif
       </section>
 
-      {{-- The Papers tab folded in here. Her format pass on what this team
-           sent her as Subject Adviser; what she reviews as an adviser or a
-           consultant is a different job and stays in My Expert Duties. --}}
-      <section class="tp-sec" aria-labelledby="tp-pap">
-        <div class="tp-sec-h"><h2 id="tp-pap">Papers</h2><span>{{ $row->papersToCheck }} to check</span></div>
-        <ul class="tp-papers">
-          @forelse ($row->papers as $paper)
-            @php
-              $reviewed = $paper->review_status === 'Reviewed';
-              $mark = $reviewed ? 'Checked' : ($paper->review_status === 'Reviewing' ? 'In progress' : 'To check');
-              $meta = collect([
-                $paper->chapter ?: 'Chapter not set',
-                'v'.$paper->file_version,
-                $paper->submitted_at ? \Illuminate\Support\Carbon::parse($paper->submitted_at)->format('M j, Y') : null,
-              ])->filter()->implode(' · ');
-            @endphp
-            <li>
-              <span class="fn">{{ $paper->file_name }}<small>{{ $meta }} · <span class="{{ $reviewed ? 'ok' : 'due' }}">{{ $mark }}</span></small></span>
-              <a class="btn {{ $reviewed ? 'btn-o' : 'btn-p' }}"
-                 href="{{ route('instructor.docreview.annotate', $paper->review_id) }}">{{ $reviewed ? 'Open' : 'Check format' }}</a>
-            </li>
-          @empty
-            <li class="tp-none">Nothing to check. Papers appear here when this team sends one to their Subject Adviser.</li>
-          @endforelse
-        </ul>
-      </section>
-    </div>
-
-    <section class="tp-panel tp-ms" aria-labelledby="tp-ms-h">
-      <div class="tp-ms-h">
-        <h2 id="tp-ms-h">Milestones</h2>
-        <span class="cnt">{{ $row->milestones?->completed ?? 0 }} of {{ $row->milestones?->total ?? 0 }} items done</span>
-        <span class="tp-bar" aria-hidden="true"><i style="width:{{ $percent }}%"></i></span>
-      </div>
-
-      @if ($milestones->isEmpty())
-        <p class="tp-none" style="padding:18px 22px;margin:0">This section has no checklist yet, so there is nothing to track.</p>
-      @else
-        <div class="tp-ms-body">
-          <ol class="tp-nav" aria-label="Milestones">
-            @foreach ($milestones as $i => $ms)
-              @php
-                [$word] = MilestoneProgress::milestoneState($ms);
-                $tone = ['Completed' => 'd', 'Overdue' => 'o', 'Past due' => 'o', 'In progress' => 'p'][$word] ?? 'n';
-              @endphp
-              <li class="t-{{ $tone }}">
-                <a href="{{ route('capsa.team_management.show', [$row->team->team_id, 'milestone' => $i]) }}"
-                   aria-current="{{ $i === $selectedIndex ? 'true' : 'false' }}"
-                   aria-label="{{ $ms->milestone->name }}: {{ $word }}{{ $ms->locked ? '' : ", {$ms->completed} of {$ms->total} done" }}">
-                  <span class="n">@if ($tone === 'd')<x-tm-icon n="check" s="11" bold />@else{{ $i + 1 }}@endif</span>
-                  <span class="nm">{{ $ms->milestone->name }}</span>
-                  <span class="mt">@if ($ms->locked)<x-tm-icon n="lock" s="12" />@else{{ $ms->completed }}/{{ $ms->total }}@endif</span>
-                </a>
-              </li>
-            @endforeach
-          </ol>
-
-          <div class="tp-detail">
-            <div class="tp-detail-h">
-              <h3>{{ $selected->milestone->name }}</h3>
-              <span>
-                @if ($selected->due_on)Due {{ \Illuminate\Support\Carbon::parse($selected->due_on)->format('M j, Y') }} · @endif{{ $selected->total }} {{ \Illuminate\Support\Str::plural('requirement', $selected->total) }}
-              </span>
-            </div>
-
-            @if ($selected->locked)
-              {{-- One line for the whole milestone rather than a lock and a
-                   red "missed" mark on every row: while it is locked the team
-                   cannot hand anything in, so nothing here is theirs to miss. --}}
-              <div class="tp-gate"><x-tm-icon n="lock" s="16" />
-                <span><b>Opens once {{ $selected->requires }} {{ \Illuminate\Support\Str::contains($selected->requires, ' and ') ? 'are' : 'is' }} complete.</b> Until then the team can't hand anything in here.</span></div>
+      {{-- One card under Progress. While the team has no title, its titles
+           open first (what used to be the Check Pre-proposals page). After
+           that, papers sent to her as Subject Adviser for the format pass;
+           what she reviews as somebody's adviser stays in My Expert Duties. --}}
+      <section class="tp-panel tp-grow" aria-label="{{ $titled ? 'Papers and activity' : 'Titles and activity' }}">
+        <div class="tp-panel-h" style="padding:4px 12px">
+          <div class="tp-tabs" role="group" aria-label="Show">
+            @unless ($titled)
+              <button type="button" data-tp-pane="tp-titles" aria-pressed="true">Titles <span>{{ $row->pendingProposalCount ? $row->pendingProposalCount.' waiting' : $row->proposals->count() }}</span></button>
+            @endunless
+            @if ($showPapers)
+              <button type="button" data-tp-pane="tp-papers" aria-pressed="{{ $titled ? 'true' : 'false' }}">Papers <span>{{ $row->papersToCheck }} to check</span></button>
             @endif
-
-            {{-- Flat: every item of the chosen milestone, nothing folded away. --}}
-            <ul class="tp-items">
-              @foreach ($selected->items as $item)
-                @php
-                  $short = ['done' => 'd', 'done_late' => 'l', 'handed_in' => 'h', 'overdue' => 'o'][$item->state] ?? 'n';
-                  $word = ['d' => 'Done', 'l' => 'Done late', 'h' => 'Handed in', 'o' => 'Overdue', 'n' => 'Not started'][$short];
-                  $note = MilestoneProgress::itemNote($item, $item->locked, $item->waits_for);
-                  $steps = MilestoneProgress::steps($item->item->kind, $item->state, $item->waiting_on);
-                  $stepsDone = collect($steps)->where('state', 'done')->count();
-                @endphp
-                <li class="tp-item{{ $item->locked ? ' lk' : '' }}">
-                  <div class="tt"><b>{{ $item->item->title }}</b>@if ($note)<small>{{ $note }}</small>@endif
-                  <ol class="tp-steps" aria-label="{{ $stepsDone }} of {{ count($steps) }} steps done">
-                    @foreach ($steps as $s => $step)
-                      @php
-                        $dot = ['done' => 'y', 'current' => 'c', 'missed' => 'x'][$step['state']] ?? '';
-                        // Locked: nothing could be handed in, so nothing was missed.
-                        if ($item->locked && $dot === 'x') { $dot = ''; }
-                      @endphp
-                      @if ($s > 0)<li class="ar" aria-hidden="true">→</li>@endif
-                      <li class="{{ $dot }}">@if ($dot === 'y')<x-tm-icon n="check" s="10" bold />@endif{{ $step['label'] }}</li>
-                    @endforeach
-                  </ol>
-                  </div>
-                  @if ($item->locked && $item->state !== 'handed_in')
-                    <span class="tp-state lk"><x-tm-icon n="lock" s="12" />Locked</span>
-                  @elseif ($item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
-                    {{-- A signed paper closes on the CaPSA's check, and the check
-                         itself lives in the Milestones tracker. Once it is
-                         checked, or put down, the tracker brings her back
-                         here (return). --}}
-                    <a class="btn btn-p" href="{{ route('capsa.team_management', [
-                         'tab' => 'milestones', 'section' => $row->section,
-                         'team' => $team->team_id, 'check' => $item->item->id,
-                         'return' => route('capsa.team_management.show', $team->team_id, false),
-                       ]) }}">Check</a>
-                  @else
-                    <span class="tp-state {{ $short }}">{{ $word }}</span>
-                  @endif
-                </li>
-              @endforeach
-            </ul>
-
+            <button type="button" data-tp-pane="tp-activity" aria-pressed="false">Activity <span>{{ $activity->count() }}</span></button>
           </div>
         </div>
-      @endif
-
-      <div class="tp-sched"><x-tm-icon n="cal" s="16" />
-        <span><b>Defense schedule</b> ·
-          @forelse ($defenseSchedules as $sched)
-            {{ $sched->defense_type }} {{ $sched->schedule_date?->format('M j, Y') ?? 'date not set' }}@if (! $loop->last), @endif
-          @empty
-            Not scheduled yet
-          @endforelse
-        </span>
-      </div>
-    </section>
+        @unless ($titled)
+          <div class="tp-pane" id="tp-titles">
+            <ul class="tp-slots">
+              @forelse ($row->proposals->sortBy('slot') as $proposal)
+                @php
+                  $isPending = ! $proposal->approved_status && ! $proposal->rejection_reason;
+                  [$stateWord, $stateTone] = $proposal->approved_status ? ['Recommended', 'ok'] : ($isPending ? ['Waiting', 'wait'] : ['Rejected', 'bad']);
+                @endphp
+                <li>
+                  <span class="k">#{{ $proposal->slot }}</span>
+                  <div style="min-width:0"><b>{{ $proposal->title }}</b>
+                    <small>Closest match <x-tm-sim :score="$proposal->duplicationCheck?->top_score" /></small></div>
+                  <span class="end"><span class="st {{ $stateTone }}">{{ $stateWord }}</span>
+                    <a class="btn {{ $isPending ? 'btn-p' : 'btn-o' }}" href="{{ route('capsa.team_management.title', [$team->team_id, $proposal->id]) }}">{{ $isPending ? 'Review' : 'Open' }}</a></span>
+                </li>
+              @empty
+                <li><span></span><p class="tp-none">No titles turned in yet.</p><span></span></li>
+              @endforelse
+            </ul>
+          </div>
+        @endunless
+        @if ($showPapers)
+          <div class="tp-pane" id="tp-papers"@unless ($titled) hidden @endunless>
+            @if ($row->papers->isEmpty())
+              <p class="tp-none">Nothing to check. Papers appear here when this team sends one to their Subject Adviser.</p>
+            @else
+              @include('capsa.team-management._papers', ['papers' => $row->papers->take(12), 'fill' => true])
+              @if ($row->papers->count() > $shown)
+                <a class="tp-more" href="{{ route('capsa.team_management.log', [$team->team_id, 'papers']) }}">See all {{ $row->papers->count() }} papers</a>
+              @endif
+            @endif
+          </div>
+        @endif
+        <div class="tp-pane" id="tp-activity" hidden>
+          @include('capsa.team-management._feed', ['events' => $activity->take(12), 'fill' => true])
+          @if ($activity->count() > $shown)
+            <a class="tp-more" href="{{ route('capsa.team_management.log', [$team->team_id, 'activity']) }}">See all {{ $activity->count() }} updates</a>
+          @endif
+        </div>
+      </section>
+    </div>
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+  // A milestone's requirements differ in height, so CSS cannot count how many
+  // fit; draw the ones that fit whole and point the rest to the tracker.
+  function tpFitItems() {
+    document.querySelectorAll('.tp-items').forEach(function (list) {
+      var more = list.parentNode.querySelector('[data-tp-more]');
+      var rows = Array.prototype.slice.call(list.children);
+      var clipping = window.matchMedia('(min-width:1101px)').matches;
+      var cut = false;
+      rows.forEach(function (row) { row.hidden = false; });
+      rows.forEach(function (row) {
+        cut = cut || (clipping && row.offsetTop + row.offsetHeight > list.clientHeight);
+        row.hidden = cut;
+      });
+      if (more) { more.hidden = !cut; }
+    });
+  }
+  tpFitItems();
+  window.addEventListener('resize', tpFitItems);
+
+  document.querySelectorAll('[data-tp-pane]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      document.querySelectorAll('[data-tp-pane]').forEach(function (other) {
+        var on = other === button;
+        other.setAttribute('aria-pressed', on ? 'true' : 'false');
+        document.getElementById(other.dataset.tpPane).hidden = !on;
+      });
+    });
+  });
+</script>
+@endpush
