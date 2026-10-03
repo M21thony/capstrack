@@ -30,6 +30,7 @@
 .ta-tc-btn { min-height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: inherit; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .ta-tc-ok { background: #1f7a4d; border-color: #1f7a4d; color: #fff; }
 .ta-tc-err { margin-top: 6px; font-size: 12.5px; color: #b42318; }
+.ta-go-done { margin: 6px 0 0; font-size: 13px; color: var(--green); font-weight: 600; }
 .ta-intro { font-size: 14px; color: var(--text2); margin: 0; max-width: 640px; line-height: 1.5; }
 
 /* Same pill for every slot, five to a row; an expert with 15 slots gets
@@ -318,6 +319,35 @@
           @endif
         </div>
       </div>
+
+      {{-- The CaPA's go: a team defends Title, Pre Oral or Final Oral only once its
+           adviser says it is ready. Not ready cancels the date, and the CaPSA
+           gives the team a new one. --}}
+      @if ($defenseGo->isNotEmpty())
+        <section class="ta-tc" aria-labelledby="ta-go-h">
+          <h2 id="ta-go-h" class="ta-tc-h">Defenses waiting for your go <span class="ta-count">{{ $defenseGo->whereNull('capa_answer')->count() }}</span></h2>
+          @foreach ($defenseGo as $defense)
+            <article class="ta-tc-item">
+              <div class="ta-tc-team">{{ $defense->team?->team_name }} <span class="ta-tc-when">· {{ $defense->defense_type }}, {{ $defense->schedule_date->format('D, M j, g:i A') }} · {{ $defense->venue }}</span></div>
+              @if ($defense->capa_answer === \App\Models\DefenseSchedule::CAPA_GO)
+                <p class="ta-go-done">You gave the go. If the team is no longer ready, you can still cancel.</p>
+              @endif
+              <form method="POST" action="{{ route('instructor.defense-go.update', $defense) }}" class="ta-tc-form">
+                @csrf
+                @method('PATCH')
+                <label class="ta-tc-note-l" for="go-note-{{ $defense->defense_id }}">If not ready, what is missing <span>(optional, the team sees it)</span></label>
+                <input id="go-note-{{ $defense->defense_id }}" name="note" class="ta-tc-note" maxlength="255">
+                <div class="ta-tc-actions">
+                  <button type="submit" name="answer" value="not_ready" class="ta-tc-btn">Not ready, cancel</button>
+                  @unless ($defense->capa_answer === \App\Models\DefenseSchedule::CAPA_GO)
+                    <button type="submit" name="answer" value="go" class="ta-tc-btn ta-tc-ok">Go</button>
+                  @endunless
+                </div>
+              </form>
+            </article>
+          @endforeach
+        </section>
+      @endif
 
       {{-- A passed team asking to change part of its title. Only an approval changes it. --}}
       @if ($titleChanges->isNotEmpty())

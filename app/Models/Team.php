@@ -446,12 +446,27 @@ class Team extends Model
         'is_confirmed',
         'member_count',
         'selected_pre_proposal_id',
+        'panel_status',
+        'panel_finalized_at',
+        'panel_finalized_by',
     ];
 
     protected $casts = [
         'is_confirmed' => 'boolean',
         'member_count' => 'integer',
+        'panel_finalized_at' => 'datetime',
     ];
+
+    /** A panel still being worked out: panelists can move between teams. */
+    public const PANEL_DRAFT = 'draft';
+
+    /** A panel that sits every defense through Final Oral. */
+    public const PANEL_FINAL = 'final';
+
+    public function panelIsFinal(): bool
+    {
+        return $this->panel_status === self::PANEL_FINAL;
+    }
 
     // Some legacy rows have double-encoded JSON in `tags` (e.g. the literal
     // string "[]" instead of an actual empty array), which crashes any

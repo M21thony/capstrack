@@ -42,6 +42,7 @@ use App\Http\Controllers\IdleSessionController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
 use App\Http\Controllers\Instructor\ConsultationLogController;
 use App\Http\Controllers\Instructor\DashboardController as InstructorDashboardController;
+use App\Http\Controllers\Instructor\DefenseGoController;
 use App\Http\Controllers\Instructor\DocReviewController;
 use App\Http\Controllers\Instructor\GradingController;
 use App\Http\Controllers\Instructor\ProfileController as InstructorProfileController;
@@ -315,6 +316,8 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/title-confirmations/{preProposal}/document', [TitleConfirmationController::class, 'document'])->name('title-confirmations.document');
     // An adviser deciding on a passed team's request to change part of its title.
     Route::patch('/title-changes/{titleChangeRequest}', [TitleConfirmationController::class, 'decideChange'])->name('title-changes.update');
+    // An adviser (CaPA) saying whether their team is ready for its defense date.
+    Route::patch('/defense-go/{defense}', [DefenseGoController::class, 'update'])->name('defense-go.update');
     Route::get('/progress', [InstructorProgressController::class, 'index'])->name('progress');
     Route::get('/profile', [InstructorProfileController::class, 'index'])->name('profile');
     Route::put('/profile', [InstructorProfileController::class, 'update'])->name('profile.update');

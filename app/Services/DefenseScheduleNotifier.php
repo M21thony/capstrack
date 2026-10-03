@@ -8,6 +8,7 @@ use App\Models\DefenseSchedule;
 use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Support\DefenseBoard;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -90,6 +91,17 @@ class DefenseScheduleNotifier
             $schedule, $rescheduled, false,
         );
         $this->email($schedule->panels->pluck('expert.email'), $schedule, $rescheduled, true);
+
+        // Title, Pre Oral and Final Oral go ahead on the CaPA's word.
+        if (DefenseBoard::needsCapaGo($schedule->defense_type) && $schedule->capa_answer === null) {
+            Notifier::toExpert(
+                app(RecipientResolver::class)->resolveTeamRoleExpert((int) $team->team_id, 'adviser'),
+                'defense_scheduled',
+                'Is '.$team->team_name.' ready? '.$schedule->defense_type.' on '.$schedule->schedule_date->format('M j'),
+                'Give the go, or say the team is not ready and the date is cancelled.',
+                route('instructor.assignments'),
+            );
+        }
     }
 
     /** Queued, and never allowed to stop the schedule itself from saving. */

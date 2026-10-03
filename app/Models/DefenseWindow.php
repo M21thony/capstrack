@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DefenseWindow extends Model
 {
@@ -17,6 +18,8 @@ class DefenseWindow extends Model
         'start_date',
         'end_date',
         'duration_minutes',
+        'updated_by',
+        'updated_at',
     ];
 
     protected $attributes = ['duration_minutes' => 120];
@@ -25,5 +28,11 @@ class DefenseWindow extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'duration_minutes' => 'integer',
+        'updated_at' => 'datetime',
     ];
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(CapstoneExpert::class, 'updated_by', 'expert_id');
+    }
 }

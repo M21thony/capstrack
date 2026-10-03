@@ -3,9 +3,11 @@
 namespace App\Support;
 
 use App\Models\CapstoneExpert;
+use App\Models\DefenseCancellation;
 use App\Models\DefenseSchedule;
 use App\Models\DefenseWindow;
 use App\Models\ExpensePost;
+use App\Models\ExpertAwayDate;
 use App\Models\FinancialRecord;
 use App\Models\GradingRubric;
 use App\Models\Role;
@@ -33,6 +35,12 @@ class DefenseBoard
 
     /** Pre-proposal Defense has no fee; the other three do. */
     public const PAID_STAGES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense'];
+
+    /**
+     * Shown, but not in the way of a date: a team still owing requirements
+     * can be scheduled, and the panel follows them up.
+     */
+    public const WARNING_KEYS = ['req'];
 
     public const VENUES = ['NAS Lab', 'Mac Lab', 'ERP Lab', 'Open Lab', 'CS Lab', 'IT Lab 1', 'IT Lab 2', 'Conference Room'];
 
@@ -62,6 +70,23 @@ class DefenseBoard
         }
 
         return $out;
+    }
+
+    /**
+     * The blockers that keep a team from a date - every one but the warnings.
+     *
+     * @param  array<int, array{key: string, text: string}>  $blockers
+     * @return array<int, array{key: string, text: string}>
+     */
+    public static function hardBlockers(array $blockers): array
+    {
+        return array_values(array_filter($blockers, fn (array $b) => ! in_array($b['key'], self::WARNING_KEYS, true)));
+    }
+
+    /** Whether this stage needs the CaPA's go before it is held: all but the pre-proposal. */
+    public static function needsCapaGo(string $stage): bool
+    {
+        return in_array($stage, self::PAID_STAGES, true);
     }
 
     /** How long this stage's defenses run, from its window. */
@@ -158,9 +183,15 @@ class DefenseBoard
         $experts = $this->teamExperts($teams->pluck('team_id'));
         $paid = in_array($stage, self::PAID_STAGES, true) ? self::paidTeamIds($teams, $stage) : $teams->pluck('team_id');
         $panelists = $this->panelists();
+        $cancellations = DefenseCancellation::whereIn('team_id', $teams->pluck('team_id'))
+            ->where('defense_type', $stage)
+            ->orderBy('was_scheduled_at')
+            ->get()
+            ->groupBy('team_id');
 
-        return $teams->map(function (Team $team) use ($stage, $sections, $experts, $paid, $panelists) {
+        return $teams->map(function (Team $team) use ($stage, $sections, $experts, $paid, $panelists, $cancellations) {
             $schedule = $team->defenseSchedules->where('defense_type', $stage)->sortByDesc('attempt')->first();
+            $tries = $this->triesOf($team, $stage, $schedule, $cancellations->get($team->team_id, collect()));
             $roles = $experts->get($team->team_id, collect());
             $panel = $schedule ? $this->panelOf($schedule) : null;
             $tags = array_values(array_filter(array_map(fn ($t) => trim((string) $t), $team->tags ?: [])));
@@ -171,12 +202,28 @@ class DefenseBoard
                 'title' => $team->project_title,
                 'section' => $sections[$team->team_id],
                 'members' => $team->schoolYears->count(),
+                'member_list' => $team->schoolYears->map(fn (StudentSchoolYear $sy) => $sy->student)->filter()
+                    ->map(fn ($student) => [
+                        'id' => (int) $student->student_id,
+                        'name' => trim($student->l_name.', '.$student->f_name),
+                        'returnee' => (bool) $student->is_returnee,
+                    ])->sortBy('name')->values()->all(),
                 'adviser' => $roles->get('adviser'),
                 'consultant' => $roles->get('consultant'),
                 'grammarian' => $roles->get('grammarian')['name'] ?? null,
                 'tags' => $tags,
                 'suggested' => $panelists->filter(fn ($e) => $this->matchedTags($tags, $e['tags']) !== [])->pluck('id')->values(),
                 'panel' => $panel && $panel['chair'] ? $panel : null,
+                'panel_status' => $panel && $panel['chair'] ? $team->panel_status : null,
+                'panel_final_since' => $team->panelIsFinal() ? $team->panel_finalized_at?->toDateString() : null,
+                // The CaPA's go, for a date not yet held: Title, Pre Oral and Final Oral only.
+                'needs_go' => self::needsCapaGo($stage),
+                'capa' => $schedule?->capa_answer,
+                'tries' => $tries,
+                'waiting' => $schedule && ! $schedule->schedule_date && ! $schedule->outcome
+                    ? (end($tries)['kind'] ?? 'new')
+                    : null,
+                'journey' => $this->journeyOf($team),
                 'defense_id' => $schedule?->defense_id,
                 'attempt' => (int) ($schedule->attempt ?? 1),
                 'schedule' => $schedule?->schedule_date ? [
@@ -228,6 +275,8 @@ class DefenseBoard
 
         if (! $schedule || ! $schedule->panels->contains('panel_role', 'Panel Chair')) {
             $out[] = ['key' => 'panel', 'text' => 'No panel assigned yet'];
+        } elseif ($team->panel_status === Team::PANEL_DRAFT) {
+            $out[] = ['key' => 'draft', 'text' => 'Panel is still a draft'];
         } else {
             // Assigning a panel refuses the team's own adviser or consultant,
             // but one approved after the panel was set would still be on it.
@@ -245,6 +294,85 @@ class DefenseBoard
         }
 
         return $out;
+    }
+
+    /**
+     * The tries at this stage that did not end in a pass, oldest first: dates
+     * the CaPA cancelled, and defenses the panel sent back for a redefense.
+     *
+     * @return array<int, array{kind: string, date: string, note: ?string}>
+     */
+    private function triesOf(Team $team, string $stage, ?DefenseSchedule $current, Collection $cancellations): array
+    {
+        $tries = $cancellations->map(fn (DefenseCancellation $c) => [
+            'kind' => 'cancelled',
+            'date' => $c->was_scheduled_at->toDateString(),
+            'note' => $c->note,
+        ]);
+
+        $redefenses = $team->defenseSchedules
+            ->where('defense_type', $stage)
+            ->filter(fn (DefenseSchedule $s) => $s !== $current && $s->schedule_date && DefenseOutcome::requiresRedefense($s->outcome))
+            ->map(fn (DefenseSchedule $s) => ['kind' => 'redefense', 'date' => $s->schedule_date->toDateString(), 'note' => $s->outcomeLabel()]);
+
+        return $tries->concat($redefenses)->sortBy('date')->values()->all();
+    }
+
+    /**
+     * Where the team stands at every stage, for the team's drawer.
+     *
+     * @return array<int, array{stage: string, attempt: int, date: ?string, time: ?string, venue: ?string, outcome: ?string, passed: bool}>
+     */
+    private function journeyOf(Team $team): array
+    {
+        return collect(self::STAGES)->map(function (string $stage) use ($team) {
+            $s = $team->defenseSchedules->where('defense_type', $stage)->sortByDesc('attempt')->first();
+
+            return [
+                'stage' => $stage,
+                'attempt' => (int) ($s->attempt ?? 1),
+                'date' => $s?->schedule_date?->toDateString(),
+                'time' => $s?->schedule_date?->format('H:i'),
+                'venue' => $s?->venue,
+                'outcome' => $s?->outcome ? $s->outcomeLabel() : null,
+                'passed' => $s ? DefenseOutcome::isPass($s->outcome) : false,
+            ];
+        })->all();
+    }
+
+    /**
+     * Panelists' days away from today on, for every panel they sit on.
+     *
+     * @return array<int, array{id: int, expert_id: int, from: string, to: string, reason: string}>
+     */
+    public function awayDates(): array
+    {
+        return ExpertAwayDate::whereDate('ends_on', '>=', today()->toDateString())
+            ->orderBy('starts_on')
+            ->get()
+            ->map(fn (ExpertAwayDate $a) => [
+                'id' => (int) $a->id,
+                'expert_id' => (int) $a->expert_id,
+                'from' => $a->starts_on->toDateString(),
+                'to' => $a->ends_on->toDateString(),
+                'reason' => $a->reason,
+            ])->all();
+    }
+
+    /**
+     * Teams per stage that have a date or a result, for the stage tabs.
+     *
+     * @return array<string, array{done: int, of: int}>
+     */
+    public function stageProgress(CapstoneExpert $capsa): array
+    {
+        $teams = $this->teamsFor($capsa)['teams'];
+
+        return collect(self::STAGES)->mapWithKeys(fn (string $stage) => [$stage => [
+            'done' => $teams->filter(fn (Team $t) => $t->defenseSchedules->where('defense_type', $stage)
+                ->contains(fn (DefenseSchedule $s) => $s->schedule_date || $s->outcome))->count(),
+            'of' => $teams->count(),
+        ]])->all();
     }
 
     /**
@@ -337,7 +465,7 @@ class DefenseBoard
     /** @return array<string, array{start: ?string, end: ?string}> */
     public function windows(): array
     {
-        $windows = DefenseWindow::whereIn('defense_type', self::STAGES)->get()->keyBy('defense_type');
+        $windows = DefenseWindow::whereIn('defense_type', self::STAGES)->with('updatedBy')->get()->keyBy('defense_type');
 
         return collect(self::STAGES)->mapWithKeys(function ($stage) use ($windows) {
             $minutes = $windows->get($stage)?->duration_minutes ?? self::DEFAULT_MINUTES;
@@ -347,6 +475,8 @@ class DefenseBoard
                 'end' => $windows->get($stage)?->end_date?->toDateString(),
                 'minutes' => $minutes,
                 'slots' => self::slots($minutes),
+                'set_by' => $windows->get($stage)?->updatedBy?->name,
+                'set_on' => $windows->get($stage)?->updated_at?->toDateString(),
             ]];
         })->all();
     }
