@@ -23,7 +23,7 @@ class ActionToastTest extends TestCase
         'views/capsa/resources.blade.php',
         'views/capsa/rubric_management.blade.php',
         'views/capsa/sections.blade.php',
-        'views/capsa/team_management.blade.php',
+        'views/capsa/team-management/_hub-script.blade.php',
         'views/instructor/assignments.blade.php',
         'views/instructor/schedule.blade.php',
         'views/student/archive.blade.php',

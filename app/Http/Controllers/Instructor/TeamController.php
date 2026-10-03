@@ -2,78 +2,85 @@
 
 namespace App\Http\Controllers\Instructor;
 
+use App\Http\Controllers\Capsa\TeamManagementController;
 use App\Http\Controllers\Controller;
-use App\Models\DefensePanel;
-use App\Models\TeamExpertAssignment;
-use Illuminate\Support\Facades\Auth;
+use App\Models\CapstoneExpert;
+use App\Models\Team;
+use App\Support\DefenseScores;
+use App\Support\TeamRows;
+use App\Support\TeamTodo;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
+/**
+ * My Teams: an expert's one hub, the same To do and Teams a CaPSA has.
+ *
+ * Invitations (Team Assignments), papers sent to them (Document Review),
+ * titles to approve and score sheets due all land in To do; the teams they
+ * advise, consult for, check the grammar of or sit on a panel for are the
+ * Teams list, each opening the same team page a CaPSA sees.
+ */
 class TeamController extends Controller
 {
-    public function index()
+    public function __construct(
+        private TeamRows $teamRows,
+        private TeamTodo $todo,
+    ) {}
+
+    public function index(Request $request): View|RedirectResponse
     {
-        $expert = Auth::guard('expert')->user();
+        /** @var CapstoneExpert $expert */
+        $expert = auth('expert')->user();
 
-        $approvedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
-            ->where('status', 'approved')
-            ->with(['team', 'role', 'expertRole.role', 'team.leader', 'team.members'])
-            ->get();
-
-        $grouped = $approvedAssignments->groupBy(fn ($a) => $a->role->first()?->role_name ?? 'unknown');
-
-        $expertRoles = $expert->roles->pluck('role_name');
-
-        $tabs = collect(['all']);
-        if ($expertRoles->contains('adviser')) {
-            $tabs->push('adviser');
+        // A CaPSA who is also an expert has one Teams page, not two.
+        if ($expert->is_capsa) {
+            return redirect()->route('capsa.team_management', ['tab' => $request->query('tab') === 'todo' ? 'todo' : 'teams']);
         }
-        if ($expertRoles->contains('consultant')) {
-            $tabs->push('consultant');
-        }
-        $tabs->push('panel');
 
-        $totalTeams = $approvedAssignments->unique('team_id')->count();
-
-        // The teams this expert sits on a defense panel for, one row per team.
-        // A panel is not an application, so these come from the panels themselves.
-        $panelSeats = DefensePanel::where('expert_id', $expert->expert_id)
-            ->with('schedule.team')
-            ->get()
-            ->filter(fn ($p) => $p->schedule?->team)
-            ->groupBy(fn ($p) => $p->schedule->team_id)
-            ->map(fn ($seats) => (object) [
-                'team' => $seats->first()->schedule->team,
-                'role' => $seats->first()->panel_role,
-                'scheduled' => $seats->filter(fn ($p) => $p->schedule->schedule_date)->pluck('schedule.defense_type')->unique()->values(),
-            ])
-            ->sortBy(fn ($s) => $s->team->team_name)
-            ->values();
-
-        // Progress used to be its own page, which meant an adviser looking at
-        // a team had to leave it to find out how that team was doing. Same
-        // teams, same cards - the numbers just come with them now. Keyed by
-        // team so a team advised in two roles is only counted once.
-        // Only for the teams this expert advises or consults for: a team's
-        // checklist is its own, its CaPSA's and the two experts it chose, not
-        // its grammarian's or its panel's.
-        $progress = $approvedAssignments
-            ->filter(fn ($a) => in_array($a->engaged_role_name, ['adviser', 'consultant'], true))
-            ->pluck('team')->filter()->unique('team_id')
-            ->mapWithKeys(fn ($team) => [$team->team_id => $team->progressSummary()]);
+        $tab = $request->query('tab') === 'teams' ? 'teams' : 'todo';
+        $rows = $this->teamRows->forViewer($expert, null, false, true);
+        $todo = $this->todo->forExpert($expert, $rows, 'expert');
 
         return view('instructor.teams', [
-            'grouped' => $grouped,
-            'tabs' => $tabs,
-            'totalTeams' => $totalTeams,
+            'tab' => $tab,
+            'portal' => 'expert',
+            'rows' => $rows,
+            'todo' => $todo,
+            'decided' => $this->todo->decidedByExpert($expert),
+            'twoHats' => false,
+            'defenseScores' => DefenseScores::forTeams($rows->map(fn ($row) => $row->team->team_id)),
             'expert' => $expert,
-            'approvedAssignments' => $approvedAssignments,
-            'panelSeats' => $panelSeats,
-            'progress' => $progress,
-            // Shown only on the cards of teams this expert advises - the
-            // adviser is who the department lets see a team's defense scores.
-            'defenseScores' => \App\Support\DefenseScores::forTeams($approvedAssignments->pluck('team_id')),
-            'avgCompletion' => $progress->isEmpty() ? 0 : (int) round($progress->avg('percent')),
-            'overdueMilestones' => $progress->sum('overdue'),
-            'onTrack' => $progress->where('overdue', 0)->count(),
+            'totalTeams' => $rows->count(),
+            'counts' => ['todo' => $todo->count(), 'teams' => $rows->count()],
         ]);
+    }
+
+    /** One team, the same page a CaPSA sees, from the expert's seat. */
+    public function show(Request $request, Team $team): View|RedirectResponse
+    {
+        /** @var CapstoneExpert $expert */
+        $expert = auth('expert')->user();
+
+        if ($expert->is_capsa) {
+            return redirect()->route('capsa.team_management.show', [$team->team_id] + $request->query());
+        }
+
+        $rows = $this->teamRows->forViewer($expert, null, false, true);
+
+        return view('capsa.team-management.show', app(TeamManagementController::class)
+            ->teamPage($request, $team, $rows, $expert, 'expert') + ['totalTeams' => $rows->count()]);
+    }
+
+    /** Everything behind a team page's "See all". */
+    public function log(Team $team, string $log): View
+    {
+        /** @var CapstoneExpert $expert */
+        $expert = auth('expert')->user();
+        $rows = $this->teamRows->forViewer($expert, null, false, true);
+        $row = $rows->first(fn ($row) => (int) $row->team->team_id === (int) $team->team_id) ?? abort(404);
+
+        return view('capsa.team-management.log', app(TeamManagementController::class)
+            ->logPage($row, $log, 'expert') + ['totalTeams' => $rows->count()]);
     }
 }

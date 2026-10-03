@@ -170,6 +170,7 @@ const pageWith = (w, h, at, extra = false) => {
   }
   return greyOf(d, w, h);
 };
+const near = (got, want, by = 0.25) => got.forEach((v, i) => assert.ok(Math.abs(v - want[i]) <= by, `${got} is not near ${want}`));
 const cut = (g, w, x, y, cw, ch) => {
   const out = new Float32Array(cw * ch);
   for (let r = 0; r < ch; r++) for (let c = 0; c < cw; c++) out[r * cw + c] = g[(y + r) * w + x + c];
@@ -183,7 +184,7 @@ test("finds a diagram pushed to the top of the next page", () => {
   const next = pageWith(160, 200, [40, 20]);
   const hit = findPicture(next, 160, 200, tpl, 90, 30);
   assert.equal(hit.found, true);
-  assert.deepEqual([hit.x, hit.y], [35, 15]);
+  near([hit.x, hit.y], [35, 15]);
 });
 
 test("finds a diagram that changed a little", () => {
@@ -191,7 +192,23 @@ test("finds a diagram that changed a little", () => {
   const tpl = cut(oldPage, 160, 25, 55, 90, 30);
   const hit = findPicture(pageWith(160, 200, [30, 100], true), 160, 200, tpl, 90, 30);
   assert.equal(hit.found, true);
-  assert.deepEqual([hit.x, hit.y], [25, 95]);
+  near([hit.x, hit.y], [25, 95], 0.5);
+});
+
+test("places a diagram between pixels when it moved by half a pixel", () => {
+  // Drawn at twice the size and shrunk, so a half-pixel move shows as grey edges.
+  const shrunk = (at) => {
+    const big = pageWith(320, 400, at);
+    const g = new Float32Array(160 * 200);
+    for (let y = 0; y < 200; y++) for (let x = 0; x < 160; x++) {
+      g[y * 160 + x] = (big[2 * y * 320 + 2 * x] + big[2 * y * 320 + 2 * x + 1] + big[(2 * y + 1) * 320 + 2 * x] + big[(2 * y + 1) * 320 + 2 * x + 1]) / 4;
+    }
+    return g;
+  };
+  const tpl = cut(shrunk([60, 280]), 160, 25, 135, 90, 30);
+  const hit = findPicture(shrunk([81, 41]), 160, 200, tpl, 90, 30);
+  assert.equal(hit.found, true);
+  near([hit.x, hit.y], [35.5, 15.5], 0.2);
 });
 
 test("does not claim to find a diagram on a page without it", () => {
