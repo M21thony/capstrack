@@ -39,8 +39,8 @@ return [
         ],
         [
             'key' => 'experts',
-            'label' => 'Choose your experts',
-            'body' => 'Ask an adviser, a consultant and a grammarian. Each one has to accept first.',
+            'label' => 'Choose and book your experts',
+            'body' => 'Ask an adviser, a consultant and a grammarian. Once one accepts, book consultations with them here too.',
             'target' => ['student.experts'],
         ],
         [
@@ -54,12 +54,6 @@ return [
             'label' => 'Send chapters, read feedback',
             'body' => 'Upload your documents here. Your experts\' comments show up in Review Viewer.',
             'target' => ['student.submission', 'student.review'],
-        ],
-        [
-            'key' => 'consultation',
-            'label' => 'Book a consultation',
-            'body' => 'Pick an expert and an open date to request a meeting.',
-            'target' => ['student.consultation'],
         ],
         [
             'key' => 'progress',

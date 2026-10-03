@@ -111,6 +111,20 @@ class ExpertsPageTabsTest extends TestCase
         $response->assertSee('<title>Experts - CapsTrack</title>', false);
     }
 
+    /** One sidebar link for the one page, lit on either address. */
+    public function test_the_sidebar_has_one_link_for_experts_and_consultations(): void
+    {
+        [$student] = $this->leader();
+
+        foreach (['student.experts', 'student.consultation'] as $route) {
+            $html = $this->actingAs($student, 'web')->get(route($route))->assertOk()->getContent();
+
+            $this->assertSame(1, substr_count($html, 'Experts &amp; Consultations'), $route);
+            $this->assertStringContainsString('data-tour-target="student.experts" class="nav-item active"', $html);
+            $this->assertStringNotContainsString('data-tour-target="student.consultation"', $html);
+        }
+    }
+
     public function test_an_unknown_tab_falls_back_rather_than_breaking(): void
     {
         [$student] = $this->leader();

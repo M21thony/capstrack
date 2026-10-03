@@ -26,7 +26,7 @@ class StudentPortalTourTest extends TestCase
             ->assertSee('id="portal-tour"', false)
             ->assertSee('data-auto-open="1"', false)
             ->assertSee('Welcome to CapsTrack, Juan!')
-            ->assertSeeInOrder(['Start here: form your team', 'Choose your experts', 'Submit your title', 'Updates land here', 'You are all set!']);
+            ->assertSeeInOrder(['Start here: form your team', 'Choose and book your experts', 'Submit your title', 'Updates land here', 'You are all set!']);
     }
 
     public function test_it_is_there_on_every_page_not_only_the_dashboard(): void
