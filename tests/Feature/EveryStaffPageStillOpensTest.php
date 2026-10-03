@@ -90,7 +90,7 @@ class EveryStaffPageStillOpensTest extends TestCase
                 'Overview', 'Dashboard', 'Announcements',
                 'People', 'Expert Management', 'Student Section List', 'Student Accounts',
                 'Teams', 'Team Management', 'Team Assignments',
-                'Defenses', 'Panel Assignment', 'Team Grading', 'Grading Rubrics',
+                'Defenses', '/capsa/defenses"', 'Team Grading', 'Grading Rubrics',
                 'Advising', 'My Schedule', 'Document Review',
                 'Records', 'Financial Records', 'Archived Capstones', 'Templates &amp; Lessons',
                 'Reports', 'Analytics', 'Activity Log',

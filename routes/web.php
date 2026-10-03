@@ -12,7 +12,6 @@ use App\Http\Controllers\Admin\StudentAccountsController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AdminFinancialController;
-use App\Http\Controllers\AdminPanelAssignmentController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminTeamVerificationController;
 use App\Http\Controllers\AuthController;
@@ -199,8 +198,10 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // roles an Admin could be setting - and a button they cannot use is a
         // smaller problem than an endpoint they still can.
         Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
-        Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
-        // Dates for the teams that can defend - its actions are the panel_assignment scheduling endpoints.
+        // Defenses: panels and dates on one page. The two addresses it used
+        // to be still open it, each on its own step.
+        Route::get('/defenses', [DefenseSchedulingController::class, 'index'])->name('defenses');
+        Route::get('/panel_assignment', [DefenseSchedulingController::class, 'panels'])->name('panel_assignment');
         Route::get('/defense-scheduling', [DefenseSchedulingController::class, 'index'])->name('defense_scheduling');
         // Team Management is the single page for everything about the teams
         // in a CaPSA's sections. Team Verification's actions keep their old

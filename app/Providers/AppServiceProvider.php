@@ -27,8 +27,7 @@ class AppServiceProvider extends ServiceProvider
     public const PAGE_DRAWING_SCRIPTS = [
         'resources/js/financial/capsa.js',
         'resources/js/financial/student.js',
-        'resources/js/defenses/defense-scheduling.js',
-        'resources/js/defenses/panel-assignment.js',
+        'resources/js/defenses/defenses.js',
     ];
 
     /**

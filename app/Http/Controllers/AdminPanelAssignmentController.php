@@ -22,10 +22,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\View\View;
 
 /**
- * Panel Assignment, and the scheduling endpoints Defense Scheduling calls.
+ * The panel and scheduling endpoints the Defenses page calls.
  *
  * Assigning a panel never gives a team a date. Dates come only from Generate
  * schedule on the Defense Scheduling page, reviewed before they are saved,
@@ -44,30 +43,6 @@ class AdminPanelAssignmentController extends Controller
     private const SAVE_LOCK = 'defense-schedule-save';
 
     public function __construct(private GoogleCalendarService $calendar, private DefenseBoard $board) {}
-
-    public function index(Request $request): View
-    {
-        $capsa = $this->capsa();
-
-        // The page opens where the work is: the earliest stage any of this
-        // CaPSA's teams is still working through, unless one is asked for.
-        // A panel belongs to the team rather than to one defense (assigning
-        // writes all four stages), but the stage still decides which teams,
-        // schedules and panels this board lists.
-        $stage = $this->board->openingStage($capsa, $request->query('defense_type'));
-
-        $rows = $this->board->rows($capsa, $stage);
-
-        return view('capsa.panel_assignment', [
-            'state' => [
-                'stage' => $stage,
-                'stages' => DefenseBoard::STAGES,
-                'teams' => $rows,
-                'experts' => $this->board->panelists()->values(),
-                'names' => DefenseBoard::names($rows),
-            ],
-        ]);
-    }
 
     /**
      * GET /panel_assignment/board - one stage's board as JSON.
@@ -878,7 +853,7 @@ class AdminPanelAssignmentController extends Controller
         if (! $before || ! $before->start_date->equalTo($window->start_date) || ! $before->end_date->equalTo($window->end_date)) {
             CapstoneExpert::whereHas('roles', fn ($q) => $q->where('role_name', CapstoneExpert::CAPSA_ROLE))->where('expert_id', '!=', $capsa->expert_id)->get()
                 ->each(fn (CapstoneExpert $other) => Notifier::toExpert($other, 'defense_window', $defenseType.' window: '.$window->start_date->format('M j').' – '.$window->end_date->format('M j'),
-                    $capsa->name.' set the '.$defenseType.' window for every section.', route('capsa.defense_scheduling', ['defense_type' => $defenseType])));
+                    $capsa->name.' set the '.$defenseType.' window for every section.', route('capsa.defenses', ['defense_type' => $defenseType])));
         }
 
         return response()->json([

@@ -44,7 +44,9 @@
     $seenVerifiedTeamIds = session('admin_seen_verified_team_ids', []);
     $unseenVerifiedTeamCount = count(array_diff($verifiedTeamIds, $seenVerifiedTeamIds));
 
-    if ($currentRoute === 'capsa.panel_assignment') {
+    $onDefenses = in_array($currentRoute, ['capsa.defenses', 'capsa.panel_assignment', 'capsa.defense_scheduling'], true);
+
+    if ($onDefenses) {
         session()->put('admin_seen_verified_team_ids', array_unique(array_merge($seenVerifiedTeamIds, $verifiedTeamIds)));
     }
 
@@ -244,16 +246,13 @@
     <div class="nav-section">Defenses</div>
     @endif
     @if ($isCapsa)
-    <a href="{{ route('capsa.panel_assignment') }}" class="nav-item {{ $currentRoute === 'capsa.panel_assignment' ? 'active' : '' }}">
-      <x-portal-icon name="user-plus" />
-      Panel Assignment
+    {{-- Panels and dates are one page now; its old addresses still open it. --}}
+    <a href="{{ route('capsa.defenses') }}" class="nav-item {{ $onDefenses ? 'active' : '' }}">
+      <x-portal-icon name="defense" />
+      Defenses
       @if ($unseenVerifiedTeamCount > 0)
         <span class="nav-badge">{{ $badge($unseenVerifiedTeamCount) }}</span>
       @endif
-    </a>
-    <a href="{{ route('capsa.defense_scheduling') }}" class="nav-item {{ $currentRoute === 'capsa.defense_scheduling' ? 'active' : '' }}">
-      <x-portal-icon name="defense" />
-      Defense Scheduling
     </a>
     @endif
     @if ($isExpert)
@@ -351,7 +350,7 @@
         $phoneTabs[] = ['label' => 'Teams', 'href' => route('capsa.team_management'), 'active' => str_starts_with((string) $currentRoute, 'capsa.team_management'),
             'badge' => $teamManagementBadge ?? 0,
             'icon' => App\Support\PortalIcons::paths('teams-manage')];
-        $phoneTabs[] = ['label' => 'Defenses', 'href' => route('capsa.defense_scheduling'), 'active' => $currentRoute === 'capsa.defense_scheduling',
+        $phoneTabs[] = ['label' => 'Defenses', 'href' => route('capsa.defenses'), 'active' => $onDefenses,
             'icon' => App\Support\PortalIcons::paths('defense')];
     }
     // An admin who is not also a CaPSA runs accounts and reports, so their

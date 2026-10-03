@@ -48,8 +48,6 @@ class TableExportTest extends TestCase
             'capsa.activitylog' => ['Activity Log'],
             // Progress is a column of the Teams table now, not a second table.
             'capsa.team_management' => ['Teams'],
-            'capsa.panel_assignment' => ['Panel Assignment'],
-            'capsa.defense_scheduling' => ['Defense Schedule'],
             'capsa.financial' => ['Receipts'],
             'admin.students' => ['Student Accounts'],
         ];
