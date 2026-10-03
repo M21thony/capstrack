@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Capsa;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
+use App\Models\ExpertAwayDate;
 use App\Support\DefenseBoard;
 use App\Support\DefenseScheduleExport;
 use App\Support\DefenseScheduleWorkbook;
@@ -14,18 +15,35 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Defense Scheduling: which of the CaPSA's teams can be scheduled for a
- * stage, which cannot and why, and what is already on the calendar - other
- * sections' defenses included, since their rooms and panelists are taken too.
+ * Defenses: one page for a team's panel and its defense dates. A team moves
+ * along four steps - its panel made final, then what still holds it back,
+ * then ready, then scheduled - for whichever stage is in view. Other
+ * sections' defenses are on the calendar too, since their rooms and
+ * panelists are taken.
  *
- * The page's actions (the window, Generate schedule, moving one defense) call
- * AdminPanelAssignmentController's scheduling endpoints.
+ * The page's actions call AdminPanelAssignmentController's and
+ * DefenseCaseController's endpoints.
  */
 class DefenseSchedulingController extends Controller
 {
+    /** Where a team is, for the stage in view - the page's four steps. */
+    private const STEPS = ['panel', 'blocked', 'ready', 'scheduled'];
+
     public function __construct(private DefenseBoard $board) {}
 
+    /** Opens on the teams waiting for a date. */
     public function index(Request $request): View|Response
+    {
+        return $this->page($request, 'ready');
+    }
+
+    /** The old Panel Assignment address: opens on the panels. */
+    public function panels(Request $request): View|Response
+    {
+        return $this->page($request, 'panel');
+    }
+
+    private function page(Request $request, string $step): View|Response
     {
         /** @var CapstoneExpert $capsa */
         $capsa = auth('expert')->user();
@@ -40,8 +58,10 @@ class DefenseSchedulingController extends Controller
         $rows = $this->board->rows($capsa, $stage);
         $other = $this->board->otherBookings(array_column($rows, 'id'));
 
-        return view('capsa.defense_scheduling', [
+        return view('capsa.defenses', [
             'state' => [
+                'step' => in_array($request->query('step'), self::STEPS, true) ? $request->query('step') : $step,
+                'today' => today()->toDateString(),
                 'stage' => $stage,
                 'stages' => DefenseBoard::STAGES,
                 'teams' => $rows,
@@ -54,6 +74,9 @@ class DefenseSchedulingController extends Controller
                 'rubric_missing_programs' => DefenseBoard::programsWithoutRubric($stage, $capsa->handledPrograms()),
                 'slots' => DefenseBoard::slots(DefenseBoard::minutesFor($stage)),
                 'venues' => DefenseBoard::VENUES,
+                'away' => $this->board->awayDates(),
+                'away_reasons' => ExpertAwayDate::REASONS,
+                'progress' => $this->board->stageProgress($capsa),
             ],
         ]);
     }

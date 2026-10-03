@@ -248,6 +248,6 @@ class DefenseScheduleXlsxExportTest extends TestCase
         $this->actingAs($this->capsa, 'expert')
             ->get(route('capsa.defense_scheduling'))
             ->assertOk()
-            ->assertViewIs('capsa.defense_scheduling');
+            ->assertViewIs('capsa.defenses');
     }
 }

@@ -105,7 +105,7 @@ class ActionToastTest extends TestCase
         foreach ([
             'js/milestones/tracker.js',
             'js/financial/capsa.js',
-            'views/capsa/panel_assignment.blade.php',
+            'js/defenses/defenses.js',
             'views/capsa/sections.blade.php',
             'views/instructor/assignments.blade.php',
             'views/instructor/schedule.blade.php',

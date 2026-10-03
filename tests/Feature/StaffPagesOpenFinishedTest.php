@@ -70,8 +70,7 @@ class StaffPagesOpenFinishedTest extends TestCase
         $this->assertSame([
             'resources/js/financial/capsa.js',
             'resources/js/financial/student.js',
-            'resources/js/defenses/defense-scheduling.js',
-            'resources/js/defenses/panel-assignment.js',
+            'resources/js/defenses/defenses.js',
         ], AppServiceProvider::PAGE_DRAWING_SCRIPTS);
 
         $html = $this->actingAs($this->capsa(), 'expert')->get(route('capsa.team_management'))->assertOk()->getContent();

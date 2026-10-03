@@ -150,19 +150,22 @@ class AdminPanelAssignmentTest extends TestCase
         $response = $this->actingAs($this->admin, 'expert')
             ->get(route('capsa.panel_assignment'));
 
+        // The Defenses page draws itself from this state.
         $response->assertStatus(200)
             ->assertSee('Ada Lovelace')
-            ->assertSee('Assigned');
+            ->assertViewHas('state', fn ($state) => $state['step'] === 'panel'
+                && collect($state['teams'])->firstWhere('id', $team->team_id)['panel']['chair'] === $chair->expert_id);
     }
 
     public function test_index_shows_assign_label_for_teams_without_a_panel_yet(): void
     {
-        $this->makeTeam();
+        $team = $this->makeTeam();
 
         $response = $this->actingAs($this->admin, 'expert')
             ->get(route('capsa.panel_assignment'));
 
-        $response->assertStatus(200)->assertSee('Assign');
+        $response->assertStatus(200)
+            ->assertViewHas('state', fn ($state) => collect($state['teams'])->firstWhere('id', $team->team_id)['panel'] === null);
     }
 
     public function test_store_creates_defense_schedule_and_panels(): void
