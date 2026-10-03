@@ -54,11 +54,10 @@ class PortalIconsTest extends TestCase
             ->assertSeeInOrder([
                 'data-icon="dashboard"', 'Dashboard',
                 'data-icon="team"', 'Team Management',
-                'data-icon="expert"', 'Capstone Expert',
+                'data-icon="expert"', 'Experts &amp; Consultations',
                 'data-icon="file-up"', 'Document Submission',
                 'data-icon="feedback"', 'Review Viewer',
                 'data-icon="similarity"', 'Pre-Proposal Submission',
-                'data-icon="consultation"', 'Consultation',
                 'data-icon="progress"', 'Progress Tracker',
                 'data-icon="receipt"', 'Financial Records',
                 'data-icon="book"', 'Resources',

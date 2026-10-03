@@ -13,6 +13,8 @@
     $studentHasTeam = \App\Models\StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
 
     $currentRouteName = request()->route()?->getName();
+    // Experts and Consultation are one page: either address is that page.
+    $onExpertsPage = in_array($currentRouteName, ['student.experts', 'student.consultation'], true);
 
     $lastVisitTeam = session('last_visit_team', now()->subYear());
     $lastVisitExperts = session('last_visit_experts', now()->subYear());
@@ -23,7 +25,7 @@
         session()->put('last_visit_team', now());
         $lastVisitTeam = now();
     }
-    if ($currentRouteName === 'student.experts') {
+    if ($onExpertsPage) {
         session()->put('last_visit_experts', now());
         $lastVisitExperts = now();
     }
@@ -31,7 +33,7 @@
         session()->put('last_visit_financial', now());
         $lastVisitFinancial = now();
     }
-    if ($currentRouteName === 'student.consultation') {
+    if ($onExpertsPage) {
         session()->put('last_visit_consultation', now());
         $lastVisitConsultation = now();
     }
@@ -41,7 +43,7 @@
     $seenExpertIds = session('seen_expert_ids', []);
     $unseenExpertCount = count(array_diff($pendingExpertIds, $seenExpertIds));
 
-    if ($currentRouteName === 'student.experts') {
+    if ($onExpertsPage) {
         session()->put('seen_expert_ids', array_unique(array_merge($seenExpertIds, $pendingExpertIds)));
     }
 
@@ -65,7 +67,7 @@
     $seenConsultationIds = session('seen_consultation_ids', []);
     $unseenConsultationCount = count(array_diff($consultationIds, $seenConsultationIds));
 
-    if ($currentRouteName === 'student.consultation') {
+    if ($onExpertsPage) {
         session()->put('seen_consultation_ids', array_unique(array_merge($seenConsultationIds, $consultationIds)));
     }
 @endphp
@@ -119,11 +121,16 @@
         <span class="nav-badge">{{ $newPostCount > 99 ? '99+' : $newPostCount }}</span>
       @endif
     </a>
-    <a href="{{ route('student.experts') }}" data-tour-target="student.experts" class="nav-item {{ request()->routeIs('student.experts') ? 'active' : '' }}">
+    {{-- Finding experts and booking them is one page, so one link. An
+         application waiting on an answer is the more urgent of its two
+         counts, so it shows first. --}}
+    <a href="{{ route('student.experts') }}" data-tour-target="student.experts" class="nav-item {{ $onExpertsPage ? 'active' : '' }}">
       <x-portal-icon name="expert" />
-      Capstone Expert
+      Experts &amp; Consultations
       @if ($unseenExpertCount > 0)
         <span class="nav-badge warn">{{ $unseenExpertCount > 99 ? '99+' : $unseenExpertCount }}</span>
+      @elseif ($unseenConsultationCount > 0)
+        <span class="nav-badge red">{{ $unseenConsultationCount > 99 ? '99+' : $unseenConsultationCount }}</span>
       @endif
     </a>
     <div class="nav-section">Documents</div>
@@ -141,14 +148,6 @@
     <a href="{{ route('student.duplication') }}" data-tour-target="student.duplication" class="nav-item {{ request()->routeIs('student.duplication') ? 'active' : '' }}">
       <x-portal-icon name="similarity" />
       Pre-Proposal Submission
-    </a>
-    <div class="nav-section">Schedule</div>
-    <a href="{{ route('student.consultation') }}" data-tour-target="student.consultation" class="nav-item {{ request()->routeIs('student.consultation') ? 'active' : '' }}">
-      <x-portal-icon name="consultation" />
-      Consultation
-      @if ($unseenConsultationCount > 0)
-        <span class="nav-badge red">{{ $unseenConsultationCount > 99 ? '99+' : $unseenConsultationCount }}</span>
-      @endif
     </a>
     <div class="nav-section">Tracking</div>
     <a href="{{ route('student.progress') }}" data-tour-target="student.progress" class="nav-item {{ request()->routeIs('student.progress') ? 'active' : '' }}">
