@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\CapstoneExpert;
+use App\Models\DefenseCancellation;
 use App\Models\ExpensePost;
 use App\Models\FinancialRecord;
 use App\Models\StudentSchoolYear;
@@ -56,9 +57,18 @@ class DefenseScheduleExport
         $experts = $this->expertsFor($teams->pluck('team_id'));
         $paidStudentIds = in_array($stage, DefenseBoard::PAID_STAGES, true) ? $this->paidStudentIds($teams, $stage) : null;
         $deadline = $this->progress->deadlineFor($stage);
+        $cancelled = DefenseCancellation::whereIn('team_id', $teams->pluck('team_id'))
+            ->where('defense_type', $stage)
+            ->orderByDesc('was_scheduled_at')
+            ->get()
+            ->groupBy('defense_id');
 
-        return $teams->map(function (Team $team) use ($stage, $sections, $experts, $paidStudentIds, $deadline) {
+        return $teams->map(function (Team $team) use ($stage, $sections, $experts, $paidStudentIds, $deadline, $cancelled) {
             $schedule = $team->defenseSchedules->where('defense_type', $stage)->sortByDesc('attempt')->first();
+            $lastCancelled = $schedule && ! $schedule->schedule_date ? $cancelled->get($schedule->defense_id)?->first() : null;
+            $earlier = $schedule && ! $schedule->schedule_date && $schedule->attempt > 1
+                ? $team->defenseSchedules->where('defense_type', $stage)->where('attempt', $schedule->attempt - 1)->first()
+                : null;
             $panel = $schedule ? $this->board->panelOf($schedule) : null;
             $panelNames = $panel ? DefenseBoard::names([['panel' => $panel]]) : [];
 
@@ -68,6 +78,7 @@ class DefenseScheduleExport
                 ->map(fn ($student) => [
                     'name' => $this->studentName($student),
                     'paid' => $paidStudentIds === null ? null : $paidStudentIds->contains($student->student_id),
+                    'returnee' => (bool) $student->is_returnee,
                 ])
                 ->values();
 
@@ -81,7 +92,13 @@ class DefenseScheduleExport
                     'end' => DefenseBoard::endOf($schedule),
                 ] : null,
                 'venue' => $schedule?->venue,
-                'status' => $this->statusOf($schedule, $stage, $deadline),
+                'status' => $this->statusOf($schedule, $stage, $deadline, $lastCancelled, $earlier),
+                // What a team waiting for a date lost, for the Schedule column.
+                'note' => match (true) {
+                    $lastCancelled !== null => 'Was '.$lastCancelled->was_scheduled_at->format('M j, g:i A').'. CaPA: not ready'.($lastCancelled->note ? ' ('.$lastCancelled->note.')' : '').'.',
+                    $earlier?->schedule_date !== null => 'Defended '.$earlier->schedule_date->format('M j').'.',
+                    default => null,
+                },
                 'members' => $members,
                 'experts' => $experts->get($team->team_id, collect(['adviser' => null, 'consultant' => null, 'grammarian' => null])),
                 'panel' => [
@@ -106,13 +123,25 @@ class DefenseScheduleExport
      *
      * @return array{key: string, label: string, tone: string}
      */
-    private function statusOf(?object $schedule, string $stage, ?Carbon $deadline): array
+    private function statusOf(?object $schedule, string $stage, ?Carbon $deadline, ?DefenseCancellation $cancelled = null, ?object $earlier = null): array
     {
         // All caps, matching the sample sheet's own STATUS column (PASSED,
         // CANCELLED, REDEFENSE...). The app's other badges for the same
         // outcome (DefenseBoard::rows(), the Scheduled tab) stay in the
         // title case the rest of the UI uses; only this export follows the
         // department's printed convention.
+        // The CaPA did not give the go: the team waits for a new date.
+        if ($cancelled) {
+            return ['key' => 'cancelled', 'label' => 'CANCELLED · WAITING FOR A NEW DATE', 'tone' => 'fail'];
+        }
+
+        // Sent back by the panel, and waiting for the date of its next try.
+        if ($earlier && DefenseOutcome::requiresRedefense($earlier->outcome)) {
+            $label = DefenseOutcome::label($earlier->outcome, $stage).($deadline ? ' (until '.$deadline->format('M j').')' : '');
+
+            return ['key' => 'redefense', 'label' => mb_strtoupper($label), 'tone' => 'major'];
+        }
+
         if (! $schedule || ! $schedule->schedule_date) {
             return ['key' => 'not_scheduled', 'label' => 'NOT SCHEDULED', 'tone' => 'none'];
         }

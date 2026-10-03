@@ -90,7 +90,7 @@ class DefenseSchedulingController extends Controller
     {
         $rows = app(DefenseScheduleExport::class)->rows($capsa, $stage);
         $scope = $capsa->sections ? implode(', ', $capsa->sections) : 'All sections';
-        $book = (new DefenseScheduleWorkbook)->build($rows, $stage, $scope);
+        $book = (new DefenseScheduleWorkbook)->build($rows, $stage, $scope, $this->board->windows()[$stage] ?? null);
 
         $filename = str_replace(' ', '_', $stage).'_'.now()->format('Y-m-d').'.xlsx';
 
