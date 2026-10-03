@@ -140,7 +140,7 @@ class StudentPhoneLayoutTest extends TestCase
     /** Every student page on a phone: the dashboard's top bar and side margins, not a desktop's 26px. */
     public function test_every_student_page_shares_one_phone_top_bar_and_margin(): void
     {
-        foreach (['styles.css', 'Styles/consultation.css'] as $sheet) {
+        foreach (['styles.css'] as $sheet) {
             $css = File::get(resource_path('student-ui/'.$sheet));
 
             $this->assertStringContainsString('.topbar{padding:0 12px!important}', $css, $sheet);
@@ -157,13 +157,12 @@ class StudentPhoneLayoutTest extends TestCase
     /** The booking card ran 90px off the right of a 320px phone: a grid column is as wide as its widest line. */
     public function test_consultation_fits_a_small_phone(): void
     {
-        $css = File::get(resource_path('student-ui/Styles/consultation.css'));
-        $this->assertStringContainsString('.consultation-container{grid-template-columns:minmax(0,1fr)!important}', $css);
-        $this->assertStringContainsString('.consultation-container>*{min-width:0}', $css);
+        $css = File::get(resource_path('student-ui/Styles/experts.css'));
+        $this->assertStringContainsString('.xh-grow{flex:999 1 600px;min-width:0}', $css);
+        $this->assertStringContainsString('.xh-rail{flex:1 1 320px;min-width:0}', $css);
+        $this->assertStringContainsString('.xh-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))', $css);
 
-        $this->actingAs($this->student())->get(route('student.consultation'))
-            ->assertOk()
-            ->assertSee('.sched-cal .calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr))}', false);
+        $this->actingAs($this->student())->get(route('student.consultation'))->assertOk();
     }
 
     /** A section stored the long way ("4th Year · BSCS-4A") read "BSCS - 4BSCS-4A" under the student's name. */

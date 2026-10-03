@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ConsultationBooking;
 use App\Models\Student;
+use App\Support\ConsultationBoard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -312,33 +313,19 @@ class ConsultationBookingDateTest extends TestCase
         $booking->setRelation('schedule', null);
         $orphanedBookings = collect([$booking]);
 
-        $this->actingAs($student, 'web');
+        // What the page is handed for this booking: a date it can draw,
+        // and a stand-in name and no times rather than a crash on
+        // ->schedule->start_time.
+        $card = app(ConsultationBoard::class)->cardData($booking);
 
-        $html = view('student.consultation', [
-            'experts' => collect(),
-            'defaultExpertId' => null,
-            'availableSlots' => collect(),
-            'fullOccurrences' => collect(),
-            'upcomingBookings' => $orphanedBookings,
-            'recentBookings' => collect(),
-            'teamId' => $team,
-            'student' => $student,
-            // One live booking per expert now, so the page is handed the
-            // experts already spoken for rather than a single yes/no.
-            'bookedExpertIds' => collect(),
-        ])->render();
+        $this->assertSame($booking->session_date->format('Y-m-d'), $card['session_date']);
+        $this->assertSame('Expert', $card['expert_name']);
+        $this->assertNull($card['start_time']);
+        $this->assertNull($card['expert_id']);
 
-        // The literal formatted date can only come from the server-rendered
-        // @forelse loop (the page's JS template for this same markup uses a
-        // ${...} placeholder, not a real date string), proving the loop
-        // actually ran for this booking rather than silently skipping it.
-        // The booking row reads date-first now - month, day and weekday in
-        // their own places - so the old single "M d, Y" string is not what
-        // gets rendered. What matters here is unchanged: the page draws the
-        // row at all rather than dying on a null schedule.
-        $this->assertStringContainsString($booking->session_date->format('M'), $html);
-        $this->assertStringContainsString($booking->session_date->format('D'), $html);
-        $this->assertStringContainsString('session-list-item', $html);
+        // And the page itself still opens with the orphaned row in the team's
+        // lists (the booking has no team_id, so it is looked up by student).
+        $this->actingAs($student, 'web')->get(route('student.consultation'))->assertOk();
     }
 
     public function test_my_booked_dates_are_tagged_with_expert_id_not_shared_across_experts(): void
@@ -387,11 +374,8 @@ class ConsultationBookingDateTest extends TestCase
         $response = $this->actingAs($student, 'web')->get(route('student.consultation'));
         $response->assertOk();
 
-        preg_match('/let myBookedDates = (\[.*?\]);/s', $response->getContent(), $matches);
-        $this->assertNotEmpty($matches, 'myBookedDates must be present in the rendered page.');
-
-        $myBookedDates = json_decode($matches[1], true);
-        $this->assertCount(1, $myBookedDates);
-        $this->assertSame($expertId, $myBookedDates[0]['expert_id'], 'Each booked date must carry the expert_id it was actually booked with.');
+        $booked = $response->viewData('upcomingBookings');
+        $this->assertCount(1, $booked);
+        $this->assertSame($expertId, $booked->first()['expert_id'], 'Each booked date must carry the expert_id it was actually booked with.');
     }
 }

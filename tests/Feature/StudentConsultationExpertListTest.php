@@ -106,7 +106,7 @@ class StudentConsultationExpertListTest extends TestCase
 
         $response->assertOk();
 
-        $experts = $response->viewData('experts');
+        $experts = $response->viewData('consultExperts');
         $this->assertCount(1, $experts, 'Only the approved adviser should be listed.');
         $this->assertSame($adviserId, $experts->first()->expert_id);
         $this->assertSame($adviserId, $response->viewData('defaultExpertId'));
@@ -115,9 +115,13 @@ class StudentConsultationExpertListTest extends TestCase
         $this->assertCount(1, $slots);
         $this->assertSame($adviserId, $slots->first()->expert_id);
 
-        $response->assertSee('Ada Adviser');
-        $response->assertDontSee('Cara Consultant');
-        $response->assertDontSee('Ian Stranger');
+        // The calendar's own data. The page also lists experts to browse and
+        // the team's applications, so the names are looked for here, not
+        // anywhere on the page.
+        $bookable = $this->bookingData($response->getContent());
+        $this->assertStringContainsString('Ada', $bookable);
+        $this->assertStringNotContainsString('Cara', $bookable);
+        $this->assertStringNotContainsString('Stranger', $bookable);
     }
 
     public function test_an_expert_holding_two_roles_is_shown_as_the_one_engaged(): void
@@ -158,7 +162,7 @@ class StudentConsultationExpertListTest extends TestCase
 
         $response->assertOk();
 
-        $experts = $response->viewData('experts');
+        $experts = $response->viewData('consultExperts');
         $this->assertCount(1, $experts, 'An expert must appear once, not once per role.');
         $this->assertSame($bothId, $experts->first()->expert_id);
 
@@ -168,7 +172,9 @@ class StudentConsultationExpertListTest extends TestCase
         $this->assertSame('Adviser', $experts->first()->role_name);
         $this->assertSame($bothId, $response->viewData('defaultExpertId'), 'Still defaults to them since one of their roles is adviser.');
 
-        $response->assertSee('Grom Hellscream (Adviser)');
+        // Shown on the team's adviser card, not as a consultant too.
+        $response->assertSee('data-slot-role="adviser"', false);
+        $this->assertStringContainsString('"roles":["adviser"]', $this->bookingData($response->getContent()));
     }
 
     public function test_shows_no_experts_when_student_has_no_team(): void
@@ -178,7 +184,7 @@ class StudentConsultationExpertListTest extends TestCase
         $response = $this->actingAs($student, 'web')->get(route('student.consultation'));
 
         $response->assertOk();
-        $this->assertCount(0, $response->viewData('experts'));
+        $this->assertCount(0, $response->viewData('consultExperts'));
         $this->assertNull($response->viewData('defaultExpertId'));
     }
 
@@ -215,7 +221,7 @@ class StudentConsultationExpertListTest extends TestCase
         }
 
         $experts = $this->actingAs($student, 'web')
-            ->get(route('student.consultation'))->assertOk()->viewData('experts');
+            ->get(route('student.consultation'))->assertOk()->viewData('consultExperts');
 
         $this->assertCount(1, $experts, 'one person, one entry');
         $this->assertSame('Adviser, Consultant', $experts->first()->role_name);
@@ -247,11 +253,19 @@ class StudentConsultationExpertListTest extends TestCase
 
         $response = $this->actingAs($student, 'web')->get(route('student.consultation'))->assertOk();
 
-        $experts = $response->viewData('experts')->keyBy('expert_id');
+        $experts = $response->viewData('consultExperts')->keyBy('expert_id');
         $this->assertSame('https://lh3.googleusercontent.com/a/adviser-photo', $experts[$withPhoto]->avatar);
         // No photo saved: the initials stand alone.
         $this->assertNull($experts[$withoutPhoto]->avatar);
 
         $response->assertSee('src="https://lh3.googleusercontent.com/a/adviser-photo"', false);
+    }
+
+    /** The Consultations tab's data: who the team can book. */
+    private function bookingData(string $html): string
+    {
+        $this->assertSame(1, preg_match('/window\.XH_DATA = (.*?);\n/s', $html, $matches));
+
+        return json_encode(json_decode($matches[1], true)['consultExperts']);
     }
 }

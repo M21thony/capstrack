@@ -73,23 +73,26 @@ class ExpertRemovalRequestTest extends TestCase
     {
         [$leader, , $assignment] = $this->teamWithAdviser();
 
-        // Before asking: the change dialog carries the section CaPSA line.
+        // Before asking: browsing advisers offers the change, and the dialog
+        // it opens names the section whose CaPSA decides.
         $this->actingAs($leader, 'web')
-            ->get(route('student.experts'))
+            ->get(route('student.experts', ['tab' => 'find', 'role' => 'adviser']))
             ->assertOk()
-            ->assertSee('change-expert-modal', false)
-            ->assertSee('Request an Expert Change')
-            ->assertSee('Decided by the CaPSA for your section: BSIT-3A');
+            ->assertSee('Request a change')
+            ->assertSee('Request an expert change')
+            ->assertSee('"teamSection":"BSIT-3A"', false)
+            ->assertSee('Decided by the CaPSA for ', false);
 
-        // After asking: the badge replaces the button.
+        // After asking: the adviser's card is flagged, and taking the request
+        // back replaces the button.
         $this->askToRemove($leader, $assignment)->assertOk();
 
         $this->actingAs($leader, 'web')
-            ->get(route('student.experts'))
+            ->get(route('student.experts', ['tab' => 'find', 'role' => 'adviser']))
             ->assertOk()
-            ->assertSee('Cancel request')
-            // The change button is gone; only the cancel action marks the expert.
-            ->assertDontSee('Ask your section');
+            ->assertSee('Change asked')
+            ->assertSee('Take back request')
+            ->assertDontSee('Request a change');
     }
 
     public function test_the_capsa_approving_removes_the_expert(): void
@@ -176,10 +179,10 @@ class ExpertRemovalRequestTest extends TestCase
         ]);
 
         $this->actingAs($leader, 'web')
-            ->get(route('student.experts'))
+            ->get(route('student.experts', ['tab' => 'find', 'role' => 'adviser']))
             ->assertOk()
-            ->assertDontSee('Cancel request')
-            ->assertSee('Ask your section');
+            ->assertDontSee('Take back request')
+            ->assertSee('Request a change');
 
         // A withdrawn request is not the CaPSA's to decide any more.
         $this->assertSame(0, ExpertRemovalRequest::pending()->count());

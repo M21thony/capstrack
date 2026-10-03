@@ -181,9 +181,9 @@ class StudentExpertsPageRolesTest extends TestCase
         // The request itself, named and labelled, not merely counted. The
         // panel is "Applications" rather than "Pending Applications" now,
         // because it also carries the ones that were answered.
-        $response->assertSee('Applications');
+        $response->assertSee('Your applications');
         $response->assertSee('request waiting on a reply');
-        $response->assertSee('class="req-card"', false);
+        $response->assertSee('class="app-item', false);
         // Escaped as the page escapes it: a name like O'Keefe is O&#039;Keefe
         // in the HTML, and compared raw the test failed whenever Faker drew one.
         $response->assertSee($expert->name);
@@ -206,7 +206,7 @@ class StudentExpertsPageRolesTest extends TestCase
         $response = $this->actingAs($student, 'web')->get('/student/experts');
 
         $response->assertStatus(200);
-        $response->assertDontSee('class="req-card"', false);
+        $response->assertDontSee('class="app-item', false);
         $response->assertDontSee('waiting on a reply');
 
         // The signpost stays put at zero.
@@ -215,13 +215,12 @@ class StudentExpertsPageRolesTest extends TestCase
 
     /** One row of the Team Checklist - the slot for a given role. */
     /**
-     * An approved expert's name belongs in Your Experts and nowhere else on
-     * this screen.
+     * An approved expert's name is said once at the top of the page.
      *
-     * The role card above it used to end with "Filled - Neil Inocencio", which
-     * is the same fact twice on one page - a CaPSA reading over a team's
-     * shoulder pointed at it. The card is the filter for browsing that role,
-     * so it says whether there is anything left to browse for and stops there.
+     * There used to be a row of role cards ending "Filled - Neil Inocencio"
+     * directly above Your Experts, which said the same thing twice - a CaPSA
+     * reading over a team's shoulder pointed at it. The two are one row of
+     * cards now: the expert's card is both who they are and the filter.
      */
     public function test_the_name_is_said_once(): void
     {
@@ -237,20 +236,14 @@ class StudentExpertsPageRolesTest extends TestCase
 
         $html = $this->actingAs($student, 'web')->get('/student/experts')->getContent();
 
-        // Named in Your Experts...
-        $this->assertStringContainsString(e($expert->name), $this->checklistRow($html, 'adviser'));
+        // Named on the team's own card...
+        $adviser = $this->checklistRow($html, 'adviser');
+        $this->assertStringContainsString(e($expert->name), $adviser);
+        $this->assertStringContainsString('Accepted your team', $adviser);
 
-        // ...and not again in the role picker directly above it. Sliced rather
-        // than counted, because the name also rides along in a title and in
-        // the remove button's arguments, neither of which anybody reads.
-        $rolesStart = strpos($html, '<div class="roles">');
-        $rolesEnd = strpos($html, '</div>', strpos($html, 'role-grammarian', $rolesStart));
-        $rolesGrid = substr($html, $rolesStart, $rolesEnd - $rolesStart);
-
-        $this->assertStringNotContainsString(e($expert->name), $rolesGrid);
-        $this->assertStringNotContainsString('Filled &mdash;', $rolesGrid);
-        // It still says the slot is taken, which is what the filter is for.
-        $this->assertStringContainsString('Filled', $rolesGrid);
+        // ...and there is no second row of role cards to repeat it.
+        $this->assertStringNotContainsString('<div class="roles">', $html);
+        $this->assertSame(1, substr_count($html, 'class="xh-slot-name">'.e($expert->name).'<'));
     }
 
     /** Your Experts shows the expert's own photo; the empty slot shows nobody. */
@@ -271,8 +264,11 @@ class StudentExpertsPageRolesTest extends TestCase
 
         $adviser = $this->checklistRow($html, 'adviser');
         $this->assertStringContainsString('src="https://lh3.googleusercontent.com/a/adviser-photo"', $adviser);
-        // The leader can still ask for a change, from a button that says so.
-        $this->assertStringContainsString('>Change</button>', $adviser);
+
+        // The leader can still ask for a change, from a button that says so,
+        // when browsing that role.
+        $this->actingAs($student, 'web')->get('/student/experts?tab=find&role=adviser')
+            ->assertSee('Request a change');
 
         $consultant = $this->checklistRow($html, 'consultant');
         $this->assertStringContainsString('Not chosen yet', $consultant);

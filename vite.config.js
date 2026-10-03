@@ -27,7 +27,6 @@ export default defineConfig({
                 'resources/student-ui/Styles/personal-info.css',
                 'resources/student-ui/Styles/team.css',
                 'resources/student-ui/Styles/experts.css',
-                'resources/student-ui/Styles/consultation.css',
                 'resources/student-ui/Styles/template.css',
             ],
             refresh: true,

@@ -82,7 +82,7 @@ class StudentExpertRoleAndSearchTest extends TestCase
      * The list view showed only initials even for an expert with a photo,
      * while the cards showed it.
      */
-    public function test_the_list_view_shows_an_experts_own_photo_over_their_initials(): void
+    public function test_the_expert_cards_show_an_experts_own_photo_over_their_initials(): void
     {
         [$student] = $this->leader();
 
@@ -91,8 +91,8 @@ class StudentExpertRoleAndSearchTest extends TestCase
         $this->expert('Ramon', 'Salazar', ['adviser']);
 
         $html = $this->actingAs($student, 'web')->get('/student/experts?role=adviser')->getContent();
-        $list = substr($html, strpos($html, 'class="listwrap"'));
-        $list = substr($list, 0, strpos($list, '</table>'));
+        $list = substr($html, strpos($html, 'class="xh-grid"'));
+        $list = substr($list, 0, strpos($list, '</section>'));
 
         $this->assertSame(1, substr_count($list, 'class="avatar-photo"'));
         $this->assertStringContainsString('src="https://lh3.googleusercontent.com/neil.jpg"', $list);
@@ -112,8 +112,9 @@ class StudentExpertRoleAndSearchTest extends TestCase
 
         $html = $this->actingAs($student, 'web')->get('/student/experts')->getContent();
 
-        $this->assertStringContainsString('2 experts', $html);   // advisers
-        $this->assertStringContainsString('0 experts', $html);   // grammarians
+        $this->assertStringContainsString('2 advisers to browse', $html);
+        $this->assertStringContainsString('2 consultants to browse', $html);
+        $this->assertStringContainsString('0 grammarians to browse', $html);
     }
 
     /**
@@ -182,7 +183,7 @@ class StudentExpertRoleAndSearchTest extends TestCase
 
         $html = $this->actingAs($student, 'web')->get('/student/experts')->getContent();
 
-        $form = substr($html, strpos($html, '<form class="filters"'));
+        $form = substr($html, strpos($html, '<form class="filters'));
         $form = substr($form, 0, strpos($form, '</form>'));
 
         $this->assertStringContainsString('name="q"', $form);

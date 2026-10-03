@@ -3,308 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
-<title>Capstone Expert - CapsTrack</title>
+<title>Experts - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
-@vite(['resources/student-ui/Styles/experts.css'])
-<style>
-/* The recommended pre-proposal, drawn as pages - no iframe. Same look as the submission preview. */
-.preview-dialog{border:0;border-radius:12px;padding:0;margin:auto;inset:0;width:min(860px,calc(100vw - 32px));height:calc(100vh - 48px);height:calc(100dvh - 48px);box-shadow:0 24px 70px rgba(24,25,31,.3);background:var(--bg2,#fff)}
-.preview-dialog::backdrop{background:rgba(24,25,31,.55)}
-.preview-dialog[open]{display:flex;flex-direction:column}
-.preview-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
-.preview-head h2{margin:0;flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.preview-body{flex:1;min-height:0;overflow:auto;background:var(--bg3,#f2f3f5);padding:12px;display:grid;justify-items:center;align-content:start;gap:12px}
-.preview-body canvas{max-width:100%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
-.preview-note{color:var(--text3);font-size:13px;margin:40px 0}
-.role-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; justify-content: center; }
-.role-chip { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
-.expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin: 0; }
-.expertise-tag { font-size: 10px; color: var(--text3); background: var(--bg3); padding: 2px 8px; border-radius: 4px; }
-
-/* The list of applications this team has out.
-
-   The bottom margin is not decoration: .sticky-controls below is pulled up
-   20px (margin-top:-20px) and paints an opaque background at z-index 100, so
-   whatever sits directly above it loses its last 20px underneath. Every other
-   block up there - .team-slots, .req-notice - already carries margin-bottom
-   20px for exactly that reason. This one did not, so the last application
-   card was clipped along its bottom edge. */
-.req-section { margin-top: 8px; margin-bottom: 20px; }
-
-/* The team's three role slots - see the markup above for why these
-   replaced the stat cards and the panel that used to list them. */
-.team-slots { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 20px; }
-.team-slots-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; flex-wrap: wrap; }
-.team-slots-head svg { width: 18px; height: 18px; stroke: var(--accent); fill: none; stroke-width: 2; flex-shrink: 0; }
-.team-slots-hint { font-size: 11.5px; font-weight: 400; color: var(--text3); }
-.slot-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.slot { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg3); min-width: 0; }
-.slot.filled { background: var(--bg2); }
-.slot.open { border-style: dashed; }
-.slot-extra { margin-top: 10px; }
-.slot-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.slot-body { min-width: 0; flex: 1; }
-.slot-role { font-variant-numeric:tabular-nums; font-size: 9.5px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; }
-.slot-state { font-size: 12px; color: var(--text3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.slot.filled .slot-state { color: var(--text); font-weight: 500; }
-.slot-remove { background: none; border: none; cursor: pointer; color: var(--text3); padding: 3px; border-radius: 5px; flex-shrink: 0; display: flex; }
-.slot-remove:hover { color: var(--red); background: var(--red-bg); }
-.slot-pending { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 7px; }
-.slot-pending-none { background: var(--bg4); color: var(--text3); }
-.slot-pending-n { font-variant-numeric:tabular-nums; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); }
-.req-notice { font-size: 12.5px; color: var(--text2); background: var(--bg3); border: 1px dashed var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; }
-.rg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-
-.req-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; transition: 0.2s; }
-.req-card:hover { border-color: var(--accent); }
-.req-card .status-badge { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-left: auto; flex-shrink: 0; }
-
-/* Button system — clean, simple, user-friendly */
-.btn { display: inline-flex; align-items: center; gap: 6px; border: none; font-family: 'DM Sans','DM Sans Fallback', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.15s; border-radius: 8px; }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-sm { font-size: 12px; padding: 7px 14px; }
-.btn-md { font-size: 13px; padding: 10px 18px; }
-.btn-full { width: 100%; justify-content: center; }
-
-/* Solid variants */
-.btn-solid { background: var(--accent); color: #18191f; }
-.btn-solid:hover { filter: brightness(1.08); }
-.btn-solid:active { filter: brightness(0.95); }
-.btn-solid-green { background: var(--green); color: white; }
-.btn-solid-green:hover { filter: brightness(1.08); }
-.btn-solid-red { background: var(--red); color: white; }
-.btn-solid-red:hover { filter: brightness(1.08); }
-
-/* Soft variants (subtle bg + border) */
-.btn-soft { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
-.btn-soft:hover { background: var(--border); border-color: var(--text3); }
-.btn-soft:active { background: var(--bg2); }
-.btn-soft-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); }
-.btn-soft-green:hover { filter: brightness(1.08); }
-.btn-soft-red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
-.btn-soft-red:hover { filter: brightness(1.08); }
-
-/* Muted disabled */
-.btn-muted { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); cursor: not-allowed; }
-.btn-muted-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); cursor: not-allowed; opacity: 0.8; }
-.btn-muted-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber); cursor: not-allowed; opacity: 0.8; }
-
-/* ── Skeleton Loading ── */
-@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; overflow-y: auto; }
-.sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
-
-/* Modal base */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-/* Preview is opened from inside the Apply form, so it is a modal on top of a
-   modal. Both were z-index 300 and the later one in the document won - which
-   is Apply, so pressing Preview appeared to do nothing while the panel sat
-   behind the form. */
-#proposal-preview-modal { z-index: 400; }
-/* Two classes, so this beats .modal-box's 420px rather than losing to it on
-   equal weight and rendering a seven-section document in a narrow column.
-   The rule in experts.css could never win: that stylesheet is linked before
-   this block. */
-.modal-box.pp-box { width: 720px; max-width: 94vw; }
-/* Same reason, and the same trap I had already written down once: the
-   .pdf-box rule in experts.css lost to .modal-box's 420px, so the document
-   opened in a column narrower than a phone. A PDF page is the one thing on
-   this site with a fixed aspect ratio - too narrow is unreadable, not just
-   cramped. */
-.modal-box.pdf-box { width: 1000px; max-width: 95vw; height: 90vh;height: 90dvh; max-height: 90vh;max-height: 90dvh; }
-#original-pdf-modal { z-index: 500; }
-/* The header is a strip above the document, not a heading block: a long
-   title wrapped onto four lines and took a fifth of the reading area. */
-.pdf-box .pdf-box-header h3 { font-size: 14px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.modal-overlay.open { display: flex; }
-.modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; }
-@keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-.modal-box h3 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-.modal-box .modal-sub { font-size: 13px; color: var(--text3); margin-bottom: 20px; }
-.modal-box .form-group { margin-bottom: 16px; }
-.modal-box .form-group label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
-.modal-box .form-group label .req { color: var(--red); margin-left: 2px; }
-.modal-box .form-group select,
-.modal-box .form-group textarea { width: 100%; padding: 12px 14px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; font-family: 'DM Sans','DM Sans Fallback', sans-serif; outline: none; box-sizing: border-box; transition: border 0.15s; }
-.modal-box .form-group select:focus,
-.modal-box .form-group textarea:focus { border-color: var(--accent); }
-.modal-box .form-group textarea { resize: vertical; min-height: 140px; line-height: 1.6; }
-.modal-box .form-group .file-input-wrap { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg3); cursor: pointer; transition: 0.15s; }
-.modal-box .form-group .file-input-wrap:hover { border-color: var(--accent); }
-.modal-box .form-group .file-input-wrap input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.modal-box .form-group .file-input-wrap .file-icon { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 2; flex-shrink: 0; }
-.modal-box .form-group .file-input-wrap .file-label { font-size: 13px; color: var(--text3); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.modal-box .form-group .file-input-wrap .file-label.has-file { color: var(--text); }
-/* An expert's own photo, laid over their initials so a failed load (an
-   expired Google URL) simply reveals the initials again. */
-.avatar { position: relative; overflow: hidden; }
-.avatar .avatar-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
-
-/* Skill filter - a grouped, searchable picker in the controls bar. */
-.skill-filter { position: relative; display: flex; align-items: center; gap: 8px; }
-.skill-filter-trigger { display: inline-flex; align-items: center; gap: 8px; min-width: 190px; max-width: 260px; padding: 8px 11px; font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; text-align: left; }
-.skill-filter-trigger span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.skill-filter-trigger svg { flex-shrink: 0; }
-.skill-filter-caret { transition: transform .15s; }
-.skill-filter.open .skill-filter-caret { transform: rotate(180deg); }
-.skill-filter.open .skill-filter-trigger { border-color: var(--accent); }
-
-.skill-picker { display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; width: 320px; max-width: 92vw; background: var(--bg2); border: 1.5px solid var(--border); border-radius: 10px; box-shadow: 0 14px 32px -8px rgba(0,0,0,0.22); overflow: hidden; }
-.skill-filter.open .skill-picker { display: block; }
-.skill-picker-search { display: flex; align-items: center; gap: 7px; padding: 9px 11px; border-bottom: 1px solid var(--border); }
-.skill-picker-search svg { width: 13px; height: 13px; stroke: var(--text3); fill: none; stroke-width: 2; flex-shrink: 0; }
-.skill-picker-search input { flex: 1; border: none; outline: none; background: none; font-family: 'DM Sans','DM Sans Fallback', sans-serif; font-size: 13px; color: var(--text); }
-.skill-picker-search input::placeholder { color: var(--text3); }
-.skill-picker-list { max-height: 300px; overflow-y: auto; padding: 7px; display: flex; flex-direction: column; gap: 4px;scrollbar-width:none;-ms-overflow-style:none}
-.skill-picker-list::-webkit-scrollbar{display:none}
-.skill-picker-empty { font-size: 12px; color: var(--text3); padding: 10px 8px; margin: 0; }
-
-.skill-group { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
-.skill-group-header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; background: var(--bg3); user-select: none; }
-.skill-group-header:hover { background: var(--bg4); }
-.skill-chevron { width: 11px; height: 11px; stroke: var(--text3); fill: none; stroke-width: 2.4; flex-shrink: 0; transition: transform .15s; }
-.skill-group.open .skill-chevron { transform: rotate(90deg); }
-.skill-group-name { font-size: 12px; font-weight: 700; color: var(--text); }
-.skill-group-count { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--text3); background: var(--bg4); padding: 2px 7px; border-radius: 999px; }
-.skill-group-body { display: none; flex-direction: column; gap: 2px; padding: 5px; }
-.skill-group.open .skill-group-body { display: flex; }
-
-.skill-opt { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 6px; font-size: 12.5px; color: var(--text2); text-decoration: none; border: 1px solid transparent; }
-.skill-opt:hover { background: var(--bg3); color: var(--text); }
-.skill-opt.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent3); font-weight: 600; }
-.skill-opt-name { flex: 1; }
-.skill-opt-count { font-size: 10px; font-weight: 700; color: var(--text3); }
-.skill-opt-all { font-weight: 600; }
-.skill-opt-group { font-style: italic; color: var(--text3); }
-
-.skill-filter-active { font-size: 12px; color: var(--text2); margin-top: 10px; }
-.skill-filter-active strong { color: var(--text); }
-.skill-filter-clear { font-size: 12px; font-weight: 600; color: var(--text3); text-decoration: none; margin-left: 6px; }
-.skill-filter-clear:hover { color: var(--accent3); text-decoration: underline; }
-
-/* Role picker in the apply modal - one card per role the expert holds. */
-.role-choice-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.role-choice { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text2); font-size: 13px; font-weight: 600; font-family: 'DM Sans','DM Sans Fallback', sans-serif; cursor: pointer; transition: 0.15s; }
-.role-choice:hover { border-color: var(--accent); }
-.role-choice .role-choice-mark { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border2, var(--border)); flex-shrink: 0; transition: 0.15s; }
-.role-choice.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent3); }
-.role-choice.selected .role-choice-mark { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 2px var(--bg); }
-.role-choice-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.5; }
-.modal-box .form-group .field-error { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
-.modal-box .form-group .field-error.show { display: block; }
-/* Content-width and at the end, the same as the expert side's dialogs.
-   flex:1 stretched every button across its panel, so a one-word Close came
-   out as a bar the full width of the modal. The narrow breakpoint below
-   still stacks them full-width, which is right on a phone. */
-.modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
-.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans','DM Sans Fallback', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
-.modal-actions .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* On a phone there is no room for two buttons side by side once they are
-   sized to their words, so they stack and fill - matching what the expert
-   side's dialogs already do at this width. */
-@media (max-width: 480px) {
-  .modal-actions { flex-direction: column; }
-  .modal-actions .btn { width: 100%; }
-}
-
-/* Confirmation modal */
-.confirm-box { width: 380px; text-align: center; }
-.confirm-box .confirm-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-.confirm-box .confirm-icon svg { width: 24px; height: 24px; stroke: white; fill: none; stroke-width: 2; }
-.confirm-box h3 { font-size: 18px; }
-.confirm-box .confirm-desc { font-size: 13px; color: var(--text3); margin: 8px 0 4px; line-height: 1.5; }
-.confirm-box .confirm-detail { font-size: 12px; color: var(--text2); background: var(--bg3); border-radius: 8px; padding: 12px 16px; margin-top: 14px; text-align: left; line-height: 1.6; }
-.confirm-box .confirm-detail strong { color: var(--text); }
-
-/* Remove confirmation — type confirmation + reason */
-.remove-box { width: 420px; text-align: left; }
-.remove-field { margin-top: 16px; }
-.remove-field label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
-.remove-field label strong { color: var(--red); font-variant-numeric:tabular-nums; }
-.modal-input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg3); color: var(--text); font-size: 14px; font-family: 'DM Sans','DM Sans Fallback', sans-serif; outline: none; box-sizing: border-box; transition: border 0.2s, box-shadow 0.2s, background 0.2s; }
-.modal-input:focus { border-color: var(--accent); background: var(--bg2); box-shadow: 0 0 0 3px var(--accent-glow); }
-.modal-input.error { border-color: var(--red); background: var(--red-bg); box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
-.remove-field textarea.modal-input { min-height: 80px; line-height: 1.5; }
-.remove-field .field-error { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
-.remove-field .field-error.show { display: block; }
-
-/* Review / Info modals */
-.review-box { width: 440px; }
-.review-box .review-row { display: flex; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.review-box .review-row:last-child { border-bottom: none; }
-.review-box .review-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.3px; width: 100px; flex-shrink: 0; }
-.review-box .review-value { font-size: 13px; color: var(--text); flex: 1; word-break: break-word; }
-
-.msg-toast { position: fixed; bottom: 30px; right: 30px; background: var(--navy-dark); color: white; padding: 14px 22px; border-radius: 12px; font-size: 13px; font-weight: 500; z-index: 500; display: none; align-items: center; gap: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease; }
-.msg-toast.success { border-left: 4px solid var(--green); }
-.msg-toast.error { border-left: 4px solid var(--red); }
-.msg-toast.show { display: flex; }
-@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
-.empty-state svg { width: 48px; height: 48px; stroke: var(--border2); margin-bottom: 12px; }
-.empty-state p { font-size: 14px; }
-
-/* ── Tablet and phone: one column that grows, and the page scrolls ──
-   experts.css keeps .content-grid at the height of the screen, which suits
-   the desktop's two columns. Once it becomes one column (1024px down) that
-   height stayed, and every section was squeezed into it: the roles list
-   poured out over Applications and How it works, and the credits sat on top
-   of Your Experts. Here, after experts.css, and with !important because its
-   phone rules use it. */
-@media (max-width: 1024px) {
-  .content-grid-wrap,
-  #real-content.content-grid { height: auto !important; min-height: 0 !important; }
-  #real-content.content-grid > * { flex-shrink: 0 !important; }
-  #real-content .experts-main { min-height: auto !important; }
-  #real-content .overview-panel { max-height: none !important; overflow: visible !important; }
-}
-/* Two boxes side by side left each about 180px - too narrow to read. */
-@media (max-width: 480px) {
-  #real-content .overview-panel { grid-template-columns: minmax(0, 1fr) !important; }
-}
-
-/* ── Expert cards on a phone: a list you scroll down, each card whole ──
-   The desktop strip runs sideways, sized to fit one screen, and the older
-   phone rules shrank every card to one row with its expertise and
-   availability hidden. Here each expert is a full card, one under another,
-   and the list/table toggle is dropped: a table does not fit a phone. */
-@media (max-width: 768px) {
-  #viewSeg { display: none !important; }
-  #results.view-list .listwrap { display: none !important; }
-  #results .railwrap, #results .rail-pager { display: block !important; }
-  #results .rail-pager, .rail-nav { display: none !important; }
-  #rail.rail {
-    display: flex !important; flex-direction: column; gap: 10px;
-    overflow: visible !important; scroll-snap-type: none; max-height: none !important;
-  }
-  #rail .expert-card-compact {
-    display: grid !important; grid-template-columns: 48px minmax(0, 1fr);
-    column-gap: 12px !important; row-gap: 10px !important;
-    align-items: start !important; text-align: left !important;
-    padding: 14px !important; border-radius: 14px !important;
-    cursor: pointer !important;
-  }
-  #rail .expert-card-compact > .role-dot { display: block !important; top: 14px; right: 14px; left: auto; }
-  #rail .expert-card-compact .who { grid-column: 1 / -1; display: flex !important; align-items: center; gap: 12px; flex-direction: row !important; }
-  #rail .expert-card-compact .expert-avatar-wrap { width: 48px !important; height: 48px !important; flex: none; margin: 0 !important; }
-  #rail .expert-card-compact .ex-nm { font-size: 15px !important; font-weight: 700; text-align: left !important; white-space: normal !important; }
-  #rail .expert-card-compact .chips,
-  #rail .expert-card-compact > div:not(.who):not(.avail):not(.chips),
-  #rail .expert-card-compact .avail { grid-column: 1 / -1; display: block !important; }
-  #rail .expert-card-compact .chips { display: flex !important; flex-wrap: wrap; gap: 5px; }
-  #rail .expert-card-compact .tags { display: flex !important; flex-wrap: wrap; gap: 5px; max-height: none !important; }
-  #rail .expert-card-compact .tags .t { display: inline-block !important; }
-  #rail .expert-card-compact .lbl { display: block !important; margin-bottom: 4px; font-size: 10.5px; }
-  #rail .expert-card-compact .slot-caption { display: block !important; font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--text2); }
-  #rail .expert-card-compact .slot-caption.is-full { color: var(--red); }
-  #rail .expert-card-compact .btn { grid-column: 1 / -1; width: 100% !important; justify-content: center; padding: 10px 12px !important; font-size: 12.5px !important; }
-  #rail .expert-card-compact .btn svg { width: 14px !important; height: 14px !important; }
-}
-
-</style>
-@include('partials.skeleton-head', ['skReveal' => 'opacity'])
+@vite(['resources/student-ui/styles.css', 'resources/student-ui/Styles/experts.css'])
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -315,1714 +17,1315 @@
     <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Toggle navigation">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="page-title">Capstone Expert</div>
+    <div class="page-title">Experts</div>
     <div class="topbar-actions">
       @include('student.partials.notification-dropdown')
     </div>
   </div>
 
   <div class="content">
+  @php
+    $roleNames = ['adviser', 'consultant', 'grammarian'];
+    $roleBlurbs = [
+      'adviser' => 'Academic guidance and concerns',
+      'consultant' => 'Capstone project review',
+      'grammarian' => 'Grammar and language review',
+    ];
 
-    <!-- ── SKELETON LOADER ── -->
-    <!-- .content is a 2-column CSS grid (grid-template-columns:1fr 420px) and
-         .experts-main/.overview-panel must be direct grid children to place
-         correctly — #contentWrapper spans the whole grid as one cell, so
-         both layers inside it re-declare the same grid independently via
-         .content-grid (a real class, not inline styles, so the existing
-         @media(max-width:1024px) override that stacks .content to a single
-         column on mobile can reach them too). -->
-    <div id="contentWrapper" class="content-grid-wrap">
-<div id="skeleton-content" class="sk-overlay content-grid">
-      <div class="experts-main">
-        {{-- Shaped like the strip that actually loads, so the page does not
-             jump when the real content replaces it. --}}
-        <div class="team-slots">
-          <div class="sk" style="height:16px;width:180px;margin-bottom:14px;"></div>
-          <div class="slot-row">
-            @for($i = 0; $i < 3; $i++)
-            <div class="slot">
-              <div class="sk" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;"></div>
-              <div style="flex:1">
-                <div class="sk" style="height:9px;width:56px;margin-bottom:5px;"></div>
-                <div class="sk" style="height:12px;width:80%;"></div>
-              </div>
-            </div>
-            @endfor
-          </div>
-        </div>
+    // An assignment whose expert account is gone is nobody: it showed as an
+    // "Unknown" card and made the count read "4 of 3".
+    $approvedAssignments = $assignments->where('status', 'approved')->filter(fn ($a) => $a->expert);
 
-        <div class="sticky-controls">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div class="sk" style="height:40px;flex:1;max-width:320px;border-radius:8px;"></div>
-            <div style="display:flex;gap:6px;">
-              @for($i = 0; $i < 4; $i++)
-              <div class="sk" style="height:28px;width:72px;border-radius:20px;"></div>
-              @endfor
-            </div>
-          </div>
-        </div>
+    // Keyed by the role the team actually engaged them as. Anyone approved
+    // before roles were recorded has no slot, so they are listed after the
+    // three rather than dropped from the page.
+    $filledSlots = [];
+    $unslotted = [];
+    foreach ($approvedAssignments as $a) {
+      $r = $a->engaged_role_name;
+      if ($r && in_array($r, $roleNames, true) && ! isset($filledSlots[$r])) { $filledSlots[$r] = $a; }
+      else { $unslotted[] = $a; }
+    }
+    $filledCount = count($filledSlots) + count($unslotted);
 
-        <div class="expert-grid">
-          @for($i = 0; $i < 6; $i++)
-          <div class="expert-card-compact">
-            <div class="expert-avatar-wrap" style="border:0;padding:0;">
-              <div class="sk" style="width:72px;height:72px;border-radius:50%;"></div>
-            </div>
-            <div class="sk" style="height:16px;width:120px;margin:12px auto;"></div>
-            <div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px;">
-              <div class="sk" style="height:20px;width:60px;border-radius:20px;"></div>
-              <div class="sk" style="height:20px;width:75px;border-radius:20px;"></div>
-            </div>
-            <div class="sk" style="height:4px;width:100%;border-radius:2px;margin-bottom:6px;"></div>
-            <div class="sk" style="height:12px;width:100px;margin:0 auto 12px;"></div>
-            <div class="sk" style="height:38px;width:100%;border-radius:10px;"></div>
-          </div>
-          @endfor
-        </div>
+    // An approved expert is yours, not someone to browse or apply to again.
+    $settledExpertIds = $approvedAssignments->pluck('expert_id')->filter()->all();
+    $shownExperts = collect($experts->items())->whereNotIn('expert_id', $settledExpertIds)->values();
 
+    // Waiting on somebody, then answered. Approved ones are on the strip.
+    $waitingRequests = $assignments->where('status', 'pending')->filter(fn ($a) => $a->expert)->values();
+    $closedRequests = $assignments->whereNotIn('status', ['approved', 'pending'])->filter(fn ($a) => $a->expert)->values();
+    $openRequests = $waitingRequests->concat($closedRequests);
+
+    $removalByAssignment = collect($pendingRemovalIds);
+    $activeFilled = $filledSlots[$activeRole] ?? null;
+    $activePending = (! $activeFilled && isset($rolesSpokenFor[$activeRole]) && $rolesSpokenFor[$activeRole]->status === 'pending')
+      ? $rolesSpokenFor[$activeRole] : null;
+
+    $canApply = $team && $isLeader && $teamConfirmed;
+    $studentProgram = \App\Models\Student::mapCourseToProgram(auth()->user()->course ?? '');
+
+    // Who a card is, what they do, how much room they have and what this
+    // team may do about them - read by the profile and apply dialogs.
+    $expertPayloads = [];
+    foreach ($shownExperts as $expert) {
+      $max = (int) ($expert->max_teams ?? 0);
+      $used = (int) $expert->slots_used;
+      $isFull = $max > 0 && $used >= $max;
+      $mine = $assignments->where('expert_id', $expert->expert_id);
+      $hasPending = $mine->where('status', 'pending')->isNotEmpty();
+      $roles = $expert->roles->pluck('role_name')->filter(fn ($r) => in_array($r, $roleNames, true))->values();
+
+      // Each role the leader can apply for, carrying the pivot key the
+      // application records. A role the team has already asked somebody for
+      // is left off.
+      $choices = $expert->roles
+        ->filter(fn ($r) => in_array($r->role_name, $roleNames, true))
+        ->reject(fn ($r) => isset($rolesSpokenFor[$r->role_name]))
+        ->map(fn ($r) => ['expert_role_id' => $r->pivot->expert_role_id, 'name' => $r->role_name, 'label' => ucfirst($r->role_name)])
+        ->values();
+
+      $status = null;
+      if ($hasPending) {
+        $status = ['text' => 'Application pending', 'tone' => 'amber'];
+      } elseif (! $expert->hasSetPrograms()) {
+        $status = ['text' => 'Not accepting teams yet', 'tone' => 'gray'];
+      } elseif ($isFull) {
+        $status = ['text' => 'No slots left', 'tone' => 'red'];
+      } elseif ($choices->isEmpty() && $activePending) {
+        $status = ['text' => 'Waiting on your other application', 'tone' => 'gray'];
+      }
+
+      $expertPayloads[$expert->expert_id] = [
+        'id' => $expert->expert_id,
+        'name' => $expert->name,
+        'initials' => $expert->avatarInitials(),
+        'avatar' => $expert->hasAvatarImage() ? $expert->avatarUrl() : null,
+        'roles' => $roles->all(),
+        'tags' => $expert->expertise->pluck('expertise_field')->filter()->values()->all(),
+        'used' => $used,
+        'max' => $max,
+        'choices' => $choices->all(),
+        'status' => $status,
+        'apply' => $canApply && ! $status && $choices->isNotEmpty(),
+      ];
+    }
+
+    $applicationPayloads = $openRequests->mapWithKeys(fn ($a) => [$a->assignment_id => [
+      'id' => $a->assignment_id,
+      'name' => $a->expert->name,
+      'initials' => $a->expert->avatarInitials(),
+      'avatar' => $a->expert->hasAvatarImage() ? $a->expert->avatarUrl() : null,
+      'role' => $a->engaged_role_name,
+      'status' => $a->status,
+      'message' => $a->message,
+      'reason' => $a->rejection_reason,
+      'proposalTitle' => $a->preProposal?->title,
+      'proposalFile' => $a->proposal_file ? \Illuminate\Support\Facades\Storage::url($a->proposal_file) : null,
+      'sent' => $a->created_at?->format('M j, Y'),
+    ]])->all();
+
+    $teamForJs = collect($roleNames)->mapWithKeys(function ($r) use ($filledSlots, $removalByAssignment) {
+      $a = $filledSlots[$r] ?? null;
+
+      return [$r => $a ? [
+        'expert_id' => (int) $a->expert_id,
+        'assignment_id' => (int) $a->assignment_id,
+        'name' => $a->expert->name,
+        'initials' => $a->expert->avatarInitials(),
+        'avatar' => $a->expert->hasAvatarImage() ? $a->expert->avatarUrl() : null,
+        'removal_request' => $removalByAssignment->get($a->assignment_id)['request'] ?? null,
+      ] : null];
+    });
+
+    $pendingByRole = $waitingRequests->mapWithKeys(fn ($a) => [$a->engaged_role_name ?? '' => $a->expert->name])->except('');
+    $findUrl = fn (string $role) => route('student.experts', array_filter([
+      'tab' => 'find',
+      'role' => $role,
+      'q' => $search !== '' ? $search : null,
+      'skill' => $activeSkill !== '' ? $activeSkill : null,
+      'skill_group' => $activeGroup !== '' ? $activeGroup : null,
+      'open' => $openOnly ? 1 : null,
+    ]));
+  @endphp
+
+  <div class="xh" id="xh" data-tab="{{ $tab }}">
+    <div class="xh-pagehead">
+      <div>
+        <h1>Experts</h1>
+        <p>Your team's adviser, consultant and grammarian, and the sessions you book with them.</p>
       </div>
-
-      <div class="overview-panel">
-        <div class="rg-qt-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
-          <div class="card" style="padding:14px;border-radius:12px;">
-            <div class="sk" style="height:13px;width:80px;margin-bottom:12px;"></div>
-            @for($i = 0; $i < 3; $i++)
-            <div class="sk" style="height:11px;width:90%;margin-bottom:10px;"></div>
-            @endfor
-          </div>
-          <div class="card" style="padding:14px;border-radius:12px;">
-            <div class="sk" style="height:13px;width:80px;margin-bottom:12px;"></div>
-            @for($i = 0; $i < 4; $i++)
-            <div class="sk" style="height:11px;width:85%;margin-bottom:8px;"></div>
-            @endfor
-          </div>
-        </div>
+      <div class="xh-seg" role="tablist" aria-label="Experts page sections">
+        <button type="button" role="tab" id="xh-tab-book" aria-controls="xh-panel-book" data-xh="tab" data-tab="consultations" aria-selected="{{ $tab === 'consultations' ? 'true' : 'false' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Consultations
+          <span class="xh-count" id="xh-book-count" @if($upcomingBookings->isEmpty()) hidden @endif>{{ $upcomingBookings->count() }}</span>
+        </button>
+        <button type="button" role="tab" id="xh-tab-find" aria-controls="xh-panel-find" data-xh="tab" data-tab="find" aria-selected="{{ $tab === 'find' ? 'true' : 'false' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          Find experts
+        </button>
       </div>
     </div>
 
-    <!-- ── REAL CONTENT ── -->
-    <div id="real-content" class="content-grid" style="opacity:0">
-      @include('student.partials.page-tutorial', ['page' => 'experts'])
-
-    {{-- A grid child in its own right, spanning both columns. Inside
-         .experts-main it gave the left column 42px of heading the right column
-         did not have, so the sidebar started level with this line instead of
-         with the role cards underneath it. --}}
-    <div class="pagehead"><h1>Find Your Team Experts</h1></div>
-
-    <div class="experts-main">
-      @php
-        // Same colours the role chips use, so a consultant reads as a
-        // consultant everywhere on this page.
-        $roleColors = [
-          'adviser'     => ['dot' => 'var(--accent)', 'bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
-          'consultant'  => ['dot' => '#2160b8',       'bg' => 'var(--blue-bg)',      'text' => 'var(--blue)'],
-          'grammarian'  => ['dot' => '#7c3aed',       'bg' => 'var(--purple-bg)',    'text' => 'var(--purple)'],
-        ];
-        $roleBlurbs = [
-          'adviser'    => "Guides your team's overall capstone journey",
-          'consultant' => 'Provides subject-matter expertise and technical advice',
-          'grammarian' => 'Reviews and ensures quality of written documentation',
-        ];
-        // An assignment whose expert account is gone is nobody: it showed as an
-        // "Unknown" card and made the count read "4 of 3".
-        $approvedAssignments = $assignments->where('status', 'approved')->filter(fn ($a) => $a->expert);
-
-        // Keyed by the role the team actually engaged them as. Anyone approved
-        // before roles were recorded has no slot, so they are listed under the
-        // three rather than dropped from the page.
-        $filledSlots = [];
-        $unslotted = [];
-        foreach ($approvedAssignments as $a) {
-          $r = $a->engaged_role_name;
-          if ($r && isset($roleColors[$r]) && ! isset($filledSlots[$r])) { $filledSlots[$r] = $a; }
-          else { $unslotted[] = $a; }
-        }
-
-        // An approved expert is not a request any more and not available any
-        // more - they are yours, and the checklist says so.
-        $settledExpertIds = $approvedAssignments->pluck('expert_id')->filter()->all();
-
-        // Split, because they were one list called "Pending Applications" and
-        // a rejected application sat in it looking like something still being
-        // decided. One is waiting on somebody; the other is finished.
-        $waitingRequests = $assignments->where('status', 'pending');
-        $closedRequests = $assignments->whereNotIn('status', ['approved', 'pending']);
-        $openRequests = $waitingRequests->concat($closedRequests);
-        $shownExperts = $experts->whereNotIn('expert_id', $settledExpertIds);
-      @endphp
-
-      {{-- The role decides the list, so it is the first thing on the page and
-           it lives in the URL. A team needs one of each, so you are never
-           choosing among everybody - only among the four or five who can hold
-           the role you are filling. That is what keeps this page to one
-           screen no matter how long the roster gets. --}}
-      <div class="roles">
-        @foreach(['adviser', 'consultant', 'grammarian'] as $r)
+    {{-- The team's three experts. Under Consultations a card picks who you
+         book; under Find experts it picks the role you are browsing. --}}
+    <section aria-labelledby="xh-strip-h">
+      <div class="xh-strip-head">
+        <h2 id="xh-strip-h">Your team's experts</h2>
+        <span><b>{{ $filledCount }} of 3</b> chosen · <span id="xh-strip-hint">{{ $filledCount === 0 ? 'start with your adviser' : ($tab === 'find' ? 'pick the role you are looking for' : 'pick who you want to meet') }}</span></span>
+      </div>
+      <div class="xh-strip" id="xh-strip">
+        @foreach($roleNames as $r)
           @php
-            $isOn = $activeRole === $r;
-            $filled = $filledSlots[$r] ?? null;
-            $qs = array_filter([
-              'role' => $r,
-              'q' => $search !== '' ? $search : null,
-              'skill' => $activeSkill !== '' ? $activeSkill : null,
-              'skill_group' => $activeGroup !== '' ? $activeGroup : null,
-            ]);
+            $a = $filledSlots[$r] ?? null;
+            $ex = $a?->expert;
+            $removal = $a ? $removalByAssignment->get($a->assignment_id) : null;
+            if ($a) {
+              $findMeta = $removal ? 'Change request waiting on CaPSA' : 'Accepted your team';
+            } elseif ($pendingByRole->has($r)) {
+              $findMeta = 'Waiting on '.$pendingByRole[$r];
+            } else {
+              $n = $roleCounts[$r] ?? 0;
+              $findMeta = $n.' '.\Illuminate\Support\Str::plural($r, $n).' to browse';
+            }
           @endphp
-          <a class="role role-{{ $r }} {{ $isOn ? 'is-on' : '' }}"
-             href="{{ route('student.experts', $qs) }}" aria-current="{{ $isOn ? 'true' : 'false' }}">
-            <span class="role-ic">
-              @if($r === 'adviser')
-                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              @elseif($r === 'consultant')
-                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
-              @else
-                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-              @endif
+          <a class="xh-slot r-{{ $r }} role-{{ $r }}{{ $activeRole === $r ? ' is-on' : '' }}{{ $a ? '' : ' is-open' }}" data-slot-role="{{ $r }}" data-xh="slot" data-role="{{ $r }}"
+             href="{{ $findUrl($r) }}" aria-current="{{ $activeRole === $r ? 'true' : 'false' }}">
+            @if($ex)
+              <span class="xh-av r-{{ $r }}" aria-hidden="true">{{ $ex->avatarInitials() }}@if($ex->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+            @else
+              <span class="xh-av is-vacant" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+            @endif
+            <span class="xh-slot-body">
+              <span class="xh-slot-role">{{ ucfirst($r) }}</span>
+              <span class="xh-slot-name">{{ $ex ? $ex->name : 'Not chosen yet' }}</span>
+              <span class="xh-slot-meta" data-meta="find">{{ $findMeta }}</span>
+              <span class="xh-slot-meta" data-meta="book">{{ $ex ? 'No session booked' : ($pendingByRole->has($r) ? '1 application pending' : 'Not chosen yet') }}</span>
             </span>
-            <span class="role-body">
-              <span class="role-nm">{{ ucfirst($r) }}</span>
-              <span class="role-ds">{{ $roleBlurbs[$r] }}</span>
-              {{-- The name is not repeated here. Your Experts, directly below
-                   this row, already says who fills the slot; saying it twice on
-                   one screen is what a CaPSA pulled us up on. This card is the
-                   filter for browsing that role, so it says whether there is
-                   anything left to browse for. --}}
-              <span class="role-ct">
-                @if($filled)
-                  Filled
-                @else
-                  {{ $roleCounts[$r] ?? 0 }} {{ Str::plural('expert', $roleCounts[$r] ?? 0) }}
-                @endif
-              </span>
-            </span>
-            <span class="role-tick">
-              @if($isOn)
-                <svg viewBox="0 0 24 24" class="on"><circle cx="12" cy="12" r="10"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
-              @endif
-            </span>
+            @if($removal)
+              <span class="xh-pill xh-amber">Change asked</span>
+            @elseif(! $ex)
+              <span class="xh-pill xh-gray">Open</span>
+            @endif
           </a>
         @endforeach
-      </div>
-
-      @if(! $team)
-        <div class="req-notice">You need to join or create a team before you can apply for an expert.</div>
-      @elseif(! $isLeader)
-        <div class="req-notice">Only your team leader can apply for experts. You can still browse who is available below.</div>
-      @endif
-
-
-      {{-- Who your team actually has: one card per slot, each under the role
-           card of the same name, with the expert's own photo. A team can tell
-           at a glance whether they have an adviser - and who it is. --}}
-      @if($team)
-        @php
-          $filledCount = count($filledSlots) + count($unslotted);
-          // Approved before roles were recorded, so they belong to no slot.
-          // Listed rather than dropped: they are still your expert.
-          $yxTiles = collect(['adviser', 'consultant', 'grammarian'])
-            ->map(fn ($r) => ['slot' => $r, 'label' => ucfirst($r), 'a' => $filledSlots[$r] ?? null])
-            ->concat(collect($unslotted)->map(fn ($a) => ['slot' => null, 'label' => 'Assigned', 'a' => $a]));
-        @endphp
-        <div class="yx">
-          <div class="yx-head">
-            <span class="yx-lab">Your Experts</span>
-            <span class="yx-count">
-              <b>{{ $filledCount }} of 3</b> {{ $filledCount >= 3 ? 'filled - your team is set' : 'filled' }}
+        @foreach($unslotted as $a)
+          <div class="xh-slot" data-slot-role="assigned">
+            <span class="xh-av" aria-hidden="true">{{ $a->expert->avatarInitials() }}@if($a->expert->hasAvatarImage())<img class="avatar-photo" src="{{ $a->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+            <span class="xh-slot-body">
+              <span class="xh-slot-role">Expert</span>
+              <span class="xh-slot-name">{{ $a->expert->name }}</span>
+              <span class="xh-slot-meta">Accepted your team</span>
             </span>
           </div>
+        @endforeach
+      </div>
+    </section>
 
-          <div class="yx-slots">
-            @foreach($yxTiles as $tile)
-              @php $a = $tile['a']; $ex = $a?->expert; @endphp
-              <div class="yx-slot {{ $a ? 'is-set' : 'is-open' }}" @if($tile['slot']) data-slot-role="{{ $tile['slot'] }}" @endif>
-                @if($a)
-                  {{-- Photo over initials, as on the cards below: a photo that
-                       fails to load removes itself and the initials show. --}}
-                  <span class="avatar">{{ $ex?->avatarInitials() }}@if($ex?->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
-                @else
-                  <span class="yx-empty" aria-hidden="true">?</span>
-                @endif
-                <span class="yx-who">
-                  <span class="yx-top">
-                    <span class="yx-role">{{ $tile['label'] }}</span>
-                    @if($a && $isLeader)
-                      @php $pendingRemoval = collect($pendingRemovalIds)->firstWhere('assignment', (int) $a->assignment_id); @endphp
-                      @if($pendingRemoval)
-                        <button type="button" class="yx-act" title="Waiting on your section's CaPSA - click to take the request back"
-                                onclick="openWithdrawRemovalModal({{ $pendingRemoval['request'] }}, '{{ addslashes($ex?->name ?? 'this expert') }}')">Cancel request</button>
-                      @else
-                        <button type="button" class="yx-act" title="Ask your section's CaPSA to change {{ $ex?->name ?? 'this expert' }}"
-                                onclick="openChangeExpertModal({{ $a->assignment_id }}, '{{ addslashes($ex?->name ?? '') }}', '{{ addslashes(ucfirst($a->engaged_role_name ?? 'expert')) }}')">Change</button>
-                      @endif
-                    @endif
-                  </span>
-                  <span class="yx-name">{{ $a ? ($ex?->name ?? 'Unknown') : 'Not chosen yet' }}</span>
-                </span>
-              </div>
-            @endforeach
-          </div>
-        </div>
-      @endif
+    {{-- ===================== CONSULTATIONS ===================== --}}
+    <section id="xh-panel-book" role="tabpanel" aria-labelledby="xh-tab-book" @if($tab !== 'consultations') hidden @endif>
+      <div class="xh-split">
+        <div class="xh-card xh-grow xh-book" id="xh-book"></div>
+        <aside class="xh-card xh-rail xh-rail-card" id="xh-sessions" aria-label="My consultations"></aside>
+      </div>
+    </section>
 
-      {{-- Searching reloads the page rather than hiding cards. The list is
-           paginated, so a filter in the browser would only ever search the
-           experts already on screen and report "none" for the rest. --}}
-      <form class="filters" method="GET" action="{{ route('student.experts') }}">
-        <input type="hidden" name="role" value="{{ $activeRole }}">
-        @if($activeSkill !== '')<input type="hidden" name="skill" value="{{ $activeSkill }}">@endif
-        @if($activeGroup !== '')<input type="hidden" name="skill_group" value="{{ $activeGroup }}">@endif
-
-        {{-- The magnifier is the submit button, not decoration. The skill
-             picker below carries its own text box, and a form with two text
-             fields and no submit button does not submit on Enter at all -
-             which is exactly how this search came to do nothing. --}}
-        <label class="field search">
-          <button type="submit" class="field-go" aria-label="Search experts">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          </button>
-          <input type="search" name="q" value="{{ $search }}" enterkeyhint="search" placeholder="Search experts by name or expertise&hellip;" autocomplete="off">
-          @if($search !== '')
-            <a class="field-clear" href="{{ route('student.experts', array_filter(['role' => $activeRole, 'skill' => $activeSkill ?: null, 'skill_group' => $activeGroup ?: null])) }}" aria-label="Clear search">&times;</a>
+    {{-- ===================== FIND EXPERTS ===================== --}}
+    <section id="xh-panel-find" role="tabpanel" aria-labelledby="xh-tab-find" @if($tab !== 'find') hidden @endif>
+      <div class="xh-split">
+        <div class="xh-grow xh-find">
+          @if(! $team)
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">You need to join or create a team before you can apply for an expert.</span></div>
+          @elseif(! $isLeader)
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Only your team leader can apply for experts. You can still browse who is available.</span></div>
+          @elseif(! $teamConfirmed)
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your team has to be verified before you can apply for experts. You can still browse who is available.</span></div>
           @endif
-        </label>
 
-          <div class="skill-filter">
-            <button type="button" class="input skill-filter-trigger" id="skill-filter-trigger" onclick="toggleSkillPicker(event)"
-                    aria-haspopup="true" aria-expanded="false">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
-              <span id="skill-filter-label">
-                @if($activeSkill !== '') {{ $activeSkill }}
-                @elseif($activeGroup !== '') {{ $activeGroup }}
-                @else All skills @endif
-              </span>
-                    @if($activeSkill !== '' || $activeGroup !== '')
-                      {{-- Clearing belongs on the control that set it. --}}
-                      <a class="skill-filter-x"
-                         href="{{ route('student.experts', array_filter(['role' => $activeRole, 'q' => $search ?: null])) }}"
-                         onclick="event.stopPropagation()" aria-label="Clear skill filter">&times;</a>
-                    @endif
-              <svg class="skill-filter-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-
-            <div class="skill-picker" id="skill-picker">
-              <div class="skill-picker-search">
-                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-                <input id="skillSearch" placeholder="Search skills…" autocomplete="off" oninput="filterSkillPicker(this.value)">
+          @if($activeFilled)
+            @php $activeRemoval = $removalByAssignment->get($activeFilled->assignment_id); @endphp
+            @if($activeRemoval)
+              <div class="xh-banner xh-wait">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span class="xh-banner-text">Your request to change <b>{{ $activeFilled->expert->name }}</b> is waiting on your section's CaPSA. They stay your {{ $activeRole }} until the CaPSA decides.</span>
+                @if($isLeader)
+                  <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="takeback" data-request="{{ $activeRemoval['request'] }}" data-name="{{ $activeFilled->expert->name }}">Take back request</button>
+                @endif
               </div>
+            @else
+              <div class="xh-banner xh-ok">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+                <span class="xh-banner-text"><b>{{ $activeFilled->expert->name }}</b> is your {{ $activeRole }}. You can still browse, but changing them goes through your section's CaPSA.</span>
+                @if($isLeader)
+                  <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="change" data-assignment="{{ $activeFilled->assignment_id }}" data-name="{{ $activeFilled->expert->name }}" data-role="{{ $activeRole }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                    Request a change
+                  </button>
+                @endif
+              </div>
+            @endif
+          @elseif($activePending)
+            <div class="xh-banner xh-wait">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span class="xh-banner-text">Your team is waiting on <b>{{ $activePending->expert?->name }}</b> to answer as your {{ $activeRole }}. Once they answer, or you withdraw it, you can apply to another.</span>
+              <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="app" data-id="{{ $activePending->assignment_id }}">View application</button>
+            </div>
+          @endif
 
-              <div class="skill-picker-list" id="skillPickerList">
-                <a class="skill-opt skill-opt-all {{ $activeSkill === '' && $activeGroup === '' ? 'selected' : '' }}"
-                   href="{{ route('student.experts') }}">All skills</a>
-
-                @forelse($skillGroups as $groupName => $groupSkills)
-                  @php $groupCount = $groupSkills->sum('expert_count'); @endphp
-                  <div class="skill-group {{ $activeGroup === $groupName ? 'open' : '' }}" data-name="{{ mb_strtolower($groupName) }}">
-                    <div class="skill-group-header" onclick="toggleSkillGroup(this)">
-                      <svg class="skill-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-                      <span class="skill-group-name">{{ $groupName }}</span>
-                      <span class="skill-group-count">{{ $groupSkills->count() }}</span>
-                    </div>
-                    <div class="skill-group-body">
-                      {{-- Pick the whole area without needing to know which
-                           wording each expert happened to use. --}}
-                      <a class="skill-opt skill-opt-group {{ $activeGroup === $groupName && $activeSkill === '' ? 'selected' : '' }}"
-                         data-name="{{ mb_strtolower($groupName) }}"
-                         href="{{ route('student.experts', ['skill_group' => $groupName]) }}">
-                        Anything in this area
-                      </a>
+          {{-- Searching reloads the page rather than hiding cards. The list is
+               paginated, so a filter in the browser would only ever search
+               the experts already on screen and report "none" for the rest. --}}
+          <form class="filters xh-find-head" method="GET" action="{{ route('student.experts') }}">
+            <input type="hidden" name="tab" value="find">
+            <input type="hidden" name="role" value="{{ $activeRole }}">
+            @if($activeSkill !== '')<input type="hidden" name="skill" value="{{ $activeSkill }}">@endif
+            @if($activeGroup !== '')<input type="hidden" name="skill_group" value="{{ $activeGroup }}">@endif
+            <h2>{{ ucfirst(\Illuminate\Support\Str::plural($activeRole)) }} <span>{{ $experts->hasPages() ? $experts->total() : $shownExperts->count() }} {{ \Illuminate\Support\Str::plural('expert', $experts->hasPages() ? $experts->total() : $shownExperts->count()) }}</span></h2>
+            <label class="xh-search" for="xh-q">
+              {{-- The magnifier is the submit button: with the skill picker's
+                   own text box in this form, Enter alone does not submit it. --}}
+              <button type="submit" class="xh-search-go" aria-label="Search experts">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              </button>
+              <span class="xh-sr">Search by name or expertise</span>
+              <input id="xh-q" type="search" name="q" value="{{ $search }}" enterkeyhint="search" placeholder="Name or expertise, e.g. Technical Writing" autocomplete="off">
+            </label>
+            <div class="xh-skill" id="xh-skill">
+              <button type="button" class="xh-chip-btn" id="xh-skill-trigger" data-xh="skill-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="xh-skill-pop">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                <span>{{ $activeSkill !== '' ? $activeSkill : ($activeGroup !== '' ? $activeGroup : 'All skills') }}</span>
+              </button>
+              <div class="xh-skill-pop" id="xh-skill-pop" hidden>
+                <label class="xh-skill-search" for="xh-skill-q">
+                  <span class="xh-sr">Search skills</span>
+                  <input id="xh-skill-q" type="text" placeholder="Search skills…" autocomplete="off">
+                </label>
+                <div class="xh-skill-list" id="xh-skill-list">
+                  <a class="xh-skill-opt{{ $activeSkill === '' && $activeGroup === '' ? ' is-on' : '' }}" data-all href="{{ route('student.experts', ['tab' => 'find', 'role' => $activeRole]) }}">All skills</a>
+                  @forelse($skillGroups as $groupName => $groupSkills)
+                    <details class="xh-skill-group" data-name="{{ mb_strtolower($groupName) }}" @if($activeGroup === $groupName) open @endif>
+                      <summary><span>{{ $groupName }}</span><span class="xh-skill-n">{{ $groupSkills->count() }}</span></summary>
+                      <a class="xh-skill-opt xh-skill-any{{ $activeGroup === $groupName && $activeSkill === '' ? ' is-on' : '' }}" data-name="{{ mb_strtolower($groupName) }}" href="{{ route('student.experts', ['tab' => 'find', 'role' => $activeRole, 'skill_group' => $groupName]) }}">Anything in this area</a>
                       @foreach($groupSkills as $skill)
-                        <a class="skill-opt {{ mb_strtolower($activeSkill) === mb_strtolower($skill->skill_name) ? 'selected' : '' }}"
-                           data-name="{{ mb_strtolower($skill->skill_name) }}"
-                           href="{{ route('student.experts', ['skill' => $skill->skill_name]) }}">
-                          <span class="skill-opt-name">{{ $skill->skill_name }}</span>
-                          <span class="skill-opt-count">{{ $skill->expert_count }}</span>
+                        <a class="xh-skill-opt{{ mb_strtolower($activeSkill) === mb_strtolower($skill->skill_name) ? ' is-on' : '' }}" data-name="{{ mb_strtolower($skill->skill_name) }}" href="{{ route('student.experts', ['tab' => 'find', 'role' => $activeRole, 'skill' => $skill->skill_name]) }}">
+                          <span>{{ $skill->skill_name }}</span><span class="xh-skill-n">{{ $skill->expert_count }}</span>
                         </a>
                       @endforeach
-                    </div>
-                  </div>
-                @empty
-                  <p class="skill-picker-empty">No skills recorded yet — they appear here once experts fill in their expertise.</p>
-                @endforelse
-
-                <p class="skill-picker-empty" id="skillPickerNoMatch" style="display:none;">No skill matches that.</p>
+                    </details>
+                  @empty
+                    <p class="xh-skill-none">No skills recorded yet. They appear here once experts fill in their expertise.</p>
+                  @endforelse
+                  <p class="xh-skill-none" id="xh-skill-nomatch" hidden>No skill matches that.</p>
+                </div>
               </div>
             </div>
-          </div>
-
-        <div class="seg" id="viewSeg">
-          <button type="button" data-view="cards" aria-pressed="true">
-            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-            Cards</button>
-          <button type="button" data-view="list" aria-pressed="false">
-            <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
-            List</button>
-        </div>
-      </form>
-
-      {{-- Both views are rendered from the same rows; the switch only changes
-           which one is shown, so the list can never fall out of step with the
-           cards. --}}
-      <div id="results" class="view-cards">
-        @if($shownExperts->isEmpty())
-          <div class="empty-state" style="grid-column: 1 / -1;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
             @if($activeSkill !== '' || $activeGroup !== '')
-              <p>No expert lists a skill matching <strong>{{ $activeSkill !== '' ? $activeSkill : $activeGroup }}</strong>.</p>
-              <a href="{{ route('student.experts') }}" class="btn btn-sm btn-soft" style="margin-top:10px;">Show all experts</a>
-            @else
-              <p>No approved experts available yet.</p>
+              <a class="xh-chip-x" href="{{ route('student.experts', array_filter(['tab' => 'find', 'role' => $activeRole, 'q' => $search ?: null, 'open' => $openOnly ? 1 : null])) }}" aria-label="Clear skill filter">Clear skill</a>
             @endif
-          </div>
-        @else
-        <div class="railwrap">
-          <div class="rail" id="rail">
-            @foreach($shownExperts as $expert)
-          @php
-            $visibleRoles = $expert->roles;
-            $firstRole = $visibleRoles->first();
-            $_maxSlots = $expert->max_teams ?? 0;
-            $_slotsUsed = $expert->slots_used;
-            // Only full against a number somebody actually set - "0 >= 0"
-            // used to mark every expert who had not said as full.
-            $_isFull = $_maxSlots > 0 && $_slotsUsed >= $_maxSlots;
-            $_slotsUnset = $_maxSlots < 1;
-            // The role you are browsing is on every card in the list, so
-            // saying it again tells you nothing. The OTHER roles do.
-            $_alsoRoles = $visibleRoles->pluck('role_name')->reject(fn ($r) => $r === $activeRole);
-            $_expertiseTags = $expert->expertise->pluck('expertise_field')->all();
-            $_chips = $visibleRoles->map(fn ($r) => ['name' => ucfirst($r->role_name), 'color' => $roleColors[$r->role_name]['dot'] ?? 'var(--accent)'])->values();
-          @endphp
-              <div class="card expert-card-compact" data-expert-id="{{ $expert->expert_id }}"
-                   data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}"
-                   data-avatar="{{ $expert->hasAvatarImage() ? $expert->avatarUrl() : '' }}"
-                   data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}'
-                   data-slots="{{ $_slotsUnset ? 'Capacity not set' : $_slotsUsed.'/'.$_maxSlots }}"
-                   data-slots-pct="{{ $_maxSlots > 0 ? min(100, ($_slotsUsed / $_maxSlots) * 100) : 0 }}"
-                   data-slots-color="{{ $_isFull ? 'var(--red)' : 'var(--accent)' }}"
-                   onclick="openExpertPostModal(this)">
-                <span class="role-dot" style="background: {{ $roleColors[$firstRole?->role_name ?? 'adviser']['dot'] ?? 'var(--accent)' }};"></span>
+            <label class="xh-check" for="xh-open"><input type="checkbox" id="xh-open" name="open" value="1" @checked($openOnly) onchange="this.form.submit()">Has open slots</label>
+          </form>
 
-                <div class="who">
-                  <div class="expert-avatar-wrap">
-                    <div class="avatar" style="width:100%; height:100%; font-size:13px;">
-                      {{ $expert->avatarInitials() }}
-                      @if ($expert->hasAvatarImage())
-                        <img class="avatar-photo" src="{{ $expert->avatarUrl() }}" alt="" loading="lazy"
-                             referrerpolicy="no-referrer" onerror="this.remove()">
+          @if($shownExperts->isEmpty())
+            <div class="xh-card xh-hint xh-empty-list">
+              @if($activeSkill !== '' || $activeGroup !== '')
+                <span>No {{ $activeRole }} lists a skill matching <strong>{{ $activeSkill !== '' ? $activeSkill : $activeGroup }}</strong>.</span>
+                <a class="xh-btn xh-ghost xh-sm" href="{{ route('student.experts', ['tab' => 'find', 'role' => $activeRole]) }}">Show all experts</a>
+              @elseif($search !== '')
+                <span>No {{ $activeRole }} matches “{{ $search }}”.</span>
+                <a class="xh-btn xh-ghost xh-sm" href="{{ route('student.experts', ['tab' => 'find', 'role' => $activeRole]) }}">Clear search and filters</a>
+              @elseif($openOnly)
+                <span>No {{ \Illuminate\Support\Str::plural($activeRole) }} have open slots right now.</span>
+                <a class="xh-btn xh-ghost xh-sm" href="{{ route('student.experts', ['tab' => 'find', 'role' => $activeRole]) }}">Show everyone</a>
+              @else
+                <span>No {{ \Illuminate\Support\Str::plural($activeRole) }} are available yet.</span>
+              @endif
+            </div>
+          @else
+            <div class="xh-grid">
+              @foreach($shownExperts as $expert)
+                @php
+                  $p = $expertPayloads[$expert->expert_id];
+                  $also = collect($p['roles'])->reject(fn ($r) => $r === $activeRole);
+                @endphp
+                <article class="xh-card xh-xcard r-{{ $activeRole }}" data-expert-id="{{ $expert->expert_id }}">
+                  <div class="xh-xhead">
+                    <span class="xh-av xh-lg r-{{ $activeRole }}" aria-hidden="true">{{ $p['initials'] }}@if($p['avatar'])<img class="avatar-photo" src="{{ $p['avatar'] }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                    <div>
+                      <h3>{{ $expert->name }}</h3>
+                      @if($also->isNotEmpty())
+                        <div class="xh-chips">
+                          @foreach($also as $r)<span class="xh-chip r-{{ $r }}">also {{ $r }}</span>@endforeach
+                        </div>
                       @endif
                     </div>
                   </div>
-                  <div class="ex-nm">{{ $expert->name }}</div>
-                </div>
-
-                @if($_alsoRoles->isNotEmpty())
-                  <div class="chips">
-                    @foreach($_alsoRoles as $r)
-                      <span class="chip" style="background: {{ $roleColors[$r]['bg'] ?? 'var(--bg3)' }}; color: {{ $roleColors[$r]['text'] ?? 'var(--text2)' }};">also {{ $r }}</span>
-                    @endforeach
+                  <div class="xh-sec">
+                    <span class="xh-lbl">Expertise</span>
+                    <div class="xh-tags">
+                      @forelse(array_slice($p['tags'], 0, 4) as $tag)
+                        <span class="xh-tag">{{ $tag }}</span>
+                      @empty
+                        <span class="xh-tag">Not filled in yet</span>
+                      @endforelse
+                      @if(count($p['tags']) > 4)<span class="xh-tag">+{{ count($p['tags']) - 4 }} more</span>@endif
+                    </div>
                   </div>
-                @endif
-
-                <div>
-                  <div class="lbl">Expertise</div>
-                  <div class="tags">
-                    @foreach($_expertiseTags as $tag)
-                      <span class="t" title="{{ $tag }}">{{ $tag }}</span>
-                    @endforeach
+                  <div class="xh-sec">
+                    @php
+                      $capFull = $p['max'] > 0 && $p['used'] >= $p['max'];
+                      $capPct = $p['max'] > 0 ? min(100, (int) round($p['used'] / $p['max'] * 100)) : 0;
+                    @endphp
+                    <div class="xh-caprow"><span>Availability</span>
+                      <b class="{{ $p['max'] < 1 ? 'is-unset' : ($capFull ? 'is-full' : 'is-ok') }}">
+                        @if($p['max'] < 1) Capacity not set
+                        @elseif($capFull) Full · {{ $p['used'] }} of {{ $p['max'] }} teams
+                        @else {{ $p['max'] - $p['used'] }} of {{ $p['max'] }} slots open
+                        @endif
+                      </b>
+                    </div>
+                    <div class="xh-meter{{ $capFull ? ' is-full' : '' }}"><i style="width:{{ $capPct }}%"></i></div>
                   </div>
-                </div>
-
-                <div class="avail">
-                  <div class="lbl">Availability</div>
-                  <div class="slot-caption {{ $_isFull ? 'is-full' : ($_slotsUnset ? 'is-unset' : '') }}">
-                    @if($_slotsUnset) Capacity not set
-                    @elseif($_isFull) Full capacity
-                    @else {{ $_maxSlots - $_slotsUsed }} of {{ $_maxSlots }} slots open
+                  <div class="xh-xact">
+                    <button type="button" class="xh-btn xh-ghost" data-xh="profile" data-id="{{ $expert->expert_id }}">View profile</button>
+                    @if($p['apply'])
+                      <button type="button" class="xh-btn xh-gold" data-xh="apply" data-apply-expert="{{ $expert->expert_id }}" data-id="{{ $expert->expert_id }}">Apply</button>
+                    @elseif($p['status'])
+                      <span class="xh-xstatus xh-pill xh-{{ $p['status']['tone'] }}">{{ $p['status']['text'] }}</span>
                     @endif
                   </div>
-                </div>
-
-@include('student.partials.expert-action')
-              </div>
-            @endforeach
-          </div>
-
-          <button class="rail-nav prev" type="button" data-rail="-1" aria-label="Previous experts" hidden>
-            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-          <button class="rail-nav next" type="button" data-rail="1" aria-label="More experts" hidden>
-            <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+                </article>
+              @endforeach
+            </div>
+            @if($experts->hasPages())
+              <nav class="xh-pager" aria-label="More experts">
+                @if($experts->onFirstPage())
+                  <span class="xh-btn xh-ghost xh-sm is-off">Previous</span>
+                @else
+                  <a class="xh-btn xh-ghost xh-sm" href="{{ $experts->previousPageUrl() }}">Previous</a>
+                @endif
+                <span>Page {{ $experts->currentPage() }} of {{ $experts->lastPage() }}</span>
+                @if($experts->hasMorePages())
+                  <a class="xh-btn xh-ghost xh-sm" href="{{ $experts->nextPageUrl() }}">Next</a>
+                @else
+                  <span class="xh-btn xh-ghost xh-sm is-off">Next</span>
+                @endif
+              </nav>
+            @endif
+          @endif
         </div>
-        <div class="rail-pager" id="railPager" hidden>
-          <span class="dots" id="railDots"></span><span class="count" id="railCount"></span>
-        </div>
 
-        <div class="listwrap">
-          <div class="listscroll">
-            <table>
-              <thead><tr><th>Expert</th><th>Also</th><th>Expertise</th><th>Availability</th><th></th></tr></thead>
-              <tbody>
-                @foreach($shownExperts as $expert)
-          @php
-            $visibleRoles = $expert->roles;
-            $firstRole = $visibleRoles->first();
-            $_maxSlots = $expert->max_teams ?? 0;
-            $_slotsUsed = $expert->slots_used;
-            // Only full against a number somebody actually set - "0 >= 0"
-            // used to mark every expert who had not said as full.
-            $_isFull = $_maxSlots > 0 && $_slotsUsed >= $_maxSlots;
-            $_slotsUnset = $_maxSlots < 1;
-            // The role you are browsing is on every card in the list, so
-            // saying it again tells you nothing. The OTHER roles do.
-            $_alsoRoles = $visibleRoles->pluck('role_name')->reject(fn ($r) => $r === $activeRole);
-            $_expertiseTags = $expert->expertise->pluck('expertise_field')->all();
-            $_chips = $visibleRoles->map(fn ($r) => ['name' => ucfirst($r->role_name), 'color' => $roleColors[$r->role_name]['dot'] ?? 'var(--accent)'])->values();
-          @endphp
-                  <tr>
-                    <td><span class="lname">
-                      <span class="expert-avatar-wrap sm"><span class="avatar" style="width:100%;height:100%;font-size:10px;">{{ $expert->avatarInitials() }}@if($expert->hasAvatarImage())<img class="avatar-photo" src="{{ $expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span></span>
-                      <span>{{ $expert->name }}</span>
-                    </span></td>
-                    <td>
-                      @forelse($_alsoRoles as $r)
-                        <span class="chip" style="background: {{ $roleColors[$r]['bg'] ?? 'var(--bg3)' }}; color: {{ $roleColors[$r]['text'] ?? 'var(--text2)' }};">{{ $r }}</span>
-                      @empty
-                        <span class="t">&mdash;</span>
-                      @endforelse
-                    </td>
-                    <td><span class="ltags">@foreach($_expertiseTags as $tag)<span class="t" title="{{ $tag }}">{{ $tag }}</span>@endforeach</span></td>
-                    <td>
-                      <span class="slot-caption {{ $_isFull ? 'is-full' : ($_slotsUnset ? 'is-unset' : '') }}">
-                        @if($_slotsUnset) Capacity not set
-                        @elseif($_isFull) Full capacity
-                        @else {{ $_maxSlots - $_slotsUsed }} of {{ $_maxSlots }} slots open
-                        @endif
-                      </span>
-                    </td>
-                    <td class="lact">@include('student.partials.expert-action')</td>
-                  </tr>
-                @endforeach
-              </tbody>
-            </table>
-          </div>
-        </div>
-        @endif
+        <aside class="xh-rail xh-rail-stack">
+          <section class="xh-card xh-rail-card" aria-labelledby="xh-apps-h">
+            <div>
+              <h2 id="xh-apps-h">Your applications</h2>
+              @if($waitingRequests->isNotEmpty())
+                <p class="xh-rail-sub">{{ $waitingRequests->count() }} {{ \Illuminate\Support\Str::plural('request', $waitingRequests->count()) }} waiting on a reply</p>
+              @endif
+            </div>
+            <div class="xh-list">
+              @forelse($openRequests as $a)
+                @php $tone = $a->status === 'pending' ? 'amber' : 'red'; @endphp
+                <button type="button" class="app-item xh-app" data-xh="app" data-id="{{ $a->assignment_id }}">
+                  <span class="xh-av xh-sm r-{{ $a->engaged_role_name ?? 'adviser' }}" aria-hidden="true">{{ $a->expert->avatarInitials() }}@if($a->expert->hasAvatarImage())<img class="avatar-photo" src="{{ $a->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                  <span class="xh-app-meta">
+                    <b>{{ $a->expert->name }}</b>
+                    <span>{{ $a->engaged_role_name ? 'Applied as '.$a->engaged_role_name : 'Application' }} · {{ $a->created_at?->format('M j') }}</span>
+                  </span>
+                  <span class="xh-pill xh-{{ $tone }}">{{ $a->status === 'pending' ? 'Pending' : 'Declined' }}</span>
+                </button>
+              @empty
+                <div class="xh-hint">No requests out yet.</div>
+              @endforelse
+            </div>
+          </section>
+          <section class="xh-card xh-rail-card" aria-labelledby="xh-how-h">
+            <h2 id="xh-how-h">How it works</h2>
+            <ol class="xh-steps">
+              <li><i>1</i><span>Pick the role you still need from the cards above.</span></li>
+              <li><i>2</i><span>Your team leader applies{{ $approvedProposal ? ', with your approved pre-proposal attached' : ' and attaches your pre-proposal' }}.</span></li>
+              <li><i>3</i><span>The expert accepts or declines. Once they accept, book sessions with them in Consultations.</span></li>
+              <li><i>4</i><span>To change an expert later, ask your section's CaPSA. They decide.</span></li>
+            </ol>
+          </section>
+        </aside>
       </div>
+    </section>
+  </div>
 
-      @if ($experts->hasPages())
-      <div class="pagination-container">
-        @if ($experts->onFirstPage())
-          <div class="pg-arrow disabled" style="opacity:0.5;cursor:not-allowed;display:flex;align-items:center;justify-content:center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </div>
-        @else
-          <a href="{{ $experts->previousPageUrl() }}" class="pg-arrow" style="color:inherit;text-decoration:none;display:flex;align-items:center;justify-content:center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </a>
-        @endif
-
-        @foreach ($experts->getUrlRange(1, $experts->lastPage()) as $page => $url)
-          @if ($page == $experts->currentPage())
-            <div class="pg-btn active">{{ $page }}</div>
-          @else
-            <a href="{{ $url }}" class="pg-btn" style="color:inherit;text-decoration:none;">{{ $page }}</a>
+  @if($approvedProposal)
+    {{-- The recommended pre-proposal, read before it goes out with an application. --}}
+    <template id="xh-proposal">
+      <div class="xh-dlg-head">
+        <div class="xh-ttl"><span class="xh-eyebrow">Recommended pre-proposal</span><h2>{{ $approvedProposal->title }}</h2></div>
+        <button type="button" class="xh-x" data-xh="close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="xh-dlg-body">
+        @foreach([
+          'Problem statement' => $approvedProposal->problem_statement,
+          'Proposed solution' => $approvedProposal->proposed_solution,
+          'Scope' => $approvedProposal->scope,
+          'Limitations' => $approvedProposal->limitations,
+          'Software development method' => $approvedProposal->sdm,
+          'Clients/Organization' => $approvedProposal->clients,
+          'Address of the organization' => $approvedProposal->client_address,
+          'Representative' => $approvedProposal->client_representative,
+          'Their position' => $approvedProposal->client_position,
+          'Research agenda' => \App\Support\ResearchAgenda::items($approvedProposal->research_agenda),
+          'SDG goals' => $approvedProposal->sdg_goals,
+        ] as $label => $value)
+          @if(filled($value))
+            <div class="xh-pp"><h3>{{ $label }}</h3><p>{{ is_array($value) ? implode(', ', $value) : $value }}</p></div>
           @endif
         @endforeach
-
-        @if ($experts->hasMorePages())
-          <a href="{{ $experts->nextPageUrl() }}" class="pg-arrow" style="color:inherit;text-decoration:none;display:flex;align-items:center;justify-content:center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-        @else
-          <div class="pg-arrow disabled" style="opacity:0.5;cursor:not-allowed;display:flex;align-items:center;justify-content:center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
+      </div>
+      <div class="xh-dlg-foot">
+        <button type="button" class="xh-btn xh-ghost" data-xh="close">Close</button>
+        @if($proposalPdfUrl)
+          <button type="button" class="xh-btn xh-gold" data-xh="pdf">View original PDF</button>
         @endif
       </div>
-      @endif
-    </div>
-
-    <aside class="overview-panel">
-      {{-- Applications that are still out. A sent application is not a filled
-           slot, so it shows here and the checklist above stays "Not selected"
-           until the expert approves. --}}
-      <div class="panel">
-        <h3>Applications</h3>
-        @php $pendingCount = $waitingRequests->count(); @endphp
-        @if($pendingCount > 0)
-          <p class="panel-count"><b>{{ $pendingCount }}</b> {{ $pendingCount === 1 ? 'request waiting on a reply' : 'requests waiting on a reply' }}</p>
-        @endif
-        @if($openRequests->isNotEmpty())
-          @foreach($waitingRequests as $assignment)
-            @include('student.partials.expert-request-card')
-          @endforeach
-
-          @if($closedRequests->isNotEmpty())
-            {{-- Said once, above the finished ones. A team that was turned
-                 down can apply to that expert again - the row stays as a
-                 record of what happened, not as something still out. --}}
-            <p class="req-divider">Already answered &mdash; you can apply to these experts again.</p>
-            @foreach($closedRequests as $assignment)
-              @include('student.partials.expert-request-card')
-            @endforeach
-          @endif
-        @else
-          <p class="panel-empty">No requests out yet. Choose a role above, then apply to an expert.</p>
-        @endif
-      </div>
-
-      <details class="panel howto">
-        <summary>How it works
-          <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-        </summary>
-        <div class="steps">
-          <div class="step"><span class="n">1</span><div><b>Choose a role</b><span>Pick the slot your team still needs to fill.</span></div></div>
-          <div class="step"><span class="n">2</span><div><b>Browse experts</b><span>Only the people who can hold that role are listed.</span></div></div>
-          <div class="step"><span class="n">3</span><div><b>Submit request</b><span>Your recommended pre-proposal goes with it.</span></div></div>
-          <div class="step"><span class="n">4</span><div><b>Wait for approval</b><span>The expert reviews and decides.</span></div></div>
-        </div>
-      </details>
-    </aside>
-
-      <div class="legal-credits">
-        <div class="credits-title">System Developers</div>
-        <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-
-<!-- Expert Post Info Modal (responsive only) -->
-<div class="modal-overlay expert-post-modal" id="expert-post-modal">
-  <div class="expert-post-box">
-    <button class="expert-post-close" onclick="closeModal('expert-post-modal')">
-      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="expert-post-header">
-      <div class="expert-post-avatar" id="ep-avatar"></div>
-      <div class="expert-post-name" id="ep-name"></div>
-    </div>
-    <div class="expert-post-section">
-      <div class="ep-label">Roles</div>
-      <div class="ep-chips" id="ep-chips"></div>
-    </div>
-    <div class="expert-post-section">
-      <div class="ep-label">Expertise</div>
-      <div class="ep-tags" id="ep-tags"></div>
-    </div>
-    <div class="expert-post-section">
-      <div class="ep-label">Slot Availability</div>
-      <div class="ep-slot-row">
-        <div class="ep-slot-bar"><div class="ep-slot-fill" id="ep-slot-fill"></div></div>
-        <div class="ep-slot-text" id="ep-slot-text"></div>
-      </div>
-    </div>
-    <div class="expert-post-action" id="ep-action"></div>
+    </template>
+  @endif
   </div>
 </div>
 
-@if($approvedProposal)
-<div class="modal-overlay" id="proposal-preview-modal" onclick="if (event.target === this) closeModal('proposal-preview-modal')">
-  <div class="modal-box pp-box">
-    <div class="pp-head">
-      <div style="min-width:0">
-        <div class="pp-eyebrow">Recommended pre-proposal</div>
-        <h3 style="margin:0">{{ $approvedProposal->title }}</h3>
-      </div>
-      <button class="pp-x" onclick="closeModal('proposal-preview-modal')" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="pp-body">
-      @foreach([
-        'Problem statement' => $approvedProposal->problem_statement,
-        'Proposed solution' => $approvedProposal->proposed_solution,
-        'Scope' => $approvedProposal->scope,
-        'Limitations' => $approvedProposal->limitations,
-        'Software development method' => $approvedProposal->sdm,
-        'Clients/Organization' => $approvedProposal->clients,
-        'Address of the organization' => $approvedProposal->client_address,
-        'Representative' => $approvedProposal->client_representative,
-        'Their position' => $approvedProposal->client_position,
-        'Research agenda' => \App\Support\ResearchAgenda::items($approvedProposal->research_agenda),
-        'SDG goals' => $approvedProposal->sdg_goals,
-      ] as $label => $value)
-        @if(filled($value))
-          <div class="pp-field">
-            <div class="pp-label">{{ $label }}</div>
-            <p>{{ is_array($value) ? implode(', ', $value) : $value }}</p>
-          </div>
-        @endif
-      @endforeach
-    </div>
-    <div class="pp-foot">
-      @if($proposalPdfUrl)
-        {{-- Opens over this panel rather than leaving the application form,
-             which is where the expert side already puts a proposal PDF. --}}
-        <button type="button" class="btn btn-sm btn-primary" onclick="openOriginalPdf()">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          View Original PDF
-        </button>
-      @endif
-      <button class="btn btn-sm btn-soft" onclick="closeModal('proposal-preview-modal')">Close</button>
-    </div>
-  </div>
-</div>
-@endif
-
-
-<!-- Apply Form Modal -->
-<div class="modal-overlay" id="apply-modal">
-  <div class="modal-box" style="width: 560px; max-width: 94vw;">
-    <h3>Apply for Expert</h3>
-    <div class="modal-sub" id="apply-expert-name"></div>
-
-    <div class="form-group" id="apply-role-group">
-      <label>Apply as <span class="req">*</span></label>
-      <div class="role-choice-list" id="apply-role-choices"></div>
-      <div class="role-choice-note">An expert can take only one role per team. Once they are your adviser, you cannot also engage them as your consultant or grammarian.</div>
-      <div class="field-error" id="err-role">Please choose the role you are applying for.</div>
-    </div>
-
-    {{-- A team whose pre-proposal the CaPSA has approved sends that one. It
-         is the document that got through, so re-uploading it was busywork -
-         and nothing stopped a different, unapproved file being attached in
-         its place. Teams still waiting on a decision attach a PDF as before. --}}
-    @if($approvedProposal)
-    <div class="form-group">
-      <label>Recommended Pre-Proposal</label>
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--green);background:var(--green-bg);border-radius:10px">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2.4" style="flex-shrink:0;margin-top:1px"><polyline points="20 6 9 17 4 12"/></svg>
-        <div style="min-width:0;flex:1">
-          <div style="font-size:12.5px;font-weight:600;color:var(--text);line-height:1.4">{{ $approvedProposal->title }}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px">Approved by your CaPSA &mdash; sent with this application, so there is nothing to upload.</div>
-        </div>
-        {{-- The document goes out with the application, so being able to read
-             it first is the least the form owes you. --}}
-        <button type="button" class="btn btn-sm btn-soft" style="flex-shrink:0;align-self:center"
-                onclick="openModal('proposal-preview-modal')">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          Preview
-        </button>
-      </div>
-    </div>
-    @else
-    <div class="form-group">
-      <label>Recommended Pre-Proposal <span class="req">*</span></label>
-      <div class="file-input-wrap">
-        <svg class="file-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
-        <span class="file-label" id="file-label">Choose PDF file...</span>
-        <input type="file" id="proposal-file" accept=".pdf,application/pdf" onchange="handleFileSelect(this)" />
-      </div>
-      <div class="field-error" id="err-file">Please upload your recommended pre-proposal (PDF).</div>
-    </div>
-    @endif
-
-    <div class="form-group">
-      <label>Message to Expert <span class="req">*</span></label>
-      <textarea id="apply-message" placeholder="Briefly introduce your team and why you're applying for this expert..." rows="5"></textarea>
-      <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-        <div class="field-error" id="err-message">Please write a message.</div>
-        <span style="font-size: 11px; color: var(--text3);"><span id="msg-count">0</span>/500 words</span>
-      </div>
-    </div>
-
-    <div class="modal-actions" style="justify-content:flex-end;">
-      <button class="btn btn-soft" onclick="closeModal('apply-modal')" style="flex:0 0 auto;">Cancel</button>
-      <button class="btn btn-solid" id="btn-review-apply" onclick="reviewApply()" style="flex:0 0 auto;">Review &amp; Submit</button>
-    </div>
-  </div>
-</div>
-
-<!-- Apply Review / Confirmation Modal -->
-<div class="modal-overlay" id="review-modal">
-  <div class="modal-box review-box">
-    <h3>Review Application</h3>
-    <div class="modal-sub">Please review your details before submitting.</div>
-
-    <div class="review-row">
-      <div class="review-label">Expert</div>
-      <div class="review-value" id="review-expert"></div>
-    </div>
-    <div class="review-row">
-      <div class="review-label">Applying as</div>
-      <div class="review-value" id="review-role"></div>
-    </div>
-    <div class="review-row">
-      <div class="review-label">Proposal</div>
-      <div class="review-value" id="review-file"></div>
-    </div>
-      <div class="review-row" style="align-items:flex-start;">
-      <div class="review-label" style="padding-top:2px;">Message</div>
-      <div class="review-value" id="review-message" style="font-size: 12px; color: var(--text2); display:block; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; line-height: 1.5; width: 100%; max-width: 100%; overflow-y: auto; max-height: 200px; border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: var(--bg2);"></div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-soft" onclick="closeModal('review-modal'); openModal('apply-modal')">Edit</button>
-      <button class="btn btn-solid" id="btn-confirm-apply" onclick="confirmApply()">Confirm &amp; Send</button>
-    </div>
-  </div>
-</div>
-
-<!-- Remove Confirmation Modal -->
-<div class="modal-overlay" id="remove-modal">
-  <div class="modal-box confirm-box remove-box">
-    <div class="confirm-icon" style="background: var(--red);">
-      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-    </div>
-    <h3 id="remove-title">Remove Expert?</h3>
-    <div class="confirm-desc" id="remove-desc">Are you sure you want to remove this expert from your team?</div>
-    <div class="confirm-detail" id="remove-detail"></div>
-
-    <div class="remove-field">
-      <label>Type <strong>remove</strong> to confirm</label>
-      <input type="text" id="remove-confirm-input" class="modal-input" placeholder='type "remove" here' oninput="validateRemoveInput()" autocomplete="off" />
-      <div class="field-error" id="err-remove-confirm">Please type "remove" to confirm.</div>
-    </div>
-
-    <div class="remove-field">
-      <label>Reason for removal <span class="req">*</span></label>
-      <textarea id="remove-reason" class="modal-input" rows="3" placeholder="Explain why you're removing this expert..." maxlength="500" oninput="validateRemoveInput()"></textarea>
-      <div style="display:flex;justify-content:space-between;margin-top:4px;">
-        <div class="field-error" id="err-remove-reason">Please provide a reason.</div>
-        <span style="font-size:11px;color:var(--text3);"><span id="remove-reason-count">0</span>/500</span>
-      </div>
-    </div>
-
-    <div class="modal-actions" style="margin-top: 18px;">
-      <button class="btn btn-soft" onclick="closeRemoveModal()">Cancel</button>
-      <button class="btn btn-solid-red" id="btn-confirm-remove" onclick="confirmRemove()" disabled>Remove</button>
-    </div>
-  </div>
-</div>
-
-<!-- Change Expert Modal — an approved expert can only be changed with the
-     team's section CaPSA's approval, so this asks rather than removes. The
-     delete modal above stays for withdrawing an application the expert has
-     not answered yet; the two read differently on purpose. -->
-<div class="modal-overlay" id="change-expert-modal">
-  <div class="modal-box confirm-box remove-box">
-    <div class="confirm-icon" style="background: var(--amber);">
-      <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-    </div>
-    <h3>Request an Expert Change</h3>
-    <div class="confirm-desc">Your section's CaPSA decides on this. The expert stays with your team until they decide &mdash; once approved, you can apply to someone else for the same role.</div>
-    <div class="confirm-detail" id="change-expert-detail"></div>
-
-    <div class="remove-field">
-      <label>Reason for your CaPSA <span class="req">*</span></label>
-      <textarea id="change-expert-reason" class="modal-input" rows="3" placeholder="Explain to your CaPSA why this expert has to change..." maxlength="500" oninput="validateChangeExpertInput()"></textarea>
-      <div style="display:flex;justify-content:space-between;margin-top:4px;">
-        <div class="field-error" id="err-change-expert-reason">Give your CaPSA a reason they can decide on &mdash; at least {{ \App\Models\ExpertRemovalRequest::REASON_MIN }} characters.</div>
-        <span style="font-size:11px;color:var(--text3);"><span id="change-expert-reason-count">0</span>/500</span>
-      </div>
-    </div>
-
-    <div class="modal-actions" style="margin-top: 18px;">
-      <button class="btn btn-soft" onclick="closeChangeExpertModal()">Cancel</button>
-      <button class="btn btn-solid" id="btn-confirm-change-expert" onclick="confirmChangeExpert()" disabled>Send to CaPSA</button>
-    </div>
-  </div>
-</div>
-
-<!-- Withdraw Expert Change Request Modal — the team taking back a request
-     that is still waiting on the CaPSA. Once the CaPSA has decided, there is
-     nothing to take back, so the server refuses and the page says so. -->
-<div class="modal-overlay" id="withdraw-removal-modal">
-  <div class="modal-box confirm-box remove-box">
-    <div class="confirm-icon" style="background: var(--amber);">
-      <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-    </div>
-    <h3>Take Back Change Request?</h3>
-    <div class="confirm-desc">Your request to change <strong id="withdraw-removal-name">this expert</strong> is still waiting on your section's CaPSA. Taking it back keeps them as your expert.</div>
-
-    <div class="modal-actions" style="margin-top: 18px;">
-      <button class="btn btn-soft" onclick="closeWithdrawRemovalModal()">Keep the request</button>
-      <button class="btn btn-solid" id="btn-confirm-withdraw-removal" onclick="confirmWithdrawRemoval()">Take it back</button>
-    </div>
-  </div>
-</div>
-
-<!-- Request Expert Info Modal -->
-<div class="modal-overlay" id="req-info-modal">
-  <div class="modal-box review-box">
-    <h3>Request Details</h3>
-    <div class="modal-sub" id="req-info-sub"></div>
-    <div class="review-row">
-      <div class="review-label">Expert</div>
-      <div class="review-value" id="req-info-expert"></div>
-    </div>
-    <div class="review-row" id="req-info-role-row">
-      <div class="review-label">Applied as</div>
-      <div class="review-value" id="req-info-role"></div>
-    </div>
-    <div class="review-row">
-      <div class="review-label">Status</div>
-      <div class="review-value" id="req-info-status"></div>
-    </div>
-    <div class="review-row" id="req-info-reason-row" style="display:none">
-      <div class="review-label">Reason</div>
-      <div class="review-value" id="req-info-reason" style="font-size:12px;color:var(--red);"></div>
-    </div>
-    <div class="review-row">
-      <div class="review-label">Message</div>
-      <div class="review-value" id="req-info-message" style="font-size:12px;color:var(--text2);"></div>
-    </div>
-    <div class="review-row">
-      <div class="review-label">Proposal</div>
-      <div class="review-value" id="req-info-proposal"></div>
-    </div>
-    <div class="review-row">
-      <div class="review-label">Sent</div>
-      <div class="review-value" id="req-info-date"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-soft" onclick="closeModal('req-info-modal')">Close</button>
-    </div>
-  </div>
-</div>
-
-<div class="msg-toast" id="msg-toast"></div>
-
+@php
+  $xhData = [
+  'tab' => $tab,
+  'activeRole' => $activeRole,
+  'team' => $teamForJs,
+  'consultExperts' => $consultExperts->values(),
+  'defaultExpertId' => $defaultExpertId,
+  'slots' => $availableSlots->values(),
+  'full' => $fullOccurrences,
+  'windows' => $bookingWindows,
+  'bookedExpertIds' => $bookedExpertIds,
+  'upcoming' => $upcomingBookings,
+  'recent' => $recentBookings,
+  'pendingByRole' => $pendingByRole,
+  'cutoffDays' => \App\Http\Controllers\StudentConsultationController::CANCEL_CUTOFF_DAYS,
+  'reasonMin' => \App\Models\ExpertRemovalRequest::REASON_MIN,
+  'teamSection' => $teamSection,
+  'isLeader' => $isLeader,
+  'hasApprovedProposal' => (bool) $approvedProposal,
+  'proposalTitle' => $approvedProposal?->title,
+  'proposalPdfUrl' => $proposalPdfUrl,
+  'findUrl' => route('student.experts'),
+  'urls' => [
+    'refresh' => route('student.consultation.refresh'),
+    'book' => route('student.consultation.book'),
+    'cancel' => url('/student/consultation/cancel'),
+    'apply' => route('api.student.assignments.store'),
+    'assignments' => url('/api/assignments'),
+    'removals' => url('/api/expert-removal-requests'),
+  ],
+];
+@endphp
 <script>
-const APPLY_HAS_APPROVED_PROPOSAL = @json((bool) $approvedProposal);
-let currentExpertId = null;
-let currentRoleId = null;
-let currentRoleName = '';
-let currentFileName = '';
-let currentMessage = '';
-let currentRemoveId = null;
-
-// Forces an element to actually be interactive, overriding anything
-// external that may have set pointer-events/cursor/disabled on it - some
-// browsers/content filters silently zero the opacity and block
-// pointer-events of generic full-screen "modal-overlay" elements (mistaken
-// for cookie-consent/paywall dark patterns), with no console error at all,
-// so the .open class toggle alone isn't reliable.
-function forceInteractive(el) {
-  if (!el) return;
-  el.disabled = false;
-  el.removeAttribute('disabled');
-  el.removeAttribute('readonly');
-  el.readOnly = false;
-  el.style.setProperty('pointer-events', 'auto', 'important');
-  el.style.setProperty('user-select', 'auto', 'important');
-}
-
-@if($proposalPdfUrl)
-const originalPdfUrl = @json($proposalPdfUrl, JSON_UNESCAPED_SLASHES);
-
-function openOriginalPdf() {
-  if (window.previewPdfUrl) {
-    window.previewPdfUrl(originalPdfUrl, @json($approvedProposal->title ?? 'Pre-proposal'));
-  }
-}
-@endif
-
-function openModal(id) {
-  const modal = document.getElementById(id);
-  if (!modal) return;
-  modal.classList.add('open');
-  modal.style.setProperty('display', 'flex', 'important');
-  modal.style.setProperty('opacity', '1', 'important');
-  modal.style.setProperty('visibility', 'visible', 'important');
-  forceInteractive(modal);
-  modal.querySelectorAll('input, textarea, select, button, a').forEach(forceInteractive);
-}
-
-function closeModal(id) {
-  const modal = document.getElementById(id);
-  if (!modal) return;
-  modal.classList.remove('open');
-  modal.style.display = 'none';
-}
-
-function openExpertPostModal(el) {
-  if (window.innerWidth >= 1024) return;
-  var name = el.dataset.name;
-  var initials = el.dataset.initials;
-  var chips = JSON.parse(el.dataset.chips || '[]');
-  var tags = JSON.parse(el.dataset.tags || '[]');
-  var slots = el.dataset.slots;
-  var slotsPct = parseFloat(el.dataset.slotsPct) || 0;
-  var slotsColor = el.dataset.slotsColor || 'var(--accent)';
-
-  var epAvatar = document.getElementById('ep-avatar');
-  epAvatar.textContent = initials;
-  if (el.dataset.avatar) {
-    var img = document.createElement('img');
-    img.className = 'avatar-photo';
-    img.src = el.dataset.avatar;
-    img.alt = '';
-    img.referrerPolicy = 'no-referrer';
-    img.onerror = function () { img.remove(); };
-    epAvatar.appendChild(img);
-  }
-  document.getElementById('ep-name').textContent = name;
-
-  var chipsContainer = document.getElementById('ep-chips');
-  chipsContainer.innerHTML = '';
-  chips.forEach(function(c) {
-    var span = document.createElement('span');
-    span.className = 'ep-chip';
-    span.style.background = c.bg;
-    span.style.color = c.text;
-    span.textContent = c.name;
-    chipsContainer.appendChild(span);
-  });
-
-  var tagsContainer = document.getElementById('ep-tags');
-  tagsContainer.innerHTML = '';
-  var tagsTotal = tags.length;
-  var tagsShow = tags.slice(0, 3);
-  var tagsHidden = tags.slice(3);
-  tagsShow.forEach(function(t) {
-    var span = document.createElement('span');
-    span.className = 'ep-tag';
-    span.textContent = t;
-    tagsContainer.appendChild(span);
-  });
-  if (tagsHidden.length > 0) {
-    var more = document.createElement('span');
-    more.className = 'ep-tag ep-tag-more';
-    more.textContent = '+' + tagsHidden.length + ' more';
-    more.style.cursor = 'pointer';
-    more.onclick = function() {
-      tagsHidden.forEach(function(t) {
-        var span = document.createElement('span');
-        span.className = 'ep-tag';
-        span.textContent = t;
-        tagsContainer.insertBefore(span, more);
-      });
-      more.remove();
-    };
-    tagsContainer.appendChild(more);
-  }
-
-  document.getElementById('ep-slot-fill').style.width = slotsPct + '%';
-  document.getElementById('ep-slot-fill').style.background = slotsColor;
-  document.getElementById('ep-slot-text').textContent = slots;
-  document.getElementById('ep-slot-text').style.color = slotsPct >= 100 ? 'var(--red)' : 'var(--text3)';
-
-  var actionContainer = document.getElementById('ep-action');
-  actionContainer.innerHTML = '';
-  var cardBtn = el.querySelector('.btn-full, .btn-sm');
-  if (cardBtn) {
-    var clone = cardBtn.cloneNode(true);
-    clone.removeAttribute('id');
-    actionContainer.appendChild(clone);
-  }
-
-  openModal('expert-post-modal');
-}
-
-function renderRoleChoices(roles) {
-  const list = document.getElementById('apply-role-choices');
-  const group = document.getElementById('apply-role-group');
-  list.innerHTML = '';
-  currentRoleId = null;
-  currentRoleName = '';
-
-  // With only one role on offer there is nothing to decide, so it is
-  // selected up front and shown as a statement rather than a question.
-  const single = roles.length === 1;
-  group.querySelector('label').innerHTML = single
-    ? 'Applying as'
-    : 'Apply as <span class="req">*</span>';
-
-  roles.forEach(function (role) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'role-choice';
-    btn.dataset.roleId = role.expert_role_id;
-    btn.dataset.roleName = role.label;
-    btn.innerHTML = '<span class="role-choice-mark"></span>' + role.label;
-    btn.onclick = function () { selectRoleChoice(btn); };
-    list.appendChild(btn);
-  });
-
-  if (single && list.firstChild) selectRoleChoice(list.firstChild);
-}
-
-function selectRoleChoice(btn) {
-  document.querySelectorAll('#apply-role-choices .role-choice').forEach(function (b) {
-    b.classList.remove('selected');
-  });
-  btn.classList.add('selected');
-  currentRoleId = btn.dataset.roleId;
-  currentRoleName = btn.dataset.roleName;
-  document.getElementById('err-role').classList.remove('show');
-}
-
-function openApplyModal(expertId, expertName, roles) {
-  currentExpertId = expertId;
-  renderRoleChoices(roles || []);
-  document.getElementById('apply-expert-name').textContent = 'Apply to ' + expertName;
-
-  // Only there when the team still has to attach a PDF. A team whose
-  // pre-proposal the CaPSA approved sends that one instead, so the whole
-  // upload field is off the page and every line below it used to throw.
-  const fileLabel = document.getElementById('file-label');
-  const fileField = document.getElementById('proposal-file');
-  if (fileLabel) {
-    fileLabel.textContent = 'Choose PDF file...';
-    fileLabel.classList.remove('has-file');
-  }
-  if (fileField) fileField.value = '';
-
-  document.getElementById('apply-message').value = '';
-  document.getElementById('msg-count').textContent = '0';
-  document.querySelectorAll('#apply-modal .field-error').forEach(e => e.classList.remove('show'));
-  document.getElementById('btn-review-apply').disabled = false;
-  openModal('apply-modal');
-}
-
-function handleFileSelect(input) {
-  const label = document.getElementById('file-label');
-  if (!label) return;
-  if (input.files && input.files[0]) {
-    label.textContent = input.files[0].name;
-    label.classList.add('has-file');
-  } else {
-    label.textContent = 'Choose PDF file...';
-    label.classList.remove('has-file');
-  }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  var msgInput = document.getElementById('apply-message');
-  if (msgInput) {
-    msgInput.addEventListener('input', function() {
-      var text = this.value.trim();
-      var words = text ? text.split(/\s+/).length : 0;
-      document.getElementById('msg-count').textContent = words;
-      if (words > 500) {
-        var trimmed = text.split(/\s+/).slice(0, 500).join(' ');
-        this.value = trimmed;
-        document.getElementById('msg-count').textContent = 500;
-      }
-    });
-  }
-  var removeReason = document.getElementById('remove-reason');
-  if (removeReason) {
-    removeReason.addEventListener('input', function() {
-      document.getElementById('remove-reason-count').textContent = this.value.length;
-    });
-  }
-  var changeReason = document.getElementById('change-expert-reason');
-  if (changeReason) {
-    changeReason.addEventListener('input', function() {
-      document.getElementById('change-expert-reason-count').textContent = this.value.length;
-    });
-  }
-});
-
-function reviewApply() {
-  const fileInput = document.getElementById('proposal-file');
-  const message = document.getElementById('apply-message').value.trim();
-  let valid = true;
-
-  document.querySelectorAll('#apply-modal .field-error').forEach(e => e.classList.remove('show'));
-
-  if (!currentRoleId) {
-    document.getElementById('err-role').classList.add('show');
-    valid = false;
-  }
-  if (!APPLY_HAS_APPROVED_PROPOSAL && (!fileInput || !fileInput.files || !fileInput.files[0])) {
-    const fileError = document.getElementById('err-file');
-    if (fileError) fileError.classList.add('show');
-    valid = false;
-  }
-  if (!message) {
-    document.getElementById('err-message').classList.add('show');
-    valid = false;
-  } else {
-    var wordCount = message.split(/\s+/).length;
-    if (wordCount > 500) {
-      document.getElementById('err-message').textContent = 'Message exceeds 500 words.';
-      document.getElementById('err-message').classList.add('show');
-      valid = false;
-    }
-  }
-
-  if (!valid) return;
-
-  // '+' here, not PHP's '.': this is JavaScript by the time the browser
-  // sees it, and the directive below has already rendered a quoted string.
-  currentFileName = APPLY_HAS_APPROVED_PROPOSAL
-    ? @json($approvedProposal?->title ?? '') + ' (recommended pre-proposal)'
-    : fileInput.files[0].name;
-  currentMessage = message;
-
-  document.getElementById('review-expert').textContent = document.getElementById('apply-expert-name').textContent.replace('Apply to ', '');
-  document.getElementById('review-role').textContent = currentRoleName;
-  document.getElementById('review-file').textContent = currentFileName;
-  document.getElementById('review-message').textContent = message;
-
-  closeModal('apply-modal');
-  openModal('review-modal');
-}
-
-function confirmApply() {
-  const btn = document.getElementById('btn-confirm-apply');
-  btn.disabled = true;
-  btn.textContent = 'Sending...';
-
-  const formData = new FormData();
-  formData.append('expert_id', currentExpertId);
-  formData.append('expert_role_id', currentRoleId);
-  var pf = document.getElementById('proposal-file');
-  if (pf && pf.files && pf.files[0]) {
-    formData.append('proposal_file', pf.files[0]);
-  }
-  formData.append('message', currentMessage);
-
-  fetch('{{ route("api.student.assignments.store") }}', {
-    method: 'POST',
-    headers: {
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-      'Accept': 'application/json',
-    },
-    body: formData,
-  })
-  .then(r => r.json())
-  .then(data => {
-    closeModal('review-modal');
-    if (data.success) {
-      showToast(data.message, 'success');
-      setTimeout(() => location.reload(), 1200);
-    } else {
-      showToast(data.message || 'Failed to apply', 'error');
-      btn.disabled = false;
-      btn.textContent = 'Confirm & Send';
-    }
-  })
-  .catch(err => {
-    closeModal('review-modal');
-    showToast('Network error. Please try again.', 'error');
-    btn.disabled = false;
-    btn.textContent = 'Confirm & Send';
-  });
-}
-
-/** Titles are written by students, so they are escaped before going in. */
-function escapeHtmlText(value) {
-  const div = document.createElement('div');
-  div.textContent = value == null ? '' : String(value);
-
-  return div.innerHTML;
-}
-
-function openReqInfoModal(data) {
-  document.getElementById('req-info-sub').textContent = 'Information about this expert request.';
-  document.getElementById('req-info-expert').textContent = data.name;
-  document.getElementById('req-info-role').textContent = data.role || '';
-  document.getElementById('req-info-role-row').style.display = data.role ? '' : 'none';
-  const statusColors = { Approved: 'var(--green)', Pending: 'var(--amber)', Rejected: 'var(--red)' };
-  document.getElementById('req-info-status').innerHTML = '<span style="color:' + (statusColors[data.status] || 'var(--text3)') + ';font-weight:600;">' + data.status + '</span>';
-  var reasonRow = document.getElementById('req-info-reason-row');
-  if (data.rejection_reason) {
-    document.getElementById('req-info-reason').textContent = data.rejection_reason;
-    reasonRow.style.display = '';
-  } else {
-    reasonRow.style.display = 'none';
-  }
-  document.getElementById('req-info-message').textContent = data.message;
-  const proposalEl = document.getElementById('req-info-proposal');
-  if (data.pre_proposal_title) {
-    // Named, not linked: the team already has this on their Duplication
-    // Checker page, and there is no student-facing route to the file.
-    proposalEl.innerHTML =
-      '<div style="color:var(--green);font-weight:600;font-size:12px">&#10003; CaPSA-recommended pre-proposal</div>'
-      + '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + escapeHtmlText(data.pre_proposal_title) + '</div>';
-  } else if (data.proposal) {
-    proposalEl.innerHTML = '<a href="' + data.proposal + '" target="_blank" style="color:var(--accent);">View Proposal <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>';
-  } else {
-    proposalEl.textContent = 'None attached';
-  }
-  document.getElementById('req-info-date').textContent = data.date;
-  openModal('req-info-modal');
-}
-
-// ── Change Expert ──────────────────────────────────────────────────────
-// An expert who already took the team on can only be changed with the
-// section CaPSA's approval, so this dialog sends them a request. It never
-// removes anything - the server turns this exact call into a request when
-// the assignment is approved, and the CaPSA decides on it from there.
-var changeExpertSection = @json($teamSection !== '' ? 'Decided by the CaPSA for your section: '.$teamSection : '');
-
-function openChangeExpertModal(assignmentId, expertName, role) {
-  currentRemoveId = assignmentId;
-  document.getElementById('change-expert-detail').innerHTML = '<strong>' + escapeHtmlText(expertName) + '</strong>'
-    + (role ? '<br><span style="font-size:11px;color:var(--text3);">Your team’s ' + escapeHtmlText(role) + '</span>' : '')
-    + (changeExpertSection ? '<br><span style="font-size:11px;color:var(--text2);display:inline-block;margin-top:6px;">' + escapeHtmlText(changeExpertSection) + '</span>' : '');
-  document.getElementById('change-expert-reason').value = '';
-  document.getElementById('change-expert-reason').classList.remove('error');
-  document.getElementById('err-change-expert-reason').classList.remove('show');
-  document.getElementById('change-expert-reason-count').textContent = '0';
-  document.getElementById('btn-confirm-change-expert').disabled = true;
-  openModal('change-expert-modal');
-}
-
-function closeChangeExpertModal() {
-  closeModal('change-expert-modal');
-}
-
-function validateChangeExpertInput() {
-  var reason = document.getElementById('change-expert-reason').value.trim();
-  // The CaPSA decides on the reason, so it needs to be a real one.
-  var ok = reason.length >= {{ \App\Models\ExpertRemovalRequest::REASON_MIN }};
-
-  document.getElementById('change-expert-reason').classList.toggle('error', reason.length > 0 && !ok);
-  document.getElementById('err-change-expert-reason').classList.toggle('show', reason.length > 0 && !ok);
-  document.getElementById('btn-confirm-change-expert').disabled = !ok;
-}
-
-function confirmChangeExpert() {
-  if (!currentRemoveId) return;
-
-  var reason = document.getElementById('change-expert-reason').value.trim();
-  if (!reason) return;
-
-  var btn = document.getElementById('btn-confirm-change-expert');
-  btn.disabled = true;
-  btn.textContent = 'Sending...';
-
-  fetch('/api/assignments/' + currentRemoveId, {
-    method: 'DELETE',
-    headers: {
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({ reason: reason }),
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    closeModal('change-expert-modal');
-    if (data.success) {
-      showToast(data.message, 'success');
-      setTimeout(function() { location.reload(); }, 1200);
-    } else {
-      showToast(data.message || 'Failed to send the request', 'error');
-      btn.disabled = false;
-      btn.textContent = 'Send to CaPSA';
-    }
-  })
-  .catch(function() {
-    closeModal('change-expert-modal');
-    showToast('Network error. Please try again.', 'error');
-    btn.disabled = false;
-    btn.textContent = 'Send to CaPSA';
-  });
-}
-
-// Take Back a Change Request - undo while the CaPSA has not decided.
-var withdrawRemovalId = null;
-
-function openWithdrawRemovalModal(requestId, expertName) {
-  withdrawRemovalId = requestId;
-  document.getElementById('withdraw-removal-name').textContent = expertName;
-  var btn = document.getElementById('btn-confirm-withdraw-removal');
-  btn.disabled = false;
-  btn.textContent = 'Take it back';
-  openModal('withdraw-removal-modal');
-}
-
-function closeWithdrawRemovalModal() {
-  closeModal('withdraw-removal-modal');
-}
-
-function confirmWithdrawRemoval() {
-  if (!withdrawRemovalId) return;
-
-  var btn = document.getElementById('btn-confirm-withdraw-removal');
-  btn.disabled = true;
-  btn.textContent = 'Taking back...';
-
-  fetch('/api/expert-removal-requests/' + withdrawRemovalId, {
-    method: 'DELETE',
-    headers: {
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-      'Accept': 'application/json',
-    },
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    closeModal('withdraw-removal-modal');
-    if (data.success) {
-      showToast(data.message, 'success');
-      setTimeout(function() { location.reload(); }, 1200);
-    } else {
-      showToast(data.message || 'Could not take the request back', 'error');
-      btn.disabled = false;
-      btn.textContent = 'Take it back';
-    }
-  })
-  .catch(function() {
-    closeModal('withdraw-removal-modal');
-    showToast('Network error. Please try again.', 'error');
-    btn.disabled = false;
-    btn.textContent = 'Take it back';
-  });
-}
-
-// ── Remove Expert (withdraw an unanswered application) ─────────────────
-// The delete modal is only reached for applications the expert has not
-// answered yet - those are the team's to withdraw directly.
-function openRemoveModal(assignmentId, expertName) {
-  currentRemoveId = assignmentId;
-  document.getElementById('remove-detail').innerHTML = '<strong>' + escapeHtmlText(expertName) + '</strong>'
-    + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
-  document.getElementById('remove-confirm-input').value = '';
-  document.getElementById('remove-confirm-input').classList.remove('error');
-  document.getElementById('err-remove-confirm').classList.remove('show');
-  document.getElementById('remove-reason').value = '';
-  document.getElementById('remove-reason').classList.remove('error');
-  document.getElementById('err-remove-reason').classList.remove('show');
-  document.getElementById('remove-reason-count').textContent = '0';
-  document.getElementById('btn-confirm-remove').disabled = true;
-  openModal('remove-modal');
-}
-
-function closeRemoveModal() {
-  closeModal('remove-modal');
-}
-
-function validateRemoveInput() {
-  var confirmInput = document.getElementById('remove-confirm-input').value.trim();
-  var reason = document.getElementById('remove-reason').value.trim();
-  var confirmOk = confirmInput.toLowerCase() === 'remove';
-
-  document.getElementById('remove-confirm-input').classList.toggle('error', confirmInput.length > 0 && !confirmOk);
-  document.getElementById('err-remove-confirm').classList.toggle('show', confirmInput.length > 0 && !confirmOk);
-
-  // Any non-empty reason will do here - the CaPSA minimum is the change
-  // dialog's business, not this one's.
-  document.getElementById('btn-confirm-remove').disabled = !(confirmOk && reason);
-}
-
-function confirmRemove() {
-  if (!currentRemoveId) return;
-
-  var reason = document.getElementById('remove-reason').value.trim();
-  if (!reason) return;
-
-  var btn = document.getElementById('btn-confirm-remove');
-  btn.disabled = true;
-  btn.textContent = 'Removing...';
-  var idleLabel = 'Remove';
-
-  fetch('/api/assignments/' + currentRemoveId, {
-    method: 'DELETE',
-    headers: {
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({ reason: reason }),
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    closeModal('remove-modal');
-    if (data.success) {
-      showToast(data.message, 'success');
-      setTimeout(function() { location.reload(); }, 1200);
-    } else {
-      showToast(data.message || 'Failed to remove', 'error');
-      btn.disabled = false;
-      btn.textContent = idleLabel;
-    }
-  })
-  .catch(function() {
-    closeModal('remove-modal');
-    showToast('Network error. Please try again.', 'error');
-    btn.disabled = false;
-    btn.textContent = idleLabel;
-  });
-}
-
-function showToast(msg, type) {
-  if (window.ctToast) { return ctToast(msg, type); }
-  const toast = document.getElementById('msg-toast');
-  toast.textContent = msg;
-  toast.className = 'msg-toast show ' + type;
-  setTimeout(() => toast.classList.remove('show'), 4000);
-}
-
-// ── Cards or list ──────────────────────────────────────────────────────
-// Both are rendered server-side; the switch only changes which is shown, so
-// the two can never disagree about who is on the page. The choice is
-// remembered per browser, because it is a preference and not page state.
-function setView(view) {
-  var results = document.getElementById('results');
-  if (!results) return;
-
-  results.classList.toggle('view-cards', view === 'cards');
-  results.classList.toggle('view-list', view === 'list');
-
-  var seg = document.getElementById('viewSeg');
-  if (seg) {
-    Array.prototype.forEach.call(seg.children, function (b) {
-      b.setAttribute('aria-pressed', String(b.dataset.view === view));
-    });
-  }
-
-  try { localStorage.setItem('capstrack_experts_view', view); } catch (e) {}
-  if (view === 'cards') layoutRail();
-}
-
-// ── The card strip ─────────────────────────────────────────────────────
-// Rows are capped at what the leftover height allows, and anything past that
-// runs sideways. That is what keeps the page one screen high however many
-// experts a role has - it never grows downwards.
-function layoutRail() {
-  var rail = document.getElementById('rail');
-  if (!rail) return;
-
-  var card = rail.querySelector('.card');
-  if (!card) return;
-
-  var scroller = document.querySelector('.content');
-  var cols = Math.max(2, Math.round((rail.clientWidth + 10) / (228 + 10)));
-  rail.style.setProperty('--cols', cols);
-
-  function room() {
-    var pager = document.getElementById('railPager');
-    return scroller.getBoundingClientRect().bottom
-         - parseFloat(getComputedStyle(scroller).paddingBottom || 0)
-         - rail.getBoundingClientRect().top
-         - (pager && !pager.hidden ? pager.getBoundingClientRect().height + 8 : 24);
-  }
-
-  rail.style.setProperty('--rows', 1);
-  var one = card.getBoundingClientRect().height;
-
-  // Two rows only when there are enough cards to fill two. The strip fills
-  // downwards first, so four cards against a fixed two rows made two narrow
-  // columns with the page empty beside them.
-  var needed = Math.ceil(rail.children.length / cols);
-
-  // room() holds back 24px for the pager. When a second row would take every
-  // card, there is no pager to hold back for - and that reservation was
-  // enough on its own to send the last expert onto a page of their own with
-  // the space for them sitting empty underneath.
-  var spare = rail.children.length <= cols * 2 ? 24 : 0;
-
-  var fits = room() + spare >= one * 2 + 10 ? 2 : 1;
-  rail.style.setProperty('--rows', Math.max(1, Math.min(fits, needed)));
-
-  fitAllTags();
-  updateRail();
-}
-
-function updateRail() {
-  var rail = document.getElementById('rail');
-  var pager = document.getElementById('railPager');
-  if (!rail || !pager) return;
-
-  var per = (+getComputedStyle(rail).getPropertyValue('--cols') || 1)
-          * (+getComputedStyle(rail).getPropertyValue('--rows') || 1);
-  // Counted from the cards rather than from scrollWidth: a few sub-pixels of
-  // rounding on the last column was enough to invent an empty page.
-  var pages = Math.max(1, Math.ceil(rail.children.length / per));
-
-  // Which page is showing, measured across the whole scrollable distance
-  // rather than in units of one screen width. A last page holding one card
-  // is only a third of a screen wide, so dividing by clientWidth rounded the
-  // position straight back to zero: the counter stayed on "1 of 2" and the
-  // back arrow, which hides itself on the first page, never appeared.
-  var max = rail.scrollWidth - rail.clientWidth;
-  var at = max <= 1
-    ? 0
-    : Math.min(pages - 1, Math.round((rail.scrollLeft / max) * (pages - 1)));
-
-  var prev = document.querySelector('.rail-nav.prev');
-  var next = document.querySelector('.rail-nav.next');
-
-  pager.hidden = prev.hidden = next.hidden = pages < 2;
-  if (pages < 2) return;
-
-  prev.disabled = at <= 0;
-  next.disabled = at >= pages - 1;
-
-  // Past eight pages nobody counts dots, so the number carries it alone.
-  document.getElementById('railDots').innerHTML = pages <= 8
-    ? Array.apply(null, { length: pages }).map(function (_, k) {
-        return '<i class="' + (k === at ? 'on' : '') + '"></i>';
-      }).join('')
-    : '';
-  document.getElementById('railCount').innerHTML = '<b>' + (at + 1) + '</b> of ' + pages;
-}
-
-// Two rows of expertise tags is the budget. What does not fit is counted into
-// a +N chip, measured rather than assumed: "Proofreading" and "Human-Computer
-// Interaction and Usability Engineering" are not the same width.
-function fitTags(box) {
-  var tags = Array.prototype.slice.call(box.querySelectorAll('.t:not(.more)'));
-  if (!tags.length) return;
-
-  var chip = box.querySelector('.more');
-  if (!chip) {
-    chip = document.createElement('span');
-    chip.className = 't more';
-    box.appendChild(chip);
-  }
-
-  tags.forEach(function (t) { t.hidden = false; });
-  chip.hidden = true;
-  if (box.scrollHeight <= box.clientHeight) return;
-
-  chip.hidden = false;
-  var shown = tags.length;
-  while (shown > 0 && box.scrollHeight > box.clientHeight) {
-    shown--;
-    tags[shown].hidden = true;
-    var rest = tags.slice(shown);
-    chip.textContent = '+' + rest.length;
-    chip.title = rest.map(function (t) { return t.title; }).join(', ');
-  }
-}
-
-function fitAllTags() {
-  Array.prototype.forEach.call(document.querySelectorAll('.rail .tags, .listwrap .ltags'), fitTags);
-}
-
-document.addEventListener('click', function (ev) {
-  var seg = ev.target.closest('#viewSeg [data-view]');
-  if (seg) { setView(seg.dataset.view); return; }
-
-  var arrow = ev.target.closest('[data-rail]');
-  if (arrow && !arrow.disabled) {
-    var rail = document.getElementById('rail');
-    rail.scrollLeft += (+arrow.dataset.rail) * rail.clientWidth;
-    setTimeout(updateRail, 260);
-  }
-});
-
-document.addEventListener('scroll', function (ev) {
-  if (ev.target && ev.target.id === 'rail') updateRail();
-}, true);
-
+window.XH_DATA = @json($xhData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
+window.XH_EXPERTS = {{ Js::from((object) $expertPayloads) }};
+window.XH_APPS = @json((object) $applicationPayloads);
+</script>
+<script>
 (function () {
-  var saved = 'cards';
-  try { saved = localStorage.getItem('capstrack_experts_view') || 'cards'; } catch (e) {}
-  setView(saved);
+'use strict';
 
-  var t;
-  addEventListener('resize', function () {
-    clearTimeout(t);
-    t = setTimeout(layoutRail, 120);
+var D = window.XH_DATA;
+var EXPERTS = window.XH_EXPERTS || {};
+var APPS = window.XH_APPS || {};
+var CSRF = document.querySelector('meta[name="csrf-token"]').content;
+var ROLES = ['adviser', 'consultant', 'grammarian'];
+var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+var MONTHS_AHEAD = 6;
+
+var slots = D.slots || [];
+var full = new Set(D.full || []);
+var windows = D.windows || {};
+var bookedExpertIds = (D.bookedExpertIds || []).map(Number);
+var upcoming = D.upcoming || [];
+var recent = D.recent || [];
+
+var S = {
+  tab: D.tab,
+  role: firstBookableRole(),
+  monthOffset: 0,
+  date: null,
+  slotId: null,
+  listTab: 'upcoming',
+  showAll: false,
+  draft: null
+};
+
+/* ---------------- helpers ---------------- */
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function ucfirst(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function keyOf(y, m, d) { return y + '-' + pad(m + 1) + '-' + pad(d); }
+function parseKey(k) { var p = String(k).split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+function todayStart() { var t = new Date(); t.setHours(0, 0, 0, 0); return t; }
+function daysUntil(k) { return k ? Math.round((parseKey(k) - todayStart()) / 86400000) : null; }
+function fmtT(t) { if (!t) { return ''; } var p = String(t).split(':').map(Number); return (p[0] % 12 || 12) + ':' + pad(p[1]) + ' ' + (p[0] < 12 ? 'AM' : 'PM'); }
+function shortDate(k) { var d = parseKey(k); return DAYS[d.getDay()].slice(0, 3) + ', ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getDate(); }
+function longDate(k) { var d = parseKey(k); return DAYS[d.getDay()] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate(); }
+function lengthOf(s) {
+  if (!s.start_time || !s.end_time) { return ''; }
+  var m = function (t) { var p = t.split(':').map(Number); return p[0] * 60 + p[1]; };
+  var mins = m(s.end_time) - m(s.start_time);
+  if (mins <= 0) { return ''; }
+  return mins % 60 === 0 ? (mins / 60) + (mins === 60 ? ' hour' : ' hours') : mins + ' mins';
+}
+function words(s) { s = String(s || '').trim(); return s ? s.split(/\s+/).length : 0; }
+function toast(message, type) {
+  if (window.ctToast) { return window.ctToast(message, type || 'success'); }
+  var t = document.createElement('div');
+  t.className = 'xh-toast' + (type === 'error' ? ' is-error' : '');
+  t.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  t.textContent = message;
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 4500);
+}
+function avatar(p, role, size) {
+  return '<span class="xh-av ' + (size || '') + (role ? ' r-' + role : '') + '" aria-hidden="true">' + esc(p.initials || '')
+    + (p.avatar ? '<img class="avatar-photo" src="' + esc(p.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>';
+}
+
+var ICON = {
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
+  cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>',
+  swap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M19 8v6M22 11h-6"/></svg>'
+};
+
+/* ---------------- who can be booked ---------------- */
+function expertFor(role) {
+  return (D.consultExperts || []).filter(function (e) { return (e.roles || []).indexOf(role) !== -1; })[0] || null;
+}
+function hasAnyExpert() { return (D.consultExperts || []).length > 0; }
+function firstBookableRole() {
+  var def = (D.consultExperts || []).filter(function (e) { return e.expert_id === D.defaultExpertId; })[0];
+  if (def) { return def.roles[0]; }
+  for (var i = 0; i < ROLES.length; i++) { if (expertFor(ROLES[i])) { return ROLES[i]; } }
+  return D.activeRole || 'adviser';
+}
+function roleOfExpert(id) {
+  var e = (D.consultExperts || []).filter(function (x) { return Number(x.expert_id) === Number(id); })[0];
+  return e ? e.roles[0] : null;
+}
+
+/* ---------------- calendar data (as the old Consultation page read it) ---------------- */
+function withinWindow(expertId, dateKey, startTime) {
+  var w = windows[expertId];
+  if (!w) { return true; }
+  if (dateKey + ' ' + String(startTime || '00:00').slice(0, 5) < w.earliest) { return false; }
+  return !w.latest || dateKey <= w.latest;
+}
+function matchesDate(s, dayName, dateKey) { return s.recur === 'once' ? s.specific_date === dateKey : s.available_date === dayName; }
+function hasEnded(dateKey, endTime) {
+  var n = new Date();
+  var nowKey = keyOf(n.getFullYear(), n.getMonth(), n.getDate()) + ' ' + pad(n.getHours()) + ':' + pad(n.getMinutes());
+  return dateKey + ' ' + String(endTime || '23:59').slice(0, 5) <= nowKey;
+}
+/** Every slot on that date the team could see: open ones, and ones already taken. */
+function slotsOn(expertId, dateKey) {
+  var dayName = DAYS[parseKey(dateKey).getDay()];
+  return slots.filter(function (s) {
+    return Number(s.expert_id) === Number(expertId) && matchesDate(s, dayName, dateKey)
+      && !hasEnded(dateKey, s.end_time) && withinWindow(expertId, dateKey, s.start_time);
+  }).map(function (s) {
+    return { slot: s, taken: !s.is_available || full.has(s.schedule_id + '|' + dateKey) };
+  }).sort(function (a, b) { return String(a.slot.start_time).localeCompare(String(b.slot.start_time)); });
+}
+function bookingOn(expertId, dateKey) {
+  return upcoming.concat(recent).some(function (b) { return b.session_date === dateKey && Number(b.expert_id) === Number(expertId); });
+}
+function liveBookingWith(expertId) {
+  return upcoming.filter(function (b) { return Number(b.expert_id) === Number(expertId); })[0] || null;
+}
+
+/* ---------------- render: shared ---------------- */
+function render() {
+  var book = S.tab === 'consultations';
+  $('xh').dataset.tab = S.tab;
+  $('xh-tab-book').setAttribute('aria-selected', String(book));
+  $('xh-tab-find').setAttribute('aria-selected', String(!book));
+  $('xh-tab-book').tabIndex = book ? 0 : -1;
+  $('xh-tab-find').tabIndex = book ? -1 : 0;
+  $('xh-panel-book').hidden = !book;
+  $('xh-panel-find').hidden = book;
+  var count = $('xh-book-count');
+  count.textContent = upcoming.length;
+  count.hidden = upcoming.length === 0;
+  var filled = ROLES.filter(function (r) { return D.team[r]; }).length;
+  $('xh-strip-hint').textContent = filled === 0 ? 'start with your adviser' : (book ? 'pick who you want to meet' : 'pick the role you are looking for');
+  renderStrip();
+  if (book) { renderBook(); renderSessions(); }
+}
+
+function renderStrip() {
+  var book = S.tab === 'consultations';
+  var strip = $('xh-strip');
+  ROLES.forEach(function (r) {
+    var card = strip.querySelector('[data-role="' + r + '"]');
+    if (!card) { return; }
+    var on = book ? S.role === r : D.activeRole === r;
+    card.classList.toggle('is-on', on);
+    card.setAttribute('aria-current', String(on));
+    var ex = expertFor(r);
+    if (ex) {
+      var nx = liveBookingWith(ex.expert_id);
+      card.querySelector('[data-meta="book"]').textContent = nx && nx.session_date
+        ? 'Next: ' + shortDate(nx.session_date) + ' · ' + fmtT(nx.start_time)
+        : 'No session booked';
+    }
   });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutRail);
-})();
-
-// ── Skill picker ──
-function toggleSkillPicker(event) {
-  if (event) event.stopPropagation();
-  var wrap = document.querySelector('.skill-filter');
-  if (!wrap) return;
-  var opening = !wrap.classList.contains('open');
-  wrap.classList.toggle('open', opening);
-  document.getElementById('skill-filter-trigger').setAttribute('aria-expanded', opening ? 'true' : 'false');
-  if (opening) document.getElementById('skillSearch').focus();
-}
-
-function toggleSkillGroup(header) {
-  header.closest('.skill-group').classList.toggle('open');
-}
-
-// Typing here narrows the picker itself. It does not filter the expert grid -
-// that only changes when a skill is chosen, so the page never half-applies a
-// search the student is still typing.
-function filterSkillPicker(query) {
-  var q = (query || '').trim().toLowerCase();
-  var anyVisible = false;
-
-  document.querySelectorAll('#skillPickerList .skill-group').forEach(function (group) {
-    var groupMatches = q !== '' && (group.dataset.name || '').includes(q);
-    var shown = 0;
-
-    group.querySelectorAll('.skill-opt').forEach(function (opt) {
-      // "Anything in this area" belongs to the group, not to a skill name.
-      var isGroupOpt = opt.classList.contains('skill-opt-group');
-      var match = q === '' || groupMatches || (opt.dataset.name || '').includes(q);
-      if (isGroupOpt) match = q === '' || groupMatches;
-      opt.style.display = match ? '' : 'none';
-      if (match && !isGroupOpt) shown++;
-    });
-
-    var visible = shown > 0 || groupMatches;
-    group.style.display = visible ? '' : 'none';
-    group.classList.toggle('open', q !== '' ? visible : group.classList.contains('open'));
-    if (visible) anyVisible = true;
-  });
-
-  var all = document.querySelector('#skillPickerList .skill-opt-all');
-  if (all) all.style.display = q === '' ? '' : 'none';
-
-  var none = document.getElementById('skillPickerNoMatch');
-  if (none) none.style.display = anyVisible || q === '' ? 'none' : '';
-}
-
-document.addEventListener('click', function (e) {
-  var wrap = document.querySelector('.skill-filter');
-  if (wrap && wrap.classList.contains('open') && !wrap.contains(e.target)) {
-    wrap.classList.remove('open');
-    document.getElementById('skill-filter-trigger').setAttribute('aria-expanded', 'false');
+  var on = strip.querySelector('.is-on');
+  if (on && strip.scrollWidth > strip.clientWidth) {
+    strip.scrollLeft += on.getBoundingClientRect().left - strip.getBoundingClientRect().left;
   }
-});
+}
 
-document.addEventListener('keydown', function (e) {
-  if (e.key !== 'Escape') return;
-  var wrap = document.querySelector('.skill-filter');
-  if (wrap) {
-    wrap.classList.remove('open');
-    var t = document.getElementById('skill-filter-trigger');
-    if (t) t.setAttribute('aria-expanded', 'false');
+/* ---------------- render: consultations ---------------- */
+function renderBook() {
+  var card = $('xh-book');
+  var role = S.role;
+  if (!hasAnyExpert()) {
+    var waiting = Object.keys(D.pendingByRole || {}).length;
+    card.innerHTML = '<div class="xh-empty"><span class="xh-dlg-icon xh-ic-gold xh-empty-ic">' + ICON.cal + '</span>'
+      + '<h2>No consultations yet</h2>'
+      + '<p>You book consultations with the experts who accepted your team. Your team doesn\'t have one yet'
+      + (waiting ? ', and ' + waiting + (waiting === 1 ? ' application is' : ' applications are') + ' still waiting for an answer.' : '.') + '</p>'
+      + '<ol class="xh-steps xh-empty-steps">'
+      + '<li><i>1</i><span>Find an adviser, consultant and grammarian.</span></li>'
+      + '<li><i>2</i><span>Your team leader applies with your pre-proposal.</span></li>'
+      + '<li><i>3</i><span>Once an expert accepts, their open dates show up here.</span></li></ol>'
+      + '<a class="xh-btn xh-gold" href="' + esc(D.findUrl + '?tab=find') + '">Find experts</a></div>';
+    return;
   }
-});
-
-// Arriving from the duplication report's "Apply" link: find that expert's
-// card and open the apply modal on it. The card may not have an apply button
-// (already engaged, full, or the team isn't verified yet), in which case the
-// card itself explains why - so scroll to it and say so rather than failing
-// silently.
-document.addEventListener('DOMContentLoaded', function () {
-  var wanted = new URLSearchParams(window.location.search).get('apply');
-  if (!wanted) return;
-
-  // One-shot. Left in the URL, this fired again on every later load of the
-  // page - applying reloads, and so does coming back after a decision - so
-  // the modal reopened by itself long after the link that asked for it.
-  var cleaned = new URL(window.location.href);
-  cleaned.searchParams.delete('apply');
-  history.replaceState(null, '', cleaned.pathname + cleaned.search + cleaned.hash);
-
-  var card = document.querySelector('.expert-card-compact[data-expert-id="' + CSS.escape(wanted) + '"]');
-  var btn = card ? card.querySelector('[data-apply-expert]') : null;
-
-  if (!card) {
-    // Not on this page of results - a skill filter or pagination can hide it.
-    showToast('That expert is not in the current list. Clear any filters to find them.', 'error');
+  var ex = expertFor(role);
+  if (!ex) {
+    var p = (D.pendingByRole || {})[role];
+    card.innerHTML = '<div class="xh-empty"><span class="xh-av is-vacant xh-empty-av" aria-hidden="true">' + ICON.user + '</span>'
+      + '<h2>You don\'t have a ' + role + ' yet</h2>'
+      + '<p>Consultations are booked with the experts who accepted your team. '
+      + (p ? 'Your application to <b>' + esc(p) + '</b> is still waiting for an answer.' : 'Apply to one, and their open dates show up here once they accept.') + '</p>'
+      + '<a class="xh-btn xh-gold" href="' + esc(D.findUrl + '?tab=find&role=' + role) + '">Find a ' + role + '</a></div>';
     return;
   }
 
-  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  card.style.outline = '2px solid var(--accent)';
-  card.style.outlineOffset = '3px';
-  setTimeout(function () { card.style.outline = ''; }, 2600);
+  var base = new Date(new Date().getFullYear(), new Date().getMonth() + S.monthOffset, 1);
+  var y = base.getFullYear();
+  var m = base.getMonth();
+  var startDow = base.getDay();
+  var dim = new Date(y, m + 1, 0).getDate();
+  var total = Math.ceil((startDow + dim) / 7) * 7;
+  var live = liveBookingWith(ex.expert_id) || (bookedExpertIds.indexOf(Number(ex.expert_id)) !== -1 ? {} : null);
 
-  if (btn && !btn.disabled) {
-    setTimeout(function () { btn.click(); }, 450);
-  } else {
-    var why = card.querySelector('button[disabled]');
-    showToast(why ? 'You cannot apply to this expert right now: ' + why.textContent.trim() : 'You cannot apply to this expert right now.', 'error');
+  var cells = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(function (d) { return '<span class="xh-dow" aria-hidden="true">' + d + '</span>'; });
+  for (var i = 0; i < total; i++) {
+    var d = i - startDow + 1;
+    if (d < 1 || d > dim) { cells.push('<span class="xh-day is-blank" aria-hidden="true"></span>'); continue; }
+    var k = keyOf(y, m, d);
+    var off = daysUntil(k);
+    var list = off >= 0 ? slotsOn(ex.expert_id, k) : [];
+    var open = list.filter(function (x) { return !x.taken; }).length;
+    var mine = bookingOn(ex.expert_id, k);
+    var sel = S.date === k;
+    var cls = 'xh-day';
+    var cap = '';
+    var capShort = null;
+    var disabled = true;
+    if (off < 0) { cls += ' is-past'; }
+    else if (!list.length) { cls += off === 0 ? ' is-today' : ' is-off'; cap = off === 0 ? 'Today' : ''; }
+    else if (open === 0) { cls += ' is-full'; cap = 'Full'; }
+    else if (live) { cls += ' is-off'; }
+    else { cls += ' is-avail'; cap = open + ' open'; capShort = String(open); disabled = false; if (off === 0) { cls += ' is-today'; } }
+    if (off === 0 && cls.indexOf('is-today') === -1) { cls += ' is-today'; if (!cap) { cap = 'Today'; } }
+    if (mine) { cls += ' is-booked'; if (!cap || cap === 'Full') { cap = 'Booked'; capShort = ''; } }
+    var dot = (cls.indexOf('is-avail') !== -1 || mine) ? '<i class="xh-dot"></i>' : '';
+    cells.push('<button type="button" class="' + cls + '" data-xh="date" data-key="' + k + '"' + (disabled ? ' disabled' : '')
+      + ' aria-pressed="' + sel + '" aria-label="' + longDate(k) + (cap ? ', ' + cap : '') + '">'
+      + '<span class="xh-dn">' + d + '</span><span class="xh-dc">' + dot + '<span class="xh-cap is-long">' + cap + '</span><span class="xh-cap is-short">' + (capShort === null ? cap : capShort) + '</span></span></button>');
   }
+
+  var times;
+  var chosen = null;
+  if (S.date && !live) {
+    var ts = slotsOn(ex.expert_id, S.date);
+    times = '<h3>' + longDate(S.date) + '</h3>' + (ts.length ? ts.map(function (x) {
+      var on = S.slotId === x.slot.schedule_id;
+      if (on && !x.taken) { chosen = x.slot; }
+      var st = x.taken ? 'Taken' : (on ? 'Selected' : 'Open');
+      return '<button type="button" class="xh-tslot" data-xh="slot" data-id="' + x.slot.schedule_id + '"' + (x.taken ? ' disabled' : '') + ' aria-pressed="' + (on && !x.taken) + '">'
+        + '<span class="xh-tt"><b>' + fmtT(x.slot.start_time) + ' – ' + fmtT(x.slot.end_time) + '</b><span class="xh-note">' + (lengthOf(x.slot) || 'Consultation') + '</span></span>'
+        + '<span class="xh-st">' + st + '</span></button>';
+    }).join('') : '<div class="xh-hint">No open times on this date.</div>');
+  } else if (live) {
+    times = '<h3>Available times</h3><div class="xh-hint">One booking per expert at a time. You can pick a new time after your '
+      + (live.session_date ? shortDate(live.session_date) + ' ' : '') + 'session.</div>';
+  } else {
+    times = '<h3>Available times</h3><div class="xh-hint">Pick a date with a <b class="xh-gold-text">gold dot</b> to see its open times.</div>';
+  }
+
+  var notice = '';
+  if (live) {
+    notice = '<div class="xh-banner xh-info xh-book-notice">' + ICON.info + '<span class="xh-banner-text">You already have a session with <b>' + esc(ex.name) + '</b>'
+      + (live.session_date ? ' on <b>' + shortDate(live.session_date) + ' at ' + fmtT(live.start_time) + '</b>' : '') + '. You can book them again after it.</span>'
+      + (live.booking_id ? '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="session" data-id="' + live.booking_id + '">View session</button>' : '') + '</div>';
+  }
+
+  card.innerHTML = '<div class="xh-book-head"><div><h2>Book with ' + esc(ex.name) + '</h2>'
+    + '<p>' + ucfirst(role) + ' · Only the dates and times they opened can be booked.</p></div>'
+    + '<div class="xh-month"><button type="button" class="xh-icon-btn" data-xh="month" data-dir="-1" aria-label="Previous month"' + (S.monthOffset <= 0 ? ' disabled' : '') + '>' + ICON.left + '</button>'
+    + '<b aria-live="polite">' + MONTHS[m] + ' ' + y + '</b>'
+    + '<button type="button" class="xh-icon-btn" data-xh="month" data-dir="1" aria-label="Next month"' + (S.monthOffset >= MONTHS_AHEAD ? ' disabled' : '') + '>' + ICON.right + '</button></div></div>'
+    + notice
+    + '<div class="xh-book-cols"><div class="xh-cal"><div class="xh-cal-grid">' + cells.join('') + '</div>'
+    + '<div class="xh-legend"><span><i class="xh-lg-dot is-gold"></i>Open times</span><span><i class="xh-lg-dot is-blue"></i>Your booking</span>'
+    + '<span><i class="xh-lg-sq is-full"></i>Fully booked</span><span><i class="xh-lg-sq is-off"></i>Past or not offered</span></div></div>'
+    + '<div class="xh-times">' + times + '</div></div>'
+    + '<div class="xh-confirm-bar"><div class="xh-sum">'
+    + (chosen ? '<b>' + shortDate(S.date) + ' · ' + fmtT(chosen.start_time) + ' – ' + fmtT(chosen.end_time) + '</b><span>Consultation with ' + esc(ex.name) + '</span>'
+              : '<b>No time picked yet</b><span>Choose a date, then one of its open times.</span>')
+    + '</div><button type="button" class="xh-btn xh-gold" data-xh="book-open"' + (chosen ? '' : ' disabled') + '>' + ICON.cal + 'Book this time</button></div>';
+}
+
+function canCancel(b) { var n = daysUntil(b.session_date); return n !== null && n >= D.cutoffDays && !b.cancel_requested; }
+function lastCancelDay(b) { var d = parseKey(b.session_date); d.setDate(d.getDate() - D.cutoffDays); return shortDate(keyOf(d.getFullYear(), d.getMonth(), d.getDate())); }
+
+function sessionCard(b, isPast, isNext) {
+  var role = roleOfExpert(b.expert_id);
+  var foot = '';
+  var badge;
+  if (isPast) {
+    badge = '<span class="xh-pill xh-gray">Ended</span>';
+  } else if (b.cancel_requested) {
+    badge = '<span class="xh-pill xh-amber">Cancel requested</span>';
+    foot = '<span class="xh-sess-foot">' + ICON.clock + 'Waiting on ' + esc(b.expert_name) + ' to approve the cancellation</span>';
+  } else {
+    var n = daysUntil(b.session_date);
+    badge = '<span class="xh-pill ' + (isNext ? 'xh-goldp' : 'xh-green') + '">' + (n === null ? 'Scheduled' : n <= 0 ? 'Today' : n === 1 ? 'Tomorrow' : 'In ' + n + ' days') + '</span>';
+    foot = canCancel(b)
+      ? '<span class="xh-sess-foot">' + ICON.clock + 'You can cancel until ' + lastCancelDay(b) + '</span>'
+      : '<span class="xh-sess-foot">' + ICON.lock + 'Within ' + D.cutoffDays + ' days, so it can\'t be cancelled here</span>';
+  }
+  var dt = b.session_date ? parseKey(b.session_date) : null;
+  return '<button type="button" class="xh-sess' + (isNext ? ' is-next' : '') + '" data-xh="session" data-id="' + b.booking_id + '" data-booking-id="' + b.booking_id + '">'
+    + '<span class="xh-dblock' + (isPast ? ' is-past' : '') + '"><small>' + (dt ? MONTHS[dt.getMonth()].slice(0, 3).toUpperCase() : '--') + '</small><b>' + (dt ? dt.getDate() : '--') + '</b><span>' + (dt ? DAYS[dt.getDay()].slice(0, 3) : '') + '</span></span>'
+    + '<span class="xh-sess-body"><span class="xh-sess-top"><b>' + fmtT(b.start_time) + (b.end_time ? ' – ' + fmtT(b.end_time) : '') + '</b>' + badge + '</span>'
+    + '<span class="xh-sess-with">Consultation with ' + esc(b.expert_name) + (role ? ' · ' + ucfirst(role) : '') + '</span>' + foot + '</span></button>';
+}
+
+function renderSessions() {
+  var aside = $('xh-sessions');
+  aside.hidden = !hasAnyExpert() && !upcoming.length && !recent.length;
+  if (aside.hidden) { return; }
+  var showUp = S.listTab === 'upcoming';
+  var all = showUp ? upcoming : recent;
+  var list = S.showAll ? all : all.slice(0, 2);
+  var more = all.length > 2 ? '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="show-all">' + (S.showAll ? 'Show fewer' : 'Show all ' + all.length) + '</button>' : '';
+  aside.innerHTML = '<h2>My consultations</h2>'
+    + '<div class="xh-mini-seg" role="tablist" aria-label="Which consultations">'
+    + '<button type="button" role="tab" data-xh="list" data-list="upcoming" aria-selected="' + showUp + '">Upcoming <span class="xh-n">' + upcoming.length + '</span></button>'
+    + '<button type="button" role="tab" data-xh="list" data-list="past" aria-selected="' + !showUp + '">Past <span class="xh-n">' + recent.length + '</span></button></div>'
+    + '<div class="xh-list">' + (list.length ? list.map(function (b, i) { return sessionCard(b, !showUp, showUp && i === 0); }).join('')
+      : '<div class="xh-hint">' + (showUp ? 'Nothing booked yet. Pick a date on the calendar.' : 'No past consultations yet.') + '</div>') + more + '</div>'
+    + '<p class="xh-rail-note">One live booking per expert. A booking can\'t be cancelled once the session is within ' + D.cutoffDays + ' days; message your expert instead.</p>';
+}
+
+/* ---------------- dialogs ---------------- */
+function openDialog(html, size) {
+  var d = document.createElement('dialog');
+  d.className = 'xh-dlg' + (size ? ' ' + size : '');
+  d.innerHTML = html;
+  document.body.appendChild(d);
+  d.addEventListener('click', function (e) { if (e.target === d) { d.close(); } });
+  d.addEventListener('close', function () { d.remove(); });
+  d.showModal();
+  var first = d.querySelector('textarea, input[type="text"]');
+  if (first) { first.focus(); }
+  return d;
+}
+function head(title, sub, icon) {
+  return '<div class="xh-dlg-head">' + (icon || '') + '<div class="xh-ttl"><h2>' + title + '</h2>' + (sub ? '<p>' + sub + '</p>' : '') + '</div>'
+    + '<button type="button" class="xh-x" data-xh="close" aria-label="Close">' + ICON.x + '</button></div>';
+}
+function closeAll() { document.querySelectorAll('dialog.xh-dlg').forEach(function (d) { d.close(); }); }
+function busy(btn, label) { btn.disabled = true; btn.dataset.label = btn.innerHTML; btn.textContent = label; }
+function idle(btn) { btn.disabled = false; if (btn.dataset.label) { btn.innerHTML = btn.dataset.label; } }
+function reloadOnFind() {
+  var url = new URL(window.location.href);
+  url.searchParams.set('tab', 'find');
+  url.searchParams.delete('apply');
+  setTimeout(function () { window.location.href = url.toString(); }, 1100);
+}
+function send(url, method, body, isForm) {
+  var headers = { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' };
+  if (body && !isForm) { headers['Content-Type'] = 'application/json'; }
+  return fetch(url, { method: method, headers: headers, body: body ? (isForm ? body : JSON.stringify(body)) : undefined })
+    .then(function (r) { return r.json().catch(function () { return { success: false, message: 'Something went wrong (' + r.status + '). Try again.' }; }); });
+}
+
+function capOf(p) {
+  if (p.max < 1) { return { text: 'Capacity not set', cls: 'is-unset', pct: 0 }; }
+  if (p.used >= p.max) { return { text: 'Full · ' + p.used + ' of ' + p.max + ' teams', cls: 'is-full', pct: 100 }; }
+  return { text: (p.max - p.used) + ' of ' + p.max + ' slots open', cls: 'is-ok', pct: Math.round(p.used / p.max * 100) };
+}
+
+function openProfile(id) {
+  var p = EXPERTS[id];
+  if (!p) { return; }
+  var role = p.roles.indexOf(D.activeRole) !== -1 ? D.activeRole : p.roles[0];
+  var c = capOf(p);
+  var action = p.apply
+    ? '<button type="button" class="xh-btn xh-gold" data-xh="apply" data-id="' + p.id + '">Apply</button>'
+    : (p.status ? '<span class="xh-pill xh-' + p.status.tone + ' xh-pill-center">' + esc(p.status.text) + '</span>' : '');
+  openDialog('<div class="xh-dlg-head"><div class="xh-profile-top xh-ttl r-' + role + '">' + avatar(p, role, 'xh-xl') + '<div><h2>' + esc(p.name) + '</h2><div class="xh-chips">'
+    + p.roles.map(function (r) { return '<span class="xh-chip r-' + r + '">' + ucfirst(r) + '</span>'; }).join('') + '</div></div></div>'
+    + '<button type="button" class="xh-x" data-xh="close" aria-label="Close">' + ICON.x + '</button></div>'
+    + '<div class="xh-dlg-body"><div class="xh-sec"><span class="xh-lbl">Expertise</span><div class="xh-tags">'
+    + (p.tags.length ? p.tags.map(function (t) { return '<span class="xh-tag">' + esc(t) + '</span>'; }).join('') : '<span class="xh-tag">Not filled in yet</span>') + '</div></div>'
+    + '<div class="xh-sec"><span class="xh-lbl">Teams they can take</span><div class="xh-caprow"><span>' + (p.max > 0 ? p.used + ' of ' + p.max + ' taken' : 'They have not set this yet') + '</span><b class="' + c.cls + '">' + c.text + '</b></div>'
+    + '<div class="xh-meter' + (c.cls === 'is-full' ? ' is-full' : '') + '"><i style="width:' + c.pct + '%"></i></div></div>'
+    + '<p class="xh-note">An expert can take only one role per team.</p></div>'
+    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Close</button>' + action + '</div>');
+}
+
+function openApply(id, draft) {
+  var p = EXPERTS[id];
+  if (!p || !p.apply) { return; }
+  var pick = draft ? draft.roleId : (p.choices.length === 1 ? p.choices[0].expert_role_id : null);
+  if (!pick) {
+    var match = p.choices.filter(function (c) { return c.name === D.activeRole; })[0];
+    if (match) { pick = match.expert_role_id; }
+  }
+  var roles = p.choices.map(function (c) {
+    return '<label class="xh-rp r-' + c.name + '"><input type="radio" name="xh-apply-role" value="' + c.expert_role_id + '" data-name="' + c.name + '"' + (Number(pick) === Number(c.expert_role_id) ? ' checked' : '') + '>'
+      + '<span>' + esc(ucfirst(c.name)) + '</span></label>';
+  }).join('');
+  var proposal = D.hasApprovedProposal
+    ? '<div class="xh-field"><span class="xh-flabel">Recommended pre-proposal</span><div class="xh-attach">' + ICON.file
+      + '<div class="xh-attach-meta"><b>' + esc(D.proposalTitle) + '</b><span>Approved by your CaPSA. It is sent with this application, so there is nothing to upload.</span></div>'
+      + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="proposal">Preview</button></div></div>'
+    : '<div class="xh-field" id="xh-f-file"><label for="xh-apply-file">Recommended pre-proposal (PDF) <span class="xh-req">*</span></label>'
+      + '<input type="file" id="xh-apply-file" accept=".pdf,application/pdf">'
+      + (draft && draft.file ? '<span class="xh-note">Attached: ' + esc(draft.file.name) + '. Choose another file to replace it.</span>' : '')
+      + '<span class="xh-fmeta"><span class="xh-ferr">Attach your recommended pre-proposal as a PDF.</span></span></div>';
+  openDialog(head('Apply to ' + esc(p.name), 'Your application goes to the expert. They accept or decline.')
+    + '<div class="xh-dlg-body" data-expert="' + p.id + '">'
+    + '<fieldset class="xh-field" id="xh-f-role"><legend class="xh-flabel">Apply as <span class="xh-req">*</span></legend>'
+    + '<div class="xh-roles-pick">' + roles + '</div>'
+    + '<span class="xh-note">An expert can take only one role per team. Once they are your adviser, you can\'t also engage them as your consultant or grammarian.</span>'
+    + '<span class="xh-fmeta"><span class="xh-ferr">Choose the role you are applying for.</span></span></fieldset>'
+    + proposal
+    + '<div class="xh-field" id="xh-f-msg"><label for="xh-apply-msg">Message to the expert <span class="xh-req">*</span></label>'
+    + '<textarea id="xh-apply-msg" rows="5" placeholder="Introduce your team and say why you are applying to this expert.">' + esc(draft ? draft.message : '') + '</textarea>'
+    + '<span class="xh-fmeta"><span class="xh-ferr" id="xh-msg-err">Write a short message to the expert.</span><span><span id="xh-msg-count">' + words(draft ? draft.message : '') + '</span>/500 words</span></span></div></div>'
+    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="apply-review">Review application</button></div>', 'is-wide');
+}
+
+function openReview(d) {
+  var p = EXPERTS[d.expertId];
+  openDialog(head('Review your application', 'Check the details before it goes to ' + esc(p.name) + '.')
+    + '<div class="xh-dlg-body"><dl class="xh-rows">'
+    + '<div class="xh-row"><dt>Expert</dt><dd>' + esc(p.name) + '</dd></div>'
+    + '<div class="xh-row"><dt>Applying as</dt><dd>' + esc(ucfirst(d.roleName)) + '</dd></div>'
+    + '<div class="xh-row"><dt>Proposal</dt><dd>' + esc(D.hasApprovedProposal ? D.proposalTitle : (d.file ? d.file.name : '')) + '</dd></div>'
+    + '<div class="xh-row"><dt>Message</dt><dd>' + esc(d.message) + '</dd></div></dl></div>'
+    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="apply-edit">Edit</button><button type="button" class="xh-btn xh-gold" data-xh="apply-send">' + ICON.check + 'Send application</button></div>');
+}
+
+function openProposal() {
+  var tpl = $('xh-proposal');
+  if (!tpl) { return; }
+  var d = openDialog('', 'is-wide');
+  d.appendChild(tpl.content.cloneNode(true));
+}
+
+function openChange(btn) {
+  var role = btn.dataset.role;
+  openDialog(head('Request an expert change', 'Your section\'s CaPSA decides. ' + esc(btn.dataset.name) + ' stays with your team until they do. Once approved, you can apply to someone else for the same role.',
+      '<span class="xh-dlg-icon xh-ic-amber">' + ICON.swap + '</span>')
+    + '<div class="xh-dlg-body"><div class="xh-detail r-' + role + '">' + avatar(D.team[role] || {}, role, 'xh-sm') + '<span class="xh-detail-meta"><b>' + esc(btn.dataset.name) + '</b><span>' + ucfirst(role) + ' of your team'
+    + (D.teamSection ? ' · Decided by the CaPSA for ' + esc(D.teamSection) : '') + '</span></span></div>'
+    + '<div class="xh-field" id="xh-f-reason"><label for="xh-change-reason">Reason for your CaPSA <span class="xh-req">*</span></label>'
+    + '<textarea id="xh-change-reason" rows="4" maxlength="500" placeholder="Explain to your CaPSA why this expert has to change."></textarea>'
+    + '<span class="xh-fmeta"><span class="xh-ferr">Give at least ' + D.reasonMin + ' characters so your CaPSA can decide.</span><span><span id="xh-reason-count">0</span>/500</span></span></div></div>'
+    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="change-send" data-assignment="' + btn.dataset.assignment + '" id="xh-change-send" disabled>Send to CaPSA</button></div>');
+}
+
+function openTakeBack(btn) {
+  openDialog(head('Take back your change request?', 'Your request to change <b>' + esc(btn.dataset.name) + '</b> is still waiting on your section\'s CaPSA. Taking it back keeps them as your expert.',
+      '<span class="xh-dlg-icon xh-ic-amber">' + ICON.swap + '</span>')
+    + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep the request</button><button type="button" class="xh-btn xh-gold" data-xh="takeback-send" data-request="' + btn.dataset.request + '">Take it back</button></div>');
+}
+
+function openApp(id) {
+  var a = APPS[id];
+  if (!a) { return; }
+  var status = a.status === 'pending' ? '<span class="xh-pill xh-amber">Pending · waiting for the expert</span>' : '<span class="xh-pill xh-red">Declined</span>';
+  var proposal = a.proposalTitle ? esc(a.proposalTitle) + ' <span class="xh-note">(recommended pre-proposal)</span>'
+    : (a.proposalFile ? '<a href="' + esc(a.proposalFile) + '" target="_blank" rel="noopener">View proposal</a>' : 'None attached');
+  var withdraw = '';
+  if (D.isLeader) {
+    withdraw = a.status === 'pending'
+      ? '<button type="button" class="xh-btn xh-danger-ghost xh-push" data-xh="app-withdraw" data-id="' + a.id + '">' + ICON.trash + 'Withdraw</button>'
+      : '<button type="button" class="xh-btn xh-danger-ghost xh-push" data-xh="app-withdraw" data-id="' + a.id + '">' + ICON.trash + 'Remove from list</button>';
+  }
+  openDialog(head('Application to ' + esc(a.name), a.sent ? 'Sent ' + esc(a.sent) : '')
+    + '<div class="xh-dlg-body"><dl class="xh-rows">'
+    + '<div class="xh-row"><dt>Status</dt><dd>' + status + '</dd></div>'
+    + (a.role ? '<div class="xh-row"><dt>Applied as</dt><dd>' + esc(ucfirst(a.role)) + '</dd></div>' : '')
+    + '<div class="xh-row"><dt>Proposal</dt><dd>' + proposal + '</dd></div>'
+    + '<div class="xh-row"><dt>Your message</dt><dd>' + esc(a.message || '') + '</dd></div>'
+    + (a.reason ? '<div class="xh-row"><dt>Their reason</dt><dd>' + esc(a.reason) + '</dd></div>' : '') + '</dl></div>'
+    + '<div class="xh-dlg-foot">' + withdraw + '<button type="button" class="xh-btn xh-ghost" data-xh="close">Close</button></div>');
+}
+
+function openWithdraw(id) {
+  var a = APPS[id];
+  var pending = a.status === 'pending';
+  openDialog(head(pending ? 'Withdraw this application?' : 'Remove this from your list?',
+      pending ? esc(a.name) + ' will no longer see it. You can apply to them again later.' : 'The declined application to ' + esc(a.name) + ' leaves your list. Nothing is sent to them.',
+      '<span class="xh-dlg-icon xh-ic-red">' + ICON.trash + '</span>')
+    + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep it</button><button type="button" class="xh-btn xh-danger" data-xh="app-withdraw-send" data-id="' + a.id + '">' + (pending ? 'Withdraw application' : 'Remove from list') + '</button></div>');
+}
+
+function openBookConfirm() {
+  var ex = expertFor(S.role);
+  var s = slots.filter(function (x) { return x.schedule_id === S.slotId; })[0];
+  if (!ex || !s || !S.date) { return; }
+  var n = daysUntil(S.date);
+  openDialog(head('Confirm your booking', 'Check the session before it goes on ' + esc(ex.name) + '\'s calendar.', '<span class="xh-dlg-icon xh-ic-gold">' + ICON.cal + '</span>')
+    + '<div class="xh-dlg-body"><dl class="xh-rows">'
+    + '<div class="xh-row"><dt>Date</dt><dd>' + longDate(S.date) + ', ' + parseKey(S.date).getFullYear() + '</dd></div>'
+    + '<div class="xh-row"><dt>Time</dt><dd>' + fmtT(s.start_time) + ' – ' + fmtT(s.end_time) + '</dd></div>'
+    + '<div class="xh-row"><dt>With</dt><dd>' + esc(ex.name) + ' · ' + ucfirst(S.role) + '</dd></div></dl>'
+    + '<div class="xh-banner xh-info">' + ICON.info + '<span class="xh-banner-text">' + (n >= D.cutoffDays
+      ? 'You can ask to cancel until <b>' + lastCancelDay({ session_date: S.date }) + '</b>. After that, message your expert instead.'
+      : 'This session is within ' + D.cutoffDays + ' days, so <b>it can\'t be cancelled here</b> once booked.') + '</span></div></div>'
+    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Back</button><button type="button" class="xh-btn xh-gold" data-xh="book-send">' + ICON.check + 'Confirm booking</button></div>');
+}
+
+function findBooking(id) {
+  return upcoming.concat(recent).filter(function (b) { return Number(b.booking_id) === Number(id); })[0] || null;
+}
+
+function openSession(id) {
+  var b = findBooking(id);
+  if (!b) { return; }
+  var isPast = recent.indexOf(b) !== -1;
+  var role = roleOfExpert(b.expert_id);
+  var foot = '<button type="button" class="xh-btn xh-ghost" data-xh="close">Close</button>';
+  var note = '';
+  if (!isPast && b.cancel_requested) {
+    note = '<div class="xh-banner xh-wait">' + ICON.clock + '<span class="xh-banner-text">You asked to cancel this. ' + esc(b.expert_name) + ' will approve or decline it, and it stays booked until then.</span></div>';
+  } else if (!isPast && canCancel(b)) {
+    foot = '<button type="button" class="xh-btn xh-danger-ghost xh-push" data-xh="cancel-open" data-id="' + b.booking_id + '">Cancel booking</button>' + foot;
+    note = '<div class="xh-banner">' + ICON.clock + '<span class="xh-banner-text">You can ask to cancel until <b>' + lastCancelDay(b) + '</b>.</span></div>';
+  } else if (!isPast) {
+    note = '<div class="xh-banner">' + ICON.lock + '<span class="xh-banner-text">This session is within ' + D.cutoffDays + ' days, so it can\'t be cancelled here. Message ' + esc(b.expert_name) + ' if you can\'t make it.</span></div>';
+  }
+  openDialog(head('Consultation', isPast ? 'This session has ended.' : 'Your upcoming session.')
+    + '<div class="xh-dlg-body"><dl class="xh-rows">'
+    + '<div class="xh-row"><dt>Date</dt><dd>' + (b.session_date ? longDate(b.session_date) + ', ' + parseKey(b.session_date).getFullYear() : esc(b.available_date || '—')) + '</dd></div>'
+    + '<div class="xh-row"><dt>Time</dt><dd>' + fmtT(b.start_time) + (b.end_time ? ' – ' + fmtT(b.end_time) : '') + '</dd></div>'
+    + '<div class="xh-row"><dt>With</dt><dd>' + esc(b.expert_name) + (role ? ' · ' + ucfirst(role) : '') + '</dd></div>'
+    + '<div class="xh-row"><dt>Status</dt><dd>' + (isPast ? '<span class="xh-pill xh-gray">Ended</span>' : b.cancel_requested ? '<span class="xh-pill xh-amber">Cancel requested</span>' : '<span class="xh-pill xh-green">Scheduled</span>') + '</dd></div></dl>' + note + '</div>'
+    + '<div class="xh-dlg-foot">' + foot + '</div>');
+}
+
+function openCancel(id) {
+  var b = findBooking(id);
+  if (!b) { return; }
+  openDialog(head('Cancel this booking?', 'Tell ' + esc(b.expert_name) + ' why. They approve or decline it, and it stays booked until then.', '<span class="xh-dlg-icon xh-ic-red">' + ICON.x + '</span>')
+    + '<div class="xh-dlg-body"><div class="xh-field" id="xh-f-cancel"><label for="xh-cancel-reason">Reason <span class="xh-req">*</span></label>'
+    + '<textarea id="xh-cancel-reason" rows="4" maxlength="1000" placeholder="For example: our draft is not ready for review yet."></textarea>'
+    + '<span class="xh-fmeta"><span class="xh-ferr">Enter a reason for the expert.</span></span></div></div>'
+    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep booking</button><button type="button" class="xh-btn xh-danger" data-xh="cancel-send" data-id="' + b.booking_id + '">Ask to cancel</button></div>');
+}
+
+/* ---------------- data refresh ---------------- */
+var refreshing = false;
+function refresh(passive) {
+  if (refreshing) { return Promise.resolve(); }
+  refreshing = true;
+  var headers = { 'Accept': 'application/json' };
+  if (passive) { headers['X-Idle-Passive'] = '1'; }
+  return fetch(D.urls.refresh, { headers: headers })
+    .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+    .then(function (data) {
+      slots = data.availableSlots || [];
+      full = new Set(data.fullOccurrences || []);
+      windows = data.bookingWindows || {};
+      bookedExpertIds = (data.bookedExpertIds || []).map(Number);
+      upcoming = data.upcomingBookings || [];
+      recent = data.recentBookings || [];
+      render();
+    })
+    .catch(function () { /* the next poll tries again */ })
+    .then(function () { refreshing = false; });
+}
+
+/* ---------------- actions ---------------- */
+var ACT = {
+  close: function (el) { var d = el.closest('dialog'); if (d) { d.close(); } },
+  tab: function (el) {
+    // Find experts always opens on the role the server listed: the first one
+    // the team has not filled, unless the address asked for another.
+    var tab = el.dataset.tab;
+    S.tab = tab;
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set('tab', tab);
+      history.replaceState(null, '', url.pathname + url.search);
+    } catch (e) { /* ignore */ }
+    render();
+    $(tab === 'find' ? 'xh-tab-find' : 'xh-tab-book').focus();
+  },
+  slot: function (el, e) {
+    if (el.classList.contains('xh-tslot')) {
+      S.slotId = Number(el.dataset.id);
+      renderBook();
+      return;
+    }
+    // On the booking tab a card picks who to book, without leaving the page.
+    if (S.tab === 'consultations') {
+      e.preventDefault();
+      S.role = el.dataset.role;
+      S.date = null;
+      S.slotId = null;
+      S.monthOffset = 0;
+      render();
+    }
+  },
+  month: function (el) { S.monthOffset = Math.max(0, Math.min(MONTHS_AHEAD, S.monthOffset + Number(el.dataset.dir))); S.date = null; S.slotId = null; renderBook(); },
+  date: function (el) { S.date = el.dataset.key; S.slotId = null; renderBook(); },
+  list: function (el) { S.listTab = el.dataset.list; S.showAll = false; renderSessions(); },
+  'show-all': function () { S.showAll = !S.showAll; renderSessions(); },
+  'book-open': function () { if (S.date && S.slotId) { openBookConfirm(); } },
+  'book-send': function (el) {
+    var ex = expertFor(S.role);
+    busy(el, 'Booking…');
+    send(D.urls.book, 'POST', { schedule_id: S.slotId, session_date: S.date }).then(function (data) {
+      ACT.close(el);
+      if (data.success) {
+        toast('Booked ' + shortDate(S.date) + ' with ' + (ex ? ex.name : 'your expert') + '.', 'success');
+        S.date = null; S.slotId = null; S.listTab = 'upcoming';
+      } else {
+        toast(data.message || 'That time could not be booked. Pick another.', 'error');
+        S.slotId = null;
+      }
+      refresh(false);
+    }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
+  },
+  session: function (el) { openSession(el.dataset.id); },
+  'cancel-open': function (el) { openCancel(el.dataset.id); },
+  'cancel-send': function (el) {
+    var reason = $('xh-cancel-reason').value.trim();
+    if (!reason) { $('xh-f-cancel').classList.add('is-bad'); $('xh-cancel-reason').focus(); return; }
+    var b = findBooking(el.dataset.id);
+    busy(el, 'Sending…');
+    send(D.urls.cancel + '/' + el.dataset.id, 'POST', { reason: reason }).then(function (data) {
+      if (data.success) {
+        closeAll();
+        toast('Cancellation sent. ' + (b ? b.expert_name : 'Your expert') + ' will approve or decline it.', 'success');
+        refresh(false);
+      } else {
+        idle(el);
+        toast(data.message || 'Could not ask to cancel this booking.', 'error');
+      }
+    }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
+  },
+  profile: function (el) { openProfile(el.dataset.id); },
+  apply: function (el) {
+    var d = el.closest('dialog');
+    if (d) { d.close(); }
+    S.draft = null;
+    openApply(el.dataset.id, null);
+  },
+  'apply-review': function (el) {
+    var dlg = el.closest('dialog');
+    var body = dlg.querySelector('[data-expert]');
+    var picked = dlg.querySelector('input[name="xh-apply-role"]:checked');
+    var msg = $('xh-apply-msg').value.trim();
+    var ok = true;
+    $('xh-f-role').classList.toggle('is-bad', !picked);
+    if (!picked) { ok = false; }
+    var n = words(msg);
+    if (n === 0 || n > 500) {
+      $('xh-msg-err').textContent = n === 0 ? 'Write a short message to the expert.' : 'Keep it to 500 words or fewer.';
+      $('xh-f-msg').classList.add('is-bad');
+      ok = false;
+    }
+    var file = S.draft && S.draft.file ? S.draft.file : null;
+    if (!D.hasApprovedProposal) {
+      var input = $('xh-apply-file');
+      if (input && input.files && input.files[0]) { file = input.files[0]; }
+      $('xh-f-file').classList.toggle('is-bad', !file);
+      if (!file) { ok = false; }
+    }
+    if (!ok) { return; }
+    S.draft = { expertId: body.dataset.expert, roleId: picked.value, roleName: picked.dataset.name, message: msg, file: file };
+    dlg.close();
+    openReview(S.draft);
+  },
+  'apply-edit': function (el) { ACT.close(el); openApply(S.draft.expertId, S.draft); },
+  'apply-send': function (el) {
+    var d = S.draft;
+    var form = new FormData();
+    form.append('expert_id', d.expertId);
+    form.append('expert_role_id', d.roleId);
+    form.append('message', d.message);
+    if (d.file) { form.append('proposal_file', d.file); }
+    busy(el, 'Sending…');
+    send(D.urls.apply, 'POST', form, true).then(function (data) {
+      if (data.success) {
+        closeAll();
+        toast(data.message || 'Application sent.', 'success');
+        reloadOnFind();
+      } else {
+        idle(el);
+        toast(data.message || 'The application could not be sent.', 'error');
+      }
+    }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
+  },
+  proposal: function () { openProposal(); },
+  pdf: function () { if (window.previewPdfUrl && D.proposalPdfUrl) { window.previewPdfUrl(D.proposalPdfUrl, D.proposalTitle || 'Pre-proposal'); } },
+  change: function (el) { openChange(el); },
+  'change-send': function (el) {
+    var reason = $('xh-change-reason').value.trim();
+    if (reason.length < D.reasonMin) { $('xh-f-reason').classList.add('is-bad'); return; }
+    busy(el, 'Sending…');
+    send(D.urls.assignments + '/' + el.dataset.assignment, 'DELETE', { reason: reason }).then(function (data) {
+      if (data.success) { closeAll(); toast(data.message, 'success'); reloadOnFind(); }
+      else { idle(el); toast(data.message || 'The request could not be sent.', 'error'); }
+    }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
+  },
+  takeback: function (el) { openTakeBack(el); },
+  'takeback-send': function (el) {
+    busy(el, 'Taking back…');
+    send(D.urls.removals + '/' + el.dataset.request, 'DELETE').then(function (data) {
+      if (data.success) { closeAll(); toast(data.message, 'success'); reloadOnFind(); }
+      else { idle(el); toast(data.message || 'The request could not be taken back.', 'error'); }
+    }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
+  },
+  app: function (el) { openApp(el.dataset.id); },
+  'app-withdraw': function (el) { openWithdraw(el.dataset.id); },
+  'app-withdraw-send': function (el) {
+    var a = APPS[el.dataset.id];
+    busy(el, 'Removing…');
+    send(D.urls.assignments + '/' + a.id, 'DELETE', { reason: a.status === 'pending' ? 'Withdrawn by the team leader before the expert answered.' : 'Cleared from the list after the expert declined.' }).then(function (data) {
+      if (data.success) { closeAll(); toast(a.status === 'pending' ? 'Application to ' + a.name + ' withdrawn.' : 'Removed from your list.', 'success'); reloadOnFind(); }
+      else { idle(el); toast(data.message || 'That could not be removed.', 'error'); }
+    }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
+  },
+  'skill-toggle': function (el) {
+    var pop = $('xh-skill-pop');
+    pop.hidden = !pop.hidden;
+    el.setAttribute('aria-expanded', String(!pop.hidden));
+    if (!pop.hidden) { $('xh-skill-q').focus(); }
+  }
+};
+
+document.addEventListener('click', function (e) {
+  var el = e.target.closest('[data-xh]');
+  var pop = $('xh-skill-pop');
+  if (pop && !pop.hidden && !e.target.closest('#xh-skill')) { pop.hidden = true; $('xh-skill-trigger').setAttribute('aria-expanded', 'false'); }
+  if (!el || el.disabled) { return; }
+  var fn = ACT[el.dataset.xh];
+  if (fn) { fn(el, e); }
 });
 
-// ── Mobile Sidebar ──
+document.addEventListener('input', function (e) {
+  var t = e.target;
+  if (t.id === 'xh-apply-msg') {
+    var n = words(t.value);
+    $('xh-msg-count').textContent = n;
+    if (n > 0 && n <= 500) { $('xh-f-msg').classList.remove('is-bad'); }
+  } else if (t.id === 'xh-change-reason') {
+    var len = t.value.trim().length;
+    $('xh-reason-count').textContent = t.value.length;
+    $('xh-change-send').disabled = len < D.reasonMin;
+    $('xh-f-reason').classList.toggle('is-bad', len > 0 && len < D.reasonMin);
+  } else if (t.id === 'xh-cancel-reason') {
+    if (t.value.trim()) { $('xh-f-cancel').classList.remove('is-bad'); }
+  } else if (t.id === 'xh-skill-q') {
+    // Narrows the picker itself; the list of experts only changes when a skill is chosen.
+    var q = t.value.trim().toLowerCase();
+    var any = false;
+    document.querySelectorAll('#xh-skill-list .xh-skill-group').forEach(function (g) {
+      var groupHit = q !== '' && (g.dataset.name || '').indexOf(q) !== -1;
+      var shown = 0;
+      g.querySelectorAll('.xh-skill-opt').forEach(function (o) {
+        var isAny = o.classList.contains('xh-skill-any');
+        var hit = q === '' || groupHit || (!isAny && (o.dataset.name || '').indexOf(q) !== -1);
+        o.hidden = !hit;
+        if (hit && !isAny) { shown++; }
+      });
+      var visible = q === '' || shown > 0 || groupHit;
+      g.hidden = !visible;
+      if (q !== '') { g.open = visible; }
+      if (visible) { any = true; }
+    });
+    var all = document.querySelector('#xh-skill-list [data-all]');
+    if (all) { all.hidden = q !== ''; }
+    $('xh-skill-nomatch').hidden = any || q === '';
+  }
+});
+document.addEventListener('change', function (e) {
+  if (e.target.name === 'xh-apply-role') { $('xh-f-role').classList.remove('is-bad'); }
+  if (e.target.id === 'xh-apply-file' && e.target.files && e.target.files[0]) { $('xh-f-file').classList.remove('is-bad'); }
+});
+document.querySelector('.xh-seg').addEventListener('keydown', function (e) {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    ACT.tab({ dataset: { tab: S.tab === 'consultations' ? 'find' : 'consultations' } });
+  }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { var pop = $('xh-skill-pop'); if (pop) { pop.hidden = true; } }
+});
+
+// Kept current without a reload: a slot the expert adds, or a booking a
+// teammate makes or cancels. Paused while the tab is hidden.
+setInterval(function () { if (document.visibilityState === 'visible') { refresh(true); } }, 30000);
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { refresh(true); } });
+
+// Arriving from the duplication report's "Apply" link: open that expert's
+// application, or say why it cannot be opened. One-shot, so a reload does
+// not open it again.
+(function () {
+  var wanted = new URLSearchParams(window.location.search).get('apply');
+  if (!wanted) { return; }
+  var cleaned = new URL(window.location.href);
+  cleaned.searchParams.delete('apply');
+  history.replaceState(null, '', cleaned.pathname + cleaned.search + cleaned.hash);
+  var card = document.querySelector('.xh-xcard[data-expert-id="' + CSS.escape(wanted) + '"]');
+  if (!card) { toast('That expert is not in the current list. Clear any filters to find them.', 'error'); return; }
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (EXPERTS[wanted] && EXPERTS[wanted].apply) {
+    setTimeout(function () { openApply(wanted, null); }, 400);
+  } else {
+    var why = EXPERTS[wanted] && EXPERTS[wanted].status ? EXPERTS[wanted].status.text : 'You cannot apply to this expert right now.';
+    toast('You cannot apply to this expert right now: ' + why, 'error');
+  }
+})();
+
+render();
+})();
+
+// -- Mobile sidebar --
 function toggleSidebar() {
   document.body.classList.toggle('sidebar-open');
   document.body.style.overflow = document.body.classList.contains('sidebar-open') ? 'hidden' : '';
@@ -2031,55 +1334,8 @@ function closeSidebar() {
   document.body.classList.remove('sidebar-open');
   document.body.style.overflow = '';
 }
-document.querySelectorAll('.nav-item').forEach(function(el) {
-  el.addEventListener('click', function() {
-    if (window.innerWidth <= 768) closeSidebar();
-  });
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  var sk = document.getElementById('skeleton-content');
-  var rc = document.getElementById('real-content');
-  var scroller = document.querySelector('.content');
-  if (sk && rc) {
-    // partials/skeleton-head already decided this in <head>, before the first
-    // paint: the content is on screen and no skeleton was ever shown. Without
-    // this, every save replayed the 600ms fade over content already there.
-    if (document.documentElement.classList.contains('sk-seen')) {
-      sk.remove();
-
-      return;
-    }
-
-    // #real-content stays in normal flow at opacity:0 (not display:none, to
-    // avoid a layout jump on reveal) — but that means its full real height
-    // already counts toward .content's scrollable area while only the
-    // skeleton is visible. If real content is taller than the skeleton
-    // placeholder, that produced a scrollbar you could drag into blank
-    // space below the skeleton. Locking scroll during loading and
-    // restoring it on reveal avoids that.
-    var prevOverflow = scroller ? scroller.style.overflowY : '';
-    if (scroller) scroller.style.overflowY = 'hidden';
-
-    requestAnimationFrame(function () {
-      setTimeout(function () {
-        sk.style.transition = 'opacity 0.3s ease';
-        sk.style.opacity = '0';
-        rc.style.transition = 'opacity 0.35s ease';
-        rc.style.opacity = '1';
-        if (scroller) scroller.style.overflowY = prevOverflow || 'auto';
-        setTimeout(function () {
-          sk.remove();
-          rc.style.transition = '';
-        }, 350);
-        try {
-          sessionStorage.setItem('sk-seen:{{ substr(sha1(session()->getId()), 0, 12) }}:' + window.location.pathname, '1');
-        } catch (e) {}
-      }, 600);
-    });
-  }
+document.querySelectorAll('.nav-item').forEach(function (el) {
+  el.addEventListener('click', function () { if (window.innerWidth <= 768) { closeSidebar(); } });
 });
 </script>
 @include('partials.escape-closes-modals')

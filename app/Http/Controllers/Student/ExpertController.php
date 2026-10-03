@@ -9,6 +9,7 @@ use App\Models\ExpertRemovalRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
+use App\Support\ConsultationBoard;
 use App\Support\SectionScope;
 use App\Support\SkillCatalog;
 use Illuminate\Http\Request;
@@ -21,7 +22,27 @@ class ExpertController extends Controller
     /** The roles a team engages, in the order the page offers them. */
     private const ROLES = ['adviser', 'consultant', 'grammarian'];
 
+    /** The page's two tabs. */
+    private const TABS = ['consultations', 'find'];
+
+    public function __construct(private ConsultationBoard $board) {}
+
+    /**
+     * Experts and Consultation are one page now: the team's three experts on
+     * top, booking them under one tab and finding them under the other.
+     */
     public function index(Request $request)
+    {
+        return $this->page($request, null);
+    }
+
+    /** The old Consultation address, which opens the same page on its booking tab. */
+    public function consultations(Request $request)
+    {
+        return $this->page($request, 'consultations');
+    }
+
+    private function page(Request $request, ?string $forcedTab)
     {
         $student = Auth::user();
         $team = StudentSchoolYear::where('student_id', $student->student_id)
@@ -147,6 +168,10 @@ class ExpertController extends Controller
 
         $search = trim((string) $request->query('q', ''));
 
+        // Only experts who can still take a team. A capacity nobody has set
+        // is not room, so those are left out too.
+        $openOnly = $request->boolean('open');
+
         // A group only means something if it is one we actually offer.
         if ($activeGroup !== '' && ! $skillGroups->has($activeGroup)) {
             $activeGroup = '';
@@ -214,7 +239,14 @@ class ExpertController extends Controller
             ->when($activeSkill === '' && $groupTerms !== [], function ($q) use ($groupTerms, $matchesSkill) {
                 $q->whereHas('expertise', fn ($sub) => $matchesSkill($sub, $groupTerms));
             })
-            ->when($search !== '', $matchesSearch);
+            ->when($search !== '', $matchesSearch)
+            ->when($openOnly, function ($q) {
+                $q->where('max_teams', '>', 0)
+                    ->whereRaw(
+                        '(SELECT COUNT(*) FROM capstone_expert_application AS taken WHERE taken.expert_id = capstone_experts.expert_id AND taken.status = ?) < max_teams',
+                        ['approved'],
+                    );
+            });
 
         $roleCounts = [];
         foreach (self::ROLES as $roleName) {
@@ -259,7 +291,20 @@ class ExpertController extends Controller
             ? CapstonePreProposal::with('duplicationCheck')->find($team->selected_pre_proposal_id)
             : null;
 
+        $consult = $this->board->forStudent($student);
+
+        // Booking is what a team comes back for, once it has somebody to book.
+        // Until then, and whenever the address carries a search, the page
+        // opens on finding experts.
+        $tab = $forcedTab ?? $request->query('tab');
+        if (! in_array($tab, self::TABS, true)) {
+            $browsing = collect(['role', 'q', 'skill', 'skill_group', 'open', 'apply', 'page'])
+                ->contains(fn ($key) => $request->filled($key));
+            $tab = ! $browsing && $consult['experts']->isNotEmpty() ? 'consultations' : 'find';
+        }
+
         return view('student.experts', [
+            'tab' => $tab,
             'experts' => $experts,
             'assignments' => $assignments,
             // Roles this team has an application out for, or has settled,
@@ -294,7 +339,18 @@ class ExpertController extends Controller
             'activeGroup' => $activeGroup,
             'activeRole' => $activeRole,
             'search' => $search,
+            'openOnly' => $openOnly,
             'roleCounts' => $roleCounts,
+            // The Consultations tab: who this team can book, when, and what
+            // it already has.
+            'consultExperts' => $consult['experts'],
+            'defaultExpertId' => $consult['defaultExpertId'],
+            'availableSlots' => $consult['availableSlots'],
+            'fullOccurrences' => $this->board->fullOccurrences($consult['availableSlots']),
+            'upcomingBookings' => $consult['upcomingBookings']->map(fn ($b) => $this->board->cardData($b))->values(),
+            'recentBookings' => $consult['recentBookings']->map(fn ($b) => $this->board->cardData($b))->values(),
+            'bookedExpertIds' => $consult['bookedExpertIds'],
+            'bookingWindows' => $consult['bookingWindows'],
         ]);
     }
 
