@@ -548,7 +548,7 @@
                   </a>
                   <a class="ta-btn" href="{{ route('instructor.teams') }}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/></svg>
-                    Team Overview
+                    My Teams
                   </a>
                 </div>
               </div>

@@ -7,7 +7,7 @@
   <div class="nav-section">Teams</div>
   <a href="{{ route('instructor.teams') }}" class="nav-item {{ (isset($currentPage) && $currentPage === 'teams') ? 'active' : '' }}">
     <x-portal-icon name="team" />
-    Team Overview
+    My Teams
     @if (($totalTeams ?? 0) > 0)
       <span class="nav-badge">{{ $totalTeams > 99 ? '99+' : $totalTeams }}</span>
     @endif

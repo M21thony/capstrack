@@ -46,7 +46,8 @@ class TableExportTest extends TestCase
 
         $pages = [
             'capsa.activitylog' => ['Activity Log'],
-            'capsa.team_management' => ['Teams', 'Milestone Progress'],
+            // Progress is a column of the Teams table now, not a second table.
+            'capsa.team_management' => ['Teams'],
             'capsa.panel_assignment' => ['Panel Assignment'],
             'capsa.defense_scheduling' => ['Defense Schedule'],
             'capsa.financial' => ['Receipts'],

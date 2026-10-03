@@ -24,15 +24,21 @@
   .tp-facts dt{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
   .tp-facts dd{margin:2px 0 0;font-size:13px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
   .tp-acts{display:flex;gap:8px;flex-wrap:wrap}
-  .tp-acts .btn{height:38px;padding:0 14px}
+  .tp-acts .btn{padding:7px 13px;font-size:12.5px;border-radius:8px;box-shadow:none}
 
   /* What on this team is waiting on her: the first thing, and how many more. */
-  .tp-needs{display:flex;align-items:center;gap:16px;padding:7px 16px;border:1px solid var(--amber);background:var(--amber-bg);border-radius:12px;flex-wrap:wrap}
-  .tp-needs-h{display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--amber);white-space:nowrap}
-  .tp-needs-h a{font-size:12px;letter-spacing:0;text-transform:none;font-weight:600;color:var(--ink2)}
-  .tp-needs-what{flex:1;min-width:200px;font-size:12.5px;color:var(--mut)}
+  .tp-needs{display:flex;align-items:center;gap:14px;padding:10px 18px;border:1px solid #b45309;background:#fffbeb;border-radius:12px;flex-wrap:wrap}
+  .tp-needs-h{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#b45309;white-space:nowrap}
+  .tp-needs-h a{font-size:12px;letter-spacing:0;text-transform:none;font-weight:600;color:var(--ink2);text-decoration:underline;text-underline-offset:2px}
+  .tp-needs-ico{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;background:var(--tint);color:var(--accent3);flex:none}
+  .tp-needs-what{flex:1;min-width:200px;display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--mut)}
   .tp-needs-what b{font-size:13.5px;color:var(--ink)}
-  .tp-needs .btn{padding:5px 14px}
+  .tp-needs .btn{padding:7px 13px;font-size:12.5px;border-radius:8px;box-shadow:none}
+  .tp-st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--mut);letter-spacing:0}
+  .tp-st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+  .tp-st.ok{color:var(--green)} .tp-st.warn{color:#b45309}
+  .tp-facts dd.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+  .tp .btn{box-shadow:none}
 
   .tp-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:stretch}
   .tp-col{display:flex;flex-direction:column;gap:16px;min-width:0}
@@ -111,7 +117,7 @@
      at all rather than cut in half. */
   @media (min-width:1101px){
     .content:has(.tp){display:flex;flex-direction:column}
-    .content:has(.tp) > .tmx{flex:1 0 auto;display:flex;flex-direction:column;padding-block:12px}
+    .content:has(.tp) > .tmx{flex:1 0 auto;display:flex;flex-direction:column;padding-block:20px}
     .content:has(.tp) > .tmx > .crumb{margin-bottom:8px}
     .tp{flex:1 0 auto}
     .tp-grid{flex:1}
@@ -147,6 +153,14 @@
   use Illuminate\Support\Str;
 
   $team = $row->team;
+  $portal = $portal ?? 'capsa';
+  // What she does here as CaPSA - titles, verifying, signed papers - only on
+  // a team in her sections; on a team she only advises, the page is an
+  // expert's.
+  $asCapsa = $portal === 'capsa' && $row->inSections;
+  $showRoute = $portal === 'capsa' ? 'capsa.team_management.show' : 'instructor.teams.show';
+  $logRoute = $portal === 'capsa' ? 'capsa.team_management.log' : 'instructor.teams.log';
+  $hubRoute = $portal === 'capsa' ? 'capsa.team_management' : 'instructor.teams';
   $maxMembers = \App\Models\Team::maxMembers();
   $palette = ['#8a6e10', '#0e7490', '#4338ca', '#1d7a3e', '#9f1239'];
   $avatar = fn ($seed) => $palette[abs((int) $seed) % count($palette)];
@@ -154,7 +168,7 @@
       ->filter()->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->take(2)->implode('');
 
   // The panel's average at the latest stage they have actually been graded on.
-  $score = $defenseScores->get($team->team_id, collect())->last(fn ($s) => $s->average !== null);
+  $score = $row->seesScores ? $defenseScores->get($team->team_id, collect())->last(fn ($s) => $s->average !== null) : null;
   $titled = (bool) $team->project_title;
   // Papers normally start after the title, but one sent early still shows.
   $showPapers = $titled || $row->papers->isNotEmpty();
@@ -184,36 +198,36 @@
 
 <div class="tp">
   <div class="tp-head">
-    <span class="tp-tav" style="background:linear-gradient(135deg,{{ $row->gradient }})" aria-hidden="true">{{ $row->initials }}</span>
+    <span class="tp-tav" style="background:{{ Str::before($row->gradient, ',') }}" aria-hidden="true">{{ $row->initials }}</span>
     <div class="grow">
       <h1>{{ $team->team_name }}
         @if ($team->is_confirmed)
-          <span class="pill p-green">Verified</span>
+          <span class="tp-st ok">Verified</span>
         @elseif ($row->awaitingVerification)
-          <span class="pill p-amber">To verify</span>
+          <span class="tp-st warn">To verify</span>
         @else
-          <span class="pill p-gray">{{ ucfirst($team->team_status) }}</span>
+          <span class="tp-st">{{ ucfirst($team->team_status) }}</span>
         @endif
       </h1>
       <div class="tp-meta">
         <span class="t" title="{{ $titled ? $team->project_title : $untitledNote }}">{{ $titled ? $team->project_title : $untitledNote }}</span>
-        @if ($titled && $row->proposals->isNotEmpty())
+        @if ($asCapsa && $titled && $row->proposals->isNotEmpty())
           <span>·</span> <a href="{{ route('capsa.team_management.pre_proposals', $team->team_id) }}">See all {{ $row->proposals->count() }} submitted titles</a>
         @endif
       </div>
       <dl class="tp-facts">
         <div><dt>Section</dt><dd>{{ $row->section }}</dd></div>
         <div><dt>Next</dt><dd>{{ $next }}</dd></div>
-        <div><dt>Latest score{{ $score ? ' · '.$score->label : '' }}</dt><dd>{{ $score ? \App\Support\DefenseScores::format($score->average) : 'None yet' }}</dd></div>
+        <div><dt>Latest score{{ $score ? ' · '.$score->label : '' }}</dt><dd @class(['mono' => $score])>{{ $score ? \App\Support\DefenseScores::format($score->average) : 'None yet' }}</dd></div>
       </dl>
     </div>
     <div class="tp-acts">
-      @if ($row->canVerify)
+      @if ($asCapsa && $row->canVerify)
         <a class="btn btn-p" href="{{ route('capsa.team_management.pre_proposals', $team->team_id) }}"><x-tm-icon n="shield" s="14" />Verify team</a>
       @endif
       @if ($previousTeam)
-        <a class="btn btn-o" href="{{ route('capsa.team_management.show', $previousTeam->team_id) }}" aria-label="Previous team, {{ $previousTeam->team_name }}">← {{ $previousTeam->team_name }}</a>
-        <a class="btn btn-o" href="{{ route('capsa.team_management.show', $nextTeam->team_id) }}" aria-label="Next team, {{ $nextTeam->team_name }}">{{ $nextTeam->team_name }} →</a>
+        <a class="btn btn-o" href="{{ route($showRoute, $previousTeam->team_id) }}" aria-label="Previous team, {{ $previousTeam->team_name }}">← {{ $previousTeam->team_name }}</a>
+        <a class="btn btn-o" href="{{ route($showRoute, $nextTeam->team_id) }}" aria-label="Next team, {{ $nextTeam->team_name }}">{{ $nextTeam->team_name }} →</a>
       @endif
     </div>
   </div>
@@ -223,10 +237,12 @@
     <div class="tp-needs">
       <div class="tp-needs-h">Waiting on you
         @if ($waiting->count() > 1)
-          <a href="{{ route('capsa.team_management') }}">+{{ $waiting->count() - 1 }} more in To do</a>
+          <a href="{{ route($hubRoute, ['tab' => 'todo']) }}">+{{ $waiting->count() - 1 }} more in To do</a>
         @endif
       </div>
-      <div class="tp-needs-what"><b>{{ $first->what }}</b> · {{ $first->why }}</div>
+      @php $needIcons = ['title' => 'file', 'verify' => 'shield', 'paper' => 'clip', 'signed' => 'star', 'review' => 'file']; @endphp
+      <span class="tp-needs-ico"><x-tm-icon :n="$needIcons[$first->kind] ?? 'dot'" s="18" /></span>
+      <div class="tp-needs-what"><b>{{ $first->what }}</b><span>{{ $first->why }}</span></div>
       <a class="btn btn-p" href="{{ $first->url }}">{{ $first->label }}</a>
     </div>
   @endif
@@ -267,7 +283,7 @@
             @endforeach
           </ul>
           @unless ($titled)
-            <p class="tp-note">The team can apply to an adviser once you recommend one of its titles.</p>
+            <p class="tp-note">The team can apply to an adviser once {{ $asCapsa ? 'you recommend' : 'the CaPSA recommends' }} one of its titles.</p>
           @endunless
         </section>
 
@@ -305,7 +321,7 @@
               @foreach ($milestones as $i => $ms)
                 @php $tone = $toneOf($states[$i]); @endphp
                 <li class="t-{{ $tone }}">
-                  <a href="{{ route('capsa.team_management.show', [$team->team_id, 'milestone' => $i]) }}"
+                  <a href="{{ route($showRoute, [$team->team_id, 'milestone' => $i]) }}"
                      aria-current="{{ $i === $selectedIndex ? 'true' : 'false' }}"
                      aria-label="{{ $ms->milestone->name }}: {{ $states[$i] }}{{ $ms->locked ? '' : ", {$ms->completed} of {$ms->total} done" }}">
                     <span class="n">@if ($tone === 'd')<x-tm-icon n="check" s="11" bold />@elseif ($ms->locked)<x-tm-icon n="lock" s="11" />@else{{ $i + 1 }}@endif</span>
@@ -352,7 +368,7 @@
                     </div>
                     @if ($item->locked && $item->state !== 'handed_in')
                       <span class="tp-state lk"><x-tm-icon n="lock" s="12" />Locked</span>
-                    @elseif ($item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
+                    @elseif ($asCapsa && $item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
                       {{-- A signed paper closes on the CaPSA's check, and the check
                            itself lives in the Milestones tracker. Once it is
                            checked, or put down, the tracker brings her back
@@ -369,7 +385,7 @@
                 @endforeach
               </ul>
               <a class="tp-more" data-tp-more="{{ $selected->items->count() }}" hidden
-                 href="{{ route('capsa.team_management', ['tab' => 'milestones', 'section' => $row->section, 'team' => $team->team_id]) }}">See all {{ $selected->items->count() }} requirements</a>
+                 href="{{ $portal === 'capsa' ? route('capsa.team_management', ['tab' => 'milestones', 'section' => $row->section, 'team' => $team->team_id]) : route('instructor.progress') }}">See all {{ $selected->items->count() }} requirements</a>
             </div>
           </div>
         @endif
@@ -386,7 +402,7 @@
               <button type="button" data-tp-pane="tp-titles" aria-pressed="true">Titles <span>{{ $row->pendingProposalCount ? $row->pendingProposalCount.' waiting' : $row->proposals->count() }}</span></button>
             @endunless
             @if ($showPapers)
-              <button type="button" data-tp-pane="tp-papers" aria-pressed="{{ $titled ? 'true' : 'false' }}">Papers <span>{{ $row->papersToCheck }} to check</span></button>
+              <button type="button" data-tp-pane="tp-papers" aria-pressed="{{ $titled ? 'true' : 'false' }}">Papers <span>{{ $row->inSections && $portal === 'capsa' ? $row->papersToCheck : $row->reviewsToDo }} to check</span></button>
             @endif
             <button type="button" data-tp-pane="tp-activity" aria-pressed="false">Activity <span>{{ $activity->count() }}</span></button>
           </div>
@@ -404,7 +420,9 @@
                   <div style="min-width:0"><b>{{ $proposal->title }}</b>
                     <small>Closest match <x-tm-sim :score="$proposal->duplicationCheck?->top_score" /></small></div>
                   <span class="end"><span class="st {{ $stateTone }}">{{ $stateWord }}</span>
-                    <a class="btn {{ $isPending ? 'btn-p' : 'btn-o' }}" href="{{ route('capsa.team_management.title', [$team->team_id, $proposal->id]) }}">{{ $isPending ? 'Review' : 'Open' }}</a></span>
+                    @if ($asCapsa)
+                      <a class="btn {{ $isPending ? 'btn-p' : 'btn-o' }}" href="{{ route('capsa.team_management.title', [$team->team_id, $proposal->id]) }}">{{ $isPending ? 'Review' : 'Open' }}</a>
+                    @endif</span>
                 </li>
               @empty
                 <li><span></span><p class="tp-none">No titles turned in yet.</p><span></span></li>
@@ -415,11 +433,11 @@
         @if ($showPapers)
           <div class="tp-pane" id="tp-papers"@unless ($titled) hidden @endunless>
             @if ($row->papers->isEmpty())
-              <p class="tp-none">Nothing to check. Papers appear here when this team sends one to their Subject Adviser.</p>
+              <p class="tp-none">{{ $portal === 'capsa' && $row->inSections ? 'Nothing to check. Papers appear here when this team sends one to their Subject Adviser.' : 'Nothing sent to you yet. Papers appear here when this team sends you one to review.' }}</p>
             @else
               @include('capsa.team-management._papers', ['papers' => $row->papers->take(12), 'fill' => true])
               @if ($row->papers->count() > $shown)
-                <a class="tp-more" href="{{ route('capsa.team_management.log', [$team->team_id, 'papers']) }}">See all {{ $row->papers->count() }} papers</a>
+                <a class="tp-more" href="{{ route($logRoute, [$team->team_id, 'papers']) }}">See all {{ $row->papers->count() }} papers</a>
               @endif
             @endif
           </div>
@@ -427,7 +445,7 @@
         <div class="tp-pane" id="tp-activity" hidden>
           @include('capsa.team-management._feed', ['events' => $activity->take(12), 'fill' => true])
           @if ($activity->count() > $shown)
-            <a class="tp-more" href="{{ route('capsa.team_management.log', [$team->team_id, 'activity']) }}">See all {{ $activity->count() }} updates</a>
+            <a class="tp-more" href="{{ route($logRoute, [$team->team_id, 'activity']) }}">See all {{ $activity->count() }} updates</a>
           @endif
         </div>
       </section>

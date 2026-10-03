@@ -308,6 +308,8 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
 Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {
     Route::get('/dashboard', [InstructorDashboardController::class, 'index'])->name('dashboard');
     Route::get('/teams', [InstructorTeamController::class, 'index'])->name('teams');
+    Route::get('/teams/{team}', [InstructorTeamController::class, 'show'])->name('teams.show');
+    Route::get('/teams/{team}/{log}', [InstructorTeamController::class, 'log'])->whereIn('log', ['papers', 'activity'])->name('teams.log');
     // An adviser confirming a team's new title after "Redefense with a new title".
     Route::patch('/title-confirmations/{preProposal}', [TitleConfirmationController::class, 'update'])->name('title-confirmations.update');
     Route::get('/title-confirmations/{preProposal}/document', [TitleConfirmationController::class, 'document'])->name('title-confirmations.document');
