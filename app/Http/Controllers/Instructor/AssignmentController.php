@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstonePreProposal;
+use App\Models\DefenseSchedule;
 use App\Models\Notification;
 use App\Models\TeamExpertAssignment;
 use App\Models\TitleChangeRequest;
 use App\Services\RecipientResolver;
+use App\Support\DefenseBoard;
 use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -143,7 +145,18 @@ class AssignmentController extends Controller
             ->filter(fn ($c) => $resolver->resolveTeamRoleExpert((int) $c->team_id, 'adviser') === (int) $expert->expert_id)
             ->values();
 
+        // Title, Pre Oral and Final Oral dates of this adviser's teams, for their go.
+        $defenseGo = DefenseSchedule::whereIn('defense_type', DefenseBoard::PAID_STAGES)
+            ->whereNull('outcome')
+            ->where('schedule_date', '>=', now())
+            ->with('team')
+            ->orderBy('schedule_date')
+            ->get()
+            ->filter(fn ($d) => $resolver->resolveTeamRoleExpert((int) $d->team_id, 'adviser') === (int) $expert->expert_id)
+            ->values();
+
         return view('instructor.assignments', [
+            'defenseGo' => $defenseGo,
             'titleChanges' => $titleChanges,
             'titleConfirmations' => $titleConfirmations,
             'titleData' => $titleData,

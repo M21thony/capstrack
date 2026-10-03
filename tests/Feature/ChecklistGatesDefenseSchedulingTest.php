@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
-use App\Models\Deliverable;
-use App\Models\DeliverableCheck;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\DefenseWindow;
+use App\Models\Deliverable;
+use App\Models\DeliverableCheck;
 use App\Models\ExpertRole;
 use App\Models\Role;
 use App\Models\Student;
@@ -16,14 +16,16 @@ use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Support\DefenseOutcome;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * A defense is not scheduled until everything above it on the team's
- * checklist is done: Getting started for the Pre-Proposal, everything through
- * the signed Hearing Notice for the Title Defense.
+ * What is still open above a defense on the team's checklist - Getting
+ * started for the Pre-Proposal, everything through the signed Hearing Notice
+ * for the Title Defense - is named on the board, but it does not keep the
+ * team from a date: the panel follows the requirements up.
  */
 class ChecklistGatesDefenseSchedulingTest extends TestCase
 {
@@ -71,12 +73,23 @@ class ChecklistGatesDefenseSchedulingTest extends TestCase
         return $team;
     }
 
-    private function notReady(string $stage): \Illuminate\Support\Collection
+    private function notReady(string $stage): Collection
     {
         return collect($this->actingAs($this->admin, 'expert')
             ->postJson(route('api.admin.panel_assignment.schedule-drafts.store'), ['defense_type' => $stage])
             ->assertOk()
             ->json('data.not_ready'))->pluck('reason', 'team_name');
+    }
+
+    /** The requirement the board names for each team still owing one. */
+    private function owed(string $stage): Collection
+    {
+        return collect($this->actingAs($this->admin, 'expert')
+            ->getJson(route('api.admin.panel_assignment.board', ['defense_type' => $stage]))
+            ->assertOk()
+            ->json('data.teams'))
+            ->mapWithKeys(fn ($row) => [$row['name'] => collect($row['blockers'])->firstWhere('key', 'req')['text'] ?? null])
+            ->filter();
     }
 
     private function complete(Deliverable $deliverable, Team $team): void
@@ -89,14 +102,17 @@ class ChecklistGatesDefenseSchedulingTest extends TestCase
         $team = $this->readyTeam('Alpha', DefenseOutcome::PRE_PROPOSAL);
         $checklist = $this->departmentChecklist($this->capsa);
 
-        $reason = $this->notReady(DefenseOutcome::PRE_PROPOSAL)['Alpha'] ?? '';
+        $reason = $this->owed(DefenseOutcome::PRE_PROPOSAL)['Alpha'] ?? '';
         $this->assertStringContainsString('Signed Project Team Assignment Form', $reason);
         $this->assertStringContainsString('4 more', $reason);
+
+        // Named, but not in the way: Generate schedule still places the team.
+        $this->assertArrayNotHasKey('Alpha', $this->notReady(DefenseOutcome::PRE_PROPOSAL)->all());
 
         $checklist->milestones()->where('name', 'Getting started')->first()->deliverables
             ->each(fn (Deliverable $d) => $this->complete($d, $team));
 
-        $this->assertArrayNotHasKey('Alpha', $this->notReady(DefenseOutcome::PRE_PROPOSAL)->all());
+        $this->assertArrayNotHasKey('Alpha', $this->owed(DefenseOutcome::PRE_PROPOSAL)->all());
     }
 
     public function test_the_title_defense_waits_for_everything_above_it_and_nothing_below(): void
@@ -112,13 +128,14 @@ class ChecklistGatesDefenseSchedulingTest extends TestCase
         $this->addDeliverable($checklist, ['title' => 'Title Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => DefenseOutcome::TITLE_DEFENSE]);
         $this->addDeliverable($checklist, ['title' => 'Signed (Noted) TD RSC']);
 
-        $this->assertStringContainsString('Signed Title Defense Hearing Notice', $this->notReady(DefenseOutcome::TITLE_DEFENSE)['Bravo'] ?? '');
+        $this->assertStringContainsString('Signed Title Defense Hearing Notice', $this->owed(DefenseOutcome::TITLE_DEFENSE)['Bravo'] ?? '');
+        // What holds the team back is the Title Defense fee, which this test does not set - not the checklist.
+        $this->assertSame('Fees not verified.', $this->notReady(DefenseOutcome::TITLE_DEFENSE)['Bravo'] ?? '');
 
         $this->complete($notice, $team);
 
-        // The TD RSC comes after the defense, so it cannot hold it up. (Any
-        // reason left is the Title Defense fee, which this test does not set.)
-        $this->assertStringNotContainsString('Checklist', $this->notReady(DefenseOutcome::TITLE_DEFENSE)['Bravo'] ?? '');
+        // The TD RSC comes after the defense, so it is not owed before it.
+        $this->assertArrayNotHasKey('Bravo', $this->owed(DefenseOutcome::TITLE_DEFENSE)->all());
     }
 
     /** A team whose section has no checklist has not been given this gate. */
@@ -127,6 +144,7 @@ class ChecklistGatesDefenseSchedulingTest extends TestCase
         $this->departmentChecklist($this->capsa);
         $this->readyTeam('Charlie', DefenseOutcome::PRE_PROPOSAL, '3rd · Z');
 
+        $this->assertArrayNotHasKey('Charlie', $this->owed(DefenseOutcome::PRE_PROPOSAL)->all());
         $this->assertArrayNotHasKey('Charlie', $this->notReady(DefenseOutcome::PRE_PROPOSAL)->all());
     }
 }

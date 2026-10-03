@@ -25,6 +25,9 @@ class DefenseSchedule extends Model
         'outcome_remarks',
         'outcome_recorded_by',
         'outcome_recorded_at',
+        'capa_answer',
+        'capa_answered_at',
+        'capa_answered_by',
     ];
 
     protected $casts = [
@@ -32,7 +35,11 @@ class DefenseSchedule extends Model
         'end_date' => 'datetime',
         'attempt' => 'integer',
         'outcome_recorded_at' => 'datetime',
+        'capa_answered_at' => 'datetime',
     ];
+
+    /** The CaPA's word that the team is ready to defend on this date. */
+    public const CAPA_GO = 'go';
 
     /**
      * A defense takes its panel and grades with it. The tables are MyISAM,

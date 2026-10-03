@@ -6,16 +6,21 @@ use App\Models\CapstoneExpert;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\DefenseWindow;
+use App\Models\ExpertAwayDate;
+use App\Models\PanelReplacement;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Services\DefenseScheduleNotifier;
 use App\Services\GoogleCalendarService;
+use App\Services\Notifier;
 use App\Support\DefenseBoard;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
@@ -31,6 +36,12 @@ class AdminPanelAssignmentController extends Controller
     private const DEFENSE_TYPES = DefenseBoard::STAGES;
 
     private const VENUES = DefenseBoard::VENUES;
+
+    /**
+     * Held while a date is checked and saved, by every CaPSA: two of them
+     * saving at the same moment would otherwise both find the same slot free.
+     */
+    private const SAVE_LOCK = 'defense-schedule-save';
 
     public function __construct(private GoogleCalendarService $calendar, private DefenseBoard $board) {}
 
@@ -86,6 +97,8 @@ class AdminPanelAssignmentController extends Controller
             'rubric_missing_programs' => DefenseBoard::programsWithoutRubric($stage, $capsa->handledPrograms()),
             'slots' => DefenseBoard::slots(DefenseBoard::minutesFor($stage)),
             'venues' => DefenseBoard::VENUES,
+            'away' => $this->board->awayDates(),
+            'progress' => $this->board->stageProgress($capsa),
         ]]);
     }
 
@@ -200,11 +213,170 @@ class AdminPanelAssignmentController extends Controller
     // changing or removing it is the same act for all four stages.
     private function assignPanelToTeam(Team $team, array $validated): array
     {
+        // A final panel sits every defense through Final Oral. Someone who
+        // can no longer sit is replaced on their own (replacePanelist()).
+        if ($team->panelIsFinal()) {
+            return ['success' => false, 'message' => $team->team_name.'\'s panel is final. Replace one panelist instead.'];
+        }
+
         $result = empty($validated['chair_expert_id'])
             ? $this->removePanelFromTeam($team)
             : $this->writePanelToAllStages($team, $validated);
 
+        if ($result['success']) {
+            // A panel saved here is a draft until the CaPSA finalizes it.
+            $team->update(['panel_status' => empty($validated['chair_expert_id']) ? null : Team::PANEL_DRAFT]);
+        }
+
         return $result;
+    }
+
+    /**
+     * POST /panel_assignment/finalize - these teams' draft panels become
+     * final: from now on they sit every defense through Final Oral, and the
+     * teams can be scheduled.
+     */
+    public function finalize(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'team_ids' => ['required', 'array', 'min:1'],
+            'team_ids.*' => ['integer', 'exists:team,team_id'],
+        ]);
+
+        $capsa = $this->capsa();
+        $done = [];
+        $skipped = [];
+
+        foreach (Team::whereIn('team_id', $validated['team_ids'])->get() as $team) {
+            $hasChair = DefensePanel::whereIn('defense_id', DefenseSchedule::where('team_id', $team->team_id)->pluck('defense_id'))
+                ->where('panel_role', 'Panel Chair')->exists();
+
+            $why = match (true) {
+                ! $this->board->covers($capsa, $team) => 'Not in your sections.',
+                ! $hasChair => 'Has no panel yet.',
+                $team->panelIsFinal() => 'Already final.',
+                default => null,
+            };
+
+            if ($why) {
+                $skipped[] = ['team_id' => $team->team_id, 'team_name' => $team->team_name, 'reason' => $why];
+
+                continue;
+            }
+
+            $team->update(['panel_status' => Team::PANEL_FINAL, 'panel_finalized_at' => now(), 'panel_finalized_by' => $capsa->expert_id]);
+            $done[] = $team->team_id;
+        }
+
+        $n = count($done);
+
+        return response()->json([
+            'success' => true,
+            'message' => $n.' '.($n === 1 ? 'panel' : 'panels').' finalized.',
+            'data' => ['finalized' => $done, 'skipped' => $skipped],
+        ]);
+    }
+
+    /**
+     * POST /panel_assignment/{team}/replacements - one panelist on a final
+     * panel who can no longer sit, and who takes the seat. Defenses already
+     * held keep the panelist who sat them; every one still to come gets the
+     * new one.
+     */
+    public function replacePanelist(Request $request, Team $team): JsonResponse
+    {
+        $validated = $request->validate([
+            'seat' => ['required', 'in:chair,m1,m2'],
+            'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
+            'reason' => ['required', 'string', 'min:5', 'max:255'],
+        ]);
+
+        $capsa = $this->capsa();
+
+        if (! $this->board->covers($capsa, $team)) {
+            return response()->json(['success' => false, 'message' => $team->team_name.' is not in your sections.'], 403);
+        }
+
+        if (! $team->panelIsFinal()) {
+            return response()->json(['success' => false, 'message' => 'This panel is still a draft. Change it instead.'], 422);
+        }
+
+        $role = ['chair' => 'Panel Chair', 'm1' => 'Panel Member 1', 'm2' => 'Panel Member 2'][$validated['seat']];
+        $new = CapstoneExpert::findOrFail($validated['expert_id']);
+
+        // Every defense still to come: not decided, and not already past.
+        $upcoming = DefenseSchedule::where('team_id', $team->team_id)
+            ->whereNull('outcome')
+            ->where(fn ($q) => $q->whereNull('schedule_date')->orWhere('schedule_date', '>=', now()))
+            ->with('panels.expert')
+            ->get();
+
+        $current = $upcoming->flatMap->panels->firstWhere('panel_role', $role);
+
+        if (! $current) {
+            return response()->json(['success' => false, 'message' => 'That seat has no defense left to sit.'], 422);
+        }
+
+        $sitting = $upcoming->flatMap->panels->where('panel_role', '!=', $role)->pluck('expert_id')->map(fn ($id) => (int) $id);
+        $why = match (true) {
+            (int) $current->expert_id === $new->expert_id => $new->name.' already has this seat.',
+            $sitting->contains($new->expert_id) => $new->name.' is already on this panel.',
+            $this->teamAdviserConsultantIds($team)->map(fn ($id) => (int) $id)->contains($new->expert_id) => "This team's adviser or consultant can't also sit on their defense panel.",
+            $role === 'Panel Chair' && ! $new->canChairPanel() => 'A Panel Chair needs a Master\'s degree or higher.',
+            default => null,
+        };
+
+        if ($why) {
+            return response()->json(['success' => false, 'message' => $why], 422);
+        }
+
+        // A defense that already has a date keeps it, so the new panelist has to be free then.
+        foreach ($upcoming->filter(fn ($s) => $s->schedule_date) as $schedule) {
+            $ids = $schedule->panels->where('panel_role', '!=', $role)->pluck('expert_id')->map(fn ($id) => (int) $id)->push($new->expert_id)->all();
+            $conflicts = $this->conflictsFor($schedule, $ids, $schedule->schedule_date, DefenseBoard::endOf($schedule), $schedule->venue, $capsa);
+
+            if ($conflicts) {
+                return response()->json(['success' => false, 'message' => $schedule->defense_type.' on '.$schedule->schedule_date->format('M j').': '.implode(' ', array_column($conflicts, 'text')).' Move that defense first.'], 409);
+            }
+        }
+
+        $oldId = (int) $current->expert_id;
+
+        foreach ($upcoming as $schedule) {
+            $seat = $schedule->panels->firstWhere('panel_role', $role);
+
+            if (! $seat) {
+                continue;
+            }
+
+            if ($seat->google_event_id) {
+                try {
+                    $this->calendar->cancelBookingEvent($seat->expert_id, $seat->google_event_id);
+                } catch (\Exception $e) {
+                    Log::warning('Defense panel Google Calendar cancel failed', ['defense_id' => $schedule->defense_id, 'expert_id' => $seat->expert_id, 'error' => $e->getMessage()]);
+                }
+            }
+
+            $seat->update(['expert_id' => $new->expert_id, 'google_event_id' => null]);
+
+            if ($schedule->schedule_date) {
+                $this->syncDefensePanelToGoogleCalendar($schedule->fresh(['panels.expert', 'team']));
+            }
+        }
+
+        PanelReplacement::create([
+            'team_id' => $team->team_id,
+            'panel_role' => $role,
+            'old_expert_id' => $oldId,
+            'new_expert_id' => $new->expert_id,
+            'reason' => $validated['reason'],
+            'replaced_by' => $capsa->expert_id,
+        ]);
+
+        Notifier::toExpert($new, 'defense_panel', 'You are on '.$team->team_name.'\'s defense panel', 'You take the '.$role.' seat for the defenses still to come.', route('instructor.grading'));
+        Notifier::toExpert($oldId, 'defense_panel', 'You were replaced on '.$team->team_name.'\'s panel', 'Reason: '.$validated['reason'].'. Defenses you already sat stay on your record.', route('instructor.grading'));
+
+        return response()->json(['success' => true, 'message' => $new->name.' replaces '.(CapstoneExpert::find($oldId)?->name ?? 'the panelist').' on '.$team->team_name.'\'s panel.']);
     }
 
     private function writePanelToAllStages(Team $team, array $validated): array
@@ -336,6 +508,25 @@ class AdminPanelAssignmentController extends Controller
             return response()->json(['success' => false, 'message' => $why], 422);
         }
 
+        return $this->whileSaving(fn () => $this->saveOneSchedule($request, $defense, $validated, $slotStart, $slotEnd, $capsa));
+    }
+
+    /**
+     * Run a check-and-save holding the save lock, waiting a few seconds for
+     * another CaPSA's save to finish first.
+     */
+    private function whileSaving(callable $save): JsonResponse
+    {
+        try {
+            return Cache::lock(self::SAVE_LOCK, 30)->block(5, $save);
+        } catch (LockTimeoutException) {
+            return response()->json(['success' => false, 'message' => 'Another CaPSA is saving a schedule. Try again in a moment.'], 423);
+        }
+    }
+
+    /** The check and the save, run while the save lock is held. */
+    private function saveOneSchedule(Request $request, DefenseSchedule $defense, array $validated, Carbon $slotStart, Carbon $slotEnd, CapstoneExpert $capsa): JsonResponse
+    {
         $conflicts = $this->conflictsForManualOverride($defense, $slotStart, $slotEnd, $validated['venue'], $capsa);
 
         if ($conflicts) {
@@ -374,8 +565,25 @@ class AdminPanelAssignmentController extends Controller
      */
     private function conflictsForManualOverride(DefenseSchedule $defense, Carbon $slotStart, Carbon $slotEnd, string $venue, CapstoneExpert $capsa): array
     {
-        $ids = $defense->panels->pluck('expert_id')->map(fn ($id) => (int) $id)->all();
+        return $this->conflictsFor($defense, $defense->panels->pluck('expert_id')->map(fn ($id) => (int) $id)->all(), $slotStart, $slotEnd, $venue, $capsa);
+    }
+
+    /**
+     * The same, for a panel that is not (yet) the defense's own - a panelist
+     * about to be replaced. A panelist's day away can be kept on purpose,
+     * like a clash in the CaPSA's own sections; the defense goes ahead
+     * without them.
+     *
+     * @param  array<int, int>  $ids
+     * @return array<int, array{text: string, other: bool}>
+     */
+    private function conflictsFor(DefenseSchedule $defense, array $ids, Carbon $slotStart, Carbon $slotEnd, string $venue, CapstoneExpert $capsa): array
+    {
         $conflicts = [];
+
+        if ($why = $this->awayReason($ids, $slotStart)) {
+            $conflicts[] = ['text' => $why, 'other' => false];
+        }
 
         $sameDay = DefenseSchedule::whereDate('schedule_date', $slotStart->toDateString())
             ->where('defense_id', '!=', $defense->defense_id)
@@ -395,6 +603,15 @@ class AdminPanelAssignmentController extends Controller
         }
 
         return collect($conflicts)->unique('text')->values()->all();
+    }
+
+    /** Why one of these panelists can't sit on this day - they are away - or null. */
+    private function awayReason(array $ids, Carbon $day, ?Collection $away = null): ?string
+    {
+        $away ??= ExpertAwayDate::forExperts($ids, $day, $day)->load('expert');
+        $hit = $away->first(fn (ExpertAwayDate $a) => in_array((int) $a->expert_id, $ids, true) && $a->covers($day));
+
+        return $hit ? ($hit->expert?->name ?? 'A panelist').' is away that day ('.mb_strtolower($hit->reason).').' : null;
     }
 
     /**
@@ -538,6 +755,14 @@ class AdminPanelAssignmentController extends Controller
         }
 
         $capsa = $this->capsa();
+
+        return $this->whileSaving(fn () => $this->saveDraft($validated, $window, $capsa));
+    }
+
+    /** Saves the reviewed draft row by row, while the save lock is held. */
+    private function saveDraft(array $validated, DefenseWindow $window, CapstoneExpert $capsa): JsonResponse
+    {
+        $type = $validated['defense_type'];
         $minutes = $window->duration_minutes;
         $readyById = $this->schedulingCandidates($type, $capsa)[0]->keyBy('defense_id');
         $saved = [];
@@ -612,11 +837,12 @@ class AdminPanelAssignmentController extends Controller
         $alreadyScheduled = $rows->filter(fn ($row) => $row['schedule'])->count();
         $open = $rows->reject(fn ($row) => $row['schedule']);
 
-        $readyIds = $open->filter(fn ($row) => $row['blockers'] === [])->pluck('defense_id');
+        // Requirements still owed don't hold a team back; the panel follows them up.
+        $readyIds = $open->filter(fn ($row) => DefenseBoard::hardBlockers($row['blockers']) === [])->pluck('defense_id');
         $ready = DefenseSchedule::whereIn('defense_id', $readyIds)->with(['panels.expert', 'team.members'])->orderBy('defense_id')->get();
 
-        $notReady = $open->filter(fn ($row) => $row['blockers'] !== [])
-            ->map(fn ($row) => ['team_id' => $row['id'], 'team_name' => $row['name'], 'reason' => $row['blockers'][0]['text'].'.'])
+        $notReady = $open->filter(fn ($row) => DefenseBoard::hardBlockers($row['blockers']) !== [])
+            ->map(fn ($row) => ['team_id' => $row['id'], 'team_name' => $row['name'], 'reason' => DefenseBoard::hardBlockers($row['blockers'])[0]['text'].'.'])
             ->values()->all();
 
         return [$ready, $notReady, $alreadyScheduled];
@@ -644,7 +870,16 @@ class AdminPanelAssignmentController extends Controller
             'duration_minutes' => ['nullable', 'integer', 'min:'.DefenseBoard::MIN_MINUTES, 'max:'.DefenseBoard::MAX_MINUTES],
         ]);
 
-        $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], array_filter($validated, fn ($v) => $v !== null));
+        $capsa = $this->capsa();
+        $before = DefenseWindow::where('defense_type', $defenseType)->first();
+        $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], array_filter($validated, fn ($v) => $v !== null) + ['updated_by' => $capsa->expert_id, 'updated_at' => now()]);
+
+        // Every section shares the window, so the other CaPSAs hear when it moves.
+        if (! $before || ! $before->start_date->equalTo($window->start_date) || ! $before->end_date->equalTo($window->end_date)) {
+            CapstoneExpert::whereHas('roles', fn ($q) => $q->where('role_name', CapstoneExpert::CAPSA_ROLE))->where('expert_id', '!=', $capsa->expert_id)->get()
+                ->each(fn (CapstoneExpert $other) => Notifier::toExpert($other, 'defense_window', $defenseType.' window: '.$window->start_date->format('M j').' – '.$window->end_date->format('M j'),
+                    $capsa->name.' set the '.$defenseType.' window for every section.', route('capsa.defense_scheduling', ['defense_type' => $defenseType])));
+        }
 
         return response()->json([
             'success' => true,
@@ -654,6 +889,8 @@ class AdminPanelAssignmentController extends Controller
                 'end_date' => $window->end_date->toDateString(),
                 'duration_minutes' => $window->duration_minutes,
                 'slots' => DefenseBoard::slots($window->duration_minutes),
+                'set_by' => $capsa->name,
+                'set_on' => now()->toDateString(),
             ],
         ]);
     }
@@ -692,9 +929,15 @@ class AdminPanelAssignmentController extends Controller
 
         $who = fn (DefenseSchedule $s) => $s->team && ! $this->board->covers($capsa, $s->team) ? 'another section' : 'Team '.($s->team?->team_name ?? '');
 
+        $away = ExpertAwayDate::forExperts($ids, $window->start_date, $window->end_date)->load('expert');
+
         // Null when this panel can sit in $venue at $slotStart, otherwise why not.
-        $reason = function (Carbon $slotStart, string $venue) use ($booked, $heldForOthers, $ids, $minutes, $who): ?string {
+        $reason = function (Carbon $slotStart, string $venue) use ($booked, $heldForOthers, $ids, $minutes, $who, $away): ?string {
             $slotEnd = $slotStart->copy()->addMinutes($minutes);
+
+            if ($away->isNotEmpty() && ($why = $this->awayReason($ids, $slotStart, $away))) {
+                return $why;
+            }
 
             foreach ($booked as $s) {
                 if ($why = $this->clash($s, $ids, $slotStart, $slotEnd, $venue, $who($s))) {

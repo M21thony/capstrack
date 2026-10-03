@@ -23,6 +23,7 @@ use Illuminate\Support\Str;
     'course',
     'year_section',
     'last_seen_at',
+    'is_returnee',
 ])]
 class Student extends Authenticatable
 {
@@ -47,6 +48,7 @@ class Student extends Authenticatable
         return [
             'last_seen_at' => 'datetime',
             'tutorial_completed_at' => 'datetime',
+            'is_returnee' => 'boolean',
         ];
     }
 

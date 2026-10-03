@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\RecruitmentController;
 use App\Http\Controllers\Api\StudentExpertController;
 use App\Http\Controllers\Api\StudentFinancialController;
 use App\Http\Controllers\Api\TeamController;
+use App\Http\Controllers\Capsa\DefenseCaseController;
 use Illuminate\Support\Facades\Route;
 
 // Admin API routes (session based auth for experts) - split the same way
@@ -50,6 +51,14 @@ Route::middleware(['web', 'expert.auth'])
                 // Generate a stage's schedule at once: suggest every ready team a slot, then save the reviewed set.
                 Route::post('/schedule-drafts', [AdminPanelAssignmentController::class, 'draftSchedule'])->name('schedule-drafts.store');
                 Route::put('/schedules', [AdminPanelAssignmentController::class, 'applySchedule'])->name('schedules.update');
+                // A draft panel becoming final, and one panelist on a final panel replaced.
+                Route::post('/finalize', [AdminPanelAssignmentController::class, 'finalize'])->name('finalize');
+                Route::post('/{team}/replacements', [AdminPanelAssignmentController::class, 'replacePanelist'])->name('replacements.store');
+                // A panelist's days away, a returnee, and a CaPA's go given in person.
+                Route::post('/away', [DefenseCaseController::class, 'storeAway'])->name('away.store');
+                Route::delete('/away/{away}', [DefenseCaseController::class, 'destroyAway'])->name('away.destroy');
+                Route::patch('/students/{student}/returnee', [DefenseCaseController::class, 'returnee'])->name('returnee.update');
+                Route::post('/capa/{defense}', [DefenseCaseController::class, 'capa'])->name('capa.store');
                 Route::post('/', [AdminPanelAssignmentController::class, 'storeMultiple'])->name('store.bulk');
                 Route::post('/{team}', [AdminPanelAssignmentController::class, 'store'])->name('store');
             });
