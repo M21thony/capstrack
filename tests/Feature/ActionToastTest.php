@@ -27,7 +27,6 @@ class ActionToastTest extends TestCase
         'views/instructor/assignments.blade.php',
         'views/instructor/schedule.blade.php',
         'views/student/archive.blade.php',
-        'views/student/consultation.blade.php',
         'views/student/duplication.blade.php',
         'views/student/experts.blade.php',
         'views/student/resources.blade.php',

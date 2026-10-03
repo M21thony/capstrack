@@ -8,6 +8,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Support\PortalIcons;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 /**
@@ -154,10 +155,14 @@ class MobileTabBarTest extends TestCase
         ]);
         StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id, 'program' => 'BSIT']);
 
-        $this->actingAs($student)->get(route('student.experts'))
-            ->assertOk()
-            ->assertSee('#real-content.content-grid { height: auto !important; min-height: 0 !important; }', false)
-            ->assertSee('#real-content .overview-panel { grid-template-columns: minmax(0, 1fr) !important; }', false);
+        $this->actingAs($student)->get(route('student.experts'))->assertOk();
+
+        // No fixed screen height to squeeze into: the page's columns wrap to
+        // one and it scrolls, and the sessions list comes before the calendar.
+        $css = File::get(resource_path('student-ui/Styles/experts.css'));
+        $this->assertStringContainsString('.xh-split{display:flex;flex-wrap:wrap;', $css);
+        $this->assertStringNotContainsString('100vh', substr($css, 0, strpos($css, '.preview-dialog{')));
+        $this->assertStringContainsString('#xh-sessions{order:-1}', $css);
     }
 
     public function test_a_capsa_gets_their_own_pages_and_no_one_elses(): void

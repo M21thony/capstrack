@@ -227,7 +227,7 @@ class ConsultationCancellationTest extends TestCase
 
         $this->actingAs($teammate, 'web')->get(route('student.consultation'))
             ->assertOk()
-            ->assertSee('data-booking-id="'.$bookingId.'"', false);
+            ->assertSee('"booking_id":'.$bookingId.',', false);
     }
 
     public function test_a_teammate_who_did_not_book_it_can_still_ask_to_cancel_it(): void

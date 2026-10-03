@@ -484,7 +484,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/review/{review}/remarks', [StudentReviewController::class, 'remarks'])->name('student.review.remarks');
             Route::get('/review/{reviewId}/clf', [ConsultationLogController::class, 'generate'])->name('student.review.clf');
             Route::get('/duplication', [PreProposalController::class, 'edit'])->name('student.duplication');
-            Route::get('/consultation', [StudentConsultationController::class, 'index'])->name('student.consultation');
+            Route::get('/consultation', [StudentExpertController::class, 'consultations'])->name('student.consultation');
             Route::get('/consultation/refresh', [StudentConsultationController::class, 'refreshData'])->name('student.consultation.refresh');
             Route::post('/consultation/book', [StudentConsultationController::class, 'book'])->name('student.consultation.book');
             Route::post('/consultation/cancel/{bookingId}', [StudentConsultationController::class, 'cancel'])->name('student.consultation.cancel');

@@ -12,6 +12,7 @@ use App\Models\Team;
 use App\Models\Term;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 /**
@@ -44,13 +45,15 @@ class ConsultationPageStatesTest extends TestCase
     {
         [$student] = $this->studentOnTeam();
 
-        $this->actingAs($student, 'web')->get(route('student.consultation'))
+        $response = $this->actingAs($student, 'web')->get(route('student.consultation'))
             ->assertOk()
-            ->assertSee('No expert on your team yet')
-            ->assertSee('href="'.route('student.experts').'" class="book-empty-link"', false)
-            ->assertSee('<div class="book-body"  hidden >', false)
-            ->assertSee('<div class="cal-notes"  hidden >', false)
-            ->assertSee('.book-body[hidden],.cal-notes[hidden]{display:none!important}', false);
+            ->assertSee('No consultations yet')
+            ->assertSee('Find experts');
+
+        // The Consultations tab is the one open, and it has nobody to book:
+        // the page draws that explanation instead of a calendar.
+        $this->assertSame('consultations', $response->viewData('tab'));
+        $this->assertCount(0, $response->viewData('consultExperts'));
     }
 
     public function test_a_team_with_an_expert_gets_the_steps_and_a_plain_name_for_its_booking(): void
@@ -72,27 +75,25 @@ class ConsultationPageStatesTest extends TestCase
             'session_date' => now()->next('Monday')->toDateString(), 'created_at' => now(), 'updated_at' => now(),
         ]);
 
-        $this->actingAs($student, 'web')->get(route('student.consultation'))
+        $response = $this->actingAs($student, 'web')->get(route('student.consultation'))
             ->assertOk()
-            ->assertDontSee('No expert on your team yet')
-            ->assertSee('<div class="book-body" >', false)
-            ->assertSee('<div class="appt-kind">Consultation</div>', false)
-            ->assertDontSee('Consult Consultation')
-            ->assertSee("slotTypeNames[booking.slot_type || 'consult'] || 'Consultation'", false);
+            ->assertSee("Consultation with ' + esc(b.expert_name)", false)
+            ->assertDontSee('Consult Consultation');
+
+        $this->assertCount(1, $response->viewData('consultExperts'));
+        $this->assertCount(1, $response->viewData('upcomingBookings'));
     }
 
-    /** The date picker's days stay round on a phone. */
-    public function test_the_date_picker_days_stay_round_on_a_phone(): void
+    /** The calendar's dates are even squares, and a small square shortens "3 open" to "3". */
+    public function test_the_calendar_dates_are_squares_that_fit_a_phone(): void
     {
-        [$student] = $this->studentOnTeam();
+        $css = File::get(resource_path('student-ui/Styles/experts.css'));
 
-        $this->actingAs($student, 'web')->get(route('student.consultation'))
-            ->assertOk()
-            ->assertSee('.sched-cal .calendar-day{border:0!important}', false)
-            ->assertSee('.sched-cal .calendar-day{height:44px!important;padding:0!important;font-size:13px!important}', false)
-            ->assertSee('.sched-cal .calendar-day{width:100%;max-width:40px;height:auto!important;aspect-ratio:1/1}', false)
-            // Round, and still coloured: a bookable date gold, a booked one blue.
-            ->assertSee('background:var(--accent-light);box-shadow:inset 0 0 0 1.5px var(--accent)}', false)
-            ->assertSee('.sched-cal .calendar-day.my-booking{color:var(--blue);font-weight:700;background:var(--blue-bg);box-shadow:inset 0 0 0 2px var(--blue)}', false);
+        $this->assertStringContainsString('.xh-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))', $css);
+        $this->assertStringContainsString('.xh-day{aspect-ratio:1/1;', $css);
+        $this->assertStringContainsString('@container (max-width: 78px){.xh-cap.is-long{display:none}.xh-cap.is-short{display:inline}}', $css);
+        // Still coloured: a bookable date gold, a booked one blue.
+        $this->assertStringContainsString('.xh-day.is-avail .xh-dot{background:var(--accent)}', $css);
+        $this->assertStringContainsString('.xh-day.is-booked .xh-dot{background:var(--xh-blue)}', $css);
     }
 }

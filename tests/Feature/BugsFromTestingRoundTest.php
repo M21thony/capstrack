@@ -264,7 +264,7 @@ class BugsFromTestingRoundTest extends TestCase
         // a student's proposal - not an iframe wedged above seven text
         // fields, which is neither a readable document nor a readable
         // summary.
-        $this->assertStringContainsString('View Original PDF', $html);
+        $this->assertStringContainsString('View original PDF', $html);
         $this->assertStringContainsString('id="previewDialog"', $html);
     }
 

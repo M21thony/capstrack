@@ -313,7 +313,7 @@ class SubmissionRecipientsTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('Neil Inocencio', $html);
-        $this->assertStringContainsString('Not Accepting Yet', $html);
+        $this->assertStringContainsString('Not accepting teams yet', $html);
         $this->assertStringNotContainsString('data-apply-expert="'.$expert->expert_id.'"', $html);
     }
 }
