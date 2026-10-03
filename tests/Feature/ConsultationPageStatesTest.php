@@ -84,7 +84,7 @@ class ConsultationPageStatesTest extends TestCase
         $this->assertCount(1, $response->viewData('upcomingBookings'));
     }
 
-    /** The calendar's dates are even squares, and a small square shortens "3 open" to "3". */
+    /** The calendar's dates are even squares that say plainly which ones can be booked. */
     public function test_the_calendar_dates_are_squares_that_fit_a_phone(): void
     {
         $css = File::get(resource_path('student-ui/Styles/experts.css'));
@@ -92,8 +92,14 @@ class ConsultationPageStatesTest extends TestCase
         $this->assertStringContainsString('.xh-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))', $css);
         $this->assertStringContainsString('.xh-day{aspect-ratio:1/1;', $css);
         $this->assertStringContainsString('@container (max-width: 78px){.xh-cap.is-long{display:none}.xh-cap.is-short{display:inline}}', $css);
-        // Still coloured: a bookable date gold, a booked one blue.
-        $this->assertStringContainsString('.xh-day.is-avail .xh-dot{background:var(--accent)}', $css);
-        $this->assertStringContainsString('.xh-day.is-booked .xh-dot{background:var(--xh-blue)}', $css);
+        // A bookable date is a gold tile, a booked one blue, and a date the
+        // expert does not take is crossed out with an X.
+        $this->assertStringContainsString('.xh-day.is-avail{background:var(--accent-light);border:1.5px solid var(--accent)}', $css);
+        $this->assertStringContainsString('.xh-day.is-booked{background:var(--xh-blue-soft);border:1.5px solid var(--xh-blue)}', $css);
+        $this->assertStringContainsString('.xh-day.is-off::after{content:"";position:absolute;inset:18%;pointer-events:none}', $css);
+        // While a session with the expert is pending, the open dates stay
+        // visible, outlined, and the next open dates are offered above.
+        $this->assertStringContainsString('.xh-day.is-locked{background:var(--bg3);border:1.5px dashed var(--accent)', $css);
+        $this->assertStringContainsString('.xh-next-btn{', $css);
     }
 }

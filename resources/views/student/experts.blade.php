@@ -652,6 +652,24 @@ function bookingOn(expertId, dateKey) {
 function liveBookingWith(expertId) {
   return upcoming.filter(function (b) { return Number(b.expert_id) === Number(expertId); })[0] || null;
 }
+/** The next dates with an open time, from today on, as far as the calendar goes. */
+function nextOpenDates(expertId, howMany) {
+  var found = [];
+  var day = todayStart();
+  var end = new Date(day.getFullYear(), day.getMonth() + MONTHS_AHEAD + 1, 0);
+  while (day <= end && found.length < howMany) {
+    var k = keyOf(day.getFullYear(), day.getMonth(), day.getDate());
+    var open = slotsOn(expertId, k).filter(function (x) { return !x.taken; }).length;
+    if (open) { found.push({ key: k, open: open }); }
+    day.setDate(day.getDate() + 1);
+  }
+  return found;
+}
+function monthOffsetOf(dateKey) {
+  var d = parseKey(dateKey);
+  var now = new Date();
+  return (d.getFullYear() - now.getFullYear()) * 12 + d.getMonth() - now.getMonth();
+}
 
 /* ---------------- render: shared ---------------- */
 function render() {
@@ -731,6 +749,7 @@ function renderBook() {
   var total = Math.ceil((startDow + dim) / 7) * 7;
   var live = liveBookingWith(ex.expert_id) || (bookedExpertIds.indexOf(Number(ex.expert_id)) !== -1 ? {} : null);
 
+  var openThisMonth = 0;
   var cells = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(function (d) { return '<span class="xh-dow" aria-hidden="true">' + d + '</span>'; });
   for (var i = 0; i < total; i++) {
     var d = i - startDow + 1;
@@ -745,17 +764,21 @@ function renderBook() {
     var cap = '';
     var capShort = null;
     var disabled = true;
+    // Open dates are gold tiles. A date the expert does not take is crossed
+    // out. While the team already has a session with this expert, the open
+    // dates stay visible, outlined, so the team can see when they are free.
+    var aria = '';
     if (off < 0) { cls += ' is-past'; }
-    else if (!list.length) { cls += off === 0 ? ' is-today' : ' is-off'; cap = off === 0 ? 'Today' : ''; }
-    else if (open === 0) { cls += ' is-full'; cap = 'Full'; }
-    else if (live) { cls += ' is-off'; }
-    else { cls += ' is-avail'; cap = open + ' open'; capShort = String(open); disabled = false; if (off === 0) { cls += ' is-today'; } }
-    if (off === 0 && cls.indexOf('is-today') === -1) { cls += ' is-today'; if (!cap) { cap = 'Today'; } }
-    if (mine) { cls += ' is-booked'; if (!cap || cap === 'Full') { cap = 'Booked'; capShort = ''; } }
-    var dot = (cls.indexOf('is-avail') !== -1 || mine) ? '<i class="xh-dot"></i>' : '';
+    else if (mine) { cls += ' is-booked'; cap = 'Booked'; capShort = ''; aria = 'your booking'; }
+    else if (!list.length) { cls += off === 0 ? '' : ' is-off'; aria = 'not offered'; }
+    else if (open === 0) { cls += ' is-full'; cap = 'Full'; aria = 'fully booked'; }
+    else if (live) { cls += ' is-locked'; cap = open + ' open'; capShort = String(open); aria = open + ' open, book after your current session'; }
+    else { cls += ' is-avail'; cap = open + ' open'; capShort = String(open); disabled = false; aria = open + ' open'; }
+    if (off === 0) { cls += ' is-today'; if (!cap) { cap = 'Today'; } }
     cells.push('<button type="button" class="' + cls + '" data-xh="date" data-key="' + k + '"' + (disabled ? ' disabled' : '')
-      + ' aria-pressed="' + sel + '" aria-label="' + longDate(k) + (cap ? ', ' + cap : '') + '">'
-      + '<span class="xh-dn">' + d + '</span><span class="xh-dc">' + dot + '<span class="xh-cap is-long">' + cap + '</span><span class="xh-cap is-short">' + (capShort === null ? cap : capShort) + '</span></span></button>');
+      + ' aria-pressed="' + sel + '" aria-label="' + longDate(k) + (aria ? ', ' + aria : '') + '">'
+      + '<span class="xh-dn">' + d + '</span><span class="xh-dc"><span class="xh-cap is-long">' + cap + '</span><span class="xh-cap is-short">' + (capShort === null ? cap : capShort) + '</span></span></button>');
+    if (cls.indexOf('is-avail') !== -1) { openThisMonth++; }
   }
 
   var times;
@@ -774,14 +797,36 @@ function renderBook() {
     times = '<h3>Available times</h3><div class="xh-hint">One booking per expert at a time. You can pick a new time after your '
       + (live.session_date ? shortDate(live.session_date) + ' ' : '') + 'session.</div>';
   } else {
-    times = '<h3>Available times</h3><div class="xh-hint">Pick a date with a <b class="xh-gold-text">gold dot</b> to see its open times.</div>';
+    times = '<h3>Available times</h3><div class="xh-hint">Pick a <b class="xh-gold-text">gold date</b> to see its open times.</div>';
   }
 
   var notice = '';
   if (live) {
     notice = '<div class="xh-banner xh-info xh-book-notice">' + ICON.info + '<span class="xh-banner-text">You already have a session with <b>' + esc(ex.name) + '</b>'
-      + (live.session_date ? ' on <b>' + shortDate(live.session_date) + ' at ' + fmtT(live.start_time) + '</b>' : '') + '. You can book them again after it.</span>'
+      + (live.session_date ? ' on <b>' + shortDate(live.session_date) + ' at ' + fmtT(live.start_time) + '</b>. You can book them again after ' + shortDate(live.session_date) + '.' : '. You can book them again after it.') + ' Their open dates are outlined below.</span>'
       + (live.booking_id ? '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="session" data-id="' + live.booking_id + '">View session</button>' : '') + '</div>';
+  }
+
+  // The next few open dates as one-tap buttons, so nobody hunts through
+  // the month - or through the next one - for the gold dates.
+  var nextUp = '';
+  var monthEmpty = '';
+  if (!live) {
+    var soon = nextOpenDates(ex.expert_id, 5);
+    if (soon.length) {
+      nextUp = '<div class="xh-next"><span class="xh-lbl">Next open dates</span><div class="xh-next-list">'
+        + soon.map(function (o) {
+          return '<button type="button" class="xh-next-btn" data-xh="jump" data-key="' + o.key + '" aria-pressed="' + (S.date === o.key) + '">'
+            + '<b>' + shortDate(o.key) + '</b><span>' + o.open + ' open</span></button>';
+        }).join('') + '</div></div>';
+      var later = soon.filter(function (o) { return monthOffsetOf(o.key) > S.monthOffset; })[0];
+      if (!openThisMonth && later) {
+        monthEmpty = '<div class="xh-month-empty"><span>No open dates in ' + MONTHS[m] + '.</span>'
+          + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="jump" data-key="' + later.key + '">Go to ' + shortDate(later.key) + '</button></div>';
+      }
+    } else {
+      nextUp = '<div class="xh-hint">' + esc(ex.name) + ' has no open dates in the next ' + (MONTHS_AHEAD + 1) + ' months yet. New ones show up here as soon as they add them.</div>';
+    }
   }
 
   card.innerHTML = '<div class="xh-book-head"><div><h2>Book with ' + esc(ex.name) + '</h2>'
@@ -790,9 +835,10 @@ function renderBook() {
     + '<b aria-live="polite">' + MONTHS[m] + ' ' + y + '</b>'
     + '<button type="button" class="xh-icon-btn" data-xh="month" data-dir="1" aria-label="Next month"' + (S.monthOffset >= MONTHS_AHEAD ? ' disabled' : '') + '>' + ICON.right + '</button></div></div>'
     + notice
-    + '<div class="xh-book-cols"><div class="xh-cal"><div class="xh-cal-grid">' + cells.join('') + '</div>'
-    + '<div class="xh-legend"><span><i class="xh-lg-dot is-gold"></i>Open times</span><span><i class="xh-lg-dot is-blue"></i>Your booking</span>'
-    + '<span><i class="xh-lg-sq is-full"></i>Fully booked</span><span><i class="xh-lg-sq is-off"></i>Past or not offered</span></div></div>'
+    + (nextUp ? '<div class="xh-book-next">' + nextUp + '</div>' : '')
+    + '<div class="xh-book-cols"><div class="xh-cal">' + monthEmpty + '<div class="xh-cal-grid">' + cells.join('') + '</div>'
+    + '<div class="xh-legend"><span><i class="xh-lg-sq is-open"></i>Open</span><span><i class="xh-lg-sq is-mine"></i>Your booking</span>'
+    + '<span><i class="xh-lg-sq is-full"></i>Fully booked</span><span><i class="xh-lg-sq is-off"></i>Not offered</span></div></div>'
     + '<div class="xh-times">' + times + '</div></div>'
     + '<div class="xh-confirm-bar"><div class="xh-sum">'
     + (chosen ? '<b>' + shortDate(S.date) + ' · ' + fmtT(chosen.start_time) + ' – ' + fmtT(chosen.end_time) + '</b><span>Consultation with ' + esc(ex.name) + '</span>'
@@ -1111,6 +1157,12 @@ var ACT = {
   },
   month: function (el) { S.monthOffset = Math.max(0, Math.min(MONTHS_AHEAD, S.monthOffset + Number(el.dataset.dir))); S.date = null; S.slotId = null; renderBook(); },
   date: function (el) { S.date = el.dataset.key; S.slotId = null; renderBook(); },
+  jump: function (el) {
+    S.monthOffset = Math.max(0, Math.min(MONTHS_AHEAD, monthOffsetOf(el.dataset.key)));
+    S.date = el.dataset.key;
+    S.slotId = null;
+    renderBook();
+  },
   list: function (el) { S.listTab = el.dataset.list; S.showAll = false; renderSessions(); },
   'show-all': function () { S.showAll = !S.showAll; renderSessions(); },
   'book-open': function () { if (S.date && S.slotId) { openBookConfirm(); } },
