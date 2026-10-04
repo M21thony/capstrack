@@ -3,14 +3,17 @@
 namespace App\Providers;
 
 use App\Models\CapstoneDocumentReview;
+use App\Models\DefenseSchedule;
 use App\Models\Notification;
 use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\TeamExpertAssignment;
 use App\Models\TeamInvitation;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
 use App\Support\LeaveDecisionDetails;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -107,13 +110,53 @@ class AppServiceProvider extends ServiceProvider
                     ? StudentRole::LEADER_ROLE_NAME
                     : $enrolment?->role?->s_role_name;
 
+                // The rest of where they stand: who is on the team, who their
+                // experts are, and the next defense. Worked out once a request,
+                // however many student partials this composer runs for.
+                ['members' => $panelMembers, 'experts' => $panelExperts, 'defense' => $panelDefense] = $panelTeam
+                    ? once(fn () => $this->panelDetails($panelTeam))
+                    : ['members' => collect(), 'experts' => [], 'defense' => null];
+
                 $view->with(compact(
                     'unreadNotifications', 'unreadCount', 'bellNotifications', 'leaveDecisions', 'joinRequestPopups',
-                    'panelTeam', 'panelRole'
+                    'panelTeam', 'panelRole', 'panelMembers', 'panelExperts', 'panelDefense'
                 ));
             }
         });
 
         Route::model('review', CapstoneDocumentReview::class);
+    }
+
+    /**
+     * The team, its experts and its next defense, for the profile panel.
+     *
+     * @return array{members: Collection<int, array{name: string, initials: string, leader: bool, id: int}>, experts: array<string, ?string>, defense: ?DefenseSchedule}
+     */
+    private function panelDetails(Team $team): array
+    {
+        $members = StudentSchoolYear::where('team_id', $team->team_id)->with('student')->get()
+            ->filter(fn ($sy) => $sy->student)
+            ->unique('student_id')
+            ->map(fn ($sy) => [
+                'id' => (int) $sy->student_id,
+                'name' => trim($sy->student->f_name.' '.$sy->student->l_name) ?: $sy->student->email,
+                'initials' => $sy->student->avatarInitials(),
+                'leader' => (int) $team->leader_id === (int) $sy->student_id,
+            ])
+            ->sortBy(fn ($m) => [! $m['leader'], $m['name']])
+            ->values();
+
+        $engaged = TeamExpertAssignment::where('team_id', $team->team_id)->where('status', 'approved')->with('expert')->get();
+        $experts = collect(['adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian'])
+            ->mapWithKeys(fn ($label, $key) => [$label => $engaged
+                ->first(fn ($a) => strtolower(trim((string) $a->engaged_role_name)) === $key)?->expert?->name])
+            ->all();
+
+        $defense = DefenseSchedule::where('team_id', $team->team_id)
+            ->where('schedule_date', '>=', now()->startOfDay())
+            ->orderBy('schedule_date')
+            ->first();
+
+        return ['members' => $members, 'experts' => $experts, 'defense' => $defense];
     }
 }

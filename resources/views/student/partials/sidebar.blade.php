@@ -253,6 +253,24 @@
   .pm-row .pm-label { margin-bottom: 0; flex-shrink: 0; }
   /* Beats the boxed .pm-value the old stylesheets still define. */
   .pm-rows .pm-value { background: none; border: 0; padding: 0; font-size: 12.5px; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+  .pm-rows .pm-value.pm-none { color: var(--text3); font-style: italic; }
+
+  .pm-count { flex-shrink: 0; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--bg3); color: var(--text2); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .pm-members { display: flex; flex-direction: column; gap: 8px; }
+  .pm-member { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .pm-initials { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; background: var(--bg3); color: var(--text2); font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
+  .pm-initials.is-leader { background: var(--accent); color: #1a1a1a; }
+  .pm-member-name { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pm-tag { flex-shrink: 0; padding: 2px 7px; border-radius: 6px; background: var(--bg3); color: var(--text3); font-size: 10px; font-weight: 700; }
+  .pm-tag-gold { background: var(--accent-light, rgba(201,168,44,0.12)); color: var(--accent3); }
+
+  .pm-defense { display: flex; align-items: center; gap: 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .pm-defense-date { width: 44px; flex-shrink: 0; border-radius: 9px; background: var(--accent-light, rgba(201,168,44,0.12)); color: var(--accent3); text-align: center; padding: 5px 0; line-height: 1.1; }
+  .pm-defense-date b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
+  .pm-defense-date span { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .pm-defense-type { font-size: 13px; font-weight: 700; color: var(--text); }
+  .pm-defense-meta { font-size: 11.5px; color: var(--text3); margin-top: 2px; line-height: 1.45; }
+  .pm-empty { font-size: 12.5px; color: var(--text3); }
 </style>
 
 <div class="profile-overlay" id="profile-overlay" onclick="handleOverlayClick(event)">
@@ -310,6 +328,53 @@
               </svg>
             @endif
           </div>
+        </div>
+
+        {{-- Who they are doing it with. --}}
+        <div class="pm-zone">
+          <div class="pm-zone-head"><span class="pm-label">Team</span><span class="pm-rule"></span><span class="pm-count">{{ $panelMembers->count() }}</span></div>
+          <div class="pm-members">
+            @foreach ($panelMembers as $member)
+              <div class="pm-member">
+                <span class="pm-initials {{ $member['leader'] ? 'is-leader' : '' }}">{{ $member['initials'] }}</span>
+                <span class="pm-member-name">{{ $member['name'] }}</span>
+                @if ($member['leader'])<span class="pm-tag pm-tag-gold">Leader</span>@endif
+                @if ($member['id'] === (int) $student->student_id)<span class="pm-tag">You</span>@endif
+              </div>
+            @endforeach
+          </div>
+        </div>
+
+        {{-- Who guides them, by the role the team engaged them as. --}}
+        <div class="pm-zone">
+          <div class="pm-zone-head"><span class="pm-label">Experts</span><span class="pm-rule"></span></div>
+          <div class="pm-rows">
+            @foreach ($panelExperts as $role => $name)
+              <div class="pm-row"><span class="pm-label">{{ $role }}</span><span class="pm-value {{ $name ? '' : 'pm-none' }}">{{ $name ?: 'Not yet' }}</span></div>
+            @endforeach
+          </div>
+        </div>
+
+        {{-- What is coming. --}}
+        <div class="pm-zone">
+          <div class="pm-zone-head"><span class="pm-label">Next defense</span><span class="pm-rule"></span></div>
+          @if ($panelDefense)
+            <div class="pm-defense">
+              <div class="pm-defense-date">
+                <b>{{ $panelDefense->schedule_date->format('d') }}</b>
+                <span>{{ $panelDefense->schedule_date->format('M') }}</span>
+              </div>
+              <div style="min-width:0;flex:1">
+                <div class="pm-defense-type">{{ $panelDefense->defense_type }}</div>
+                <div class="pm-defense-meta">
+                  {{ $panelDefense->schedule_date->format('l') }}@if ($panelDefense->schedule_date->format('H:i') !== '00:00') · {{ $panelDefense->schedule_date->format('g:i A') }}@endif
+                  @if ($panelDefense->venue)<br>{{ $panelDefense->venue }}@endif
+                </div>
+              </div>
+            </div>
+          @else
+            <div class="pm-empty">Nothing scheduled yet.</div>
+          @endif
         </div>
       @endif
 
