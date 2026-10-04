@@ -34,7 +34,8 @@
 .r-grammarian{--rc:var(--xh-purple);--rc-ink:var(--xh-purple);--rc-soft:var(--xh-purple-soft)}
 
 .xh,.xh-dlg{font-family:'DM Sans','DM Sans Fallback',system-ui,sans-serif;font-size:14px;line-height:1.45;color:var(--text);font-variant-numeric:tabular-nums}
-.xh{display:flex;flex-direction:column;gap:14px;padding-bottom:24px}
+/* Capped and centred, so a wide laptop screen does not stretch the page. */
+.xh{display:flex;flex-direction:column;gap:14px;padding-bottom:24px;max-width:1200px;margin-inline:auto}
 /* Flex children size to their content by default. The swipeable row of
    experts also carries contain:inline-size, so its full width cannot push
    the page wider than a phone. */
