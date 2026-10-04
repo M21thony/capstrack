@@ -126,6 +126,16 @@ class ExpertsPageTabsTest extends TestCase
         }
     }
 
+    /** The top bar already says "Experts", so the page does not repeat it. */
+    public function test_the_page_does_not_repeat_the_top_bar_title(): void
+    {
+        [$student] = $this->leader();
+
+        $this->actingAs($student, 'web')->get(route('student.experts'))
+            ->assertOk()
+            ->assertDontSee('<h1>Experts</h1>', false);
+    }
+
     public function test_an_unknown_tab_falls_back_rather_than_breaking(): void
     {
         [$student] = $this->leader();

@@ -160,7 +160,6 @@
   <div class="xh" id="xh" data-tab="{{ $tab }}">
     <div class="xh-pagehead">
       <div>
-        <h1>Experts</h1>
         <p>Your team's adviser, consultant and grammarian, and the sessions you book with them.</p>
       </div>
       <div class="xh-seg" role="tablist" aria-label="Experts page sections">
