@@ -24,3 +24,7 @@ Schedule::command('checklists:purge-removed')->dailyAt('02:00');
 // A few days before a checklist deadline, each team that has not met it hears
 // about it once. Web only - there was never an email for this.
 Schedule::command('milestones:send-due-reminders')->dailyAt('07:05');
+
+// When a team finishes a phase, its leader is told to evaluate the experts -
+// once per phase, so running it often only makes the email arrive sooner.
+Schedule::command('evaluations:send-reminders')->hourly();

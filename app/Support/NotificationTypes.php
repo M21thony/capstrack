@@ -178,6 +178,10 @@ final class NotificationTypes
             'label' => 'Our consultation is happening today',
             'email' => true,
         ],
+        'evaluation_due' => [
+            'label' => 'We finished a phase and our experts are waiting to be evaluated',
+            'email' => true,
+        ],
     ];
 
     /**

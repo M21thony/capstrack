@@ -124,9 +124,9 @@ class FinancialReceiptsTest extends TestCase
         ExpensePost::create(['title' => 'Binding', 'course' => 'BSIT', 'year_level' => '4th', 'amount' => 100, 'is_active' => true]);
 
         $this->actingAs($student)
-            ->get(route('student.financial'))
+            ->get(route('student.team', ['tab' => 'financial']))
             ->assertOk()
-            ->assertViewHas('state', fn ($state) => collect($state['fees'])->pluck('stage')->all() === ['Pre Oral Defense']);
+            ->assertViewHas('financialState', fn ($state) => collect($state['fees'])->pluck('stage')->all() === ['Pre Oral Defense']);
     }
 
     public function test_the_capsa_sees_fees_and_receipts_for_her_sections_only(): void
@@ -184,11 +184,11 @@ class FinancialReceiptsTest extends TestCase
         $this->actingAs($capsa, 'expert')->get(route('capsa.financial'))->assertOk()
             ->assertViewHas('state', fn ($state) => $state['receipts'] === []);
 
-        $this->actingAs($leader)->get(route('student.financial'))->assertOk()
-            ->assertViewHas('state', fn ($state) => $state['is_leader'] === true
+        $this->actingAs($leader)->get(route('student.team', ['tab' => 'financial']))->assertOk()
+            ->assertViewHas('financialState', fn ($state) => $state['is_leader'] === true
                 && $state['receipts'][$fee->id.':'.$member->student_id]['status'] === 'held');
-        $this->actingAs($member)->get(route('student.financial'))
-            ->assertViewHas('state', fn ($state) => $state['is_leader'] === false);
+        $this->actingAs($member)->get(route('student.team', ['tab' => 'financial']))
+            ->assertViewHas('financialState', fn ($state) => $state['is_leader'] === false);
     }
 
     public function test_the_leader_cannot_send_the_team_until_every_member_has_a_receipt(): void
@@ -284,5 +284,41 @@ class FinancialReceiptsTest extends TestCase
             ->assertStatus(422);
 
         $this->assertSame('held', $record->fresh()->f_record_status);
+    }
+
+    /** Financial Records is Team Management's second tab; the old address opens it. */
+    public function test_the_old_address_opens_the_financial_tab_of_team_management(): void
+    {
+        [, $student] = $this->teamInSection('Alpha');
+
+        $this->actingAs($student)->get(route('student.financial'))
+            ->assertRedirect(route('student.team', ['tab' => 'financial']));
+    }
+
+    public function test_team_management_carries_both_tabs_and_opens_on_the_one_asked_for(): void
+    {
+        [, $student] = $this->teamInSection('Alpha');
+        $this->fee();
+
+        $team = $this->actingAs($student)->get(route('student.team'))->assertOk()->getContent();
+        $this->assertStringContainsString('data-tm-tab="financial"', $team);
+        $this->assertStringContainsString('id="fx-student"', $team, 'the receipts are on the page, behind their tab');
+        $this->assertMatchesRegularExpression('/id="tm-panel-financial"[^>]*hidden/', $team);
+        $this->assertStringContainsString('<body class="">', $team);
+
+        $fin = $this->actingAs($student)->get(route('student.team', ['tab' => 'financial']))->assertOk()->getContent();
+        $this->assertStringContainsString('<body class="tm-on-fin">', $fin);
+        $this->assertDoesNotMatchRegularExpression('/id="tm-panel-financial"[^>]*hidden/', $fin);
+        $this->assertMatchesRegularExpression('/id="tm-tab-financial"[^>]*aria-selected="true"/', $fin);
+    }
+
+    public function test_the_sidebar_has_no_separate_financial_records_link(): void
+    {
+        [, $student] = $this->teamInSection('Alpha');
+
+        $html = $this->actingAs($student)->get(route('student.dashboard'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('data-tour-target="student.financial"', $html);
+        $this->assertStringNotContainsString('href="'.route('student.financial').'"', $html);
     }
 }

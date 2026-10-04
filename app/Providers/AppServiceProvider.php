@@ -12,6 +12,7 @@ use App\Models\TeamExpertAssignment;
 use App\Models\TeamInvitation;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
+use App\Support\ExpertEvaluations;
 use App\Support\LeaveDecisionDetails;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
@@ -117,9 +118,22 @@ class AppServiceProvider extends ServiceProvider
                     ? once(fn () => $this->panelDetails($panelTeam))
                     : ['members' => collect(), 'experts' => [], 'defense' => null];
 
+                // A leader whose team finished a phase owes each expert an
+                // evaluation: told once by bell and email the first time any
+                // page notices, and nudged by the popup until it is done.
+                $evaluationsOwed = $panelTeam && (int) $panelTeam->leader_id === (int) $studentId
+                    ? once(function () use ($panelTeam) {
+                        $evaluations = app(ExpertEvaluations::class);
+                        // A failed email must not take the page down with it.
+                        rescue(fn () => $evaluations->remind($panelTeam));
+
+                        return $evaluations->due($panelTeam);
+                    })
+                    : collect();
+
                 $view->with(compact(
                     'unreadNotifications', 'unreadCount', 'bellNotifications', 'leaveDecisions', 'joinRequestPopups',
-                    'panelTeam', 'panelRole', 'panelMembers', 'panelExperts', 'panelDefense'
+                    'panelTeam', 'panelRole', 'panelMembers', 'panelExperts', 'panelDefense', 'evaluationsOwed'
                 ));
             }
         });

@@ -13,7 +13,7 @@
   .set-row{display:grid;grid-template-columns:300px minmax(0,1fr);gap:48px;padding:28px 32px}
   .set-row + .set-row{border-top:1px solid var(--bg4)}
   .set-row h2{margin:0 0 6px;font-size:16px;font-weight:700;color:var(--text)}
-  .set-row .set-desc{margin:0;font-size:13.5px;line-height:1.5;color:var(--text3)}
+  .set-row .set-degit sc{margin:0;font-size:13.5px;line-height:1.5;color:var(--text3)}
   .set-label{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:8px}
   .set-label span{font-weight:400;color:var(--text3)}
   .set-field + .set-field{margin-top:22px}

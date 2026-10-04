@@ -58,8 +58,8 @@ return [
         [
             'key' => 'progress',
             'label' => 'Track your progress',
-            'body' => 'See which milestones are done, and upload receipts for capstone expenses.',
-            'target' => ['student.progress', 'student.financial'],
+            'body' => 'See which milestones are done. Receipts for defense fees are under Team Management, in Financial Records.',
+            'target' => ['student.progress'],
         ],
         [
             'key' => 'reference',

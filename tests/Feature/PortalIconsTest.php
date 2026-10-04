@@ -59,7 +59,6 @@ class PortalIconsTest extends TestCase
                 'data-icon="feedback"', 'Review Viewer',
                 'data-icon="similarity"', 'Pre-Proposal Submission',
                 'data-icon="progress"', 'Progress Tracker',
-                'data-icon="receipt"', 'Financial Records',
                 'data-icon="book"', 'Resources',
                 'data-icon="archive"', 'Archived Capstones',
                 'data-icon="sign-out"', 'Sign Out',

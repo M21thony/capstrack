@@ -111,7 +111,7 @@ class MobileTabBarTest extends TestCase
     }
 
     /**
-     * On Financial Records the page is about a receipt. A big Submit in the
+     * On Financial Records (Team Management's second tab) the page is about a receipt. A big Submit in the
      * middle of the bar read as the way to upload one, and opened the
      * document form instead - so the bar there has no Submit.
      */
@@ -123,19 +123,16 @@ class MobileTabBarTest extends TestCase
         ]);
         StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id, 'program' => 'BSIT']);
 
-        $this->actingAs($student)->get(route('student.financial'))
+        $this->actingAs($student)->get(route('student.team', ['tab' => 'financial']))
             ->assertOk()
             ->assertSee('class="mtab is-floating"', false)
             ->assertSeeInOrder(['>Home<', '>Team<', '>Progress<', '>Menu<'], false)
             ->assertDontSee('>Submit<', false)
             ->assertDontSee('class="mtab-item primary"', false);
 
-        // The developers' credit there is the size the student dashboard gives
-        // it, not a size larger from the receipt list's own type.
-        $this->actingAs($student)->get(route('student.financial'))
-            ->assertSee('#fx-student .sys-credits .credits-title{font-size:8px}', false)
-            ->assertSee('#fx-student .sys-credits .credits-names{font-size:9px}', false)
-            ->assertSee('#fx-student .sys-credits .credits-names{font-size:8px}', false);
+        // The Team tab of the same page keeps its Submit.
+        $this->actingAs($student)->get(route('student.team'))
+            ->assertSee('>Submit<', false);
 
         // Everywhere else it is still there.
         $this->actingAs($student)->get(route('student.progress'))

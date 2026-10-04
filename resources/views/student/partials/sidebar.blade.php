@@ -18,7 +18,6 @@
 
     $lastVisitTeam = session('last_visit_team', now()->subYear());
     $lastVisitExperts = session('last_visit_experts', now()->subYear());
-    $lastVisitFinancial = session('last_visit_financial', now()->subYear());
     $lastVisitConsultation = session('last_visit_consultation', now()->subYear());
 
     if ($currentRouteName === 'student.team') {
@@ -28,10 +27,6 @@
     if ($onExpertsPage) {
         session()->put('last_visit_experts', now());
         $lastVisitExperts = now();
-    }
-    if ($currentRouteName === 'student.financial') {
-        session()->put('last_visit_financial', now());
-        $lastVisitFinancial = now();
     }
     if ($onExpertsPage) {
         session()->put('last_visit_consultation', now());
@@ -53,14 +48,6 @@
 
     if ($currentRouteName === 'student.team') {
         session()->put('seen_post_ids', array_unique(array_merge($seenPostIds, $allPostIds)));
-    }
-
-    $pendingReceiptIds = $student ? \App\Models\FinancialRecord::where('student_id', $student->student_id)->whereNull('verified_at')->whereNotNull('receipt_image')->pluck('id')->toArray() : [];
-    $seenReceiptIds = session('seen_receipt_ids', []);
-    $unseenReceiptCount = count(array_diff($pendingReceiptIds, $seenReceiptIds));
-
-    if ($currentRouteName === 'student.financial') {
-        session()->put('seen_receipt_ids', array_unique(array_merge($seenReceiptIds, $pendingReceiptIds)));
     }
 
     $consultationIds = DB::table('consultation_schedule')->where('specific_date', '>=', now()->toDateString())->where('is_available', 1)->pluck('schedule_id')->toArray();
@@ -154,13 +141,7 @@
       <x-portal-icon name="progress" />
       Progress Tracker
     </a>
-    <a href="{{ route('student.financial') }}" data-tour-target="student.financial" class="nav-item {{ request()->routeIs('student.financial') ? 'active' : '' }}">
-      <x-portal-icon name="receipt" />
-      Financial Records
-      @if ($unseenReceiptCount > 0)
-        <span class="nav-badge warn">{{ $unseenReceiptCount > 99 ? '99+' : $unseenReceiptCount }}</span>
-      @endif
-    </a>
+    {{-- Financial Records is a tab of Team Management now, not a page of its own. --}}
     <div class="nav-section">Reference</div>
     <a href="{{ route('student.resources') }}" data-tour-target="student.resources" class="nav-item {{ request()->routeIs('student.resources') ? 'active' : '' }}">
       <x-portal-icon name="book" />
@@ -186,10 +167,10 @@
     ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team'), 'badge' => $newPostCount,
         'icon' => App\Support\PortalIcons::paths('team')],
     // Handing in a document is what a student comes here to do most - but
-    // not on Financial Records. There the page is about uploading a receipt,
-    // and a big Submit button in the middle of the bar read as the way to do
-    // that, then opened the document form instead.
-    request()->routeIs('student.financial') ? null : ['label' => 'Submit', 'onclick' => "window.openSubmissionDrawer && window.openSubmissionDrawer('')", 'primary' => true,
+    // not on Financial Records (Team Management's second tab). There the page
+    // is about uploading a receipt, and a big Submit button in the middle of
+    // the bar read as the way to do that, then opened the document form instead.
+    request()->routeIs('student.team') && request()->query('tab') === 'financial' ? null : ['label' => 'Submit', 'onclick' => "window.openSubmissionDrawer && window.openSubmissionDrawer('')", 'primary' => true,
         'icon' => App\Support\PortalIcons::paths('add')],
     ['label' => 'Progress', 'href' => route('student.progress'), 'active' => request()->routeIs('student.progress'),
         'icon' => App\Support\PortalIcons::paths('progress')],
@@ -392,6 +373,7 @@
 
 
 @include('student.partials.join-request-popup')
+@include('student.partials.evaluation-popup')
 
 <script>
   function openProfile() {
