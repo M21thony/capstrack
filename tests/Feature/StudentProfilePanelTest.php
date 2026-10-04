@@ -2,10 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneExpert;
+use App\Models\DefenseSchedule;
+use App\Models\ExpertRole;
+use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\TeamExpertAssignment;
 use Database\Seeders\StudentRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -122,5 +127,52 @@ class StudentProfilePanelTest extends TestCase
 
         $this->assertStringNotContainsString('Your role', $panel);
         $this->assertStringContainsString('mark@my.cspc.edu.ph', $panel);
+        $this->assertStringNotContainsString('Next defense', $panel);
+        $this->assertStringNotContainsString('pm-members', $panel);
+    }
+
+    /** The rest of where they stand: the team, the experts, the next defense. */
+    public function test_it_shows_the_members_the_experts_and_the_next_defense(): void
+    {
+        (new StudentRoleSeeder)->run();
+
+        $student = $this->student();
+        $team = Team::create(['team_name' => 'Bulbasaurus', 'leader_id' => $student->student_id]);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]);
+        $mate = Student::create(['email' => 'ana@my.cspc.edu.ph', 'f_name' => 'Ana', 'l_name' => 'Cruz', 'course' => 'BSIT']);
+        StudentSchoolYear::create(['student_id' => $mate->student_id, 'team_id' => $team->team_id]);
+
+        $adviser = CapstoneExpert::factory()->create(['approved_status' => true, 'first_name' => 'Rosa', 'last_name' => 'Santos']);
+        $role = Role::firstOrCreate(['role_name' => 'adviser']);
+        $adviser->roles()->attach($role->role_id);
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id, 'expert_id' => $adviser->expert_id, 'status' => 'approved',
+            'expert_role_id' => ExpertRole::where('expert_id', $adviser->expert_id)->where('role_id', $role->role_id)->value('expert_role_id'),
+        ]);
+        DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Title Defense', 'schedule_date' => now()->addDays(3)->setTime(9, 0), 'venue' => 'NAS Lab']);
+        DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Pre-proposal Defense', 'schedule_date' => now()->subDays(20), 'venue' => 'IT Lab 1']);
+
+        $html = $this->actingAs($student, 'web')->get(route('student.team'))->assertOk()->getContent();
+        $at = strpos($html, 'id="profile-overlay"');
+        $panel = substr($html, $at, strpos($html, '</div>'."\n".'</div>', strpos($html, 'Account', $at)) - $at);
+
+        $this->assertStringContainsString('Mark Balilla', $panel);
+        $this->assertStringContainsString('Ana Cruz', $panel);
+        $this->assertStringContainsString('<span class="pm-count">2</span>', $panel);
+        $this->assertStringContainsString('Rosa Santos', $panel);
+        $this->assertSame(2, substr_count($panel, 'Not yet'), 'consultant and grammarian are not engaged yet');
+        $this->assertStringContainsString('Title Defense', $panel);
+        $this->assertStringContainsString('NAS Lab', $panel);
+        $this->assertStringNotContainsString('Pre-proposal Defense', $panel, 'a defense that is over is not the next one');
+    }
+
+    public function test_a_team_with_no_defense_coming_says_so(): void
+    {
+        $student = $this->student();
+        $team = Team::create(['team_name' => 'Bulbasaurus', 'leader_id' => $student->student_id]);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+
+        $this->actingAs($student, 'web')->get(route('student.team'))->assertOk()
+            ->assertSee('Nothing scheduled yet.');
     }
 }
