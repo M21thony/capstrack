@@ -1322,9 +1322,8 @@ var ACT = {
 };
 
 /* Find experts shows one side - open slots, or full and not taking - a page
-   of cards at a time: up to three 320px cards across, two rows when both
-   fit on the screen and one when they do not. A phone scrolls, so it gets
-   six. */
+   of cards at a time: up to three across, two rows when both fit on the
+   screen and one when they do not. A phone scrolls, so it gets six. */
 var FIND = { side: 'open', page: 0, rows: 2 };
 function findPage() {
   var box = $('xh-results');
@@ -1332,7 +1331,7 @@ function findPage() {
   var cards = Array.prototype.slice.call(box.querySelectorAll('.xh-xcard'));
   var side = cards.filter(function (c) { return c.dataset.side === FIND.side; });
   var phone = window.innerWidth <= 900;
-  var cols = Math.min(3, Math.max(1, Math.floor((box.clientWidth + 12) / 332)));
+  var cols = Math.min(3, Math.max(1, Math.floor((box.clientWidth + 12) / 282)));
   var per = phone ? 6 : cols * FIND.rows;
   var pages = Math.max(1, Math.ceil(side.length / per));
   FIND.page = Math.max(0, Math.min(FIND.page, pages - 1));

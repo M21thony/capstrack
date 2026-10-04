@@ -34,8 +34,7 @@
 .r-grammarian{--rc:var(--xh-purple);--rc-ink:var(--xh-purple);--rc-soft:var(--xh-purple-soft)}
 
 .xh,.xh-dlg{font-family:'DM Sans','DM Sans Fallback',system-ui,sans-serif;font-size:14px;line-height:1.45;color:var(--text);font-variant-numeric:tabular-nums}
-/* Capped and centred, so a wide laptop screen does not stretch the page. */
-.xh{display:flex;flex-direction:column;gap:14px;padding-bottom:24px;max-width:1360px;margin-inline:auto}
+.xh{display:flex;flex-direction:column;gap:14px;padding-bottom:24px}
 /* Flex children size to their content by default. The swipeable row of
    experts also carries contain:inline-size, so its full width cannot push
    the page wider than a phone. */
@@ -276,13 +275,13 @@
 .xh-skill-n{font-size:11px;font-weight:700;color:var(--xh-ink-3)}
 .xh-skill-none{margin:0;padding:10px;font-size:12.5px;color:var(--xh-ink-3)}
 .xh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-/* Find experts: one side at a time, three 320px cards by two rows a page.
-   The cards keep their size on a wide screen instead of stretching to it. */
+/* Find experts: one side at a time, a page of up to three across. */
 .xh-tally b{color:var(--text)}
 .xh-tally .is-fit{color:var(--xh-gold-ink)}
-.xh-results{display:flex;flex-direction:column;gap:10px;max-width:984px}
-.xh-results .xh-grid{grid-template-columns:repeat(auto-fill,320px)}
-@media (max-width:600px){.xh-results .xh-grid{grid-template-columns:1fr}}
+.xh-results{display:flex;flex-direction:column;gap:10px}
+.xh-results .xh-grid{grid-template-columns:repeat(auto-fill,minmax(max(270px,calc((100% - 24px)/3)),1fr))}
+.xh-results .xh-xcard{padding:12px;gap:8px}
+.xh-results .xh-xcard .xh-av{width:40px;height:40px}
 .xh-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
 .xh-side{display:inline-flex;padding:3px;border-radius:11px;background:var(--bg3);border:1px solid var(--border)}
 .xh-side button{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border:0;border-radius:8px;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer}
