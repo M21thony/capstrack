@@ -118,25 +118,27 @@ class StudentExpertRoleAndSearchTest extends TestCase
     }
 
     /**
-     * Searching has to reach past the page you are looking at. With the
-     * filter in the browser, an expert on page two was simply invisible.
+     * The whole role arrives at once and the browser flips through it a page
+     * at a time, so an expert far down the list is still on the page - and
+     * searching still narrows the list in the query.
      */
-    public function test_search_finds_an_expert_who_is_not_on_the_first_page(): void
+    public function test_every_expert_in_the_role_is_listed_and_search_narrows_it(): void
     {
         [$student] = $this->leader();
 
-        // Comfortably past the 24 a page holds.
         for ($i = 0; $i < 30; $i++) {
             $this->expert('Filler'.$i, 'Person'.$i, ['adviser']);
         }
 
         $needle = $this->expert('Zenaida', 'Yabut', ['adviser']);
 
-        $first = $this->actingAs($student, 'web')->get('/student/experts?role=adviser');
-        $first->assertDontSee('data-expert-id="'.$needle->expert_id.'"', false);
+        $all = $this->actingAs($student, 'web')->get('/student/experts?role=adviser');
+        $all->assertSee('data-expert-id="'.$needle->expert_id.'"', false);
+        $this->assertSame(31, substr_count($all->getContent(), '<article class="xh-card xh-xcard'));
 
         $found = $this->actingAs($student, 'web')->get('/student/experts?role=adviser&q=Yabut');
         $found->assertSee('data-expert-id="'.$needle->expert_id.'"', false);
+        $this->assertSame(1, substr_count($found->getContent(), '<article class="xh-card xh-xcard'));
     }
 
     public function test_search_matches_expertise_as_well_as_names(): void

@@ -50,7 +50,15 @@
 
     // An approved expert is yours, not someone to browse or apply to again.
     $settledExpertIds = $approvedAssignments->pluck('expert_id')->filter()->all();
-    $shownExperts = collect($experts->items())->whereNotIn('expert_id', $settledExpertIds)->values();
+    $shownExperts = $experts->whereNotIn('expert_id', $settledExpertIds)->values();
+
+    // Open experts on one side, full and not-taking on the other. The first
+    // four open ones whose skills cover the team's tags are marked as a fit.
+    $openCount = $shownExperts->where('is_open', true)->count();
+    $fullCount = $shownExperts->filter(fn ($e) => ! $e->is_open && $e->hasSetPrograms() && $e->max_teams > 0)->count();
+    $notTakingCount = $shownExperts->count() - $openCount - $fullCount;
+    $fittingIds = $shownExperts->filter(fn ($e) => $e->is_open && $e->matched_tags)->pluck('expert_id');
+    $fitIds = $fittingIds->take(4)->all();
 
     // Waiting on somebody, then answered. Approved ones are on the strip.
     $waitingRequests = $assignments->where('status', 'pending')->filter(fn ($a) => $a->expert)->values();
@@ -273,15 +281,21 @@
             </div>
           @endif
 
-          {{-- Searching reloads the page rather than hiding cards. The list is
-               paginated, so a filter in the browser would only ever search
-               the experts already on screen and report "none" for the rest. --}}
+          {{-- Searching reloads the page: the name and skill search runs on
+               the server, which also puts the best fits first. --}}
           <form class="filters xh-find-head" method="GET" action="{{ route('student.experts') }}">
             <input type="hidden" name="tab" value="find">
             <input type="hidden" name="role" value="{{ $activeRole }}">
             @if($activeSkill !== '')<input type="hidden" name="skill" value="{{ $activeSkill }}">@endif
             @if($activeGroup !== '')<input type="hidden" name="skill_group" value="{{ $activeGroup }}">@endif
-            <h2>{{ ucfirst(\Illuminate\Support\Str::plural($activeRole)) }} <span>{{ $experts->hasPages() ? $experts->total() : $shownExperts->count() }} {{ \Illuminate\Support\Str::plural('expert', $experts->hasPages() ? $experts->total() : $shownExperts->count()) }}</span></h2>
+            @if($openOnly)<input type="hidden" name="open" value="1">@endif
+            <h2>{{ ucfirst(\Illuminate\Support\Str::plural($activeRole)) }}
+              <span class="xh-tally">
+                <b>{{ $openCount }}</b> with open slots · <b>{{ $fullCount }}</b> full
+                @if($notTakingCount) · <b>{{ $notTakingCount }}</b> not taking teams @endif
+                @if($team?->titleTags()) · <b class="is-fit">{{ $fittingIds->count() }}</b> <span class="is-fit">fit your team's tags</span> @endif
+              </span>
+            </h2>
             <label class="xh-search" for="xh-q">
               {{-- The magnifier is the submit button: with the skill picker's
                    own text box in this form, Enter alone does not submit it. --}}
@@ -323,7 +337,6 @@
             @if($activeSkill !== '' || $activeGroup !== '')
               <a class="xh-chip-x" href="{{ route('student.experts', array_filter(['tab' => 'find', 'role' => $activeRole, 'q' => $search ?: null, 'open' => $openOnly ? 1 : null])) }}" aria-label="Clear skill filter">Clear skill</a>
             @endif
-            <label class="xh-check" for="xh-open"><input type="checkbox" id="xh-open" name="open" value="1" @checked($openOnly) onchange="this.form.submit()">Has open slots</label>
           </form>
 
           @if($shownExperts->isEmpty())
@@ -342,19 +355,49 @@
               @endif
             </div>
           @else
+            {{-- Open experts on one side, the rest on the other, a page of
+                 cards at a time; the script below hides the cards that are
+                 not on the current page. --}}
+            <div class="xh-results" id="xh-results">
+              <div class="xh-bar">
+                <div class="xh-side" role="group" aria-label="Show">
+                  <button type="button" data-xh="side" data-side="open" aria-pressed="true">Open slots<small>{{ $openCount }}</small></button>
+                  <button type="button" data-xh="side" data-side="closed" aria-pressed="false" @disabled($openCount === $shownExperts->count())>Full or not taking<small>{{ $shownExperts->count() - $openCount }}</small></button>
+                </div>
+                <div class="xh-pgnav" id="xh-pgnav" hidden>
+                  <span id="xh-pg-range"></span>
+                  <span class="xh-dots" id="xh-pg-dots" aria-hidden="true"></span>
+                  <span class="xh-keys" title="Keyboard: the left and right arrow keys flip pages"><kbd>&larr;</kbd><kbd>&rarr;</kbd> keys</span>
+                  <button type="button" class="xh-pg" data-xh="page" data-dir="-1" aria-label="Previous page (left arrow key)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+                  <button type="button" class="xh-pg" data-xh="page" data-dir="1" aria-label="Next page (right arrow key)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+                </div>
+              </div>
+              <div class="xh-card xh-hint" id="xh-side-empty" hidden>No {{ $activeRole }} here has an open slot. Check <b>Full or not taking</b>.</div>
             <div class="xh-grid">
               @foreach($shownExperts as $expert)
                 @php
                   $p = $expertPayloads[$expert->expert_id];
                   $also = collect($p['roles'])->reject(fn ($r) => $r === $activeRole);
+                  $isFit = in_array($expert->expert_id, $fitIds, true);
+
+                  // Skills that cover the team's tags first, then as many as
+                  // fit in about two lines; the rest become "+N more".
+                  $cardTags = [];
+                  $tagRoom = 80;
+                  foreach (collect($p['tags'])->sortByDesc(fn ($t) => in_array($t, $expert->matching_fields, true)) as $tag) {
+                    if ($cardTags && mb_strlen($tag) + 4 > $tagRoom) { break; }
+                    $cardTags[] = $tag;
+                    $tagRoom -= mb_strlen($tag) + 4;
+                  }
                 @endphp
-                <article class="xh-card xh-xcard r-{{ $activeRole }}" data-expert-id="{{ $expert->expert_id }}">
+                <article class="xh-card xh-xcard r-{{ $activeRole }}{{ $isFit ? ' xh-fit' : '' }}{{ $expert->is_open ? '' : ' is-closed' }}" data-expert-id="{{ $expert->expert_id }}" data-side="{{ $expert->is_open ? 'open' : 'closed' }}">
                   <div class="xh-xhead">
                     <span class="xh-av xh-lg r-{{ $activeRole }}" aria-hidden="true">{{ $p['initials'] }}@if($p['avatar'])<img class="avatar-photo" src="{{ $p['avatar'] }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
                     <div>
                       <h3>{{ $expert->name }}</h3>
-                      @if($also->isNotEmpty())
+                      @if($isFit || $also->isNotEmpty())
                         <div class="xh-chips">
+                          @if($isFit)<span class="xh-fitmark" title="Fits your team: {{ implode(', ', $expert->matched_tags) }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Fits your team</span>@endif
                           @foreach($also as $r)<span class="xh-chip r-{{ $r }}">also {{ $r }}</span>@endforeach
                         </div>
                       @endif
@@ -363,12 +406,12 @@
                   <div class="xh-sec">
                     <span class="xh-lbl">Expertise</span>
                     <div class="xh-tags">
-                      @forelse(array_slice($p['tags'], 0, 4) as $tag)
-                        <span class="xh-tag">{{ $tag }}</span>
+                      @forelse($cardTags as $tag)
+                        <span class="xh-tag{{ $expert->is_open && in_array($tag, $expert->matching_fields, true) ? ' is-match' : '' }}">{{ $tag }}</span>
                       @empty
                         <span class="xh-tag">Not filled in yet</span>
                       @endforelse
-                      @if(count($p['tags']) > 4)<span class="xh-tag">+{{ count($p['tags']) - 4 }} more</span>@endif
+                      @if(count($p['tags']) > count($cardTags))<span class="xh-tag">+{{ count($p['tags']) - count($cardTags) }} more</span>@endif
                     </div>
                   </div>
                   <div class="xh-sec">
@@ -397,21 +440,7 @@
                 </article>
               @endforeach
             </div>
-            @if($experts->hasPages())
-              <nav class="xh-pager" aria-label="More experts">
-                @if($experts->onFirstPage())
-                  <span class="xh-btn xh-ghost xh-sm is-off">Previous</span>
-                @else
-                  <a class="xh-btn xh-ghost xh-sm" href="{{ $experts->previousPageUrl() }}">Previous</a>
-                @endif
-                <span>Page {{ $experts->currentPage() }} of {{ $experts->lastPage() }}</span>
-                @if($experts->hasMorePages())
-                  <a class="xh-btn xh-ghost xh-sm" href="{{ $experts->nextPageUrl() }}">Next</a>
-                @else
-                  <span class="xh-btn xh-ghost xh-sm is-off">Next</span>
-                @endif
-              </nav>
-            @endif
+            </div>
           @endif
         </div>
 
@@ -1137,6 +1166,7 @@ var ACT = {
       history.replaceState(null, '', url.pathname + url.search);
     } catch (e) { /* ignore */ }
     render();
+    if (tab === 'find') { FIND.rows = 2; findPage(); }
     $(tab === 'find' ? 'xh-tab-find' : 'xh-tab-book').focus();
   },
   slot: function (el, e) {
@@ -1287,8 +1317,43 @@ var ACT = {
     pop.hidden = !pop.hidden;
     el.setAttribute('aria-expanded', String(!pop.hidden));
     if (!pop.hidden) { $('xh-skill-q').focus(); }
-  }
+  },
+  side: function (el) { FIND.side = el.dataset.side; FIND.page = 0; findPage(); },
+  page: function (el) { FIND.page += Number(el.dataset.dir); findPage(); }
 };
+
+/* Find experts shows one side - open slots, or full and not taking - a page
+   of cards at a time: up to three across, two rows when both fit on the
+   screen and one when they do not. A phone scrolls, so it gets six. */
+var FIND = { side: 'open', page: 0, rows: 2 };
+function findPage() {
+  var box = $('xh-results');
+  if (!box || S.tab !== 'find') { return; }
+  var cards = Array.prototype.slice.call(box.querySelectorAll('.xh-xcard'));
+  var side = cards.filter(function (c) { return c.dataset.side === FIND.side; });
+  var phone = window.innerWidth <= 900;
+  var cols = Math.min(3, Math.max(1, Math.floor((box.clientWidth + 12) / 282)));
+  var per = phone ? 6 : cols * FIND.rows;
+  var pages = Math.max(1, Math.ceil(side.length / per));
+  FIND.page = Math.max(0, Math.min(FIND.page, pages - 1));
+  var from = FIND.page * per;
+  cards.forEach(function (c) { var i = side.indexOf(c); c.hidden = i < from || i >= from + per; });
+  box.querySelectorAll('[data-xh="side"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.side === FIND.side)); });
+  $('xh-side-empty').hidden = side.length > 0;
+  $('xh-pgnav').hidden = side.length === 0;
+  $('xh-pg-range').innerHTML = '<b>' + (from + 1) + '–' + Math.min(from + per, side.length) + '</b> of ' + side.length;
+  $('xh-pg-dots').innerHTML = pages > 1 && pages <= 8
+    ? Array.from({ length: pages }, function (_, i) { return '<i' + (i === FIND.page ? ' class="on"' : '') + '></i>'; }).join('') : '';
+  box.querySelector('.xh-keys').hidden = pages < 2;
+  box.querySelector('.xh-pg[data-dir="-1"]').disabled = FIND.page === 0;
+  box.querySelector('.xh-pg[data-dir="1"]').disabled = FIND.page >= pages - 1;
+  if (!phone && FIND.rows > 1 && side.length > cols && box.getBoundingClientRect().bottom > window.innerHeight) { FIND.rows = 1; findPage(); }
+}
+// The open side is empty but the other is not: start on the other.
+if ($('xh-results') && !document.querySelector('#xh-results [data-side="open"]')) { FIND.side = 'closed'; }
+findPage();
+var findResize;
+window.addEventListener('resize', function () { clearTimeout(findResize); findResize = setTimeout(function () { FIND.rows = 2; findPage(); }, 120); });
 
 document.addEventListener('click', function (e) {
   var el = e.target.closest('[data-xh]');
@@ -1346,7 +1411,15 @@ document.querySelector('.xh-seg').addEventListener('keydown', function (e) {
   }
 });
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') { var pop = $('xh-skill-pop'); if (pop) { pop.hidden = true; } }
+  if (e.key === 'Escape') { var pop = $('xh-skill-pop'); if (pop) { pop.hidden = true; } return; }
+  // Left and right flip Find experts' pages, unless typing, a modifier is
+  // held, the skill list or a dialog is open, or the tabs took the key.
+  if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) { return; }
+  if (S.tab !== 'find' || e.target.closest('input, textarea, select, [contenteditable]') || document.querySelector('dialog[open]')) { return; }
+  var skillPop = $('xh-skill-pop');
+  if (skillPop && !skillPop.hidden) { return; }
+  var btn = document.querySelector('#xh-results .xh-pg[data-dir="' + (e.key === 'ArrowLeft' ? -1 : 1) + '"]');
+  if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
 });
 
 // Kept current without a reload: a slot the expert adds, or a booking a

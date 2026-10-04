@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\ExpertExpertise;
 use App\Models\ExpertRole;
 use App\Models\Role;
 use App\Models\Student;
@@ -159,5 +160,96 @@ class ExpertsPageTabsTest extends TestCase
         foreach ([$open, $full, $unset] as $expert) {
             $this->assertStringContainsString('data-expert-id="'.$expert->expert_id.'"', $all);
         }
+    }
+
+    /**
+     * Find experts puts the experts whose skills cover the team's title tags
+     * first, then the ones with room for a team, then goes by name.
+     *
+     * @return array{0: Student, 1: array<string, CapstoneExpert>}
+     */
+    private function iotTeamAndExperts(): array
+    {
+        [$student, $team] = $this->leader();
+        $team->update(['project_title' => 'Smart Farm Monitor', 'tags' => ['IoT']]);
+
+        $experts = [
+            'zed' => $this->expert('Zed', 'adviser'),
+            'abe' => $this->expert('Abe', 'adviser', 1),
+            'bea' => $this->expert('Bea', 'adviser'),
+            'carl' => $this->expert('Carl', 'adviser'),
+            'ann' => $this->expert('Ann', 'adviser', 0),
+        ];
+
+        ExpertExpertise::create(['expert_id' => $experts['zed']->expert_id, 'expertise_field' => 'IoT Systems']);
+        ExpertExpertise::create(['expert_id' => $experts['abe']->expert_id, 'expertise_field' => 'IoT Systems']);
+        ExpertExpertise::create(['expert_id' => $experts['bea']->expert_id, 'expertise_field' => 'Database Design']);
+
+        $other = Team::create(['team_name' => 'Other Team', 'team_status' => 'Active', 'is_confirmed' => true]);
+        $this->accept($other, $experts['abe']);
+
+        return [$student, $experts];
+    }
+
+    /** The card markup of one expert, from its opening tag to its closing one. */
+    private function card(string $html, CapstoneExpert $expert): string
+    {
+        $head = strrpos(substr($html, 0, strpos($html, 'data-expert-id="'.$expert->expert_id.'"')), '<article');
+
+        return substr($html, $head, strpos($html, '</article>', $head) - $head);
+    }
+
+    public function test_find_experts_lists_tag_matches_first_then_open_slots_then_names(): void
+    {
+        [$student, $experts] = $this->iotTeamAndExperts();
+
+        $html = $this->actingAs($student, 'web')
+            ->get(route('student.experts', ['role' => 'adviser']))->assertOk()->getContent();
+
+        $positions = array_map(fn ($expert) => strpos($html, 'data-expert-id="'.$expert->expert_id.'"'), $experts);
+        $this->assertNotContains(false, $positions);
+
+        asort($positions);
+        $this->assertSame(['zed', 'abe', 'bea', 'carl', 'ann'], array_keys($positions));
+    }
+
+    public function test_only_an_open_expert_who_covers_a_tag_is_marked_as_a_fit(): void
+    {
+        [$student, $experts] = $this->iotTeamAndExperts();
+
+        $html = $this->actingAs($student, 'web')
+            ->get(route('student.experts', ['role' => 'adviser']))->getContent();
+
+        $zed = $this->card($html, $experts['zed']);
+        $this->assertStringContainsString('xh-fit', $zed);
+        $this->assertStringContainsString('Fits your team', $zed);
+        $this->assertStringContainsString('xh-tag is-match">IoT Systems', $zed);
+        $this->assertStringContainsString('data-side="open"', $zed);
+
+        // Abe covers the tag too, but his only slot is taken.
+        $abe = $this->card($html, $experts['abe']);
+        $this->assertStringNotContainsString('xh-fit', $abe);
+        $this->assertStringNotContainsString('is-match', $abe);
+        $this->assertStringContainsString('data-side="closed"', $abe);
+        $this->assertStringContainsString('data-side="closed"', $this->card($html, $experts['ann']));
+
+        $this->assertStringContainsString('<b>3</b> with open slots · <b>1</b> full', $html);
+        $this->assertStringContainsString('<b>1</b> not taking teams', $html);
+        $this->assertStringContainsString('<b class="is-fit">1</b>', $html);
+    }
+
+    public function test_a_team_without_title_tags_sees_no_fit_marks(): void
+    {
+        [$student] = $this->leader();
+        $expert = $this->expert('Zed', 'adviser');
+        ExpertExpertise::create(['expert_id' => $expert->expert_id, 'expertise_field' => 'IoT Systems']);
+
+        $html = $this->actingAs($student, 'web')
+            ->get(route('student.experts', ['role' => 'adviser']))->getContent();
+
+        $this->assertStringContainsString('data-expert-id="'.$expert->expert_id.'"', $html);
+        $this->assertStringNotContainsString('Fits your team', $html);
+        $this->assertStringNotContainsString('is-match', $html);
+        $this->assertStringNotContainsString('fit your team', $html);
     }
 }

@@ -566,7 +566,7 @@ class DefenseBoard
     }
 
     /** @return array<int, string> the team tags an expert's expertise covers */
-    public function matchedTags(array $tags, array $expertiseFields): array
+    public static function matchedTags(array $tags, array $expertiseFields): array
     {
         $fields = array_filter(array_map(fn ($f) => mb_strtolower(trim((string) $f)), $expertiseFields));
         $matched = [];

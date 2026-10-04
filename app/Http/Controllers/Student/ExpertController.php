@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
 use App\Support\ConsultationBoard;
+use App\Support\DefenseBoard;
 use App\Support\SectionScope;
 use App\Support\SkillCatalog;
 use Illuminate\Http\Request;
@@ -268,9 +269,16 @@ class ExpertController extends Controller
             $activeRole = $activeRole ?: self::ROLES[0];
         }
 
-        // 24 rather than 9: the page shows one role at a time now, and the
-        // card strip pages through what it is handed without the screen
-        // growing, so a whole role normally arrives in a single request.
+        $approvedProposal = $team?->selected_pre_proposal_id
+            ? CapstonePreProposal::with('duplicationCheck')->find($team->selected_pre_proposal_id)
+            : null;
+
+        $teamTags = $team?->titleTags() ?? [];
+
+        // The whole role arrives at once and the browser shows it six cards a
+        // page, so the order can put whoever fits the team first: tag
+        // matches, then room to take a team, then name.
+        // ponytail: loads every expert in the role; paginate on the server if a role grows past a few hundred.
         $experts = $filtered()
             ->whereHas('roles', fn ($q) => $q->where('role_name', $activeRole))
             ->with(['roles' => function ($q) {
@@ -278,18 +286,22 @@ class ExpertController extends Controller
             }, 'expertise', 'teamAssignments' => function ($q) {
                 $q->where('status', 'approved');
             }])
-            ->paginate(24)
-            ->withQueryString()
-            ->through(function ($expert) {
+            ->get()
+            ->each(function ($expert) use ($teamTags) {
                 $expert->slots_used = $expert->teamAssignments->count();
                 unset($expert->teamAssignments);
-
-                return $expert;
-            });
-
-        $approvedProposal = $team?->selected_pre_proposal_id
-            ? CapstonePreProposal::with('duplicationCheck')->find($team->selected_pre_proposal_id)
-            : null;
+                $fields = $expert->expertise->pluck('expertise_field')->filter()->all();
+                $expert->matched_tags = DefenseBoard::matchedTags($teamTags, $fields);
+                // The expert's own skills that cover a team tag, drawn gold on the card.
+                $expert->matching_fields = array_values(array_filter($fields, fn ($f) => DefenseBoard::matchedTags($teamTags, [$f]) !== []));
+                $expert->is_open = $expert->hasSetPrograms() && $expert->max_teams > 0 && $expert->slots_used < $expert->max_teams;
+            })
+            ->sortBy([
+                fn ($a, $b) => count($b->matched_tags) <=> count($a->matched_tags),
+                fn ($a, $b) => $b->is_open <=> $a->is_open,
+                fn ($a, $b) => strcasecmp($a->name, $b->name),
+            ])
+            ->values();
 
         $consult = $this->board->forStudent($student);
 
