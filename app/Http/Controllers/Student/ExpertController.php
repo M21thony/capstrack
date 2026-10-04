@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
 use App\Support\ConsultationBoard;
+use App\Support\ExpertEvaluations;
 use App\Support\SectionScope;
 use App\Support\SkillCatalog;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class ExpertController extends Controller
     private const ROLES = ['adviser', 'consultant', 'grammarian'];
 
     /** The page's two tabs. */
-    private const TABS = ['consultations', 'find'];
+    private const TABS = ['consultations', 'find', 'evaluations'];
 
     public function __construct(private ConsultationBoard $board) {}
 
@@ -333,6 +334,10 @@ class ExpertController extends Controller
             // same way the CaPSA side scopes it, so the two cannot disagree.
             'teamSection' => $team ? app(SectionScope::class)->sectionFor($team) : '',
             'isLeader' => $isLeader,
+            // The Evaluations tab: what the leader still owes each expert for
+            // the phases the team has finished, and what was already sent.
+            'evaluationsDue' => $team ? app(ExpertEvaluations::class)->due($team) : collect(),
+            'evaluationHistory' => $team ? app(ExpertEvaluations::class)->history($team) : collect(),
             'teamConfirmed' => $team?->is_confirmed ?? false,
             'skillGroups' => $skillGroups,
             'activeSkill' => $activeSkill,

@@ -1,50 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
-<title>Financial Records - CapsTrack</title>
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
-@vite(['resources/student-ui/styles.css', 'resources/css/financial.css', 'resources/js/financial/student.js'])
-<x-dashboard.styles />
-<style>
-  /* The developers' credit (placed by partials/mobile-tabbar) at the size the
-     student dashboard gives it. The receipt list's own 1.45 line height and
-     type made it read a size larger here than anywhere else in the portal. */
-  #fx-student .sys-credits{padding:12px 12px 14px;line-height:normal}
-  #fx-student .sys-credits .credits-title{font-size:8px}
-  #fx-student .sys-credits .credits-names{font-size:9px}
-  /* The how-to card sits straight in .main on this page, with no .content
-     around it, so it gets the room .content gives it everywhere else rather
-     than touching the top bar and the screen's edge. */
-  .main > .page-tutorial{margin:16px 20px}
-  @media (max-width:768px){
-    .main > .page-tutorial{margin:12px}
-    #fx-student .sys-credits{padding:10px 12px}
-    #fx-student .sys-credits .credits-title{font-size:7px}
-    #fx-student .sys-credits .credits-names{font-size:8px}
-  }
-</style>
-</head>
-<body>
-@include('student.partials.sidebar')
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-<div class="main">
-  <div class="topbar">
-    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Toggle navigation">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="page-title">Financial Records</div>
-    <div class="topbar-actions">
-      @include('student.partials.notification-dropdown')
-    </div>
-  </div>
-
-  @include('student.partials.page-tutorial', ['page' => 'financial'])
-
-  {{-- Drawn by resources/js/financial/student.js from the JSON below. --}}
+{{-- Financial Records, as the second tab of Team Management. Drawn by
+     resources/js/financial/student.js from the JSON on #fx-student; $state is
+     FeeBoard::forStudent(). --}}
   <div class="fx" id="fx-student"
        data-state="{{ json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}"
        data-urls="{{ json_encode(['upload' => route('api.student.financial.submit'), 'submitTeam' => route('api.student.financial.submit-team')], JSON_UNESCAPED_SLASHES) }}">
@@ -80,7 +36,6 @@
       </div>
     </div>
   </div>
-</div>
 
 <dialog id="fx-d-image" class="fx-dialog fx-image" aria-label="Receipt, full size"><img id="fx-img-full" alt=""></dialog>
 
@@ -102,20 +57,3 @@
   </div>
   <div class="fx-dlg-foot"><button class="fx-btn" data-close>Cancel</button><button class="fx-btn fx-btn-primary" id="u-send"><svg><use href="#fx-i-upload"/></svg><span id="u-send-t">Give to team leader</span></button></div>
 </dialog>
-
-<script>
-function toggleSidebar() {
-  document.body.classList.toggle('sidebar-open');
-  document.body.style.overflow = document.body.classList.contains('sidebar-open') ? 'hidden' : '';
-}
-function closeSidebar() {
-  document.body.classList.remove('sidebar-open');
-  document.body.style.overflow = '';
-}
-document.querySelectorAll('.nav-item').forEach(function (el) {
-  el.addEventListener('click', function () { if (window.innerWidth <= 768) closeSidebar(); });
-});
-</script>
-@include('partials.escape-closes-modals')
-</body>
-</html>

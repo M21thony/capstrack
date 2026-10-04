@@ -165,12 +165,17 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
           Find experts
         </button>
+        <button type="button" role="tab" id="xh-tab-eval" aria-controls="xh-panel-eval" data-xh="tab" data-tab="evaluations" aria-selected="{{ $tab === 'evaluations' ? 'true' : 'false' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Evaluations
+          @if($isLeader && $evaluationsDue->isNotEmpty())<span class="xh-count xh-count-due">{{ $evaluationsDue->count() }}</span>@endif
+        </button>
       </div>
     </div>
 
     {{-- The team's three experts. Under Consultations a card picks who you
          book; under Find experts it picks the role you are browsing. --}}
-    <section aria-labelledby="xh-strip-h">
+    <section class="xh-strip-sec" aria-labelledby="xh-strip-h">
       <div class="xh-strip-head">
         <h2 id="xh-strip-h">Your team's experts</h2>
         <span><b>{{ $filledCount }} of 3</b> chosen · <span id="xh-strip-hint">{{ $filledCount === 0 ? 'start with your adviser' : ($tab === 'find' ? 'pick the role you are looking for' : 'pick who you want to meet') }}</span></span>
@@ -451,6 +456,110 @@
         </aside>
       </div>
     </section>
+
+    {{-- ===================== EVALUATIONS ===================== --}}
+    {{-- After each phase of the Progress Tracker the leader rates every
+         expert 1-5 stars with a comment. See App\Support\ExpertEvaluations. --}}
+    @php
+      $evalExperts = $assignments->where('status', 'approved')->pluck('expert')->filter()->keyBy('expert_id');
+      $evalByPhase = $evaluationsDue->groupBy('milestone_id');
+      $starWords = [1 => 'Poor', 2 => 'Fair', 3 => 'Good', 4 => 'Very good', 5 => 'Excellent'];
+    @endphp
+    <section id="xh-panel-eval" role="tabpanel" aria-labelledby="xh-tab-eval" @if($tab !== 'evaluations') hidden @endif>
+      @if(session('evaluation_saved'))
+        <div class="xh-banner xh-ok xh-ev-flash" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span class="xh-banner-text">{{ session('evaluation_saved') }}</span></div>
+      @endif
+      @if(session('evaluation_error') || ($errors->any() && old('form_key')))
+        <div class="xh-banner xh-wait xh-ev-flash" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span class="xh-banner-text">{{ session('evaluation_error') ?? $errors->first() }}</span></div>
+      @endif
+
+      @if(! $team)
+        <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Join or create a team first. Once your team finishes a phase, your leader evaluates your experts here.</span></div>
+      @else
+      <div class="xh-split">
+        <div class="xh-grow xh-ev">
+          <div class="xh-ev-head">
+            <h2>To evaluate</h2>
+            <span>{{ $evaluationsDue->count() }} waiting · one for each expert after every finished phase</span>
+          </div>
+
+          @if($evaluationsDue->isEmpty())
+            <div class="xh-card xh-hint xh-ev-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <b>Nothing to evaluate right now</b>
+              <p>When your team finishes a phase on the Progress Tracker, from Getting Started to Final Manuscript, {{ $isLeader ? 'you rate' : 'your leader rates' }} your adviser, consultant and grammarian here.</p>
+            </div>
+          @elseif(! $isLeader)
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your team leader evaluates the experts. <b>{{ $evaluationsDue->count() }}</b> {{ $evaluationsDue->count() === 1 ? 'evaluation is' : 'evaluations are' }} waiting for {{ $evalByPhase->map(fn ($rows) => $rows->first()->milestone)->implode(', ') }}.</span></div>
+          @else
+            @foreach($evalByPhase as $milestoneId => $rows)
+              <article class="xh-card xh-ev-phase">
+                <header class="xh-ev-phase-head">
+                  <div>
+                    <span class="xh-ev-kicker">Phase finished</span>
+                    <h3>{{ $rows->first()->milestone }}</h3>
+                  </div>
+                  <span class="xh-pill xh-amber">{{ $rows->count() }} to rate</span>
+                </header>
+                @foreach($rows as $row)
+                  @php
+                    $formKey = $row->milestone_id.'-'.$row->expert_id.'-'.$row->role;
+                    $isOld = old('form_key') === $formKey;
+                    $ex = $evalExperts->get($row->expert_id);
+                  @endphp
+                  <form class="xh-ev-form r-{{ $row->role }}" method="POST" action="{{ route('student.evaluations.store') }}">
+                    @csrf
+                    <input type="hidden" name="form_key" value="{{ $formKey }}">
+                    <input type="hidden" name="milestone_id" value="{{ $row->milestone_id }}">
+                    <input type="hidden" name="expert_id" value="{{ $row->expert_id }}">
+                    <input type="hidden" name="role" value="{{ $row->role }}">
+                    <div class="xh-ev-who">
+                      <span class="xh-av r-{{ $row->role }}" aria-hidden="true">{{ $ex?->avatarInitials() }}@if($ex?->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                      <span class="xh-ev-name"><b>{{ $row->expert }}</b><span class="xh-chip r-{{ $row->role }}">{{ $row->role_label }}</span></span>
+                    </div>
+                    <fieldset class="xh-ev-rate">
+                      <legend class="xh-sr">Rating for {{ $row->expert }}</legend>
+                      <div class="xh-stars-in">
+                        @for($s = 5; $s >= 1; $s--)
+                          <input type="radio" id="ev-{{ $formKey }}-{{ $s }}" name="rating" value="{{ $s }}" required @checked($isOld && (int) old('rating') === $s)>
+                          <label for="ev-{{ $formKey }}-{{ $s }}" title="{{ $s }} {{ $s === 1 ? 'star' : 'stars' }} · {{ $starWords[$s] }}"><span class="xh-sr">{{ $s }} {{ $s === 1 ? 'star' : 'stars' }}</span><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></label>
+                        @endfor
+                      </div>
+                      <span class="xh-ev-word" data-words='@json($starWords)'>{{ $isOld && old('rating') ? $starWords[(int) old('rating')] ?? '' : 'Tap a star' }}</span>
+                    </fieldset>
+                    <label class="xh-sr" for="ev-c-{{ $formKey }}">Comment for {{ $row->expert }}</label>
+                    <textarea id="ev-c-{{ $formKey }}" name="comment" rows="2" maxlength="1000" minlength="3" required placeholder="How did {{ $row->expert }} help your team during {{ $row->milestone }}?">{{ $isOld ? old('comment') : '' }}</textarea>
+                    <div class="xh-ev-foot">
+                      <button type="submit" class="xh-btn xh-gold xh-sm">Submit evaluation</button>
+                    </div>
+                  </form>
+                @endforeach
+              </article>
+            @endforeach
+          @endif
+        </div>
+
+        <aside class="xh-card xh-rail xh-rail-card xh-ev-history" aria-labelledby="xh-ev-history-h">
+          <div class="xh-ev-head">
+            <h2 id="xh-ev-history-h">Sent evaluations</h2>
+            <span>{{ $evaluationHistory->count() }}</span>
+          </div>
+          @forelse($evaluationHistory as $ev)
+            <div class="xh-ev-sent r-{{ $ev->role }}">
+              <div class="xh-ev-sent-top">
+                <b>{{ $ev->expert?->name ?? 'Former expert' }}</b>
+                <span class="xh-stars" role="img" aria-label="{{ $ev->rating }} out of 5 stars">@for($s = 1; $s <= 5; $s++)<svg viewBox="0 0 24 24" class="{{ $s <= $ev->rating ? 'is-on' : '' }}" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>@endfor</span>
+              </div>
+              <div class="xh-ev-sent-meta">{{ \App\Models\ExpertEvaluation::ROLES[$ev->role] ?? ucfirst($ev->role) }} · {{ $ev->milestone?->name ?? 'Removed phase' }} · {{ $ev->created_at?->format('M j, Y') }}</div>
+              <p>{{ $ev->comment }}</p>
+            </div>
+          @empty
+            <p class="xh-ev-none">No evaluations sent yet.</p>
+          @endforelse
+        </aside>
+      </div>
+      @endif
+    </section>
   </div>
 
   @if($approvedProposal)
@@ -675,12 +784,12 @@ function monthOffsetOf(dateKey) {
 function render() {
   var book = S.tab === 'consultations';
   $('xh').dataset.tab = S.tab;
-  $('xh-tab-book').setAttribute('aria-selected', String(book));
-  $('xh-tab-find').setAttribute('aria-selected', String(!book));
-  $('xh-tab-book').tabIndex = book ? 0 : -1;
-  $('xh-tab-find').tabIndex = book ? -1 : 0;
-  $('xh-panel-book').hidden = !book;
-  $('xh-panel-find').hidden = book;
+  [['book', 'consultations'], ['find', 'find'], ['eval', 'evaluations']].forEach(function (t) {
+    var on = S.tab === t[1];
+    $('xh-tab-' + t[0]).setAttribute('aria-selected', String(on));
+    $('xh-tab-' + t[0]).tabIndex = on ? 0 : -1;
+    $('xh-panel-' + t[0]).hidden = !on;
+  });
   var count = $('xh-book-count');
   count.textContent = upcoming.length;
   count.hidden = upcoming.length === 0;
@@ -1137,7 +1246,7 @@ var ACT = {
       history.replaceState(null, '', url.pathname + url.search);
     } catch (e) { /* ignore */ }
     render();
-    $(tab === 'find' ? 'xh-tab-find' : 'xh-tab-book').focus();
+    $(tab === 'find' ? 'xh-tab-find' : (tab === 'evaluations' ? 'xh-tab-eval' : 'xh-tab-book')).focus();
   },
   slot: function (el, e) {
     if (el.classList.contains('xh-tslot')) {
@@ -1342,8 +1451,16 @@ document.addEventListener('change', function (e) {
 document.querySelector('.xh-seg').addEventListener('keydown', function (e) {
   if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
     e.preventDefault();
-    ACT.tab({ dataset: { tab: S.tab === 'consultations' ? 'find' : 'consultations' } });
+    var order = ['consultations', 'find', 'evaluations'];
+    var step = e.key === 'ArrowRight' ? 1 : order.length - 1;
+    ACT.tab({ dataset: { tab: order[(order.indexOf(S.tab) + step) % order.length] } });
   }
+});
+// The words under the stars follow the pick.
+document.addEventListener('change', function (e) {
+  if (e.target.name !== 'rating' || !e.target.closest('.xh-ev-form')) { return; }
+  var word = e.target.closest('.xh-ev-rate').querySelector('.xh-ev-word');
+  try { word.textContent = JSON.parse(word.dataset.words)[e.target.value] || ''; } catch (err) { /* leave it */ }
 });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') { var pop = $('xh-skill-pop'); if (pop) { pop.hidden = true; } }

@@ -27,6 +27,7 @@ class Recruitment extends Model
         'student_id',
         'recruitment_goal',
         'roles',
+        'role_tags',
         'looking_for',
         'introduction',
         'member_count',
@@ -36,6 +37,7 @@ class Recruitment extends Model
     {
         return [
             'member_count' => 'integer',
+            'role_tags' => 'array',
         ];
     }
 
@@ -60,6 +62,81 @@ class Recruitment extends Model
             },
             set: fn (mixed $value): ?string => is_array($value) ? json_encode(array_values($value)) : $value,
         );
+    }
+
+    /**
+     * What Create Post offers, in the order it offers it. 'role' is the team
+     * role the choice stands for - what the join flow matches on - and null
+     * for Leader and Member, which name no particular seat.
+     *
+     * @var array<string, array{label: string, role: ?string}>
+     */
+    public const ROLE_OPTIONS = [
+        'leader' => ['label' => 'Leader', 'role' => null],
+        'member' => ['label' => 'Member', 'role' => null],
+        'nd_primary' => ['label' => 'Network Designer/UI Designer (Primary)', 'role' => 'Network Designer/UI Designer'],
+        'nd_secondary' => ['label' => 'Network Designer/UI Designer (Secondary)', 'role' => 'Network Designer/UI Designer'],
+        'qa_primary' => ['label' => 'QA Tester/Documentation (Primary)', 'role' => 'QA Tester/Documentation Writer'],
+        'qa_secondary' => ['label' => 'QA Tester/Documentation (Secondary)', 'role' => 'QA Tester/Documentation Writer'],
+    ];
+
+    /**
+     * What a form sent, as option keys, in the order offered. A key, a label
+     * or a bare team role name (older forms, and the API) are all understood;
+     * a role name reads as its Primary. Anything else is dropped.
+     *
+     * @param  array<int, mixed>  $picked
+     * @return list<string>
+     */
+    public static function tagKeys(array $picked): array
+    {
+        $byLabel = collect(self::ROLE_OPTIONS)->mapWithKeys(fn ($o, $key) => [mb_strtolower($o['label']) => $key]);
+        // A bare role name stands for that role's first choice - its Primary.
+        $byRole = collect(self::ROLE_OPTIONS)->filter(fn ($o) => $o['role'] !== null)
+            ->groupBy(fn ($o) => mb_strtolower($o['role']), preserveKeys: true)
+            ->map(fn ($group) => $group->keys()->first())->all();
+
+        $keys = collect($picked)->filter(fn ($v) => is_string($v))->map(function (string $v) use ($byLabel, $byRole) {
+            $lower = mb_strtolower(trim($v));
+
+            return array_key_exists($v, self::ROLE_OPTIONS) ? $v : ($byLabel[$lower] ?? $byRole[$lower] ?? null);
+        })->filter()->unique()->all();
+
+        return array_values(array_intersect(array_keys(self::ROLE_OPTIONS), $keys));
+    }
+
+    /**
+     * The team roles those choices stand for, for `roles`.
+     *
+     * @param  list<string>  $keys
+     * @return list<string>
+     */
+    public static function rolesForTags(array $keys): array
+    {
+        return collect($keys)->map(fn ($key) => self::ROLE_OPTIONS[$key]['role'] ?? null)->filter()->unique()->values()->all();
+    }
+
+    /**
+     * The post's tags as option keys. A post from before tags existed has
+     * only `roles`; each of those reads as its Primary.
+     *
+     * @return list<string>
+     */
+    public function tagKeyList(): array
+    {
+        $saved = is_array($this->role_tags) ? $this->role_tags : [];
+
+        return self::tagKeys($saved !== [] ? $saved : $this->roles);
+    }
+
+    /**
+     * The post's tags as they are shown.
+     *
+     * @return list<string>
+     */
+    public function tagLabels(): array
+    {
+        return array_map(fn ($key) => self::ROLE_OPTIONS[$key]['label'], $this->tagKeyList());
     }
 
     public function student(): BelongsTo

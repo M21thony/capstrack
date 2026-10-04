@@ -1,0 +1,88 @@
+{{-- Nudges a team leader whose team finished a phase but has not yet rated
+     the experts for it. Shown on every student page except the Evaluations
+     tab itself; "Remind me later" quiets it on this device for an hour. --}}
+@php
+  $evaluationsOwed = $evaluationsOwed ?? collect();
+  $onEvaluationsTab = request()->routeIs('student.experts', 'student.consultation') && request('tab') === 'evaluations';
+@endphp
+@if($evaluationsOwed->isNotEmpty() && ! $onEvaluationsTab)
+@php
+  $owedPhases = $evaluationsOwed->groupBy('milestone_id')->map(fn ($rows) => [
+    'name' => $rows->first()->milestone,
+    'experts' => $rows->map(fn ($r) => $r->expert.' · '.$r->role_label)->unique()->values(),
+  ])->values();
+  // Changes whenever something new is owed, so a fresh phase brings the
+  // popup back even inside a snooze.
+  $owedKey = md5($evaluationsOwed->map(fn ($r) => $r->milestone_id.'-'.$r->expert_id.'-'.$r->role)->implode(','));
+@endphp
+<style>
+  #evp-overlay{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(24,25,31,.5);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+  #evp-overlay.active{opacity:1;visibility:visible}
+  #evp-card{position:relative;width:440px;max-width:100%;max-height:calc(100dvh - 32px);overflow:auto;background:var(--bg2);color:var(--text);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.18),0 8px 24px rgba(0,0,0,.12);padding:24px;animation:evpIn .2s ease}
+  @keyframes evpIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+  #evp-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(201,168,44,.16);color:#b8961c;margin-bottom:14px}
+  #evp-title{font-size:17px;font-weight:700;letter-spacing:-.2px}
+  #evp-sub{font-size:13px;color:var(--text2);margin-top:6px;line-height:1.55}
+  #evp-list{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+  #evp-list li{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--bg3)}
+  #evp-list b{display:block;font-size:13px}
+  #evp-list span{display:block;font-size:12px;color:var(--text2);margin-top:2px}
+  #evp-actions{display:flex;gap:8px;margin-top:20px}
+  #evp-actions a,#evp-actions button{flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:42px;border-radius:10px;font:inherit;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer}
+  #evp-later{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+  #evp-later:hover{background:var(--bg4);color:var(--text)}
+  #evp-go{background:var(--accent,#c9a82c);color:#18191f;border:0}
+  #evp-go:hover{filter:brightness(1.06)}
+  @media (max-width:480px){#evp-overlay{align-items:flex-end;padding:0}#evp-card{border-radius:20px 20px 0 0;padding:20px 16px}}
+</style>
+<div id="evp-overlay" role="dialog" aria-modal="true" aria-labelledby="evp-title" data-key="{{ $owedKey }}">
+  <div id="evp-card">
+    <div id="evp-icon" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div id="evp-title">Time to evaluate your experts</div>
+    <div id="evp-sub">
+      Your team finished {{ $owedPhases->count() === 1 ? 'a phase' : $owedPhases->count().' phases' }} on the Progress Tracker.
+      As team leader, rate each expert from 1 to 5 stars with a comment. This is required for every phase.
+    </div>
+    <ul id="evp-list">
+      @foreach($owedPhases->take(3) as $phase)
+        <li><b>{{ $phase['name'] }}</b><span>{{ $phase['experts']->implode(', ') }}</span></li>
+      @endforeach
+      @if($owedPhases->count() > 3)
+        <li><span>and {{ $owedPhases->count() - 3 }} more phase{{ $owedPhases->count() - 3 === 1 ? '' : 's' }}</span></li>
+      @endif
+    </ul>
+    <div id="evp-actions">
+      <button type="button" id="evp-later">Remind me later</button>
+      <a id="evp-go" href="{{ route('student.experts', ['tab' => 'evaluations']) }}">Evaluate now</a>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var overlay = document.getElementById('evp-overlay');
+  if (!overlay) { return; }
+  var KEY = 'capstrack.evaluationSnooze';
+  var key = overlay.dataset.key;
+  var snooze = null;
+  try { snooze = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { snooze = null; }
+  if (snooze && snooze.key === key && snooze.until > Date.now()) { return; }
+
+  function later() {
+    try { localStorage.setItem(KEY, JSON.stringify({ key: key, until: Date.now() + 60 * 60 * 1000 })); } catch (e) { /* the popup simply comes back next page */ }
+    overlay.classList.remove('active');
+  }
+  document.getElementById('evp-later').addEventListener('click', later);
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) { later(); } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlay.classList.contains('active')) { later(); } });
+  // After the page settles, and not on top of the portal tour: a new account
+  // sees the tour first and this on the next page.
+  setTimeout(function () {
+    var tour = document.getElementById('portal-tour');
+    if (tour && tour.dataset.autoOpen === '1') { return; }
+    overlay.classList.add('active');
+  }, 700);
+})();
+</script>
+@endif
