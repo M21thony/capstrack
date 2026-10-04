@@ -159,7 +159,7 @@ class StudentPhoneLayoutTest extends TestCase
     {
         $css = File::get(resource_path('student-ui/Styles/experts.css'));
         $this->assertStringContainsString('.xh-grow{flex:999 1 600px;min-width:0}', $css);
-        $this->assertStringContainsString('.xh-rail{flex:1 1 320px;min-width:0}', $css);
+        $this->assertStringContainsString('.xh-rail{flex:1 1 300px;min-width:0}', $css);
         $this->assertStringContainsString('.xh-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))', $css);
 
         $this->actingAs($this->student())->get(route('student.consultation'))->assertOk();
