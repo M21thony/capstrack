@@ -85,18 +85,19 @@ class ConsultationPageStatesTest extends TestCase
     }
 
     /** The calendar's dates are even squares that say plainly which ones can be booked. */
-    public function test_the_calendar_dates_are_squares_that_fit_a_phone(): void
+    public function test_the_calendar_dates_are_short_tiles_that_fit_the_screen(): void
     {
         $css = File::get(resource_path('student-ui/Styles/experts.css'));
 
         $this->assertStringContainsString('.xh-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))', $css);
-        $this->assertStringContainsString('.xh-day{aspect-ratio:1/1;', $css);
+        // Short tiles rather than squares, so the month and the Book button fit one screen.
+        $this->assertStringContainsString('.xh-day{height:44px;', $css);
         $this->assertStringContainsString('@container (max-width: 78px){.xh-cap.is-long{display:none}.xh-cap.is-short{display:inline}}', $css);
         // A bookable date is a gold tile, a booked one blue, and a date the
         // expert does not take is crossed out with an X.
         $this->assertStringContainsString('.xh-day.is-avail{background:var(--accent-light);border:1.5px solid var(--accent)}', $css);
         $this->assertStringContainsString('.xh-day.is-booked{background:var(--xh-blue-soft);border:1.5px solid var(--xh-blue)}', $css);
-        $this->assertStringContainsString('.xh-day.is-off::after{content:"";position:absolute;inset:18%;pointer-events:none}', $css);
+        $this->assertStringContainsString('.xh-day.is-off::after{content:"";position:absolute;inset:8% 22%;pointer-events:none}', $css);
         // While a session with the expert is pending, the open dates stay
         // visible, outlined, and the next open dates are offered above.
         $this->assertStringContainsString('.xh-day.is-locked{background:var(--bg3);border:1.5px dashed var(--accent)', $css);

@@ -839,11 +839,11 @@ function renderBook() {
     + '<div class="xh-book-cols"><div class="xh-cal">' + monthEmpty + '<div class="xh-cal-grid">' + cells.join('') + '</div>'
     + '<div class="xh-legend"><span><i class="xh-lg-sq is-open"></i>Open</span><span><i class="xh-lg-sq is-mine"></i>Your booking</span>'
     + '<span><i class="xh-lg-sq is-full"></i>Fully booked</span><span><i class="xh-lg-sq is-off"></i>Not offered</span></div></div>'
-    + '<div class="xh-times">' + times + '</div></div>'
+    + '<div class="xh-times">' + times
     + '<div class="xh-confirm-bar"><div class="xh-sum">'
     + (chosen ? '<b>' + shortDate(S.date) + ' · ' + fmtT(chosen.start_time) + ' – ' + fmtT(chosen.end_time) + '</b><span>Consultation with ' + esc(ex.name) + '</span>'
               : '<b>No time picked yet</b><span>Choose a date, then one of its open times.</span>')
-    + '</div><button type="button" class="xh-btn xh-gold" data-xh="book-open"' + (chosen ? '' : ' disabled') + '>' + ICON.cal + 'Book this time</button></div>';
+    + '</div><button type="button" class="xh-btn xh-gold" data-xh="book-open"' + (chosen ? '' : ' disabled') + '>' + ICON.cal + 'Book this time</button></div></div></div>';
 }
 
 function canCancel(b) { var n = daysUntil(b.session_date); return n !== null && n >= D.cutoffDays && !b.cancel_requested; }
