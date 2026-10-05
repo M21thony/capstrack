@@ -485,6 +485,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             // Asked before a draft goes up: is this the file they mean to send?
             Route::post('/submission/warnings', [SubmissionController::class, 'warnings'])->name('student.submission.warnings');
             Route::get('/submission/plan', [SubmissionController::class, 'plan'])->name('student.submission.plan');
+            Route::delete('/submission/{document}', [SubmissionController::class, 'unsubmit'])->name('student.submission.unsubmit');
             Route::get('/review', [StudentReviewController::class, 'index'])->name('student.review');
             Route::get('/review/{review}/pdf', [StudentReviewController::class, 'file'])->name('student.review.pdf');
             Route::get('/review/{review}/remarks', [StudentReviewController::class, 'remarks'])->name('student.review.remarks');

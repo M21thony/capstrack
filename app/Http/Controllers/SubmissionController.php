@@ -19,6 +19,7 @@ use App\Support\StudentTeam;
 use App\Support\SubmissionRecipients;
 use App\Support\TeamChecklist;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -507,6 +508,28 @@ class SubmissionController extends Controller
     }
 
     /**
+     * Takes an upload back, as in Google Classroom: gone as if never sent, so
+     * the next upload of the line gets the same version number. Silent - no
+     * one is told, and copies already in a reviewer's Drive stay.
+     */
+    public function unsubmit(CapstoneDocument $document): RedirectResponse
+    {
+        abort_unless(CapstoneDocument::forTeamOf(Auth::id())->whereKey($document->file_id)->exists(), 404);
+
+        if (! $document->canBeUnsubmitted()) {
+            return back()->with('error', 'A reviewer has already started on this, so it can no longer be unsubmitted.');
+        }
+
+        // No transactions on these tables: reviews first, so a failure part
+        // way leaves at worst an upload nobody is asked to review.
+        $document->reviews()->delete();
+        $document->delete();
+        Storage::disk('local')->delete($document->file_path);
+
+        return back()->with('status', $document->file_name.' was unsubmitted.');
+    }
+
+    /**
      * The team's checklist lines still open, each with its own lock: its
      * milestone's, or the order inside the milestone. Defenses and the title
      * form are never uploaded.
@@ -559,6 +582,8 @@ class SubmissionController extends Controller
                 $verdicts = $document->reviews->pluck('verdict')->filter();
 
                 return (object) [
+                    'id' => $document->file_id,
+                    'canUnsubmit' => $document->canBeUnsubmitted(),
                     'name' => $document->file_name,
                     'for' => $document->deliverable?->title ?? ($document->chapter ?: 'Feedback only'),
                     'version' => (int) $document->file_version,

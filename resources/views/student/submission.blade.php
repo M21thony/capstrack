@@ -39,6 +39,9 @@
           Submit a document
         </button>
       </div>
+      @if (session('status') || session('error'))
+        <p class="sub-flash {{ session('error') ? 'bad' : '' }}" role="status">{{ session('error') ?? session('status') }}</p>
+      @endif
       @if ($submitted->isEmpty())
         <p class="sub-empty">Nothing sent yet. What you submit shows up here.</p>
       @else
@@ -48,6 +51,14 @@
               <b title="{{ $doc->name }}">{{ $doc->for }}</b>
               <span class="sub-status {{ $doc->status[1] }}">{{ $doc->status[0] }}</span>
               <small>{{ $doc->name }} &middot; version {{ $doc->version }} &middot; {{ $doc->sent?->format('M j, Y g:i A') }}</small>
+              @if ($doc->canUnsubmit)
+                <form class="sub-undo" method="POST" action="{{ route('student.submission.unsubmit', $doc->id) }}"
+                      onsubmit="return confirm('Unsubmit {{ addslashes($doc->name) }}? It goes back to not handed in and reviewers will no longer see it. Upload again when ready.')">
+                  @csrf
+                  @method('DELETE')
+                  <button type="submit" class="up-btn">Unsubmit</button>
+                </form>
+              @endif
             </li>
           @endforeach
         </ul>

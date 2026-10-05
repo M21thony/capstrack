@@ -90,18 +90,39 @@ class CapstoneDocument extends Model
      */
     public function earlierVersions(): Collection
     {
+        return $this->otherVersions()
+            ->where('file_version', '<', (int) $this->file_version)
+            ->orderByDesc('file_version')
+            ->get();
+    }
+
+    /**
+     * Whether the team may take this upload back, as in Google Classroom: it
+     * is the newest of its line and nobody has started on it - no remark, no
+     * verdict, no review begun, no CaPSA check of a signed paper.
+     */
+    public function canBeUnsubmitted(): bool
+    {
+        $reviews = $this->reviews;
+
+        return $reviews->every(fn (CapstoneDocumentReview $r) => $r->review_status === CapstoneDocumentReview::AWAITING && ! $r->verdict && ! $r->reviewed_at)
+            && ! PdfRemark::whereIn('review_id', $reviews->pluck('review_id'))->exists()
+            && ! DeliverableCheck::where('file_id', $this->file_id)->exists()
+            && ! $this->otherVersions()->where('file_version', '>=', (int) $this->file_version)->exists();
+    }
+
+    /** The team's other uploads of the same line: the checklist line, else the chapter, else the file name. */
+    private function otherVersions(): Builder
+    {
         $teamId = $this->team_id ?? StudentTeam::idFor($this->student_id);
 
         return ($teamId ? self::ofTeam($teamId) : self::where('student_id', $this->student_id))
             ->where('file_id', '!=', $this->file_id)
-            ->where('file_version', '<', (int) $this->file_version)
             ->when(
                 $this->deliverable_id,
                 fn ($q) => $q->where('deliverable_id', $this->deliverable_id),
                 fn ($q) => $this->chapter ? $q->where('chapter', $this->chapter) : $q->where('file_name', $this->file_name)
-            )
-            ->orderByDesc('file_version')
-            ->get();
+            );
     }
 
     private static function round(int $revision): string

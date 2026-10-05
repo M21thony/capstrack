@@ -316,6 +316,11 @@ dialog.up-pv::backdrop{background:rgba(10,11,15,.6)}
 .sub-list .sub-status.revise{background:rgba(180,83,9,.09);color:#b45309}
 .sub-list .sub-status.ok{background:rgba(22,163,74,.09);color:#15803d}
 .sub-empty{padding:26px 20px;font-size:13px;color:var(--text3)}
+.sub-list li:has(.sub-undo){grid-template-columns:minmax(0,1fr) auto auto}
+.sub-list .sub-undo{grid-row:1 / span 2;grid-column:3;align-self:center;margin:0}
+.sub-list .sub-undo .up-btn{height:32px;font-size:12.5px}
+.sub-flash{margin:0;padding:10px 20px;font-size:13px;color:#15803d;background:rgba(22,163,74,.07);border-bottom:1px solid var(--border)}
+.sub-flash.bad{color:#b45309;background:rgba(180,83,9,.07)}
 @media (max-width:600px){
   .sub-card-h{flex-direction:column;align-items:stretch}
   .sub-card-h .up-btn{height:44px}
