@@ -351,7 +351,7 @@ export function figureMarks(figures) {
     return { left_position: left, top_position: top, highlight_width: clamp(ink.left + ((r.x + r.w) / W) * ink.width + 0.004) - left, highlight_height: clamp(ink.top + ((r.y + r.h) / h) * ink.height + 0.004) - top };
   };
   const whole = (ink) => onPage(ink, 1, { x: 0, y: 0, w: W, h: 1 });
-  const add = (into, page, id, tone, label, rect) => (into[page] ||= []).push({ id, tone, label, rects: [rect] });
+  const add = (into, page, id, tone, label, rect) => (into[page] ||= []).push({ id, figure: parseInt(id.slice(1), 10), tone, label, rects: [rect] });
   figures.forEach((f, i) => {
     const id = `f${i}`;
     if (f.kind === "small") {
@@ -369,6 +369,22 @@ export function figureMarks(figures) {
     else if (f.kind === "new") add(marks, f.newPage, id, "added", "+ new figure", whole(f.newInk));
   });
   return { marks, oldMarks };
+}
+
+/**
+ * Where the one-picture view of an edited diagram goes on this version's
+ * page, to lay over the diagram there. The picture is in the earlier
+ * diagram's frame, `pictureHeight` tall at SHOW times, so it is moved back
+ * the way this version's diagram was moved onto that frame.
+ */
+export function overlayRect(f, pictureHeight) {
+  const s = f.fit?.s ?? 1, dx = f.fit?.x ?? 0, dy = f.fit?.y ?? 0, ink = f.newInk;
+  return {
+    left_position: ink.left + (-dx / s / W) * ink.width,
+    top_position: ink.top + (-dy / s / f.newH) * ink.height,
+    highlight_width: ink.width / s,
+    highlight_height: (pictureHeight / SHOW / s / f.newH) * ink.height,
+  };
 }
 
 /**

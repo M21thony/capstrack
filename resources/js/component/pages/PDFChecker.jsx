@@ -6,7 +6,7 @@ import {
   kindOf, mergeRectsByLine, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
-import { figureMarks } from "../reader/figureDiff";
+import { figureMarks, highlighted, overlayRect } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
 import {
   DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, uniqueFigures,
@@ -126,10 +126,22 @@ function PDFChecker({
   // compared picture by picture once the earlier version is opened beside
   // this one (or the Figures list is), and their changed spots boxed on both.
   const [figuresWanted, setFiguresWanted] = useState(false);
-  useEffect(() => { if (compareOpen) setFiguresWanted(true); }, [compareOpen]);
+  useEffect(() => { if (compareOpen || (showChanges && base)) setFiguresWanted(true); }, [compareOpen, showChanges, base]);
   const earlierPdf = useEarlierPdf(base && figuresWanted ? base.file : null);
   const figureDiff = useFigureDiff(earlierPdf, pdf, figuresWanted);
   const figureBoxes = useMemo(() => (figureDiff.status === "ready" ? figureMarks(figureDiff.figures) : { marks: {}, oldMarks: {} }), [figureDiff]);
+  // An edited diagram is shown on this page as one picture: faded where both
+  // versions agree, red where something was removed, green where added.
+  const figureOverlays = useMemo(() => {
+    const byPage = {};
+    if (figureDiff.status !== "ready") return byPage;
+    figureDiff.figures.forEach((f, i) => {
+      if (f.kind !== "small" || !f.newPage) return;
+      const picture = (f.hl ??= highlighted(f)).picture;
+      (byPage[f.newPage] ||= []).push({ id: i, rect: overlayRect(f, picture.height), src: picture.toDataURL() });
+    });
+    return byPage;
+  }, [figureDiff]);
   useEffect(() => { onFigures({ status: figureDiff.status, note: figureDiff.note, oldMarks: figureBoxes.oldMarks }); }, [figureDiff, figureBoxes]); // eslint-disable-line react-hooks/exhaustive-deps
   const openChange = (c) => {
     setChangeId(c.id);
@@ -470,7 +482,7 @@ function PDFChecker({
       <PageStrip numPages={numPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} />
 
       <section className="rr-viewer" aria-label="Document">
-        <div className="rr-hint">{hint}</div>
+        <div className="rr-hint">{showChanges && figureDiff.status === "loading" ? figureDiff.note || "Comparing the figures…" : hint}</div>
         <div
           className="rr-canvas"
           ref={col.canvasRef}
@@ -527,7 +539,10 @@ function PDFChecker({
                       {(marks[n] || []).map((m) => m.rects.map((r, idx) => (
                         <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
                       )))}
-                      {showChanges && (figureBoxes.marks[n] || []).map((m) => m.rects.map((r, idx) => (
+                      {showChanges && (figureOverlays[n] || []).map((o) => (
+                        <img key={`o${o.id}`} className="rr-figover" src={o.src} alt="" style={rectStyle(o.rect)} />
+                      ))}
+                      {showChanges && (figureBoxes.marks[n] || []).filter((m) => figureDiff.figures[m.figure]?.kind !== "small").map((m) => m.rects.map((r, idx) => (
                         <div key={`${m.id}-${idx}`} className={`rr-figdiff ${m.tone || ""}`} data-label={m.label || undefined} style={rectStyle(r)} />
                       )))}
                       <Highlights
