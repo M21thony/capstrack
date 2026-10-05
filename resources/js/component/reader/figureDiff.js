@@ -374,6 +374,22 @@ export function figureMarks(figures) {
 }
 
 /**
+ * Where the one-picture view of an edited diagram goes on this version's
+ * page, to lay over the diagram there. The picture is in the earlier
+ * diagram's frame, `pictureHeight` tall at SHOW times, so it is moved back
+ * the way this version's diagram was moved onto that frame.
+ */
+export function overlayRect(f, pictureHeight) {
+  const s = f.fit?.s ?? 1, dx = f.fit?.x ?? 0, dy = f.fit?.y ?? 0, ink = f.newInk;
+  return {
+    left_position: ink.left + (-dx / s / W) * ink.width,
+    top_position: ink.top + (-dy / s / f.newH) * ink.height,
+    highlight_width: ink.width / s,
+    highlight_height: (pictureHeight / SHOW / s / f.newH) * ink.height,
+  };
+}
+
+/**
  * Whether a spot has about as much removed as added ink: something rewritten
  * or moved in place, where red over green would be unreadable.
  */
@@ -429,39 +445,82 @@ function inkChanges(f) {
     if (tone === "rewritten") for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
     return { box, tone };
   });
-  return { a, b, w, h, mark, spots };
+  return { a, b, w, h, mark, spots, inkA, inkB };
 }
 
 /**
- * The pair as one picture: faded where both agree, red = only in the earlier
- * one, green = only in this one, each on a light highlight. A spot rewritten
- * in place shows its new ink green where it is, and its old ink red just
- * above it, and is given as a before/after close-up too.
+ * The inside of every closed shape in a spot: blank pixels that cannot reach
+ * the edge of the box without crossing ink, as pixel indices. Holes smaller
+ * than `min` (the inside of an "o" or "a") are left out.
+ */
+export function enclosed(ink, w, [x0, y0, x1, y1], min = 200) {
+  const bw = x1 - x0, bh = y1 - y0, seen = new Uint8Array(bw * bh), out = [];
+  const blank = (p) => !ink[(y0 + Math.floor(p / bw)) * w + x0 + (p % bw)];
+  for (let p0 = 0; p0 < bw * bh; p0++) {
+    if (seen[p0] || !blank(p0)) continue;
+    const stack = [p0], got = [];
+    let edge = false;
+    seen[p0] = 1;
+    while (stack.length) {
+      const p = stack.pop(), x = p % bw, y = (p - x) / bw;
+      got.push((y0 + y) * w + x0 + x);
+      if (x === 0 || y === 0 || x === bw - 1 || y === bh - 1) edge = true;
+      for (const q of [x > 0 ? p - 1 : -1, x < bw - 1 ? p + 1 : -1, y > 0 ? p - bw : -1, y < bh - 1 ? p + bw : -1]) {
+        if (q >= 0 && !seen[q] && blank(q)) { seen[q] = 1; stack.push(q); }
+      }
+    }
+    if (!edge && got.length >= min) for (const k of got) out.push(k);
+  }
+  return out;
+}
+
+/**
+ * The pair as one picture: faded where both agree, and what changed glowing
+ * on top, red = only in the earlier one, green = only in this one, with a
+ * closed shape that was added or removed filled in. A spot rewritten in place
+ * shows its new ink green where it is and its old ink red just above it, and
+ * is given as a before/after close-up too.
  */
 export function highlighted(f) {
-  const { a, b, w, h, mark, spots } = (f.changes ??= inkChanges(f));
+  const { a, b, w, h, mark, spots, inkA, inkB } = (f.changes ??= inkChanges(f));
   const boxes = spots.filter((s) => s.tone === "rewritten").map((s) => s.box);
-  const c = canvasOf(w, h), ctx = c.getContext("2d"), img = ctx.createImageData(w, h), o = img.data;
   const grey = (p, k) => (p[k * 4] + p[k * 4 + 1] + p[k * 4 + 2]) / 3;
-  const RED = [220, 38, 38, 255], GREEN = [22, 163, 74, 255], RED_BG = [254, 226, 226, 255], GREEN_BG = [220, 252, 231, 255];
-  const tint = new Uint8Array(w * h); // 1 = a removed spot, 2 = an added or rewritten one
-  for (const { box: [x0, y0, x1, y1], tone } of spots) {
-    if (tone) for (let y = y0; y < y1; y++) tint.fill(tone === "removed" ? 1 : 2, y * w + x0, y * w + x1);
-  }
-  const rewritten = new Uint8Array(w * h);
-  for (const [x0, y0, x1, y1] of boxes) for (let y = y0; y < y1; y++) rewritten.fill(1, y * w + x0, y * w + x1);
+  const base = new ImageData(w, h), red = new ImageData(w, h), green = new ImageData(w, h);
   for (let k = 0; k < w * h; k++) {
     const faded = 255 - (255 - Math.min(grey(a, k), grey(b, k))) * 0.3;
-    const bg = tint[k] === 1 ? RED_BG : tint[k] === 2 ? GREEN_BG : [faded, faded, faded, 255];
-    if (rewritten[k]) o.set(grey(b, k) < 170 ? GREEN : GREEN_BG, k * 4);
-    else o.set(mark[k] === 1 ? RED : mark[k] === 2 ? GREEN : tint[k] && faded > 235 ? bg : [faded, faded, faded, 255], k * 4);
+    base.data.set([faded, faded, faded, 255], k * 4);
+    if (mark[k] === 1) red.data.set([220, 38, 38, 255], k * 4);
+    else if (mark[k] === 2) green.data.set([22, 163, 74, 255], k * 4);
   }
-  // The old ink of a rewritten spot, red, just above it (or below when there is no room).
+  for (const { box, tone } of spots) {
+    if (tone === "added") for (const k of enclosed(inkB, w, box)) green.data.set([34, 197, 94, 70], k * 4);
+    if (tone === "removed") for (const k of enclosed(inkA, w, box)) red.data.set([239, 68, 68, 70], k * 4);
+  }
+  // A rewritten spot: its new ink where it is, its old ink just above it (or below when there is no room).
   for (const [x0, y0, x1, y1] of boxes) {
     const bh = y1 - y0, top = y0 - bh - 2 >= 0 ? y0 - bh - 2 : Math.min(h - bh, y1 + 2);
-    for (let y = 0; y < bh; y++) for (let x = x0; x < x1; x++) o.set(grey(a, (y0 + y) * w + x) < 170 ? RED : RED_BG, ((top + y) * w + x) * 4);
+    for (let y = 0; y < bh; y++) {
+      for (let x = x0; x < x1; x++) {
+        const k = (y0 + y) * w + x, t = (top + y) * w + x;
+        base.data.set([255, 255, 255, 255], k * 4);
+        base.data.set([255, 245, 245, 255], t * 4);
+        if (inkB[k]) green.data.set([22, 163, 74, 255], k * 4);
+        if (inkA[k]) red.data.set([220, 38, 38, 255], t * 4);
+      }
+    }
   }
-  ctx.putImageData(img, 0, 0);
+  const c = canvasOf(w, h), ctx = c.getContext("2d");
+  ctx.putImageData(base, 0, 0);
+  for (const [layer, glow] of [[red, "rgba(239,68,68,.9)"], [green, "rgba(34,197,94,.9)"]]) {
+    const l = canvasOf(w, h);
+    l.getContext("2d").putImageData(layer, 0, 0);
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 12;
+    ctx.drawImage(l, 0, 0);
+    ctx.drawImage(l, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.drawImage(l, 0, 0);
+  }
   const pad = (box) => [Math.max(0, box[0] - 12), Math.max(0, box[1] - 12), Math.min(w, box[2] + 12), Math.min(h, box[3] + 12)];
   return { picture: c, closeUps: boxes.map((box) => ({ old: crop(f.old, pad(box)), neu: crop(f.neu, pad(box)) })) };
 }

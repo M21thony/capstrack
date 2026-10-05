@@ -125,6 +125,7 @@ textarea.rr-input{min-height:64px;resize:none}
 /* A changed spot inside a diagram: boxed, since a picture has no words to underline. */
 .rr-figdiff{position:absolute;border:2px solid #16a34a;background:rgba(34,197,94,.1);border-radius:3px}
 .rr-figdiff.old{border-color:#cf222e;background:rgba(207,34,46,.08)}
+.rr-figover{position:absolute;pointer-events:none}
 .rr-figdiff.removed{border-style:dashed}
 .rr-figdiff.rewritten{border-color:#d97706;background:rgba(217,119,6,.08)}
 .rr-figdiff[data-label]::before{content:attr(data-label);position:absolute;left:-2px;bottom:100%;padding:0 5px;border-radius:3px 3px 0 0;background:#16a34a;color:#fff;font:600 11px/1.6 system-ui,sans-serif;white-space:nowrap}
