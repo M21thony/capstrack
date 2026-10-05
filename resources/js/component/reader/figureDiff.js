@@ -338,10 +338,11 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
 }
 
 /**
- * The changed spots of every figure as boxes on the pages of both versions,
- * for the side-by-side view: { marks, oldMarks }, each by page number. A part
- * removed is boxed on the earlier version only, a part added on this one
- * only, a part rewritten on both. A redone, new or removed diagram is boxed whole.
+ * The changed spots of every figure on the pages of both versions:
+ * { marks, oldMarks }, each by page number. A spot in an edited diagram is
+ * marked like a changed word: highlighted where it is, and a thin bar on the
+ * other version where it was taken out or put in. A redone, new or removed
+ * diagram is boxed whole.
  */
 export function figureMarks(figures) {
   const marks = {}, oldMarks = {};
@@ -351,7 +352,8 @@ export function figureMarks(figures) {
     return { left_position: left, top_position: top, highlight_width: clamp(ink.left + ((r.x + r.w) / W) * ink.width + 0.004) - left, highlight_height: clamp(ink.top + ((r.y + r.h) / h) * ink.height + 0.004) - top };
   };
   const whole = (ink) => onPage(ink, 1, { x: 0, y: 0, w: W, h: 1 });
-  const add = (into, page, id, tone, label, rect) => (into[page] ||= []).push({ id, figure: parseInt(id.slice(1), 10), tone, label, rects: [rect] });
+  const add = (into, page, id, tone, label, rect) => (into[page] ||= []).push({ id, tone, label, rects: [rect] });
+  const spot = (into, page, id, rect, bar) => (into[page] ||= []).push({ id, diff: true, ...(bar && { [bar]: true }), rects: [bar ? { ...rect, highlight_width: 0.003 } : rect] });
   figures.forEach((f, i) => {
     const id = `f${i}`;
     if (f.kind === "small") {
@@ -359,8 +361,8 @@ export function figureMarks(figures) {
       const s = f.fit?.s ?? 1, dx = f.fit?.x ?? 0, dy = f.fit?.y ?? 0;
       f.spots.forEach((r, k) => {
         const tone = f.tones?.[k] ?? null;
-        if (tone !== "added") add(oldMarks, f.oldPage, `${id}-${k}`, tone, tone === "removed" ? "− removed" : tone === "rewritten" ? "changed" : null, onPage(f.oldInk, f.oldH, r));
-        if (tone !== "removed") add(marks, f.newPage, `${id}-${k}`, tone, tone === "added" ? "+ added" : tone === "rewritten" ? "changed" : null, onPage(f.newInk, f.newH, { x: (r.x - dx) / s, y: (r.y - dy) / s, w: r.w / s, h: r.h / s }));
+        spot(oldMarks, f.oldPage, `${id}-${k}`, onPage(f.oldInk, f.oldH, r), tone === "added" ? "inserted" : null);
+        spot(marks, f.newPage, `${id}-${k}`, onPage(f.newInk, f.newH, { x: (r.x - dx) / s, y: (r.y - dy) / s, w: r.w / s, h: r.h / s }), tone === "removed" ? "removed" : null);
       });
     } else if (f.kind === "big") {
       add(oldMarks, f.oldPage, id, "rewritten", "redone", whole(f.oldInk));
@@ -369,22 +371,6 @@ export function figureMarks(figures) {
     else if (f.kind === "new") add(marks, f.newPage, id, "added", "+ new figure", whole(f.newInk));
   });
   return { marks, oldMarks };
-}
-
-/**
- * Where the one-picture view of an edited diagram goes on this version's
- * page, to lay over the diagram there. The picture is in the earlier
- * diagram's frame, `pictureHeight` tall at SHOW times, so it is moved back
- * the way this version's diagram was moved onto that frame.
- */
-export function overlayRect(f, pictureHeight) {
-  const s = f.fit?.s ?? 1, dx = f.fit?.x ?? 0, dy = f.fit?.y ?? 0, ink = f.newInk;
-  return {
-    left_position: ink.left + (-dx / s / W) * ink.width,
-    top_position: ink.top + (-dy / s / f.newH) * ink.height,
-    highlight_width: ink.width / s,
-    highlight_height: (pictureHeight / SHOW / s / f.newH) * ink.height,
-  };
 }
 
 /**

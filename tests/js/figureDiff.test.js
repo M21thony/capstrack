@@ -2,7 +2,7 @@
 // a pair amounts to. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OVERHAUL, figureMarks, hungarian, kindOf, overlapping, overlayRect, pairUp, spotTone } from "../../resources/js/component/reader/figureDiff.js";
+import { OVERHAUL, figureMarks, hungarian, kindOf, overlapping, pairUp, spotTone } from "../../resources/js/component/reader/figureDiff.js";
 
 test("hungarian finds the cheapest pairing, not the greedy one", () => {
   // Greedy takes 0->0 (1), leaving 1->1 (100): 101. Best is 0->1, 1->0: 4.
@@ -73,22 +73,13 @@ test("on this version, a spot follows the diagram when it was rescaled to line u
   assert.ok(Math.abs(marks[1][0].rects[0].left_position - (60 / 400 - 0.004)) < 0.001);
 });
 
-test("a part removed is boxed on the earlier version only, one added on this one only, one rewritten on both", () => {
+test("a spot is highlighted like a changed word, with a thin bar on the version it is missing from", () => {
   const ink = { left: 0, top: 0, width: 1, height: 1 };
   const spot = { x: 10, y: 10, w: 20, h: 20 };
   const { marks, oldMarks } = figureMarks([{ kind: "small", spots: [spot, spot, spot], tones: ["removed", "added", "rewritten"], oldPage: 1, newPage: 1, oldInk: ink, newInk: ink, oldH: 400, newH: 400, fit: null }]);
-  assert.deepEqual(oldMarks[1].map((m) => [m.tone, m.label]), [["removed", "− removed"], ["rewritten", "changed"]]);
-  assert.deepEqual(marks[1].map((m) => [m.tone, m.label]), [["added", "+ added"], ["rewritten", "changed"]]);
-});
-
-test("the one-picture view sits over this version's diagram, undoing the move that lined it up", () => {
-  const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} vs ${b}`);
-  const f = { newInk: { left: 0.1, top: 0.2, width: 0.8, height: 0.4 }, newH: 300 };
-  const same = overlayRect(f, 600); // not moved: exactly over the diagram
-  near(same.left_position, 0.1); near(same.top_position, 0.2); near(same.highlight_width, 0.8); near(same.highlight_height, 0.4);
-  const r = overlayRect({ ...f, fit: { s: 2, x: 40, y: 30 } }, 600);
-  near(r.left_position, 0.1 + (-20 / 400) * 0.8);
-  near(r.top_position, 0.2 + (-15 / 300) * 0.4);
-  near(r.highlight_width, 0.4);
-  near(r.highlight_height, 0.2);
+  assert.deepEqual(oldMarks[1].map((m) => [m.diff, !!m.inserted, m.rects[0].highlight_width]), [[true, false, oldMarks[1][0].rects[0].highlight_width], [true, true, 0.003], [true, false, oldMarks[1][2].rects[0].highlight_width]]);
+  assert.deepEqual(marks[1].map((m) => [m.diff, !!m.removed]), [[true, true], [true, false], [true, false]]);
+  assert.equal(marks[1][0].rects[0].highlight_width, 0.003);
+  assert.ok(marks[1][1].rects[0].highlight_width > 0.05);
+  assert.equal(marks[1][0].label, undefined); // no "changed" / "+ added" tags
 });

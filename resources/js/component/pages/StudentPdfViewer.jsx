@@ -134,8 +134,9 @@ function StudentPdfViewer({
                     {(marks?.[n] || []).map((m) => m.rects.map((r, idx) => (
                       <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff old${m.inserted ? " ins" : ""}${focus?.id === m.id ? " on" : ""}`} style={rectStyle(r)} />
                     )))}
-                    {(figureMarks?.[n] || []).map((m) => m.rects.map((r, idx) => (
-                      <div key={`${m.id}-${idx}`} className={`rr-figdiff old ${m.tone || ""}`} data-label={m.label || undefined} style={rectStyle(r)} />
+                    {(figureMarks?.[n] || []).map((m) => m.rects.map((r, idx) => (m.diff
+                      ? <div key={`${m.id}-${idx}`} className={`rr-hl rr-diff old${m.inserted ? " ins" : ""}`} style={rectStyle(r)} />
+                      : <div key={`${m.id}-${idx}`} className={`rr-figdiff old ${m.tone || ""}`} data-label={m.label || undefined} style={rectStyle(r)} />
                     )))}
                     <Highlights
                       remarks={remarks.filter((r) => r.page_number === n)}
