@@ -377,6 +377,7 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
     if (fig.kind === "small") {
       fig.changes = inkChanges(fig);
       fig.tones = fig.changes.spots.map((sp) => sp.tone);
+      fig.texts = fig.changes.spots.map((sp) => sp.text);
       await pause();
     }
     figures.push(fig);
@@ -389,10 +390,11 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
 
 /**
  * The changed spots of every figure on the pages of both versions:
- * { marks, oldMarks }, each by page number. A spot in an edited diagram is
- * marked like a changed word: highlighted where it is, and a thin bar on the
- * other version where it was taken out or put in. A redone, new or removed
- * diagram is boxed whole.
+ * { marks, oldMarks }, each by page number. A changed label in an edited
+ * diagram is marked like a changed word: highlighted where it is, and a thin
+ * bar on the other version where it was taken out or put in. A changed shape
+ * or arrow is not marked here: its own ink is coloured instead (tints). A
+ * redone, new or removed diagram is boxed whole.
  */
 export function figureMarks(figures) {
   const marks = {}, oldMarks = {};
@@ -411,6 +413,7 @@ export function figureMarks(figures) {
       const s = f.fit?.s ?? 1, dx = f.fit?.x ?? 0, dy = f.fit?.y ?? 0;
       f.spots.forEach((r, k) => {
         const tone = f.tones?.[k] ?? null;
+        if (f.texts?.[k] === false) return;
         spot(oldMarks, f.oldPage, `${id}-${k}`, onPage(f.oldInk, f.oldH, r), tone === "added" ? "inserted" : null);
         spot(marks, f.newPage, `${id}-${k}`, onPage(f.newInk, f.newH, { x: (r.x - dx) / s, y: (r.y - dy) / s, w: r.w / s, h: r.h / s }), tone === "removed" ? "removed" : null);
       });
@@ -437,6 +440,44 @@ export function overlayRect(f, pictureHeight) {
     highlight_width: ink.width / s,
     highlight_height: (pictureHeight / SHOW / s / f.newH) * ink.height,
   };
+}
+
+/** Where a picture in the earlier diagram's frame, `pictureHeight` tall at SHOW times, goes on its page. */
+export function oldOverlayRect(f, pictureHeight) {
+  const ink = f.oldInk;
+  return { left_position: ink.left, top_position: ink.top, highlight_width: ink.width, highlight_height: (pictureHeight / SHOW / f.oldH) * ink.height };
+}
+
+/**
+ * Whether the changed ink in a box is writing: several small marks (letters)
+ * making up most of it. A shape or an arrow is one or two big strokes, and a
+ * new box with its label is mostly box.
+ */
+export function textLike(changed, w, [x0, y0, x1, y1], letter = 30) {
+  const seen = new Uint8Array(changed.length);
+  let marks = 0, small = 0, total = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const k0 = y * w + x;
+      if (!changed[k0] || seen[k0]) continue;
+      const stack = [k0];
+      let n = 0, lx = x, hx = x, ly = y, hy = y;
+      seen[k0] = 1;
+      while (stack.length) {
+        const k = stack.pop(), kx = k % w, ky = (k - kx) / w;
+        n++; lx = Math.min(lx, kx); hx = Math.max(hx, kx); ly = Math.min(ly, ky); hy = Math.max(hy, ky);
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const xx = kx + dx, yy = ky + dy, m = yy * w + xx;
+          if (xx >= x0 && yy >= y0 && xx < x1 && yy < y1 && changed[m] && !seen[m]) { seen[m] = 1; stack.push(m); }
+        }
+      }
+      if (n < 3) continue;
+      total += n;
+      marks++;
+      if (hy - ly < letter && hx - lx < letter * 1.5) small += n;
+    }
+  }
+  return marks >= 3 && small >= 0.7 * total;
 }
 
 /**
@@ -492,8 +533,9 @@ function inkChanges(f) {
       }
     }
     const tone = spotTone(removed, added);
+    const text = tone === "rewritten" || textLike(mark, w, box);
     if (tone === "rewritten") for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
-    return { box, tone };
+    return { box, tone, text };
   });
   return { a, b, w, h, mark, spots, inkA, inkB };
 }
@@ -573,6 +615,50 @@ export function highlighted(f) {
   }
   const pad = (box) => [Math.max(0, box[0] - 12), Math.max(0, box[1] - 12), Math.min(w, box[2] + 12), Math.min(h, box[3] + 12)];
   return { picture: c, closeUps: boxes.map((box) => ({ old: crop(f.old, pad(box)), neu: crop(f.neu, pad(box)) })) };
+}
+
+/**
+ * The shapes and arrows that changed, coloured where they sit, on clear
+ * pictures to lay over each version's diagram: { added } in green over this
+ * version, { removed } in red over the earlier one, each null when nothing
+ * is there. Lines glow so a thin arrow stands out, and a closed shape is
+ * filled in. Labels are left to the word-style highlight.
+ */
+export function tints(f) {
+  const { w, h, mark, spots, inkA, inkB } = (f.changes ??= inkChanges(f));
+  const layer = (tone, value, ink, colour, fill, glow) => {
+    const img = new ImageData(w, h);
+    let any = false;
+    for (const s of spots) {
+      if (s.text || s.tone !== tone) continue;
+      const [x0, y0, x1, y1] = s.box;
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          if (mark[y * w + x] !== value) continue;
+          any = true;
+          // One pixel wider, so the black line under it does not show at the edges.
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const xx = x + dx, yy = y + dy;
+            if (xx >= 0 && yy >= 0 && xx < w && yy < h) img.data.set(colour, (yy * w + xx) * 4);
+          }
+        }
+      }
+      for (const k of enclosed(ink, w, s.box)) if (!img.data[k * 4 + 3]) img.data.set(fill, k * 4);
+    }
+    if (!any) return null;
+    const l = canvasOf(w, h), c = canvasOf(w, h), ctx = c.getContext("2d");
+    l.getContext("2d").putImageData(img, 0, 0);
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 8;
+    ctx.drawImage(l, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.drawImage(l, 0, 0);
+    return c;
+  };
+  return {
+    added: layer("added", 2, inkB, [22, 163, 74, 255], [34, 197, 94, 60], "rgba(34,197,94,.8)"),
+    removed: layer("removed", 1, inkA, [220, 38, 38, 255], [239, 68, 68, 60], "rgba(239,68,68,.8)"),
+  };
 }
 
 /** A picture with the changed spots outlined. */

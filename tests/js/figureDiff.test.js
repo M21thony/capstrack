@@ -2,7 +2,7 @@
 // a pair amounts to. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OVERHAUL, drawingAreas, enclosed, figureMarks, hungarian, kindOf, overlapping, overlayRect, pairUp, spotTone } from "../../resources/js/component/reader/figureDiff.js";
+import { OVERHAUL, drawingAreas, enclosed, figureMarks, hungarian, kindOf, oldOverlayRect, overlapping, overlayRect, pairUp, spotTone, textLike } from "../../resources/js/component/reader/figureDiff.js";
 
 test("hungarian finds the cheapest pairing, not the greedy one", () => {
   // Greedy takes 0->0 (1), leaving 1->1 (100): 101. Best is 0->1, 1->0: 4.
@@ -122,4 +122,32 @@ test("shapes joined by lines are one drawn diagram; underlines, a lone frame and
   const prose = [0.31, 0.33, 0.35].map((t) => box(0.2, t, 0.28, 0.01));
   assert.equal(drawingAreas(flow, [], prose).length, 0); // a panel behind long lines of text
   assert.equal(drawingAreas(flow, [], prose.map((l) => ({ ...l, width: 0.06 }))).length, 1); // short labels are fine
+});
+
+test("a changed label is told apart from a changed shape or arrow", () => {
+  const w = 200, ink = new Uint8Array(w * w);
+  const line = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) ink[y * w + x] = 1; };
+  for (let i = 0; i < 6; i++) line(10 + i * 12, 10, 17 + i * 12, 22); // six letters in a row
+  assert.equal(textLike(ink, w, [0, 0, 100, 40]), true);
+  ink.fill(0);
+  line(10, 60, 150, 61); line(140, 55, 150, 66); // an arrow
+  assert.equal(textLike(ink, w, [0, 40, w, 100]), false);
+  ink.fill(0);
+  line(20, 100, 180, 101); line(20, 160, 180, 161); line(20, 100, 21, 161); line(179, 100, 180, 161); // a box
+  for (let i = 0; i < 3; i++) line(60 + i * 12, 125, 67 + i * 12, 137); // with a short label in it
+  assert.equal(textLike(ink, w, [0, 95, w, 170]), false);
+});
+
+test("a changed shape is coloured on the diagram instead of highlighted like a word", () => {
+  const ink = { left: 0, top: 0, width: 1, height: 1 };
+  const spot = { x: 10, y: 10, w: 20, h: 20 };
+  const { marks, oldMarks } = figureMarks([{ kind: "small", spots: [spot, spot], tones: ["added", "added"], texts: [false, true], oldPage: 1, newPage: 1, oldInk: ink, newInk: ink, oldH: 400, newH: 400, fit: null }]);
+  assert.equal(marks[1].length, 1); // only the label
+  assert.equal(oldMarks[1].length, 1);
+});
+
+test("the earlier side's colouring sits over the earlier diagram", () => {
+  const r = oldOverlayRect({ oldInk: { left: 0.1, top: 0.2, width: 0.4, height: 0.2 }, oldH: 300 }, 800);
+  assert.deepEqual([r.left_position, r.top_position, r.highlight_width], [0.1, 0.2, 0.4]);
+  assert.ok(Math.abs(r.highlight_height - (800 / 2 / 300) * 0.2) < 1e-9);
 });

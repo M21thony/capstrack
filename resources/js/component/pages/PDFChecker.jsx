@@ -6,7 +6,7 @@ import {
   kindOf, mergeRectsByLine, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
-import { figureMarks, highlighted, overlayRect } from "../reader/figureDiff";
+import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
 import {
   DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, uniqueFigures,
@@ -130,19 +130,24 @@ function PDFChecker({
   const earlierPdf = useEarlierPdf(base && figuresWanted ? base.file : null);
   const figureDiff = useFigureDiff(earlierPdf, pdf, figuresWanted);
   const figureBoxes = useMemo(() => (figureDiff.status === "ready" ? figureMarks(figureDiff.figures) : { marks: {}, oldMarks: {} }), [figureDiff]);
-  // An edited diagram is shown on this page as one picture: faded where both
-  // versions agree, and what changed glowing red (removed) or green (added).
-  const figureOverlays = useMemo(() => {
-    const byPage = {};
-    if (figureDiff.status !== "ready") return byPage;
+  // In an edited diagram, a shape or arrow put in is coloured green where it
+  // sits on this page, and one taken out red on the earlier version's page.
+  const figureTints = useMemo(() => {
+    const now = {}, before = {};
+    if (figureDiff.status !== "ready") return { now, before };
     figureDiff.figures.forEach((f, i) => {
-      if (f.kind !== "small" || !f.newPage) return;
-      const picture = (f.hl ??= highlighted(f)).picture;
-      (byPage[f.newPage] ||= []).push({ id: i, rect: overlayRect(f, picture.height), src: picture.toDataURL() });
+      if (f.kind !== "small") return;
+      const { added, removed } = (f.tints ??= tints(f));
+      if (added) (now[f.newPage] ||= []).push({ id: `t${i}`, src: added.toDataURL(), rects: [overlayRect(f, added.height)] });
+      if (removed) (before[f.oldPage] ||= []).push({ id: `t${i}`, src: removed.toDataURL(), rects: [oldOverlayRect(f, removed.height)] });
     });
-    return byPage;
+    return { now, before };
   }, [figureDiff]);
-  useEffect(() => { onFigures({ status: figureDiff.status, note: figureDiff.note, oldMarks: figureBoxes.oldMarks }); }, [figureDiff, figureBoxes]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const oldMarks = { ...figureBoxes.oldMarks };
+    Object.entries(figureTints.before).forEach(([p, ts]) => { oldMarks[p] = [...(oldMarks[p] || []), ...ts]; });
+    onFigures({ status: figureDiff.status, note: figureDiff.note, oldMarks });
+  }, [figureDiff, figureBoxes, figureTints]); // eslint-disable-line react-hooks/exhaustive-deps
   const openChange = (c) => {
     setChangeId(c.id);
     if (c.rect) col.goToRect(c.page, c.rect);
@@ -539,11 +544,12 @@ function PDFChecker({
                       {(marks[n] || []).map((m) => m.rects.map((r, idx) => (
                         <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
                       )))}
-                      {showChanges && (figureOverlays[n] || []).map((o) => (
-                        <img key={`o${o.id}`} className="rr-figover" src={o.src} alt="" style={rectStyle(o.rect)} />
+                      {showChanges && (figureTints.now[n] || []).map((t) => (
+                        <img key={t.id} className="rr-figover" src={t.src} alt="" style={rectStyle(t.rects[0])} />
                       ))}
-                      {showChanges && (figureBoxes.marks[n] || []).filter((m) => !m.diff).map((m) => m.rects.map((r, idx) => (
-                        <div key={`${m.id}-${idx}`} className={`rr-figdiff ${m.tone || ""}`} data-label={m.label || undefined} style={rectStyle(r)} />
+                      {showChanges && (figureBoxes.marks[n] || []).map((m) => m.rects.map((r, idx) => (m.diff
+                        ? <div key={`${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}`} style={rectStyle(r)} />
+                        : <div key={`${m.id}-${idx}`} className={`rr-figdiff ${m.tone || ""}`} data-label={m.label || undefined} style={rectStyle(r)} />
                       )))}
                       <Highlights
                         remarks={pageRemarks}
