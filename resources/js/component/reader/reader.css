@@ -122,6 +122,9 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-hl.rr-diff.old{background:rgba(207,34,46,.16);box-shadow:inset 0 -2px 0 #cf222e}
 .rr-hl.rr-diff.old.on{background:rgba(207,34,46,.3);outline:2px solid #cf222e}
 .rr-hl.rr-diff.old.ins{background:#1a7f37;box-shadow:none;mix-blend-mode:normal}
+/* A changed spot inside a diagram: boxed, since a picture has no words to underline. */
+.rr-figdiff{position:absolute;border:2px solid #16a34a;background:rgba(34,197,94,.1);border-radius:3px}
+.rr-figdiff.old{border-color:#cf222e;background:rgba(207,34,46,.08)}
 .rr-tabs{display:flex;border-bottom:1px solid #e0e2e8;padding:0 8px}
 .rr-tab{flex:1;border:0;background:none;padding:10px 6px 8px;font:600 13px/1.2 "DM Sans","DM Sans Fallback",system-ui,sans-serif;color:#656b7a;border-bottom:2px solid transparent;cursor:pointer;min-height:40px}
 .rr-tab[aria-selected="true"]{color:#1e2128;border-bottom-color:#c9a82c}

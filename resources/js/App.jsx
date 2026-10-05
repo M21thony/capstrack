@@ -48,6 +48,8 @@ function App() {
   // Measured once: this document and the earlier version both draw from it.
   const diff = useVersionDiff(reviewId ? `/reviews/${reviewId}/pdf` : null, baseVersion);
   const [focus, setFocus] = useState(null);
+  // The diagram compare's progress and its boxes for the earlier version.
+  const [figureView, setFigureView] = useState({ status: "idle", note: "", oldMarks: {} });
 
   const [comments, setComments] = useState([]);
   const [generalComments, setGeneralComments] = useState([]);
@@ -536,6 +538,8 @@ function App() {
           onToggleFigure={toggleFigure}
           revisionStatus={revisionStatus}
           onRevision={setRevision}
+          compareOpen={Boolean(compareVersion)}
+          onFigures={setFigureView}
         />
         {compareVersion && (
           <div className="an-pane-head">
@@ -543,6 +547,7 @@ function App() {
             <b>This version</b>
             {ctx.round && <span className="an-pane-sub">{ctx.round}</span>}
             <span className="rr-spacer" />
+            {showChanges && figureView.status === "loading" && <span className="an-pane-sub">{figureView.note || "Comparing the figures…"}</span>}
             {showChanges && <span className="an-key ins">New or reworded</span>}
           </div>
         )}
@@ -566,6 +571,7 @@ function App() {
               remarksUrl={compareVersion.remarks}
               reviewer="you"
               marks={showChanges && diff.status === "ready" ? diff.oldMarks : null}
+              figureMarks={showChanges ? figureView.oldMarks : null}
               focus={focus}
             />
           </section>

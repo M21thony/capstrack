@@ -128,7 +128,7 @@ const compared = (r) => {
 };
 
 /** The earlier version, open for snapshots and picture checks while this panel is. */
-function useEarlierPdf(url) {
+export function useEarlierPdf(url) {
   const [doc, setDoc] = useState(null);
   useEffect(() => {
     if (!url) return undefined;
@@ -190,9 +190,10 @@ function usePictureChecks(items, oldPdf, newPdf) {
 
 /**
  * Every diagram of both versions, paired and compared - worked out only once
- * the Figures list is opened, since it draws every picture of both files.
+ * the Figures list or the side-by-side compare is opened, since it draws
+ * every picture of both files.
  */
-function useFigureDiff(oldPdf, newPdf, wanted) {
+export function useFigureDiff(oldPdf, newPdf, wanted) {
   const [state, setState] = useState({ status: "idle", figures: [], note: "" });
   useEffect(() => {
     if (!wanted || !oldPdf || !newPdf) return undefined;
@@ -379,6 +380,7 @@ const KIND = { added: ["Added", "add"], removed: ["Removed", "del"], reworded: [
 export default function ChangesPanel({
   top, base, diff, selectedChange, onOpenChange, onOpenRemark,
   pdf = null, revisionStatus = {}, onRevision = () => {}, onOpenRevision = () => {},
+  figureDiff = { status: "idle", figures: [], note: "" }, onWantFigures = () => {},
 }) {
   const ready = diff.status === "ready";
   const changes = ready ? diff.changes : [];
@@ -390,12 +392,10 @@ export default function ChangesPanel({
     : isFigureRemark(r) && ["same place", "nearby text", "labels", "caption"].includes(r.foundBy) ? { ...r, unsettled: true } : r));
   const [filter, setFilter] = useState("remarks");
   const [comparing, setComparing] = useState(null);
-  const [figuresWanted, setFiguresWanted] = useState(false);
   const [openFigure, setOpenFigure] = useState(null);
-  const oldPdf = useEarlierPdf(revision.length || figuresWanted ? base?.file : null);
+  const oldPdf = useEarlierPdf(revision.length ? base?.file : null);
   const pictures = usePictureChecks(revision, oldPdf, pdf);
-  const figureDiff = useFigureDiff(oldPdf, pdf, figuresWanted);
-  const showFilter = (k) => { setFilter(k); if (k === "figures") setFiguresWanted(true); };
+  const showFilter = (k) => { setFilter(k); if (k === "figures") onWantFigures(); };
 
   // Every figure is lined up by its picture. A caption is sure about the
   // page, so its figure is only looked for on that page, to place the box

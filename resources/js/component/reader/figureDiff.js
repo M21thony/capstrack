@@ -259,8 +259,12 @@ async function diagramsOf(pdf, OPS, alive) {
     const captions = captionsOnPage(text.items, page.getViewport({ scale: 1 }).height, n);
     for (const box of boxes) {
       const label = figureFor(captions, n, [{ top_position: box.top, left_position: box.left, highlight_width: box.width, highlight_height: box.height }]);
-      const sharp = normalised(await drawBox(page, box, W * SHOW * 1.5), W * SHOW);
-      out.push({ page: n, label, title: captions.find((c) => c.label === label)?.title || "", sharp, small: normalised(sharp, W) });
+      const drawn = await drawBox(page, box, W * SHOW * 1.5);
+      const t = trimBox(drawn);
+      // Where the inked part sits on the page, to mark changed spots there.
+      const ink = { left: box.left + (t.x / drawn.width) * box.width, top: box.top + (t.y / drawn.height) * box.height, width: (t.w / drawn.width) * box.width, height: (t.h / drawn.height) * box.height };
+      const sharp = normalised(drawn, W * SHOW);
+      out.push({ page: n, label, title: captions.find((c) => c.label === label)?.title || "", sharp, small: normalised(sharp, W), ink });
     }
   }
   return out;
@@ -290,7 +294,7 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
   for (const [i, o] of olds.entries()) {
     const j = partner[i];
     if (j === null) {
-      figures.push({ kind: "removed", label: o.label, title: o.title, oldPage: o.page, newPage: null, old: o.sharp });
+      figures.push({ kind: "removed", label: o.label, title: o.title, oldPage: o.page, newPage: null, old: o.sharp, oldInk: o.ink });
       continue;
     }
     const n = news[j];
@@ -312,14 +316,49 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
       title: n.title || o.title,
       oldPage: o.page,
       newPage: n.page,
+      oldInk: o.ink,
+      newInk: n.ink,
+      oldH: o.small.height,
+      newH: n.small.height,
+      fit,
       old: onWhite(o.sharp, o.sharp.width, h),
       neu: fit ? onWhite(n.sharp, o.sharp.width, h, fit.x * SHOW, fit.y * SHOW, fit.s) : onWhite(n.sharp, o.sharp.width, h),
     });
   }
   news.forEach((n, j) => {
-    if (!partner.includes(j)) figures.push({ kind: "new", label: n.label, title: n.title, oldPage: null, newPage: n.page, neu: n.sharp });
+    if (!partner.includes(j)) figures.push({ kind: "new", label: n.label, title: n.title, oldPage: null, newPage: n.page, neu: n.sharp, newInk: n.ink });
   });
   return figures.sort((a, b) => (a.newPage ?? Infinity) - (b.newPage ?? Infinity) || (a.oldPage ?? 0) - (b.oldPage ?? 0));
+}
+
+/**
+ * The changed spots of every figure as boxes on the pages of both versions,
+ * for the side-by-side view: { marks, oldMarks }, each by page number. A
+ * redone, new or removed diagram is boxed whole.
+ */
+export function figureMarks(figures) {
+  const marks = {}, oldMarks = {};
+  const clamp = (v) => Math.min(1, Math.max(0, v));
+  const onPage = (ink, h, r) => {
+    const left = clamp(ink.left + (r.x / W) * ink.width - 0.004), top = clamp(ink.top + (r.y / h) * ink.height - 0.004);
+    return { left_position: left, top_position: top, highlight_width: clamp(ink.left + ((r.x + r.w) / W) * ink.width + 0.004) - left, highlight_height: clamp(ink.top + ((r.y + r.h) / h) * ink.height + 0.004) - top };
+  };
+  const whole = (ink) => [onPage(ink, 1, { x: 0, y: 0, w: W, h: 1 })];
+  const add = (into, page, id, rects) => rects.length && (into[page] ||= []).push({ id, rects });
+  figures.forEach((f, i) => {
+    const id = `f${i}`;
+    if (f.kind === "small") {
+      // Spots are found in the earlier picture's frame; this version's was moved onto it first.
+      const s = f.fit?.s ?? 1, dx = f.fit?.x ?? 0, dy = f.fit?.y ?? 0;
+      add(oldMarks, f.oldPage, id, f.spots.map((r) => onPage(f.oldInk, f.oldH, r)));
+      add(marks, f.newPage, id, f.spots.map((r) => onPage(f.newInk, f.newH, { x: (r.x - dx) / s, y: (r.y - dy) / s, w: r.w / s, h: r.h / s })));
+    } else if (f.kind === "big") {
+      add(oldMarks, f.oldPage, id, whole(f.oldInk));
+      add(marks, f.newPage, id, whole(f.newInk));
+    } else if (f.kind === "removed") add(oldMarks, f.oldPage, id, whole(f.oldInk));
+    else if (f.kind === "new") add(marks, f.newPage, id, whole(f.newInk));
+  });
+  return { marks, oldMarks };
 }
 
 /**

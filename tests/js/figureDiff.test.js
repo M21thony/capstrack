@@ -2,7 +2,7 @@
 // a pair amounts to. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OVERHAUL, hungarian, kindOf, overlapping, pairUp } from "../../resources/js/component/reader/figureDiff.js";
+import { OVERHAUL, figureMarks, hungarian, kindOf, overlapping, pairUp } from "../../resources/js/component/reader/figureDiff.js";
 
 test("hungarian finds the cheapest pairing, not the greedy one", () => {
   // Greedy takes 0->0 (1), leaving 1->1 (100): 101. Best is 0->1, 1->0: 4.
@@ -36,4 +36,31 @@ test("a spot rewritten in place is told apart from a plain removal or addition",
   assert.equal(overlapping(0, 300), false); // a new line
   assert.equal(overlapping(800, 60), false); // mostly removed, a sliver added
   assert.equal(overlapping(20, 20), false); // too small to matter
+});
+
+test("changed spots are boxed on the pages of both versions, where the diagram sits", () => {
+  // A diagram filling the right half of the page, 400 wide and 200 tall when compared.
+  const ink = { left: 0.5, top: 0.2, width: 0.4, height: 0.3 };
+  const spot = { x: 0, y: 100, w: 200, h: 100 }; // its bottom-left quarter
+  const { marks, oldMarks } = figureMarks([
+    { kind: "small", spots: [spot], oldPage: 2, newPage: 3, oldInk: ink, newInk: ink, oldH: 200, newH: 200, fit: null },
+    { kind: "new", newPage: 5, newInk: ink },
+    { kind: "same", oldPage: 1, newPage: 1, oldInk: ink, newInk: ink },
+  ]);
+  const near = (a, b) => assert.ok(Math.abs(a - b) < 0.01, `${a} vs ${b}`);
+  const [r] = oldMarks[2][0].rects;
+  near(r.left_position, 0.5);
+  near(r.top_position, 0.35);
+  near(r.highlight_width, 0.2);
+  near(r.highlight_height, 0.15);
+  assert.equal(marks[3][0].rects.length, 1);
+  near(marks[5][0].rects[0].highlight_width, 0.4); // a new diagram is boxed whole
+  assert.equal(marks[1], undefined); // an unchanged one is not boxed
+  assert.equal(oldMarks[5], undefined);
+});
+
+test("on this version, a spot follows the diagram when it was rescaled to line up", () => {
+  const ink = { left: 0, top: 0, width: 1, height: 1 };
+  const { marks } = figureMarks([{ kind: "small", spots: [{ x: 120, y: 20, w: 40, h: 40 }], oldPage: 1, newPage: 1, oldInk: ink, newInk: ink, oldH: 400, newH: 400, fit: { s: 2, x: 0, y: 0 } }]);
+  assert.ok(Math.abs(marks[1][0].rects[0].left_position - (60 / 400 - 0.004)) < 0.001);
 });

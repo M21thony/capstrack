@@ -5,7 +5,8 @@ import {
   FigureZoom, Highlights, KINDS, PageStrip, ReaderTools, RemarksPanel, SectionPicker,
   kindOf, mergeRectsByLine, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
-import ChangesPanel from "../reader/ChangesPanel";
+import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
+import { figureMarks } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
 import {
   DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, uniqueFigures,
@@ -105,7 +106,7 @@ function PDFChecker({
   onDeleteComment, selectedId, setSelectedId, notify, base = null, showChanges = true,
   diff = { status: "idle" }, onFocusChange,
   startMode = "text", startTab = "remarks", checkedFigures = [], onToggleFigure = () => {},
-  revisionStatus = {}, onRevision = () => {},
+  revisionStatus = {}, onRevision = () => {}, compareOpen = false, onFigures = () => {},
 }) {
   const [numPages, setNumPages] = useState(null);
   const [pdf, setPdf] = useState(null);
@@ -121,6 +122,15 @@ function PDFChecker({
   const [tab, setTab] = useState(startTab);
   const [changeId, setChangeId] = useState(null);
   const marks = showChanges && diff.status === "ready" ? diff.marks : {};
+  // Diagrams are pictures, so the words diff cannot see them change: they are
+  // compared picture by picture once the earlier version is opened beside
+  // this one (or the Figures list is), and their changed spots boxed on both.
+  const [figuresWanted, setFiguresWanted] = useState(false);
+  useEffect(() => { if (compareOpen) setFiguresWanted(true); }, [compareOpen]);
+  const earlierPdf = useEarlierPdf(base && figuresWanted ? base.file : null);
+  const figureDiff = useFigureDiff(earlierPdf, pdf, figuresWanted);
+  const figureBoxes = useMemo(() => (figureDiff.status === "ready" ? figureMarks(figureDiff.figures) : { marks: {}, oldMarks: {} }), [figureDiff]);
+  useEffect(() => { onFigures({ status: figureDiff.status, note: figureDiff.note, oldMarks: figureBoxes.oldMarks }); }, [figureDiff, figureBoxes]); // eslint-disable-line react-hooks/exhaustive-deps
   const openChange = (c) => {
     setChangeId(c.id);
     if (c.rect) col.goToRect(c.page, c.rect);
@@ -517,6 +527,9 @@ function PDFChecker({
                       {(marks[n] || []).map((m) => m.rects.map((r, idx) => (
                         <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
                       )))}
+                      {showChanges && (figureBoxes.marks[n] || []).map((m) => m.rects.map((r, idx) => (
+                        <div key={`${m.id}-${idx}`} className="rr-figdiff" style={rectStyle(r)} />
+                      )))}
                       <Highlights
                         remarks={pageRemarks}
                         numbers={numbers}
@@ -630,6 +643,8 @@ function PDFChecker({
           onOpenChange={openChange}
           onOpenRemark={openOldRemark}
           pdf={pdf}
+          figureDiff={figureDiff}
+          onWantFigures={() => setFiguresWanted(true)}
           revisionStatus={revisionStatus}
           onRevision={onRevision}
           onOpenRevision={(r) => {

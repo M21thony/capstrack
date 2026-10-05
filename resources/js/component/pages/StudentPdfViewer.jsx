@@ -53,7 +53,7 @@ function StudentPdfViewer({
   pdfUrl, remarksUrl, reviewer = "your reviewer", general = [], decision = null, others = [],
   // Used only when it is the earlier version beside the annotator: what was
   // removed from it, and the change to scroll to.
-  marks = null, focus = null,
+  marks = null, focus = null, figureMarks = null,
 }) {
   const [numPages, setNumPages] = useState(null);
   const [error, setError] = useState(null);
@@ -133,6 +133,9 @@ function StudentPdfViewer({
                   <div className="rr-overlay">
                     {(marks?.[n] || []).map((m) => m.rects.map((r, idx) => (
                       <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff old${m.inserted ? " ins" : ""}${focus?.id === m.id ? " on" : ""}`} style={rectStyle(r)} />
+                    )))}
+                    {(figureMarks?.[n] || []).map((m) => m.rects.map((r, idx) => (
+                      <div key={`${m.id}-${idx}`} className="rr-figdiff old" style={rectStyle(r)} />
                     )))}
                     <Highlights
                       remarks={remarks.filter((r) => r.page_number === n)}
