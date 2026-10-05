@@ -490,7 +490,7 @@ export default function ChangesPanel({
                   items={figureDiff.figures}
                   keyOf={(f) => f.id}
                   noun="figure"
-                  empty={<><b>No figures found</b><span>Only pasted pictures are compared. Diagrams drawn in Word are checked with the words.</span></>}
+                  empty={<><b>No figures found</b><span>No pasted pictures or drawn diagrams in either version.</span></>}
                   renderItem={(f, measuring) => {
                     const [tag, tone] = FIGURE_KIND[f.kind](f);
                     return (

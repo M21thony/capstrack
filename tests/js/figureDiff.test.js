@@ -2,7 +2,7 @@
 // a pair amounts to. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OVERHAUL, enclosed, figureMarks, hungarian, kindOf, overlapping, overlayRect, pairUp, spotTone } from "../../resources/js/component/reader/figureDiff.js";
+import { OVERHAUL, drawingAreas, enclosed, figureMarks, hungarian, kindOf, overlapping, overlayRect, pairUp, spotTone } from "../../resources/js/component/reader/figureDiff.js";
 
 test("hungarian finds the cheapest pairing, not the greedy one", () => {
   // Greedy takes 0->0 (1), leaving 1->1 (100): 101. Best is 0->1, 1->0: 4.
@@ -105,4 +105,21 @@ test("the inside of a closed shape is found, but not an open one or a letter's s
   line(25, 5, 25, 25); ink.fill(0, 15 * w + 25, 15 * w + 26); // open one side
   for (let y = 6; y < 25; y++) ink[y * w + 25] = 0;
   assert.equal(enclosed(ink, w, [0, 0, w, w]).length, 0);
+});
+
+test("shapes joined by lines are one drawn diagram; underlines, a lone frame and a picture's border are not", () => {
+  const box = (left, top, width, height) => ({ left, top, width, height });
+  const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} vs ${b}`);
+  // Two boxes and the arrow between them.
+  const flow = [box(0.2, 0.3, 0.1, 0.05), box(0.3, 0.32, 0.1, 0.001), box(0.4, 0.3, 0.1, 0.05), box(0.2, 0.36, 0.05, 0.05)];
+  const [d] = drawingAreas(flow);
+  near(d.left, 0.19); near(d.top, 0.29); near(d.width, 0.32); near(d.height, 0.13);
+  assert.equal(drawingAreas(flow).length, 1);
+  assert.equal(drawingAreas([box(0.1, 0.5, 0.6, 0.001), box(0.1, 0.52, 0.6, 0.001)]).length, 0); // underlines
+  assert.equal(drawingAreas([box(0.1, 0.1, 0.5, 0.3)]).length, 0); // one frame alone
+  assert.equal(drawingAreas([box(0, 0, 1, 1), box(0.1, 0.1, 0.05, 0.05)]).length, 0); // page background dropped
+  assert.equal(drawingAreas(flow, [box(0.18, 0.28, 0.4, 0.2)]).length, 0); // a pasted picture's frame
+  const prose = [0.31, 0.33, 0.35].map((t) => box(0.2, t, 0.28, 0.01));
+  assert.equal(drawingAreas(flow, [], prose).length, 0); // a panel behind long lines of text
+  assert.equal(drawingAreas(flow, [], prose.map((l) => ({ ...l, width: 0.06 }))).length, 1); // short labels are fine
 });

@@ -68,9 +68,52 @@ export const kindOf = (mismatch, spots) => (mismatch > OVERHAUL ? "big" : spots 
 
 const mul = (a, b) => [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1], a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3], a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5]];
 
+const bigEnough = (b) => b.width > 0.15 && b.height > 0.08;
+const shapeLike = (b) => b.width > 0.02 && b.height > 0.02;
+
 /**
- * Every picture big enough to be a diagram on a page, as fractions of the
- * page. Read from what the page draws, so a logo or an icon is left out.
+ * Where diagrams made of drawn lines and shapes sit (Canva, Word shapes), from
+ * the boxes of every drawn path, as page fractions. Paths a small gap apart
+ * are one drawing; a drawing counts when it is diagram-sized and holds at
+ * least two real shapes, so underlines and table rules are left out. One
+ * mostly covered by a pasted picture is that picture's frame, and one with
+ * several long lines of text in it is a panel behind the page's text (Word's
+ * comment pane), since a diagram's labels are short.
+ * ponytail: a table with shaded cells can still pass as a diagram; tell them
+ * apart by the text grid inside if that shows up in real chapters.
+ */
+export function drawingAreas(paths, pictures = [], lines = [], gap = 0.015) {
+  let groups = paths.filter((p) => !(p.width > 0.8 && p.height > 0.8)).map((p) => ({ ...p, shapes: shapeLike(p) ? 1 : 0 }));
+  const near = (a, b) => a.left - gap < b.left + b.width && b.left - gap < a.left + a.width && a.top - gap < b.top + b.height && b.top - gap < a.top + a.height;
+  for (let merged = true; merged;) {
+    merged = false;
+    for (let i = 0; i < groups.length; i++) {
+      for (let j = i + 1; j < groups.length; j++) {
+        const a = groups[i], b = groups[j];
+        if (!near(a, b)) continue;
+        const left = Math.min(a.left, b.left), top = Math.min(a.top, b.top);
+        groups[i] = { left, top, width: Math.max(a.left + a.width, b.left + b.width) - left, height: Math.max(a.top + a.height, b.top + b.height) - top, shapes: a.shapes + b.shapes };
+        groups.splice(j, 1);
+        merged = true;
+        j = i;
+      }
+    }
+  }
+  const overlap = (a, b) => Math.max(0, Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top));
+  const inside = (g, l) => l.left + l.width / 2 > g.left && l.left + l.width / 2 < g.left + g.width && l.top + l.height / 2 > g.top && l.top + l.height / 2 < g.top + g.height;
+  const prose = (g) => lines.filter((l) => l.width > 0.4 * g.width && inside(g, l)).length >= 3;
+  groups = groups.filter((g) => bigEnough(g) && g.shapes >= 2 && !pictures.some((p) => overlap(g, p) > 0.5 * g.width * g.height) && !prose(g));
+  // A little margin so a label just outside a shape comes along.
+  return groups.map(({ left, top, width, height }) => {
+    const l = Math.max(0, left - 0.01), t = Math.max(0, top - 0.01);
+    return { left: l, top: t, width: Math.min(1, left + width + 0.01) - l, height: Math.min(1, top + height + 0.01) - t };
+  });
+}
+
+/**
+ * Every diagram on a page, as fractions of the page: pictures big enough to
+ * be one (so a logo or an icon is left out), and drawings made of lines and
+ * shapes. Read from what the page draws.
  */
 export async function picturesOn(page, OPS) {
   const vp = page.getViewport({ scale: 1 });
@@ -78,6 +121,8 @@ export async function picturesOn(page, OPS) {
   let ctm = [1, 0, 0, 1, 0, 0];
   const stack = [];
   const out = [];
+  const paths = [];
+  const onPage = (xs, ys) => ({ left: Math.min(...xs) / vp.width, top: 1 - Math.max(...ys) / vp.height, width: (Math.max(...xs) - Math.min(...xs)) / vp.width, height: (Math.max(...ys) - Math.min(...ys)) / vp.height });
   ops.fnArray.forEach((fn, i) => {
     const a = ops.argsArray[i];
     if (fn === OPS.save) stack.push(ctm);
@@ -86,13 +131,18 @@ export async function picturesOn(page, OPS) {
     else if (fn === OPS.paintFormXObjectBegin && a?.[0]) { stack.push(ctm); ctm = mul(ctm, a[0]); }
     else if (fn === OPS.paintFormXObjectEnd) ctm = stack.pop() || ctm;
     else if (fn === OPS.paintImageXObject || fn === OPS.paintInlineImageXObject || fn === OPS.paintImageMaskXObject) {
-      const xs = [ctm[4], ctm[4] + ctm[0], ctm[4] + ctm[2], ctm[4] + ctm[0] + ctm[2]];
-      const ys = [ctm[5], ctm[5] + ctm[1], ctm[5] + ctm[3], ctm[5] + ctm[1] + ctm[3]];
-      const box = { left: Math.min(...xs) / vp.width, top: 1 - Math.max(...ys) / vp.height, width: (Math.max(...xs) - Math.min(...xs)) / vp.width, height: (Math.max(...ys) - Math.min(...ys)) / vp.height };
-      if (box.width > 0.15 && box.height > 0.08) out.push(box);
+      const box = onPage([ctm[4], ctm[4] + ctm[0], ctm[4] + ctm[2], ctm[4] + ctm[0] + ctm[2]], [ctm[5], ctm[5] + ctm[1], ctm[5] + ctm[3], ctm[5] + ctm[1] + ctm[3]]);
+      if (bigEnough(box)) out.push(box);
+    } else if (fn === OPS.constructPath && a?.[0] !== OPS.endPath && a?.[2] && Number.isFinite(a[2][0])) {
+      // A drawn line or shape (a clipping path draws nothing and is skipped).
+      const [x0, y0, x1, y1] = a[2], c = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map(([x, y]) => [ctm[0] * x + ctm[2] * y + ctm[4], ctm[1] * x + ctm[3] * y + ctm[5]]);
+      paths.push(onPage(c.map((p) => p[0]), c.map((p) => p[1])));
     }
   });
-  return out;
+  if (!paths.length) return out;
+  const text = await page.getTextContent().catch(() => ({ items: [] }));
+  const lines = text.items.filter((t) => t.str?.trim()).map((t) => ({ left: t.transform[4] / vp.width, top: 1 - (t.transform[5] + t.height) / vp.height, width: t.width / vp.width, height: t.height / vp.height }));
+  return [...out, ...drawingAreas(paths, out, lines)];
 }
 
 const canvasOf = (w, h) => Object.assign(document.createElement("canvas"), { width: Math.max(1, Math.round(w)), height: Math.max(1, Math.round(h)) });
