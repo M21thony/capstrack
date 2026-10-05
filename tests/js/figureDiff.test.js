@@ -72,3 +72,11 @@ test("on this version, a spot follows the diagram when it was rescaled to line u
   const { marks } = figureMarks([{ kind: "small", spots: [{ x: 120, y: 20, w: 40, h: 40 }], oldPage: 1, newPage: 1, oldInk: ink, newInk: ink, oldH: 400, newH: 400, fit: { s: 2, x: 0, y: 0 } }]);
   assert.ok(Math.abs(marks[1][0].rects[0].left_position - (60 / 400 - 0.004)) < 0.001);
 });
+
+test("a part removed is boxed on the earlier version only, one added on this one only, one rewritten on both", () => {
+  const ink = { left: 0, top: 0, width: 1, height: 1 };
+  const spot = { x: 10, y: 10, w: 20, h: 20 };
+  const { marks, oldMarks } = figureMarks([{ kind: "small", spots: [spot, spot, spot], tones: ["removed", "added", "rewritten"], oldPage: 1, newPage: 1, oldInk: ink, newInk: ink, oldH: 400, newH: 400, fit: null }]);
+  assert.deepEqual(oldMarks[1].map((m) => [m.tone, m.label]), [["removed", "− removed"], ["rewritten", "changed"]]);
+  assert.deepEqual(marks[1].map((m) => [m.tone, m.label]), [["added", "+ added"], ["rewritten", "changed"]]);
+});

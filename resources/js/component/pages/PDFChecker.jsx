@@ -528,7 +528,7 @@ function PDFChecker({
                         <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
                       )))}
                       {showChanges && (figureBoxes.marks[n] || []).map((m) => m.rects.map((r, idx) => (
-                        <div key={`${m.id}-${idx}`} className="rr-figdiff" style={rectStyle(r)} />
+                        <div key={`${m.id}-${idx}`} className={`rr-figdiff ${m.tone || ""}`} data-label={m.label || undefined} style={rectStyle(r)} />
                       )))}
                       <Highlights
                         remarks={pageRemarks}

@@ -308,7 +308,7 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
     }
     const d = difference(o.small, near);
     const h = Math.max(o.sharp.height, n.sharp.height);
-    figures.push({
+    const fig = {
       kind: kindOf(d.mismatch, d.spots.length),
       pct: Math.round(d.mismatch * 100),
       spots: d.spots,
@@ -323,7 +323,13 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
       fit,
       old: onWhite(o.sharp, o.sharp.width, h),
       neu: fit ? onWhite(n.sharp, o.sharp.width, h, fit.x * SHOW, fit.y * SHOW, fit.s) : onWhite(n.sharp, o.sharp.width, h),
-    });
+    };
+    if (fig.kind === "small") {
+      fig.changes = inkChanges(fig);
+      fig.tones = fig.changes.spots.map((sp) => sp.tone);
+      await pause();
+    }
+    figures.push(fig);
   }
   news.forEach((n, j) => {
     if (!partner.includes(j)) figures.push({ kind: "new", label: n.label, title: n.title, oldPage: null, newPage: n.page, neu: n.sharp, newInk: n.ink });
@@ -333,8 +339,9 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
 
 /**
  * The changed spots of every figure as boxes on the pages of both versions,
- * for the side-by-side view: { marks, oldMarks }, each by page number. A
- * redone, new or removed diagram is boxed whole.
+ * for the side-by-side view: { marks, oldMarks }, each by page number. A part
+ * removed is boxed on the earlier version only, a part added on this one
+ * only, a part rewritten on both. A redone, new or removed diagram is boxed whole.
  */
 export function figureMarks(figures) {
   const marks = {}, oldMarks = {};
@@ -343,20 +350,23 @@ export function figureMarks(figures) {
     const left = clamp(ink.left + (r.x / W) * ink.width - 0.004), top = clamp(ink.top + (r.y / h) * ink.height - 0.004);
     return { left_position: left, top_position: top, highlight_width: clamp(ink.left + ((r.x + r.w) / W) * ink.width + 0.004) - left, highlight_height: clamp(ink.top + ((r.y + r.h) / h) * ink.height + 0.004) - top };
   };
-  const whole = (ink) => [onPage(ink, 1, { x: 0, y: 0, w: W, h: 1 })];
-  const add = (into, page, id, rects) => rects.length && (into[page] ||= []).push({ id, rects });
+  const whole = (ink) => onPage(ink, 1, { x: 0, y: 0, w: W, h: 1 });
+  const add = (into, page, id, tone, label, rect) => (into[page] ||= []).push({ id, tone, label, rects: [rect] });
   figures.forEach((f, i) => {
     const id = `f${i}`;
     if (f.kind === "small") {
       // Spots are found in the earlier picture's frame; this version's was moved onto it first.
       const s = f.fit?.s ?? 1, dx = f.fit?.x ?? 0, dy = f.fit?.y ?? 0;
-      add(oldMarks, f.oldPage, id, f.spots.map((r) => onPage(f.oldInk, f.oldH, r)));
-      add(marks, f.newPage, id, f.spots.map((r) => onPage(f.newInk, f.newH, { x: (r.x - dx) / s, y: (r.y - dy) / s, w: r.w / s, h: r.h / s })));
+      f.spots.forEach((r, k) => {
+        const tone = f.tones?.[k] ?? null;
+        if (tone !== "added") add(oldMarks, f.oldPage, `${id}-${k}`, tone, tone === "removed" ? "− removed" : tone === "rewritten" ? "changed" : null, onPage(f.oldInk, f.oldH, r));
+        if (tone !== "removed") add(marks, f.newPage, `${id}-${k}`, tone, tone === "added" ? "+ added" : tone === "rewritten" ? "changed" : null, onPage(f.newInk, f.newH, { x: (r.x - dx) / s, y: (r.y - dy) / s, w: r.w / s, h: r.h / s }));
+      });
     } else if (f.kind === "big") {
-      add(oldMarks, f.oldPage, id, whole(f.oldInk));
-      add(marks, f.newPage, id, whole(f.newInk));
-    } else if (f.kind === "removed") add(oldMarks, f.oldPage, id, whole(f.oldInk));
-    else if (f.kind === "new") add(marks, f.newPage, id, whole(f.newInk));
+      add(oldMarks, f.oldPage, id, "rewritten", "redone", whole(f.oldInk));
+      add(marks, f.newPage, id, "rewritten", "redone", whole(f.newInk));
+    } else if (f.kind === "removed") add(oldMarks, f.oldPage, id, "removed", "− removed figure", whole(f.oldInk));
+    else if (f.kind === "new") add(marks, f.newPage, id, "added", "+ new figure", whole(f.newInk));
   });
   return { marks, oldMarks };
 }
@@ -384,11 +394,11 @@ const crop = (src, [x0, y0, x1, y1]) => {
 };
 
 /**
- * The pair as one picture: faded where both agree, red = only in the earlier
- * one, green = only in this one. A spot that was rewritten in place is boxed
- * and numbered instead, and given as a before/after close-up.
+ * Which ink in each changed spot is only in the earlier picture (1) or only
+ * in this one (2), and what happened at the spot. A spot rewritten in place
+ * is left unmarked: it is boxed and shown as before/after instead.
  */
-export function highlighted(f) {
+function inkChanges(f) {
   const w = f.old.width, h = f.old.height, a = rgba(f.old), b = rgba(f.neu);
   const inkA = new Uint8Array(w * h), inkB = new Uint8Array(w * h), mark = new Uint8Array(w * h);
   for (let k = 0; k < w * h; k++) {
@@ -403,8 +413,7 @@ export function highlighted(f) {
     }
     return false;
   };
-  const boxes = [], plain = [];
-  for (const r of f.spots) {
+  const spots = f.spots.map((r) => {
     const box = [Math.max(0, r.x * SHOW - 4), Math.max(0, r.y * SHOW - 4), Math.min(w, (r.x + r.w) * SHOW + 4), Math.min(h, (r.y + r.h) * SHOW + 4)];
     let removed = 0, added = 0;
     for (let y = box[1]; y < box[3]; y++) {
@@ -415,11 +424,21 @@ export function highlighted(f) {
       }
     }
     const tone = spotTone(removed, added);
-    if (tone === "rewritten") {
-      for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
-      boxes.push(box);
-    } else if (tone) plain.push({ box, tone });
-  }
+    if (tone === "rewritten") for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
+    return { box, tone };
+  });
+  return { a, b, w, h, mark, spots };
+}
+
+/**
+ * The pair as one picture: faded where both agree, red = only in the earlier
+ * one, green = only in this one. A spot that was rewritten in place is boxed
+ * and numbered instead, and given as a before/after close-up.
+ */
+export function highlighted(f) {
+  const { a, b, w, h, mark, spots } = (f.changes ??= inkChanges(f));
+  const boxes = spots.filter((s) => s.tone === "rewritten").map((s) => s.box);
+  const plain = spots.filter((s) => s.tone === "removed" || s.tone === "added");
   const c = canvasOf(w, h), ctx = c.getContext("2d"), img = ctx.createImageData(w, h), o = img.data;
   for (let k = 0; k < w * h; k++) {
     const faded = 255 - (255 - Math.min(a[k * 4] + a[k * 4 + 1] + a[k * 4 + 2], b[k * 4] + b[k * 4 + 1] + b[k * 4 + 2]) / 3) * 0.3;
