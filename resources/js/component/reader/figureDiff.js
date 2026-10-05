@@ -378,6 +378,7 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
       fig.changes = inkChanges(fig);
       fig.tones = fig.changes.spots.map((sp) => sp.tone);
       fig.texts = fig.changes.spots.map((sp) => sp.text);
+      fig.lines = fig.changes.spots.map((sp) => sp.text && { old: sp.oldLines, neu: sp.newLines });
       await pause();
     }
     figures.push(fig);
@@ -405,17 +406,23 @@ export function figureMarks(figures) {
   };
   const whole = (ink) => onPage(ink, 1, { x: 0, y: 0, w: W, h: 1 });
   const add = (into, page, id, tone, label, rect) => (into[page] ||= []).push({ id, tone, label, rects: [rect] });
-  const spot = (into, page, id, rect, bar) => (into[page] ||= []).push({ id, diff: true, ...(bar && { [bar]: true }), rects: [bar ? { ...rect, highlight_width: 0.003 } : rect] });
+  const spot = (into, page, id, rects, bar) => rects.length && (into[page] ||= []).push({ id, diff: true, ...(bar && { [bar]: true }), rects: bar ? rects.map((r) => ({ ...r, highlight_width: 0.003 })) : rects });
+  const shown = ([x0, y0, x1, y1]) => ({ x: x0 / SHOW, y: y0 / SHOW, w: (x1 - x0) / SHOW, h: (y1 - y0) / SHOW });
   figures.forEach((f, i) => {
     const id = `f${i}`;
     if (f.kind === "small") {
       // Spots are found in the earlier picture's frame; this version's was moved onto it first.
       const s = f.fit?.s ?? 1, dx = f.fit?.x ?? 0, dy = f.fit?.y ?? 0;
+      const onOld = (r) => onPage(f.oldInk, f.oldH, r);
+      const onNew = (r) => onPage(f.newInk, f.newH, { x: (r.x - dx) / s, y: (r.y - dy) / s, w: r.w / s, h: r.h / s });
       f.spots.forEach((r, k) => {
-        const tone = f.tones?.[k] ?? null;
+        const tone = f.tones?.[k] ?? null, lines = f.lines?.[k];
         if (f.texts?.[k] === false) return;
-        spot(oldMarks, f.oldPage, `${id}-${k}`, onPage(f.oldInk, f.oldH, r), tone === "added" ? "inserted" : null);
-        spot(marks, f.newPage, `${id}-${k}`, onPage(f.newInk, f.newH, { x: (r.x - dx) / s, y: (r.y - dy) / s, w: r.w / s, h: r.h / s }), tone === "removed" ? "removed" : null);
+        // The words themselves when known, else the whole spot.
+        const was = lines ? lines.old.map(shown) : tone === "added" ? [] : [r];
+        const now = lines ? lines.neu.map(shown) : tone === "removed" ? [] : [r];
+        spot(oldMarks, f.oldPage, `${id}-${k}`, (was.length ? was : now).map(onOld), was.length ? null : "inserted");
+        spot(marks, f.newPage, `${id}-${k}`, (now.length ? now : was).map(onNew), now.length ? null : "removed");
       });
     } else if (f.kind === "big") {
       add(oldMarks, f.oldPage, id, "rewritten", "redone", whole(f.oldInk));
@@ -453,13 +460,20 @@ export function oldOverlayRect(f, pictureHeight) {
  * making up most of it. A shape or an arrow is one or two big strokes, and a
  * new box with its label is mostly box.
  */
-export function textLike(changed, w, [x0, y0, x1, y1], letter = 30) {
-  const seen = new Uint8Array(changed.length);
-  let marks = 0, small = 0, total = 0;
+export function textLike(changed, w, box, letter = 30) {
+  const parts = inkParts(changed, w, box, (v) => v !== 0);
+  const total = parts.reduce((t, p) => t + p.n, 0);
+  const small = parts.filter((p) => isLetter(p, letter)).reduce((t, p) => t + p.n, 0);
+  return parts.length >= 3 && small >= 0.7 * total;
+}
+
+/** The joined-up marks (3 pixels or more) in a box whose value passes `is`: { n, lx, hx, ly, hy }. */
+function inkParts(changed, w, [x0, y0, x1, y1], is) {
+  const seen = new Uint8Array(changed.length), parts = [];
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       const k0 = y * w + x;
-      if (!changed[k0] || seen[k0]) continue;
+      if (!is(changed[k0]) || seen[k0]) continue;
       const stack = [k0];
       let n = 0, lx = x, hx = x, ly = y, hy = y;
       seen[k0] = 1;
@@ -468,16 +482,32 @@ export function textLike(changed, w, [x0, y0, x1, y1], letter = 30) {
         n++; lx = Math.min(lx, kx); hx = Math.max(hx, kx); ly = Math.min(ly, ky); hy = Math.max(hy, ky);
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
           const xx = kx + dx, yy = ky + dy, m = yy * w + xx;
-          if (xx >= x0 && yy >= y0 && xx < x1 && yy < y1 && changed[m] && !seen[m]) { seen[m] = 1; stack.push(m); }
+          if (xx >= x0 && yy >= y0 && xx < x1 && yy < y1 && is(changed[m]) && !seen[m]) { seen[m] = 1; stack.push(m); }
         }
       }
-      if (n < 3) continue;
-      total += n;
-      marks++;
-      if (hy - ly < letter && hx - lx < letter * 1.5) small += n;
+      if (n >= 3) parts.push({ n, lx, hx, ly, hy });
     }
   }
-  return marks >= 3 && small >= 0.7 * total;
+  return parts;
+}
+
+const isLetter = (p, letter) => p.hy - p.ly < letter && p.hx - p.lx < letter * 1.5;
+
+/**
+ * The lines of writing made of the changed ink of one kind (`value`) in a
+ * box, as tight [x0, y0, x1, y1] boxes: letters side by side on the same
+ * line are one box, so the highlight sits on the words and not the space
+ * around them.
+ */
+export function textLines(changed, w, box, value, letter = 30) {
+  const lines = [];
+  for (const p of inkParts(changed, w, box, (v) => v === value).filter((q) => isLetter(q, letter)).sort((a, b) => a.lx - b.lx)) {
+    const line = lines.find((l) => Math.min(l[3], p.hy + 1) - Math.max(l[1], p.ly) > 0 && p.lx - l[2] < Math.max(8, l[3] - l[1]) * 1.5);
+    if (line) {
+      line[1] = Math.min(line[1], p.ly); line[2] = Math.max(line[2], p.hx + 1); line[3] = Math.max(line[3], p.hy + 1);
+    } else lines.push([p.lx, p.ly, p.hx + 1, p.hy + 1]);
+  }
+  return lines;
 }
 
 /**
@@ -533,11 +563,13 @@ function inkChanges(f) {
       }
     }
     const tone = spotTone(removed, added);
-    const text = tone === "rewritten" || textLike(mark, w, box);
-    if (tone === "rewritten") for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
-    return { box, tone, text };
+    const text = textLike(mark, w, box);
+    return { box, tone, text, ...(text && { oldLines: textLines(mark, w, box, 1), newLines: textLines(mark, w, box, 2) }) };
   });
-  return { a, b, w, h, mark, spots, inkA, inkB };
+  // The pop-up draws a rewritten spot as old above new, so its marks are kept only for colouring the pages.
+  const both = mark.slice();
+  for (const { box, tone } of spots) if (tone === "rewritten") for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
+  return { a, b, w, h, mark, both, spots, inkA, inkB };
 }
 
 /**
@@ -625,12 +657,12 @@ export function highlighted(f) {
  * filled in. Labels are left to the word-style highlight.
  */
 export function tints(f) {
-  const { w, h, mark, spots, inkA, inkB } = (f.changes ??= inkChanges(f));
+  const { w, h, both: mark, spots, inkA, inkB } = (f.changes ??= inkChanges(f));
   const layer = (tone, value, ink, colour, fill, glow) => {
     const img = new ImageData(w, h);
     let any = false;
     for (const s of spots) {
-      if (s.text || s.tone !== tone) continue;
+      if (s.text || (s.tone !== tone && s.tone !== "rewritten")) continue;
       const [x0, y0, x1, y1] = s.box;
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
@@ -643,7 +675,7 @@ export function tints(f) {
           }
         }
       }
-      for (const k of enclosed(ink, w, s.box)) if (!img.data[k * 4 + 3]) img.data.set(fill, k * 4);
+      if (s.tone === tone) for (const k of enclosed(ink, w, s.box)) if (!img.data[k * 4 + 3]) img.data.set(fill, k * 4);
     }
     if (!any) return null;
     const l = canvasOf(w, h), c = canvasOf(w, h), ctx = c.getContext("2d");

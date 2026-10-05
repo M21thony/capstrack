@@ -2,7 +2,7 @@
 // a pair amounts to. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OVERHAUL, drawingAreas, enclosed, figureMarks, hungarian, kindOf, oldOverlayRect, overlapping, overlayRect, pairUp, spotTone, textLike } from "../../resources/js/component/reader/figureDiff.js";
+import { OVERHAUL, drawingAreas, enclosed, figureMarks, hungarian, kindOf, oldOverlayRect, overlapping, overlayRect, pairUp, spotTone, textLike, textLines } from "../../resources/js/component/reader/figureDiff.js";
 
 test("hungarian finds the cheapest pairing, not the greedy one", () => {
   // Greedy takes 0->0 (1), leaving 1->1 (100): 101. Best is 0->1, 1->0: 4.
@@ -144,6 +144,27 @@ test("a changed shape is coloured on the diagram instead of highlighted like a w
   const { marks, oldMarks } = figureMarks([{ kind: "small", spots: [spot, spot], tones: ["added", "added"], texts: [false, true], oldPage: 1, newPage: 1, oldInk: ink, newInk: ink, oldH: 400, newH: 400, fit: null }]);
   assert.equal(marks[1].length, 1); // only the label
   assert.equal(oldMarks[1].length, 1);
+});
+
+test("a changed label is boxed tightly, one box per line of words", () => {
+  const w = 200, ink = new Uint8Array(w * w);
+  const line = (x0, y0, x1, y1, v) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) ink[y * w + x] = v; };
+  for (let i = 0; i < 4; i++) line(20 + i * 10, 30, 26 + i * 10, 40, 2); // a word
+  for (let i = 0; i < 3; i++) line(20 + i * 10, 50, 26 + i * 10, 60, 2); // the next line
+  line(150, 10, 151, 190, 1); // a removed line, not writing
+  assert.deepEqual(textLines(ink, w, [0, 0, w, w], 2), [[20, 30, 57, 41], [20, 50, 47, 61]]);
+  assert.deepEqual(textLines(ink, w, [0, 0, w, w], 1), []);
+});
+
+test("a label's highlight sits on its words, and a side without words gets the thin bar", () => {
+  const ink = { left: 0, top: 0, width: 1, height: 1 };
+  const spot = { x: 0, y: 0, w: 200, h: 200 };
+  const words = [40, 60, 120, 80]; // in the sharper picture: x 20..60, y 30..40 of the spot
+  const { marks, oldMarks } = figureMarks([{ kind: "small", spots: [spot], tones: ["rewritten"], texts: [true], lines: [{ old: [], neu: [words] }], oldPage: 1, newPage: 1, oldInk: ink, newInk: ink, oldH: 400, newH: 400, fit: null }]);
+  const [r] = marks[1][0].rects;
+  assert.ok(Math.abs(r.left_position - (20 / 400 - 0.004)) < 1e-9 && Math.abs(r.highlight_width - (40 / 400 + 0.008)) < 1e-9);
+  assert.equal(oldMarks[1][0].inserted, true);
+  assert.equal(oldMarks[1][0].rects[0].highlight_width, 0.003);
 });
 
 test("the earlier side's colouring sits over the earlier diagram", () => {
