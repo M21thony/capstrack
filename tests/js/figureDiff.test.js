@@ -2,7 +2,7 @@
 // a pair amounts to. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OVERHAUL, hungarian, kindOf, pairUp } from "../../resources/js/component/reader/figureDiff.js";
+import { OVERHAUL, hungarian, kindOf, overlapping, pairUp } from "../../resources/js/component/reader/figureDiff.js";
 
 test("hungarian finds the cheapest pairing, not the greedy one", () => {
   // Greedy takes 0->0 (1), leaving 1->1 (100): 101. Best is 0->1, 1->0: 4.
@@ -28,4 +28,12 @@ test("a pair is redone past the cut-off, edited when spots differ, else the same
   assert.equal(kindOf(OVERHAUL + 0.01, 3), "big");
   assert.equal(kindOf(0.08, 2), "small");
   assert.equal(kindOf(0.01, 0), "same");
+});
+
+test("a spot rewritten in place is told apart from a plain removal or addition", () => {
+  assert.equal(overlapping(400, 380), true); // a retyped title
+  assert.equal(overlapping(500, 0), false); // handwriting taken out
+  assert.equal(overlapping(0, 300), false); // a new line
+  assert.equal(overlapping(800, 60), false); // mostly removed, a sliver added
+  assert.equal(overlapping(20, 20), false); // too small to matter
 });

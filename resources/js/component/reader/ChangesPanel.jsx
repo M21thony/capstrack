@@ -256,8 +256,14 @@ function FigureView({ figure, base, onClose }) {
           {f.kind === "big" && <p className="rr-help rr-help-tight">Too different to highlight, shown side by side.</p>}
           {f.kind === "small" && mode === "highlight" ? (
             <>
-              <div className="rr-zoom-view"><Picture canvas={(f.hl ??= highlighted(f))} /></div>
-              <p className="rr-muted rr-figkey"><span className="del">Red</span> = removed · <span className="add">Green</span> = added · faded = the same</p>
+              <div className="rr-zoom-view"><Picture canvas={(f.hl ??= highlighted(f)).picture} /></div>
+              <p className="rr-muted rr-figkey"><span className="del">Red</span> = removed · <span className="add">Green</span> = added · faded = the same{f.hl.closeUps.length > 0 && <> · <span className="box">Boxed</span> = rewritten, shown below</>}</p>
+              {f.hl.closeUps.map((u, i) => (
+                <div key={i} className="rr-compare">
+                  <div><span className="rr-muted">{i + 1} · {was}</span><Picture canvas={u.old} /></div>
+                  <div><span className="rr-muted">{i + 1} · This version</span><Picture canvas={u.neu} /></div>
+                </div>
+              ))}
             </>
           ) : f.kind === "small" || f.kind === "big" ? (
             <div className="rr-compare">

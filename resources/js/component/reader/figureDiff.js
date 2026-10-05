@@ -322,18 +322,32 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
   return figures.sort((a, b) => (a.newPage ?? Infinity) - (b.newPage ?? Infinity) || (a.oldPage ?? 0) - (b.oldPage ?? 0));
 }
 
-/** The pair as one picture: faded where both agree, red = only in the earlier one, green = only in this one. */
+/**
+ * Whether a spot has about as much removed as added ink: something rewritten
+ * or moved in place, where red over green would be unreadable.
+ */
+export function overlapping(removed, added) {
+  const less = Math.min(removed, added);
+  return less >= 30 && less >= 0.25 * Math.max(removed, added);
+}
+
+const crop = (src, [x0, y0, x1, y1]) => {
+  const c = canvasOf(x1 - x0, y1 - y0);
+  c.getContext("2d").drawImage(src, x0, y0, c.width, c.height, 0, 0, c.width, c.height);
+  return c;
+};
+
+/**
+ * The pair as one picture: faded where both agree, red = only in the earlier
+ * one, green = only in this one. A spot that was rewritten in place is boxed
+ * and numbered instead, and given as a before/after close-up.
+ */
 export function highlighted(f) {
   const w = f.old.width, h = f.old.height, a = rgba(f.old), b = rgba(f.neu);
-  const inkA = new Uint8Array(w * h), inkB = new Uint8Array(w * h), inSpot = new Uint8Array(w * h);
+  const inkA = new Uint8Array(w * h), inkB = new Uint8Array(w * h), mark = new Uint8Array(w * h);
   for (let k = 0; k < w * h; k++) {
     inkA[k] = (a[k * 4] + a[k * 4 + 1] + a[k * 4 + 2]) / 3 < 170;
     inkB[k] = (b[k * 4] + b[k * 4 + 1] + b[k * 4 + 2]) / 3 < 170;
-  }
-  for (const r of f.spots) {
-    for (let y = Math.max(0, r.y * SHOW - 4); y < Math.min(h, (r.y + r.h) * SHOW + 4); y++) {
-      for (let x = Math.max(0, r.x * SHOW - 4); x < Math.min(w, (r.x + r.w) * SHOW + 4); x++) inSpot[y * w + x] = 1;
-    }
   }
   // A line one or two pixels off in the other picture is the same line.
   const near = (ink, x, y) => {
@@ -343,18 +357,37 @@ export function highlighted(f) {
     }
     return false;
   };
-  const c = canvasOf(w, h), img = c.getContext("2d").createImageData(w, h), o = img.data;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const k = y * w + x, ga = (a[k * 4] + a[k * 4 + 1] + a[k * 4 + 2]) / 3, gb = (b[k * 4] + b[k * 4 + 1] + b[k * 4 + 2]) / 3, faded = 255 - (255 - Math.min(ga, gb)) * 0.3;
-      let col = [faded, faded, faded];
-      if (inSpot[k] && inkA[k] && !near(inkB, x, y)) col = [220, 38, 38];
-      else if (inSpot[k] && inkB[k] && !near(inkA, x, y)) col = [22, 163, 74];
-      o.set([col[0], col[1], col[2], 255], k * 4);
+  const boxes = [];
+  for (const r of f.spots) {
+    const box = [Math.max(0, r.x * SHOW - 4), Math.max(0, r.y * SHOW - 4), Math.min(w, (r.x + r.w) * SHOW + 4), Math.min(h, (r.y + r.h) * SHOW + 4)];
+    let removed = 0, added = 0;
+    for (let y = box[1]; y < box[3]; y++) {
+      for (let x = box[0]; x < box[2]; x++) {
+        const k = y * w + x;
+        if (inkA[k] && !near(inkB, x, y)) { mark[k] = 1; removed++; }
+        else if (inkB[k] && !near(inkA, x, y)) { mark[k] = 2; added++; }
+      }
+    }
+    if (overlapping(removed, added)) {
+      for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
+      boxes.push(box);
     }
   }
-  c.getContext("2d").putImageData(img, 0, 0);
-  return c;
+  const c = canvasOf(w, h), ctx = c.getContext("2d"), img = ctx.createImageData(w, h), o = img.data;
+  for (let k = 0; k < w * h; k++) {
+    const faded = 255 - (255 - Math.min(a[k * 4] + a[k * 4 + 1] + a[k * 4 + 2], b[k * 4] + b[k * 4 + 1] + b[k * 4 + 2]) / 3) * 0.3;
+    o.set(mark[k] === 1 ? [220, 38, 38, 255] : mark[k] === 2 ? [22, 163, 74, 255] : [faded, faded, faded, 255], k * 4);
+  }
+  ctx.putImageData(img, 0, 0);
+  ctx.strokeStyle = ctx.fillStyle = "#d97706";
+  ctx.lineWidth = 2;
+  ctx.font = "bold 16px sans-serif";
+  boxes.forEach(([x0, y0, x1, y1], i) => {
+    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.fillText(String(i + 1), Math.min(x1 + 4, w - 12), y0 + 14);
+  });
+  const pad = (box) => [Math.max(0, box[0] - 12), Math.max(0, box[1] - 12), Math.min(w, box[2] + 12), Math.min(h, box[3] + 12)];
+  return { picture: c, closeUps: boxes.map((box) => ({ old: crop(f.old, pad(box)), neu: crop(f.neu, pad(box)) })) };
 }
 
 /** A picture with the changed spots outlined. */
