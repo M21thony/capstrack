@@ -846,6 +846,9 @@ class PreProposalControllerTest extends TestCase
         $match = $this->get(route('student.duplication.similar', [$check->id, 1]));
         $match->assertOk();
         $match->assertSee('An IoT-based early warning study.', false);
+
+        // A rank that is not a number is a page that does not exist, not a crash.
+        $this->get('/pre-proposal/duplication-checks/'.$check->id.'/matches/abc')->assertNotFound();
     }
 
     // The locked Submit button has to say what unlocks it, not just sit there

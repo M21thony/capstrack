@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Meet the Team — CapsTrack</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   @font-face {
     font-family: 'Geist Pixel';
     font-style: normal;
@@ -831,7 +831,7 @@
   <span id="copy-toast-title">Copied</span>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   // The envelope copies the address rather than opening a mail client: this is
   // a showcase page people land on from the sign-in screen, so a mail window
   // for one of five strangers would be noise.

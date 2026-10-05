@@ -8,6 +8,7 @@ use App\Http\Middleware\EnsureExpertIsCapsa;
 use App\Http\Middleware\EnsureExpertIsStaff;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\PreventBackHistory;
+use App\Http\Middleware\PreventRequestForgery;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackExpertActivity;
 use App\Http\Middleware\TrackStudentActivity;
@@ -16,6 +17,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery as LaravelPreventRequestForgery;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 
@@ -49,7 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
 
         // Ten idle minutes and anyone signed in, on any portal, is signed out.
-        $middleware->web(append: [EndIdleSession::class]);
+        $middleware->web(append: [EndIdleSession::class], replace: [LaravelPreventRequestForgery::class => PreventRequestForgery::class]);
         $middleware->api(append: [EndIdleSession::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

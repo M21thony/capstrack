@@ -592,7 +592,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   let activeRole = 'all';
   let activeSection = '';
   let activeSearch = '';

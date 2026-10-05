@@ -8,7 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite('resources/student-ui/styles.css')
 <x-dashboard.styles />
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* Each panelist's copy of the rubric, side by side: one column per panelist,
    so the team sees where the three agreed and where they did not. */
 .ds-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px;overflow-x:auto}
@@ -166,14 +166,14 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 function dsShow(id, tab) {
   document.querySelectorAll('.ds-tab').forEach(function (t) { t.setAttribute('aria-selected', t === tab); });
   document.querySelectorAll('.ds-panel').forEach(function (p) { p.hidden = p.id !== 'ds-' + id; });
 }
 </script>
 @include('partials.escape-closes-modals')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 {{-- The hamburger button and the overlay both called these and nothing
      defined them, so the menu would not open on a phone. Same two lines as
      every other student page. --}}

@@ -1,4 +1,4 @@
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* This partial is included on every student page via the sidebar, and
      consultation, dashboard and team all use .modal-overlay without styling
      it themselves - without a base rule here their overlays render as plain
@@ -130,7 +130,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var overlay = document.getElementById('jrp-overlay');
   if (!overlay) return;

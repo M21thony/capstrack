@@ -41,7 +41,7 @@
   </div>
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-    <style>
+    <style nonce="{{ Vite::cspNonce() }}">
       .dash-lead{font-size:13.5px;color:var(--text2);margin:0 0 12px}
       .dash-lead b{color:var(--text)}
       .dash-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
@@ -237,7 +237,7 @@
 
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');
 function toggleSidebar() { sidebarEl.classList.contains('mobile-open') ? closeSidebar() : openSidebar(); }

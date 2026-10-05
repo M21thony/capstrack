@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Vite;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -22,18 +23,21 @@ class SecurityHeaders
      * picker on Resources, Drive previews in a frame. A script from anywhere
      * else is refused.
      *
-     * The pages' own inline scripts and onclick handlers stay allowed
-     * ('unsafe-inline'): there are hundreds of them, and a policy without it
-     * would stop every one of those buttons until each was rewritten.
+     * The pages' own <script> and <style> blocks carry this response's nonce,
+     * so a block someone manages to slip into a page does not run. Onclick
+     * and style="" attributes stay allowed (script-src-attr / style-src-attr):
+     * there are hundreds of them, and an attribute cannot load anything.
      *
      * @var array<string, list<string>>
      */
     private const POLICY = [
         'default-src' => ["'self'"],
-        'script-src' => ["'self'", "'unsafe-inline'", 'https://www.google.com', 'https://www.gstatic.com', 'https://apis.google.com', 'https://accounts.google.com'],
-        'style-src' => ["'self'", "'unsafe-inline'", 'https://accounts.google.com', 'https://fonts.googleapis.com'],
+        'script-src' => ["'self'", 'https://www.google.com', 'https://www.gstatic.com', 'https://apis.google.com', 'https://accounts.google.com'],
+        'script-src-attr' => ["'unsafe-inline'"],
+        'style-src' => ["'self'", 'https://accounts.google.com', 'https://fonts.googleapis.com'],
+        'style-src-attr' => ["'unsafe-inline'"],
         'font-src' => ["'self'", 'data:', 'https://fonts.gstatic.com'],
-        'img-src' => ["'self'", 'data:', 'blob:', 'https:'],
+        'img-src' => ["'self'", 'data:', 'blob:', 'https://lh3.googleusercontent.com', 'https://lh4.googleusercontent.com', 'https://lh5.googleusercontent.com', 'https://lh6.googleusercontent.com'],
         'media-src' => ["'self'", 'data:', 'blob:'],
         'connect-src' => ["'self'", 'https://accounts.google.com', 'https://www.googleapis.com', 'https://content.googleapis.com', 'https://www.google.com'],
         'frame-src' => ["'self'", 'blob:', 'https://www.google.com', 'https://recaptcha.google.com', 'https://accounts.google.com', 'https://docs.google.com', 'https://drive.google.com', 'https://content.googleapis.com'],
@@ -46,7 +50,16 @@ class SecurityHeaders
 
     public function handle(Request $request, Closure $next): Response
     {
+        Vite::useCspNonce();
+
         $response = $next($request);
+
+        // A redirect needs only its Location header. The "Redirecting to..."
+        // page Laravel puts in the body is never shown, and a scan reads a
+        // redirect carrying a page as one that might be leaking it.
+        if ($response instanceof RedirectResponse) {
+            $response->setContent('');
+        }
 
         header_remove('X-Powered-By');
         $response->headers->remove('X-Powered-By');
@@ -78,7 +91,10 @@ class SecurityHeaders
             return "frame-ancestors 'self'";
         }
 
+        $nonce = "'nonce-".Vite::cspNonce()."'";
+
         return collect(self::POLICY)
+            ->map(fn (array $sources, string $directive): array => in_array($directive, ['script-src', 'style-src'], true) ? [...$sources, $nonce] : $sources)
             ->map(fn (array $sources, string $directive): string => $directive.' '.implode(' ', $sources))
             ->implode('; ');
     }

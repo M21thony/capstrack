@@ -53,7 +53,7 @@
 
 @push('scripts')
 @include('partials.app-dialog')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   (() => {
     const ways = @json($ways);
     const form = document.getElementById('ml-requirement');

@@ -104,7 +104,7 @@
   @endif
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   // Finish, reopen or show again, then the list again: the milestone moves tabs.
   document.querySelectorAll('.ml-page [data-patch]').forEach(button => {
     button.addEventListener('click', async () => {

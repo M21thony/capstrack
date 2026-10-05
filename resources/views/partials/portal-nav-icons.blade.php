@@ -11,7 +11,7 @@
   Included by each portal's sidebar partial, like partials/mobile-tabbar.
 --}}
 @once
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .sidebar .nav-item{gap:11px;padding-top:6px;padding-bottom:6px}
   .sidebar .nav-item > svg{
     box-sizing:border-box;width:30px;height:30px;padding:6.5px;flex-shrink:0;
@@ -45,7 +45,7 @@
     @media (max-width:768px){.main{height:var(--app-height,100vh)!important}}
   }
 </style>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   (function () {
     if (window.CSS && CSS.supports && CSS.supports('height', '100dvh')) return;
     var root = document.documentElement;

@@ -42,7 +42,7 @@
 {{-- Before the markup, not after it: a style further down arrives after
      the browser may already have painted the panel and its popups,
      which then flashed full-size on a refresh. --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* The panel hangs off the bell. Without a positioned wrapper of its own it
    measures against <body> and lands most of a page below the button. */
 .notif-wrap{position:relative;display:inline-flex}
@@ -171,7 +171,7 @@
 @include('partials.action-toast')
 
 <script src="/js/capstrack-push.js" defer></script>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var wrap = document.getElementById('notif-wrap');
   var panel = document.getElementById('notif-dropdown');

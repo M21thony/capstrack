@@ -22,7 +22,7 @@
      data-expired="{{ route('session.expired') }}"
      data-csrf="{{ csrf_token() }}"></div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var box = document.getElementById('idle-logout');
   if (!box) return;

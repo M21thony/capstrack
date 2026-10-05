@@ -365,7 +365,7 @@
 </div>
 @include('capsa.partials.skeleton-toggle')
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // -- SERVER DATA -------------------------------------------------------------
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 let GDRIVE_CONNECTED = @json($driveConnected ?? false);
@@ -743,6 +743,8 @@ function loadPicker(){
 
   const gsi = document.createElement('script');
   gsi.src = 'https://accounts.google.com/gsi/client';
+  // Google's script passes this on to the stylesheet it adds.
+  gsi.nonce = document.querySelector('script[nonce]')?.nonce;
   document.head.appendChild(gsi);
 }
 

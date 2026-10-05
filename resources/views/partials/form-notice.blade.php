@@ -25,7 +25,7 @@
   The host is an element or its id. Title and body are set as text, never as
   markup: they carry folder names and server messages, which are data.
 --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .fn-notice{border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:9px}
   .fn-notice + .fn-notice{margin-top:8px}
   .fn-notice svg{width:16px;height:16px;flex-shrink:0;margin-top:1px;fill:none;stroke-width:2.2;stroke-linecap:round}
@@ -47,7 +47,7 @@
   .fn-success .fn-action{color:#15803d;border:1px solid #c3e0cd}
 </style>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var GLYPH = {
     error: '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="13"></line><line x1="12" y1="16.5" x2="12" y2="16.5"></line>',

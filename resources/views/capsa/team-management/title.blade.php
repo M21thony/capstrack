@@ -162,7 +162,7 @@
 
 @if ($title['status'] === 'pending')
   <dialog id="rec-dlg" aria-labelledby="rec-h">
-    <form method="dialog" id="rec-form">
+    <form method="post" id="rec-form">@csrf
       <div class="mh"><h4 id="rec-h">Recommend this title?</h4><div class="s">{{ $title['title'] }}</div></div>
       <div class="mb">
         <p class="rj-l" style="margin:0 0 14px">One recommended title becomes theirs. Recommend a second as well and the team picks between them.</p>
@@ -179,7 +179,7 @@
   </dialog>
 
   <dialog id="rej-dlg" aria-labelledby="rej-h">
-    <form method="dialog" id="rej-form">
+    <form method="post" id="rej-form">@csrf
       <div class="mh"><h4 id="rej-h">Reject this title</h4><div class="s">Rejecting: {{ $title['title'] }}</div></div>
       <div class="mb">
         <label class="rj-l" for="rej-reason">Your reason is sent to the team with the rejection.</label>
@@ -197,7 +197,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   (function () {
     /* One dialog at a time, and a click on the backdrop closes the open one. */
     const dialogs = [...document.querySelectorAll('dialog')];

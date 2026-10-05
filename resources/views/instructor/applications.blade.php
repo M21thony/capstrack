@@ -123,7 +123,7 @@
 
 @include('instructor.partials.expert-profile')
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 /* Mobile sidebar toggle */
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');

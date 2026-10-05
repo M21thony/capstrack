@@ -8,7 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite(['resources/student-ui/styles.css', 'resources/css/financial.css', 'resources/js/financial/student.js'])
 <x-dashboard.styles />
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* The developers' credit (placed by partials/mobile-tabbar) at the size the
      student dashboard gives it. The receipt list's own 1.45 line height and
      type made it read a size larger here than anywhere else in the portal. */
@@ -103,7 +103,7 @@
   <div class="fx-dlg-foot"><button class="fx-btn" data-close>Cancel</button><button class="fx-btn fx-btn-primary" id="u-send"><svg><use href="#fx-i-upload"/></svg><span id="u-send-t">Give to team leader</span></button></div>
 </dialog>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 function toggleSidebar() {
   document.body.classList.toggle('sidebar-open');
   document.body.style.overflow = document.body.classList.contains('sidebar-open') ? 'hidden' : '';

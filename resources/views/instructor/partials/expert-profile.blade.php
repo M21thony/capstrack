@@ -1,7 +1,7 @@
 ﻿@php $expert = auth('expert')->user(); @endphp
 
 @once
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* Scoped copy of the "EXPERT PROFILE SIDE PANEL" rules from
      public/css/expert.css. Instructor pages already load that whole
      stylesheet, but this partial is also included from the merged
@@ -316,7 +316,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const EP_OVERLAY = document.getElementById('ep-overlay');
 const EP_TRIGGER = document.getElementById('ep-trigger');
 const EP_INPUT   = document.getElementById('ep-tag-input');

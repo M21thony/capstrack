@@ -8,7 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* ── Abstract view: laid out like the abstract page of a manuscript ── */
 #abstract-modal{padding:24px;overflow-y:auto;align-items:flex-start;z-index:1000;background:rgba(15,17,23,.55);backdrop-filter:blur(2px)}
 .abs-sheet{position:relative;width:min(760px,100%);margin:auto;background:#fff;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.28);border-top:5px solid var(--accent);overflow:hidden}
@@ -292,7 +292,7 @@
     <button type="button" class="btn btn-primary" id="tag-dialog-save">Save tags</button>
   </div>
 </dialog>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .tag-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
   .tag-pill{position:relative;cursor:pointer}
   .tag-pill input{position:absolute;opacity:0;width:1px;height:1px}
@@ -330,7 +330,7 @@
   </article>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 const ABSTRACTS = @json($abstractData);
 

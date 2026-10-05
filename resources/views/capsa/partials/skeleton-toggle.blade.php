@@ -1,4 +1,4 @@
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var sk = document.getElementById('skeleton-content');
   var rc = document.getElementById('real-content');

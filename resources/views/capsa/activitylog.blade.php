@@ -119,7 +119,7 @@
   </div>
 </div>
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.2s}
 .modal-overlay.open{opacity:1;pointer-events:auto}
 .modal-box{background:#fff;border:1px solid var(--border);border-radius:16px;padding:32px;max-width:480px;width:90%}
@@ -137,7 +137,7 @@
 .al-tone-gray{--al-bg:var(--bg3);--al-fg:var(--text3)}
 </style>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const logData = {!! $logDataJson !!};
 
 function openLogModal(id) {

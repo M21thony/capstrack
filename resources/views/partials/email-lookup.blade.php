@@ -12,7 +12,7 @@
   Usage:  @include('partials.email-lookup', ['input' => 'capsaEmail', 'kind' => 'expert'])
   and optionally 'nameInput' => 'capsaName' to have the name filled in too.
 --}}
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   const input = document.getElementById(@json($input));
   if (!input) return;

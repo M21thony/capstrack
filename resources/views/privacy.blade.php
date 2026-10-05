@@ -3,7 +3,7 @@
 @section('title', 'Privacy Policy - CapsTRACK')
 
 @section('content')
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   body { font-family: 'DM Sans','DM Sans Fallback', sans-serif; background: #0f1115; color: #f0f2f7; margin: 0; padding: 40px 16px; }
   .privacy { max-width: 720px; margin: 0 auto; line-height: 1.6; }
   .privacy h1 { font-size: 28px; margin-bottom: 4px; }

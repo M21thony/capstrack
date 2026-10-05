@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 @include('capsa.reports._styles')
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 .rp-period{padding:18px 20px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:end}
 .rp-period-foot{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;color:var(--text3)}
 .rp-list{overflow:hidden}
@@ -153,7 +153,7 @@
 </div>
 
 @include('capsa.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var form = document.getElementById('period');
   form.querySelectorAll('select').forEach(function (select) {

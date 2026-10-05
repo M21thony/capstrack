@@ -77,7 +77,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   (function () {
     const list = document.querySelector('.ppr'), box = document.getElementById('ppq');
     let filter = 'all';

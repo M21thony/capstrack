@@ -62,7 +62,7 @@ class StaffPagesOpenFinishedTest extends TestCase
     {
         $html = $this->actingAs($this->capsa(), 'expert')->get(route('capsa.financial'))->assertOk()->getContent();
 
-        $this->assertMatchesRegularExpression('#<script type="module" src="[^"]*resources/js/financial/capsa\.js" blocking="render">#', $html);
+        $this->assertMatchesRegularExpression('#<script type="module" src="[^"]*resources/js/financial/capsa\.js"[^>]*blocking="render"[^>]*>#', $html);
     }
 
     public function test_other_scripts_do_not_hold_the_page(): void
@@ -134,7 +134,7 @@ class StaffPagesOpenFinishedTest extends TestCase
 
         // The browser's state is written into the box by a script right after
         // it, not once the page has loaded.
-        $this->assertMatchesRegularExpression('#<div class="notif-prefs-perm" id="notif-prefs-perm">.*?</div>\s*<script>\s*//[^\n]*\n.*?getElementById\(\'notif-prefs-perm-text\'\)#s', $html);
+        $this->assertMatchesRegularExpression('#<div class="notif-prefs-perm" id="notif-prefs-perm">.*?</div>\s*<script[^>]*>\s*//[^\n]*\n.*?getElementById\(\'notif-prefs-perm-text\'\)#s', $html);
         $this->assertStringNotContainsString('id="notif-prefs-perm" style="display:none"', $html);
     }
 

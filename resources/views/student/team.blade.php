@@ -9,7 +9,7 @@
 @vite('resources/student-ui/Styles/team.css')
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 @keyframes spin { to { transform: rotate(360deg); } }
   .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; background-color: var(--bg2); color: var(--text3); border: none; border-radius: 50%; cursor: pointer; transition: all 0.15s ease-in-out; outline: none; }
   .pm-close-btn:hover { background-color: var(--border); color: var(--text); transform: scale(1.05); }
@@ -1619,7 +1619,7 @@
   </div>
 </div>
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .rolepick{
     display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;
     padding:13px 14px;border-radius:11px;cursor:pointer;
@@ -1644,7 +1644,7 @@
   .rolepick-shared strong{color:var(--text2);font-weight:700}
 </style>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 function pickRole(roleId, btn) {
   // Every button off at once - a double click was two people's worth of
   // seat, and the answer to the second one is an error message.
@@ -1703,7 +1703,7 @@ function pickRole(roleId, btn) {
     <button id="expertRemovedOkBtn" type="button" style="width:100%;padding:11px 16px;border-radius:10px;border:none;background:#1e2128;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 0.15s;margin-top:12px;">OK</button>
   </div>
 </div>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   @keyframes expertPopIn { from { transform:scale(0.92) translateY(8px); opacity:0; } to { transform:scale(1) translateY(0); opacity:1; } }
   #expertRemovedContent::-webkit-scrollbar { width:4px; }
   #expertRemovedContent::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:4px; }
@@ -1718,7 +1718,7 @@ function pickRole(roleId, btn) {
 </style>
 @endif
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .msg-toast{position:fixed;bottom:30px;right:30px;background:var(--navy-dark);color:#fff;padding:14px 22px;border-radius:12px;font-size:13px;font-weight:500;z-index:99999;display:none;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,0.3);animation:slideUp 0.3s ease;max-width:380px}
   .msg-toast.error{border-left:4px solid var(--red)}
   .msg-toast.show{display:flex}
@@ -1740,7 +1740,7 @@ function pickRole(roleId, btn) {
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
 const currentStudentId = {{ auth()->user()->student_id }};
 const myRecruitmentGoal = '{{ $myRecruitmentGoal ?? '' }}';

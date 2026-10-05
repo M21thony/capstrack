@@ -58,7 +58,7 @@
 
 @push('scripts')
 @include('partials.app-dialog')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   (() => {
     const form = document.getElementById('ml-setup');
     const button = form.querySelector('[type=submit]');

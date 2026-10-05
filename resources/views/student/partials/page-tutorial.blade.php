@@ -22,7 +22,7 @@
             <button type="button" class="page-tutorial-dismiss" data-dismiss-tutorial="{{ $page }}" aria-label="Dismiss tutorial">Got it</button>
         </div>
     </div>
-    <script>
+    <script nonce="{{ Vite::cspNonce() }}">
     (function () {
         var key = 'capstrack_tutorial_{{ $page }}';
         var el = document.getElementById('tutorial-{{ $page }}');

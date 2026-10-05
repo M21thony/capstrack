@@ -16,7 +16,7 @@
   PDF, and a PDF or Excel download. Download Excel asks which columns first and
   builds the file from the same table (TableExportController).
 --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 .tx-bar{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin:0 0 8px;flex:none}
 .tx-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid var(--border,#e2e4ea);background:var(--bg2,#fff);color:var(--text2,#4a4d57);font:600 12px/1 inherit;font-family:inherit;cursor:pointer;white-space:nowrap;text-decoration:none}
 .tx-btn:hover:not(:disabled){border-color:var(--accent,#c9a82c);color:var(--text,#18191f)}
@@ -75,7 +75,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
   </div>
 </dialog>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   if (window.__txReady) { return; }
   window.__txReady = true;

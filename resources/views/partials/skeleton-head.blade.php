@@ -12,8 +12,8 @@
      A stylesheet !important beats a plain inline style, which is how this
      wins against the display:none each page sets on its content inline. --}}
 @include('partials.smooth-navigation')
-<script>document.documentElement.className += ' sk-seen';</script>
-<style>
+<script nonce="{{ Vite::cspNonce() }}">document.documentElement.className += ' sk-seen';</script>
+<style nonce="{{ Vite::cspNonce() }}">
   html.sk-seen #skeleton-content { display: none !important; }
 @if (($skReveal ?? 'block') === 'opacity')
   html.sk-seen #real-content { opacity: 1 !important; transition: none !important; }

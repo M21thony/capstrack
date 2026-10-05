@@ -7,7 +7,7 @@
 <title>CapsTRACK — Expert Portal</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* A long list scrolls inside itself, under headings that stay: the Drive
      card and the filters hold still and only the documents move, as the
      staff portals' other long lists do. A phone keeps its cards below. */
@@ -293,7 +293,7 @@
 </div>
 @include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 /* The three controls above the table were markup only - typing in the box
    or picking a team did nothing at all. They filter the rows now, and the
    count on the right says what is being shown rather than what exists. */

@@ -15,7 +15,7 @@
 @if ($prefsPerson)
   {{-- Ahead of the card, so it is never on screen without its styles:
        after it, the card was drawn plain first and grew into them. --}}
-  <style>
+  <style nonce="{{ Vite::cspNonce() }}">
   .notif-prefs{max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);font-family:'DM Sans','DM Sans Fallback',sans-serif}
   .notif-prefs-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:18px}
   .notif-prefs-btn{padding:8px 16px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif}
@@ -67,7 +67,7 @@
       <span id="notif-prefs-perm-text"></span>
       <button type="button" class="notif-prefs-btn" id="notif-prefs-allow" style="display:none">Allow notifications</button>
     </div>
-    <script>
+    <script nonce="{{ Vite::cspNonce() }}">
     // Said as the box is drawn, not once the page has loaded: filled in then,
     // the box grew in and pushed every switch below it down. The same test
     // /js/capstrack-push.js makes, which is not loaded yet at this point.
@@ -134,7 +134,7 @@
 
 
   <script src="/js/capstrack-push.js" defer></script>
-  <script>
+  <script nonce="{{ Vite::cspNonce() }}">
   document.addEventListener('DOMContentLoaded', function () {
     var card = document.querySelector('.notif-prefs');
     if (!card) return;

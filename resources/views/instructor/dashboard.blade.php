@@ -7,7 +7,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
 <x-dashboard.styles />
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .ann-list { display:flex;flex-direction:column;gap:0;max-height:320px;overflow-y:auto; }
   .ann-list::-webkit-scrollbar { width:4px; }
   .ann-list::-webkit-scrollbar-thumb { background:var(--border);border-radius:4px; }
@@ -242,7 +242,7 @@
 
 @include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // Announcement modal
 function openAnnModal(el) {
   var modal = document.getElementById('annModal');

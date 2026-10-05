@@ -16,7 +16,7 @@
   sit on top of the keyboard taking room from the form.
 --}}
 @once
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   html.kb-open .mtab{display:none!important}
   html.kb-open .main{padding-bottom:0!important}
 
@@ -34,7 +34,7 @@
     }
   }
 </style>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var vv = window.visualViewport;
   var root = document.documentElement;

@@ -1,4 +1,4 @@
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 .crumbs{display:flex;align-items:center;gap:8px;font-size:14px;min-width:0;flex:1}
 .crumbs > *{white-space:nowrap}
 .crumbs > span:first-child, .crumbs a{color:var(--navy-text2);text-decoration:none}

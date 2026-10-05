@@ -201,7 +201,7 @@
   </div>
 </dialog>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // Suggested experts, three at a time.
 (function () {
   var pager = document.querySelector('.rp-pager');

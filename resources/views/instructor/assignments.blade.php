@@ -7,7 +7,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* The page is a queue with the application open beside it. The page itself
    never scrolls on a desktop: the list scrolls inside its card and the panel
    inside itself, so the tabs, the slots and the decision buttons stay put. */
@@ -783,7 +783,7 @@
 
 @include('instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const assignmentData = {{ Js::from($assignmentData) }};
 const titleData = {{ Js::from($titleData) }};
 const SLOTS = { used: {{ (int) $currentSlots }}, max: {{ (int) $maxSlots }} };

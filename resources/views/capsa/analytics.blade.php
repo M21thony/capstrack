@@ -8,7 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* ── Analytics ──
    Colours are roles, not hex scattered through the markup. The chart colours
    come from one validated set: the seven project tags in a fixed order, a
@@ -709,7 +709,7 @@
 
 @include('capsa.partials.skeleton-toggle')
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   // Changing a filter applies it: there is no second button to find.
   var filters = document.getElementById('an-filters');

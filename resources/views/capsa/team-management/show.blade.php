@@ -10,7 +10,7 @@
 @section('title', $row->team->team_name)
 
 @push('head')
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .tp{display:flex;flex-direction:column;gap:10px}
 
   .tp-head{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
@@ -455,7 +455,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   // A milestone's requirements differ in height, so CSS cannot count how many
   // fit; draw the ones that fit whole and point the rest to the tracker.
   function tpFitItems() {

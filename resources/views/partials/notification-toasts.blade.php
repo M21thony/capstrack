@@ -20,7 +20,7 @@
      data-feed="{{ $toastFeed }}" data-read="{{ $toastRead }}" data-owner="{{ $toastOwner }}"
      data-csrf="{{ csrf_token() }}"></div>
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 .nt-stack{position:fixed;right:20px;bottom:20px;z-index:2500;display:flex;flex-direction:column;gap:10px;width:min(380px,calc(100vw - 32px));pointer-events:none}
 .nt{pointer-events:auto;position:relative;display:flex;gap:12px;align-items:flex-start;padding:14px 40px 16px 14px;background:var(--bg2,#fff);border:1px solid var(--border,#e5e7eb);border-left:4px solid var(--accent,#c9a82c);border-radius:14px;box-shadow:0 14px 36px rgba(24,25,31,.2);overflow:hidden;cursor:pointer;text-align:left;animation:ntIn .3s cubic-bezier(.2,.8,.2,1)}
 .nt:hover{box-shadow:0 16px 40px rgba(24,25,31,.26)}
@@ -68,7 +68,7 @@
 @media (prefers-reduced-motion:reduce){.nt,.nt.out{animation:none}.nt-bar{display:none}}
 </style>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var stack = document.getElementById('nt-stack');
   if (!stack || !window.fetch) return;

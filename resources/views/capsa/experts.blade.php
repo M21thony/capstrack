@@ -6,7 +6,7 @@
 <title>Expert Management - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .ae-field{margin-bottom:14px}
   .ae-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
             color:#64748b;margin-bottom:6px}
@@ -688,7 +688,7 @@
           </tr>
           @endforeach
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   // Client-side filtering: search, role, and status.
   (function() {
     var searchInput = document.getElementById('experts-search-input');
@@ -807,7 +807,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const ROLE_OPTIONS = [
   { id: 'adviser', label: 'Adviser', desc: "Primary subject adviser for a team's capstone project." },
   { id: 'consultant', label: 'Consultant', desc: 'Secondary technical/content guidance alongside the adviser.' },
@@ -1067,7 +1067,7 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const addExpertModal = document.getElementById('addExpertModal');
 
 function openAddExpertModal() {
@@ -1400,7 +1400,7 @@ function uploadExpertRoster(btn) {
 }
 </script>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // ── TOAST NOTIFICATION ───────────────────────────────────────
 function showToast(message, type = 'info', title = null) {
   if (window.ctToast) { return ctToast(message, type, { title }); }
@@ -1557,7 +1557,7 @@ function closeSidebar() {
 }
 </script>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // ── acting on several experts at once ──
 // Both loop the endpoint that already changes one expert, so the rules about
 // what a CaPSA may set stay in one place.

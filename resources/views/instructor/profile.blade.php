@@ -52,7 +52,7 @@
 @include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 /* Mobile sidebar toggle */
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');

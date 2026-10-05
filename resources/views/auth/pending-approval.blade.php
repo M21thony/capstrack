@@ -3,7 +3,7 @@
 @section('title', 'Pending Approval - CapsTRACK')
 
 @section('content')
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   :root {
     --primary: #b5941f;
     --primary-dark: #9e811a;

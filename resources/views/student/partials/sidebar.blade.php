@@ -1,5 +1,5 @@
 {{-- The student portal is light only; a theme saved back when it had a dark mode is ignored. --}}
-<script>document.documentElement.setAttribute('data-theme','light')</script>
+<script nonce="{{ Vite::cspNonce() }}">document.documentElement.setAttribute('data-theme','light')</script>
 @php
     $student = Auth::user();
     $yearParts = explode(' · ', $student->year_section ?? '');
@@ -195,7 +195,7 @@
         'icon' => App\Support\PortalIcons::paths('progress')],
 ]))])
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .profile-modal .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; width: auto; height: auto; padding: 4px; background: none; background-color: transparent; color: rgba(255,255,255,0.4); border: none; border-radius: 0; line-height: 1; cursor: pointer; transition: color 0.13s ease-in-out; outline: none; }
   .profile-modal .pm-close-btn:hover { background-color: transparent; color: rgba(255,255,255,0.85); transform: none; }
   .profile-modal .pm-close-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.5; }
@@ -393,7 +393,7 @@
 
 @include('student.partials.join-request-popup')
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   function openProfile() {
     var overlay = document.getElementById('profile-overlay');
     var trigger = document.getElementById('profile-trigger');

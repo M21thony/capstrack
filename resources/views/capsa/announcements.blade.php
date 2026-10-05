@@ -7,7 +7,7 @@
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 .target-group { display:flex;flex-wrap:wrap;gap:8px;margin-top:6px; }
 .target-opt { display:flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s ease;font-size:13px;font-weight:500;color:var(--text2);background:transparent;user-select:none; }
 .target-opt:hover { border-color:var(--accent);color:var(--accent); }
@@ -243,7 +243,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var teamsList = @json($teams);
 var adminSections = @json($adminSections);
 var milestoneSubmissions = @json($milestoneSubmissions);

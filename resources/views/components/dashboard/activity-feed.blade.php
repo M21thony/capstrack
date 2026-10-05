@@ -50,7 +50,7 @@
 @endphp
 
 @once
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .afeed{position:relative;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
   .afeed-group{position:sticky;top:0;z-index:1;margin:0;padding:8px 0 6px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);background:var(--bg2,#fff)}
   .afeed-list{position:relative;margin:0 0 6px;padding:0;list-style:none}

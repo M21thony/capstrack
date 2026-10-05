@@ -34,7 +34,7 @@
   <button type="button" class="selbar-clear" id="selbarClear">Clear</button>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // Deferred, because the bar is included above the table it wires - reading the
 // DOM at this point would find nothing and silently do nothing.
 (function () {

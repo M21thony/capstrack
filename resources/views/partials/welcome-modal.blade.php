@@ -67,7 +67,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ Vite::cspNonce() }}">
     (function () {
         var el = document.getElementById('welcome-modal');
         var btn = document.getElementById('welcome-dismiss');

@@ -6,7 +6,7 @@
 <title>CaPSA Management - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* ── Compact table ───────────────────────────────────────────────────
      One line per person. Status is a dot beside the name, which buys the
      width back for the sections and the expertise - the two columns that
@@ -859,7 +859,7 @@
           </tr>
           @endforeach
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   // Client-side filtering: search, role, and status.
   (function() {
     var searchInput = document.getElementById('experts-search-input');
@@ -1141,7 +1141,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // ── TOAST NOTIFICATION ───────────────────────────────────────
 function showToast(message, type = 'info', title = null) {
   if (window.ctToast) { return ctToast(message, type, { title }); }
@@ -1736,7 +1736,7 @@ function closeSidebar() {
 
 
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // ── acting on several experts at once ──
 // Both actions loop the endpoint that already changes one expert, so the rules
 // about who may set what live in one place and cannot drift from the

@@ -6,7 +6,7 @@
 <title>System Settings - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* One panel, three rows. Each row says what it is on the left and holds its
      controls on the right, so the page reads down one column. */
   .set-panel{background:var(--bg2);border:1px solid var(--border);border-radius:14px}
@@ -235,7 +235,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var SECTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 /** What the range would produce, shown before it is saved rather than after. */

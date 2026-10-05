@@ -11,7 +11,7 @@
     $totalSteps = 3;
 @endphp
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   [hidden] { display: none !important; }
   .pi-wizard-actions { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; gap: 12px !important; margin-top: 32px !important; padding-top: 24px !important; border-top: 1px solid var(--border) !important; }
   .pi-wizard-actions .pi-btn { flex: none !important; width: auto !important; min-width: 120px !important; justify-content: center !important; }
@@ -221,7 +221,7 @@
     </div>
 </form>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
     var form = document.getElementById('pi-form');
     if (!form) return;

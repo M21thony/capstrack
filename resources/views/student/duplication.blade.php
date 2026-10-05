@@ -7,7 +7,7 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite('resources/student-ui/styles.css')
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .dup-layout {
@@ -957,7 +957,7 @@
 
 <div id="pp-toast"></div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // Handing your titles in is the one act that puts your team in front of your
 // CaPSA, so it always asks - not only when there are fewer than we suggest.
 // Turning in fewer is allowed: it used to be refused outright, which pushed

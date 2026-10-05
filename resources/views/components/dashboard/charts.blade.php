@@ -4,7 +4,7 @@
   markup and reads the same in light and dark. Included once, from
   x-dashboard.styles.
 --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
     .dc-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:16px; margin-bottom:16px; }
     .dc-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:16px; }
     .dc-grid.wide { grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr)); }

@@ -35,9 +35,9 @@ class SmoothNavigationTest extends TestCase
 
         $this->assertStringNotContainsString('@view-transition', $html);
         $this->assertStringNotContainsString('::view-transition', $html);
-        $this->assertSame(1, substr_count($html, '<script type="speculationrules">'), 'once per page');
+        $this->assertSame(1, substr_count($html, '<script type="speculationrules" nonce='), 'once per page');
 
-        preg_match('/<script type="speculationrules">(.*?)<\/script>/s', $html, $rules);
+        preg_match('/<script type="speculationrules"[^>]*>(.*?)<\/script>/s', $html, $rules);
         $json = json_decode($rules[1], true);
         $this->assertNotNull($json, 'the speculation rules are valid JSON');
         $this->assertSame('moderate', $json['prefetch'][0]['eagerness']);
@@ -46,14 +46,14 @@ class SmoothNavigationTest extends TestCase
 
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
         $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk()
-            ->assertSee('<script type="speculationrules">', false)
+            ->assertSee('<script type="speculationrules" nonce=', false)
             ->assertDontSee('@view-transition', false);
     }
 
     /** Nothing is given a view-transition-name: it would lift the top bar's notifications under sticky headings. */
     public function test_no_element_is_lifted_onto_a_layer_of_its_own(): void
     {
-        preg_match('/<style>(.*?)<\/style>/s', File::get(resource_path('views/partials/smooth-navigation.blade.php')), $style);
+        preg_match('/<style[^>]*>(.*?)<\/style>/s', File::get(resource_path('views/partials/smooth-navigation.blade.php')), $style);
 
         $this->assertStringNotContainsString('view-transition-name', $style[1]);
     }
@@ -66,7 +66,7 @@ class SmoothNavigationTest extends TestCase
     {
         $html = $this->studentPage();
 
-        $this->assertStringContainsString("<script>document.documentElement.className += ' sk-seen';</script>", $html);
+        $this->assertStringContainsString("\">document.documentElement.className += ' sk-seen';</script>", $html);
         $this->assertStringNotContainsString('sessionStorage.getItem(key)', File::get(resource_path('views/partials/skeleton-head.blade.php')));
         $this->assertStringContainsString('html.sk-seen #skeleton-content { display: none !important; }', $html);
         // No fade-in either: on every page it read as a flash.

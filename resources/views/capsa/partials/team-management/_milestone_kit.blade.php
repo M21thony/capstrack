@@ -1,6 +1,6 @@
 {{-- What the milestone list and the milestone pages share: their look, one
      way to save through the JSON endpoints, and drag to reorder. --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .ml-page{max-width:980px}
   .ml-form{max-width:560px}
   .ml-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
@@ -71,7 +71,7 @@
     .ml-acts .ml-btn{flex:1;justify-content:center}
   }
 </style>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   /** Sends JSON to one of the checklist endpoints; throws with the server's own words when it refuses. */
   window.mlSend = async function (url, method, body) {
     const response = await fetch(url, {

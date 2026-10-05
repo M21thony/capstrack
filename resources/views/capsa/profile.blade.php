@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* ============================================================
      Profile page — scoped styles. Built on top of the shared
      admin.css tokens (--accent, --text, --text2, --text3,
@@ -696,7 +696,7 @@
 </div>
 @include('capsa.partials.skeleton-toggle')
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');
 function toggleSidebar() {

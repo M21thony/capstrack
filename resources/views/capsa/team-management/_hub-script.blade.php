@@ -4,7 +4,7 @@
   quiet refresh, and - for a CaPSA - the Team rules menu.
 --}}
 <dialog id="tm-decide" class="tm-dialog" aria-labelledby="tm-decide-t">
-  <form method="dialog">
+  <form method="post">@csrf
     <div class="dh"><h2 id="tm-decide-t"></h2><p id="tm-decide-sub"></p></div>
     <div class="db">
       <p class="next-note" id="tm-decide-effect" hidden></p>
@@ -19,7 +19,7 @@
   </form>
 </dialog>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   (function () {
     const hub = document.querySelector('.tm-hub');
     if (!hub) { return; }

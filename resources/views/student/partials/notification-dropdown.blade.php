@@ -6,7 +6,7 @@
 {{-- Before the markup, not after it: a style further down arrives after
      the browser may already have painted the panel and its popups,
      which then flashed full-size on a refresh. --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 .notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;border:2px solid var(--navy-mid);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;line-height:1;padding:0 4px}
 
 .nld-confirm-overlay{display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;background:rgba(15,16,22,0.75);backdrop-filter:blur(6px);padding:20px}
@@ -260,7 +260,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var nldConfirmUrl = null;
 var nldConfirmOverlay = document.getElementById('nld-confirm-overlay');
 var nldConfirmIcon = document.getElementById('nld-confirm-icon');
@@ -459,7 +459,7 @@ document.addEventListener('click', function(e) {
 @include('partials.action-toast')
 
 <script src="/js/capstrack-push.js" defer></script>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // Deferred scripts finish before this fires, so CapsTrackPush is there by now.
 document.addEventListener('DOMContentLoaded', function () {
   var ask = document.getElementById('notif-ask');

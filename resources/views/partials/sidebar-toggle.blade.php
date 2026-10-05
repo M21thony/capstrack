@@ -4,7 +4,7 @@
      button did nothing on a phone. --}}
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');
 

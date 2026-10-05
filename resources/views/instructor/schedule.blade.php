@@ -198,7 +198,7 @@
   pointer-events:none;">
   <span id="toast-msg"></span>
 </div>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 #sched-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
 
 /* The defaults, as a sentence rather than three more fields at the same
@@ -485,7 +485,7 @@
   </div>
 </div>
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* One slot, added or edited. A dialog rather than a panel down the side: the
    day grid is where slots are read, so the form only appears when one is
    actually being changed. */
@@ -493,7 +493,7 @@
 
 <!-- ─── ONE SLOT: ADD OR EDIT ─────────────────────────────────────────────── -->
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* One date: what is on it, and adding to it. The weekly hours are Set
    availability's job, so nothing here repeats. */
 .qa-pop{position:absolute;z-index:95;width:320px;max-width:calc(100vw - 24px)}
@@ -599,7 +599,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // ══════════════════════════════════════════════════════════════
 //  CONSTANTS
 // ══════════════════════════════════════════════════════════════

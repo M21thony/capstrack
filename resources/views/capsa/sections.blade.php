@@ -7,7 +7,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* A school address box: the domain sits in grey at the right end, so only
      the name part is typed. Typing or pasting a whole address hides it. */
   .email-field{position:relative}
@@ -404,7 +404,7 @@
 </div>
 @include('capsa.partials.skeleton-toggle')
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');
 function toggleSidebar() {
@@ -542,7 +542,7 @@ function closeSidebar() {
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 let ypData = [];
 let ypConfirming = false;
 
@@ -1223,7 +1223,7 @@ function uploadStudentRoster(btn) {
     ],
 ])
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 // ══ the CaPSA's own students ══
 // Every call here goes to one of three routes: post to the collection to take
 // somebody on, patch a record to change part of it, delete to take them off

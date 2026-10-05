@@ -1,4 +1,4 @@
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .rr-page{max-width:900px}
   .rr-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
   .rr-title{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.01em}
@@ -275,7 +275,7 @@
 
 <div id="rr-toast" class="toast"></div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   const $ = (id) => document.getElementById(id);
   const updateUrl = @json(url('capsa/leave-requests'), JSON_UNESCAPED_SLASHES);

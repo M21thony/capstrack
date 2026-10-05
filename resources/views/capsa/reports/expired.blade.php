@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Report expired - CapsTRACK</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f5f8;font-family:'DM Sans','DM Sans Fallback',sans-serif;color:#18191f}
 .box{max-width:420px;padding:32px;text-align:center;background:#fff;border:1px solid #e2e4ea;border-radius:14px}
 h1{margin:0 0 8px;font-size:20px}

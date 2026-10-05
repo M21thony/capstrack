@@ -29,7 +29,7 @@
   Included by partials/mobile-tabbar, which every portal page has.
 --}}
 @once
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   // The shapes a pop-up takes in this codebase (as in escape-closes-modals),
   // plus a form: the button is looked for no further out than these.

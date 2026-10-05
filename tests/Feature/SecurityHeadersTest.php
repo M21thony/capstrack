@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneExpert;
+use App\Models\Role;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Vite;
 use Tests\TestCase;
 
@@ -43,6 +46,76 @@ class SecurityHeadersTest extends TestCase
         $this->assertNotContains("'unsafe-eval'", $policy['script-src']);
         // The login page's reCAPTCHA is the one outside script it needs.
         $this->assertContains('https://www.google.com', $policy['script-src']);
+
+        // Inline <script> and <style> blocks run only with this response's
+        // nonce; images load only from here and Google profile pictures.
+        $this->assertNotContains("'unsafe-inline'", $policy['script-src']);
+        $this->assertNotContains("'unsafe-inline'", $policy['style-src']);
+        $this->assertNotContains('https:', $policy['img-src']);
+        $this->assertContains('https://lh3.googleusercontent.com', $policy['img-src']);
+    }
+
+    public function test_every_inline_block_on_the_page_carries_the_policy_nonce(): void
+    {
+        $response = $this->get('/login');
+        $this->assertEveryInlineBlockCarriesTheNonce($response);
+
+        $this->assertNotSame($this->nonceOf($response), $this->nonceOf($this->get('/login')), 'a new nonce every response');
+    }
+
+    public function test_the_drive_picker_hands_google_the_nonce_for_the_stylesheet_it_adds(): void
+    {
+        $capsa = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]);
+        $capsa->roles()->attach(Role::firstOrCreate(['role_name' => 'capstone_adviser'])->role_id);
+
+        $response = $this->actingAs($capsa, 'expert')->get('/capsa/resources');
+
+        $this->assertEveryInlineBlockCarriesTheNonce($response);
+        $response->assertSee("gsi.nonce = document.querySelector('script[nonce]')?.nonce;", false);
+    }
+
+    public function test_the_pop_up_forms_carry_the_token_a_scan_looks_for(): void
+    {
+        $views = collect(File::allFiles(resource_path('views')))->map(fn ($file): string => $file->getContents())->implode("\n");
+
+        // A scan sends a method="dialog" form as a link, token in the address.
+        $this->assertStringNotContainsString('<form method="dialog"', $views);
+
+        $hub = File::get(resource_path('views/capsa/team-management/_hub-script.blade.php'));
+        $title = File::get(resource_path('views/capsa/team-management/title.blade.php'));
+        $this->assertStringContainsString('<form method="post">@csrf', $hub);
+        $this->assertStringContainsString('<form method="post" id="rec-form">@csrf', $title);
+        $this->assertStringContainsString('<form method="post" id="rej-form">@csrf', $title);
+    }
+
+    private function assertEveryInlineBlockCarriesTheNonce($response): void
+    {
+        $nonce = $this->nonceOf($response);
+        $this->assertNotEmpty($nonce);
+
+        preg_match_all('/<(script|style)\b([^>]*)>/', $response->getContent(), $tags, PREG_SET_ORDER);
+        $inline = array_filter($tags, fn (array $tag): bool => ! str_contains($tag[2], 'src=') && ! str_contains($tag[2], 'application/json'));
+        $this->assertNotEmpty($inline);
+        foreach ($inline as $tag) {
+            $this->assertStringContainsString('nonce="'.$nonce.'"', $tag[0]);
+        }
+    }
+
+    public function test_a_redirect_carries_no_page_and_no_script_readable_cookie_is_set(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertRedirect();
+        $this->assertSame('', $response->getContent());
+        $this->assertNull(collect($response->headers->getCookies())->first(fn ($cookie) => $cookie->getName() === 'XSRF-TOKEN'));
+        $this->assertNull(collect($this->get('/login')->headers->getCookies())->first(fn ($cookie) => $cookie->getName() === 'XSRF-TOKEN'));
+    }
+
+    private function nonceOf($response): ?string
+    {
+        preg_match("/'nonce-([^']+)'/", (string) $response->headers->get('Content-Security-Policy'), $nonce);
+
+        return $nonce[1] ?? null;
     }
 
     public function test_the_dev_server_is_not_refused_while_it_runs(): void

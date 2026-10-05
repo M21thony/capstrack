@@ -17,7 +17,7 @@
   page already wires that one up, each in its own way.
 --}}
 @once
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .mtab{display:none}
   @media (max-width:768px){
     .mtab{
@@ -100,7 +100,7 @@
     color:var(--text3);margin-bottom:4px}
   .sys-credits .credits-names{font-size:9.5px;font-weight:500;letter-spacing:.3px;color:var(--text3)}
 </style>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   // Every portal's bell toggles .open on #notif-dropdown; the dim follows it.
   // A tap on the dim reaches the bells' own "click outside closes" handlers,
   // so this only has to show and hide it.
@@ -268,7 +268,7 @@
   out of the way while the page is being read downwards, and back the moment
   it is scrolled up again (or reaches the top). Every portal has it.
 --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   @media (max-width:768px){
     /* A small white pill with a soft grey shadow for a lip, centred and no
        wider than it needs to be - on a tablet too, rather than stretched
@@ -374,7 +374,7 @@
     .mtab.is-floating .mtab-item:active .mtab-ic,.mtab.is-floating .mtab-item.primary:active .mtab-ic svg{transform:none}
   }
 </style>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   // The bar is drawn just after this script, so it is looked for once the
   // page has been read.
   document.addEventListener('DOMContentLoaded', function () {

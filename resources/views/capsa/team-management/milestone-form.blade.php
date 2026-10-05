@@ -51,7 +51,7 @@
 
 @push('scripts')
 @include('partials.app-dialog')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   (() => {
     const form = document.getElementById('ml-milestone');
     const error = document.getElementById('ml-err');

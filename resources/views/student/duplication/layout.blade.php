@@ -36,7 +36,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 function toggleSidebar() {
     document.body.classList.toggle('sidebar-open');
     document.body.style.overflow = document.body.classList.contains('sidebar-open') ? 'hidden' : '';

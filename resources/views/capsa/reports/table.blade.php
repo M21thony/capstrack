@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url($portal === 'instructor' ? 'css/expert.css' : 'css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 @include('capsa.reports._styles')
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* The page itself does not scroll on a desktop: the table card takes what is left and scrolls inside. */
 .rp.fit{overflow:hidden;height:100%;box-sizing:border-box}
 .rp-top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;justify-content:space-between}
@@ -479,7 +479,7 @@
 
 {{-- Back to the page it was opened from: when that is the page before this one, step back
      in history, so it returns as it was (scroll and all) instead of loading again. --}}
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 document.querySelectorAll('a[data-back]').forEach(function (link) {
   link.addEventListener('click', function (e) {
     try {
@@ -496,7 +496,7 @@ document.querySelectorAll('a[data-back]').forEach(function (link) {
   @include('instructor.partials.expert-profile')
 @endif
 @include('capsa.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var REPORT = {
   first: @json($first),
   defaultOrder: @json(array_keys($columns)),

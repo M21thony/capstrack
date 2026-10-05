@@ -1,5 +1,5 @@
 <x-dashboard.charts />
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
     @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: calc(400px + 100%) 0; } }
     .skeleton-box { background: linear-gradient(90deg, var(--bg2) 25%, var(--bg) 50%, var(--bg2) 75%); background-size: 400px 100%; animation: shimmer 1.6s ease-in-out infinite; border-radius: 6px; }
 

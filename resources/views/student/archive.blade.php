@@ -8,7 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite('resources/student-ui/styles.css')
 <x-dashboard.styles />
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* ── Archive: search bar, study cards and the abstract ── */
   .arx-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; padding: 10px; background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
   .arx-search { flex: 1 1 280px; display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 40px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg3); }
@@ -368,7 +368,7 @@
     </div>
   </article>
 </div>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   const ARCHIVE_ABSTRACTS = @json($archAbstracts);
   function openArchiveAbstract(id) {
     const d = ARCHIVE_ABSTRACTS[id]; if (!d) return;
@@ -393,7 +393,7 @@
 </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 document.addEventListener('DOMContentLoaded', function () {
   var sk = document.getElementById('skeleton-content');
   var rc = document.getElementById('real-content');

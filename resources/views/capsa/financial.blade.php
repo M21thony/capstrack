@@ -99,7 +99,7 @@
   <div class="fx-dlg-foot"><button class="fx-btn" data-close>Cancel</button><button class="fx-btn fx-btn-primary" id="f-save">Save fee</button></div>
 </dialog>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');
 function toggleSidebar() { if (sidebarEl) { sidebarEl.classList.contains('mobile-open') ? closeSidebar() : openSidebar(); } }

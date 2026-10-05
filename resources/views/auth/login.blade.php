@@ -7,7 +7,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <script src="https://www.google.com/recaptcha/api.js?render={{ config('services.recaptcha.site_key') }}"></script>
 @vite(['resources/css/app.css'])
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* Everything below is what Tailwind cannot express: a self-hosted face, a
      background built from asset() URLs, and a drawn-line animation. The rest
      of this page is utility classes. */
@@ -268,7 +268,7 @@
 </div>
 @endif
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 document.getElementById('google-login-form').addEventListener('submit', function(e) {
     e.preventDefault();
     const btn = document.getElementById('google-signin-btn');

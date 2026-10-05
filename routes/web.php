@@ -221,7 +221,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::get('/team-management/{team}', [TeamManagementController::class, 'show'])->name('team_management.show');
         Route::get('/team-management/{team}/pre-proposals', [TeamManagementController::class, 'preProposals'])->name('team_management.pre_proposals');
         Route::get('/team-management/{team}/pre-proposals/{preProposal}', [TeamManagementController::class, 'title'])->name('team_management.title');
-        Route::get('/team-management/{team}/pre-proposals/{preProposal}/similar/{rank}', [TeamManagementController::class, 'similar'])->name('team_management.similar');
+        Route::get('/team-management/{team}/pre-proposals/{preProposal}/similar/{rank}', [TeamManagementController::class, 'similar'])->whereNumber('rank')->name('team_management.similar');
         Route::get('/team-management/{team}/{log}', [TeamManagementController::class, 'log'])->whereIn('log', ['papers', 'activity'])->name('team_management.log');
         // The rules every team is formed under: its size, and whether students
         // may create or join one. One resource, replaced whole on save.
@@ -456,7 +456,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     // one title, and one archived capstone it turned up. Keyed off the check
     // because that one row covers both a scan just run and a saved title's.
     Route::get('/pre-proposal/duplication-checks/{check}', [PreProposalController::class, 'report'])->name('student.duplication.report');
-    Route::get('/pre-proposal/duplication-checks/{check}/matches/{rank}', [PreProposalController::class, 'similar'])->name('student.duplication.similar');
+    Route::get('/pre-proposal/duplication-checks/{check}/matches/{rank}', [PreProposalController::class, 'similar'])->whereNumber('rank')->name('student.duplication.similar');
     Route::post('/pre-proposal', [PreProposalController::class, 'store'])->name('student.pre-proposal.store');
     Route::patch('/pre-proposal', [PreProposalController::class, 'updateStatus'])->name('student.pre-proposal.submit');
     // Rewording a title the panel passed with revision.

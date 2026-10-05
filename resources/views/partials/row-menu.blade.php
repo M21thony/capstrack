@@ -24,7 +24,7 @@
       </div>
     </div>
 --}}
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   let open = null;
 

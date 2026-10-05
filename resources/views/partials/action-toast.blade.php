@@ -12,7 +12,7 @@
 @once
 <div id="ct-action-toasts" popover="manual" aria-live="polite"></div>
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   #ct-action-toasts {
     position: fixed; inset: 18px 0 auto 0; margin: 0 auto; padding: 0;
     width: min(480px, calc(100vw - 32px)); border: 0; background: none; overflow: visible;
@@ -57,7 +57,7 @@
   @media (prefers-reduced-motion: reduce) { .ct-at { animation: none; } }
 </style>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   const host = document.getElementById('ct-action-toasts');
   const icons = {

@@ -314,7 +314,7 @@
 </div>
 @include('capsa.partials.skeleton-toggle')
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const TYPE_LABEL = {
   pre_proposal:"Pre-Proposal Defense",
   title_defense:"Title Defense",
@@ -1499,7 +1499,7 @@ loadRubrics();
 @endif
 </script>
 
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* ── SIDEBAR ── */
 .hamburger-btn {
   display: none;

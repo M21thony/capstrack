@@ -68,14 +68,16 @@ class StaffListScrollTest extends TestCase
     }
 
     /**
-     * The portals' stylesheets are served with the time they last changed on
-     * the end: after a deploy the pages were new and a browser's copy of the
-     * styles was not, so a fix looked as though it had not been made.
+     * The portals' stylesheets are served with a fingerprint of their contents
+     * on the end: after a deploy the pages were new and a browser's copy of
+     * the styles was not, so a fix looked as though it had not been made. Not
+     * the time they changed, which a security scan reads as a leak.
      */
     public function test_stylesheets_carry_their_version_so_a_deploy_reaches_the_browser(): void
     {
         $url = PublicAsset::url('css/team-management.css');
-        $this->assertSame(asset('css/team-management.css').'?v='.filemtime(public_path('css/team-management.css')), $url);
+        $this->assertSame(asset('css/team-management.css').'?v='.substr(md5_file(public_path('css/team-management.css')), 0, 8), $url);
+        $this->assertStringNotContainsString((string) filemtime(public_path('css/team-management.css')), $url);
         $this->assertSame(asset('css/missing.css'), PublicAsset::url('css/missing.css'));
 
         $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'sections' => ['BSIT-3A']]));

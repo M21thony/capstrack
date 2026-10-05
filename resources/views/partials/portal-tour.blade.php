@@ -59,7 +59,7 @@
   <script type="application/json" id="gt-steps">@json($tourSteps)</script>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var tour = document.getElementById('portal-tour');
   if (!tour) return;

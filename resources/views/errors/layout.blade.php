@@ -18,7 +18,7 @@
 <title>@yield('title') - CapsTRACK</title>
 <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .err-page{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg)}
   .err-bar{height:54px;flex-shrink:0;background:var(--navy-dark);display:flex;align-items:center;gap:12px;padding:0 24px}
   .err-bar-mark{width:22px;height:22px;border-radius:7px;background:var(--accent)}

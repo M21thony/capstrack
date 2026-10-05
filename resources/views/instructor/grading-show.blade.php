@@ -32,7 +32,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* The grading sheet fills the screen and never scrolls: a section that is
      too long for the window is split into pages that fit it. */
   #real-content{flex:1;min-height:0}
@@ -311,7 +311,7 @@
 @include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const SECTIONS = {{ Js::from($sections) }};
 const scores = {{ Js::from((object) $savedScores->all()) }};
 const RUBRIC_TOTAL = {{ (float) $rubric->total_points }};

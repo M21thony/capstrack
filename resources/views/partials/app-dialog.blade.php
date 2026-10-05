@@ -26,7 +26,7 @@
   Every string is set as text, never markup: these carry team names, folder names
   and server messages, which are data.
 --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   .ad-scrim{position:fixed;inset:0;z-index:1600;background:rgba(24,25,31,.45);display:flex;align-items:center;justify-content:center;padding:20px;animation:adScrimIn 250ms ease-out both}
   .ad-scrim[hidden]{display:none}
   .ad-box{width:440px;max-width:100%;box-sizing:border-box;background:var(--bg2,#fff);border:1px solid var(--border,#e0e2e8);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;animation:adBoxIn 250ms cubic-bezier(.16,.84,.44,1) both;font-family:'DM Sans','DM Sans Fallback',sans-serif}
@@ -97,7 +97,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var GLYPH = {
     error: '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="13"></line><line x1="12" y1="16.5" x2="12" y2="16.5"></line>',

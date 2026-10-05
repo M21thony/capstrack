@@ -5,7 +5,7 @@
   It is here rather than in the stylesheet because the stylesheet only
   reaches the browser after a build, and these three pages are read as one.
 --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 /* ── the trail back, on both of the new pages ───────────────────── */
 .dup-crumb{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3);flex-wrap:wrap;margin-bottom:10px}
 .dup-crumb a{color:var(--text2);text-decoration:none;border-bottom:1px solid transparent}

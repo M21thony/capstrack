@@ -66,7 +66,7 @@
 
 @push('scripts')
 @include('partials.app-dialog')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   document.getElementById('ml-close')?.addEventListener('click', async event => {
     const button = event.currentTarget;
     button.disabled = true;

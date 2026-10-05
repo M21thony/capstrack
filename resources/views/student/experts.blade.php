@@ -550,12 +550,12 @@
   ],
 ];
 @endphp
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 window.XH_DATA = @json($xhData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
 window.XH_EXPERTS = {{ Js::from((object) $expertPayloads) }};
 window.XH_APPS = @json((object) $applicationPayloads);
 </script>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
 'use strict';
 

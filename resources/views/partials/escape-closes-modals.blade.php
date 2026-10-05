@@ -15,7 +15,7 @@
   carrying data-no-escape - the role choice is the only one today, because
   every roster row and the CaPSA's verification list read the field it sets.
 --}}
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   // Every shape a modal takes in this codebase. They accumulated separately;
   // this is the list, not a new convention to migrate them all onto.

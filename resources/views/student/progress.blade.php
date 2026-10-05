@@ -8,7 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite('resources/student-ui/styles.css')
 <x-dashboard.styles />
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
@@ -454,7 +454,7 @@
     @endforeach
   </div>
 </section>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
   // A step in the header opens its milestone below.
   function ptOpen(n) { var d = document.getElementById('pt-g-' + n); if (d) d.open = true; }
 </script>
@@ -464,7 +464,7 @@
 </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 document.addEventListener('DOMContentLoaded', function () {
   var sk = document.getElementById('skeleton-content');
   var rc = document.getElementById('real-content');
@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 @include('partials.escape-closes-modals')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 {{-- The hamburger button and the overlay both called these and nothing
      defined them, so the menu would not open on a phone. Same two lines as
      every other student page. --}}

@@ -21,7 +21,7 @@
         @endif
     @else
         @once
-        <style>
+        <style nonce="{{ Vite::cspNonce() }}">
             /* The number's own colour, on a tile in the card's corner, so each card
                is told apart by its picture before its label is read. Room is kept
                beside the number only: the tile is no taller than the number's line,

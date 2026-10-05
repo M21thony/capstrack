@@ -3,7 +3,7 @@
 @section('title', 'Request Rejected - CapsTRACK')
 
 @section('content')
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {

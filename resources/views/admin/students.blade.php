@@ -6,7 +6,7 @@
 <title>Student Accounts - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   /* ── Compact rows ────────────────────────────────────────────────────
      This list holds every student in the college, so the row height is the
      thing that decides how much of it you can see at once. */
@@ -308,7 +308,7 @@
 {{-- Toast container --}}
 <div id="ct-toast-container"></div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 const CSRF_TOKEN = '{{ csrf_token() }}';
 
 // ── TOAST ──────────────────────────────────────────────

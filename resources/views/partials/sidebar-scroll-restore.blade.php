@@ -1,4 +1,4 @@
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   // Every nav click is a full page load in this app, which otherwise resets
   // the sidebar's scroll position to the top - annoying when the item

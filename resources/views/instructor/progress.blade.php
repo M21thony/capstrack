@@ -44,7 +44,7 @@
 @include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 @vite('resources/js/milestones/tracker.js')
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');
 function toggleSidebar() {

@@ -3,7 +3,7 @@
 @section('title', 'Mock Google Account Selector')
 
 @section('content')
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
     body {
         margin: 0;
         padding: 0;
@@ -186,7 +186,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
     function fillPreset(name, email) {
         document.getElementById('name').value = name;
         document.getElementById('email').value = email;

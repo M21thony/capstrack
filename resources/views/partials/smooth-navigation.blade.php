@@ -13,10 +13,10 @@
   partials/mobile-tabbar for the few pages without it; @once keeps it single.
 --}}
 @once
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   a, button, [role="button"], label, summary, input, select, textarea { touch-action: manipulation; }
 </style>
-<script type="speculationrules">
+<script type="speculationrules" nonce="{{ Vite::cspNonce() }}">
 {
   "prefetch": [{
     "where": { "and": [
