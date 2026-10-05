@@ -136,6 +136,18 @@ test("a changed label is told apart from a changed shape or arrow", () => {
   line(20, 100, 180, 101); line(20, 160, 180, 161); line(20, 100, 21, 161); line(179, 100, 180, 161); // a box
   for (let i = 0; i < 3; i++) line(60 + i * 12, 125, 67 + i * 12, 137); // with a short label in it
   assert.equal(textLike(ink, w, [0, 95, w, 170]), false);
+  ink.fill(0);
+  for (const [x, len] of [[10, 62], [80, 49], [140, 40]]) line(x, 110, x + len, 119); // words whose letters ran together
+  line(10, 130, 190, 131); // and the heading's dividing line, moved
+  assert.equal(textLike(ink, w, [0, 100, w, 140]), true);
+});
+
+test("a word moved a few pixels is judged by the whole word, not its changed edges", () => {
+  const w = 100, changed = new Uint8Array(w * w), ink = new Uint8Array(w * w);
+  for (let y = 20; y <= 29; y++) for (let x = 10; x <= 60; x++) ink[y * w + x] = 1; // the word as drawn
+  for (let x = 10; x <= 60; x++) changed[20 * w + x] = 1; // only its top edge has nothing near it in the other version
+  assert.deepEqual(textLines(changed, w, [0, 0, w, w], 1), []); // the edge alone is a line
+  assert.deepEqual(textLines(changed, w, [0, 0, w, w], 1, 30, ink), [[10, 20, 61, 30]]);
 });
 
 test("a changed shape is coloured on the diagram instead of highlighted like a word", () => {

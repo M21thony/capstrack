@@ -225,9 +225,27 @@ function difference(a, b) {
       if (mina < 200 || minb < 200 || sa / n < 235 || sb / n < 235) ink[r * cols + q] = 1;
     }
   }
+  // A thin grey line too faint to move a cell's average: grey where the other picture is blank all around.
+  const faint = new Uint8Array(diff.length);
+  const blankNear = (g, x, y) => {
+    for (let yy = Math.max(0, y - 2); yy <= Math.min(h - 1, y + 2); yy++) {
+      for (let xx = Math.max(0, x - 2); xx <= Math.min(W - 1, x + 2); xx++) if (g[yy * W + xx] < 248) return false;
+    }
+    return true;
+  };
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < W; x++) {
+      const yb = y + dy, xb = x + dx;
+      if (yb < 0 || xb < 0 || yb >= h || xb >= W) continue;
+      const k = Math.floor(y / cell) * cols + Math.floor(x / cell);
+      if (k >= faint.length || diff[k]) continue;
+      if ((ga[y * W + x] <= 240 && blankNear(gb, xb, yb)) || (gb[yb * W + xb] <= 240 && blankNear(ga, x, y))) faint[k]++;
+    }
+  }
   const grow = new Uint8Array(diff.length);
   for (let r = 0; r < rows; r++) {
     for (let q = 0; q < cols; q++) {
+      if (faint[r * cols + q] >= 2) diff[r * cols + q] = 2;
       if (!diff[r * cols + q]) continue;
       for (let a2 = -2; a2 <= 2; a2++) for (let b2 = -2; b2 <= 2; b2++) {
         const rr = r + a2, qq = q + b2;
@@ -253,7 +271,7 @@ function difference(a, b) {
     if (real >= 6) spots.push({ x: x0 * cell, y: y0 * cell, w: (x1 - x0 + 1) * cell, h: (y1 - y0 + 1) * cell });
   }
   let inked = 0, differing = 0;
-  for (let i = 0; i < ink.length; i++) if (ink[i]) { inked++; if (diff[i]) differing++; }
+  for (let i = 0; i < ink.length; i++) if (ink[i]) { inked++; if (diff[i] === 1) differing++; }
   return { mismatch: inked ? differing / inked : 0, spots };
 }
 
@@ -458,10 +476,11 @@ export function oldOverlayRect(f, pictureHeight) {
 /**
  * Whether the changed ink in a box is writing: several small marks (letters)
  * making up most of it. A shape or an arrow is one or two big strokes, and a
- * new box with its label is mostly box.
+ * new box with its label is mostly box. Straight rules and specks are left
+ * out, so a heading whose dividing line moved is still writing.
  */
 export function textLike(changed, w, box, letter = 30) {
-  const parts = inkParts(changed, w, box, (v) => v !== 0);
+  const parts = inkParts(changed, w, box, (v) => v !== 0).filter((p) => p.hy - p.ly >= 3 && p.hx - p.lx >= 3);
   const total = parts.reduce((t, p) => t + p.n, 0);
   const small = parts.filter((p) => isLetter(p, letter)).reduce((t, p) => t + p.n, 0);
   return parts.length >= 3 && small >= 0.7 * total;
@@ -491,17 +510,28 @@ function inkParts(changed, w, [x0, y0, x1, y1], is) {
   return parts;
 }
 
-const isLetter = (p, letter) => p.hy - p.ly < letter && p.hx - p.lx < letter * 1.5;
+// A letter, or a word whose letters ran together: short, solid, and no longer than a long word.
+const isLetter = (p, letter) => {
+  const h = p.hy - p.ly + 1, w = p.hx - p.lx + 1;
+  return h >= 4 && h <= letter && w <= 15 * h && p.n >= 0.3 * w * h;
+};
 
 /**
  * The lines of writing made of the changed ink of one kind (`value`) in a
  * box, as tight [x0, y0, x1, y1] boxes: letters side by side on the same
  * line are one box, so the highlight sits on the words and not the space
- * around them.
+ * around them. Given the picture's `ink`, a mark is judged whole: a word
+ * moved a few pixels changes only its top and bottom edges, which alone
+ * would look like lines.
  */
-export function textLines(changed, w, box, value, letter = 30) {
+export function textLines(changed, w, box, value, letter = 30, ink = null) {
+  const touched = (p) => {
+    for (let y = p.ly; y <= p.hy; y++) for (let x = p.lx; x <= p.hx; x++) if (changed[y * w + x] === value) return true;
+    return false;
+  };
+  const parts = ink ? inkParts(ink, w, box, (v) => v !== 0).filter(touched) : inkParts(changed, w, box, (v) => v === value);
   const lines = [];
-  for (const p of inkParts(changed, w, box, (v) => v === value).filter((q) => isLetter(q, letter)).sort((a, b) => a.lx - b.lx)) {
+  for (const p of parts.filter((q) => isLetter(q, letter)).sort((a, b) => a.lx - b.lx)) {
     const line = lines.find((l) => Math.min(l[3], p.hy + 1) - Math.max(l[1], p.ly) > 0 && p.lx - l[2] < Math.max(8, l[3] - l[1]) * 1.5);
     if (line) {
       line[1] = Math.min(line[1], p.ly); line[2] = Math.max(line[2], p.hx + 1); line[3] = Math.max(line[3], p.hy + 1);
@@ -541,8 +571,9 @@ function inkChanges(f) {
   const w = f.old.width, h = f.old.height, a = rgba(f.old), b = rgba(f.neu);
   const inkA = new Uint8Array(w * h), inkB = new Uint8Array(w * h), mark = new Uint8Array(w * h);
   for (let k = 0; k < w * h; k++) {
-    inkA[k] = (a[k * 4] + a[k * 4 + 1] + a[k * 4 + 2]) / 3 < 170;
-    inkB[k] = (b[k * 4] + b[k * 4 + 1] + b[k * 4 + 2]) / 3 < 170;
+    // Light enough to catch a thin grey line, which a re-export draws about 206.
+    inkA[k] = (a[k * 4] + a[k * 4 + 1] + a[k * 4 + 2]) / 3 < 225;
+    inkB[k] = (b[k * 4] + b[k * 4 + 1] + b[k * 4 + 2]) / 3 < 225;
   }
   // A line one or two pixels off in the other picture is the same line.
   const near = (ink, x, y) => {
@@ -564,10 +595,17 @@ function inkChanges(f) {
     }
     const tone = spotTone(removed, added);
     const text = textLike(mark, w, box);
-    return { box, tone, text, ...(text && { oldLines: textLines(mark, w, box, 1), newLines: textLines(mark, w, box, 2) }) };
+    return { box, tone, text, ...(text && { oldLines: textLines(mark, w, box, 1, 30, inkA), newLines: textLines(mark, w, box, 2, 30, inkB) }) };
   });
   // The pop-up draws a rewritten spot as old above new, so its marks are kept only for colouring the pages.
+  // Coloured on the pages: everything but the words of a label, which get the word-style highlight.
   const both = mark.slice();
+  for (const s of spots) {
+    if (!s.text) continue;
+    for (const [lines, v] of [[s.oldLines, 1], [s.newLines, 2]]) {
+      for (const [x0, y0, x1, y1] of lines) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (both[y * w + x] === v) both[y * w + x] = 0;
+    }
+  }
   for (const { box, tone } of spots) if (tone === "rewritten") for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
   return { a, b, w, h, mark, both, spots, inkA, inkB };
 }
@@ -654,7 +692,7 @@ export function highlighted(f) {
  * pictures to lay over each version's diagram: { added } in green over this
  * version, { removed } in red over the earlier one, each null when nothing
  * is there. Lines glow so a thin arrow stands out, and a closed shape is
- * filled in. Labels are left to the word-style highlight.
+ * filled in. The words of a label are left to the word-style highlight.
  */
 export function tints(f) {
   const { w, h, both: mark, spots, inkA, inkB } = (f.changes ??= inkChanges(f));
@@ -662,7 +700,7 @@ export function tints(f) {
     const img = new ImageData(w, h);
     let any = false;
     for (const s of spots) {
-      if (s.text || (s.tone !== tone && s.tone !== "rewritten")) continue;
+      if (s.tone !== tone && s.tone !== "rewritten") continue;
       const [x0, y0, x1, y1] = s.box;
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
@@ -675,7 +713,7 @@ export function tints(f) {
           }
         }
       }
-      if (s.tone === tone) for (const k of enclosed(ink, w, s.box)) if (!img.data[k * 4 + 3]) img.data.set(fill, k * 4);
+      if (s.tone === tone && !s.text) for (const k of enclosed(ink, w, s.box)) if (!img.data[k * 4 + 3]) img.data.set(fill, k * 4);
     }
     if (!any) return null;
     const l = canvasOf(w, h), c = canvasOf(w, h), ctx = c.getContext("2d");
