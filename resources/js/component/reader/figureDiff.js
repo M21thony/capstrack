@@ -412,7 +412,7 @@ const crop = (src, [x0, y0, x1, y1]) => {
 /**
  * Which ink in each changed spot is only in the earlier picture (1) or only
  * in this one (2), and what happened at the spot. A spot rewritten in place
- * is left unmarked: it is boxed and shown as before/after instead.
+ * is left unmarked: it is drawn as old above new instead.
  */
 function inkChanges(f) {
   const w = f.old.width, h = f.old.height, a = rgba(f.old), b = rgba(f.neu);
@@ -448,40 +448,34 @@ function inkChanges(f) {
 
 /**
  * The pair as one picture: faded where both agree, red = only in the earlier
- * one, green = only in this one. A spot that was rewritten in place is boxed
- * and numbered instead, and given as a before/after close-up.
+ * one, green = only in this one, each on a light highlight. A spot rewritten
+ * in place shows its new ink green where it is, and its old ink red just
+ * above it, and is given as a before/after close-up too.
  */
 export function highlighted(f) {
   const { a, b, w, h, mark, spots } = (f.changes ??= inkChanges(f));
   const boxes = spots.filter((s) => s.tone === "rewritten").map((s) => s.box);
-  const plain = spots.filter((s) => s.tone === "removed" || s.tone === "added");
   const c = canvasOf(w, h), ctx = c.getContext("2d"), img = ctx.createImageData(w, h), o = img.data;
+  const grey = (p, k) => (p[k * 4] + p[k * 4 + 1] + p[k * 4 + 2]) / 3;
+  const RED = [220, 38, 38, 255], GREEN = [22, 163, 74, 255], RED_BG = [254, 226, 226, 255], GREEN_BG = [220, 252, 231, 255];
+  const tint = new Uint8Array(w * h); // 1 = a removed spot, 2 = an added or rewritten one
+  for (const { box: [x0, y0, x1, y1], tone } of spots) {
+    if (tone) for (let y = y0; y < y1; y++) tint.fill(tone === "removed" ? 1 : 2, y * w + x0, y * w + x1);
+  }
+  const rewritten = new Uint8Array(w * h);
+  for (const [x0, y0, x1, y1] of boxes) for (let y = y0; y < y1; y++) rewritten.fill(1, y * w + x0, y * w + x1);
   for (let k = 0; k < w * h; k++) {
-    const faded = 255 - (255 - Math.min(a[k * 4] + a[k * 4 + 1] + a[k * 4 + 2], b[k * 4] + b[k * 4 + 1] + b[k * 4 + 2]) / 3) * 0.3;
-    o.set(mark[k] === 1 ? [220, 38, 38, 255] : mark[k] === 2 ? [22, 163, 74, 255] : [faded, faded, faded, 255], k * 4);
+    const faded = 255 - (255 - Math.min(grey(a, k), grey(b, k))) * 0.3;
+    const bg = tint[k] === 1 ? RED_BG : tint[k] === 2 ? GREEN_BG : [faded, faded, faded, 255];
+    if (rewritten[k]) o.set(grey(b, k) < 170 ? GREEN : GREEN_BG, k * 4);
+    else o.set(mark[k] === 1 ? RED : mark[k] === 2 ? GREEN : tint[k] && faded > 235 ? bg : [faded, faded, faded, 255], k * 4);
+  }
+  // The old ink of a rewritten spot, red, just above it (or below when there is no room).
+  for (const [x0, y0, x1, y1] of boxes) {
+    const bh = y1 - y0, top = y0 - bh - 2 >= 0 ? y0 - bh - 2 : Math.min(h - bh, y1 + 2);
+    for (let y = 0; y < bh; y++) for (let x = x0; x < x1; x++) o.set(grey(a, (y0 + y) * w + x) < 170 ? RED : RED_BG, ((top + y) * w + x) * 4);
   }
   ctx.putImageData(img, 0, 0);
-  // A part removed or added is boxed too, so a small change is not missed: red dashed with −, green with +.
-  ctx.font = "bold 13px sans-serif";
-  for (const { box: [x0, y0, x1, y1], tone } of plain) {
-    const colour = tone === "removed" ? "#dc2626" : "#16a34a", text = tone === "removed" ? "− removed" : "+ added";
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = ctx.fillStyle = colour;
-    ctx.setLineDash(tone === "removed" ? [6, 4] : []);
-    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
-    ctx.setLineDash([]);
-    const tw = ctx.measureText(text).width + 8, ty = y0 >= 18 ? y0 - 18 : y0;
-    ctx.fillRect(Math.min(x0, w - tw), ty, tw, 18);
-    ctx.fillStyle = "#fff";
-    ctx.fillText(text, Math.min(x0, w - tw) + 4, ty + 13);
-  }
-  ctx.strokeStyle = ctx.fillStyle = "#d97706";
-  ctx.lineWidth = 2;
-  ctx.font = "bold 16px sans-serif";
-  boxes.forEach(([x0, y0, x1, y1], i) => {
-    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
-    ctx.fillText(String(i + 1), Math.min(x1 + 4, w - 12), y0 + 14);
-  });
   const pad = (box) => [Math.max(0, box[0] - 12), Math.max(0, box[1] - 12), Math.min(w, box[2] + 12), Math.min(h, box[3] + 12)];
   return { picture: c, closeUps: boxes.map((box) => ({ old: crop(f.old, pad(box)), neu: crop(f.neu, pad(box)) })) };
 }
