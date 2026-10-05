@@ -189,4 +189,11 @@ class IdleSessionTimeoutTest extends TestCase
             // Straight to the sign-out once the time is up.
             ->assertSee('if (now - Math.max(last, shared()) >= LIMIT) { end(); return; }', false);
     }
+
+    /** Thirty minutes unless an install says otherwise - here and in the example env a server is set up from. */
+    public function test_the_idle_limit_is_thirty_minutes_by_default(): void
+    {
+        $this->assertMatchesRegularExpression("/'idle_timeout' => \\(int\\) env\\('SESSION_IDLE_TIMEOUT', 30\\)/", file_get_contents(config_path('session.php')));
+        $this->assertMatchesRegularExpression('/^SESSION_IDLE_TIMEOUT=30$/m', file_get_contents(base_path('.env.example')));
+    }
 }

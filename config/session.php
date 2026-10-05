@@ -42,7 +42,7 @@ return [
     // clicking, typing, scrolling. Background checks (the bell, consultation
     // slots) do not count. A warning with a way to stay comes a minute
     // before, and the sign-in page then says why. 0 turns it off.
-    'idle_timeout' => (int) env('SESSION_IDLE_TIMEOUT', 10),
+    'idle_timeout' => (int) env('SESSION_IDLE_TIMEOUT', 30),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

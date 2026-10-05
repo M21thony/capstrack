@@ -23,6 +23,7 @@
   #evp-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(201,168,44,.16);color:#b8961c;margin-bottom:14px}
   #evp-title{font-size:17px;font-weight:700;letter-spacing:-.2px}
   #evp-sub{font-size:13px;color:var(--text2);margin-top:6px;line-height:1.55}
+  #evp-sub b{color:var(--text)}
   #evp-list{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
   #evp-list li{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--bg3)}
   #evp-list b{display:block;font-size:13px}
@@ -43,7 +44,7 @@
     <div id="evp-title">Time to evaluate your experts</div>
     <div id="evp-sub">
       Your team finished {{ $owedPhases->count() === 1 ? 'a phase' : $owedPhases->count().' phases' }} on the Progress Tracker.
-      As team leader, rate each expert from 1 to 5 stars with a comment. This is required for every phase.
+      As team leader, rate each expert from 1 to 5 stars with a comment. <b>The next phase stays locked until you do.</b>
     </div>
     <ul id="evp-list">
       @foreach($owedPhases->take(3) as $phase)

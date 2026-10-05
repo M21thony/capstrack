@@ -8,7 +8,6 @@ use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Services\Notifier;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -26,9 +25,6 @@ use Illuminate\Support\Facades\DB;
  */
 class ExpertEvaluations
 {
-    /** How long a team's list of owed evaluations is reused between pages. */
-    private const CACHE_SECONDS = 300;
-
     public function __construct(private TeamChecklist $checklists) {}
 
     /**
@@ -39,43 +35,36 @@ class ExpertEvaluations
      */
     public function due(Team $team): Collection
     {
-        // Cached as plain arrays: the cache refuses to unserialize objects
-        // (cache.serializable_classes), so a cached Collection comes back as
-        // __PHP_Incomplete_Class.
-        $rows = Cache::remember(self::cacheKey($team), self::CACHE_SECONDS, fn () => $this->owed($team)
-            ->map(fn ($row) => (array) $row)
-            ->all());
-
-        return collect(is_array($rows) ? $rows : [])->map(fn (array $row) => (object) $row)->values();
+        // Not cached: the next phase's lock is read fresh, and a list that
+        // lagged behind it would show a locked phase with nothing to rate.
+        return $this->owed($team);
     }
 
     /**
-     * Worked out fresh: see due().
+     * MilestoneProgress already knows, since a
+     * phase whose experts are not rated yet is not finished and holds the
+     * next gate shut - this only lays its answer out as rows.
      *
      * @return Collection<int, object>
      */
     private function owed(Team $team): Collection
     {
-        $experts = $this->engagedExperts($team);
+        $checklist = $this->checklists->for($team);
 
-        if ($experts->isEmpty()) {
+        if (! $checklist) {
             return collect();
         }
 
-        $done = ExpertEvaluation::where('team_id', $team->team_id)->get()
-            ->map(fn (ExpertEvaluation $e) => $e->checklist_milestone_id.'|'.$e->expert_id.'|'.$e->role)
-            ->flip();
-
-        return $this->finishedPhases($team)->flatMap(fn ($phase) => $experts->map(fn ($e) => (object) [
-            'milestone_id' => $phase->id,
-            'milestone' => $phase->name,
-            'position' => $phase->position,
-            'expert_id' => $e->expert_id,
-            'expert' => $e->name,
-            'role' => $e->role,
-            'role_label' => ExpertEvaluation::ROLES[$e->role],
-        ]))
-            ->reject(fn ($row) => $done->has($row->milestone_id.'|'.$row->expert_id.'|'.$row->role))
+        return MilestoneProgress::forTeam($checklist, (int) $team->team_id)->milestones
+            ->flatMap(fn ($m) => $m->evaluations_owed->map(fn ($e) => (object) [
+                'milestone_id' => (int) $m->milestone->id,
+                'milestone' => (string) $m->milestone->name,
+                'position' => (int) $m->milestone->position,
+                'expert_id' => $e->expert_id,
+                'expert' => $e->name,
+                'role' => $e->role,
+                'role_label' => ExpertEvaluation::ROLES[$e->role],
+            ]))
             ->values();
     }
 
@@ -121,8 +110,6 @@ class ExpertEvaluations
             'student_id' => $leader->student_id,
         ]);
 
-        self::forget($team);
-
         return null;
     }
 
@@ -163,7 +150,7 @@ class ExpertEvaluations
                 $leader,
                 'evaluation_due',
                 'Evaluate your experts: '.$phase,
-                'Your team finished <strong>'.e($phase).'</strong>. Rate '.e($names).' from 1 to 5 stars with a comment.',
+                'Your team finished <strong>'.e($phase).'</strong>. Rate '.e($names).' from 1 to 5 stars with a comment. The next phase stays locked until you do.',
                 route('student.experts', ['tab' => 'evaluations']),
                 ['tag' => 'evaluation:'.$milestoneId],
             );
@@ -173,58 +160,48 @@ class ExpertEvaluations
         return $count;
     }
 
-    public static function forget(Team $team): void
-    {
-        Cache::forget(self::cacheKey($team));
-    }
-
-    private static function cacheKey(Team $team): string
-    {
-        return 'expert-evaluations-due:v2:'.$team->team_id;
-    }
-
     /**
-     * The team's experts by the role they were engaged as.
+     * For each team: the experts it engaged (by the role it engaged them as)
+     * and the ratings already sent, keyed "milestone|expert|role". Read in
+     * bulk, for MilestoneProgress to work out which finished phases still owe
+     * a rating.
      *
-     * @return Collection<int, object{expert_id: int, name: string, role: string}>
+     * @param  Collection<int, int>  $teamIds
+     * @return array<int, array{experts: Collection<int, object{expert_id: int, name: string, role: string}>, done: array<string, true>}>
      */
-    private function engagedExperts(Team $team): Collection
+    public static function ledgers(Collection $teamIds): array
     {
-        return TeamExpertAssignment::where('team_id', $team->team_id)
+        $assignments = TeamExpertAssignment::whereIn('team_id', $teamIds)
             ->where('status', 'approved')
             ->with(['expert', 'expertRole.role'])
             ->get()
-            ->map(fn (TeamExpertAssignment $a) => (object) [
-                'expert_id' => (int) $a->expert_id,
-                'name' => $a->expert?->name ?? 'Expert',
-                'role' => strtolower(trim((string) $a->engaged_role_name)),
-            ])
-            ->filter(fn ($e) => array_key_exists($e->role, ExpertEvaluation::ROLES))
-            ->unique(fn ($e) => $e->expert_id.'|'.$e->role)
-            ->sortBy(fn ($e) => array_search($e->role, array_keys(ExpertEvaluation::ROLES), true))
-            ->values();
-    }
+            ->groupBy('team_id');
 
-    /**
-     * The phases of the team's checklist with every item done, in order.
-     *
-     * @return Collection<int, object{id: int, name: string, position: int}>
-     */
-    private function finishedPhases(Team $team): Collection
-    {
-        $checklist = $this->checklists->for($team);
+        $sent = ExpertEvaluation::whereIn('team_id', $teamIds)
+            ->get(['team_id', 'checklist_milestone_id', 'expert_id', 'role'])
+            ->groupBy('team_id');
 
-        if (! $checklist) {
-            return collect();
+        $roleOrder = array_keys(ExpertEvaluation::ROLES);
+        $out = [];
+
+        foreach ($teamIds as $teamId) {
+            $out[$teamId] = [
+                'experts' => $assignments->get($teamId, collect())
+                    ->map(fn (TeamExpertAssignment $a) => (object) [
+                        'expert_id' => (int) $a->expert_id,
+                        'name' => $a->expert?->name ?? 'Expert',
+                        'role' => strtolower(trim((string) $a->engaged_role_name)),
+                    ])
+                    ->filter(fn ($e) => array_key_exists($e->role, ExpertEvaluation::ROLES))
+                    ->unique(fn ($e) => $e->expert_id.'|'.$e->role)
+                    ->sortBy(fn ($e) => array_search($e->role, $roleOrder, true))
+                    ->values(),
+                'done' => $sent->get($teamId, collect())
+                    ->mapWithKeys(fn (ExpertEvaluation $e) => [$e->checklist_milestone_id.'|'.$e->expert_id.'|'.$e->role => true])
+                    ->all(),
+            ];
         }
 
-        return MilestoneProgress::forTeam($checklist, (int) $team->team_id)->milestones
-            ->filter(fn ($m) => $m->total > 0 && $m->completed === $m->total)
-            ->map(fn ($m) => (object) [
-                'id' => (int) $m->milestone->id,
-                'name' => (string) $m->milestone->name,
-                'position' => (int) $m->milestone->position,
-            ])
-            ->values();
+        return $out;
     }
 }

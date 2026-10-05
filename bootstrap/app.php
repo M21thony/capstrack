@@ -48,7 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // On every response: web pages, the API, files and the health check.
         $middleware->append(SecurityHeaders::class);
 
-        // Ten idle minutes and anyone signed in, on any portal, is signed out.
+        // Thirty idle minutes and anyone signed in, on any portal, is signed out.
         $middleware->web(append: [EndIdleSession::class]);
         $middleware->api(append: [EndIdleSession::class]);
     })

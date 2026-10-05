@@ -12,6 +12,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\NotificationMailer;
 use App\Services\Notifier;
+use App\Support\SectionScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -41,27 +42,15 @@ class AnnouncementController extends Controller
                 ->get()
                 ->groupBy('team_id');
 
+            // The team's own section - its leader's - the same answer the
+            // rest of the portal gives, so a 4th-year team split across
+            // sections is offered to the one CaPSA who handles it.
+            $scope = app(SectionScope::class);
+
             foreach ($confirmedTeams as $team) {
                 $records = $syRecords->get($team->team_id);
-                if (! $records) {
-                    continue;
-                }
-
-                foreach ($records as $sy) {
-                    $student = $sy->student;
-                    if (! $student?->course || ! $student->year_section) {
-                        continue;
-                    }
-
-                    $sectionLabel = Student::computeSectionLabel($student->course, $student->year_section);
-                    if (! $sectionLabel) {
-                        continue;
-                    }
-
-                    if (in_array($sectionLabel, $adminSections, true)) {
-                        $teams->push(['team_id' => $team->team_id, 'team_name' => $team->team_name]);
-                        break;
-                    }
+                if ($records && in_array($scope->sectionFor($team, $records), $adminSections, true)) {
+                    $teams->push(['team_id' => $team->team_id, 'team_name' => $team->team_name]);
                 }
             }
 

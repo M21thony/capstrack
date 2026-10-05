@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <style>
+  /* The student is here; their team is handled under another section. */
+  .std-team-elsewhere{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;white-space:nowrap;vertical-align:1px;background:rgba(29,78,216,.08);color:#1d4ed8;border:1px solid rgba(29,78,216,.18);cursor:help}
   /* A school address box: the domain sits in grey at the right end, so only
      the name part is typed. Typing or pasting a whole address hides it. */
   .email-field{position:relative}
@@ -329,6 +331,13 @@
                 <td data-label="Team">
                   @if ($sy && $sy->team)
                     {{ $sy->team->team_name ?? 'Team #' . $sy->team->team_id }}
+                    @if ($student->teamSection)
+                      {{-- A 4th-year team split across sections: it is one team, handled under its leader's section. --}}
+                      <span class="std-team-elsewhere"
+                            title="{{ $student->teamHandledHere ? 'This team is listed under '.$student->teamSection.', its leader\'s section.' : 'This team belongs to '.$student->teamSection.', its leader\'s section. That section\'s CaPSA handles its checklist, defenses and grading.' }}">
+                        Team in {{ $student->teamSection }}
+                      </span>
+                    @endif
                   @else
                     <span style="color:var(--text3)">—</span>
                   @endif

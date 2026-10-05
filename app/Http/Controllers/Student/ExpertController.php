@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
+use App\Models\ExpertEvaluation;
 use App\Models\ExpertRemovalRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
 use App\Support\ConsultationBoard;
+use App\Support\ExpertApplications;
 use App\Support\ExpertEvaluations;
 use App\Support\SectionScope;
 use App\Support\SkillCatalog;
@@ -215,16 +217,16 @@ class ExpertController extends Controller
         //
         // Columns are matched one at a time rather than concatenated:
         // SQLite, which the tests run on, has no CONCAT_WS.
-        $matchesSearch = function ($q) use ($search) {
+        $matchesSearch = fn (?string $side) => function ($q) use ($search, $side) {
             foreach (preg_split('/\\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) as $word) {
                 $like = '%'.$this->escapeLike(mb_strtolower($word)).'%';
 
-                $q->where(function ($w) use ($like) {
+                $q->where(function ($w) use ($like, $side) {
                     $w->whereRaw("LOWER(first_name) LIKE ? ESCAPE '!'", [$like])
                         ->orWhereRaw("LOWER(last_name) LIKE ? ESCAPE '!'", [$like])
                         ->orWhereRaw("LOWER(COALESCE(middle_name, '')) LIKE ? ESCAPE '!'", [$like])
-                        ->orWhereHas('expertise', function ($e) use ($like) {
-                            $e->whereRaw("LOWER(expertise_field) LIKE ? ESCAPE '!'", [$like]);
+                        ->orWhereHas('expertise', function ($e) use ($like, $side) {
+                            $e->when($side, fn ($s) => $s->forSide($side))->whereRaw("LOWER(expertise_field) LIKE ? ESCAPE '!'", [$like]);
                         });
                 });
             }
@@ -233,14 +235,18 @@ class ExpertController extends Controller
         // Everything except the role, so the count on each role card and the
         // list itself are filtered identically - the number on the card is
         // then exactly what choosing it shows.
-        $filtered = fn () => $visible()
-            ->when($activeSkill !== '', function ($q) use ($activeSkill, $matchesSkill) {
-                $q->whereHas('expertise', fn ($sub) => $matchesSkill($sub, [$activeSkill]));
+        //
+        // Research areas are kept per side, so a skill or search is matched
+        // against what the expert offers in the role being browsed: an
+        // adviser who consults on networking is not a networking adviser.
+        $filtered = fn (?string $side = null) => $visible()
+            ->when($activeSkill !== '', function ($q) use ($activeSkill, $matchesSkill, $side) {
+                $q->whereHas('expertise', fn ($sub) => $matchesSkill($sub->when($side, fn ($s) => $s->forSide($side)), [$activeSkill]));
             })
-            ->when($activeSkill === '' && $groupTerms !== [], function ($q) use ($groupTerms, $matchesSkill) {
-                $q->whereHas('expertise', fn ($sub) => $matchesSkill($sub, $groupTerms));
+            ->when($activeSkill === '' && $groupTerms !== [], function ($q) use ($groupTerms, $matchesSkill, $side) {
+                $q->whereHas('expertise', fn ($sub) => $matchesSkill($sub->when($side, fn ($s) => $s->forSide($side)), $groupTerms));
             })
-            ->when($search !== '', $matchesSearch)
+            ->when($search !== '', $matchesSearch($side))
             ->when($openOnly, function ($q) {
                 $q->where('max_teams', '>', 0)
                     ->whereRaw(
@@ -251,7 +257,7 @@ class ExpertController extends Controller
 
         $roleCounts = [];
         foreach (self::ROLES as $roleName) {
-            $roleCounts[$roleName] = $filtered()
+            $roleCounts[$roleName] = $filtered($roleName)
                 ->whereHas('roles', fn ($q) => $q->where('role_name', $roleName))
                 ->count();
         }
@@ -272,7 +278,7 @@ class ExpertController extends Controller
         // 24 rather than 9: the page shows one role at a time now, and the
         // card strip pages through what it is handed without the screen
         // growing, so a whole role normally arrives in a single request.
-        $experts = $filtered()
+        $experts = $filtered($activeRole)
             ->whereHas('roles', fn ($q) => $q->where('role_name', $activeRole))
             ->with(['roles' => function ($q) {
                 $q->where('role_name', '!=', 'capstone_adviser');
@@ -327,15 +333,42 @@ class ExpertController extends Controller
             // assignment id -> request id, so the "Change requested" badge can
             // also offer taking the request back before the CaPSA decides.
             'pendingRemovalIds' => $team
-                ? ExpertRemovalRequest::pending()->where('team_id', $team->team_id)->pluck('id', 'assignment_id')->map(fn ($requestId, $assignmentId) => ['request' => (int) $requestId, 'assignment' => (int) $assignmentId])->all()
+                ? ExpertRemovalRequest::pending()->with('replacement')->where('team_id', $team->team_id)->get()->mapWithKeys(fn ($r) => [(int) $r->assignment_id => ['request' => (int) $r->id, 'assignment' => (int) $r->assignment_id, 'replacement' => $r->replacement?->name]])->all()
                 : [],
             // The team's section, shown in the change-request dialog so the
             // team can see whose CaPSA the request waits on. Resolved the
             // same way the CaPSA side scopes it, so the two cannot disagree.
             'teamSection' => $team ? app(SectionScope::class)->sectionFor($team) : '',
             'isLeader' => $isLeader,
+            // Who a change request may name instead of each expert the team
+            // has: same role, room for the team, not already with it.
+            'replacementOptions' => $isLeader && $team ? $this->replacementOptions($team, $student, $roleAssignments) : [],
             // The Evaluations tab: what the leader still owes each expert for
             // the phases the team has finished, and what was already sent.
+            // What team leaders rated each listed expert, across every team
+            // and phase: the average and how many. Stars only - the comments
+            // stay with the team that wrote them.
+            'expertRatings' => ExpertEvaluation::whereIn('expert_id', $experts->pluck('expert_id'))
+                ->groupBy('expert_id')
+                ->selectRaw('expert_id, AVG(rating) as average, COUNT(*) as total')
+                ->get()
+                ->mapWithKeys(fn ($row) => [(int) $row->expert_id => ['average' => round((float) $row->average, 1), 'total' => (int) $row->total]])
+                ->all(),
+            // And what they wrote, so a team can read it before applying.
+            // Never which team wrote it.
+            'expertReviews' => ExpertEvaluation::whereIn('expert_id', $experts->pluck('expert_id'))
+                ->with('milestone:id,name')
+                ->latest()
+                ->get()
+                ->groupBy('expert_id')
+                ->map(fn ($rows) => $rows->take(30)->map(fn (ExpertEvaluation $e) => [
+                    'rating' => $e->rating,
+                    'comment' => $e->comment,
+                    'role' => $e->role,
+                    'phase' => $e->milestone?->name,
+                    'date' => $e->created_at?->format('M Y'),
+                ])->values()->all())
+                ->all(),
             'evaluationsDue' => $team ? app(ExpertEvaluations::class)->due($team) : collect(),
             'evaluationHistory' => $team ? app(ExpertEvaluations::class)->history($team) : collect(),
             'teamConfirmed' => $team?->is_confirmed ?? false,
@@ -379,5 +412,54 @@ class ExpertController extends Controller
         }
 
         return route('student.pre-proposal.document', $proposal);
+    }
+
+    /**
+     * For each role the team has filled, the experts a change request could
+     * name instead - checked the way an application to them would be.
+     *
+     * @param  array<string, ?TeamExpertAssignment>  $roleAssignments
+     * @return array<string, list<array{id: int, name: string, slots: string, rating: ?float, studyLeave: bool}>>
+     */
+    private function replacementOptions($team, Student $leader, array $roleAssignments): array
+    {
+        $applications = app(ExpertApplications::class);
+        $out = [];
+
+        foreach ($roleAssignments as $role => $current) {
+            if (! $current) {
+                continue;
+            }
+
+            $candidates = DB::table('expert_roles')
+                ->join('roles', 'roles.role_id', '=', 'expert_roles.role_id')
+                ->where('roles.role_name', $role)
+                ->where('expert_roles.expert_id', '!=', $current->expert_id)
+                ->pluck('expert_roles.expert_role_id', 'expert_roles.expert_id');
+
+            $experts = CapstoneExpert::whereIn('expert_id', $candidates->keys())->where('approved_status', true)->get();
+            $ratings = ExpertEvaluation::whereIn('expert_id', $experts->pluck('expert_id'))
+                ->groupBy('expert_id')->selectRaw('expert_id, AVG(rating) as average')->pluck('average', 'expert_id');
+
+            $out[$role] = $experts
+                ->reject(fn (CapstoneExpert $e) => $applications->refusal($team, $leader, $e, (int) $candidates[$e->expert_id], $current->assignment_id) !== null)
+                ->map(function (CapstoneExpert $e) use ($ratings) {
+                    $max = (int) ($e->max_teams ?? 0);
+                    $used = TeamExpertAssignment::where('expert_id', $e->expert_id)->where('status', 'approved')->count();
+
+                    return [
+                        'id' => (int) $e->expert_id,
+                        'name' => $e->name,
+                        'slots' => $max > 0 ? ($max - $used).' of '.$max.' slots open' : 'Slots not set',
+                        'rating' => isset($ratings[$e->expert_id]) ? round((float) $ratings[$e->expert_id], 1) : null,
+                        'studyLeave' => (bool) $e->on_study_leave,
+                    ];
+                })
+                ->sortBy('name')
+                ->values()
+                ->all();
+        }
+
+        return $out;
     }
 }

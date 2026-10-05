@@ -73,7 +73,7 @@ class RecruitmentRoleTagsTest extends TestCase
         $post = $this->publish($this->student(), ['qa_secondary', 'member', 'nd_primary']);
 
         $this->assertSame(['member', 'nd_primary', 'qa_secondary'], $post->role_tags, 'kept in the order offered');
-        $this->assertSame([self::DESIGNER, self::TESTER], $post->roles, 'the team roles the join flow matches on');
+        $this->assertSame([self::TESTER, self::DESIGNER], $post->roles, 'the team roles the join flow matches on, in the order picked');
         $this->assertSame(['Member', 'Network Designer/UI Designer (Primary)', 'QA Tester/Documentation (Secondary)'], $post->tagLabels());
     }
 

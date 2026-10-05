@@ -64,7 +64,8 @@ class RecruitmentController extends Controller
         $tags = self::pickedTags($request);
 
         // The team roles behind those choices, which the join flow matches on.
-        $roles = array_values(array_intersect(Recruitment::rolesForTags($tags), self::advertisableRoles()));
+        // The team roles in the order the student picked them.
+        $roles = array_values(array_intersect(Recruitment::rolesForTags(self::pickedTags($request, true)), self::advertisableRoles()));
 
         if ($tags === []) {
             $message = 'Choose at least one role.';
@@ -167,7 +168,7 @@ class RecruitmentController extends Controller
      *
      * @return list<string>
      */
-    private static function pickedTags(Request $request): array
+    private static function pickedTags(Request $request, bool $asPicked = false): array
     {
         $raw = $request->input('tags');
         $picked = is_string($raw) ? json_decode($raw, true) : $raw;
@@ -176,7 +177,7 @@ class RecruitmentController extends Controller
             $picked = (array) $request->input('roles', []);
         }
 
-        return Recruitment::tagKeys($picked);
+        return Recruitment::tagKeys($picked, $asPicked);
     }
 
     /**
@@ -216,7 +217,7 @@ class RecruitmentController extends Controller
 
         $recruitment->update([
             'recruitment_goal' => $validated['recruitment_goal'],
-            'roles' => array_values(array_intersect(Recruitment::rolesForTags($tags), self::advertisableRoles())),
+            'roles' => array_values(array_intersect(Recruitment::rolesForTags(self::pickedTags($request, true)), self::advertisableRoles())),
             'role_tags' => $tags,
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,

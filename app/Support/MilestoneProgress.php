@@ -102,6 +102,7 @@ class MilestoneProgress
         $defenses = self::defensesFor($teamIds, $deliverables);
         $checks = self::checksFor($teamIds, $deliverables);
         $titles = self::titlesFor($teamIds, $deliverables);
+        $ledgers = ExpertEvaluations::ledgers($teamIds);
 
         $out = [];
 
@@ -120,20 +121,21 @@ class MilestoneProgress
                 $titles->get($teamId),
             ));
 
-            $out[$teamId] = self::summarise($rows);
+            $out[$teamId] = self::summarise($rows, $ledgers[$teamId]);
         }
 
         return $out;
     }
 
-    private static function summarise(Collection $rows): object
+    /** @param  array{experts: Collection, done: array<string, true>}  $ledger  see ExpertEvaluations::ledgers() */
+    private static function summarise(Collection $rows, array $ledger): object
     {
         $total = $rows->count();
         $completed = $rows->whereIn('state', self::COMPLETE_STATES)->count();
 
         return (object) [
             'items' => $rows,
-            'milestones' => self::byMilestone($rows),
+            'milestones' => self::byMilestone($rows, $ledger),
             'total' => $total,
             'completed' => $completed,
             'handed_in' => $rows->where('state', self::HANDED_IN)->count(),
@@ -154,19 +156,23 @@ class MilestoneProgress
      * off the states here, so the grid, the team page and the student's
      * upload all read one answer.
      *
+     * A milestone whose items are all done still holds the next gate shut
+     * until the leader has rated every expert for it (ExpertEvaluations):
+     * the evaluation is the last step of finishing a phase.
+     *
      * Each item also carries its own lock (locked, waits_for): the milestone's,
      * or the order inside it - see itemWaitsFor().
      *
      * @return Collection<int, object>
      */
-    private static function byMilestone(Collection $rows): Collection
+    private static function byMilestone(Collection $rows, array $ledger): Collection
     {
         $unfinished = [];
         $above = null;
 
         return $rows
             ->groupBy(fn ($row) => $row->milestone->id)
-            ->map(function (Collection $items) use (&$unfinished, &$above) {
+            ->map(function (Collection $items) use (&$unfinished, &$above, $ledger) {
                 $milestone = $items->first()->milestone;
                 $total = $items->count();
                 $completed = $items->whereIn('state', self::COMPLETE_STATES)->count();
@@ -175,6 +181,9 @@ class MilestoneProgress
                     : $above;
                 $locked = $waitsFor !== null;
                 $dueOn = $milestone->due_on ?? $items->pluck('due_on')->filter()->max();
+                $evaluationsOwed = $total > 0 && $completed === $total
+                    ? $ledger['experts']->reject(fn ($e) => isset($ledger['done'][$milestone->id.'|'.$e->expert_id.'|'.$e->role]))->values()
+                    : collect();
 
                 $before = collect();
 
@@ -206,10 +215,15 @@ class MilestoneProgress
                     'closed' => $milestone->isClosed(),
                     // Named only when it matters: what this one is waiting for.
                     'requires' => $waitsFor,
+                    // Finished, but the leader has not rated these experts
+                    // for it yet - so the next gate stays shut.
+                    'evaluations_owed' => $evaluationsOwed,
                 ];
 
                 if ($completed < $total) {
                     $unfinished[] = $milestone->name;
+                } elseif ($evaluationsOwed->isNotEmpty()) {
+                    $unfinished[] = 'the expert evaluation for '.$milestone->name;
                 }
                 $above = $waitsFor;
 

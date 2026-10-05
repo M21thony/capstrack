@@ -12,8 +12,8 @@ use Illuminate\Support\Collection;
  * responsible for it.
  *
  * A CaPSA covers named sections ("BSIT-3A"), but a team has no section of
- * its own - it is inferred from whichever member has a complete enough
- * profile to compute one from. That inference has to give the same answer
+ * its own - it is its leader's, or failing that the first member's with a
+ * complete enough profile to compute one from (see sectionFor()). That inference has to give the same answer
  * everywhere: a listing page and the action behind it disagreeing is what
  * once made teams appear verifiable and then be rejected on submit. This
  * class is the single copy so they cannot drift.
@@ -26,11 +26,24 @@ class SectionScope
     /**
      * The section label for a team, or '' when none can be computed.
      *
+     * The leader's section. A team forms inside one section in 3rd year, but
+     * by 4th year its members can be split across sections - 4A and 4B - and
+     * still be one team finishing one capstone. Taking whichever member came
+     * back first gave such a team a different section from one page to the
+     * next, and with it a different CaPSA, checklist and grading list. The
+     * leader answers it the same way everywhere; the other members, in the
+     * order they joined, only stand in when the leader's profile has no
+     * section.
+     *
      * @param  Collection<int, StudentSchoolYear>|null  $records  Pre-loaded rows, to avoid a query per team in a list.
      */
     public function sectionFor(Team $team, ?Collection $records = null): string
     {
         $records ??= StudentSchoolYear::where('team_id', $team->team_id)->with('student')->get();
+
+        $records = $records
+            ->sortBy(fn ($sy) => [(int) $sy->student_id === (int) $team->leader_id ? 0 : 1, (int) $sy->getKey()])
+            ->values();
 
         foreach ($records as $sy) {
             if (! $sy->student) {

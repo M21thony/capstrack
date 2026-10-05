@@ -81,14 +81,16 @@ class Recruitment extends Model
     ];
 
     /**
-     * What a form sent, as option keys, in the order offered. A key, a label
-     * or a bare team role name (older forms, and the API) are all understood;
-     * a role name reads as its Primary. Anything else is dropped.
+     * What a form sent, as option keys - in the order offered, or with
+     * $asPicked in the order the student picked them, which is the order the
+     * team roles behind them are kept in. A key, a label or a bare team role
+     * name (older forms, and the API) are all understood; a role name reads
+     * as its Primary. Anything else is dropped.
      *
      * @param  array<int, mixed>  $picked
      * @return list<string>
      */
-    public static function tagKeys(array $picked): array
+    public static function tagKeys(array $picked, bool $asPicked = false): array
     {
         $byLabel = collect(self::ROLE_OPTIONS)->mapWithKeys(fn ($o, $key) => [mb_strtolower($o['label']) => $key]);
         // A bare role name stands for that role's first choice - its Primary.
@@ -100,9 +102,9 @@ class Recruitment extends Model
             $lower = mb_strtolower(trim($v));
 
             return array_key_exists($v, self::ROLE_OPTIONS) ? $v : ($byLabel[$lower] ?? $byRole[$lower] ?? null);
-        })->filter()->unique()->all();
+        })->filter()->unique()->values()->all();
 
-        return array_values(array_intersect(array_keys(self::ROLE_OPTIONS), $keys));
+        return $asPicked ? $keys : array_values(array_intersect(array_keys(self::ROLE_OPTIONS), $keys));
     }
 
     /**
@@ -136,7 +138,18 @@ class Recruitment extends Model
      */
     public function tagLabels(): array
     {
-        return array_map(fn ($key) => self::ROLE_OPTIONS[$key]['label'], $this->tagKeyList());
+        $saved = is_array($this->role_tags) ? $this->role_tags : [];
+
+        if ($saved !== []) {
+            return array_map(fn ($key) => self::ROLE_OPTIONS[$key]['label'], $this->tagKeyList());
+        }
+
+        // A post from before the six choices: each role it names shows as its
+        // Primary when it is one of them, and as written when it is not - an
+        // old post asking for a "Frontend Developer" still says so.
+        return collect($this->roles)->filter(fn ($r) => is_string($r) && trim($r) !== '')
+            ->map(fn (string $role) => ($key = self::tagKeys([$role])[0] ?? null) ? self::ROLE_OPTIONS[$key]['label'] : trim($role))
+            ->unique()->values()->all();
     }
 
     public function student(): BelongsTo
