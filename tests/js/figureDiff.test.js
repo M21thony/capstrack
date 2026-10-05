@@ -2,7 +2,7 @@
 // a pair amounts to. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OVERHAUL, figureMarks, hungarian, kindOf, overlapping, pairUp } from "../../resources/js/component/reader/figureDiff.js";
+import { OVERHAUL, figureMarks, hungarian, kindOf, overlapping, pairUp, spotTone } from "../../resources/js/component/reader/figureDiff.js";
 
 test("hungarian finds the cheapest pairing, not the greedy one", () => {
   // Greedy takes 0->0 (1), leaving 1->1 (100): 101. Best is 0->1, 1->0: 4.
@@ -36,6 +36,14 @@ test("a spot rewritten in place is told apart from a plain removal or addition",
   assert.equal(overlapping(0, 300), false); // a new line
   assert.equal(overlapping(800, 60), false); // mostly removed, a sliver added
   assert.equal(overlapping(20, 20), false); // too small to matter
+});
+
+test("each spot is boxed as rewritten, removed or added, and specks are left alone", () => {
+  assert.equal(spotTone(400, 380), "rewritten");
+  assert.equal(spotTone(500, 0), "removed");
+  assert.equal(spotTone(0, 300), "added");
+  assert.equal(spotTone(800, 60), "removed");
+  assert.equal(spotTone(10, 20), null);
 });
 
 test("changed spots are boxed on the pages of both versions, where the diagram sits", () => {

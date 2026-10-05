@@ -370,6 +370,13 @@ export function overlapping(removed, added) {
   return less >= 30 && less >= 0.25 * Math.max(removed, added);
 }
 
+/** What happened at a spot: rewritten in place, removed, added, or nothing worth a box. */
+export function spotTone(removed, added) {
+  if (overlapping(removed, added)) return "rewritten";
+  if (Math.max(removed, added) < 30) return null;
+  return removed >= added ? "removed" : "added";
+}
+
 const crop = (src, [x0, y0, x1, y1]) => {
   const c = canvasOf(x1 - x0, y1 - y0);
   c.getContext("2d").drawImage(src, x0, y0, c.width, c.height, 0, 0, c.width, c.height);
@@ -396,7 +403,7 @@ export function highlighted(f) {
     }
     return false;
   };
-  const boxes = [];
+  const boxes = [], plain = [];
   for (const r of f.spots) {
     const box = [Math.max(0, r.x * SHOW - 4), Math.max(0, r.y * SHOW - 4), Math.min(w, (r.x + r.w) * SHOW + 4), Math.min(h, (r.y + r.h) * SHOW + 4)];
     let removed = 0, added = 0;
@@ -407,10 +414,11 @@ export function highlighted(f) {
         else if (inkB[k] && !near(inkA, x, y)) { mark[k] = 2; added++; }
       }
     }
-    if (overlapping(removed, added)) {
+    const tone = spotTone(removed, added);
+    if (tone === "rewritten") {
       for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
       boxes.push(box);
-    }
+    } else if (tone) plain.push({ box, tone });
   }
   const c = canvasOf(w, h), ctx = c.getContext("2d"), img = ctx.createImageData(w, h), o = img.data;
   for (let k = 0; k < w * h; k++) {
@@ -418,6 +426,20 @@ export function highlighted(f) {
     o.set(mark[k] === 1 ? [220, 38, 38, 255] : mark[k] === 2 ? [22, 163, 74, 255] : [faded, faded, faded, 255], k * 4);
   }
   ctx.putImageData(img, 0, 0);
+  // A part removed or added is boxed too, so a small change is not missed: red dashed with −, green with +.
+  ctx.font = "bold 13px sans-serif";
+  for (const { box: [x0, y0, x1, y1], tone } of plain) {
+    const colour = tone === "removed" ? "#dc2626" : "#16a34a", text = tone === "removed" ? "− removed" : "+ added";
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = ctx.fillStyle = colour;
+    ctx.setLineDash(tone === "removed" ? [6, 4] : []);
+    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.setLineDash([]);
+    const tw = ctx.measureText(text).width + 8, ty = y0 >= 18 ? y0 - 18 : y0;
+    ctx.fillRect(Math.min(x0, w - tw), ty, tw, 18);
+    ctx.fillStyle = "#fff";
+    ctx.fillText(text, Math.min(x0, w - tw) + 4, ty + 13);
+  }
   ctx.strokeStyle = ctx.fillStyle = "#d97706";
   ctx.lineWidth = 2;
   ctx.font = "bold 16px sans-serif";
