@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import {
-  FigureZoom, Highlights, KINDS, PageStrip, ReaderTools, RemarksPanel,
+  FigureZoom, Highlights, KINDS, PageStrip, ReaderTools, RemarksPanel, SectionPicker,
   kindOf, mergeRectsByLine, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
 import ChangesPanel from "../reader/ChangesPanel";
@@ -606,13 +606,7 @@ function PDFChecker({
                   ))}
                 </div>
               )}
-              <input
-                className="rr-input"
-                placeholder="Section, e.g. 2.3 Related Studies (optional)"
-                aria-label="Section"
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
-              />
+              <SectionPicker value={section} onChange={setSection} />
               <div className="rr-row">
                 {draft.type === "box"
                   ? <button type="button" className="rr-btn sm ghost" onClick={() => { setAdding(true); changeMode("box"); }}>+ Box</button>

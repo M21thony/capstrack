@@ -120,6 +120,19 @@ export function Highlights({ remarks, numbers, selectedId, onSelect, clickable =
 }
 
 /** What a remark on a figure is about: its figure number, or where it is. */
+const CHAPTERS = ["Chapter 1", "Chapter 2", "Chapter 3", "Chapter 4", "Chapter 5"];
+
+/** Which chapter a remark is about, picked from a list. A section typed before the list existed stays choosable. */
+export function SectionPicker({ value, onChange, none = "No section" }) {
+  return (
+    <select className="rr-input" aria-label="Section" value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{none}</option>
+      {value && !CHAPTERS.includes(value) && <option value={value}>{value}</option>}
+      {CHAPTERS.map((c) => <option key={c} value={c}>{c}</option>)}
+    </select>
+  );
+}
+
 export const figureTitle = (r) => r.figure_label || (r.type === "pin" ? "Pin" : "Boxed area");
 export const figureDetail = (r) => [
   r.type === "pin" ? "Pin" : (r.highlightRects?.length > 1 ? `${r.highlightRects.length} boxes` : "Box"),
@@ -360,7 +373,7 @@ export function RemarksPanel({
         {writing && (
           <div className="rr-composer">
             <div className="rr-ctitle"><span className="rr-tag gen">General</span>About the whole document</div>
-            <input className="rr-input" placeholder="Section (optional), e.g. Whole chapter" aria-label="Section" value={gSection} onChange={(e) => setGSection(e.target.value)} />
+            <SectionPicker value={gSection} onChange={setGSection} none="Whole document" />
             <textarea
               ref={textRef}
               className="rr-input"
