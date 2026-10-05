@@ -4,6 +4,7 @@ import { Icon, KIND_LABEL, PagedList, figureTitle, kindOf } from "./Reader";
 import FigureCrop, { regionPixels } from "./FigureCrop";
 import { boundsOf, isFigureRemark, marksOf } from "./figures";
 import { PICTURE_CHANGED, findPicture, greyOf, labelsAt, pictureDifference } from "./revisionCheck";
+import { compareFigures, highlighted, outlined } from "./figureDiff";
 
 /** A remark from the earlier version, placed where it is now. */
 const atTarget = (r) => ({
@@ -187,6 +188,94 @@ function usePictureChecks(items, oldPdf, newPdf) {
   return checks;
 }
 
+/**
+ * Every diagram of both versions, paired and compared - worked out only once
+ * the Figures list is opened, since it draws every picture of both files.
+ */
+function useFigureDiff(oldPdf, newPdf, wanted) {
+  const [state, setState] = useState({ status: "idle", figures: [], note: "" });
+  useEffect(() => {
+    if (!wanted || !oldPdf || !newPdf) return undefined;
+    let alive = true;
+    setState({ status: "loading", figures: [], note: "Finding the figures…" });
+    compareFigures(oldPdf, newPdf, pdfjs.OPS, { alive: () => alive, onProgress: (note) => alive && setState((s) => ({ ...s, note })) })
+      .then((figures) => alive && setState({ status: "ready", figures: figures.map((f, i) => ({ ...f, id: i })), note: "" }))
+      .catch(() => alive && setState({ status: "error", figures: [], note: "" }));
+    return () => { alive = false; };
+  }, [oldPdf, newPdf, wanted]);
+  return state;
+}
+
+const FIGURE_KIND = {
+  small: (f) => [`Small changes · ${f.pct}%`, "mod"],
+  big: (f) => [`Overhauled · ${f.pct}%`, "del"],
+  new: () => ["New", "add"],
+  removed: () => ["Removed", "del"],
+  same: () => ["No change", ""],
+};
+const figureWhere = (f) => (f.kind === "new" ? `new · p.${f.newPage}` : f.kind === "removed" ? `p.${f.oldPage} → gone` : `p.${f.oldPage} → p.${f.newPage}`);
+const figureName = (f) => f.label || `Figure on p.${f.newPage ?? f.oldPage}`;
+
+/** A canvas drawn by the figure compare, shown as it is. */
+function Picture({ canvas }) {
+  const ref = useRef(null);
+  useEffect(() => { ref.current?.replaceChildren(canvas); }, [canvas]);
+  return <div ref={ref} className="rr-figpic" />;
+}
+
+/** One diagram, before and after: highlighted on one picture, or side by side. */
+function FigureView({ figure, base, onClose }) {
+  const ref = useRef(null);
+  const [mode, setMode] = useState("highlight");
+  useEffect(() => {
+    const d = ref.current;
+    if (figure && d && !d.open) { setMode("highlight"); d.showModal(); }
+    if (!figure && d?.open) d.close();
+  }, [figure]);
+  const f = figure;
+  const [tag, tone] = f ? FIGURE_KIND[f.kind](f) : [];
+  const was = base?.round || "Earlier version";
+  return (
+    <dialog ref={ref} className="rr-dialog rr-zoom" aria-labelledby="rr-figure-title" onClose={onClose} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      {f && (
+        <div className="rr-dlg">
+          <div className="rr-zoom-head">
+            <div>
+              <h2 id="rr-figure-title">{figureName(f)}</h2>
+              <p className="rr-muted">{f.title ? `${f.title} · ` : ""}{figureWhere(f)}</p>
+            </div>
+            <span className={`rr-tag ${tone}`}>{tag}</span>
+            <button type="button" className="rr-btn icon sm ghost" aria-label="Close" onClick={onClose}><Icon name="x" /></button>
+          </div>
+          {f.kind === "small" && (
+            <div className="rr-filter" role="group" aria-label="Show">
+              <button type="button" className="rr-fbtn" aria-pressed={mode === "highlight"} onClick={() => setMode("highlight")}>Highlight changes</button>
+              <button type="button" className="rr-fbtn" aria-pressed={mode === "side"} onClick={() => setMode("side")}>Side by side</button>
+            </div>
+          )}
+          {f.kind === "big" && <p className="rr-help rr-help-tight">Too different to highlight, shown side by side.</p>}
+          {f.kind === "small" && mode === "highlight" ? (
+            <>
+              <div className="rr-zoom-view"><Picture canvas={(f.hl ??= highlighted(f))} /></div>
+              <p className="rr-muted rr-figkey"><span className="del">Red</span> = removed · <span className="add">Green</span> = added · faded = the same</p>
+            </>
+          ) : f.kind === "small" || f.kind === "big" ? (
+            <div className="rr-compare">
+              <div><span className="rr-muted">{was} · p.{f.oldPage}</span><Picture canvas={f.kind === "small" ? (f.oldBoxed ??= outlined(f.old, f.spots, "#dc2626")) : f.old} /></div>
+              <div><span className="rr-muted">This version · p.{f.newPage}</span><Picture canvas={f.kind === "small" ? (f.newBoxed ??= outlined(f.neu, f.spots, "#16a34a")) : f.neu} /></div>
+            </div>
+          ) : (
+            <>
+              <p className="rr-help rr-help-tight">{f.kind === "new" ? `Not in ${was}.` : f.kind === "removed" ? "Not in this version." : `Same picture as ${was}.`}</p>
+              <div className="rr-zoom-view"><Picture canvas={f.kind === "removed" ? f.old : f.neu} /></div>
+            </>
+          )}
+        </div>
+      )}
+    </dialog>
+  );
+}
+
 /** Places the check could not confirm: it shows them, but says nothing about what changed there. */
 const LOST = ["not found", "picked, not matched", "picked place"];
 
@@ -295,8 +384,12 @@ export default function ChangesPanel({
     : isFigureRemark(r) && ["same place", "nearby text", "labels", "caption"].includes(r.foundBy) ? { ...r, unsettled: true } : r));
   const [filter, setFilter] = useState("remarks");
   const [comparing, setComparing] = useState(null);
-  const oldPdf = useEarlierPdf(revision.length ? base?.file : null);
+  const [figuresWanted, setFiguresWanted] = useState(false);
+  const [openFigure, setOpenFigure] = useState(null);
+  const oldPdf = useEarlierPdf(revision.length || figuresWanted ? base?.file : null);
   const pictures = usePictureChecks(revision, oldPdf, pdf);
+  const figureDiff = useFigureDiff(oldPdf, pdf, figuresWanted);
+  const showFilter = (k) => { setFilter(k); if (k === "figures") setFiguresWanted(true); };
 
   // Every figure is lined up by its picture. A caption is sure about the
   // page, so its figure is only looked for on that page, to place the box
@@ -368,18 +461,52 @@ export default function ChangesPanel({
         Since <b>{base?.round}</b>. New and reworded words are underlined in green; a red mark shows where words were removed.
       </p>
       <div className="rr-side-body">
-        {message && !(diff.status === "notext" && revision.length) ? (
+        {message && diff.status !== "notext" ? (
           <div className="rr-holder"><div className="rr-empty"><b>{message[0]}</b><span>{message[1]}</span></div></div>
         ) : (
           <>
             <div className="rr-filter" role="group" aria-label="Show">
-              {[["remarks", "Your remarks", revision.length], ["all", "All changes", changes.length]].map(([k, label, n]) => (
-                <button key={k} type="button" className="rr-fbtn" aria-pressed={filter === k} onClick={() => setFilter(k)}>
+              {[["remarks", "Your remarks", revision.length], ["all", "All changes", changes.length], ["figures", "Figures", figureDiff.status === "ready" ? figureDiff.figures.length : "…"]].map(([k, label, n]) => (
+                <button key={k} type="button" className="rr-fbtn" aria-pressed={filter === k} onClick={() => showFilter(k)}>
                   {label} <span className="rr-fc">{n}</span>
                 </button>
               ))}
             </div>
-            {filter === "all" ? (
+            {filter === "figures" ? (
+              figureDiff.status !== "ready" ? (
+                <div className="rr-holder"><div className="rr-empty">
+                  {figureDiff.status === "error"
+                    ? <><b>Could not compare the figures</b><span>Reload the page to try again.</span></>
+                    : <><b>{figureDiff.note || "Opening the earlier version…"}</b><span>Every picture of both versions is compared. This takes a moment.</span></>}
+                </div></div>
+              ) : (
+                <PagedList
+                  items={figureDiff.figures}
+                  keyOf={(f) => f.id}
+                  noun="figure"
+                  empty={<><b>No figures found</b><span>Only pasted pictures are compared. Diagrams drawn in Word are checked with the words.</span></>}
+                  renderItem={(f, measuring) => {
+                    const [tag, tone] = FIGURE_KIND[f.kind](f);
+                    return (
+                      <div
+                        className="rr-card text"
+                        role={measuring ? undefined : "button"}
+                        tabIndex={measuring ? -1 : 0}
+                        onClick={() => setOpenFigure(f.id)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenFigure(f.id); } }}
+                      >
+                        <div className="rr-card-r1">
+                          <span className={`rr-tag ${tone}`}>{tag}</span>
+                          <span className="rr-where">{figureWhere(f)}</span>
+                        </div>
+                        <b className="rr-figname">{figureName(f)}</b>
+                        {f.title && <div className="rr-t">{f.title}</div>}
+                      </div>
+                    );
+                  }}
+                />
+              )
+            ) : filter === "all" ? (
               <PagedList
                 items={changes}
                 keyOf={(c) => c.id}
@@ -474,6 +601,7 @@ export default function ChangesPanel({
         onPage={(step) => comparingItem && pickPage(comparingItem, step)}
         looking={comparingItem != null && looking === comparingItem.id}
       />
+      <FigureView figure={openFigure != null ? figureDiff.figures[openFigure] : null} base={base} onClose={() => setOpenFigure(null)} />
     </aside>
   );
 }
