@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -28,6 +29,7 @@ use Illuminate\Support\Str;
     'program',
     'sections',
     'degree_title',
+    'on_study_leave',
     'school_year',
     'rejection_reason',
     'reject_attempts',
@@ -104,6 +106,7 @@ class CapstoneExpert extends Authenticatable
     protected $casts = [
         'is_admin' => 'boolean',
         'approved_status' => 'boolean',
+        'on_study_leave' => 'boolean',
         'sections' => 'array',
         'created_at' => 'datetime',
         'reject_cooldown_until' => 'datetime',
@@ -130,6 +133,35 @@ class CapstoneExpert extends Authenticatable
     public function expertise()
     {
         return $this->hasMany(ExpertExpertise::class, 'expert_id', 'expert_id');
+    }
+
+    /**
+     * Their research areas for one side - as adviser, consultant, grammarian
+     * or panelist. A side they have not filled in yet falls back to the list
+     * that stands for every side.
+     *
+     * @return Collection<int, string>
+     */
+    public function expertiseFor(string $side): Collection
+    {
+        $rows = $this->relationLoaded('expertise') ? $this->expertise : $this->expertise()->get();
+        $own = $rows->where('side', $side);
+
+        return ($own->isNotEmpty() ? $own : $rows->whereNull('side'))
+            ->pluck('expertise_field')->map(fn ($f) => trim((string) $f))->filter()->unique()->values();
+    }
+
+    /**
+     * Every research area, whichever side it is for - for lists that show the
+     * person as a whole.
+     *
+     * @return Collection<int, string>
+     */
+    public function allExpertise(): Collection
+    {
+        $rows = $this->relationLoaded('expertise') ? $this->expertise : $this->expertise()->get();
+
+        return $rows->pluck('expertise_field')->map(fn ($f) => trim((string) $f))->filter()->unique(fn ($f) => mb_strtolower($f))->values();
     }
 
     public function getStatusAttribute(): string

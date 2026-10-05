@@ -17,6 +17,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Support\ExpertEvaluations;
+use App\Support\MilestoneProgress;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -46,6 +47,8 @@ class ExpertEvaluationTest extends TestCase
 
     private ChecklistMilestone $proposal;
 
+    private CapstoneExpert $capsa;
+
     /** @var array<string, CapstoneExpert> */
     private array $experts = [];
 
@@ -54,12 +57,12 @@ class ExpertEvaluationTest extends TestCase
         parent::setUp();
         Mail::fake();
 
-        $capsa = $this->capsaFor();
+        $capsa = $this->capsa = $this->capsaFor();
         [$this->team, $this->leader] = $this->teamInSection('Alpha');
 
         $this->checklist = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => 'BSIT', 'title' => 'Capstone Checklist']);
         $this->gettingStarted = $this->checklist->milestones()->create(['name' => 'Getting Started', 'position' => 0]);
-        $this->proposal = $this->checklist->milestones()->create(['name' => 'Pre-proposal', 'position' => 1]);
+        $this->proposal = $this->checklist->milestones()->create(['name' => 'Pre-proposal', 'position' => 1, 'requires_previous' => true]);
 
         foreach (['adviser', 'consultant', 'grammarian'] as $roleName) {
             $this->experts[$roleName] = $this->engage($roleName);
@@ -93,7 +96,6 @@ class ExpertEvaluationTest extends TestCase
         foreach ($milestone->deliverables as $line) {
             DeliverableCheck::create(['deliverable_id' => $line->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()]);
         }
-        ExpertEvaluations::forget($this->team);
     }
 
     private function member(): Student
@@ -129,7 +131,6 @@ class ExpertEvaluationTest extends TestCase
 
         // One of two done is not finished.
         DeliverableCheck::create(['deliverable_id' => $this->gettingStarted->deliverables()->first()->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()]);
-        ExpertEvaluations::forget($this->team);
         $this->assertCount(0, $this->due());
     }
 
@@ -337,5 +338,75 @@ class ExpertEvaluationTest extends TestCase
             ->assertOk()
             ->assertSee('Your team leader evaluates the experts.')
             ->assertDontSee('Submit evaluation');
+    }
+
+    private function proposalGate(): object
+    {
+        return MilestoneProgress::forTeam($this->checklist, $this->team->team_id)
+            ->milestones->first(fn ($m) => $m->milestone->id === $this->proposal->id);
+    }
+
+    public function test_the_next_phase_stays_locked_until_every_expert_is_rated(): void
+    {
+        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
+        $this->deliverable($this->proposal, 'Final Title Form');
+        $this->finish($this->gettingStarted);
+
+        $gate = $this->proposalGate();
+        $this->assertTrue($gate->locked, 'phase 1 is done but its experts are not rated');
+        $this->assertSame('the expert evaluation for Getting Started', $gate->requires);
+
+        $this->rate($this->leader, $this->experts['adviser'], 'adviser');
+        $this->rate($this->leader, $this->experts['consultant'], 'consultant');
+        $this->assertTrue($this->proposalGate()->locked, 'one expert is still not rated');
+
+        $this->rate($this->leader, $this->experts['grammarian'], 'grammarian');
+        $this->assertFalse($this->proposalGate()->locked);
+    }
+
+    public function test_the_capsa_cannot_close_anything_in_the_locked_phase(): void
+    {
+        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
+        $form = $this->deliverable($this->proposal, 'Final Title Form');
+        $this->finish($this->gettingStarted);
+
+        $this->actingAs($this->capsa, 'expert')
+            ->putJson(route('capsa.deliverables.checks.update', [$form->id, $this->team->team_id]), ['status' => DeliverableCheck::COMPLETE])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => "Final Title Form can't be checked yet: it waits for the expert evaluation for Getting Started."]);
+
+        foreach ($this->experts as $role => $expert) {
+            $this->rate($this->leader, $expert, $role);
+        }
+
+        $this->actingAs($this->capsa, 'expert')
+            ->putJson(route('capsa.deliverables.checks.update', [$form->id, $this->team->team_id]), ['status' => DeliverableCheck::COMPLETE])
+            ->assertSuccessful();
+    }
+
+    public function test_a_team_with_no_experts_yet_is_not_held_up(): void
+    {
+        TeamExpertAssignment::where('team_id', $this->team->team_id)->delete();
+        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
+        $this->deliverable($this->proposal, 'Final Title Form');
+        $this->finish($this->gettingStarted);
+
+        $this->assertFalse($this->proposalGate()->locked);
+    }
+
+    public function test_the_progress_tracker_says_why_the_next_phase_is_locked(): void
+    {
+        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
+        $this->deliverable($this->proposal, 'Final Title Form');
+        $this->finish($this->gettingStarted);
+
+        $this->actingAs($this->leader, 'web')->get(route('student.progress'))
+            ->assertOk()
+            ->assertSee('Evaluate your experts to unlock the next phase')
+            ->assertSee('Opens after the expert evaluation for Getting Started.');
+
+        $this->actingAs($this->member(), 'web')->get(route('student.progress'))
+            ->assertOk()
+            ->assertSee('Waiting on your leader to evaluate the experts');
     }
 }

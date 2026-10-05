@@ -98,9 +98,8 @@ trait ShowsTeamPage
                     'role' => $role,
                     'expert' => $expert,
                     'degree' => $expert?->degreeLabel(),
-                    'expertise' => $expert
-                        ? $expert->expertise->pluck('expertise_field')->filter()->values()
-                        : collect(),
+                    // Their research areas for the role this team engaged them as.
+                    'expertise' => $expert ? $expert->expertiseFor($role) : collect(),
                 ];
             })
             ->all();

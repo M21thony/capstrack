@@ -117,6 +117,8 @@ $pagesBothRolesOpen = function () {
     Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
     // What the Panel Chair rule reads: Master's degree or higher.
     Route::put('/experts/{expert}/degree', [AdminExpertsController::class, 'updateDegree'])->name('experts.degree.update');
+    // Taking a master's or similar: slower to schedule. Shown to students as a tag.
+    Route::put('/experts/{expert}/study-leave', [AdminExpertsController::class, 'updateStudyLeave'])->name('experts.study-leave.update');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     // Not bound to the model: route-model binding cannot find a deactivated
     // account, which is the only kind this is ever called on.
@@ -327,6 +329,8 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/grading', [GradingController::class, 'index'])->name('grading');
     Route::get('/grading/team-defenses', [GradingController::class, 'teamDefenses'])->name('grading.team-defenses');
     Route::get('/grading/{defense}', [GradingController::class, 'show'])->name('grading.show');
+    // The rating sheet on paper, for a defense held without signal or power.
+    Route::get('/grading/{defense}/sheet.{format}', [GradingController::class, 'sheet'])->whereIn('format', ['pdf', 'xlsx'])->name('grading.sheet');
     Route::put('/grading/{defense}', [GradingController::class, 'save'])->name('grading.save');
     Route::patch('/grading/{defense}', [GradingController::class, 'submit'])->name('grading.submit');
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');

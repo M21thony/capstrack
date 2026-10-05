@@ -151,6 +151,7 @@ class AdminExpertsController extends Controller
             'roles.*' => ['string', 'in:'.implode(',', CapstoneExpert::STUDENT_FACING_ROLES)],
             'expertise' => ['nullable', 'array'],
             'expertise.*' => ['string', 'max:100'],
+            'on_study_leave' => ['nullable', 'boolean'],
         ], [
             'email.required' => 'Type the email address of the person to add.',
             'email.email' => 'That is not an email address.',
@@ -244,6 +245,11 @@ class AdminExpertsController extends Controller
             CapstoneExpert::syncRoles($expert->expert_id, $wanted, $roleIds->values());
         }
 
+        // Only when asked, so adding an existing expert again does not clear it.
+        if ($request->has('on_study_leave')) {
+            $expert->update(['on_study_leave' => $request->boolean('on_study_leave')]);
+        }
+
         // Blank means "not saying", the same as an empty column on the list -
         // an expert fills their own areas in from their profile.
         $expertise = collect($request->input('expertise', []))
@@ -303,6 +309,30 @@ class AdminExpertsController extends Controller
         return response()->json([
             'success' => true,
             'message' => "Expert {$expert->name} has been updated.",
+        ]);
+    }
+
+    /**
+     * PUT /experts/{expert}/study-leave - the expert is taking a master's or
+     * similar: still takes teams, but is slower to schedule. Students see it
+     * as a quiet tag on the expert's card.
+     */
+    public function updateStudyLeave(Request $request, CapstoneExpert $expert): JsonResponse
+    {
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
+        $validated = $request->validate(['on_study_leave' => ['required', 'boolean']]);
+
+        $expert->update(['on_study_leave' => (bool) $validated['on_study_leave']]);
+
+        return response()->json([
+            'success' => true,
+            'on_study_leave' => $expert->on_study_leave,
+            'message' => $expert->on_study_leave
+                ? $expert->name.' is marked as on study leave.'
+                : $expert->name.' is no longer marked as on study leave.',
         ]);
     }
 

@@ -712,7 +712,7 @@ class CapsaReports
                     'expert' => ['b', (string) $e->name],
                     'email' => $e->email ?: self::DASH,
                     'roles' => $e->roles->isEmpty() ? self::DASH : $e->roles->pluck('role_name')->map(fn ($r) => Role::labelFor($r))->implode(', '),
-                    'expertise' => $e->expertise->isEmpty() ? self::DASH : $e->expertise->pluck('expertise_field')->implode(', '),
+                    'expertise' => $e->allExpertise()->isEmpty() ? self::DASH : $e->allExpertise()->implode(', '),
                     'accepts' => ! $takesTeams ? self::DASH : (! $slotsSet ? 'Not set' : ['slots', $teams, (int) $e->max_teams]),
                     'capacity' => $capacity ? ['lines', $capacity] : self::DASH,
                     'program' => $e->program ?: self::DASH,

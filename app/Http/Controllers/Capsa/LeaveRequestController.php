@@ -45,7 +45,7 @@ class LeaveRequestController extends Controller
         // Teams asking to change an expert who already took them on.
         $expertRequests = ExpertRemovalRequest::visibleTo(
             $capsa,
-            ExpertRemovalRequest::with(['team', 'expert', 'assignment.expertRole.role', 'requester', 'decider'])->latest()->limit(300)->get()
+            ExpertRemovalRequest::with(['team', 'expert', 'replacement', 'assignment.expertRole.role', 'requester', 'decider'])->latest()->limit(300)->get()
         );
         [$expertPending, $expertDecided] = $expertRequests->partition(fn ($r) => $r->isPending());
 

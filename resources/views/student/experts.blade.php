@@ -102,12 +102,19 @@
         'initials' => $expert->avatarInitials(),
         'avatar' => $expert->hasAvatarImage() ? $expert->avatarUrl() : null,
         'roles' => $roles->all(),
-        'tags' => $expert->expertise->pluck('expertise_field')->filter()->values()->all(),
+        // What they offer in the role being browsed - kept apart from their other sides.
+        'tags' => $expert->expertiseFor($activeRole)->all(),
         'used' => $used,
         'max' => $max,
         'choices' => $choices->all(),
         'status' => $status,
         'apply' => $canApply && ! $status && $choices->isNotEmpty(),
+        // Stars team leaders gave them after each phase, averaged.
+        'rating' => $expertRatings[$expert->expert_id]['average'] ?? null,
+        'ratings' => $expertRatings[$expert->expert_id]['total'] ?? 0,
+        'studyLeave' => (bool) $expert->on_study_leave,
+        // What earlier teams' leaders wrote, newest first. No team names.
+        'reviews' => $expertReviews[$expert->expert_id] ?? [],
       ];
     }
 
@@ -253,7 +260,7 @@
             @if($activeRemoval)
               <div class="xh-banner xh-wait">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                <span class="xh-banner-text">Your request to change <b>{{ $activeFilled->expert->name }}</b> is waiting on your section's CaPSA. They stay your {{ $activeRole }} until the CaPSA decides.</span>
+                <span class="xh-banner-text">Your request to change <b>{{ $activeFilled->expert->name }}</b> is waiting on your section's CaPSA. They stay your {{ $activeRole }} until the CaPSA decides.@if(! empty($activeRemoval['replacement'])) If approved, your application goes to <b>{{ $activeRemoval['replacement'] }}</b>.@endif</span>
                 @if($isLeader)
                   <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="takeback" data-request="{{ $activeRemoval['request'] }}" data-name="{{ $activeFilled->expert->name }}">Take back request</button>
                 @endif
@@ -358,6 +365,15 @@
                     <span class="xh-av xh-lg r-{{ $activeRole }}" aria-hidden="true">{{ $p['initials'] }}@if($p['avatar'])<img class="avatar-photo" src="{{ $p['avatar'] }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
                     <div>
                       <h3>{{ $expert->name }}</h3>
+                      <div class="xh-rating">
+                        @if($p['ratings'] > 0)
+                          <span class="xh-stars" role="img" aria-label="Rated {{ $p['rating'] }} out of 5">@for($s = 1; $s <= 5; $s++)<svg viewBox="0 0 24 24" class="{{ $s <= round($p['rating']) ? 'is-on' : '' }}" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>@endfor</span>
+                          <b>{{ number_format($p['rating'], 1) }}</b><span>({{ $p['ratings'] }} {{ $p['ratings'] === 1 ? 'rating' : 'ratings' }})</span>
+                          <button type="button" class="xh-linkbtn" data-xh="reviews" data-id="{{ $expert->expert_id }}">View comments</button>
+                        @else
+                          <span>No ratings yet</span>
+                        @endif
+                      </div>
                       @if($also->isNotEmpty())
                         <div class="xh-chips">
                           @foreach($also as $r)<span class="xh-chip r-{{ $r }}">also {{ $r }}</span>@endforeach
@@ -390,6 +406,10 @@
                       </b>
                     </div>
                     <div class="xh-meter{{ $capFull ? ' is-full' : '' }}"><i style="width:{{ $capPct }}%"></i></div>
+                    @if($p['studyLeave'])
+                      {{-- Quiet on purpose: worth knowing before applying, not a warning. --}}
+                      <p class="xh-leave"><span class="xh-leave-tag">Study leave</span> May be slow to reply and hard to book.</p>
+                    @endif
                   </div>
                   <div class="xh-xact">
                     <button type="button" class="xh-btn xh-ghost" data-xh="profile" data-id="{{ $expert->expert_id }}">View profile</button>
@@ -480,7 +500,7 @@
         <div class="xh-grow xh-ev">
           <div class="xh-ev-head">
             <h2>To evaluate</h2>
-            <span>{{ $evaluationsDue->count() }} waiting · one for each expert after every finished phase</span>
+            <span>{{ $evaluationsDue->count() }} waiting · the next phase unlocks once a phase's experts are all rated</span>
           </div>
 
           @if($evaluationsDue->isEmpty())
@@ -615,6 +635,7 @@
   'pendingByRole' => $pendingByRole,
   'cutoffDays' => \App\Http\Controllers\StudentConsultationController::CANCEL_CUTOFF_DAYS,
   'reasonMin' => \App\Models\ExpertRemovalRequest::REASON_MIN,
+  'replacementOptions' => $replacementOptions,
   'teamSection' => $teamSection,
   'isLeader' => $isLeader,
   'hasApprovedProposal' => (bool) $approvedProposal,
@@ -1037,6 +1058,30 @@ function capOf(p) {
   return { text: (p.max - p.used) + ' of ' + p.max + ' slots open', cls: 'is-ok', pct: Math.round(p.used / p.max * 100) };
 }
 
+function ratingHtml(p) {
+  if (!p.ratings) { return '<span>No ratings yet</span>'; }
+  var stars = '';
+  for (var s = 1; s <= 5; s++) { stars += '<svg viewBox="0 0 24 24" class="' + (s <= Math.round(p.rating) ? 'is-on' : '') + '" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'; }
+  return '<span class="xh-stars" role="img" aria-label="Rated ' + p.rating + ' out of 5">' + stars + '</span><b>' + Number(p.rating).toFixed(1) + '</b><span>(' + p.ratings + (p.ratings === 1 ? ' rating' : ' ratings') + ')</span>';
+}
+function starsHtml(n) {
+  var out = '';
+  for (var s = 1; s <= 5; s++) { out += '<svg viewBox="0 0 24 24" class="' + (s <= n ? 'is-on' : '') + '" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'; }
+  return '<span class="xh-stars" role="img" aria-label="' + n + ' out of 5 stars">' + out + '</span>';
+}
+/* What earlier teams' leaders wrote about an expert, after each phase. */
+function openReviews(id) {
+  var p = EXPERTS[id];
+  if (!p) { return; }
+  var list = (p.reviews || []).map(function (r) {
+    return '<li class="xh-review"><div class="xh-review-top">' + starsHtml(r.rating) + '<span>' + esc(ucfirst(r.role)) + (r.phase ? ' · ' + esc(r.phase) : '') + ' · ' + esc(r.date) + '</span></div><p>' + esc(r.comment) + '</p></li>';
+  }).join('');
+  openDialog(head('Comments on ' + esc(p.name), p.ratings + (p.ratings === 1 ? ' rating' : ' ratings') + ' from team leaders, written after each phase.')
+    + '<div class="xh-dlg-body"><div class="xh-rating xh-review-sum">' + ratingHtml(p) + '</div>'
+    + (list ? '<ul class="xh-reviews">' + list + '</ul>' : '<p class="xh-note">No comments yet.</p>')
+    + (p.ratings > (p.reviews || []).length ? '<p class="xh-note">Showing the latest ' + p.reviews.length + '.</p>' : '')
+    + '</div><div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="profile" data-id="' + p.id + '">Back to profile</button><button type="button" class="xh-btn xh-gold" data-xh="close">Close</button></div>');
+}
 function openProfile(id) {
   var p = EXPERTS[id];
   if (!p) { return; }
@@ -1048,10 +1093,12 @@ function openProfile(id) {
   openDialog('<div class="xh-dlg-head"><div class="xh-profile-top xh-ttl r-' + role + '">' + avatar(p, role, 'xh-xl') + '<div><h2>' + esc(p.name) + '</h2><div class="xh-chips">'
     + p.roles.map(function (r) { return '<span class="xh-chip r-' + r + '">' + ucfirst(r) + '</span>'; }).join('') + '</div></div></div>'
     + '<button type="button" class="xh-x" data-xh="close" aria-label="Close">' + ICON.x + '</button></div>'
-    + '<div class="xh-dlg-body"><div class="xh-sec"><span class="xh-lbl">Expertise</span><div class="xh-tags">'
+    + '<div class="xh-dlg-body"><div class="xh-sec"><span class="xh-lbl">Rating from team leaders</span><div class="xh-rating">' + ratingHtml(p) + (p.ratings ? '<button type="button" class="xh-linkbtn" data-xh="reviews" data-id="' + p.id + '">View comments</button>' : '') + '</div></div>'
+    + '<div class="xh-sec"><span class="xh-lbl">Expertise</span><div class="xh-tags">'
     + (p.tags.length ? p.tags.map(function (t) { return '<span class="xh-tag">' + esc(t) + '</span>'; }).join('') : '<span class="xh-tag">Not filled in yet</span>') + '</div></div>'
     + '<div class="xh-sec"><span class="xh-lbl">Teams they can take</span><div class="xh-caprow"><span>' + (p.max > 0 ? p.used + ' of ' + p.max + ' taken' : 'They have not set this yet') + '</span><b class="' + c.cls + '">' + c.text + '</b></div>'
     + '<div class="xh-meter' + (c.cls === 'is-full' ? ' is-full' : '') + '"><i style="width:' + c.pct + '%"></i></div></div>'
+    + (p.studyLeave ? '<p class="xh-leave"><span class="xh-leave-tag">Study leave</span> May be slow to reply and hard to book. Plan sessions early.</p>' : '')
     + '<p class="xh-note">An expert can take only one role per team.</p></div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Close</button>' + action + '</div>');
 }
@@ -1073,8 +1120,7 @@ function openApply(id, draft) {
       + '<div class="xh-attach-meta"><b>' + esc(D.proposalTitle) + '</b><span>Approved by your CaPSA. It is sent with this application, so there is nothing to upload.</span></div>'
       + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="proposal">Preview</button></div></div>'
     : '<div class="xh-field" id="xh-f-file"><label for="xh-apply-file">Recommended pre-proposal (PDF) <span class="xh-req">*</span></label>'
-      + '<input type="file" id="xh-apply-file" accept=".pdf,application/pdf">'
-      + (draft && draft.file ? '<span class="xh-note">Attached: ' + esc(draft.file.name) + '. Choose another file to replace it.</span>' : '')
+      + filePicker('xh-apply-file', draft && draft.file ? draft.file.name : '')
       + '<span class="xh-fmeta"><span class="xh-ferr">Attach your recommended pre-proposal as a PDF.</span></span></div>';
   openDialog(head('Apply to ' + esc(p.name), 'Your application goes to the expert. They accept or decline.')
     + '<div class="xh-dlg-body" data-expert="' + p.id + '">'
@@ -1107,16 +1153,67 @@ function openProposal() {
   d.appendChild(tpl.content.cloneNode(true));
 }
 
+/* A PDF picker that looks like part of the form: the real input is under the whole box. */
+function filePicker(id, chosen) {
+  return '<label class="xh-file' + (chosen ? ' is-set' : '') + '" for="' + id + '">'
+    + '<input type="file" id="' + id + '" class="xh-file-input" accept=".pdf,application/pdf">'
+    + '<span class="xh-file-ic" aria-hidden="true">' + ICON.file + '</span>'
+    + '<span class="xh-file-text"><b data-file-name>' + (chosen ? esc(chosen) : 'Choose a PDF') + '</b>'
+    + '<span data-file-meta>' + (chosen ? 'Attached · choose again to replace it' : 'PDF only, up to 5 MB') + '</span></span>'
+    + '<span class="xh-btn xh-ghost xh-sm xh-file-btn" aria-hidden="true">' + (chosen ? 'Replace' : 'Browse') + '</span></label>';
+}
+function syncFilePicker(input) {
+  var box = input.closest('.xh-file');
+  if (!box) { return; }
+  var f = input.files && input.files[0];
+  var bad = !!f && (!/\.pdf$/i.test(f.name) || f.size > 5 * 1024 * 1024);
+  if (bad) { input.value = ''; f = null; }
+  box.classList.toggle('is-set', !!f);
+  var field = box.closest('.xh-field');
+  if (field) { field.classList.toggle('is-bad', bad); }
+  box.querySelector('[data-file-name]').textContent = f ? f.name : 'Choose a PDF';
+  box.querySelector('[data-file-meta]').textContent = f ? (f.size < 1024 * 1024 ? Math.max(1, Math.round(f.size / 1024)) + ' KB' : (f.size / 1048576).toFixed(1) + ' MB') + ' · PDF' : 'PDF only, up to 5 MB';
+  box.querySelector('.xh-file-btn').textContent = f ? 'Replace' : 'Browse';
+}
+
 function openChange(btn) {
   var role = btn.dataset.role;
-  openDialog(head('Request an expert change', 'Your section\'s CaPSA decides. ' + esc(btn.dataset.name) + ' stays with your team until they do. Once approved, you can apply to someone else for the same role.',
+  var options = (D.replacementOptions || {})[role] || [];
+  var picker = options.length
+    ? '<select id="xh-change-to"><option value="">Choose a ' + esc(role) + '…</option>'
+      + options.map(function (o) {
+        return '<option value="' + o.id + '">' + esc(o.name) + ' · ' + esc(o.slots)
+          + (o.rating ? ' · ★ ' + Number(o.rating).toFixed(1) : '') + (o.studyLeave ? ' · Study leave' : '') + '</option>';
+      }).join('') + '</select>'
+    : '<p class="xh-note xh-note-warn">No other ' + esc(role) + ' has a free slot for your team right now, so a change cannot be asked for yet.</p>';
+  var file = D.hasApprovedProposal ? ''
+    : '<div class="xh-field" id="xh-f-change-file"><label for="xh-change-file">Pre-proposal for them (PDF) <span class="xh-req">*</span></label>'
+      + filePicker('xh-change-file', '') + '<span class="xh-fmeta"><span class="xh-ferr">That is not a PDF, or it is over 5 MB.</span></span></div>';
+  openDialog(head('Request an expert change', 'Your section\'s CaPSA decides. ' + esc(btn.dataset.name) + ' stays with your team until they do. Once approved, your application goes to the expert you pick below.',
       '<span class="xh-dlg-icon xh-ic-amber">' + ICON.swap + '</span>')
     + '<div class="xh-dlg-body"><div class="xh-detail r-' + role + '">' + avatar(D.team[role] || {}, role, 'xh-sm') + '<span class="xh-detail-meta"><b>' + esc(btn.dataset.name) + '</b><span>' + ucfirst(role) + ' of your team'
     + (D.teamSection ? ' · Decided by the CaPSA for ' + esc(D.teamSection) : '') + '</span></span></div>'
     + '<div class="xh-field" id="xh-f-reason"><label for="xh-change-reason">Reason for your CaPSA <span class="xh-req">*</span></label>'
-    + '<textarea id="xh-change-reason" rows="4" maxlength="500" placeholder="Explain to your CaPSA why this expert has to change."></textarea>'
-    + '<span class="xh-fmeta"><span class="xh-ferr">Give at least ' + D.reasonMin + ' characters so your CaPSA can decide.</span><span><span id="xh-reason-count">0</span>/500</span></span></div></div>'
+    + '<textarea id="xh-change-reason" rows="3" maxlength="500" placeholder="Explain to your CaPSA why this expert has to change."></textarea>'
+    + '<span class="xh-fmeta"><span class="xh-ferr">Give at least ' + D.reasonMin + ' characters so your CaPSA can decide.</span><span><span id="xh-reason-count">0</span>/500</span></span></div>'
+    + '<div class="xh-field" id="xh-f-change-to"><label for="xh-change-to">' + ucfirst(role) + ' to replace them <span class="xh-req">*</span></label>' + picker
+    + '<span class="xh-note">Sent to them only if the CaPSA approves and they still have a slot then. They accept or decline your team.</span></div>'
+    + (options.length ? '<div class="xh-field" id="xh-f-change-msg"><label for="xh-change-msg">Message to them <span class="xh-req">*</span></label>'
+      + '<textarea id="xh-change-msg" rows="3" maxlength="3000" placeholder="Introduce your team and your project to the expert you picked."></textarea></div>' + file : '')
+    + '</div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="change-send" data-assignment="' + btn.dataset.assignment + '" id="xh-change-send" disabled>Send to CaPSA</button></div>');
+}
+
+/* Send is open once every required part of the change request is there. */
+function changeReady() {
+  var reason = $('xh-change-reason');
+  var to = $('xh-change-to');
+  var msg = $('xh-change-msg');
+  var file = $('xh-change-file');
+  return !!reason && reason.value.trim().length >= D.reasonMin
+    && !!to && !!to.value
+    && !!msg && msg.value.trim() !== ''
+    && (!file || (file.files && file.files.length > 0));
 }
 
 function openTakeBack(btn) {
@@ -1308,7 +1405,9 @@ var ACT = {
       }
     }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
   },
-  profile: function (el) { openProfile(el.dataset.id); },
+  // Swapping between a profile and its comments replaces the window rather than stacking one on another.
+  profile: function (el) { var d = el.closest('dialog'); if (d) { d.close(); } openProfile(el.dataset.id); },
+  reviews: function (el) { var d = el.closest('dialog'); if (d) { d.close(); } openReviews(el.dataset.id); },
   apply: function (el) {
     var d = el.closest('dialog');
     if (d) { d.close(); }
@@ -1367,8 +1466,16 @@ var ACT = {
   'change-send': function (el) {
     var reason = $('xh-change-reason').value.trim();
     if (reason.length < D.reasonMin) { $('xh-f-reason').classList.add('is-bad'); return; }
+    if (!changeReady()) { return; }
+    // A form, not JSON: the replacement may need a PDF. The verb rides in _method.
+    var body = new FormData();
+    body.append('_method', 'DELETE');
+    body.append('reason', reason);
+    body.append('replacement_expert_id', $('xh-change-to').value);
+    body.append('replacement_message', $('xh-change-msg').value.trim());
+    if ($('xh-change-file') && $('xh-change-file').files[0]) { body.append('replacement_proposal_file', $('xh-change-file').files[0]); }
     busy(el, 'Sending…');
-    send(D.urls.assignments + '/' + el.dataset.assignment, 'DELETE', { reason: reason }).then(function (data) {
+    send(D.urls.assignments + '/' + el.dataset.assignment, 'POST', body, true).then(function (data) {
       if (data.success) { closeAll(); toast(data.message, 'success'); reloadOnFind(); }
       else { idle(el); toast(data.message || 'The request could not be sent.', 'error'); }
     }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
@@ -1417,8 +1524,10 @@ document.addEventListener('input', function (e) {
   } else if (t.id === 'xh-change-reason') {
     var len = t.value.trim().length;
     $('xh-reason-count').textContent = t.value.length;
-    $('xh-change-send').disabled = len < D.reasonMin;
+    $('xh-change-send').disabled = !changeReady();
     $('xh-f-reason').classList.toggle('is-bad', len > 0 && len < D.reasonMin);
+  } else if (t.id === 'xh-change-msg') {
+    $('xh-change-send').disabled = !changeReady();
   } else if (t.id === 'xh-cancel-reason') {
     if (t.value.trim()) { $('xh-f-cancel').classList.remove('is-bad'); }
   } else if (t.id === 'xh-skill-q') {
@@ -1445,6 +1554,8 @@ document.addEventListener('input', function (e) {
   }
 });
 document.addEventListener('change', function (e) {
+  if (e.target.classList && e.target.classList.contains('xh-file-input')) { syncFilePicker(e.target); }
+  if (e.target.id === 'xh-change-to' || e.target.id === 'xh-change-file') { $('xh-change-send').disabled = !changeReady(); }
   if (e.target.name === 'xh-apply-role') { $('xh-f-role').classList.remove('is-bad'); }
   if (e.target.id === 'xh-apply-file' && e.target.files && e.target.files[0]) { $('xh-f-file').classList.remove('is-bad'); }
 });

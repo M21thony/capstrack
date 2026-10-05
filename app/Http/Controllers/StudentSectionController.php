@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Models\Team;
+use App\Support\SectionCatalog;
+use App\Support\SectionScope;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -34,6 +37,15 @@ class StudentSectionController extends Controller
             ->get()
             ->keyBy('student_id');
 
+        // Each team's own section - its leader's. A 4th-year team can have a
+        // member here while it belongs to another section, and that student's
+        // row says so rather than looking like one of this CaPSA's teams.
+        $scope = app(SectionScope::class);
+        $teamIds = $syRecords->pluck('team_id')->filter()->unique();
+        $teamRecords = StudentSchoolYear::with('student')->whereIn('team_id', $teamIds)->get()->groupBy('team_id');
+        $teamSections = Team::whereIn('team_id', $teamIds)->get()
+            ->mapWithKeys(fn (Team $team) => [$team->team_id => $scope->sectionFor($team, $teamRecords->get($team->team_id, collect()))]);
+
         $students = collect();
 
         foreach ($allStudents as $student) {
@@ -56,6 +68,10 @@ class StudentSectionController extends Controller
             $student->sectionLabel = $sectionLabel;
             $student->programAbbr = $program;
             $student->currentSy = $syRecords->get($student->student_id);
+            $teamSection = $student->currentSy?->team_id ? ($teamSections[$student->currentSy->team_id] ?? '') : '';
+            // Set only when the team belongs to a section other than the student's own.
+            $student->teamSection = $teamSection !== '' && $teamSection !== $sectionLabel ? $teamSection : null;
+            $student->teamHandledHere = $student->teamSection !== null && in_array($student->teamSection, $adminSections, true);
             $students->push($student);
         }
 
@@ -64,7 +80,7 @@ class StudentSectionController extends Controller
         // The sections this CaPSA handles, which is what "All my sections"
         // is the top of. It used to list every section in the college, so the
         // dropdown was mostly other people's work.
-        $allSections = \App\Support\SectionCatalog::tidy($adminSections);
+        $allSections = SectionCatalog::tidy($adminSections);
 
         $debug = null;
         if ($request->query('debug') == '1') {
