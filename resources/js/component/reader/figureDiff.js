@@ -878,12 +878,16 @@ export function highlighted(f) {
  * The shapes and arrows that changed, coloured where they sit, on clear
  * pictures to lay over each version's diagram: { added } in green over this
  * version, { removed } in red over the earlier one, each null when nothing
- * is there. Only the lines are recoloured, in place, with no glow and nothing
- * filled in. The words of a label are left to the word-style highlight.
+ * is there. The picture is laid on the page with mix-blend-mode: lighten, so
+ * the page's own dark lines turn the colour and its white stays white: the
+ * shape itself is recoloured, at the page's own sharpness. The colour reaches
+ * a little past each line, so being a pixel off still lands on it. The words
+ * of a label are left to the word-style highlight.
  */
 export function tints(f) {
-  const { a, b, w, h, both: mark, spots } = (f.changes ??= inkChanges(f));
-  const layer = (tone, value, px, colour) => {
+  const { w, h, both: mark, spots } = (f.changes ??= inkChanges(f));
+  const R = 2;
+  const layer = (tone, value, colour) => {
     const img = new ImageData(w, h);
     let any = false;
     for (const s of spots) {
@@ -891,12 +895,11 @@ export function tints(f) {
       const [x0, y0, x1, y1] = s.box;
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
-          const k = y * w + x;
-          if (mark[k] !== value) continue;
+          if (mark[y * w + x] !== value) continue;
           any = true;
-          // As dark as the line itself, so it stays as thin as the line it covers.
-          const dark = 255 - (px[k * 4] + px[k * 4 + 1] + px[k * 4 + 2]) / 3;
-          img.data.set([...colour, Math.min(255, dark * 2)], k * 4);
+          for (let yy = Math.max(0, y - R); yy <= Math.min(h - 1, y + R); yy++) {
+            for (let xx = Math.max(0, x - R); xx <= Math.min(w - 1, x + R); xx++) img.data.set([...colour, 255], (yy * w + xx) * 4);
+          }
         }
       }
     }
@@ -905,7 +908,7 @@ export function tints(f) {
     c.getContext("2d").putImageData(img, 0, 0);
     return c;
   };
-  return { added: layer("added", 2, b, [22, 163, 74]), removed: layer("removed", 1, a, [220, 38, 38]) };
+  return { added: layer("added", 2, [22, 163, 74]), removed: layer("removed", 1, [220, 38, 38]) };
 }
 
 /** A picture with the changed spots outlined. */

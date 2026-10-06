@@ -130,13 +130,15 @@ function StudentPdfViewer({
                   {col.visible.has(n)
                     ? <Page pageNumber={n} width={col.pageWidth} renderTextLayer={false} renderAnnotationLayer={false} loading="" />
                     : <div style={{ height: Math.round((col.pageWidth * 11) / 8.5) }} />}
+                  {/* On the page itself, not in the overlay, so it can recolour the page's own lines. */}
+                  {(figureMarks?.[n] || []).filter((m) => m.src).map((m) => m.rects.map((r, idx) => (
+                    <img key={`${m.id}-${idx}`} className="rr-figover" src={m.src} alt="" style={rectStyle(r)} />
+                  )))}
                   <div className="rr-overlay">
                     {(marks?.[n] || []).map((m) => m.rects.map((r, idx) => (
                       <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff old${m.inserted ? " ins" : ""}${focus?.id === m.id ? " on" : ""}`} style={rectStyle(r)} />
                     )))}
-                    {(figureMarks?.[n] || []).map((m) => m.rects.map((r, idx) => (m.src
-                      ? <img key={`${m.id}-${idx}`} className="rr-figover" src={m.src} alt="" style={rectStyle(r)} />
-                      : m.diff
+                    {(figureMarks?.[n] || []).filter((m) => !m.src).map((m) => m.rects.map((r, idx) => (m.diff
                       ? <div key={`${m.id}-${idx}`} className={`rr-hl rr-diff old${m.inserted ? " ins" : ""}`} style={rectStyle(r)} />
                       : <div key={`${m.id}-${idx}`} className={`rr-figdiff old ${m.tone || ""}`} data-label={m.label || undefined} style={rectStyle(r)} />
                     )))}

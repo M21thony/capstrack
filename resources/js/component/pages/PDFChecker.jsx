@@ -540,13 +540,14 @@ function PDFChecker({
                         onRenderSuccess={() => setRendered((prev) => (prev.has(n) ? prev : new Set(prev).add(n)))}
                       />
                     )}
+                    {/* On the page itself, not in the overlay, so it can recolour the page's own lines. */}
+                    {showChanges && (figureTints.now[n] || []).map((t) => (
+                      <img key={t.id} className="rr-figover" src={t.src} alt="" contentEditable={false} style={rectStyle(t.rects[0])} />
+                    ))}
                     <div className="rr-overlay" contentEditable={false}>
                       {(marks[n] || []).map((m) => m.rects.map((r, idx) => (
                         <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
                       )))}
-                      {showChanges && (figureTints.now[n] || []).map((t) => (
-                        <img key={t.id} className="rr-figover" src={t.src} alt="" style={rectStyle(t.rects[0])} />
-                      ))}
                       {showChanges && (figureBoxes.marks[n] || []).map((m) => m.rects.map((r, idx) => (m.diff
                         ? <div key={`${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}`} style={rectStyle(r)} />
                         : <div key={`${m.id}-${idx}`} className={`rr-figdiff ${m.tone || ""}`} data-label={m.label || undefined} style={rectStyle(r)} />
