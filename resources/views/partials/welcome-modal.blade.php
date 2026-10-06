@@ -6,9 +6,7 @@
 @if (session('show_welcome'))
     <div class="modal-overlay show" id="welcome-modal">
         <div class="modal-box" style="width:min(420px,94%);text-align:center;padding:32px 28px 28px">
-            <div style="width:56px;height:56px;border-radius:14px;background:{{ $isAdmin ? 'linear-gradient(135deg,#1d4ed8,#7c3aed)' : 'linear-gradient(135deg,#c9960c,#b45309)' }};display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
-                <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:#fff;fill:none;stroke-width:2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            </div>
+            <img src="{{ asset('images/brand/capstrack-mark-small.svg') }}" alt="" width="56" height="56" style="width:56px;height:56px;border-radius:14px;display:block;margin:0 auto 16px">
             <div class="modal-title" style="font-size:17px;margin-bottom:4px">Welcome to CapsTRACK!</div>
             <div class="modal-sub" style="font-size:13px;margin-bottom:20px">
                 Hello, <strong>{{ $expert?->first_name }}</strong>! Your account has been approved.
