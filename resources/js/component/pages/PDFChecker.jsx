@@ -137,11 +137,9 @@ function PDFChecker({
     if (figureDiff.status !== "ready") return { now, before };
     figureDiff.figures.forEach((f, i) => {
       if (f.kind !== "small") return;
-      const { added, removed, addedWash, removedWash } = (f.tints ??= tints(f));
+      const { addedWash, removedWash } = (f.tints ??= tints(f));
       if (addedWash) (now[f.newPage] ||= []).push({ id: `w${i}`, wash: true, src: addedWash.toDataURL(), rects: [overlayRect(f, addedWash.height)] });
       if (removedWash) (before[f.oldPage] ||= []).push({ id: `w${i}`, wash: true, src: removedWash.toDataURL(), rects: [oldOverlayRect(f, removedWash.height)] });
-      if (added) (now[f.newPage] ||= []).push({ id: `t${i}`, src: added.toDataURL(), rects: [overlayRect(f, added.height)] });
-      if (removed) (before[f.oldPage] ||= []).push({ id: `t${i}`, src: removed.toDataURL(), rects: [oldOverlayRect(f, removed.height)] });
     });
     return { now, before };
   }, [figureDiff]);

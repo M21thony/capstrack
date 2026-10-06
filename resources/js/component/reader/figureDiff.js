@@ -921,19 +921,15 @@ export function highlighted(f) {
 }
 
 /**
- * The shapes and arrows that changed, coloured where they sit, on clear
- * pictures to lay over each version's diagram: { added } in green over this
- * version, { removed } in red over the earlier one, each null when nothing
- * is there. The picture is laid on the page with mix-blend-mode: lighten, so
- * the page's own dark lines turn the colour and its white stays white: the
- * shape itself is recoloured, at the page's own sharpness. The colour reaches
- * a little past each line, so being a pixel off still lands on it. The words
- * of a label are left to the word-style highlight. The inside of a changed
- * closed shape is filled in a light shade ({ addedWash, removedWash }), laid
- * with mix-blend-mode: multiply so the text in it stays as it is.
+ * The shapes and arrows that changed, highlighted where they sit like the
+ * changed words are: { addedWash } in green over this version, { removedWash }
+ * in red over the earlier one, each null when nothing is there. A changed
+ * closed shape is filled, a line gets a band along it. Laid on the page with
+ * mix-blend-mode: multiply, so the page's own lines and text stay as sharp
+ * as they are. The words of a label are left to the word-style highlight.
  */
 export function tints(f) {
-  const { a, b, w, h, both: mark, spots, inkA, inkB, words } = (f.changes ??= inkChanges(f));
+  const { w, h, both: mark, spots, inkA, inkB, words } = (f.changes ??= inkChanges(f));
   // The changed ink, carried a few pixels on along the version's own lines: where a new line
   // touches or crosses an old one, or runs past its spot, it would otherwise break off there.
   const GROW = 6;
@@ -966,18 +962,10 @@ export function tints(f) {
   const layer = (...sets) => {
     if (!sets.some(([pixels]) => pixels.length)) return null;
     const img = new ImageData(w, h);
-    for (const [pixels, colour, R, picture] of sets) {
+    for (const [pixels, colour, R] of sets) {
       const px = [...colour, 255];
       for (const k of pixels) {
         const x = k % w, y = (k - x) / w;
-        // Given the version's picture (for the multiply layer, where white changes nothing), mixed in
-        // as strongly as the line is dark there, so it keeps its own thinness.
-        if (picture) {
-          const t = Math.min(1, (255 - (picture[k * 4] + picture[k * 4 + 1] + picture[k * 4 + 2]) / 3) / 64), at = k * 4;
-          const under = img.data[at + 3] ? img.data.slice(at, at + 3) : [255, 255, 255];
-          img.data.set([0, 1, 2].map((i) => under[i] * (1 - t) + colour[i] * t).concat(255), at);
-          continue;
-        }
         for (let yy = Math.max(0, y - R); yy <= Math.min(h - 1, y + R); yy++) {
           for (let xx = Math.max(0, x - R); xx <= Math.min(w - 1, x + R); xx++) {
             if ((xx - x) ** 2 + (yy - y) ** 2 <= R * R) img.data.set(px, (yy * w + xx) * 4);
@@ -1108,14 +1096,12 @@ export function tints(f) {
     for (let k = 0; k < w * h; k++) if (washed[k]) out.push(k);
     return out;
   };
-  const GREEN = [22, 163, 74], RED = [220, 38, 38];
+  // The changed words' own highlight colours (.rr-hl.rr-diff), as they come out on white.
+  const GREEN = [224, 247, 232], RED = [247, 220, 222];
   const added = whole(shapesB, shapesA.list, changed("added", 2)), removed = whole(shapesA, shapesB.list, changed("removed", 1));
   return {
-    added: layer([added.lines, GREEN, 3]), removed: layer([removed.lines, RED, 3]),
-    // The lines again, right on them: a pale line (light grey, a yellow outline) is darkened to the
-    // colour, where the one above could only colour a dark one.
-    addedWash: layer([added.fill.concat(areas(added, shapesB)), [187, 247, 208], 0], [added.lines, GREEN, 0, b]),
-    removedWash: layer([removed.fill.concat(areas(removed, shapesA)), [254, 202, 202], 0], [removed.lines, RED, 0, a]),
+    addedWash: layer([added.fill.concat(areas(added, shapesB)), GREEN, 0], [added.lines, GREEN, 3]),
+    removedWash: layer([removed.fill.concat(areas(removed, shapesA)), RED, 0], [removed.lines, RED, 3]),
   };
 }
 
