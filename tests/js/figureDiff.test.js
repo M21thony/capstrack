@@ -2,7 +2,7 @@
 // a pair amounts to. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OVERHAUL, drawingAreas, enclosed, figureMarks, hungarian, kindOf, oldOverlayRect, overlapping, overlayRect, pairUp, spotTone, textLike, textLines } from "../../resources/js/component/reader/figureDiff.js";
+import { OVERHAUL, changedWords, drawingAreas, enclosed, joinWords, movesOf, figureMarks, hungarian, kindOf, oldOverlayRect, overlapping, overlayRect, pairUp, spotTone, textLike, textLines } from "../../resources/js/component/reader/figureDiff.js";
 
 test("hungarian finds the cheapest pairing, not the greedy one", () => {
   // Greedy takes 0->0 (1), leaving 1->1 (100): 101. Best is 0->1, 1->0: 4.
@@ -183,4 +183,26 @@ test("the earlier side's colouring sits over the earlier diagram", () => {
   const r = oldOverlayRect({ oldInk: { left: 0.1, top: 0.2, width: 0.4, height: 0.2 }, oldH: 300 }, 800);
   assert.deepEqual([r.left_position, r.top_position, r.highlight_width], [0.1, 0.2, 0.4]);
   assert.ok(Math.abs(r.highlight_height - (800 / 2 / 300) * 0.2) < 1e-9);
+});
+
+const w = (str, x, y, extra = {}) => ({ str, x, y, w: str.length * 8, h: 12, ...extra });
+
+test("a box that moved is found from the words that appear once in both versions", () => {
+  const olds = [w("team", 10, 10), w("id", 10, 30), w("id", 10, 50)];
+  const news = [w("team", 10, 340), w("id", 10, 360), w("id", 90, 90)];
+  assert.deepEqual(movesOf(olds, news), [[0, 330]]);
+});
+
+test("a renamed or removed word is changed, a word that moved with its box or along its line is not", () => {
+  const olds = [w("team", 10, 10), w("team_name", 10, 30), w("course", 10, 50), w("ENUM", 100, 70)];
+  const news = [w("team", 10, 340), w("team_title", 10, 360), w("ENUM", 106, 70)];
+  const { old, neu } = changedWords(olds, news, [[0, 330]]);
+  assert.deepEqual(old.map((it) => it.str), ["team_name", "course"]);
+  assert.deepEqual(neu.map((it) => it.str), ["team_title"]);
+});
+
+test("changed words side by side on a line share one highlight", () => {
+  const boxes = joinWords([w("VARCHAR(50)", 60, 50), w("course", 10, 50), w("status", 10, 90)]);
+  assert.equal(boxes.length, 2);
+  assert.deepEqual([boxes[0].x, boxes[0].w], [10, 60 + 88 - 10]);
 });

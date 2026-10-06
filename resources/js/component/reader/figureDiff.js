@@ -324,7 +324,8 @@ async function diagramsOf(pdf, OPS, alive) {
     const boxes = await picturesOn(page, OPS);
     if (!boxes.length) continue;
     const text = await page.getTextContent().catch(() => ({ items: [] }));
-    const captions = captionsOnPage(text.items, page.getViewport({ scale: 1 }).height, n);
+    const vp = page.getViewport({ scale: 1 });
+    const captions = captionsOnPage(text.items, vp.height, n);
     for (const box of boxes) {
       const label = figureFor(captions, n, [{ top_position: box.top, left_position: box.left, highlight_width: box.width, highlight_height: box.height }]);
       const drawn = await drawBox(page, box, W * SHOW * 1.5);
@@ -332,13 +333,66 @@ async function diagramsOf(pdf, OPS, alive) {
       // Where the inked part sits on the page, to mark changed spots there.
       const ink = { left: box.left + (t.x / drawn.width) * box.width, top: box.top + (t.y / drawn.height) * box.height, width: (t.w / drawn.width) * box.width, height: (t.h / drawn.height) * box.height };
       const sharp = normalised(drawn, W * SHOW);
-      out.push({ page: n, label, title: captions.find((c) => c.label === label)?.title || "", sharp, small: normalised(sharp, W), ink });
+      // The words in it, boxed in the sharp picture: compared as words, and told apart from the lines.
+      const all = [];
+      for (const it of text.items) {
+        if (!it.str.trim()) continue;
+        const x0 = ((it.transform[4] / vp.width - ink.left) / ink.width) * sharp.width, base = ((1 - it.transform[5] / vp.height - ink.top) / ink.height) * sharp.height;
+        const size = ((Math.hypot(it.transform[2], it.transform[3]) || it.height) / vp.height / ink.height) * sharp.height, per = (it.width / it.str.length / vp.width / ink.width) * sharp.width;
+        for (const m of it.str.matchAll(/\S+/g)) all.push({ str: m[0], x: x0 + m.index * per, y: base - size, w: m[0].length * per, h: size * 1.25, lx: x0, lw: it.str.length * per });
+      }
+      const words = all.filter((it) => it.x + it.w > 0 && it.y + it.h > 0 && it.x < sharp.width && it.y < sharp.height);
+      out.push({ page: n, label, title: captions.find((c) => c.label === label)?.title || "", sharp, small: normalised(sharp, W), ink, words });
     }
   }
   return out;
 }
 
 const pause = () => new Promise((ok) => setTimeout(ok));
+
+/**
+ * How far boxes of a diagram moved, in sharp pixels of the earlier frame: the
+ * shift of each piece of writing found once in each version but somewhere
+ * else, `fit` putting this version's onto the earlier frame. Most common first.
+ */
+export function movesOf(olds = [], news = [], fit = null) {
+  const once = (ws) => {
+    const m = new Map();
+    for (const it of ws) m.set(it.str, m.has(it.str) ? null : it);
+    return m;
+  };
+  const b = once(news), s = fit?.s ?? 1, fx = (fit?.x ?? 0) * SHOW, fy = (fit?.y ?? 0) * SHOW, count = new Map();
+  for (const [str, o] of once(olds)) {
+    const n = b.get(str);
+    if (!o || !n) continue;
+    const dx = Math.round(fx + n.x * s - o.x), dy = Math.round(fy + n.y * s - o.y);
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) count.set(`${dx},${dy}`, (count.get(`${dx},${dy}`) || 0) + 1);
+  }
+  return [...count].sort((p, q) => q[1] - p[1]).slice(0, 20).map(([k]) => k.split(",").map(Number));
+}
+
+/** Changed words next to each other on a line as one box, so one highlight covers them. */
+export function joinWords(words) {
+  const out = [];
+  for (const it of [...words].sort((p, q) => p.y - q.y || p.x - q.x)) {
+    const last = out[out.length - 1];
+    if (last && Math.abs(last.y - it.y) <= 2 && it.x - (last.x + last.w) <= it.h) last.w = Math.max(last.w, it.x + it.w - last.x);
+    else out.push({ ...it });
+  }
+  return out;
+}
+
+/**
+ * The words taken out of a diagram (old) and put in (neu), both on the
+ * earlier frame. A word is the same when the other version has it on the same
+ * line nearby, where it was or where its box moved to: a longer word before
+ * it on the line pushes it along, which is not a change.
+ */
+export function changedWords(olds = [], news = [], moves = []) {
+  const shifts = [[0, 0], ...moves];
+  const kept = (it, others, sign) => others.some((o) => o.str === it.str && shifts.some(([dx, dy]) => Math.abs(o.y - it.y - sign * dy) <= 4 && Math.abs(o.x - it.x - sign * dx) <= Math.max(8, it.h * 2)));
+  return { old: olds.filter((it) => !kept(it, news, 1)), neu: news.filter((it) => !kept(it, olds, -1)) };
+}
 
 /**
  * Every diagram of the earlier version and this one, paired and compared.
@@ -393,7 +447,18 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
       neu: fit ? onWhite(n.sharp, o.sharp.width, h, fit.x * SHOW, fit.y * SHOW, fit.s) : onWhite(n.sharp, o.sharp.width, h),
     };
     if (fig.kind === "small") {
+      fig.moves = movesOf(o.words, n.words, fit);
+      // This version's words on the earlier frame, like its picture.
+      const s = fit?.s ?? 1, fx = (fit?.x ?? 0) * SHOW, fy = (fit?.y ?? 0) * SHOW;
+      fig.oldWords = o.words;
+      fig.newWords = n.words.map((it) => ({ ...it, x: fx + it.x * s, y: fy + it.y * s, w: it.w * s, h: it.h * s, lx: fx + it.lx * s, lw: it.lw * s }));
+      fig.words = changedWords(fig.oldWords, fig.newWords, fig.moves);
       fig.changes = inkChanges(fig);
+      // A spot that only held a moved box is not a change.
+      const kept = fig.changes.spots.map((sp) => !(sp.moved && !sp.tone));
+      fig.spots = fig.spots.filter((_, k) => kept[k]);
+      fig.changes.spots = fig.changes.spots.filter((_, k) => kept[k]);
+      if (!fig.spots.length && !fig.words.old.length && !fig.words.neu.length) { fig.kind = "same"; fig.pct = 0; }
       fig.tones = fig.changes.spots.map((sp) => sp.tone);
       fig.texts = fig.changes.spots.map((sp) => sp.text);
       fig.lines = fig.changes.spots.map((sp) => sp.text && { old: sp.oldLines, neu: sp.newLines });
@@ -442,6 +507,10 @@ export function figureMarks(figures) {
         spot(oldMarks, f.oldPage, `${id}-${k}`, (was.length ? was : now).map(onOld), was.length ? null : "inserted");
         spot(marks, f.newPage, `${id}-${k}`, (now.length ? now : was).map(onNew), now.length ? null : "removed");
       });
+      // Words taken out red on the earlier version, words put in green on this one.
+      const word = (it) => ({ x: it.x / SHOW, y: it.y / SHOW, w: it.w / SHOW, h: it.h / SHOW });
+      spot(oldMarks, f.oldPage, `${id}-w`, joinWords(f.words?.old ?? []).map(word).map(onOld));
+      spot(marks, f.newPage, `${id}-w`, joinWords(f.words?.neu ?? []).map(word).map(onNew));
     } else if (f.kind === "big") {
       add(oldMarks, f.oldPage, id, "rewritten", "redone", whole(f.oldInk));
       add(marks, f.newPage, id, "rewritten", "redone", whole(f.newInk));
@@ -583,19 +652,82 @@ function inkChanges(f) {
     }
     return false;
   };
-  const spots = f.spots.map((r) => {
-    const box = [Math.max(0, r.x * SHOW - 4), Math.max(0, r.y * SHOW - 4), Math.min(w, (r.x + r.w) * SHOW + 4), Math.min(h, (r.y + r.h) * SHOW + 4)];
-    let removed = 0, added = 0;
+  const boxes = f.spots.map((r) => [Math.max(0, r.x * SHOW - 4), Math.max(0, r.y * SHOW - 4), Math.min(w, (r.x + r.w) * SHOW + 4), Math.min(h, (r.y + r.h) * SHOW + 4)]);
+  // The words are compared as words (changedWords), so only the lines and shapes are marked here.
+  const words = new Uint8Array(w * h);
+  for (const [list, v] of [[f.oldWords, 1], [f.newWords, 2]]) {
+    for (const it of list ?? []) {
+      // Its whole line of text: where one word ends is only guessed from its letters.
+      for (let y = Math.max(0, Math.floor(it.y) - 1); y < Math.min(h, Math.ceil(it.y + it.h) + 1); y++) {
+        for (let x = Math.max(0, Math.floor(it.lx) - 2); x < Math.min(w, Math.ceil(it.lx + it.lw) + 2); x++) words[y * w + x] |= v;
+      }
+    }
+  }
+  // Ink only in one picture, anywhere: 1 only in the earlier one, 2 only in this one.
+  const only = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const k = y * w + x;
+      if (inkA[k] && !(words[k] & 1) && !near(inkB, x, y)) only[k] = 1;
+      else if (inkB[k] && !(words[k] & 2) && !near(inkA, x, y)) only[k] = 2;
+    }
+  }
+  for (const box of boxes) for (let y = box[1]; y < box[3]; y++) for (let x = box[0]; x < box[2]; x++) mark[y * w + x] = only[y * w + x];
+  // A box that only moved: its ink gone from one place turns up, as new ink, where its writing moved to.
+  const marked = (v, x, y) => {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx >= 0 && yy >= 0 && xx < w && yy < h && only[yy * w + xx] === v) return true;
+    }
+    return false;
+  };
+  const moved = new Uint8Array(w * h);
+  for (const [mx, my] of f.moves ?? []) {
+    for (const box of boxes) {
+      for (let y = box[1]; y < box[3]; y++) {
+        for (let x = box[0]; x < box[2]; x++) {
+          const k = y * w + x;
+          if ((mark[k] === 1 && marked(2, x + mx, y + my)) || (mark[k] === 2 && marked(1, x - mx, y - my))) moved[k] = 1;
+        }
+      }
+    }
+  }
+  // A box that only grew or shrank: a row put in or taken out slides its bottom edge (and the sides
+  // along that row) straight down or up. Such a line is the other picture's, slid; the row's words
+  // already show what changed.
+  const inkAt = (ink, x, y) => {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx >= 0 && yy >= 0 && xx < w && yy < h && ink[yy * w + xx]) return true;
+    }
+    return false;
+  };
+  const slides = [];
+  for (let d = 3; d <= 80; d++) slides.push([0, d], [0, -d], [d, 0], [-d, 0]);
+  for (const part of changedParts(mark, moved, w, h)) {
+    const other = mark[part[0]] === 1 ? inkB : inkA;
+    const fits = ([sx, sy]) => {
+      let misses = 0;
+      for (const k of part) if (!inkAt(other, (k % w) + sx, Math.floor(k / w) + sy) && ++misses > 0.1 * part.length) return false;
+      return true;
+    };
+    if (slides.some(fits)) for (const k of part) moved[k] = 1;
+  }
+  const spots = boxes.map((box) => {
+    let removed = 0, added = 0, shifted = 0;
     for (let y = box[1]; y < box[3]; y++) {
       for (let x = box[0]; x < box[2]; x++) {
         const k = y * w + x;
-        if (inkA[k] && !near(inkB, x, y)) { mark[k] = 1; removed++; }
-        else if (inkB[k] && !near(inkA, x, y)) { mark[k] = 2; added++; }
+        if (moved[k]) { mark[k] = 0; shifted++; }
+        else if (mark[k] === 1) removed++;
+        else if (mark[k] === 2) added++;
       }
     }
     const tone = spotTone(removed, added);
+    // What is left of a moved box is specks: nothing to colour.
+    if (shifted && !tone) for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
     const text = textLike(mark, w, box);
-    return { box, tone, text, ...(text && { oldLines: textLines(mark, w, box, 1, 30, inkA), newLines: textLines(mark, w, box, 2, 30, inkB) }) };
+    return { box, tone, text, moved: shifted > 0, ...(text && { oldLines: textLines(mark, w, box, 1, 30, inkA), newLines: textLines(mark, w, box, 2, 30, inkB) }) };
   });
   // The pop-up draws a rewritten spot as old above new, so its marks are kept only for colouring the pages.
   // Coloured on the pages: everything but the words of a label, which get the word-style highlight.
@@ -608,6 +740,26 @@ function inkChanges(f) {
   }
   for (const { box, tone } of spots) if (tone === "rewritten") for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
   return { a, b, w, h, mark, both, spots, inkA, inkB };
+}
+
+/** The joined-up runs of changed ink (marked, and not already moved), each as its pixel indices, all of one kind. */
+function changedParts(mark, moved, w, h) {
+  const seen = new Uint8Array(mark.length), parts = [];
+  for (let k0 = 0; k0 < mark.length; k0++) {
+    if (!mark[k0] || moved[k0] || seen[k0]) continue;
+    const v = mark[k0], stack = [k0], part = [];
+    seen[k0] = 1;
+    while (stack.length) {
+      const k = stack.pop(), x = k % w, y = (k - x) / w;
+      part.push(k);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx, yy = y + dy, m = yy * w + xx;
+        if (xx >= 0 && yy >= 0 && xx < w && yy < h && mark[m] === v && !moved[m] && !seen[m]) { seen[m] = 1; stack.push(m); }
+      }
+    }
+    parts.push(part);
+  }
+  return parts;
 }
 
 /**
@@ -683,6 +835,10 @@ export function highlighted(f) {
     ctx.shadowBlur = 0;
     ctx.drawImage(l, 0, 0);
   }
+  for (const [list, colour] of [[f.words?.old, "rgba(207,34,46,.3)"], [f.words?.neu, "rgba(34,197,94,.3)"]]) {
+    ctx.fillStyle = colour;
+    for (const it of list ?? []) ctx.fillRect(it.x, it.y, it.w, it.h);
+  }
   const pad = (box) => [Math.max(0, box[0] - 12), Math.max(0, box[1] - 12), Math.min(w, box[2] + 12), Math.min(h, box[3] + 12)];
   return { picture: c, closeUps: boxes.map((box) => ({ old: crop(f.old, pad(box)), neu: crop(f.neu, pad(box)) })) };
 }
@@ -691,12 +847,12 @@ export function highlighted(f) {
  * The shapes and arrows that changed, coloured where they sit, on clear
  * pictures to lay over each version's diagram: { added } in green over this
  * version, { removed } in red over the earlier one, each null when nothing
- * is there. Lines are recoloured in place, with no glow, and a closed shape
- * is filled in. The words of a label are left to the word-style highlight.
+ * is there. Only the lines are recoloured, in place, with no glow and nothing
+ * filled in. The words of a label are left to the word-style highlight.
  */
 export function tints(f) {
-  const { w, h, both: mark, spots, inkA, inkB } = (f.changes ??= inkChanges(f));
-  const layer = (tone, value, ink, colour, fill) => {
+  const { a, b, w, h, both: mark, spots } = (f.changes ??= inkChanges(f));
+  const layer = (tone, value, px, colour) => {
     const img = new ImageData(w, h);
     let any = false;
     for (const s of spots) {
@@ -704,26 +860,21 @@ export function tints(f) {
       const [x0, y0, x1, y1] = s.box;
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
-          if (mark[y * w + x] !== value) continue;
+          const k = y * w + x;
+          if (mark[k] !== value) continue;
           any = true;
-          // One pixel wider, so the black line under it does not show at the edges.
-          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-            const xx = x + dx, yy = y + dy;
-            if (xx >= 0 && yy >= 0 && xx < w && yy < h) img.data.set(colour, (yy * w + xx) * 4);
-          }
+          // As dark as the line itself, so it stays as thin as the line it covers.
+          const dark = 255 - (px[k * 4] + px[k * 4 + 1] + px[k * 4 + 2]) / 3;
+          img.data.set([...colour, Math.min(255, dark * 2)], k * 4);
         }
       }
-      if (s.tone === tone && !s.text) for (const k of enclosed(ink, w, s.box)) if (!img.data[k * 4 + 3]) img.data.set(fill, k * 4);
     }
     if (!any) return null;
     const c = canvasOf(w, h);
     c.getContext("2d").putImageData(img, 0, 0);
     return c;
   };
-  return {
-    added: layer("added", 2, inkB, [22, 163, 74, 255], [34, 197, 94, 60]),
-    removed: layer("removed", 1, inkA, [220, 38, 38, 255], [239, 68, 68, 60]),
-  };
+  return { added: layer("added", 2, b, [22, 163, 74]), removed: layer("removed", 1, a, [220, 38, 38]) };
 }
 
 /** A picture with the changed spots outlined. */
