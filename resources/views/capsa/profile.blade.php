@@ -20,20 +20,21 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Admin Profile - CapsTRACK Admin</title>
+<title>My Profile - CapsTRACK</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 
 <style nonce="{{ Vite::cspNonce() }}">
   /* ============================================================
-     Profile page — scoped styles. Built on top of the shared
-     admin.css tokens (--accent, --text, --text2, --text3,
-     --border, --bg3, --green) with safe fallbacks so this page
-     stays visually consistent with the rest of the admin panel.
+     My Profile (CaPSA / Admin). Built on admin.css tokens, scoped
+     to .profile-page. One form, one Save: details, research areas
+     and sections are saved together.
      ============================================================ */
   .profile-page {
-    --pf-accent: #475569;
+    --pf-accent: var(--accent, #c9a82c);
+    --pf-accent-soft: rgba(201, 168, 44, 0.12);
+    --pf-ink: #475569;
     --pf-text: var(--text, #101828);
     --pf-text2: var(--text2, #344054);
     --pf-text3: var(--text3, #98a2b3);
@@ -41,365 +42,167 @@
     --pf-surface: var(--bg3, #f8fafc);
     --pf-green: var(--green, #16a34a);
     --pf-radius: 16px;
-    --pf-radius-sm: 10px;
     --pf-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.03);
-    max-width: 1040px;
+    max-width: 1080px;
     margin: 0 auto;
-  }
-
-  .profile-page .pf-intro {
-    margin-bottom: 22px;
-  }
-
-  .profile-page .pf-eyebrow {
-    font-variant-numeric:tabular-nums;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--pf-accent);
-    margin: 0 0 6px;
-  }
-
-  .profile-page .pf-subtitle {
-    font-size: 13.5px;
-    color: var(--pf-text3);
-    margin: 0;
-  }
-
-  /* Status banner */
-  .profile-page .pf-status {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    background: rgba(22, 163, 74, 0.07);
-    border: 1px solid rgba(22, 163, 74, 0.18);
-    border-radius: var(--pf-radius-sm);
-    font-size: 13.5px;
-    color: var(--pf-green);
-    margin-bottom: 20px;
-  }
-
-  .profile-page .pf-status svg {
-    flex-shrink: 0;
-  }
-
-  /* Shared card look */
-  .profile-page .pf-card {
-    background: #fff;
-    border: 1px solid var(--pf-border);
-    border-radius: var(--pf-radius);
-    box-shadow: var(--pf-shadow);
-    padding: 24px;
-  }
-
-  .profile-page .pf-card + .pf-card {
-    margin-top: 20px;
-  }
-
-  .profile-page .pf-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-
-  .profile-page .pf-card-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--pf-text);
-    letter-spacing: -0.01em;
-  }
-
-  .profile-page .pf-card-desc {
-    font-size: 12.5px;
-    color: var(--pf-text3);
-    margin-top: 3px;
-  }
-
-  /* Identity strip */
-  .profile-page .pf-identity {
-    display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 18px;
-    flex-wrap: wrap;
   }
 
-  .profile-page .pf-avatar-well {
-    flex-shrink: 0;
-    position: relative;
+  /* Messages */
+  .profile-page .pf-status {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-radius: 12px; font-size: 13.5px;
+    background: rgba(22, 163, 74, 0.07); border: 1px solid rgba(22, 163, 74, 0.18); color: var(--pf-green);
+  }
+  .profile-page .pf-status.is-error { background: #fdecea; color: #b42318; border-color: #f5c2c0; }
+
+  /* Cards */
+  .profile-page .pf-card {
+    background: #fff; border: 1px solid var(--pf-border); border-radius: var(--pf-radius);
+    box-shadow: var(--pf-shadow); padding: 20px 22px;
+  }
+  .profile-page .pf-card-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+  .profile-page .pf-card-ic {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: grid; place-items: center;
+    background: var(--pf-surface); color: var(--pf-ink); border: 1px solid var(--pf-border);
+  }
+  .profile-page .pf-card-ic svg { width: 17px; height: 17px; }
+  .profile-page .pf-card-head > div { flex: 1; min-width: 0; }
+  .profile-page .pf-card-title { font-size: 15px; font-weight: 700; color: var(--pf-text); letter-spacing: -0.01em; margin: 0; }
+  .profile-page .pf-card-desc { font-size: 12.5px; color: var(--pf-text3); margin: 2px 0 0; line-height: 1.45; }
+  .profile-page .pf-count {
+    font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 700; white-space: nowrap;
+    padding: 4px 10px; border-radius: 999px; background: var(--pf-surface); color: var(--pf-ink); border: 1px solid var(--pf-border);
   }
 
+  /* Hero */
+  .profile-page .pf-hero { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .profile-page .pf-avatar-well { flex-shrink: 0; }
   .profile-page .app-avatar,
   .profile-page .pf-avatar-well img {
-    width: 72px;
-    height: 72px;
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    font-weight: 700;
-    color: #fff;
+    width: 76px; height: 76px; border-radius: 20px; object-fit: cover; display: block;
     box-shadow: 0 0 0 4px #fff, 0 0 0 5px var(--pf-border);
   }
-
-  .profile-page .pf-identity-meta {
-    min-width: 0;
-    flex: 1 1 auto;
+  .profile-page .pf-hero-meta { flex: 1 1 260px; min-width: 0; }
+  .profile-page .pf-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pf-text3); margin: 0 0 4px; }
+  .profile-page .pf-name { font-size: 20px; font-weight: 700; color: var(--pf-text); line-height: 1.2; letter-spacing: -0.01em; margin: 0; }
+  .profile-page .pf-email { font-size: 13px; color: var(--pf-text3); margin-top: 3px; word-break: break-word; }
+  .profile-page .pf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .profile-page .pf-chip {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600;
+    padding: 4px 10px; border-radius: 999px; background: var(--pf-surface); color: var(--pf-text2); border: 1px solid var(--pf-border);
   }
+  .profile-page .pf-chip.is-role { background: var(--pf-accent-soft); color: #7d630e; border-color: rgba(201, 168, 44, 0.35); }
+  .profile-page .pf-chip svg { width: 12px; height: 12px; }
 
-  .profile-page .pf-name {
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--pf-text);
-    line-height: 1.25;
-    letter-spacing: -0.01em;
-  }
+  /* Two columns: what you edit, and your sections */
+  .profile-page .pf-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .profile-page .pf-main, .profile-page .pf-aside { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .profile-page .pf-aside { position: sticky; top: 16px; }
 
-  .profile-page .pf-email {
-    font-size: 13px;
-    color: var(--pf-text3);
-    margin-top: 3px;
-    word-break: break-word;
-  }
-
-  .profile-page .pf-avatar-actions {
-    margin-top: 12px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .profile-page .pf-btn {
-    font-family: 'DM Sans','DM Sans Fallback', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 9px 14px;
-    border-radius: 10px;
-    border: 1.5px solid var(--pf-border);
-    background: #fff;
-    color: var(--pf-text2);
-    cursor: pointer;
-    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
-  }
-
-  .profile-page .pf-btn:hover {
-    border-color: var(--pf-accent);
-    color: var(--pf-accent);
-    background: rgba(71, 85, 105, 0.04);
-  }
-
-  .profile-page .pf-btn-primary {
-    background: var(--pf-accent);
-    border-color: var(--pf-accent);
-    color: #fff;
-  }
-
-  .profile-page .pf-btn-primary:hover {
-    filter: brightness(0.94);
-    color: #fff;
-  }
-
-  /* Form layout */
-  .profile-page .pf-fields {
-    margin-top: 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .profile-page .pf-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-
-  .profile-page .pf-field label.label {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--pf-text2);
-    margin-bottom: 6px;
-    display: block;
-  }
-
+  /* Fields */
+  .profile-page .pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 14px; }
+  .profile-page .pf-field label.label { font-size: 12.5px; font-weight: 600; color: var(--pf-text2); margin-bottom: 6px; display: block; }
   .profile-page .pf-field .input {
-    width: 100%;
-    box-sizing: border-box;
-    font-size: 14px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1.5px solid var(--pf-border);
-    color: var(--pf-text);
-    background: #fff;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 10px;
+    border: 1.5px solid var(--pf-border); color: var(--pf-text); background: #fff; transition: border-color .15s, box-shadow .15s;
+  }
+  .profile-page .pf-field .input:focus { outline: none; border-color: var(--pf-ink); box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.12); }
+  .profile-page .pf-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--pf-surface); border: 1px solid var(--pf-border); }
+  .profile-page .pf-facts dt { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pf-text3); }
+  .profile-page .pf-facts dd { margin: 3px 0 0; font-size: 13.5px; font-weight: 600; color: var(--pf-text); }
+
+  /* Research areas */
+  .profile-page .pf-side-tabs { display: flex; gap: 3px; padding: 3px; margin-bottom: 12px; background: var(--pf-surface); border: 1px solid var(--pf-border); border-radius: 11px; width: fit-content; max-width: 100%; flex-wrap: wrap; }
+  .profile-page .pf-side-tab { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--pf-text2); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .profile-page .pf-side-tab.on { background: #fff; color: var(--pf-text); box-shadow: 0 1px 3px rgba(24, 25, 31, .14); }
+  .profile-page .pf-side-n { font-size: 10.5px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: rgba(100, 116, 139, .16); }
+  .profile-page .pf-side-tab.on .pf-side-n { background: var(--pf-accent); color: #18191f; }
+  .profile-page #expertiseTags { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; margin-bottom: 12px; }
+  .profile-page #expertiseTags:empty::before { content: 'Nothing added for this side yet.'; font-size: 12.5px; color: var(--pf-text3); align-self: center; }
+  .profile-page .expertise-chip.active { border-color: var(--pf-ink) !important; background: rgba(71, 85, 105, 0.07) !important; color: var(--pf-ink) !important; }
+  .profile-page .pf-add { display: flex; gap: 8px; }
+  .profile-page .pf-add-input { flex: 1; position: relative; }
+  .profile-page .pf-add-input input {
+    width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid var(--pf-border); border-radius: 10px;
+    font: inherit; font-size: 13.5px; color: var(--pf-text); outline: none; background: #fff;
+  }
+  .profile-page .pf-add-input input:focus { border-color: var(--pf-ink); box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.12); }
+  .profile-page #expertiseSuggestions {
+    position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; z-index: 10; display: none;
+    background: #fff; border: 1.5px solid var(--pf-border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); max-height: 200px; overflow-y: auto;
   }
 
-  .profile-page .pf-field .input:focus {
-    outline: none;
-    border-color: var(--pf-accent);
-    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.12);
+  /* Buttons */
+  .profile-page .pf-btn {
+    font: inherit; font-size: 13px; font-weight: 600; padding: 9px 14px; border-radius: 10px; white-space: nowrap;
+    border: 1.5px solid var(--pf-border); background: #fff; color: var(--pf-text2); cursor: pointer; transition: border-color .15s, background .15s, color .15s;
   }
+  .profile-page .pf-btn:hover { border-color: var(--pf-ink); color: var(--pf-text); }
+  .profile-page .pf-btn-primary { background: var(--pf-accent); border-color: var(--pf-accent); color: #18191f; font-weight: 700; padding: 10px 18px; }
+  .profile-page .pf-btn-primary:hover { filter: brightness(1.05); color: #18191f; border-color: var(--pf-accent); }
+  .profile-page .pf-btn-dark { background: var(--pf-ink); border-color: var(--pf-ink); color: #fff; }
+  .profile-page .pf-btn-dark:hover { filter: brightness(1.1); color: #fff; }
 
-  .profile-page .pf-field-static {
-    padding: 10px 12px;
-    border: 1.5px solid var(--pf-border);
-    border-radius: 10px;
-    font-size: 14px;
-    color: var(--pf-text2);
-    background: var(--pf-surface);
-  }
-
-  .profile-page .pf-form-footer {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 22px;
-    padding-top: 18px;
-    border-top: 1px solid var(--pf-border);
-  }
-
-  /* Sections list */
-  .profile-page .pf-section-count {
-    font-variant-numeric:tabular-nums;
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--pf-accent);
-    background: rgba(71, 85, 105, 0.08);
-    padding: 4px 10px;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-
-  .profile-page .pf-search {
-    position: relative;
-    margin-bottom: 14px;
-  }
-
+  /* Sections */
+  .profile-page .pf-search { position: relative; margin-bottom: 12px; }
   .profile-page .pf-search input {
-    width: 100%;
-    box-sizing: border-box;
-    font-size: 13.5px;
-    padding: 9px 12px 9px 34px;
-    border-radius: 10px;
-    border: 1.5px solid var(--pf-border);
-    background: var(--pf-surface);
-    color: var(--pf-text);
+    width: 100%; box-sizing: border-box; font: inherit; font-size: 13.5px; padding: 9px 12px 9px 34px; border-radius: 10px;
+    border: 1.5px solid var(--pf-border); background: var(--pf-surface); color: var(--pf-text);
   }
-
-  .profile-page .pf-search input:focus {
-    outline: none;
-    border-color: var(--pf-accent);
-    background: #fff;
-  }
-
-  .profile-page .pf-search svg {
-    position: absolute;
-    left: 11px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--pf-text3);
-  }
-
-  .profile-page .pf-sections-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 400px;
-    overflow-y: auto;
-    padding-right: 2px;scrollbar-width:none;-ms-overflow-style:none}
-.pf-sections-list::-webkit-scrollbar{display:none}
-
+  .profile-page .pf-search input:focus { outline: none; border-color: var(--pf-ink); background: #fff; }
+  .profile-page .pf-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--pf-text3); }
+  .profile-page .pf-sections-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
   .profile-page .pf-section-opt {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 11px 12px;
-    border: 1.5px solid var(--pf-border);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--pf-border); border-radius: 10px;
+    cursor: pointer; background: #fff; transition: border-color .15s, background .15s;
   }
+  .profile-page .pf-section-opt:hover { border-color: var(--pf-ink); }
+  .profile-page .pf-section-opt:has(input:checked) { border-color: var(--pf-accent); background: var(--pf-accent-soft); }
+  .profile-page .pf-section-opt input[type="checkbox"] { width: 16px; height: 16px; accent-color: #7d630e; flex-shrink: 0; margin: 0; }
+  .profile-page .pf-section-opt span { font-size: 13.5px; font-weight: 600; color: var(--pf-text); }
+  .profile-page .pf-empty { padding: 22px 12px; text-align: center; color: var(--pf-text3); font-size: 13px; border: 1.5px dashed var(--pf-border); border-radius: 10px; }
 
-  .profile-page .pf-section-opt:hover {
-    border-color: var(--pf-accent);
-    background: rgba(71, 85, 105, 0.03);
+  /* The one Save */
+  .profile-page .pf-savebar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    margin-top: 18px; padding: 12px 14px 12px 18px; border-radius: 14px; background: #fff;
+    border: 1px solid var(--pf-border); box-shadow: var(--pf-shadow);
   }
-  .profile-page .pf-section-opt:has(input:checked) {
-    border-color: var(--pf-accent);
-    background: rgba(71, 85, 105, 0.06);
-  }
+  .profile-page .pf-savebar span { font-size: 12.5px; color: var(--pf-text3); }
 
-  .profile-page .pf-section-opt input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--pf-accent);
-    flex-shrink: 0;
-  }
+  /* Tabs */
+  .profile-page .pf-tabs { display: flex; gap: 4px; padding: 4px; margin: 18px 0 0; background: #fff; border: 1px solid var(--pf-border); border-radius: 14px; box-shadow: var(--pf-shadow); overflow-x: auto; scrollbar-width: none; }
+  .profile-page .pf-tabs::-webkit-scrollbar { display: none; }
+  .profile-page .pf-tab { flex: 1 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: transparent; color: var(--pf-text2); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
+  .profile-page .pf-tab:hover { color: var(--pf-text); background: var(--pf-surface); }
+  .profile-page .pf-tab.on { background: var(--pf-ink); color: #fff; }
+  .profile-page .pf-tab-n { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: rgba(100, 116, 139, .16); }
+  .profile-page .pf-tab.on .pf-tab-n { background: var(--pf-accent); color: #18191f; }
+  .profile-page .pf-panel[hidden], .profile-page .pf-savebar[hidden] { display: none !important; }
+  /* Panels inside the form sit 18px under the tabs; the ones after it get the page's own gap. */
+  .profile-page form .pf-panel { margin-top: 18px; }
+  .profile-page #pf-panel-research .pf-card, .profile-page #pf-panel-folders .pf-card { max-width: 760px; }
 
-  .profile-page .pf-section-opt span {
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--pf-text);
-  }
+  /* Below the form */
+  .profile-page .pf-lower { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+  .profile-page .pf-lower.has-folders { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .profile-page .pf-notif .notif-prefs { max-width: none; border-radius: var(--pf-radius); padding: 20px 22px; }
+  .profile-page .folder-row { display: flex; align-items: center; gap: 10px; }
 
-  .profile-page .pf-empty {
-    padding: 28px 12px;
-    text-align: center;
-    color: var(--pf-text3);
-    font-size: 13px;
+  @media (max-width: 900px) {
+    .profile-page .pf-layout, .profile-page .pf-lower.has-folders { grid-template-columns: 1fr; }
+    .profile-page .pf-aside { position: static; }
   }
-
-  /* Layout grid for the two main cards */
-  .profile-page .pf-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    align-items: stretch;
-    margin-top: 20px;
-  }
-
-  /* Equal-height cards: each card becomes a column, footer pinned to bottom */
-  .profile-page .pf-columns > .pf-card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    margin-top: 0; /* override .pf-card + .pf-card so both cards stay top-aligned */
-  }
-
-  .profile-page .pf-columns .pf-fields {
-    flex: 1 1 auto;
-  }
-
-  .profile-page .pf-columns .pf-sections-list {
-    flex: 1 1 auto;
-    max-height: none;
-  }
-
-  .profile-page .pf-columns .pf-form-footer {
-    margin-top: auto;
-  }
-
-  .profile-page .expertise-chip.active {
-    border-color: var(--pf-accent);
-    background: rgba(71,85,105,0.08);
-    color: var(--pf-accent);
-  }
-
-  @media (max-width: 860px) {
-    .profile-page .pf-columns {
-      grid-template-columns: 1fr;
-    }
-    .profile-page .pf-row {
-      grid-template-columns: 1fr;
-    }
-    .profile-page .pf-columns > .pf-card {
-      height: auto;
-    }
-    .profile-page .pf-columns .pf-sections-list {
-      max-height: 400px;
-    }
+  @media (max-width: 560px) {
+    .profile-page .pf-grid, .profile-page .pf-facts { grid-template-columns: 1fr; }
+    .profile-page .pf-card { padding: 16px; }
+    .profile-page .pf-hero { gap: 14px; align-items: flex-start; }
+    .profile-page .pf-name { font-size: 18px; }
+    .profile-page .app-avatar, .profile-page .pf-avatar-well img { width: 60px; height: 60px; border-radius: 16px; }
+    .profile-page .pf-savebar .pf-btn-primary { width: 100%; }
   }
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
@@ -445,19 +248,12 @@
   <div class="content">
     <div class="profile-page">
 
-      <div class="pf-intro">
-        <p class="pf-eyebrow">Account</p>
-        <p class="pf-subtitle">Update your personal details and manage the sections assigned to you.</p>
-      </div>
-
       @if ($errors->any())
-        <div class="pf-status" role="alert" style="background:#fdecea;color:#b42318;border-color:#f5c2c0">
-          <span>{{ $errors->first() }}</span>
-        </div>
+        <div class="pf-status is-error" role="alert"><span>{{ $errors->first() }}</span></div>
       @endif
 
       @if (session('status'))
-        <div class="pf-status">
+        <div class="pf-status" role="status">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
           <span>{{ session('status') }}</span>
         </div>
@@ -466,229 +262,230 @@
       @php
         $viewer = auth()->user();
         $avatarUrl = '';
-        $initials = method_exists($admin, 'avatarInitials') ? $admin->avatarInitials() : (isset($admin->name) ? strtoupper(substr($admin->name,0,2)) : 'U');
 
-        if ($viewer) {
-          if (!empty($viewer->profile_picture) && filter_var($viewer->profile_picture, FILTER_VALIDATE_URL)) {
-            $avatarUrl = $viewer->profile_picture;
-          } elseif (!empty($viewer->avatar) && filter_var($viewer->avatar, FILTER_VALIDATE_URL)) {
-            $avatarUrl = $viewer->avatar;
-          } elseif (method_exists($viewer, 'avatarUrl') && $viewer->avatarUrl()) {
-            $avatarUrl = $viewer->avatarUrl();
-          }
-
-          if (method_exists($viewer, 'avatarInitials')) {
-            $initials = $viewer->avatarInitials();
-          } elseif (isset($viewer->name)) {
-            $initials = strtoupper(substr($viewer->name, 0, 2));
+        foreach ([$viewer, $admin] as $who) {
+          if ($avatarUrl || ! $who) { continue; }
+          if (!empty($who->profile_picture) && filter_var($who->profile_picture, FILTER_VALIDATE_URL)) {
+            $avatarUrl = $who->profile_picture;
+          } elseif (!empty($who->avatar) && filter_var($who->avatar, FILTER_VALIDATE_URL)) {
+            $avatarUrl = $who->avatar;
+          } elseif (method_exists($who, 'avatarUrl') && $who->avatarUrl()) {
+            $avatarUrl = $who->avatarUrl();
           }
         }
 
-        if (!$avatarUrl) {
-          if (!empty($admin->profile_picture) && filter_var($admin->profile_picture, FILTER_VALIDATE_URL)) {
-            $avatarUrl = $admin->profile_picture;
-          } elseif (!empty($admin->avatar) && filter_var($admin->avatar, FILTER_VALIDATE_URL)) {
-            $avatarUrl = $admin->avatar;
-          } elseif (method_exists($admin, 'avatarUrl') && $admin->avatarUrl()) {
-            $avatarUrl = $admin->avatarUrl();
-          }
-        }
+        $initials = method_exists($admin, 'avatarInitials') ? $admin->avatarInitials() : strtoupper(substr($admin->name ?? 'U', 0, 2));
+        $roleLabels = $admin->roles->pluck('role_name')->map(fn ($r) => \App\Models\Role::labelFor($r))->unique()->values();
+        $isSubjectAdviser = $admin->roles->pluck('role_name')->contains('capstone_adviser');
+        $schoolYearLabel = $semOptions[$schoolYear] ?? null;
 
+        // The page in tabs, so nothing is a long scroll away. ?tab= picks one,
+        // and a save comes back to the tab it was made from.
+        $pfTabs = array_filter([
+          'details' => 'Details',
+          'research' => 'Research areas',
+          'folders' => $isSubjectAdviser ? 'Submission folders' : null,
+          'notifications' => 'Notifications',
+        ]);
+        $pfTab = array_key_exists(request('tab'), $pfTabs) ? request('tab') : 'details';
+        // A validation error belongs to the form, so the form's tab shows it.
+        if ($errors->any() && ! in_array($pfTab, ['details', 'research'], true)) { $pfTab = 'details'; }
       @endphp
 
       <form method="POST" action="{{ route('capsa.profile.update') }}" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
-        {{-- Identity strip: avatar + name/email --}}
-        <div class="pf-card">
-          <div class="pf-identity">
-            <div class="pf-avatar-well" id="avatar-preview" data-initials="{{ $initials }}">
-              @if (!empty($avatarUrl))
-                <img src="{{ $avatarUrl }}" alt="{{ $admin->name ?? 'User' }}" class="app-avatar" style="object-fit:cover" />
-              @else
-                <img src="{{ asset('images/default-avatar.jpg') }}" alt="Default avatar" class="app-avatar" style="object-fit:cover" />
+        {{-- Who this is, at a glance. --}}
+        <section class="pf-card pf-hero">
+          <div class="pf-avatar-well" id="avatar-preview" data-initials="{{ $initials }}">
+            <img src="{{ $avatarUrl ?: asset('images/default-avatar.jpg') }}" alt="{{ $admin->name ?? 'User' }}" class="app-avatar" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';" />
+          </div>
+          <div class="pf-hero-meta">
+            <p class="pf-eyebrow">My profile</p>
+            <h1 class="pf-name">{{ $admin->name }}</h1>
+            <div class="pf-email">{{ $admin->email }}</div>
+            <div class="pf-chips">
+              @foreach ($roleLabels as $label)
+                <span class="pf-chip is-role">{{ $label }}</span>
+              @endforeach
+              @if ($admin->program)
+                <span class="pf-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg>{{ $admin->program }}</span>
+              @endif
+              <span class="pf-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>{{ count($sectionList) }} {{ \Illuminate\Support\Str::plural('section', count($sectionList)) }}</span>
+              @if ($schoolYearLabel)
+                <span class="pf-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>{{ $schoolYearLabel }}</span>
               @endif
             </div>
+          </div>
+          <input type="file" id="avatar" name="avatar" accept="image/*" hidden />
+        </section>
 
-            <div class="pf-identity-meta">
-              <div class="pf-name">{{ $admin->name }}</div>
-              <div class="pf-email">{{ $admin->email }}</div>
-            </div>
+        <input type="hidden" name="tab" id="pf-tab-input" value="{{ $pfTab }}" />
+        <nav class="pf-tabs" role="tablist" aria-label="Profile sections">
+          @foreach ($pfTabs as $key => $label)
+            <button type="button" role="tab" class="pf-tab{{ $pfTab === $key ? ' on' : '' }}" data-pf-tab="{{ $key }}" aria-selected="{{ $pfTab === $key ? 'true' : 'false' }}" aria-controls="pf-panel-{{ $key }}">
+              {{ $label }}
+              @if ($key === 'research')<span class="pf-tab-n">{{ collect($expertiseBySide ?? [])->flatten()->unique()->count() }}</span>@endif
+            </button>
+          @endforeach
+        </nav>
+
+        <div class="pf-panel" id="pf-panel-details" data-pf-panel="details" role="tabpanel" @if ($pfTab !== 'details') hidden @endif>
+        <div class="pf-layout">
+          <div class="pf-main">
+
+            {{-- Personal information --}}
+            <section class="pf-card">
+              <div class="pf-card-head">
+                <span class="pf-card-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+                <div>
+                  <h2 class="pf-card-title">Personal information</h2>
+                  <p class="pf-card-desc">How your name appears to students, experts and on reports.</p>
+                </div>
+              </div>
+
+              <div class="pf-grid">
+                <div class="pf-field">
+                  <label class="label" for="first_name">First name</label>
+                  <input id="first_name" name="first_name" maxlength="50" class="input" placeholder="e.g. Juan" value="{{ old('first_name', $admin->first_name) }}" />
+                </div>
+                <div class="pf-field">
+                  <label class="label" for="middle_name">Middle name</label>
+                  <input id="middle_name" name="middle_name" maxlength="50" class="input" placeholder="Optional" value="{{ old('middle_name', $admin->middle_name) }}" />
+                </div>
+                <div class="pf-field">
+                  <label class="label" for="last_name">Last name</label>
+                  <input id="last_name" name="last_name" maxlength="50" class="input" placeholder="e.g. Dela Cruz" value="{{ old('last_name', $admin->last_name) }}" />
+                </div>
+                <div class="pf-field">
+                  <label class="label" for="suffix">Suffix</label>
+                  <input id="suffix" name="suffix" maxlength="50" class="input" placeholder="Optional, e.g. Jr." value="{{ old('suffix', $admin->suffix) }}" />
+                </div>
+                <div class="pf-field">
+                  <label class="label" for="credentials">Credentials</label>
+                  <input id="credentials" name="credentials" maxlength="50" class="input" placeholder="e.g. MIT, LPT" value="{{ old('credentials', $admin->credentials) }}" />
+                </div>
+                <div class="pf-field">
+                  <label class="label" for="school_year">School year</label>
+                  <select name="school_year" id="school_year" class="input">
+                    <option value="">Select school year</option>
+                    @foreach ($semOptions as $code => $label)
+                      <option value="{{ $code }}" {{ old('school_year', $schoolYear) === $code ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                  </select>
+                </div>
+              </div>
+
+              {{-- Set elsewhere, shown for reference. --}}
+              <dl class="pf-facts">
+                <div><dt>Program</dt><dd>{{ $admin->program ?: 'Not set' }}</dd></div>
+                <div><dt>Max teams</dt><dd>{{ $admin->max_teams ?: 'Not set' }}</dd></div>
+              </dl>
+            </section>
+
           </div>
 
-          <input type="file" id="avatar" name="avatar" accept="image/*" style="display:none" />
-        </div>
-
-        <div class="pf-columns">
-
-          {{-- Left column: personal information --}}
-          <div class="pf-card" style="display:flex;flex-direction:column">
-            <div class="pf-card-header" style="margin-bottom:0;padding-bottom:18px;border-bottom:1px solid var(--pf-border);display:flex;align-items:center;gap:12px">
-              <div style="flex:1">
-                <div class="pf-card-title" style="display:flex;align-items:center;gap:8px">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pf-accent);flex-shrink:0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  Personal Information
+          <aside class="pf-aside">
+            {{-- Assigned sections --}}
+            <section class="pf-card">
+              <div class="pf-card-head">
+                <span class="pf-card-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></span>
+                <div>
+                  <h2 class="pf-card-title">Assigned sections</h2>
+                  <p class="pf-card-desc">The sections whose teams you manage.</p>
                 </div>
-                <div class="pf-card-desc" style="margin-top:2px">Your name, credentials, and expertise</div>
-              </div>
-            </div>
-
-            <div style="flex:1;display:flex;flex-direction:column;min-height:0;padding-top:16px">
-              <div class="pf-fields" style="gap:14px">
-                <div class="pf-row">
-                  <div class="pf-field">
-                    <label class="label" for="first_name">First Name</label>
-                    <input id="first_name" name="first_name" maxlength="50" class="input" placeholder="e.g. Juan" value="{{ old('first_name', $admin->first_name) }}" />
-                  </div>
-                  <div class="pf-field">
-                    <label class="label" for="middle_name">Middle Name</label>
-                    <input id="middle_name" name="middle_name" maxlength="50" class="input" placeholder="Optional" value="{{ old('middle_name', $admin->middle_name) }}" />
-                  </div>
-                </div>
-
-                <div class="pf-row">
-                  <div class="pf-field">
-                    <label class="label" for="last_name">Last Name</label>
-                    <input id="last_name" name="last_name" maxlength="50" class="input" placeholder="e.g. Dela Cruz" value="{{ old('last_name', $admin->last_name) }}" />
-                  </div>
-                  <div class="pf-field">
-                    <label class="label" for="suffix">Suffix (optional)</label>
-                    <input id="suffix" name="suffix" maxlength="50" class="input" placeholder="e.g. Jr." value="{{ old('suffix', $admin->suffix) }}" />
-                  </div>
-                </div>
-
-                <div class="pf-row">
-                  <div class="pf-field">
-                    <label class="label" for="credentials">Credentials</label>
-                    <input id="credentials" name="credentials" maxlength="50" class="input" placeholder="e.g. MIT, LPT" value="{{ old('credentials', $admin->credentials) }}" />
-                  </div>
-                  <div class="pf-field">
-                    <label class="label" for="school_year">School Year</label>
-                    <select name="school_year" id="school_year" class="input">
-                      <option value="">— Select school year —</option>
-                      @foreach ($semOptions as $code => $label)
-                        <option value="{{ $code }}" {{ old('school_year', $schoolYear) === $code ? 'selected' : '' }}>{{ $label }}</option>
-                      @endforeach
-                    </select>
-                  </div>
-                </div>
-
-                <div class="pf-row">
-                  <div class="pf-field">
-                    <label class="label">Program</label>
-                    <div class="pf-field-static" style="background:var(--pf-surface);color:var(--pf-text2);padding:10px 12px;border:1.5px solid var(--pf-border);border-radius:10px;font-size:14px">{{ $admin->program ?? '—' }}</div>
-                  </div>
-                  <div class="pf-field">
-                    <label class="label">Max Teams</label>
-                    <div class="pf-field-static" style="background:var(--pf-surface);color:var(--pf-text2);padding:10px 12px;border:1.5px solid var(--pf-border);border-radius:10px;font-size:14px">{{ $admin->max_teams ?? 'Not set' }}</div>
-                  </div>
-                </div>
+                <span class="pf-count" id="pf-section-count">{{ count($sectionList) }} / {{ count($allAvailableSections) }}</span>
               </div>
 
-                @php $presetExpertise = ['Machine Learning','Web Development','Mobile Apps','Data Analytics','Cybersecurity','Network Systems','Database Systems','UI/UX Design','Technical Writing','Grammar & Style','Software Engineering','Research Methods']; @endphp
-                {{-- Expertise --}}
-              <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--pf-border)">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pf-accent);flex-shrink:0"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                  <span style="font-size:13px;font-weight:600;color:var(--pf-text2)">Areas of Expertise</span>
-                </div>
-
-                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px" id="expertiseTags">
-                  @foreach ($expertiseList ?? [] as $exp)
-                    <div class="expertise-chip active" data-value="{{ $exp }}" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:500;border:1.5px solid var(--pf-accent);background:rgba(71,85,105,0.08);color:var(--pf-accent);user-select:none">
-                      {{ $exp }}
-                      <span onclick="removeExpertise(this)" style="cursor:pointer;opacity:0.6;display:flex;margin-left:2px" data-value="{{ $exp }}">&times;</span>
-                    </div>
-                  @endforeach
-                </div>
-
-                <div style="position:relative">
-                  <div style="display:flex;gap:8px">
-                    <div style="flex:1;position:relative">
-                      <input type="text" id="expertiseSearchInput" placeholder="Search or add expertise..." autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid var(--pf-border);border-radius:8px;font-size:13px;outline:none;font-family:'DM Sans','DM Sans Fallback',sans-serif;color:var(--pf-text)" onkeydown="handleExpertiseKeydown(event)" />
-                      <div id="expertiseSuggestions" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--pf-border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.08);max-height:180px;overflow-y:auto;z-index:10;display:none;margin-top:4px"></div>
-                    </div>
-                    <button type="button" onclick="addExpertiseFromInput()" style="padding:9px 14px;border:1.5px solid var(--pf-border);border-radius:8px;background:#fff;color:var(--pf-text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif;white-space:nowrap">Add</button>
-                  </div>
-                </div>
-
-                <input type="hidden" name="expertise" id="expertiseInput" value="{{ json_encode($expertiseList ?? []) }}" />
-              </div>
-            </div>
-
-            <div class="pf-form-footer" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--pf-border);display:flex;justify-content:flex-end">
-              <button type="submit" style="padding:9px 14px;border:1.5px solid var(--pf-border);border-radius:8px;background:#fff;color:var(--pf-text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif">Save Profile</button>
-            </div>
-          </div>
-
-          {{-- Right column: assigned sections --}}
-          <div class="pf-card" style="display:flex;flex-direction:column">
-            <div class="pf-card-header" style="margin-bottom:0;padding-bottom:18px;border-bottom:1px solid var(--pf-border);display:flex;align-items:center;gap:12px">
-              <div style="flex:1">
-                <div class="pf-card-title" style="display:flex;align-items:center;gap:8px">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pf-accent);flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                  Assigned Sections
-                </div>
-                <div class="pf-card-desc" style="margin-top:2px">Choose which sections you manage</div>
-              </div>
-              <span class="pf-section-count" id="pf-section-count" style="font-size:12px;padding:5px 12px;background:rgba(71,85,105,0.08);color:var(--pf-accent);border-radius:8px;font-weight:600;white-space:nowrap;font-family:'DM Sans','DM Sans Fallback',sans-serif">{{ count($sectionList) }} / {{ count($allAvailableSections) }}</span>
-            </div>
-
-            <div style="flex:1;display:flex;flex-direction:column;min-height:0;padding-top:16px">
-              @if (count($allAvailableSections) > 0)
-                <div class="pf-search" style="margin-bottom:14px">
+              @if (count($allAvailableSections) > 5)
+                <div class="pf-search">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
                   <input type="text" id="pf-section-search" placeholder="Search sections…" autocomplete="off" />
                 </div>
               @endif
 
-              <div class="pf-sections-list" id="pf-sections-list" style="flex:1;min-height:0;max-height:320px;display:flex;flex-direction:column;gap:6px;padding-right:4px">
+              <div class="pf-sections-list" id="pf-sections-list">
                 @forelse ($allAvailableSections as $section)
-                  <label class="pf-section-opt" data-section-name="{{ strtolower($section) }}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--pf-border);border-radius:10px;cursor:pointer;transition:all .15s;background:#fff">
-                    <input type="checkbox" name="sections[]" value="{{ $section }}" class="pf-section-checkbox" {{ in_array($section, $sectionList) ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--pf-accent);flex-shrink:0" />
-                    <span style="font-size:13.5px;font-weight:500;color:var(--pf-text)">{{ $section }}</span>
+                  <label class="pf-section-opt" data-section-name="{{ strtolower($section) }}">
+                    <input type="checkbox" name="sections[]" value="{{ $section }}" class="pf-section-checkbox" {{ in_array($section, $sectionList) ? 'checked' : '' }} />
+                    <span>{{ $section }}</span>
                   </label>
                 @empty
                   <div class="pf-empty">No sections available.</div>
                 @endforelse
               </div>
-            </div>
+            </section>
+          </aside>
+        </div>
+        </div>
 
-            <div class="pf-form-footer" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--pf-border);display:flex;justify-content:flex-end">
-              <button type="submit" style="padding:9px 14px;border:1.5px solid var(--pf-border);border-radius:8px;background:#fff;color:var(--pf-text2);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif">Update Sections</button>
-            </div>
-          </div>
+        <div class="pf-panel" id="pf-panel-research" data-pf-panel="research" role="tabpanel" @if ($pfTab !== 'research') hidden @endif>
+            {{-- Research areas, one list per side --}}
+            @php $presetExpertise = ['Machine Learning','Web Development','Mobile Apps','Data Analytics','Cybersecurity','Network Systems','Database Systems','UI/UX Design','Technical Writing','Grammar & Style','Software Engineering','Research Methods']; @endphp
+            <section class="pf-card">
+              <div class="pf-card-head">
+                <span class="pf-card-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
+                <div>
+                  <h2 class="pf-card-title">Research areas</h2>
+                  <p class="pf-card-desc">Kept separately for each expert role you hold and for defense panels. Students see the one for the role they are looking for.</p>
+                </div>
+              </div>
 
+              <div class="pf-side-tabs" role="tablist" aria-label="Research areas for">
+                @foreach ($expertSides ?? [] as $side => $label)
+                  <button type="button" role="tab" class="pf-side-tab{{ $loop->first ? ' on' : '' }}" data-side="{{ $side }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" onclick="selectExpertiseSide('{{ $side }}')">
+                    {{ $label }} <span class="pf-side-n" data-side-count="{{ $side }}">{{ count($expertiseBySide[$side] ?? []) }}</span>
+                  </button>
+                @endforeach
+              </div>
+
+              <div id="expertiseTags"></div>
+
+              <div class="pf-add">
+                <div class="pf-add-input">
+                  <input type="text" id="expertiseSearchInput" placeholder="Search or type a research area, then press Enter" autocomplete="off" onkeydown="handleExpertiseKeydown(event)" />
+                  <div id="expertiseSuggestions"></div>
+                </div>
+                <button type="button" class="pf-btn" onclick="addExpertiseFromInput()">Add</button>
+              </div>
+
+              <input type="hidden" name="expertise_by_side" id="expertiseInput" value="{{ json_encode((object) ($expertiseBySide ?? [])) }}" />
+            </section>
+        </div>
+
+        {{-- One Save for the Details and Research areas tabs. --}}
+        <div class="pf-savebar" data-pf-save @if (! in_array($pfTab, ['details', 'research'], true)) hidden @endif>
+          <span>Your details, research areas and sections are saved together.</span>
+          <button type="submit" class="pf-btn pf-btn-primary">Save changes</button>
         </div>
       </form>
 
-      @if ($admin->roles->pluck('role_name')->contains('capstone_adviser'))
-        <div class="pf-card" style="margin-top:24px">
-          <div class="pf-card-header" style="margin-bottom:0;padding-bottom:18px;border-bottom:1px solid var(--pf-border);display:flex;align-items:center;gap:12px">
-            <div style="flex:1">
-              <div class="pf-card-title" style="display:flex;align-items:center;gap:8px">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pf-accent);flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                Submission Folders
+      @if ($isSubjectAdviser)
+        <div class="pf-panel" id="pf-panel-folders" data-pf-panel="folders" role="tabpanel" @if ($pfTab !== 'folders') hidden @endif>
+          <section class="pf-card">
+            <div class="pf-card-head">
+              <span class="pf-card-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+              <div>
+                <h2 class="pf-card-title">Submission folders</h2>
+                <p class="pf-card-desc">Students pick one of these when they submit to you as Subject Adviser.</p>
               </div>
-              <div class="pf-card-desc" style="margin-top:2px">Name folders here so students can pick the right one when they submit to you as Subject Adviser</div>
             </div>
-          </div>
-
-          <div style="padding-top:16px">
-            <div style="display:flex;gap:8px;margin-bottom:16px">
-              <input type="text" id="newFolderName" placeholder="e.g. Batch 2026 - Section A" style="flex:1;padding:9px 12px;border:1.5px solid var(--pf-border);border-radius:8px;font-size:13.5px;font-family:'DM Sans','DM Sans Fallback',sans-serif" />
-              <button type="button" id="addFolderBtn" style="padding:9px 16px;border:none;border-radius:8px;background:var(--pf-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif;white-space:nowrap">Add Folder</button>
+            <div class="pf-add" style="margin-bottom:14px">
+              <div class="pf-add-input"><input type="text" id="newFolderName" placeholder="e.g. Batch 2026 - Section A" /></div>
+              <button type="button" id="addFolderBtn" class="pf-btn pf-btn-dark">Add folder</button>
             </div>
-            <div id="folderNotice" hidden style="margin-bottom:16px"></div>
+            <div id="folderNotice" hidden style="margin-bottom:14px"></div>
             <div id="folderListContainer" style="display:flex;flex-direction:column;gap:6px">
               <div class="pf-empty" id="folderListEmpty">Loading…</div>
             </div>
-          </div>
+          </section>
         </div>
       @endif
 
-      <div style="margin-top:24px">@include('partials.notification-settings')</div>
+      <div class="pf-panel pf-notif" id="pf-panel-notifications" data-pf-panel="notifications" role="tabpanel" @if ($pfTab !== 'notifications') hidden @endif>
+        @include('partials.notification-settings')
+      </div>
 
     </div>
   </div>
@@ -773,6 +570,41 @@ if (sectionCheckboxes.length && sectionCountEl) {
   });
 }
 
+// Tabs: one part of the profile at a time, remembered in the address so a
+// reload or a save comes back to it.
+(function () {
+  var tabs = document.querySelectorAll('.pf-tab');
+  if (!tabs.length) return;
+  var tabInput = document.getElementById('pf-tab-input');
+  var saveBar = document.querySelector('[data-pf-save]');
+  function show(key, focus) {
+    tabs.forEach(function (t) {
+      var on = t.dataset.pfTab === key;
+      t.classList.toggle('on', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      if (on && focus) t.focus();
+    });
+    document.querySelectorAll('[data-pf-panel]').forEach(function (p) { p.hidden = p.dataset.pfPanel !== key; });
+    if (saveBar) saveBar.hidden = key !== 'details' && key !== 'research';
+    if (tabInput) tabInput.value = key;
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set('tab', key);
+      history.replaceState(null, '', url.pathname + url.search);
+    } catch (e) { /* the tab still changes */ }
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { show(t.dataset.pfTab); });
+    t.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      var next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      show(next.dataset.pfTab, true);
+    });
+  });
+})();
+
 // Expertise management
 var expertiseInput = document.getElementById('expertiseInput');
 var expertiseTags = document.getElementById('expertiseTags');
@@ -780,13 +612,52 @@ var expertiseSearch = document.getElementById('expertiseSearchInput');
 var expertiseSuggestions = document.getElementById('expertiseSuggestions');
 var presetExpertise = {{ Js::from($presetExpertise ?? []) }};
 
+// Research areas per side; the chips show the side whose tab is on.
+var expertiseState = (function () { try { return JSON.parse(expertiseInput.value || '{}') || {}; } catch (e) { return {}; } })();
+var expertiseSide = (document.querySelector('.pf-side-tab.on') || {}).dataset ? document.querySelector('.pf-side-tab.on').dataset.side : 'panel';
+
 function getExpertiseValues() {
-  try { return JSON.parse(expertiseInput.value || '[]'); } catch(e) { return []; }
+  return (expertiseState[expertiseSide] || []).slice();
 }
 
 function setExpertiseValues(arr) {
-  expertiseInput.value = JSON.stringify(arr);
+  expertiseState[expertiseSide] = arr;
+  expertiseInput.value = JSON.stringify(expertiseState);
+  var n = document.querySelector('[data-side-count="' + expertiseSide + '"]');
+  if (n) n.textContent = arr.length;
 }
+
+function expertiseChip(val) {
+  var chip = document.createElement('div');
+  chip.className = 'expertise-chip active';
+  chip.dataset.value = val;
+  chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:500;border:1.5px solid var(--pf-accent);background:rgba(71,85,105,0.08);color:var(--pf-accent);user-select:none';
+  chip.appendChild(document.createTextNode(val));
+  var x = document.createElement('span');
+  x.setAttribute('onclick', 'removeExpertise(this)');
+  x.style.cssText = 'cursor:pointer;opacity:0.6;display:flex;margin-left:2px';
+  x.dataset.value = val;
+  x.innerHTML = '&times;';
+  chip.appendChild(x);
+  return chip;
+}
+
+function renderExpertiseChips() {
+  expertiseTags.innerHTML = '';
+  getExpertiseValues().forEach(function (val) { expertiseTags.appendChild(expertiseChip(val)); });
+}
+
+function selectExpertiseSide(side) {
+  expertiseSide = side;
+  document.querySelectorAll('.pf-side-tab').forEach(function (b) {
+    var on = b.dataset.side === side;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  renderExpertiseChips();
+}
+
+if (expertiseTags) { renderExpertiseChips(); }
 
 function removeExpertise(el) {
   var val = el.getAttribute('data-value');
@@ -800,11 +671,7 @@ function removeExpertise(el) {
 function addExpertiseChip(val) {
   var values = getExpertiseValues();
   if (values.indexOf(val) !== -1) return;
-  var chip = document.createElement('div');
-  chip.className = 'expertise-chip active';
-  chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:500;border:1.5px solid var(--pf-accent);background:rgba(71,85,105,0.08);color:var(--pf-accent);user-select:none';
-  chip.innerHTML = val + '<span onclick="removeExpertise(this)" style="cursor:pointer;opacity:0.6;display:flex;margin-left:2px" data-value="' + val.replace(/"/g, '&quot;') + '">&times;</span>';
-  expertiseTags.appendChild(chip);
+  expertiseTags.appendChild(expertiseChip(val));
   values.push(val);
   setExpertiseValues(values);
 }

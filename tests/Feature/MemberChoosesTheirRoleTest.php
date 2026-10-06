@@ -581,7 +581,12 @@ class MemberChoosesTheirRoleTest extends TestCase
         $this->assertSame([self::TESTER], (array) $post->roles);
     }
 
-    /** The post advertises the real roles, and never the leader's seat. */
+    /**
+     * The post offers Create Post's six choices. Leader and Member are tags
+     * that name no seat, so the leader's seat itself is still never given
+     * away through a post; the two member roles are offered as Primary or
+     * Secondary.
+     */
     public function test_the_post_offers_the_member_roles_only(): void
     {
         [$leader] = $this->team();
@@ -592,9 +597,10 @@ class MemberChoosesTheirRoleTest extends TestCase
         $this->assertStringContainsString('>Roles</label>', $html);
         $this->assertStringNotContainsString('Expertise & Roles', $html);
 
-        foreach ([self::DESIGNER, self::TESTER] as $role) {
-            $this->assertStringContainsString($role, $html);
+        foreach (['Network Designer/UI Designer (Primary)', 'Network Designer/UI Designer (Secondary)', 'QA Tester/Documentation (Primary)', 'QA Tester/Documentation (Secondary)'] as $choice) {
+            $this->assertStringContainsString($choice, $html);
         }
+        $this->assertNull(Recruitment::ROLE_OPTIONS['leader']['role'], 'Leader names no seat');
 
         $names = StudentRole::memberRoles()->pluck('s_role_name')->all();
         $this->assertNotContains(StudentRole::LEADER_ROLE_NAME, $names);

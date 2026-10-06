@@ -46,9 +46,16 @@ class AdminProfileController extends Controller
 
         $schoolYear = $admin->school_year;
 
-        $expertiseList = $admin->expertise->pluck('expertise_field')->toArray();
+        // Research areas per side: each expert role they hold, and panels -
+        // the same lists their expert profile panel edits.
+        $heldRoles = $admin->roles()->pluck('role_name')->all();
+        $expertSides = collect(ExpertExpertise::SIDES)
+            ->filter(fn ($label, $side) => $side === 'panel' || in_array($side, $heldRoles, true))
+            ->all();
+        $expertiseBySide = collect($expertSides)->map(fn ($label, $side) => $admin->expertiseFor($side)->all())->all();
+        $expertiseList = $admin->allExpertise()->all();
 
-        return view('capsa.profile', compact('admin', 'sectionList', 'allAvailableSections', 'schoolYear', 'expertiseList'));
+        return view('capsa.profile', compact('admin', 'sectionList', 'allAvailableSections', 'schoolYear', 'expertiseList', 'expertSides', 'expertiseBySide'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -90,24 +97,41 @@ class AdminProfileController extends Controller
 
         CapstoneExpert::where('expert_id', $admin->expert_id)->update($data);
 
-        // Sync expertise
-        $expertise = $request->input('expertise', []);
+        // Research areas, one list per side. Saving the name or sections must
+        // not flatten them, so the per-side lists are what is sent and kept;
+        // a page that only knows one list still saves it for every side.
+        $clean = fn ($fields) => array_values(array_unique(array_filter(array_map(fn ($f) => trim((string) $f), (array) $fields))));
 
-        if (is_string($expertise)) {
-            $expertise = json_decode($expertise, true) ?? [];
+        if ($request->has('expertise_by_side')) {
+            $bySide = $request->input('expertise_by_side');
+            $bySide = is_string($bySide) ? (json_decode($bySide, true) ?? []) : (array) $bySide;
+            $bySide = collect($bySide)
+                ->filter(fn ($fields, $side) => array_key_exists($side, ExpertExpertise::SIDES))
+                ->map($clean);
+        } elseif ($request->has('expertise')) {
+            $flat = $request->input('expertise', []);
+            $bySide = collect(['' => $clean(is_string($flat) ? (json_decode($flat, true) ?? []) : $flat)]);
+        } else {
+            $bySide = null;
         }
 
-        $expertise = array_values(array_unique(array_filter(array_map('trim', (array) $expertise))));
+        if ($bySide !== null) {
+            ExpertExpertise::where('expert_id', $admin->expert_id)->delete();
 
-        ExpertExpertise::where('expert_id', $admin->expert_id)->delete();
-
-        foreach ($expertise as $field) {
-            ExpertExpertise::create([
-                'expert_id' => $admin->expert_id,
-                'expertise_field' => $field,
-            ]);
+            foreach ($bySide as $side => $fields) {
+                foreach ($fields as $field) {
+                    ExpertExpertise::create([
+                        'expert_id' => $admin->expert_id,
+                        'expertise_field' => $field,
+                        'side' => $side === '' ? null : $side,
+                    ]);
+                }
+            }
         }
 
-        return redirect()->route('capsa.profile')->with('status', 'Profile updated successfully.');
+        // Back to the tab the save was made from.
+        $tab = in_array($request->input('tab'), ['details', 'research'], true) ? $request->input('tab') : null;
+
+        return redirect()->route('capsa.profile', array_filter(['tab' => $tab]))->with('status', 'Profile updated successfully.');
     }
 }

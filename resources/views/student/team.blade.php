@@ -6,7 +6,7 @@
 <title>Team Management - CapsTrack  </title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
-@vite('resources/student-ui/Styles/team.css')
+@vite(['resources/student-ui/Styles/team.css', 'resources/css/financial.css', 'resources/js/financial/student.js'])
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
 <style nonce="{{ Vite::cspNonce() }}">
@@ -203,8 +203,28 @@
     .name-label{font-size:10px!important}
     .goal-label{font-size:8px!important;letter-spacing:0.3px!important}
   }
+  /* ---- Team | Financial Records ----
+     Two tabs on one page. The team half is the page as it always was; the
+     body's class hides it while Financial Records is showing, rather than
+     moving a thousand lines of markup into a wrapper. */
+  .tm-seg { display: flex; gap: 4px; padding: 4px; margin: 0 0 16px; background: var(--bg4, #eceef2); border-radius: 12px; width: fit-content; max-width: 100%; }
+  .tm-seg button { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 16px; border-radius: 9px; border: 0; background: transparent; color: var(--text2); font: 600 13.5px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; white-space: nowrap; }
+  .tm-seg button svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .tm-seg button:hover { color: var(--text); }
+  .tm-seg button[aria-selected="true"] { background: var(--bg2); color: var(--text); box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
+  .tm-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  body.tm-on-fin #contentWrapper,
+  body.tm-on-fin .pagination-container,
+  body.tm-on-fin .tutorial-note { display: none !important; }
+  /* Financial Records was a page of its own that filled the window; inside a
+     tab it sits in the page's flow like the team half does. */
+  .tm-fin .fx { flex: none; min-height: 0; overflow: visible; background: transparent; }
+  @media (max-width: 768px) {
+    .tm-seg { width: 100%; }
+    .tm-seg button { flex: 1; justify-content: center; padding: 0 10px; }
+  }
 </style>
-<body>
+<body class="{{ $tab === 'financial' ? 'tm-on-fin' : '' }}">
 @include('student.partials.sidebar')
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 <!-- MAIN -->
@@ -220,6 +240,49 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'team'])
+
+    <div class="tm-seg" role="tablist" aria-label="Team Management sections">
+      <button type="button" role="tab" id="tm-tab-team" data-tm-tab="team" aria-selected="{{ $tab === 'team' ? 'true' : 'false' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Team
+      </button>
+      <button type="button" role="tab" id="tm-tab-financial" data-tm-tab="financial" aria-controls="tm-panel-financial" aria-selected="{{ $tab === 'financial' ? 'true' : 'false' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 1 .7V2l-1 .7-3-2-3 2-3-2-3 2-3-2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+        Financial Records
+      </button>
+    </div>
+
+    <section class="tm-fin" id="tm-panel-financial" role="tabpanel" aria-labelledby="tm-tab-financial" @if ($tab !== 'financial') hidden @endif>
+      @include('student.partials.financial-panel', ['state' => $financialState])
+    </section>
+    <script nonce="{{ Vite::cspNonce() }}">
+    (function () {
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-tm-tab]'));
+      var panel = document.getElementById('tm-panel-financial');
+
+      // Switches in place, and keeps the address in step so a refresh or a
+      // shared link opens the same tab.
+      function show(which) {
+        var fin = which === 'financial';
+        document.body.classList.toggle('tm-on-fin', fin);
+        panel.hidden = !fin;
+        tabs.forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tm-tab') === which ? 'true' : 'false'); });
+        var url = new URL(location.href);
+        if (fin) { url.searchParams.set('tab', 'financial'); } else { url.searchParams.delete('tab'); }
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+      }
+
+      tabs.forEach(function (b, i) {
+        b.addEventListener('click', function () { show(b.getAttribute('data-tm-tab')); });
+        b.addEventListener('keydown', function (e) {
+          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') { return; }
+          var next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+          next.focus();
+          show(next.getAttribute('data-tm-tab'));
+        });
+      });
+    })();
+    </script>
 
     <div id="contentWrapper" style="position: relative;">
     <div id="skeleton-content" class="sk-overlay">
@@ -821,10 +884,10 @@
               @if($introText)
                 <div class="my-post-text">{{ $introText }}</div>
               @endif
-              @if(!empty($skills))
+              @if($myRecruitment->tagLabels() !== [])
                 <div class="my-post-tags">
-                  @foreach($skills as $skill)
-                    <span class="expertise-tag">{{ $skill }}</span>
+                  @foreach($myRecruitment->tagLabels() as $label)
+                    <span class="expertise-tag">{{ $label }}</span>
                   @endforeach
                 </div>
               @endif
@@ -860,7 +923,7 @@
                 ? ($recruit->looking_for ?? '')
                 : ($recruit->introduction ?? $recruit->looking_for ?? '');
             @endphp
-            <div class="feed-post-card" data-goal="{{ $recruit->recruitment_goal }}" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->roles ?? []) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $recruitIsLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}", "{{ addslashes($recruit->introduction ?? '') }}")'>
+            <div class="feed-post-card" data-goal="{{ $recruit->recruitment_goal }}" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->tagLabels()) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $recruitIsLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}", "{{ addslashes($recruit->introduction ?? '') }}")'>
               <div class="feed-post-top">
                 <div class="avatar-ring {{ $ringClass }}">
                   @if ($recruit->student->avatarUrl())
@@ -878,10 +941,10 @@
               @if($feedIntro)
                 <div class="feed-post-text">{{ $feedIntro }}</div>
               @endif
-              @if(!empty($recruit->roles))
+              @if($recruit->tagLabels() !== [])
                 <div class="feed-post-tags">
-                  @foreach($recruit->roles as $role)
-                    <span class="expert-tag">{{ $role }}</span>
+                  @foreach($recruit->tagLabels() as $label)
+                    <span class="expert-tag">{{ $label }}</span>
                   @endforeach
                 </div>
               @endif
@@ -1155,7 +1218,7 @@
            one role is given to them on accept, two or more and they pick
            between exactly these. --}}
       <p style="margin:-2px 0 8px;font-size:11px;color:var(--text3);line-height:1.5">
-        Name one and whoever joins becomes that. Name more and they choose between them.
+        Leader, Member, or a role marked Primary or Secondary. Name one role and whoever joins becomes that; name both and they choose.
       </p>
       <div class="tag-wrapper-box" style="position: relative; margin-bottom: 25px;">
         <div class="tag-input-field" id="tag-container" onclick="document.getElementById('tag-search-input').focus()">
@@ -1750,10 +1813,10 @@ const hasPendingRequest = @json($hasPendingRequest ?? false);
 let activeTags = [];
 let isEditing = false;
 let editingId = null;
-// The capstone team roles, straight out of student_roles. Project Head is
-// not among them: that seat is the leader's and is never advertised.
-const leaderPresets = @json($memberRoleNames, JSON_UNESCAPED_SLASHES);
-const individualPresets = @json($memberRoleNames, JSON_UNESCAPED_SLASHES);
+// Create Post's six choices: Leader, Member, and Primary or Secondary of each
+// member role (Recruitment::ROLE_OPTIONS). activeTags holds their keys.
+@php $roleOptionList = collect(\App\Models\Recruitment::ROLE_OPTIONS)->map(fn ($o, $key) => ['key' => $key, 'label' => $o['label']])->values(); @endphp
+const roleOptions = @json($roleOptionList, JSON_UNESCAPED_SLASHES);
 
 const myTeamId = {{ $myTeam?->team_id ?? 'null' }};
 
@@ -2683,7 +2746,7 @@ function openEditModal() {
         document.getElementById('individual-intro').value = introduction;
     }
 
-    activeTags = JSON.parse('{{ addslashes(json_encode($myRecruitment->roles ?? [])) }}'.replace(/&quot;/g, '"').replace(/&#039;/g, "'"));
+    activeTags = @json($myRecruitment->tagKeyList());
     renderActiveTags();
 
     syncRecruitmentSelectLabels();
@@ -2939,51 +3002,62 @@ function updateModalUI() {
   window.addEventListener('resize', syncRecruitmentSelectLabels);
 
 function filterTagSuggestions() {
-    const goal = document.getElementById('post-goal').value;
     const query = document.getElementById('tag-search-input').value.toLowerCase().trim();
-    const pool = (goal === 'leader') ? leaderPresets : individualPresets;
-    const filtered = pool.filter(s => s.toLowerCase().includes(query) && !activeTags.includes(s));
+    const filtered = roleOptions.filter(o => o.label.toLowerCase().includes(query) && !activeTags.includes(o.key));
     const box = document.getElementById('tag-suggestions');
-    
+
     box.innerHTML = '';
     if (filtered.length === 0) {
         box.style.display = 'none';
         return;
     }
-    
-    filtered.forEach(tag => {
+
+    filtered.forEach(option => {
         const item = document.createElement('div');
         item.className = 'tag-suggestion-item';
-        item.textContent = tag;
-        item.onclick = function() { addTagToken(tag); };
+        item.textContent = option.label;
+        item.onclick = function() { addTagToken(option.key); };
         box.appendChild(item);
     });
     box.style.display = 'block';
 }
 
-function addTagToken(tag) {
-    if (!activeTags.includes(tag)) {
-        activeTags.push(tag);
+function roleLabel(key) {
+    const option = roleOptions.find(o => o.key === key);
+    return option ? option.label : key;
+}
+
+function addTagToken(key) {
+    if (!activeTags.includes(key)) {
+        activeTags.push(key);
     }
     document.getElementById('tag-search-input').value = '';
     document.getElementById('tag-suggestions').style.display = 'none';
     renderActiveTags();
 }
 
-function removeTagToken(tag) {
-    activeTags = activeTags.filter(t => t !== tag);
+function removeTagToken(key) {
+    activeTags = activeTags.filter(t => t !== key);
     renderActiveTags();
 }
 
+// The chips follow the order the choices are offered in, whatever order they were picked.
 function renderActiveTags() {
     const container = document.getElementById('tag-container');
     const input = document.getElementById('tag-search-input');
     container.querySelectorAll('.custom-tag-chip').forEach(el => el.remove());
-    
-    activeTags.forEach(tag => {
+
+    activeTags = roleOptions.map(o => o.key).filter(key => activeTags.includes(key));
+    activeTags.forEach(key => {
         const chip = document.createElement('div');
         chip.className = 'custom-tag-chip';
-        chip.innerHTML = `${tag} <button type="button" class="custom-tag-chip-remove" onclick="removeTagToken('${tag.replace(/'/g, "\\'")}')">×</button>`;
+        chip.textContent = roleLabel(key) + ' ';
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'custom-tag-chip-remove';
+        remove.textContent = '×';
+        remove.onclick = function () { removeTagToken(key); };
+        chip.appendChild(remove);
         container.insertBefore(chip, input);
     });
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);

@@ -13,6 +13,7 @@ class RecruitmentResource extends JsonResource
             'recruitment_id' => $this->recruitment_id,
             'recruitment_goal' => $this->recruitment_goal,
             'roles' => $this->roles,
+            'role_tags' => $this->tagLabels(),
             'looking_for' => $this->looking_for,
             'introduction' => $this->introduction,
             'member_count' => $this->member_count,

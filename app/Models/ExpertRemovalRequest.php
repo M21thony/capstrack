@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SectionScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -23,12 +24,24 @@ class ExpertRemovalRequest extends Model
 
     public const REASON_MIN = 15;
 
+    /** The application to the replacement went out when the CaPSA approved. */
+    public const REPLACEMENT_SENT = 'sent';
+
+    /** The replacement could no longer take the team by then: full, or no longer eligible. */
+    public const REPLACEMENT_UNAVAILABLE = 'unavailable';
+
     protected $fillable = [
         'team_id',
         'assignment_id',
         'expert_id',
         'requested_by',
         'reason',
+        'replacement_expert_id',
+        'replacement_expert_role_id',
+        'replacement_message',
+        'replacement_proposal_file',
+        'replacement_assignment_id',
+        'replacement_outcome',
         'status',
         'decided_by',
         'decision_note',
@@ -52,6 +65,12 @@ class ExpertRemovalRequest extends Model
     public function expert()
     {
         return $this->belongsTo(CapstoneExpert::class, 'expert_id', 'expert_id');
+    }
+
+    /** Who the team wants instead - applied to as soon as the CaPSA approves. */
+    public function replacement()
+    {
+        return $this->belongsTo(CapstoneExpert::class, 'replacement_expert_id', 'expert_id');
     }
 
     public function requester()
@@ -82,7 +101,7 @@ class ExpertRemovalRequest extends Model
      */
     public static function visibleTo(CapstoneExpert $capsa, Collection $requests): Collection
     {
-        $scope = app(\App\Support\SectionScope::class);
+        $scope = app(SectionScope::class);
         $sections = $capsa->sections ?? [];
 
         return $requests

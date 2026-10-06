@@ -46,6 +46,11 @@ class ProgressController extends Controller
                     'closed' => $summary->completed,
                     'overdue' => $summary->overdue,
                     'dues' => $summary->items->pluck('due_on')->filter()->sort()->values(),
+                    // Shut behind an unfinished phase - or a finished one whose
+                    // experts the leader has not rated yet.
+                    'locked' => $summary->locked,
+                    'requires' => $summary->requires,
+                    'evaluations_owed' => $summary->evaluations_owed,
                 ])
                 ->values();
         }
@@ -64,7 +69,9 @@ class ProgressController extends Controller
             'progress' => $progress,
             'groups' => $groups,
             // The milestone the team is on: the first one not finished. It starts open.
-            'current' => $groups->first(fn ($group) => $group->closed < $group->rows->count()),
+            // A finished one still waiting on the expert evaluation counts.
+            'current' => $groups->first(fn ($group) => $group->closed < $group->rows->count() || $group->evaluations_owed->isNotEmpty()),
+            'isLeader' => $team && (int) $team->leader_id === (int) $student->student_id,
             'next' => $progress?->items
                 ->reject(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
                 ->filter(fn ($row) => $row->due_on)

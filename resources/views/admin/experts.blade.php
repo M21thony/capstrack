@@ -256,6 +256,8 @@
     font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;
   }
   .expert-detail-field-value{font-size:13.5px;color:#1e293b;line-height:1.5}
+  .expert-detail-side + .expert-detail-side{margin-top:4px}
+  .expert-detail-side b{font-weight:700;color:#0f172a}
   .expert-detail-badges{display:flex;flex-wrap:wrap;gap:6px}
   .expert-detail-chip{
     font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#f1f5f9;color:#475569;
@@ -633,7 +635,8 @@
               // modal that said "Deactivate <blank>?" was unanswerable.
               $displayName = $expert->name !== '' ? $expert->name : $expert->email;
 
-              $expertiseList = $expert->expertise->pluck('expertise_field');
+              // Every side together here; the detail window shows them apart.
+              $expertiseList = $expert->allExpertise();
               $expertiseFull = $expertiseList->join(', ') ?: 'None specified';
               $expertiseShown = $expertiseList->take(2)->join(', ');
               $expertiseExtra = $expertiseList->count() - 2;
@@ -689,6 +692,11 @@
                 'sections' => $expert->sections ?? [],
                 'roles' => $expert->roles->pluck('role_name')->map($roleLabel)->values(),
                 'expertise' => $expertiseList->values(),
+                'expertise_by_side' => collect(\App\Models\ExpertExpertise::SIDES)
+                    ->map(fn ($label, $side) => $expert->expertise->where('side', $side)->pluck('expertise_field')->values())
+                    ->filter(fn ($fields) => $fields->isNotEmpty())
+                    ->mapWithKeys(fn ($fields, $side) => [\App\Models\ExpertExpertise::SIDES[$side] => $fields])
+                    ->all(),
                 // Empty rather than "ALL: max 0" - the detail panel reads
                 // that as "Not set", which is what it is.
                 'capacity' => $takesTeams && $slotsSet
@@ -955,7 +963,7 @@
         <div class="expert-detail-field-value" id="detailSections">—</div>
       </div>
       <div>
-        <div class="expert-detail-field-label">Expertise</div>
+        <div class="expert-detail-field-label">Research areas</div>
         <div class="expert-detail-field-value" id="detailExpertise">—</div>
       </div>
       <div>
@@ -1647,7 +1655,24 @@ function openExpertDetail(data) {
   document.getElementById('detailEmail').textContent = data.email;
   document.getElementById('detailCredentials').textContent = data.credentials || 'None on file';
   document.getElementById('detailProgram').textContent = data.program || 'Not set';
-  document.getElementById('detailExpertise').textContent = data.expertise.length ? data.expertise.join(', ') : 'None specified';
+  // Kept per side - adviser, consultant, grammarian, panel - once the expert
+  // has saved them that way; one list until then.
+  const detailExpertise = document.getElementById('detailExpertise');
+  const bySide = data.expertise_by_side || {};
+  detailExpertise.textContent = '';
+  if (Object.keys(bySide).length) {
+    Object.entries(bySide).forEach(([side, fields]) => {
+      const line = document.createElement('div');
+      line.className = 'expert-detail-side';
+      const label = document.createElement('b');
+      label.textContent = side + ': ';
+      line.appendChild(label);
+      line.appendChild(document.createTextNode(fields.join(', ')));
+      detailExpertise.appendChild(line);
+    });
+  } else {
+    detailExpertise.textContent = data.expertise.length ? data.expertise.join(', ') : 'None specified';
+  }
   document.getElementById('detailCapacity').textContent = data.capacity.length ? data.capacity.join(' · ') : 'Not set';
 
   const sectionsWrap = document.getElementById('detailSectionsWrap');

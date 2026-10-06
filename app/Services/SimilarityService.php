@@ -1360,7 +1360,7 @@ PROMPT;
         $listJson = json_encode($candidates->map(fn ($e) => [
             'id' => $e->expert_id,
             'name' => $e->name,
-            'expertise' => $e->expertise->pluck('expertise_field')->implode(', ') ?: 'General',
+            'expertise' => $e->allExpertise()->implode(', ') ?: 'General',
         ])->values()->all());
 
         $prompt = "You are matching a capstone pre-proposal to {$label}s.\n"
@@ -1431,7 +1431,7 @@ PROMPT;
     /** @return array<string,mixed> */
     private function suggestion($expert, string $role, string $label, string $reason): array
     {
-        $expertise = $expert->expertise->pluck('expertise_field')->implode(', ') ?: 'General';
+        $expertise = $expert->allExpertise()->implode(', ') ?: 'General';
 
         return [
             'id' => $expert->expert_id,

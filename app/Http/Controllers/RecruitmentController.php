@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class RecruitmentController extends Controller
 {
@@ -57,20 +58,17 @@ class RecruitmentController extends Controller
             return back()->withErrors(['error' => 'You already have a team, so you cannot publish a recruitment post.']);
         }
 
-        // Decode the tags input
-        $tagsJson = $request->input('tags');
-        $roles = [];
-        if ($tagsJson) {
-            $roles = json_decode($tagsJson, true) ?? [];
-        }
+        // What the post was tagged with: Create Post's six choices (Leader,
+        // Member, and Primary or Secondary of each member role). Anything else
+        // is dropped - it could never be assigned to whoever joins.
+        $tags = self::pickedTags($request);
 
-        // A post names capstone team roles, and nothing else. Anything not in
-        // student_roles can never be assigned to whoever joins, so the post
-        // would be advertising something the system cannot deliver.
-        $roles = array_values(array_intersect((array) $roles, self::advertisableRoles()));
+        // The team roles behind those choices, which the join flow matches on.
+        // The team roles in the order the student picked them.
+        $roles = array_values(array_intersect(Recruitment::rolesForTags(self::pickedTags($request, true)), self::advertisableRoles()));
 
-        if ($roles === []) {
-            $message = 'Choose at least one capstone team role.';
+        if ($tags === []) {
+            $message = 'Choose at least one role.';
 
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $message], 422);
@@ -99,7 +97,7 @@ class RecruitmentController extends Controller
             return back()->withErrors(['error' => Team::JOINING_CLOSED]);
         }
 
-        $recruitment = DB::transaction(function () use ($validated, $studentId, $roles): Recruitment {
+        $recruitment = DB::transaction(function () use ($validated, $studentId, $roles, $tags): Recruitment {
             // If goal is build_a_team and team_name is provided, create team and link it
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
                 $team = Team::create([
@@ -126,6 +124,7 @@ class RecruitmentController extends Controller
                 'student_id' => $studentId,
                 'recruitment_goal' => $validated['recruitment_goal'],
                 'roles' => $roles,
+                'role_tags' => $tags,
                 'looking_for' => $validated['looking_for'] ?? null,
                 'introduction' => $validated['introduction'] ?? null,
                 'member_count' => 5,
@@ -163,9 +162,28 @@ class RecruitmentController extends Controller
     }
 
     /**
+     * What the form tagged the post with, as Recruitment::ROLE_OPTIONS keys.
+     * Create Post sends them as a JSON list in `tags`; an edit or an older
+     * client may send `roles` as a list instead. See Recruitment::tagKeys().
+     *
+     * @return list<string>
+     */
+    private static function pickedTags(Request $request, bool $asPicked = false): array
+    {
+        $raw = $request->input('tags');
+        $picked = is_string($raw) ? json_decode($raw, true) : $raw;
+
+        if (! is_array($picked) || $picked === []) {
+            $picked = (array) $request->input('roles', []);
+        }
+
+        return Recruitment::tagKeys($picked, $asPicked);
+    }
+
+    /**
      * The roles a recruitment post may ask for.
      *
-     * The three member roles, straight out of student_roles. Project Head is
+     * The member roles, straight out of student_roles. Project Head is
      * excluded: that seat is the leader's and is never advertised.
      *
      * @return array<int, string>
@@ -187,13 +205,20 @@ class RecruitmentController extends Controller
             'recruitment_goal' => ['required', Rule::in(['build_a_team', 'find_a_team'])],
             'looking_for' => ['nullable', 'string', 'max:500'],
             'introduction' => ['nullable', 'string', 'max:500'],
-            'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => [Rule::in(self::advertisableRoles())],
+            'tags' => ['nullable'],
+            'roles' => ['nullable', 'array'],
         ]);
+
+        $tags = self::pickedTags($request);
+
+        if ($tags === []) {
+            throw ValidationException::withMessages(['roles' => 'Choose at least one role.']);
+        }
 
         $recruitment->update([
             'recruitment_goal' => $validated['recruitment_goal'],
-            'roles' => $validated['roles'],
+            'roles' => array_values(array_intersect(Recruitment::rolesForTags(self::pickedTags($request, true)), self::advertisableRoles())),
+            'role_tags' => $tags,
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,
             'member_count' => 5,

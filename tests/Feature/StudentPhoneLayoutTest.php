@@ -188,7 +188,7 @@ class StudentPhoneLayoutTest extends TestCase
             ]);
             StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id, 'program' => 'BSIT']);
 
-            $html = $this->actingAs($student)->get(route('student.financial'))->assertOk()->getContent();
+            $html = $this->actingAs($student)->get(route('student.team', ['tab' => 'financial']))->assertOk()->getContent();
 
             $this->assertMatchesRegularExpression('/<p class="fx-who">\s*'.preg_quote($shown, '/').'\b/', $html, $name);
             $this->assertStringNotContainsString('Team Team', $html);
@@ -241,7 +241,7 @@ class StudentPhoneLayoutTest extends TestCase
     /** capture made a phone open the camera and nothing else; the gallery could not be chosen. */
     public function test_a_receipt_photo_can_come_from_the_camera_or_the_gallery(): void
     {
-        $this->actingAs($this->student())->get(route('student.financial'))
+        $this->actingAs($this->student())->get(route('student.team', ['tab' => 'financial']))
             ->assertOk()
             ->assertSee('<input type="file" id="u-file" accept="image/*" aria-label="Photo of your receipt">', false)
             ->assertDontSee('capture="environment"', false);

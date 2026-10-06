@@ -13,6 +13,7 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\Term;
 use App\Support\DefenseProgress;
+use App\Support\FeeBoard;
 use App\Support\ProjectTags;
 use App\Support\StudentTeam;
 use App\Support\TitleRevision;
@@ -301,6 +302,9 @@ class TeamController extends Controller
             'userRole' => $userRole,
             'expertRemovedNotifications' => $expertRemovedNotifications,
             'pendingLeadershipTransfer' => $pendingLeadershipTransfer,
+            // Financial Records is the page's second tab; ?tab=financial opens on it.
+            'tab' => $request->query('tab') === 'financial' ? 'financial' : 'team',
+            'financialState' => app(FeeBoard::class)->forStudent($student),
         ]);
     }
 

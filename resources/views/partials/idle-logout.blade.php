@@ -46,7 +46,7 @@
   }
 
   // Tells the server someone is here: it keeps its own count, and a page can
-  // be read for ten minutes without sending it anything.
+  // be read for the whole idle limit without sending it anything.
   function ping() {
     lastPing = Date.now();
     busySincePing = false;

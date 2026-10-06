@@ -21,6 +21,11 @@
   .ae-role input{width:14px;height:14px;accent-color:#2563eb;cursor:pointer;margin:0}
   .ae-role:has(input:checked){border-color:#2563eb;background:rgba(29,78,216,0.06);color:#1d4ed8}
   .ae-note{font-size:11.5px;color:#94a3b8;line-height:1.5;margin:0 0 14px}
+  /* Study leave: a quiet flag, not an alarm. */
+  .ae-leave{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--text,#334155);cursor:pointer}
+  .ae-leave input{width:15px;height:15px;accent-color:#b45309;margin:0;cursor:pointer}
+  .ae-leave-hint{display:block;margin-top:3px;font-size:11.5px;color:#94a3b8;line-height:1.45}
+  .cx-leave-tag{display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.2px;vertical-align:1px;background:rgba(180,83,9,.09);color:#b45309;border:1px solid rgba(180,83,9,.18)}
 
   /* ── Compact table ───────────────────────────────────────────────────
      One line per person. Status is a dot beside the name, which buys the
@@ -252,6 +257,8 @@
     font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;
   }
   .expert-detail-field-value{font-size:13.5px;color:#1e293b;line-height:1.5}
+  .expert-detail-side + .expert-detail-side{margin-top:4px}
+  .expert-detail-side b{font-weight:700;color:#0f172a}
   .expert-detail-badges{display:flex;flex-wrap:wrap;gap:6px}
   .expert-detail-chip{
     font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#f1f5f9;color:#475569;
@@ -503,7 +510,8 @@
         <tbody>
           @foreach($experts as $expert)
           @php
-              $expertiseList = $expert->expertise->pluck('expertise_field');
+              // Every side together here; the detail window shows them apart.
+              $expertiseList = $expert->allExpertise();
               $expertiseFull = $expertiseList->join(', ') ?: 'None specified';
               $expertiseShown = $expertiseList->take(2)->join(', ');
               $expertiseExtra = $expertiseList->count() - 2;
@@ -554,9 +562,15 @@
                 'expert_id' => $expert->expert_id,
                 'highest_degree' => $expert->highest_degree,
                 'degree_title' => $expert->degree_title,
+                'on_study_leave' => (bool) $expert->on_study_leave,
                 'program' => $expert->program,
                 'roles' => $expert->roles->pluck('role_name')->map($roleLabel)->values(),
                 'expertise' => $expertiseList->values(),
+                'expertise_by_side' => collect(\App\Models\ExpertExpertise::SIDES)
+                    ->map(fn ($label, $side) => $expert->expertise->where('side', $side)->pluck('expertise_field')->values())
+                    ->filter(fn ($fields) => $fields->isNotEmpty())
+                    ->mapWithKeys(fn ($fields, $side) => [\App\Models\ExpertExpertise::SIDES[$side] => $fields])
+                    ->all(),
                 // Empty rather than "ALL: max 0" - the detail panel reads
                 // that as "Not set", which is what it is.
                 'capacity' => $takesTeams && $slotsSet
@@ -585,7 +599,7 @@
                      what tells them apart. --}}
                 @if ($isOff)<span class="cx-off-tag">Deactivated</span>@endif
                 <span class="cx-text">
-                  <span class="td-main">{{ $expert->name }}</span>
+                  <span class="td-main">{{ $expert->name }}@if ($expert->on_study_leave)<span class="cx-leave-tag" title="On study leave: may be slow to reply and hard to book.">Study leave</span>@endif</span>
                   <span class="cx-mail">{{ $expert->email }}</span>
                 </span>
               </div>
@@ -667,6 +681,11 @@
                     <button type="button" class="rowmenu-item"
                             onclick="openRoles({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->roles->pluck('role_name')) }})">
                       <svg viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/></svg> Set roles
+                    </button>
+                    {{-- On and off from here too: a leave ends, and the tag should go with it. --}}
+                    <button type="button" class="rowmenu-item"
+                            onclick="setStudyLeave({{ $expert->expert_id }}, {{ $expert->on_study_leave ? 'false' : 'true' }}, true)">
+                      <svg viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg> {{ $expert->on_study_leave ? 'End study leave' : 'Mark study leave' }}
                     </button>
                     <div class="rowmenu-sep"></div>
                     @if ($isOff)
@@ -769,11 +788,16 @@
         </div>
       </div>
       <div>
+        <div class="expert-detail-field-label">Study leave</div>
+        <label class="ae-leave" style="margin-top:4px"><input type="checkbox" id="detailStudyLeave" onchange="saveStudyLeave(this)">On study leave</label>
+        <span class="ae-leave-hint">Students see a small tag: may be slow to reply and hard to book. Untick it when the leave is over.</span>
+      </div>
+      <div>
         <div class="expert-detail-field-label">Program</div>
         <div class="expert-detail-field-value" id="detailProgram">—</div>
       </div>
       <div>
-        <div class="expert-detail-field-label">Expertise</div>
+        <div class="expert-detail-field-label">Research areas</div>
         <div class="expert-detail-field-value" id="detailExpertise">—</div>
       </div>
       <div>
@@ -936,6 +960,11 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
       </div>
     </div>
 
+    <div class="ae-field">
+      <label class="ae-leave"><input type="checkbox" id="addExpertStudyLeave">On study leave</label>
+      <span class="ae-leave-hint">Students see a small tag: may be slow to reply and hard to book. You can change it any time.</span>
+    </div>
+
     <p class="ae-note">They are approved straight away &mdash; naming them here is the vetting, the same as putting them on the list. Write a degree after the name, like <b>Juan Dela Cruz, MIT</b>, and it counts for Panel Chair. Their areas of expertise are theirs to fill in from their own profile.</p>
 
     <div id="addExpertResult" style="display:none;font-size:12px;margin-bottom:12px"></div>
@@ -1074,6 +1103,7 @@ function openAddExpertModal() {
   document.getElementById('addExpertEmail').value = '';
   document.getElementById('addExpertName').value = '';
   document.querySelectorAll('.ae-role input').forEach(function (c) { c.checked = false; });
+  document.getElementById('addExpertStudyLeave').checked = false;
   document.getElementById('addExpertResult').style.display = 'none';
   addExpertModal.style.display = 'flex';
   document.getElementById('addExpertEmail').focus();
@@ -1140,6 +1170,7 @@ function addExpert() {
       email: document.getElementById('addExpertEmail').value.trim(),
       name: document.getElementById('addExpertName').value.trim(),
       roles: roles,
+      on_study_leave: document.getElementById('addExpertStudyLeave').checked,
     }),
   })
     .then(function (r) { return r.json(); })
@@ -1467,6 +1498,44 @@ function saveExpertDegree(select) {
     .finally(() => { select.disabled = false; });
 }
 
+// Study leave: saved the moment it is ticked, like the degree.
+const leaveSaved = {};
+
+function setStudyLeave(id, value, reload) {
+  return fetch('{{ url('capsa/experts') }}/' + id + '/study-leave', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    body: JSON.stringify({ on_study_leave: value }),
+  })
+    .then(r => r.json().then(d => ({ ok: r.ok && d.success, d })))
+    .then(({ ok, d }) => {
+      showToast(d.message || (ok ? 'Saved' : 'Could not save that'), ok ? 'success' : 'error');
+      if (ok && reload) { setTimeout(function () { window.location.reload(); }, 700); }
+      return { ok, d };
+    });
+}
+
+function saveStudyLeave(box) {
+  if (!currentDetailExpertId) return;
+  const id = currentDetailExpertId;
+  const value = box.checked;
+  box.disabled = true;
+
+  setStudyLeave(id, value, false)
+    .then(({ ok, d }) => {
+      if (!ok) { box.checked = !value; return; }
+      leaveSaved[id] = !!d.on_study_leave;
+      const row = document.querySelector('tr[data-id="' + id + '"] .td-main');
+      if (row) {
+        let tag = row.querySelector('.cx-leave-tag');
+        if (d.on_study_leave && !tag) { tag = document.createElement('span'); tag.className = 'cx-leave-tag'; tag.textContent = 'Study leave'; row.appendChild(tag); }
+        if (!d.on_study_leave && tag) { tag.remove(); }
+      }
+    })
+    .catch(() => { box.checked = !value; showToast('Network error. Nothing was saved.', 'error'); })
+    .finally(() => { box.disabled = false; });
+}
+
 function openExpertDetail(data) {
   document.getElementById('detailAvatar').src = data.avatar;
   document.getElementById('detailName').textContent = data.name;
@@ -1476,8 +1545,26 @@ function openExpertDetail(data) {
   const savedDegree = degreeSaved[data.expert_id];
   document.getElementById('detailDegree').value = savedDegree ? savedDegree.title : (data.degree_title || '');
   updateDegreeNote(savedDegree ? savedDegree.level : (data.highest_degree || ''));
+  document.getElementById('detailStudyLeave').checked = data.expert_id in leaveSaved ? leaveSaved[data.expert_id] : !!data.on_study_leave;
   document.getElementById('detailProgram').textContent = data.program || 'Not set';
-  document.getElementById('detailExpertise').textContent = data.expertise.length ? data.expertise.join(', ') : 'None specified';
+  // Kept per side - adviser, consultant, grammarian, panel - once the expert
+  // has saved them that way; one list until then.
+  const detailExpertise = document.getElementById('detailExpertise');
+  const bySide = data.expertise_by_side || {};
+  detailExpertise.textContent = '';
+  if (Object.keys(bySide).length) {
+    Object.entries(bySide).forEach(([side, fields]) => {
+      const line = document.createElement('div');
+      line.className = 'expert-detail-side';
+      const label = document.createElement('b');
+      label.textContent = side + ': ';
+      line.appendChild(label);
+      line.appendChild(document.createTextNode(fields.join(', ')));
+      detailExpertise.appendChild(line);
+    });
+  } else {
+    detailExpertise.textContent = data.expertise.length ? data.expertise.join(', ') : 'None specified';
+  }
   document.getElementById('detailCapacity').textContent = data.capacity.length ? data.capacity.join(' · ') : 'Not set';
 
   // No separate "CAPSA" chip - is_capsa stays synced with the

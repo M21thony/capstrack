@@ -5,24 +5,23 @@ namespace App\Http\Controllers;
 use App\Models\ExpensePost;
 use App\Models\FinancialRecord;
 use App\Models\Student;
-use App\Support\FeeBoard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 /**
  * A student's Financial Records: each defense fee, their own receipt for it,
  * and where each teammate stands. Each member uploads their own receipt to
  * their team leader, who sends the team's receipts to the CaPSA together.
+ *
+ * It is a tab of Team Management now (TeamController::index draws it), so
+ * the old address opens that tab - links in notifications and bookmarks
+ * still land in the right place.
  */
 class StudentFinancialController extends Controller
 {
-    public function index(FeeBoard $fees): View
+    public function index(): RedirectResponse
     {
-        /** @var Student $student */
-        $student = auth()->user();
-
-        return view('student.financial', ['state' => $fees->forStudent($student)]);
+        return redirect()->route('student.team', ['tab' => 'financial']);
     }
 
     public function submitReceipt(Request $request): RedirectResponse

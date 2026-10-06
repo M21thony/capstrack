@@ -12,7 +12,7 @@ use App\Models\ExpertRemovalRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
-use App\Services\Notifier;
+use App\Support\ExpertApplications;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\Storage;
 
 class StudentExpertController extends Controller
 {
+    public function __construct(private ExpertApplications $applications) {}
+
     public function index(): JsonResponse
     {
         $student = Auth::user();
@@ -117,146 +119,16 @@ class StudentExpertController extends Controller
             ], 403);
         }
 
-        $expert = CapstoneExpert::where('expert_id', $validated['expert_id'])
-            ->where('approved_status', true)
-            ->first();
+        $expert = CapstoneExpert::find($validated['expert_id']);
 
         if (! $expert) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Expert not found or not yet approved.',
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Expert not found or not yet approved.'], 404);
         }
 
-        // Nobody is engaged before they have said what they take. An expert
-        // who has never filled in their programmes and slots is still listed
-        // - hiding them helps nobody - but a team cannot apply to them,
-        // because there is no answer yet to whether they have room.
-        if (! $expert->hasSetPrograms()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This expert has not set which programs they take teams from yet, so they cannot be applied to.',
-            ], 422);
-        }
-
-        // Enforced here too, not just hidden from the list - otherwise a
-        // hand-crafted request could still apply to an expert who doesn't
-        // take this program.
-        $studentProgram = Student::mapCourseToProgram($student->course ?? '');
-
-        if (! $expert->acceptsProgram($studentProgram)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This expert does not accept teams from your program.',
-            ], 422);
-        }
-
-        // Per-program cap first, when the expert set one. "1 - BSIT, 5 - BSIS"
-        // has to mean one BSIT team, not just six teams in total - the overall
-        // count alone would happily let all six be BSIT.
-        $programCap = $expert->slotsForProgram($studentProgram);
-
-        if ($programCap !== null) {
-            if ($programCap < 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This expert does not accept teams from your program.',
-                ], 422);
-            }
-
-            if ($expert->approvedTeamCountForProgram($studentProgram) >= $programCap) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "This expert has already reached their limit of {$programCap} {$studentProgram} team(s).",
-                ], 422);
-            }
-        }
-
-        // Overall cap still applies on top - an expert with no per-program
-        // split has only this, and one with a split shouldn't exceed the sum.
-        $slotsUsed = TeamExpertAssignment::where('expert_id', $expert->expert_id)
-            ->where('status', 'approved')
-            ->count();
-
-        // A capacity nobody has set is not a capacity of nought: an expert
-        // who has not opened their profile yet would otherwise be full from
-        // the moment their account was made, and refuse every team.
-        $maxTeams = $expert->max_teams ?? 0;
-
-        if ($maxTeams > 0 && $slotsUsed >= $maxTeams) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This expert has reached their maximum number of teams.',
-            ], 422);
-        }
-
-        // The chosen role has to be one this expert actually holds, and one a
-        // team may engage them for. Validation only proved the id exists in
-        // expert_roles - it could belong to any other expert entirely.
-        $chosenRole = DB::table('expert_roles')
-            ->join('roles', 'roles.role_id', '=', 'expert_roles.role_id')
-            ->where('expert_roles.expert_role_id', $validated['expert_role_id'])
-            ->where('expert_roles.expert_id', $expert->expert_id)
-            ->whereIn('roles.role_name', CapstoneExpert::STUDENT_FACING_ROLES)
-            ->first(['roles.role_name']);
-
-        if (! $chosenRole) {
-            return response()->json([
-                'success' => false,
-                'message' => 'That role is not available for this expert.',
-            ], 422);
-        }
-
-        // One application per role per team, waiting or settled.
-        //
-        // An approved role is plainly taken. A pending one used to be left
-        // alone, on the reasoning that a team could apply to several and
-        // take whoever said yes first - but that is a team asking four
-        // people to be their one adviser, and three of them read, thought
-        // about and answered a request that was never really theirs to
-        // accept. The team waits on the first answer instead, and applies
-        // again if it is no.
-        $spokenFor = TeamExpertAssignment::with(['expertRole.role', 'expert'])
-            ->where('team_id', $team->team_id)
-            ->whereIn('status', ['approved', 'pending'])
-            // Approved before pending, so a role that is both reads as the
-            // settled thing it is.
-            ->orderByRaw("CASE WHEN status = 'approved' THEN 0 ELSE 1 END")
-            ->get()
-            ->first(fn ($a) => strcasecmp((string) $a->engaged_role_name, $chosenRole->role_name) === 0);
-
-        if ($spokenFor) {
-            $heldByName = $spokenFor->expert?->name ?? 'another expert';
-            $role = ucfirst($chosenRole->role_name);
-
-            return response()->json([
-                'success' => false,
-                'message' => $spokenFor->status === 'approved'
-                    ? 'Your team already has an approved '.$role.' ('.$heldByName.
-                        '). Remove them first if you want a different one.'
-                    : 'Your team is already waiting on '.$heldByName.' to answer as your '.$role.
-                        '. Wait for that answer, or withdraw it, before applying to another.',
-            ], 409);
-        }
-
-        // One role per expert per team: engaging someone as your adviser
-        // takes them off the table as your consultant or grammarian. Another
-        // team is unaffected - they can still take this expert in whichever
-        // role they haven't used them for.
-        $existing = TeamExpertAssignment::where('team_id', $team->team_id)
-            ->where('expert_id', $expert->expert_id)
-            ->whereIn('status', ['pending', 'approved'])
-            ->first();
-
-        if ($existing) {
-            $heldAs = $existing->engaged_role_name;
-
-            return response()->json([
-                'success' => false,
-                'message' => $heldAs
-                    ? "Your team already has a {$existing->status} application with this expert as your ".ucfirst($heldAs).'. An expert can only take one role per team.'
-                    : 'Your team already has a pending or approved application with this expert.',
-            ], 409);
+        // Slots, program, role and "is this role already taken": the same
+        // checks an approved change request runs on the replacement.
+        if ($refusal = $this->applications->refusal($team, $student, $expert, (int) $validated['expert_role_id'])) {
+            return response()->json(['success' => false, 'message' => $refusal['message']], $refusal['status']);
         }
 
         // The pre-proposal the CaPSA settled on, when there is one. It is
@@ -278,28 +150,7 @@ class StudentExpertController extends Controller
                 ? $request->file('proposal_file')->store('proposals', 'public')
                 : null;
 
-            $assignment = TeamExpertAssignment::create([
-                'team_id' => $team->team_id,
-                'expert_id' => $validated['expert_id'],
-                'expert_role_id' => $validated['expert_role_id'],
-                'status' => 'pending',
-                'proposal_file' => $filePath,
-                'pre_proposal_id' => $approvedProposal?->id,
-                'message' => $validated['message'],
-            ]);
-
-            // Before this, an expert found out a team had applied only by
-            // opening the Assignments page and noticing. No email was ever
-            // sent for an application, so nothing here replaces one.
-            $role = $assignment->engaged_role_name;
-            Notifier::toExpert(
-                (int) $assignment->expert_id,
-                'expert_application',
-                'New application',
-                '<strong>'.e($team->team_name).'</strong> applied to you'.($role ? ' as their '.e($role) : '').'.',
-                route('instructor.assignments'),
-                ['team_id' => $team->team_id],
-            );
+            $assignment = $this->applications->send($team, $expert, (int) $validated['expert_role_id'], $validated['message'], $filePath, $approvedProposal?->id);
 
             return response()->json([
                 'success' => true,
@@ -365,6 +216,16 @@ class StudentExpertController extends Controller
                 ], 422);
             }
 
+            // Who the team wants instead, applied to the moment the CaPSA
+            // approves - so the role is not left empty while the team starts
+            // over. Checked now as well as then: a replacement who cannot take
+            // the team is better refused here than discovered later.
+            $replacement = $this->pickedReplacement($request, $team, $student, $assignment);
+
+            if (isset($replacement['message'])) {
+                return response()->json(['success' => false, 'message' => $replacement['message']], $replacement['status']);
+            }
+
             ExpertRemovalRequest::create([
                 'team_id' => $team->team_id,
                 'assignment_id' => $assignment->assignment_id,
@@ -372,6 +233,12 @@ class StudentExpertController extends Controller
                 'requested_by' => $student->student_id,
                 'reason' => trim($request->reason),
                 'status' => ExpertRemovalRequest::PENDING,
+                'replacement_expert_id' => $replacement['expert']->expert_id,
+                'replacement_expert_role_id' => $replacement['expert_role_id'],
+                'replacement_message' => $replacement['message_to_expert'],
+                'replacement_proposal_file' => $request->hasFile('replacement_proposal_file')
+                    ? $request->file('replacement_proposal_file')->store('proposals', 'public')
+                    : null,
             ]);
 
             ActivityLog::create([
@@ -384,7 +251,7 @@ class StudentExpertController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sent to your CaPSA. The expert stays with your team until they approve.',
+                'message' => 'Sent to your CaPSA. '.$assignment->expert?->name.' stays with your team until they approve; then your application goes to '.$replacement['expert']->name.'.',
             ]);
         }
 
@@ -412,6 +279,55 @@ class StudentExpertController extends Controller
             'success' => true,
             'message' => 'Expert assignment removed successfully.',
         ]);
+    }
+
+    /**
+     * The replacement a change request names, checked the way an application
+     * to them would be - the role being changed counts as free.
+     *
+     * @return array{expert: CapstoneExpert, expert_role_id: int, message_to_expert: string}|array{message: string, status: int}
+     */
+    private function pickedReplacement(Request $request, $team, Student $leader, TeamExpertAssignment $current): array
+    {
+        $approvedProposal = (bool) $team->selected_pre_proposal_id;
+
+        $validator = validator($request->all(), [
+            'replacement_expert_id' => ['required', 'integer'],
+            'replacement_message' => ['required', 'string', 'max:3000'],
+            'replacement_proposal_file' => [$approvedProposal ? 'nullable' : 'required', 'file', 'mimes:pdf', 'max:5120'],
+        ], [
+            'replacement_expert_id.required' => 'Pick the expert you want instead.',
+            'replacement_message.required' => 'Write a short message to the expert you picked.',
+            'replacement_proposal_file.required' => 'Attach your pre-proposal as a PDF for the expert you picked.',
+        ]);
+
+        if ($validator->fails()) {
+            return ['message' => $validator->errors()->first(), 'status' => 422];
+        }
+
+        $role = $current->engaged_role_name;
+        $expert = CapstoneExpert::find((int) $request->input('replacement_expert_id'));
+
+        if (! $expert || (int) $expert->expert_id === (int) $current->expert_id) {
+            return ['message' => 'Pick someone other than the expert you are changing.', 'status' => 422];
+        }
+
+        // The same role as the one being changed.
+        $expertRoleId = (int) DB::table('expert_roles')
+            ->join('roles', 'roles.role_id', '=', 'expert_roles.role_id')
+            ->where('expert_roles.expert_id', $expert->expert_id)
+            ->where('roles.role_name', $role)
+            ->value('expert_roles.expert_role_id');
+
+        if (! $expertRoleId) {
+            return ['message' => $expert->name.' does not take teams as a '.($role ?: 'this role').'.', 'status' => 422];
+        }
+
+        if ($refusal = $this->applications->refusal($team, $leader, $expert, $expertRoleId, $current->assignment_id)) {
+            return $refusal;
+        }
+
+        return ['expert' => $expert, 'expert_role_id' => $expertRoleId, 'message_to_expert' => trim((string) $request->input('replacement_message'))];
     }
 
     /**
@@ -453,6 +369,11 @@ class StudentExpertController extends Controller
         }
 
         $expertRemovalRequest->update(['status' => ExpertRemovalRequest::WITHDRAWN]);
+
+        // The PDF meant for the replacement never goes anywhere now.
+        if ($expertRemovalRequest->replacement_proposal_file) {
+            Storage::disk('public')->delete($expertRemovalRequest->replacement_proposal_file);
+        }
 
         $expertName = $expertRemovalRequest->expert?->name ?? ('expert #'.$expertRemovalRequest->expert_id);
 

@@ -97,6 +97,15 @@
                   scrollbar-width:none;-ms-overflow-style:none}
   .ep-quick-chips::-webkit-scrollbar{display:none}
   .ep-picker-hint{font-size:11px;color:var(--text3);margin-top:9px;line-height:1.45}
+  /* Which side's research areas are being edited: one per role, plus panels. */
+  .ep-side-hint{font-size:11px;color:var(--text3);margin:-2px 0 8px;line-height:1.45}
+  .ep-side-tabs{display:flex;gap:3px;padding:3px;margin-bottom:10px;background:var(--bg4);border-radius:10px}
+  .ep-side-tab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:0 8px;
+               border:0;border-radius:8px;background:transparent;color:var(--text2);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+  .ep-side-tab:hover{color:var(--text)}
+  .ep-side-tab.on{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(24,25,31,.14)}
+  .ep-side-n{font-size:10px;font-weight:700;padding:0 6px;border-radius:999px;background:var(--border);color:var(--text2)}
+  .ep-side-tab.on .ep-side-n{background:var(--accent);color:#18191f}
   .ep-picker-empty{font-size:11.5px;color:var(--text3);padding:14px 12px;text-align:center;
                    border:1px dashed var(--border);border-radius:9px}
   .ep-search-ico{width:14px;height:14px;flex-shrink:0;stroke:var(--text3);fill:none;stroke-width:2}
@@ -269,10 +278,23 @@
 
       <!-- Expertise Tags -->
       <div class="ep-field">
-        <div class="ep-label">Areas of Expertise</div>
+        <div class="ep-label">Research Areas</div>
         @php
-          $expertiseList = \App\Models\ExpertExpertise::where('expert_id', $expert?->expert_id)->pluck('expertise_field')->toArray();
+          // One list per side: each role they are engaged as, and panels.
+          // A side not filled in yet starts from the list that stood for all.
+          $heldRoles = $expert ? $expert->roles()->pluck('role_name')->all() : [];
+          $expertSides = collect(\App\Models\ExpertExpertise::SIDES)
+              ->filter(fn ($label, $side) => $side === 'panel' || in_array($side, $heldRoles, true));
+          $expertiseBySide = $expertSides->map(fn ($label, $side) => $expert ? $expert->expertiseFor($side)->all() : [])->all();
         @endphp
+        <div class="ep-side-hint">Kept separately for each role you hold and for defense panels. Students see the one for the role they are looking for.</div>
+        <div class="ep-side-tabs" id="ep-side-tabs" role="tablist" aria-label="Research areas for">
+          @foreach ($expertSides as $side => $label)
+            <button type="button" role="tab" class="ep-side-tab{{ $loop->first ? ' on' : '' }}" data-side="{{ $side }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" onclick="epSelectSide('{{ $side }}')">
+              {{ $label }} <span class="ep-side-n" data-side-count="{{ $side }}">{{ count($expertiseBySide[$side]) }}</span>
+            </button>
+          @endforeach
+        </div>
         {{-- No separate list of what has been taken. In a panel this narrow a
              long skill name is a row of its own, so fifteen of them pushed the
              thing you pick with off the bottom of the screen. They live in the
@@ -321,7 +343,32 @@ const EP_OVERLAY = document.getElementById('ep-overlay');
 const EP_TRIGGER = document.getElementById('ep-trigger');
 const EP_INPUT   = document.getElementById('ep-tag-input');
 
-let epTags = @json($expertiseList ?? []);
+// Research areas per side. epTags is always the list of the side on show,
+// the same array, so taking or dropping a skill edits that side only.
+const epSides = @json((object) ($expertiseBySide ?? []));
+let epSide = Object.keys(epSides)[0] || 'panel';
+if (!epSides[epSide]) { epSides[epSide] = []; }
+let epTags = epSides[epSide];
+
+function epSelectSide(side){
+  if (!epSides[side]) { epSides[side] = []; }
+  epSide = side;
+  epTags = epSides[side];
+  epActiveGroup = null;
+  document.querySelectorAll('.ep-side-tab').forEach(function (b) {
+    const on = b.dataset.side === side;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  renderTags();
+}
+
+function epRenderSideCounts(){
+  Object.keys(epSides).forEach(function (side) {
+    const n = document.querySelector('[data-side-count="' + side + '"]');
+    if (n) n.textContent = epSides[side].length;
+  });
+}
 
 // Suggested skills, grouped by the kind of work they belong to. This is a
 // starting point, not a whitelist - anything typed that isn't here is still
@@ -519,6 +566,7 @@ function renderTags(){
   // is the whole of this. Everything that adds or removes one comes through
   // here, whichever route it took.
   epRenderQuickGroups();
+  epRenderSideCounts();
 }
 
 function addTag(){
@@ -622,7 +670,7 @@ async function saveExpertProfile(){
       // to their expertise was silently thrown away on close.
       body: JSON.stringify({
         program_slots: programSlots,
-        expertise: epTags,
+        expertise_by_side: epSides,
         degree: (document.getElementById('ep-degree') || {}).value || null,
       }),
     });

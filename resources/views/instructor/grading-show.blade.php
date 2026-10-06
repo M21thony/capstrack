@@ -137,6 +137,10 @@
   .outcome-option.is-fail input:checked+.outcome-option-body{border-color:var(--red);background:var(--red-bg);box-shadow:0 0 0 3px rgba(220,38,38,.1)}
   .outcome-option.is-fail input:checked+.outcome-option-body .outcome-option-label{color:var(--red)}
 
+  .gs-paper{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--bg2)}
+  .gs-paper .lb{padding:0 9px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text3)}
+  .gs-paper a{display:inline-flex;align-items:center;gap:5px;padding:7px 10px;font-size:12.5px;font-weight:600;color:var(--text2);text-decoration:none;border-left:1px solid var(--border)}
+  .gs-paper a:hover{background:var(--bg3);color:var(--text)}
   .gs-foot{display:flex;align-items:center;gap:10px;padding:9px 20px;background:var(--bg2);border-top:1px solid var(--border)}
   .gs-foot .hint{flex:1;font-size:12px;color:var(--text3)}
   .gs-foot kbd{font:inherit;font-size:10.5px;padding:0 5px;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;background:var(--bg3)}
@@ -200,6 +204,12 @@
       </div>
       <div class="gs-stat"><b class="num" id="gs-left">0</b><small>criteria left</small></div>
       <div class="gs-stat"><b class="num"><span id="gs-total">0</span><small style="display:inline;font-size:12px"> / {{ $fmt($rubric->total_points) }}</small></b><small>points</small></div>
+      {{-- Paper copy, for a defense held without signal or power: grade by hand, enter it here later. --}}
+      <span class="gs-paper" title="If CapsTrack cannot be reached during the defense, grade on this and enter the scores here afterwards.">
+        <span class="lb">Paper copy</span>
+        <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'pdf']) }}"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> PDF</a>
+        <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'xlsx']) }}">Excel</a>
+      </span>
       <button type="button" class="gs-btn" id="gs-jump">Next unscored</button>
     </header>
 

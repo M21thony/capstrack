@@ -22,6 +22,7 @@ use App\Models\TeamExpertAssignment;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
 use App\Support\DefenseOutcome;
+use App\Support\ExpertEvaluations;
 use App\Support\MilestoneProgress;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -154,12 +155,35 @@ class TeamReachesTitleDefenseTest extends TestCase
 
     private function asStudent(Student $student): static
     {
+        $this->evaluateFinishedPhases();
+
         return $this->actingAs($student, 'web');
     }
 
     private function asExpert(CapstoneExpert $expert): static
     {
+        $this->evaluateFinishedPhases();
+
         return $this->actingAs($expert, 'expert');
+    }
+
+    /**
+     * What a leader does after each phase: rate every expert for it. The next
+     * phase stays locked until they do (see ExpertEvaluations).
+     */
+    private function evaluateFinishedPhases(): void
+    {
+        foreach (app(ExpertEvaluations::class)->due($this->team) as $owed) {
+            $this->actingAs($this->leader(), 'web')
+                ->post(route('student.evaluations.store'), [
+                    'milestone_id' => $owed->milestone_id,
+                    'expert_id' => $owed->expert_id,
+                    'role' => $owed->role,
+                    'rating' => 5,
+                    'comment' => 'Guided us well through '.$owed->milestone.'.',
+                ])
+                ->assertSessionHas('evaluation_saved');
+        }
     }
 
     private function line(string $key)
@@ -238,7 +262,11 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->paper("clf_chapter_{$n}");
     }
 
-    /** Every member uploads their receipt for the defense's fee, and the CaPSA verifies each. */
+    /**
+     * Every member hands their receipt for the defense's fee to the leader,
+     * the leader sends the team's to the CaPSA at once, and the CaPSA
+     * verifies each.
+     */
     private function feesPaid(string $type): void
     {
         $fee = ExpensePost::create([
@@ -253,6 +281,13 @@ class TeamReachesTitleDefenseTest extends TestCase
                     'receipt_image' => UploadedFile::fake()->image("receipt{$i}.jpg"),
                     'receipt_number' => 'OR '.$fee->id.'00'.$i,
                 ])->assertSessionHasNoErrors();
+        }
+
+        $this->asStudent($this->leader())
+            ->postJson(route('api.student.financial.submit-team'), ['expense_post_id' => $fee->id])
+            ->assertOk();
+
+        foreach ($this->members as $member) {
             $record = FinancialRecord::where('student_id', $member->student_id)->where('expense_post_id', $fee->id)->firstOrFail();
             $this->asExpert($this->capsa)
                 ->patchJson(route('api.admin.financial.update', $record->id), ['status' => 'approved', 'or_confirmed' => true])
@@ -387,6 +422,10 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->defense(DefenseOutcome::PRE_PROPOSAL, '2027-02-15');
         $this->assertDone('pre_proposal_defense');
         $this->paper('final_title_form');
+
+        // Finished, but the leader has not rated the experts for it yet.
+        $this->assertSame('the expert evaluation for Pre-proposal', $this->state('chapter_1_draft')->waits_for);
+        $this->evaluateFinishedPhases();
 
         // Past the Pre-proposal, Chapters 1 to 3 open together: none waits for another.
         foreach ([1, 2, 3] as $n) {

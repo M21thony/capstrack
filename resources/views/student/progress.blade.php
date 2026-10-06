@@ -121,6 +121,13 @@
 .pt-pill.g{background:var(--green-bg);color:var(--green)}
 .pt-pill.y{background:var(--accent-light,#faf7ed);color:var(--accent3,#8a6e10);border:1px solid rgba(201,168,44,.35)}
 
+.pt-pill.n{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.pt-gate{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 10px 50px;padding:12px 14px;border-radius:12px;background:var(--bg3);border:1px solid var(--border);font-size:12.5px;color:var(--text2)}
+.pt-gate > svg{width:20px;height:20px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--text3)}
+.pt-gate > div{flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.45}
+.pt-gate b{color:var(--text);font-size:13px}
+.pt-gate.is-eval{background:var(--accent-light,#faf7ed);border-color:rgba(201,168,44,.35)}
+.pt-gate.is-eval > svg{fill:#e0a800;stroke:none}
 .pt-items{list-style:none;margin:4px 0 10px 50px;padding:0;display:grid;gap:8px}
 .pt-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg);border-left:3px solid var(--text3)}
 .pt-item.st-done{border-left-color:var(--green)}
@@ -159,7 +166,7 @@
   .pt-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .pt-list-wrap{padding:14px 12px 6px;border-radius:16px}
   .pt-legend{display:none}
-  .pt-items{margin-left:0}
+  .pt-items,.pt-gate{margin-left:0}
   .pt-item{flex-wrap:wrap}
   .pt-item .pt-btn{width:100%;margin-left:34px;width:calc(100% - 34px)}
 }
@@ -359,7 +366,9 @@
             <span class="pt-g-name">{{ $group->name }}
               @if ($group->past_due)<span class="pt-pill r">Past due</span>
               @elseif ($group->overdue)<span class="pt-pill r">{{ $group->overdue }} overdue</span>
+              @elseif ($group->evaluations_owed->isNotEmpty())<span class="pt-pill y">Evaluate your experts</span>
               @elseif ($st === 'done')<span class="pt-pill g">Done</span>
+              @elseif ($group->locked)<span class="pt-pill n">Locked</span>
               @elseif ($isNow)<span class="pt-pill y">You are here</span>@endif
             </span>
             <span class="pt-g-meta">
@@ -376,6 +385,22 @@
           <svg class="pt-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
         </summary>
 
+        @if ($group->evaluations_owed->isNotEmpty())
+          {{-- Finishing a phase ends with the leader rating each expert; the next phase waits for it. --}}
+          <div class="pt-gate is-eval">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <div>
+              <b>{{ $isLeader ? 'Evaluate your experts to unlock the next phase' : 'Waiting on your leader to evaluate the experts' }}</b>
+              <span>{{ $group->evaluations_owed->map(fn ($e) => $e->name.' ('.ucfirst($e->role).')')->implode(', ') }} {{ $group->evaluations_owed->count() === 1 ? 'still needs' : 'still need' }} a 1 to 5 star rating with a comment for {{ $group->name }}.</span>
+            </div>
+            @if ($isLeader)<a class="pt-btn pt-btn-primary" href="{{ route('student.experts', ['tab' => 'evaluations']) }}">Evaluate now</a>@endif
+          </div>
+        @elseif ($group->locked && $group->requires)
+          <div class="pt-gate">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <div><b>Locked</b><span>Opens after {{ $group->requires }}.</span></div>
+          </div>
+        @endif
         <ul class="pt-items">
         @foreach ($group->rows as $row)
           @php

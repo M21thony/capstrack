@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
+use App\Models\ExpertExpertise;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,13 +34,33 @@ class ProfileController extends Controller
         $validator = Validator::make($request->all(), [
             'program_slots' => ['required', 'array'],
             'program_slots.*' => ['integer', 'min:0', 'max:20'],
-            'expertise' => ['present', 'array'],
+            // One list per side - adviser, consultant, grammarian, panel -
+            // or, from an older page, one list for all of them.
+            'expertise_by_side' => ['sometimes', 'array'],
+            'expertise_by_side.*' => ['array'],
+            'expertise_by_side.*.*' => ['nullable', 'string', 'max:100'],
+            'expertise' => ['sometimes', 'array'],
             'expertise.*' => ['string', 'max:100'],
             'highest_degree' => ['nullable', 'in:'.implode(',', array_keys(CapstoneExpert::DEGREES))],
             'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
         ]);
 
         $validator->after(function ($v) use ($request) {
+            // Sent empty is a choice (none); not sent at all is a broken page.
+            if (! $request->exists('expertise_by_side') && ! $request->exists('expertise')) {
+                $v->errors()->add('expertise', 'Send your research areas with the profile.');
+
+                return;
+            }
+
+            foreach (array_keys((array) $request->input('expertise_by_side', [])) as $side) {
+                if (! array_key_exists($side, ExpertExpertise::SIDES)) {
+                    $v->errors()->add('expertise_by_side', 'Research areas are kept for adviser, consultant, grammarian and panel only.');
+
+                    return;
+                }
+            }
+
             $slots = $request->input('program_slots', []);
 
             foreach (array_keys($slots) as $program) {
@@ -89,11 +110,13 @@ class ProfileController extends Controller
             $accepted
         ));
 
-        $expertise = collect($validated['expertise'])
-            ->map(fn ($e) => trim($e))
-            ->filter()
-            ->unique()
-            ->values();
+        $clean = fn (array $fields) => collect($fields)->map(fn ($e) => trim($e))->filter()->unique(fn ($e) => mb_strtolower($e))->values();
+
+        // side => fields. A null side is one list that stands for every side.
+        $bySide = $request->exists('expertise_by_side')
+            ? collect($validated['expertise_by_side'] ?? [])->map(fn ($fields) => $clean((array) $fields))
+            : collect(['' => $clean($validated['expertise'] ?? [])]);
+        $expertise = $bySide->flatten()->unique(fn ($e) => mb_strtolower($e))->values();
 
         // Only when the panel sent it, so an older page that does not know
         // about degrees cannot wipe one out by saving.
@@ -101,7 +124,7 @@ class ProfileController extends Controller
             ? CapstoneExpert::degreeFromTitle($validated['degree'] ?? null)
             : ($request->has('highest_degree') ? ['highest_degree' => $validated['highest_degree'] ?? null] : []);
 
-        DB::transaction(function () use ($expert, $accepted, $raw, $expertise, $degree) {
+        DB::transaction(function () use ($expert, $accepted, $raw, $bySide, $degree) {
             $expert->update([
                 'program_slots' => $raw,
                 'max_teams' => array_sum($accepted),
@@ -110,13 +133,16 @@ class ProfileController extends Controller
             // Replace rather than merge - the panel sends the full list it
             // is showing, so anything missing from it was removed there.
             DB::table('expert_expertise')->where('expert_id', $expert->expert_id)->delete();
-            foreach ($expertise as $field) {
-                DB::table('expert_expertise')->insert([
-                    'expert_id' => $expert->expert_id,
-                    'expertise_field' => $field,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            foreach ($bySide as $side => $fields) {
+                foreach ($fields as $field) {
+                    DB::table('expert_expertise')->insert([
+                        'expert_id' => $expert->expert_id,
+                        'expertise_field' => $field,
+                        'side' => $side === '' ? null : $side,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         });
 
@@ -126,6 +152,7 @@ class ProfileController extends Controller
             'program_slots' => $accepted,
             'max_teams' => $expert->fresh()->max_teams,
             'expertise' => $expertise,
+            'expertise_by_side' => $bySide->except('')->map->all()->all(),
         ]);
     }
 }
