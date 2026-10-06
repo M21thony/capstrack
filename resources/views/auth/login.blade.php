@@ -104,7 +104,7 @@
 
   <div class="relative z-[2]">
     <div class="flex items-center gap-3">
-      <img src="{{ asset('images/capstrack.png') }}" alt="CapsTrack" class="block h-6 w-auto brightness-0 invert md:h-7 lg:h-[34px]"/>
+      <img src="{{ asset('images/brand/capstrack-logo-ui.svg') }}" alt="CapsTrack" class="block h-6 w-auto md:h-7 lg:h-[34px]"/>
     </div>
   </div>
 

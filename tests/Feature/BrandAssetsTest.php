@@ -65,6 +65,16 @@ class BrandAssetsTest extends TestCase
         $this->assertStringNotContainsString('M12 2L2 7l10 5 10-5-10-5', $source);
     }
 
+    /** The login page shows the logo in its own colors, not the old one forced white. */
+    public function test_the_login_page_shows_the_new_logo(): void
+    {
+        $source = file_get_contents(resource_path('views/auth/login.blade.php'));
+
+        $this->assertStringContainsString("asset('images/brand/capstrack-logo-ui.svg')", $source);
+        $this->assertStringNotContainsString("asset('images/capstrack.png')", $source);
+        $this->assertStringNotContainsString('brightness-0 invert', $source);
+    }
+
     public function test_the_guest_layout_links_the_new_browser_icons(): void
     {
         $source = file_get_contents(resource_path('views/layouts/guest.blade.php'));
