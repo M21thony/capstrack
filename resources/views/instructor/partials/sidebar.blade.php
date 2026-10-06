@@ -9,9 +9,7 @@
 <div class="sidebar">
   @if(!isset($showBrand) || $showBrand)
     <div class="sidebar-brand">
-      <div class="brand-icon">
-        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      </div>
+      <img src="{{ asset('images/brand/capstrack-mark-small.svg') }}" alt="" width="38" height="38" style="width:38px;height:38px;border-radius:10px;flex-shrink:0;display:block">
       <div>
         <div class="brand-name">CapsTRACK</div>
         <div class="brand-sub">Expert Portal</div>
