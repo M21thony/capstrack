@@ -509,7 +509,7 @@
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <div style="width: 36px; height: 36px; border-radius: 50%; background: {{ $isTeamLeader || $isThisUser ? '#fbbf24' : '#7c3aed' }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
                     @if ($member->avatarUrl())
-                      <img src="{{ $member->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                      <img src="{{ $member->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $member->avatarInitials() }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
                     @else
                       {{ $member->avatarInitials() }}
                     @endif
@@ -537,7 +537,7 @@
                 <div style="display: flex; align-items: center; gap: 10px; border: 1px solid rgba(29,78,216,0.3); border-radius: 10px; padding: 6px 12px; background: var(--blue-bg);">
                   <div style="width: 36px; height: 36px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
                     @if ($invitee->avatarUrl())
-                      <img src="{{ $invitee->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                      <img src="{{ $invitee->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $invitee->avatarInitials() }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
                     @else
                       {{ $invitee->avatarInitials() }}
                     @endif
@@ -676,7 +676,7 @@
                   <div style="display: flex; align-items: center; gap: 10px; padding: 7px 0; @if(!$loop->last) border-bottom: 1px solid var(--border); @endif">
                     <div style="width: 32px; height: 32px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0;">
                       @if($ex?->hasAvatarImage())
-                        <img src="{{ $ex->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="{{ $ex->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $ex?->avatarInitials() }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
                       @else
                         {{ $ex?->avatarInitials() }}
                       @endif
@@ -861,7 +861,7 @@
           <div class="my-post-card" id="my-active-post">
             <div class="avatar-ring {{ $ringClass }}">
               @if (auth()->user()->avatarUrl())
-                <img src="{{ auth()->user()->avatarUrl() }}" alt="">
+                <img src="{{ auth()->user()->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $initials }}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar-text',textContent:this.dataset.initials}))">
               @else
                 <div class="avatar-text">{{ $initials }}</div>
               @endif
@@ -927,7 +927,7 @@
               <div class="feed-post-top">
                 <div class="avatar-ring {{ $ringClass }}">
                   @if ($recruit->student->avatarUrl())
-                    <img src="{{ $recruit->student->avatarUrl() }}" alt="">
+                    <img src="{{ $recruit->student->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $initials }}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar-text',textContent:this.dataset.initials}))">
                   @else
                     <div class="avatar-text">{{ $initials }}</div>
                   @endif
@@ -993,7 +993,7 @@
               <div style="display: flex; gap: 10px; align-items: center;">
                 <div class="avatar" style="width: 32px; height: 32px; font-size: 11px; overflow: hidden; flex-shrink: 0;">
                   @if ($invite->sender->avatarUrl())
-                    <img src="{{ $invite->sender->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                    <img src="{{ $invite->sender->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ strtoupper(substr($invite->sender->f_name ?? 'U', 0, 1) . substr($invite->sender->l_name ?? '', 0, 1)) }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
                   @else
                     {{ strtoupper(substr($invite->sender->f_name ?? 'U', 0, 1) . substr($invite->sender->l_name ?? '', 0, 1)) }}
                   @endif
@@ -1037,7 +1037,7 @@
                   <div style="display: flex; gap: 10px; align-items: center;">
                     <div class="avatar" style="width: 32px; height: 32px; font-size: 11px; overflow: hidden; flex-shrink: 0;">
                       @if ($request->sender->avatarUrl())
-                        <img src="{{ $request->sender->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="{{ $request->sender->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ strtoupper(substr($request->sender->f_name ?? 'U', 0, 1) . substr($request->sender->l_name ?? '', 0, 1)) }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
                       @else
                         {{ strtoupper(substr($request->sender->f_name ?? 'U', 0, 1) . substr($request->sender->l_name ?? '', 0, 1)) }}
                       @endif
@@ -1476,7 +1476,7 @@
       <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg3); margin-bottom: 18px;">
         <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--navy-dark); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; overflow: hidden; flex-shrink: 0;">
           @if(auth()->user()->avatarUrl())
-            <img src="{{ auth()->user()->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+            <img src="{{ auth()->user()->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ auth()->user()->avatarInitials() }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
           @else
             {{ auth()->user()->avatarInitials() }}
           @endif
@@ -1497,7 +1497,7 @@
             <button type="button" class="transfer-member-option" data-id="{{ $member->student_id }}" data-name="{{ $member->f_name }} {{ $member->l_name }}" onclick="selectTransferMember(this)">
               <div class="tmo-avatar">
                 @if($member->avatarUrl())
-                  <img src="{{ $member->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                  <img src="{{ $member->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $member->avatarInitials() }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
                 @else
                   {{ $member->avatarInitials() }}
                 @endif
@@ -1558,7 +1558,7 @@
       <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg2); margin-bottom: 18px;">
         <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--navy-dark); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; overflow: hidden; flex-shrink: 0;">
           @if($ltOldLeader && $ltOldLeader->avatarUrl())
-            <img src="{{ $ltOldLeader->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+            <img src="{{ $ltOldLeader->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $ltOldLeader->avatarInitials() }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
           @else
             {{ $ltOldLeader ? $ltOldLeader->avatarInitials() : '?' }}
           @endif
@@ -2090,7 +2090,7 @@ function closeEditTeamModal() {
 
 function setAvatar(avatarEl, url, name) {
     if (url) {
-        avatarEl.innerHTML = '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+        avatarEl.innerHTML = '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" referrerpolicy="no-referrer" onerror="this.remove()">';
     } else {
         avatarEl.innerHTML = '';
         avatarEl.textContent = (name || 'U').charAt(0).toUpperCase();
@@ -2439,7 +2439,7 @@ function loadOpenSlotClassmates() {
             }
 
             var avatarHtml = classmate.avatar
-                ? '<img src="' + classmate.avatar + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
+                ? '<img src="' + classmate.avatar + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" referrerpolicy="no-referrer" onerror="this.remove()">'
                 : (classmate.name || 'U').charAt(0).toUpperCase();
 
             var indicatorHtml = hasTeam
@@ -2930,7 +2930,7 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
 
     const avatarEl = document.getElementById('detail-avatar');
     if (avatarUrl) {
-        avatarEl.innerHTML = '<img src="' + avatarUrl + '" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
+        avatarEl.innerHTML = '<img src="' + avatarUrl + '" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" referrerpolicy="no-referrer" onerror="this.remove()">';
     } else {
         const initials = name.split(' ').map(function(n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
         avatarEl.textContent = initials;
