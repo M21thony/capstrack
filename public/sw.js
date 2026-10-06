@@ -24,8 +24,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'CapsTrack', {
       body: data.body || '',
-      icon: '/images/capstrack.png',
-      badge: '/images/capstrack.png',
+      icon: '/images/brand/capstrack-mark-192.png',
+      badge: '/images/brand/capstrack-mark-192.png',
       // Two notifications sharing a tag replace one another rather than
       // stacking, so five documents in a row is not five pop-ups.
       tag: data.tag || 'capstrack',
