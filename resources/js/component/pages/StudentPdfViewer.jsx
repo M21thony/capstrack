@@ -132,7 +132,7 @@ function StudentPdfViewer({
                     : <div style={{ height: Math.round((col.pageWidth * 11) / 8.5) }} />}
                   {/* On the page itself, not in the overlay, so it can recolour the page's own lines. */}
                   {(figureMarks?.[n] || []).filter((m) => m.src).map((m) => m.rects.map((r, idx) => (
-                    <img key={`${m.id}-${idx}`} className="rr-figover" src={m.src} alt="" style={rectStyle(r)} />
+                    <img key={`${m.id}-${idx}`} className={`rr-figover${m.wash ? " wash" : ""}`} src={m.src} alt="" style={rectStyle(r)} />
                   )))}
                   <div className="rr-overlay">
                     {(marks?.[n] || []).map((m) => m.rects.map((r, idx) => (

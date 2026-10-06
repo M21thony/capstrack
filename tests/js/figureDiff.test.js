@@ -122,6 +122,12 @@ test("shapes joined by lines are one drawn diagram; underlines, a lone frame and
   const prose = [0.31, 0.33, 0.35].map((t) => box(0.2, t, 0.28, 0.01));
   assert.equal(drawingAreas(flow, [], prose).length, 0); // a panel behind long lines of text
   assert.equal(drawingAreas(flow, [], prose.map((l) => ({ ...l, width: 0.06 }))).length, 1); // short labels are fine
+  // A one-column flowchart: narrow, but tall.
+  const column = [0.1, 0.2, 0.3, 0.4].flatMap((t) => [box(0.4, t, 0.12, 0.06), box(0.46, t + 0.06, 0.001, 0.04)]);
+  assert.equal(drawingAreas(column).length, 1);
+  // Its labels nearly fill the column, but each sits in its own box, so it is no text panel.
+  assert.equal(drawingAreas(column, [], [0.1, 0.2, 0.3, 0.4].map((t) => box(0.41, t + 0.02, 0.1, 0.01))).length, 1);
+  assert.equal(drawingAreas(column.slice(0, 4)).length, 0); // two boxes alone stay too small
 });
 
 test("a changed label is told apart from a changed shape or arrow", () => {

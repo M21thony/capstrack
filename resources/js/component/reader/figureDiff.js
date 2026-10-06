@@ -68,7 +68,8 @@ export const kindOf = (mismatch, spots) => (mismatch > OVERHAUL ? "big" : spots 
 
 const mul = (a, b) => [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1], a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3], a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5]];
 
-const bigEnough = (b) => b.width > 0.15 && b.height > 0.08;
+// A one-column flowchart is narrow but tall; a logo is neither.
+const bigEnough = (b) => (b.width > 0.15 && b.height > 0.08) || (b.width > 0.08 && b.height > 0.3);
 const shapeLike = (b) => b.width > 0.02 && b.height > 0.02;
 
 /**
@@ -78,12 +79,12 @@ const shapeLike = (b) => b.width > 0.02 && b.height > 0.02;
  * least two real shapes, so underlines and table rules are left out. One
  * mostly covered by a pasted picture is that picture's frame, and one with
  * several long lines of text in it is a panel behind the page's text (Word's
- * comment pane), since a diagram's labels are short.
+ * comment pane), since a diagram's labels are short or sit in their own box.
  * ponytail: a table with shaded cells can still pass as a diagram; tell them
  * apart by the text grid inside if that shows up in real chapters.
  */
 export function drawingAreas(paths, pictures = [], lines = [], gap = 0.015) {
-  let groups = paths.filter((p) => !(p.width > 0.8 && p.height > 0.8)).map((p) => ({ ...p, shapes: shapeLike(p) ? 1 : 0 }));
+  let groups = paths.filter((p) => !(p.width > 0.8 && p.height > 0.8)).map((p) => ({ ...p, shapes: shapeLike(p) ? 1 : 0, parts: shapeLike(p) ? [p] : [] }));
   const near = (a, b) => a.left - gap < b.left + b.width && b.left - gap < a.left + a.width && a.top - gap < b.top + b.height && b.top - gap < a.top + a.height;
   for (let merged = true; merged;) {
     merged = false;
@@ -92,16 +93,23 @@ export function drawingAreas(paths, pictures = [], lines = [], gap = 0.015) {
         const a = groups[i], b = groups[j];
         if (!near(a, b)) continue;
         const left = Math.min(a.left, b.left), top = Math.min(a.top, b.top);
-        groups[i] = { left, top, width: Math.max(a.left + a.width, b.left + b.width) - left, height: Math.max(a.top + a.height, b.top + b.height) - top, shapes: a.shapes + b.shapes };
+        groups[i] = { left, top, width: Math.max(a.left + a.width, b.left + b.width) - left, height: Math.max(a.top + a.height, b.top + b.height) - top, shapes: a.shapes + b.shapes, parts: [...a.parts, ...b.parts] };
         groups.splice(j, 1);
         merged = true;
         j = i;
       }
     }
   }
+  // A label just under or beside a shape (an icon's name) is part of the drawing; a caption is not.
+  groups = groups.map((g) => {
+    const labels = lines.filter((l) => l.width < 0.5 * g.width && near(g, l) && !/^\s*fig(ure)?\b/i.test(l.str ?? ""));
+    const all = [g, ...labels], left = Math.min(...all.map((b) => b.left)), top = Math.min(...all.map((b) => b.top));
+    return { ...g, left, top, width: Math.max(...all.map((b) => b.left + b.width)) - left, height: Math.max(...all.map((b) => b.top + b.height)) - top };
+  });
   const overlap = (a, b) => Math.max(0, Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top));
   const inside = (g, l) => l.left + l.width / 2 > g.left && l.left + l.width / 2 < g.left + g.width && l.top + l.height / 2 > g.top && l.top + l.height / 2 < g.top + g.height;
-  const prose = (g) => lines.filter((l) => l.width > 0.4 * g.width && inside(g, l)).length >= 3;
+  const boxed = (g, l) => g.parts.some((p) => p.width * p.height < 0.5 * g.width * g.height && inside(p, l));
+  const prose = (g) => lines.filter((l) => l.width > 0.4 * g.width && inside(g, l) && !boxed(g, l)).length >= 3;
   groups = groups.filter((g) => bigEnough(g) && g.shapes >= 2 && !pictures.some((p) => overlap(g, p) > 0.5 * g.width * g.height) && !prose(g));
   // A little margin so a label just outside a shape comes along.
   return groups.map(({ left, top, width, height }) => {
@@ -141,7 +149,7 @@ export async function picturesOn(page, OPS) {
   });
   if (!paths.length) return out;
   const text = await page.getTextContent().catch(() => ({ items: [] }));
-  const lines = text.items.filter((t) => t.str?.trim()).map((t) => ({ left: t.transform[4] / vp.width, top: 1 - (t.transform[5] + t.height) / vp.height, width: t.width / vp.width, height: t.height / vp.height }));
+  const lines = text.items.filter((t) => t.str?.trim()).map((t) => ({ str: t.str, left: t.transform[4] / vp.width, top: 1 - (t.transform[5] + t.height) / vp.height, width: t.width / vp.width, height: t.height / vp.height }));
   return [...out, ...drawingAreas(paths, out, lines)];
 }
 
@@ -351,6 +359,29 @@ async function diagramsOf(pdf, OPS, alive) {
 const pause = () => new Promise((ok) => setTimeout(ok));
 
 /**
+ * Two versions of a diagram drawn to the same scale. Each is stretched to W,
+ * so one that gained a branch at its side would shrink and nothing would line
+ * up; both are widened with white to the strip of the page they cover together.
+ */
+function sameScale(o, n) {
+  const left = Math.min(o.ink.left, n.ink.left), width = Math.max(o.ink.left + o.ink.width, n.ink.left + n.ink.width) - left;
+  if (Math.max(o.ink.width, n.ink.width) / Math.min(o.ink.width, n.ink.width) < 1.15) return [o, n];
+  const widen = (d) => {
+    const k = d.ink.width / width, SW = d.sharp.width, off = ((d.ink.left - left) / width) * SW;
+    const sharp = onWhite(d.sharp, SW, d.sharp.height * k, off, 0, k);
+    const small = canvasOf(W, (sharp.height * W) / SW), ctx = small.getContext("2d");
+    ctx.imageSmoothingQuality = "high";
+    ctx.filter = "blur(1px)";
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, small.width, small.height);
+    ctx.drawImage(sharp, 0, 0, small.width, small.height);
+    const words = d.words.map((it) => ({ ...it, x: off + it.x * k, y: it.y * k, w: it.w * k, h: it.h * k, lx: off + it.lx * k, lw: it.lw * k }));
+    return { ...d, sharp, small, words, ink: { ...d.ink, left, width } };
+  };
+  return [widen(o), widen(n)];
+}
+
+/**
  * How far boxes of a diagram moved, in sharp pixels of the earlier frame: the
  * shift of each piece of writing found once in each version but somewhere
  * else, `fit` putting this version's onto the earlier frame. Most common first.
@@ -439,28 +470,29 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
   for (const [i, o] of olds.entries()) {
     if (!alive()) return [];
     onProgress(`Comparing figure ${i + 1} of ${olds.length}…`);
-    cost.push(news.map((n) => difference(o.small, n.small).mismatch));
+    cost.push(news.map((n) => difference(...sameScale(o, n).map((d) => d.small)).mismatch));
     await pause();
   }
   const partner = pairUp(cost, news.length);
   const figures = [];
-  for (const [i, o] of olds.entries()) {
-    const j = partner[i];
+  for (const [i, j] of partner.entries()) {
     if (j === null) {
+      const o = olds[i];
       figures.push({ kind: "removed", label: o.label, title: o.title, oldPage: o.page, newPage: null, old: o.sharp, oldInk: o.ink });
       continue;
     }
-    const n = news[j];
+    const [o, n] = sameScale(olds[i], news[j]);
     let near = n.small;
     let fit = null;
     if (cost[i][j] > ALIGN_ABOVE) {
       if (!alive()) return [];
       fit = alignment(o.small, n.small);
-      near = onWhite(n.small, W, o.small.height, fit.x, fit.y, fit.s);
+      // Tall enough for whatever was added below the earlier diagram.
+      near = onWhite(n.small, W, Math.max(o.small.height, Math.ceil(fit.y + n.small.height * fit.s)), fit.x, fit.y, fit.s);
       await pause();
     }
     const d = difference(o.small, near);
-    const h = Math.max(o.sharp.height, n.sharp.height);
+    const h = Math.max(o.sharp.height, Math.ceil(fit ? fit.y * SHOW + n.sharp.height * fit.s : n.sharp.height));
     const fig = {
       kind: kindOf(d.mismatch, d.spots.length),
       pct: Math.round(d.mismatch * 100),
@@ -736,6 +768,15 @@ function inkChanges(f) {
   const slides = [];
   for (let d = 3; d <= 80; d++) slides.push([0, d], [0, -d], [d, 0], [-d, 0]);
   for (const part of changedParts(mark, moved, w, h)) {
+    // Only straight lines and filled areas slide like that; a slanted line (a new diamond's edge)
+    // only happens to land on some other line. Most of a straight one lies in long level runs.
+    const own = new Set(part), run = (k, step) => {
+      let n = 1;
+      for (let m = k + step; own.has(m) && n < 5; m += step) n++;
+      for (let m = k - step; own.has(m) && n < 5; m -= step) n++;
+      return n >= 5;
+    };
+    if (part.filter((k) => run(k, 1) || run(k, w)).length < 0.6 * part.length) continue;
     const other = mark[part[0]] === 1 ? inkB : inkA;
     const fits = ([sx, sy]) => {
       let misses = 0;
@@ -882,33 +923,59 @@ export function highlighted(f) {
  * the page's own dark lines turn the colour and its white stays white: the
  * shape itself is recoloured, at the page's own sharpness. The colour reaches
  * a little past each line, so being a pixel off still lands on it. The words
- * of a label are left to the word-style highlight.
+ * of a label are left to the word-style highlight. A thin line alone is easy
+ * to miss, so each also gets a wider light wash along it, like a highlighter
+ * pen ({ addedWash, removedWash }), laid with mix-blend-mode: multiply so the
+ * line on it keeps its own sharpness.
  */
 export function tints(f) {
-  const { w, h, both: mark, spots } = (f.changes ??= inkChanges(f));
-  const R = 2;
-  const layer = (tone, value, colour) => {
-    const img = new ImageData(w, h);
-    let any = false;
+  const { w, h, both: mark, spots, inkA, inkB } = (f.changes ??= inkChanges(f));
+  // The changed ink, carried a few pixels on along the version's own lines: where a new line
+  // touches or crosses an old one, or runs past its spot, it would otherwise break off there.
+  const GROW = 6;
+  const changed = (tone, value) => {
+    const ink = value === 2 ? inkB : inkA, dist = new Int8Array(w * h).fill(-1), queue = [];
     for (const s of spots) {
       if (s.tone !== tone && s.tone !== "rewritten") continue;
       const [x0, y0, x1, y1] = s.box;
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
-          if (mark[y * w + x] !== value) continue;
-          any = true;
-          for (let yy = Math.max(0, y - R); yy <= Math.min(h - 1, y + R); yy++) {
-            for (let xx = Math.max(0, x - R); xx <= Math.min(w - 1, x + R); xx++) img.data.set([...colour, 255], (yy * w + xx) * 4);
-          }
+          const k = y * w + x;
+          if (mark[k] === value && dist[k] < 0) { dist[k] = 0; queue.push(k); }
         }
       }
     }
-    if (!any) return null;
+    for (let i = 0; i < queue.length; i++) {
+      const k = queue[i], x = k % w, y = (k - x) / w;
+      if (dist[k] >= GROW) continue;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx, yy = y + dy, m = yy * w + xx;
+        if (xx >= 0 && yy >= 0 && xx < w && yy < h && ink[m] && dist[m] < 0) { dist[m] = dist[k] + 1; queue.push(m); }
+      }
+    }
+    return { grown: queue, own: queue.filter((k) => dist[k] === 0) };
+  };
+  const layer = (pixels, colour, R) => {
+    if (!pixels.length) return null;
+    const img = new ImageData(w, h), px = [...colour, 255];
+    for (const k of pixels) {
+      const x = k % w, y = (k - x) / w;
+      for (let yy = Math.max(0, y - R); yy <= Math.min(h - 1, y + R); yy++) {
+        for (let xx = Math.max(0, x - R); xx <= Math.min(w - 1, x + R); xx++) {
+          if ((xx - x) ** 2 + (yy - y) ** 2 <= R * R) img.data.set(px, (yy * w + xx) * 4);
+        }
+      }
+    }
     const c = canvasOf(w, h);
     c.getContext("2d").putImageData(img, 0, 0);
     return c;
   };
-  return { added: layer("added", 2, [22, 163, 74]), removed: layer("removed", 1, [220, 38, 38]) };
+  const added = changed("added", 2), removed = changed("removed", 1);
+  // The wash is wide enough to bridge those gaps itself, so it stays off the lines it meets.
+  return {
+    added: layer(added.grown, [22, 163, 74], 3), removed: layer(removed.grown, [220, 38, 38], 3),
+    addedWash: layer(added.own, [187, 247, 208], 7), removedWash: layer(removed.own, [254, 202, 202], 7),
+  };
 }
 
 /** A picture with the changed spots outlined. */

@@ -137,7 +137,9 @@ function PDFChecker({
     if (figureDiff.status !== "ready") return { now, before };
     figureDiff.figures.forEach((f, i) => {
       if (f.kind !== "small") return;
-      const { added, removed } = (f.tints ??= tints(f));
+      const { added, removed, addedWash, removedWash } = (f.tints ??= tints(f));
+      if (addedWash) (now[f.newPage] ||= []).push({ id: `w${i}`, wash: true, src: addedWash.toDataURL(), rects: [overlayRect(f, addedWash.height)] });
+      if (removedWash) (before[f.oldPage] ||= []).push({ id: `w${i}`, wash: true, src: removedWash.toDataURL(), rects: [oldOverlayRect(f, removedWash.height)] });
       if (added) (now[f.newPage] ||= []).push({ id: `t${i}`, src: added.toDataURL(), rects: [overlayRect(f, added.height)] });
       if (removed) (before[f.oldPage] ||= []).push({ id: `t${i}`, src: removed.toDataURL(), rects: [oldOverlayRect(f, removed.height)] });
     });
@@ -542,7 +544,7 @@ function PDFChecker({
                     )}
                     {/* On the page itself, not in the overlay, so it can recolour the page's own lines. */}
                     {showChanges && (figureTints.now[n] || []).map((t) => (
-                      <img key={t.id} className="rr-figover" src={t.src} alt="" contentEditable={false} style={rectStyle(t.rects[0])} />
+                      <img key={t.id} className={`rr-figover${t.wash ? " wash" : ""}`} src={t.src} alt="" contentEditable={false} style={rectStyle(t.rects[0])} />
                     ))}
                     <div className="rr-overlay" contentEditable={false}>
                       {(marks[n] || []).map((m) => m.rects.map((r, idx) => (
