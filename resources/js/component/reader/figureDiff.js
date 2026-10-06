@@ -365,7 +365,7 @@ const pause = () => new Promise((ok) => setTimeout(ok));
  */
 function sameScale(o, n) {
   const left = Math.min(o.ink.left, n.ink.left), width = Math.max(o.ink.left + o.ink.width, n.ink.left + n.ink.width) - left;
-  if (Math.max(o.ink.width, n.ink.width) / Math.min(o.ink.width, n.ink.width) < 1.15) return [o, n];
+  if (Math.max(o.ink.width, n.ink.width) / Math.min(o.ink.width, n.ink.width) < 1.02) return [o, n];
   const widen = (d) => {
     const k = d.ink.width / width, SW = d.sharp.width, off = ((d.ink.left - left) / width) * SW;
     const sharp = onWhite(d.sharp, SW, d.sharp.height * k, off, 0, k);
@@ -811,7 +811,7 @@ function inkChanges(f) {
     }
   }
   for (const { box, tone } of spots) if (tone === "rewritten") for (let y = box[1]; y < box[3]; y++) mark.fill(0, y * w + box[0], y * w + box[2]);
-  return { a, b, w, h, mark, both, spots, inkA, inkB };
+  return { a, b, w, h, mark, both, spots, inkA, inkB, words };
 }
 
 /** The joined-up runs of changed ink (marked, and not already moved), each as its pixel indices, all of one kind. */
@@ -839,7 +839,12 @@ function changedParts(mark, moved, w, h) {
  * the edge of the box without crossing ink, as pixel indices. Holes smaller
  * than `min` (the inside of an "o" or "a") are left out.
  */
-export function enclosed(ink, w, [x0, y0, x1, y1], min = 200) {
+export function enclosed(ink, w, box, min = 200) {
+  return holes(ink, w, box, min).flat();
+}
+
+/** The same insides, one list of pixel indices per shape. */
+function holes(ink, w, [x0, y0, x1, y1], min = 200) {
   const bw = x1 - x0, bh = y1 - y0, seen = new Uint8Array(bw * bh), out = [];
   const blank = (p) => !ink[(y0 + Math.floor(p / bw)) * w + x0 + (p % bw)];
   for (let p0 = 0; p0 < bw * bh; p0++) {
@@ -855,7 +860,7 @@ export function enclosed(ink, w, [x0, y0, x1, y1], min = 200) {
         if (q >= 0 && !seen[q] && blank(q)) { seen[q] = 1; stack.push(q); }
       }
     }
-    if (!edge && got.length >= min) for (const k of got) out.push(k);
+    if (!edge && got.length >= min) out.push(got);
   }
   return out;
 }
@@ -923,13 +928,12 @@ export function highlighted(f) {
  * the page's own dark lines turn the colour and its white stays white: the
  * shape itself is recoloured, at the page's own sharpness. The colour reaches
  * a little past each line, so being a pixel off still lands on it. The words
- * of a label are left to the word-style highlight. A thin line alone is easy
- * to miss, so each also gets a wider light wash along it, like a highlighter
- * pen ({ addedWash, removedWash }), laid with mix-blend-mode: multiply so the
- * line on it keeps its own sharpness.
+ * of a label are left to the word-style highlight. The inside of a changed
+ * closed shape is filled in a light shade ({ addedWash, removedWash }), laid
+ * with mix-blend-mode: multiply so the text in it stays as it is.
  */
 export function tints(f) {
-  const { w, h, both: mark, spots, inkA, inkB } = (f.changes ??= inkChanges(f));
+  const { a, b, w, h, both: mark, spots, inkA, inkB, words } = (f.changes ??= inkChanges(f));
   // The changed ink, carried a few pixels on along the version's own lines: where a new line
   // touches or crosses an old one, or runs past its spot, it would otherwise break off there.
   const GROW = 6;
@@ -953,16 +957,27 @@ export function tints(f) {
         if (xx >= 0 && yy >= 0 && xx < w && yy < h && ink[m] && dist[m] < 0) { dist[m] = dist[k] + 1; queue.push(m); }
       }
     }
-    return { grown: queue, own: queue.filter((k) => dist[k] === 0) };
+    return queue;
   };
-  const layer = (pixels, colour, R) => {
-    if (!pixels.length) return null;
-    const img = new ImageData(w, h), px = [...colour, 255];
-    for (const k of pixels) {
-      const x = k % w, y = (k - x) / w;
-      for (let yy = Math.max(0, y - R); yy <= Math.min(h - 1, y + R); yy++) {
-        for (let xx = Math.max(0, x - R); xx <= Math.min(w - 1, x + R); xx++) {
-          if ((xx - x) ** 2 + (yy - y) ** 2 <= R * R) img.data.set(px, (yy * w + xx) * 4);
+  const layer = (...sets) => {
+    if (!sets.some(([pixels]) => pixels.length)) return null;
+    const img = new ImageData(w, h);
+    for (const [pixels, colour, R, picture] of sets) {
+      const px = [...colour, 255];
+      for (const k of pixels) {
+        const x = k % w, y = (k - x) / w;
+        // Given the version's picture (for the multiply layer, where white changes nothing), mixed in
+        // as strongly as the line is dark there, so it keeps its own thinness.
+        if (picture) {
+          const t = Math.min(1, (255 - (picture[k * 4] + picture[k * 4 + 1] + picture[k * 4 + 2]) / 3) / 64), at = k * 4;
+          const under = img.data[at + 3] ? img.data.slice(at, at + 3) : [255, 255, 255];
+          img.data.set([0, 1, 2].map((i) => under[i] * (1 - t) + colour[i] * t).concat(255), at);
+          continue;
+        }
+        for (let yy = Math.max(0, y - R); yy <= Math.min(h - 1, y + R); yy++) {
+          for (let xx = Math.max(0, x - R); xx <= Math.min(w - 1, x + R); xx++) {
+            if ((xx - x) ** 2 + (yy - y) ** 2 <= R * R) img.data.set(px, (yy * w + xx) * 4);
+          }
         }
       }
     }
@@ -970,11 +985,76 @@ export function tints(f) {
     c.getContext("2d").putImageData(img, 0, 0);
     return c;
   };
-  const added = changed("added", 2), removed = changed("removed", 1);
-  // The wash is wide enough to bridge those gaps itself, so it stays off the lines it meets.
+  // A closed shape (a box, diamond, cloud) whose outline is mostly changed is taken whole, like a
+  // filled icon: all of its outline is coloured and its inside filled. Pieces of it that only look
+  // like an old line shifted (the bottom of a cloud drawn bigger) are not left out, and a box that
+  // merely moved, its outline unchanged, stays plain.
+  // Its words are taken out first, so a label inside it is part of its inside, not of its outline.
+  // Both are thickened a pixel: a thin pale outline (a yellow diamond's) comes out of the scan with
+  // pinholes the inside would leak through. The outline is filled too, since a pale one cannot be
+  // recoloured the way a dark line is.
+  const thick = (on) => {
+    const out = new Uint8Array(w * h);
+    for (let k = 0; k < w * h; k++) {
+      if (!on[k]) continue;
+      const x = k % w;
+      for (const m of [k, k - 1, k + 1, k - w, k + w, k - w - 1, k - w + 1, k + w - 1, k + w + 1]) {
+        if (m >= 0 && m < w * h && Math.abs((m % w) - x) <= 1) out[m] = 1;
+      }
+    }
+    return out;
+  };
+  // Each shape's inside, with the words written in it.
+  const shapes = (version, bit, items) => {
+    const ink = thick(version.map((v, k) => v && !(words[k] & bit))), list = holes(ink, w, [0, 0, w, h]);
+    const id = new Int32Array(w * h).fill(-1), labels = list.map(() => new Set());
+    list.forEach((hole, i) => { for (const k of hole) id[k] = i; });
+    for (const it of items ?? []) {
+      const k = Math.round(it.y + it.h / 2) * w + Math.round(it.x + it.w / 2);
+      if (id[k] >= 0) labels[id[k]].add(it.str);
+    }
+    return { ink, list: list.map((hole, i) => ({ hole, labels: labels[i] })) };
+  };
+  const shapesA = shapes(inkA, 1, f.oldWords), shapesB = shapes(inkB, 2, f.newWords);
+  // A shape the other version also has, the same size and with a word of the same label: it only moved.
+  const movedShape = ({ hole, labels }, others) => others.some((o) => o.hole.length > 0.85 * hole.length && o.hole.length < 1.18 * hole.length && [...o.labels].some((s) => labels.has(s)));
+  const whole = ({ ink, list }, others, grown) => {
+    const isChanged = new Uint8Array(w * h), edges = [], fill = [], rim = new Uint8Array(w * h), still = new Uint8Array(w * h);
+    for (const k of grown) isChanged[k] = 1;
+    const changedNear = thick(isChanged);
+    for (const shape of list) {
+      const { hole } = shape, edge = new Set();
+      for (const k of hole) {
+        const x = k % w;
+        for (const m of [k - 1, k + 1, k - w, k + w]) if (m >= 0 && m < w * h && Math.abs((m % w) - x) <= 1 && ink[m]) edge.add(m);
+      }
+      // A shape that only moved: none of it is coloured, its outline included.
+      if (movedShape(shape, others)) {
+        for (const k of edge) still[k] = 1;
+        continue;
+      }
+      let hits = 0;
+      for (const k of edge) hits += changedNear[k];
+      if (hits < 0.6 * edge.size) continue;
+      for (const k of edge) {
+        if (!isChanged[k]) edges.push(k);
+        rim[k] = 1;
+      }
+      for (const k of hole) fill.push(k);
+    }
+    // The fill reaches across the whole outline, so a pale one is covered too.
+    const across = thick(thick(rim)), moved = thick(thick(thick(thick(still))));
+    for (let k = 0; k < w * h; k++) if (across[k]) fill.push(k);
+    return { lines: grown.filter((k) => !moved[k]).concat(edges), fill };
+  };
+  const GREEN = [22, 163, 74], RED = [220, 38, 38];
+  const added = whole(shapesB, shapesA.list, changed("added", 2)), removed = whole(shapesA, shapesB.list, changed("removed", 1));
   return {
-    added: layer(added.grown, [22, 163, 74], 3), removed: layer(removed.grown, [220, 38, 38], 3),
-    addedWash: layer(added.own, [187, 247, 208], 7), removedWash: layer(removed.own, [254, 202, 202], 7),
+    added: layer([added.lines, GREEN, 3]), removed: layer([removed.lines, RED, 3]),
+    // The lines again, right on them: a pale line (light grey, a yellow outline) is darkened to the
+    // colour, where the one above could only colour a dark one.
+    addedWash: layer([added.fill, [187, 247, 208], 0], [added.lines, GREEN, 0, b]),
+    removedWash: layer([removed.fill, [254, 202, 202], 0], [removed.lines, RED, 0, a]),
   };
 }
 
