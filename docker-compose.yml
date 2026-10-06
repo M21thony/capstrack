@@ -1,0 +1,55 @@
+# CapsTrack: three containers - system, db, ollama.
+#   cp deploy/env.production.example .env   (fill it in, set APP_KEY, DB_PASSWORD, DB_ROOT_PASSWORD)
+#   docker compose up -d --build
+services:
+  capstrack-system:
+    build: .
+    env_file: .env
+    environment:
+      DB_HOST: capstrack-db
+      OLLAMA_URL: http://capstrack-ollama:11434
+    ports:
+      - "80:80"
+    volumes:
+      - app-storage:/var/www/capstrack/storage
+    depends_on:
+      capstrack-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  capstrack-db:
+    image: mysql:8.4
+    # The app's tables are all MyISAM (as on the laptop and Azure); InnoDB rejects its foreign keys.
+    command: --default-storage-engine=MyISAM
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-capstrack}
+      MYSQL_USER: ${DB_USERNAME:-capstrack}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  capstrack-ollama:
+    image: ollama/ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+    # With an NVIDIA GPU, uncomment:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  app-storage:
+  db-data:
+  ollama-models:
