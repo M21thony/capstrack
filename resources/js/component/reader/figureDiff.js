@@ -423,7 +423,16 @@ export function changedWords(olds = [], news = [], moves = []) {
   const shifts = [[0, 0], ...moves];
   const near = (it, o, sign) => shifts.some(([dx, dy]) => Math.abs(o.y - it.y - sign * dy) <= 4 && Math.abs(o.x - it.x - sign * dx) <= Math.max(8, it.h * 2));
   const kept = (it, others, sign) => others.some((o) => o.str === it.str && near(it, o, sign));
-  const old = olds.filter((it) => !kept(it, news, 1)), neu = news.filter((it) => !kept(it, olds, -1));
+  let old = olds.filter((it) => !kept(it, news, 1)), neu = news.filter((it) => !kept(it, olds, -1));
+  // The same word left over on both, a little way off (a diagram redrawn bigger moves every box its own
+  // way): it moved, it did not change.
+  const twins = new Set();
+  for (const o of old) {
+    const n = neu.find((it) => !twins.has(it) && it.str === o.str && Math.abs(it.x - o.x) <= o.h * 3 && Math.abs(it.y - o.y) <= o.h * 3);
+    if (n) twins.add(o).add(n);
+  }
+  old = old.filter((it) => !twins.has(it));
+  neu = neu.filter((it) => !twins.has(it));
   // A word rewritten in place (team_name -> team_title) keeps only the parts that differ.
   const taken = new Set(), trimmed = new Map();
   for (const o of old) {
