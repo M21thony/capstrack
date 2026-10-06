@@ -937,6 +937,10 @@ export function tints(f) {
   // The changed ink, carried a few pixels on along the version's own lines: where a new line
   // touches or crosses an old one, or runs past its spot, it would otherwise break off there.
   const GROW = 6;
+  // Specks of a few pixels are a line drawn a hair differently, not a change: grown, they would
+  // turn into a stray dash on an unchanged line.
+  const real = new Uint8Array(w * h);
+  for (const part of changedParts(mark, new Uint8Array(w * h), w, h)) if (part.length >= 10) for (const k of part) real[k] = 1;
   const changed = (tone, value) => {
     const ink = value === 2 ? inkB : inkA, dist = new Int8Array(w * h).fill(-1), queue = [];
     for (const s of spots) {
@@ -945,7 +949,7 @@ export function tints(f) {
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
           const k = y * w + x;
-          if (mark[k] === value && dist[k] < 0) { dist[k] = 0; queue.push(k); }
+          if (mark[k] === value && real[k] && dist[k] < 0) { dist[k] = 0; queue.push(k); }
         }
       }
     }
@@ -1004,9 +1008,10 @@ export function tints(f) {
     }
     return out;
   };
-  // Each shape's inside, with the words written in it.
+  // Each shape's inside, with the words written in it. With the letters taken out, small insides
+  // (an actor's head) are shapes too, not the inside of an "o".
   const shapes = (version, bit, items) => {
-    const ink = thick(version.map((v, k) => v && !(words[k] & bit))), list = holes(ink, w, [0, 0, w, h]);
+    const ink = thick(version.map((v, k) => v && !(words[k] & bit))), list = holes(ink, w, [0, 0, w, h], 40);
     const id = new Int32Array(w * h).fill(-1), labels = list.map(() => new Set());
     list.forEach((hole, i) => { for (const k of hole) id[k] = i; });
     for (const it of items ?? []) {
@@ -1047,14 +1052,70 @@ export function tints(f) {
     for (let k = 0; k < w * h; k++) if (across[k]) fill.push(k);
     return { lines: grown.filter((k) => !moved[k]).concat(edges), fill };
   };
+  // A change that is neither a filled shape nor a plain line (a shape drawn bigger, one whose inside
+  // could not be found) would be only a thin coloured outline, easy to miss: the area around it is
+  // washed instead, so nothing changed goes unseen: the whole shape it is part of when there is one
+  // about its size, else the box around it.
+  const areas = ({ lines, fill }, { list }) => {
+    const on = new Uint8Array(w * h), filled = new Uint8Array(w * h), id = new Int32Array(w * h).fill(-1), washed = new Uint8Array(w * h), boxes = [];
+    for (const k of fill) filled[k] = 1;
+    // What a filled shape already shows is left out: an arrow into it is then a line of its own.
+    const nearFill = thick(thick(thick(filled)));
+    for (const k of lines) if (!nearFill[k]) on[k] = 1;
+    list.forEach(({ hole }, i) => { for (const k of hole) id[k] = i; });
+    for (const part of changedParts(thick(on), new Uint8Array(w * h), w, h)) {
+      if (part.length < 30) continue;
+      // A straight line (an arrow): most of it lies along one axis.
+      let mx = 0, my = 0, sxx = 0, syy = 0, sxy = 0;
+      for (const k of part) { mx += k % w; my += Math.floor(k / w); }
+      mx /= part.length; my /= part.length;
+      for (const k of part) { const dx = (k % w) - mx, dy = Math.floor(k / w) - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+      const t = Math.atan2(2 * sxy, sxx - syy) / 2, sin = Math.sin(t), cos = Math.cos(t);
+      if (part.filter((k) => Math.abs(((Math.floor(k / w) - my) * cos) - (((k % w) - mx) * sin)) <= 4).length >= 0.85 * part.length) continue;
+      let x0 = w, y0 = h, x1 = 0, y1 = 0;
+      for (const k of part) { const x = k % w, y = Math.floor(k / w); x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+      // Solid ink (an icon) is plain to see once it is coloured.
+      if (part.length > 16 * (x1 - x0 + y1 - y0 + 2)) continue;
+      // The shapes it borders, the smallest first: an outline borders its own inside and the one around it.
+      const hits = new Map();
+      for (const k of part) {
+        const x = k % w, near = new Set();
+        for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+          const m = k + dy * w + dx;
+          if (m >= 0 && m < w * h && Math.abs((m % w) - x) <= 3 && id[m] >= 0) near.add(id[m]);
+        }
+        for (const i of near) hits.set(i, (hits.get(i) ?? 0) + 1);
+      }
+      const [shape] = [...hits].filter(([i, n]) => n >= 0.3 * part.length && list[i].hole.length <= 2 * (x1 - x0 + 1) * (y1 - y0 + 1))
+        .map(([i]) => list[i].hole).sort((p, q) => p.length - q.length);
+      if (shape) {
+        const inside = new Uint8Array(w * h);
+        for (const k of shape) inside[k] = 1;
+        const across = thick(thick(thick(inside)));
+        for (let k = 0; k < w * h; k++) if (across[k]) washed[k] = 1;
+      } else if (part.length >= 0.15 * (x1 - x0 + 1) * (y1 - y0 + 1)) {
+        // A sparse part (a bent connector across the page) stays a coloured line: its box would be mostly empty.
+        boxes.push([part, Math.max(0, x0 - 4), Math.max(0, y0 - 4), Math.min(w - 1, x1 + 4), Math.min(h - 1, y1 + 4)]);
+      }
+    }
+    // A piece of a shape washed whole (a bump of a bigger cloud) needs no box of its own.
+    const nearWashed = thick(thick(thick(washed)));
+    for (const [part, x0, y0, x1, y1] of boxes) {
+      if (part.some((k) => nearWashed[k])) continue;
+      for (let y = y0; y <= y1; y++) washed.fill(1, y * w + x0, y * w + x1 + 1);
+    }
+    const out = [];
+    for (let k = 0; k < w * h; k++) if (washed[k]) out.push(k);
+    return out;
+  };
   const GREEN = [22, 163, 74], RED = [220, 38, 38];
   const added = whole(shapesB, shapesA.list, changed("added", 2)), removed = whole(shapesA, shapesB.list, changed("removed", 1));
   return {
     added: layer([added.lines, GREEN, 3]), removed: layer([removed.lines, RED, 3]),
     // The lines again, right on them: a pale line (light grey, a yellow outline) is darkened to the
     // colour, where the one above could only colour a dark one.
-    addedWash: layer([added.fill, [187, 247, 208], 0], [added.lines, GREEN, 0, b]),
-    removedWash: layer([removed.fill, [254, 202, 202], 0], [removed.lines, RED, 0, a]),
+    addedWash: layer([added.fill.concat(areas(added, shapesB)), [187, 247, 208], 0], [added.lines, GREEN, 0, b]),
+    removedWash: layer([removed.fill.concat(areas(removed, shapesA)), [254, 202, 202], 0], [removed.lines, RED, 0, a]),
   };
 }
 
