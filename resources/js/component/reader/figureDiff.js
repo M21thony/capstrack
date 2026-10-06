@@ -691,12 +691,12 @@ export function highlighted(f) {
  * The shapes and arrows that changed, coloured where they sit, on clear
  * pictures to lay over each version's diagram: { added } in green over this
  * version, { removed } in red over the earlier one, each null when nothing
- * is there. Lines glow so a thin arrow stands out, and a closed shape is
- * filled in. The words of a label are left to the word-style highlight.
+ * is there. Lines are recoloured in place, with no glow, and a closed shape
+ * is filled in. The words of a label are left to the word-style highlight.
  */
 export function tints(f) {
   const { w, h, both: mark, spots, inkA, inkB } = (f.changes ??= inkChanges(f));
-  const layer = (tone, value, ink, colour, fill, glow) => {
+  const layer = (tone, value, ink, colour, fill) => {
     const img = new ImageData(w, h);
     let any = false;
     for (const s of spots) {
@@ -716,18 +716,13 @@ export function tints(f) {
       if (s.tone === tone && !s.text) for (const k of enclosed(ink, w, s.box)) if (!img.data[k * 4 + 3]) img.data.set(fill, k * 4);
     }
     if (!any) return null;
-    const l = canvasOf(w, h), c = canvasOf(w, h), ctx = c.getContext("2d");
-    l.getContext("2d").putImageData(img, 0, 0);
-    ctx.shadowColor = glow;
-    ctx.shadowBlur = 8;
-    ctx.drawImage(l, 0, 0);
-    ctx.shadowBlur = 0;
-    ctx.drawImage(l, 0, 0);
+    const c = canvasOf(w, h);
+    c.getContext("2d").putImageData(img, 0, 0);
     return c;
   };
   return {
-    added: layer("added", 2, inkB, [22, 163, 74, 255], [34, 197, 94, 60], "rgba(34,197,94,.8)"),
-    removed: layer("removed", 1, inkA, [220, 38, 38, 255], [239, 68, 68, 60], "rgba(239,68,68,.8)"),
+    added: layer("added", 2, inkB, [22, 163, 74, 255], [34, 197, 94, 60]),
+    removed: layer("removed", 1, inkA, [220, 38, 38, 255], [239, 68, 68, 60]),
   };
 }
 
