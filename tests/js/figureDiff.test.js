@@ -2,7 +2,7 @@
 // a pair amounts to. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OVERHAUL, changedWords, drawingAreas, enclosed, joinWords, movesOf, figureMarks, hungarian, kindOf, oldOverlayRect, overlapping, overlayRect, pairUp, spotTone, textLike, textLines } from "../../resources/js/component/reader/figureDiff.js";
+import { OVERHAUL, changedLetters, changedWords, drawingAreas, enclosed, joinWords, movesOf, figureMarks, hungarian, kindOf, oldOverlayRect, overlapping, overlayRect, pairUp, spotTone, textLike, textLines } from "../../resources/js/component/reader/figureDiff.js";
 
 test("hungarian finds the cheapest pairing, not the greedy one", () => {
   // Greedy takes 0->0 (1), leaving 1->1 (100): 101. Best is 0->1, 1->0: 4.
@@ -205,4 +205,17 @@ test("changed words side by side on a line share one highlight", () => {
   const boxes = joinWords([w("VARCHAR(50)", 60, 50), w("course", 10, 50), w("status", 10, 90)]);
   assert.equal(boxes.length, 2);
   assert.deepEqual([boxes[0].x, boxes[0].w], [10, 60 + 88 - 10]);
+});
+
+test("a word rewritten in place is marked only where its name parts differ", () => {
+  assert.deepEqual(changedLetters("team_name", "team_title"), [[5, 9], [5, 10]]);
+  assert.deepEqual(changedLetters("VARCHAR(50)", "VARCHAR(100)"), [[8, 10], [8, 11]]);
+  assert.deepEqual(changedLetters("id", "id_2"), [[2, 2], [2, 4]]);
+  assert.deepEqual(changedLetters("studnet", "student"), [[0, 7], [0, 7]]);
+});
+
+test("the highlight of a rewritten word covers only its changed letters, and none when nothing was taken out", () => {
+  const { old, neu } = changedWords([w("team_name", 10, 30), w("id", 10, 50)], [w("team_title", 10, 30), w("id_2", 10, 50)]);
+  assert.deepEqual(old.map((it) => [it.str, it.x, it.w]), [["team_name", 10 + 5 * 8, 4 * 8]]);
+  assert.deepEqual(neu.map((it) => [it.str, it.x, it.w]), [["team_title", 10 + 5 * 8, 5 * 8], ["id_2", 10 + 2 * 8, 2 * 8]]);
 });

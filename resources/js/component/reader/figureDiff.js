@@ -390,8 +390,39 @@ export function joinWords(words) {
  */
 export function changedWords(olds = [], news = [], moves = []) {
   const shifts = [[0, 0], ...moves];
-  const kept = (it, others, sign) => others.some((o) => o.str === it.str && shifts.some(([dx, dy]) => Math.abs(o.y - it.y - sign * dy) <= 4 && Math.abs(o.x - it.x - sign * dx) <= Math.max(8, it.h * 2)));
-  return { old: olds.filter((it) => !kept(it, news, 1)), neu: news.filter((it) => !kept(it, olds, -1)) };
+  const near = (it, o, sign) => shifts.some(([dx, dy]) => Math.abs(o.y - it.y - sign * dy) <= 4 && Math.abs(o.x - it.x - sign * dx) <= Math.max(8, it.h * 2));
+  const kept = (it, others, sign) => others.some((o) => o.str === it.str && near(it, o, sign));
+  const old = olds.filter((it) => !kept(it, news, 1)), neu = news.filter((it) => !kept(it, olds, -1));
+  // A word rewritten in place (team_name -> team_title) keeps only the parts that differ.
+  const taken = new Set(), trimmed = new Map();
+  for (const o of old) {
+    const n = neu.find((it) => !taken.has(it) && near(o, it, 1));
+    if (!n) continue;
+    taken.add(n);
+    const [a, b] = changedLetters(o.str, n.str);
+    trimmed.set(o, a).set(n, b);
+  }
+  const cut = (list) => list.flatMap((it) => {
+    if (!trimmed.has(it)) return [it];
+    const [from, to] = trimmed.get(it), per = it.w / it.str.length;
+    return to > from ? [{ ...it, x: it.x + from * per, w: (to - from) * per }] : [];
+  });
+  return { old: cut(old), neu: cut(neu) };
+}
+
+/**
+ * Where two spellings of a word differ, as [from, to] letter ranges of each.
+ * Compared by name parts (team, _, name; VARCHAR, (, 50, )) so a highlight
+ * covers "title", not the stray letters "titl" that happen to differ.
+ */
+export function changedLetters(a, b) {
+  const split = (s) => s.match(/[A-Z]?[a-z]+|[A-Z]+(?![a-z])|\d+|[^A-Za-z\d]/g) ?? [s];
+  const p = split(a), q = split(b);
+  let pre = 0, suf = 0;
+  while (pre < p.length && pre < q.length && p[pre] === q[pre]) pre++;
+  while (suf < p.length - pre && suf < q.length - pre && p[p.length - 1 - suf] === q[q.length - 1 - suf]) suf++;
+  const len = (parts, from, to) => parts.slice(from, to).join("").length;
+  return [[len(p, 0, pre), a.length - len(p, p.length - suf)], [len(q, 0, pre), b.length - len(q, q.length - suf)]];
 }
 
 /**
