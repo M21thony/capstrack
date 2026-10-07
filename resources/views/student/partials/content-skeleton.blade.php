@@ -70,7 +70,7 @@
   var TABLE = { TABLE: 1, THEAD: 1, TBODY: 1, TFOOT: 1, TR: 1, TD: 1, TH: 1 };
   var MEDIA = { IMG: 1, SVG: 1, CANVAS: 1, VIDEO: 1, IFRAME: 1, INPUT: 1, SELECT: 1, TEXTAREA: 1, BUTTON: 1, PROGRESS: 1, METER: 1 };
   var SKIP = { SCRIPT: 1, STYLE: 1, TEMPLATE: 1, NOSCRIPT: 1, BR: 1, WBR: 1 };
-  var LIMIT = 2500;
+  var LIMIT = 5000;
 
   function visibleColour(colour) {
     var match = /rgba?\(([^)]+)\)/.exec(colour || '');
@@ -94,12 +94,22 @@
     return SIDES.map(function (side) { return edged(style, side) ? '1px' : '0'; }).join(' ');
   }
 
+  // How many of an element's children hold words: a row like "Team name -
+  // Alpha" or a tile like "25 / Total students" is a small card with lines
+  // in it, where a badge holding one word is a single block.
+  function worded(element) {
+    var found = 0;
+    for (var child = element.firstElementChild; child; child = child.nextElementSibling) {
+      if (child.textContent.trim() !== '') found++;
+    }
+    return found;
+  }
+
   function build() {
     var content = document.querySelector('.main > .content');
     if (!content) return root.classList.remove('csk-hide');
 
     var box = content.getBoundingClientRect();
-    var reach = box.bottom + box.height;
     var originX = box.left - content.scrollLeft;
     var originY = box.top - content.scrollTop;
     var layer = document.createElement('div');
@@ -144,7 +154,6 @@
       if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0 || style.position === 'fixed') return;
 
       var rect = element.getBoundingClientRect();
-      if (rect.top > reach || rect.bottom < box.top - box.height) return;
       var sized = rect.width >= 2 && rect.height >= 2;
       var radius = style.borderRadius || '0';
       var tag = element.tagName.toUpperCase();
@@ -171,9 +180,10 @@
       if (sized && (filled || bordered || lifted)) {
         // Badges, pills, chips, small buttons and bars are one solid block;
         // anything larger - or holding buttons of its own, like a row of
-        // tabs - is a card, drawn in place with its own contents.
+        // tabs, or several pieces of words - is a card, drawn in place with
+        // its own contents.
         var small = (rect.height <= 56 && rect.width <= 360) || rect.height <= 14 || (tag === 'A' && rect.height <= 64);
-        if (small && tag !== 'TABLE' && (tag === 'A' || !element.querySelector('button, a, input, select, textarea, [role="button"]'))) {
+        if (small && tag !== 'TABLE' && (tag === 'A' || !(element.querySelector('button, a, input, select, textarea, [role="button"]') || worded(element) >= 2))) {
           draw('csk-bone', rect.left, rect.top, rect.width, rect.height, radius === '0px' ? '6px' : radius);
           return;
         }
@@ -203,6 +213,19 @@
     root.classList.remove('csk-hide');
 
     content.addEventListener('scroll', follow, { passive: true });
+    // The whole page is drawn, down to its end, so it can be scrolled while
+    // it loads: the wheel, or a finger, over the skeleton scrolls the
+    // content beneath.
+    cover.addEventListener('wheel', function (event) {
+      content.scrollBy(event.deltaX, event.deltaY);
+    }, { passive: true });
+    var fingerY = null;
+    cover.addEventListener('touchstart', function (event) { fingerY = event.touches[0].clientY; }, { passive: true });
+    cover.addEventListener('touchmove', function (event) {
+      if (fingerY === null) return;
+      content.scrollBy(0, fingerY - event.touches[0].clientY);
+      fingerY = event.touches[0].clientY;
+    }, { passive: true });
 
     // The page underneath is already drawn: the skeleton stays long enough
     // to be seen loading, and until the pictures in view

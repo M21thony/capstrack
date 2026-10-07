@@ -85,6 +85,16 @@ class StudentContentSkeletonTest extends TestCase
         $this->assertStringContainsString('window.contentSkeleton.seen(', $source);
     }
 
+    /** The whole page is drawn, down to its end, and can be scrolled while it loads. */
+    public function test_the_whole_page_is_drawn_and_can_be_scrolled_while_it_loads(): void
+    {
+        $html = $this->studentPage();
+
+        $this->assertStringNotContainsString('var reach', $html);
+        $this->assertStringContainsString("cover.addEventListener('wheel', function (event) {", $html);
+        $this->assertStringContainsString("cover.addEventListener('touchmove', function (event) {", $html);
+    }
+
     /** Table cells are never solid blocks: the words in them are lines, as anywhere else. */
     public function test_table_cells_are_drawn_as_lines_not_blocks(): void
     {
