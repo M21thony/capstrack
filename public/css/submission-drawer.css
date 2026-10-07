@@ -55,6 +55,8 @@ dialog.up::backdrop{background:rgba(15,16,22,.5)}
   padding:12px 16px;border-top:1px solid var(--border);background:var(--bg3,#fafbfc);
 }
 .up-loading{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px;color:var(--text3)}
+/* Why Send is greyed out, beside it. */
+.up-why{margin-right:auto;font-size:12.5px;color:var(--text3)}
 
 .up-btn{
   height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 14px;
@@ -214,6 +216,8 @@ button.up-pill{cursor:pointer}
   .up-head{padding-top:8px}
   .up-x{width:44px;height:44px;margin:-6px -10px 0 0;border:0}
   .up-foot{padding:12px 16px calc(16px + env(safe-area-inset-bottom))}
+  .up-foot{flex-wrap:wrap}
+  .up-why{flex-basis:100%;text-align:center}
   .up-foot .up-btn{flex:1;height:46px;font-size:14px}
   .up-foot .up-btn.primary{flex:2}
   .up-pill{min-height:34px}

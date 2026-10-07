@@ -40,13 +40,17 @@ class SubmissionDrawerMarkupTest extends TestCase
             'file_path' => 'submissions/c1.pdf', 'file_version' => 2, 'document_status' => 'Pending',
         ]);
 
-        $response = $this->actingAs($this->student)->get(route('student.submission'))->assertOk();
+        // Document Submission is part of Documents now.
+        $this->actingAs($this->student)->get(route('student.submission'))->assertRedirect(route('student.documents'));
 
-        $response->assertSee("Your team's submissions", false);
+        $response = $this->actingAs($this->student)->get(route('student.documents'))->assertOk();
+
+        $response->assertSee("Your team's documents", false);
         $response->assertSee('Chapter1_final');
-        $response->assertSee('version 2');
-        $response->assertSee("window.openSubmission('', this)", false);
-        $response->assertSee('Submit a document');
+        $response->assertSee('v2');
+        // A file for no line: no "What is this for?", straight to the file.
+        $response->assertSee("window.openSubmission('none', this)", false);
+        $response->assertSee('Submit a file');
         $response->assertDontSee('id="submission-form-root"', false);
         $response->assertDontSee('id="dropZone"', false);
         $response->assertDontSee('data-open-upload', false);
@@ -55,6 +59,7 @@ class SubmissionDrawerMarkupTest extends TestCase
     public function test_the_old_in_place_form_is_gone(): void
     {
         $this->actingAs($this->student)
+            ->followingRedirects()
             ->get(route('student.submission', ['inline' => 1]), ['X-Requested-With' => 'XMLHttpRequest'])
             ->assertOk()
             ->assertDontSee('id="submission-form-root"', false)
@@ -68,6 +73,7 @@ class SubmissionDrawerMarkupTest extends TestCase
         $response->assertSee('id="upload-config"', false);
         $response->assertSee(json_encode(route('student.submission.plan')), false);
         $response->assertSee(json_encode(route('student.submission.store')), false);
+        $response->assertSee(json_encode(route('student.documents')), false);
         $response->assertSee('id="submission-toast"', false);
         $response->assertDontSee('name="submission-form-url"', false);
         $response->assertDontSee('id="submission-form-root"', false);

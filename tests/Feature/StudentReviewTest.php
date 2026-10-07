@@ -101,10 +101,13 @@ class StudentReviewTest extends TestCase
             'email' => 'nouploads@my.cspc.edu.ph',
         ]);
 
-        $response = $this->actingAs($student, 'web')->get(route('student.review'));
+        // The Review Viewer is part of Documents now.
+        $this->actingAs($student, 'web')->get(route('student.review'))->assertRedirect(route('student.documents'));
+
+        $response = $this->actingAs($student, 'web')->get(route('student.documents'));
 
         $response->assertOk();
-        $response->assertSee('No turned-in reviews yet');
+        $response->assertSee('Nothing sent yet');
         $response->assertDontSee('Reply to Expert');
     }
 
@@ -136,7 +139,11 @@ class StudentReviewTest extends TestCase
             'review_status' => 'To Review',
         ]);
 
-        $response = $this->actingAs($student, 'web')->get(route('student.review'));
+        // A link to the review opens that file on Documents, with its remarks.
+        $this->actingAs($student, 'web')->get(route('student.review', ['review_id' => $reviewedId]))
+            ->assertRedirect(route('student.documents', ['file' => $docId, 'review' => $reviewedId]));
+
+        $response = $this->actingAs($student, 'web')->get(route('student.documents', ['file' => $docId]));
 
         $response->assertOk();
         $response->assertSee('Chapter 3 Final');
@@ -150,9 +157,9 @@ class StudentReviewTest extends TestCase
         $response->assertDontSee('drive.google.com/file/d/DRIVE_FILE_ABC/preview');
         $response->assertDontSee('Reply to Expert');
 
-        $turnedIn = $response->viewData('turnedIn');
-        $this->assertCount(1, $turnedIn);
-        $this->assertSame($reviewedId, $turnedIn->first()['review']->review_id);
+        // The one turned in is read; the pending one only says it is not opened yet.
+        $this->assertSame($reviewedId, $response->viewData('reader')->review->review_id);
+        $response->assertSee('not opened yet');
     }
 
     public function test_does_not_show_another_students_reviews(): void
@@ -171,10 +178,15 @@ class StudentReviewTest extends TestCase
             'reviewed_at' => now(),
         ]);
 
-        $response = $this->actingAs($me, 'web')->get(route('student.review'));
+        $response = $this->actingAs($me, 'web')->get(route('student.documents'));
 
         $response->assertOk();
         $response->assertDontSee('Someone Elses Paper');
+
+        // Nor through a link to it: it opens the list, not their review.
+        $this->actingAs($me, 'web')->get(route('student.review', ['review_id' => 1]))->assertRedirect(route('student.documents'));
+        $this->actingAs($me, 'web')->get(route('student.documents', ['file' => $otherDocId]))
+            ->assertOk()->assertDontSee('Someone Elses Paper');
     }
 
     public function test_pdf_and_remarks_endpoints_reject_another_students_review(): void

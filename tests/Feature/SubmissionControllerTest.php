@@ -96,7 +96,12 @@ class SubmissionControllerTest extends TestCase
         $this->assertSame('not_connected', $review->drive_status);
     }
 
-    public function test_subject_adviser_recipient_resolves_via_matching_admin_department(): void
+    /**
+     * A file for no checklist line is not the CaPSA's to read: what they want
+     * to check, they add as a line. Even with a CaPSA for the section, asking
+     * for them sends it to nobody.
+     */
+    public function test_a_file_for_no_line_is_not_sent_to_the_capsa(): void
     {
         Storage::fake('local');
 
@@ -132,14 +137,11 @@ class SubmissionControllerTest extends TestCase
             'recipients' => ['subject_adviser'],
         ]);
 
-        $response->assertOk();
-        $response->assertJson(['success' => true]);
-        $response->assertJsonFragment(['role' => 'subject_adviser']);
+        $response->assertStatus(422);
+        $response->assertJson(['message' => 'Pick at least one person to send this to.']);
 
-        $review = CapstoneDocumentReview::first();
-        $this->assertNotNull($review, 'A review row should have been created once the subject adviser resolved.');
-        $this->assertSame($adminId, $review->expert_id);
-        $this->assertSame('not_connected', $review->drive_status);
+        $this->assertSame(0, CapstoneDocumentReview::where('expert_id', $adminId)->count());
+        $this->assertSame(0, CapstoneDocument::count());
     }
 
     public function test_subject_adviser_folders_endpoint_returns_empty_when_program_is_unset(): void

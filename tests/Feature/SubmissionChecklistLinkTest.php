@@ -180,8 +180,13 @@ class SubmissionChecklistLinkTest extends TestCase
     {
         $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
 
+        // An old link to Document Submission lands on Documents, still opening on that line.
         $this->actingAs($this->student)
             ->get(route('student.submission', ['item' => $draft->id]))
+            ->assertRedirect(route('student.documents', ['item' => $draft->id]));
+
+        $this->actingAs($this->student)
+            ->get(route('student.documents', ['item' => $draft->id]))
             ->assertOk()
             ->assertSee('data-open-upload="'.$draft->id.'"', false);
 

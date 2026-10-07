@@ -156,7 +156,7 @@ class SubmissionRevisionCheckTest extends TestCase
 
         $fileId = \DB::table('capstone_documents')->value('file_id');
 
-        $this->actingAs($this->student, 'web')->get(route('student.review', ['review_id' => $review->review_id]))
+        $this->actingAs($this->student, 'web')->followingRedirects()->get(route('student.review', ['review_id' => $review->review_id]))
             ->assertOk()
             ->assertSee("window.openSubmission('{$line->id}', this, {$fileId})", false)
             ->assertSee('Submit 1st revision')
@@ -194,7 +194,7 @@ class SubmissionRevisionCheckTest extends TestCase
             'verdict' => CapstoneDocumentReview::NEEDS_REVISION, 'reviewed_at' => now(), 'verdict_at' => now(),
         ]);
 
-        $this->actingAs($this->student, 'web')->get(route('student.review', ['review_id' => $review->review_id]))
+        $this->actingAs($this->student, 'web')->followingRedirects()->get(route('student.review', ['review_id' => $review->review_id]))
             ->assertOk()
             ->assertSee("window.openSubmission('', this, {$fileId})", false);
     }

@@ -16,7 +16,8 @@ use Illuminate\Support\Collection;
  * A first upload starts from the line's rule - Chapters 1-2 go to the
  * adviser (CaPA) and the CaPSA, Chapter 3 to the adviser and the consultant,
  * the manuscripts to the defense panel as well - and the team may add or
- * drop an optional reviewer. Any later version goes back to exactly the
+ * drop an optional reviewer. A file for no line has no one ticked: the team
+ * picks from the CaPA, consultant and grammarian. Any later version goes back to exactly the
  * experts who got the version before it, with nothing to pick: advisers
  * found revisions landing with somebody who had never seen the first one.
  */
@@ -64,11 +65,13 @@ class SubmissionRecipients
             '5' => ['adviser' => [self::ON, null], 'subject_adviser' => $formatOnly],
             'revised' => ['panel' => [self::ON, null], 'adviser' => [self::ON, null], 'subject_adviser' => [self::ON, null]],
             'final' => ['panel' => [self::ON, null], 'adviser' => [self::ON, null], 'subject_adviser' => [self::ON, null], 'grammarian' => [self::ON, null]],
+            // A file that is not a checklist line: the team picks who reads it,
+            // with nobody ticked for them. The CaPSA is not offered - what they
+            // want to check, they add as a line on Progress Tracker.
             default => [
-                'adviser' => [self::ON, null],
+                'adviser' => [self::OPTIONAL, null],
                 'consultant' => [self::OPTIONAL, null],
                 'grammarian' => [self::OPTIONAL, null],
-                'subject_adviser' => [self::OPTIONAL, null],
             ],
         };
     }

@@ -349,7 +349,8 @@ class PdfAnnotationController extends Controller
 
         // The team had no way of knowing a review had come back other than
         // opening Submission and checking. Only on finishing - reopening a
-        // review is the reviewer's own housekeeping.
+        // review is the reviewer's own housekeeping. It opens Documents on
+        // that file with this reviewer's remarks.
         if ($finishing) {
             $document = $review->document;
             $team = StudentTeam::for($document?->student_id);
@@ -360,7 +361,7 @@ class PdfAnnotationController extends Controller
                 'Review finished',
                 'Your '.e(str_replace('_', ' ', $review->role)).' finished reviewing <strong>'
                     .e($document?->file_name ?? 'your document').'</strong> - '.e($review->verdict).'.',
-                route('student.submission'),
+                $document ? route('student.documents', ['file' => $document->file_id, 'review' => $review->review_id]) : route('student.documents'),
                 ['review_id' => $review->review_id],
             );
         }

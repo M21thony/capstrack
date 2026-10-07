@@ -413,7 +413,7 @@ class SubmissionController extends Controller
             'who' => 'Your '.(SubmissionRecipients::LABELS[$review->role] ?? 'reviewer'),
             'count' => $remarks->count(),
             'first' => $remarks->first() ? Str::limit(trim($remarks->first()), 90) : null,
-            'url' => route('student.review', ['review_id' => $review->review_id]),
+            'url' => route('student.documents', ['file' => $review->file_id, 'review' => $review->review_id]),
         ];
     }
 
@@ -521,16 +521,12 @@ class SubmissionController extends Controller
     }
 
     /**
-     * The Document Submission page: the team's submissions, and a button that
-     * opens the same small pop-up every other upload uses. Opened with
-     * ?item=, the pop-up opens on that line straight away.
+     * Document Submission is part of Documents now. Opened with ?item=, the
+     * pop-up still opens on that line straight away.
      */
-    public function create(Request $request)
+    public function create(Request $request): RedirectResponse
     {
-        return view('student.submission', [
-            'submitted' => $this->submittedByTeam(Auth::id()),
-            'selectedItemId' => (int) $request->query('item') ?: null,
-        ]);
+        return redirect()->route('student.documents', array_filter(['item' => (int) $request->query('item') ?: null]));
     }
 
     /**
@@ -614,40 +610,6 @@ class SubmissionController extends Controller
                     },
                 ]))
             ->values();
-    }
-
-    /**
-     * What the team has sent, newest first: each file, the requirement it was
-     * for, its version, and where it stands.
-     *
-     * @return Collection<int, object>
-     */
-    private function submittedByTeam(int $studentId): Collection
-    {
-        return CapstoneDocument::forTeamOf($studentId)
-            ->with(['deliverable', 'reviews'])
-            ->latest('created_at')
-            ->take(50)
-            ->get()
-            ->map(function (CapstoneDocument $document) {
-                $verdicts = $document->reviews->pluck('verdict')->filter();
-
-                return (object) [
-                    'id' => $document->file_id,
-                    'canUnsubmit' => $document->canBeUnsubmitted(),
-                    'name' => $document->file_name,
-                    'for' => $document->deliverable?->title ?? ($document->chapter ?: 'Feedback only'),
-                    'version' => (int) $document->file_version,
-                    'round' => $document->roundLabel(),
-                    'sent' => $document->created_at,
-                    'status' => match (true) {
-                        $verdicts->contains(CapstoneDocumentReview::NEEDS_REVISION) => ['Revision asked', 'revise'],
-                        $verdicts->isNotEmpty() && $verdicts->every(fn ($v) => $v === CapstoneDocumentReview::APPROVED) => ['Approved', 'ok'],
-                        $document->reviews->isNotEmpty() => ['With reviewers', ''],
-                        default => ['Sent', ''],
-                    },
-                ];
-            });
     }
 
     private static function ordinal(int $n): string

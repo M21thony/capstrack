@@ -87,15 +87,26 @@ class ReaderScreensTest extends TestCase
 
     public function test_the_team_sees_the_decision_and_is_sent_to_submit_the_next_revision(): void
     {
+        $fileId = DB::table('capstone_documents')->value('file_id');
+
+        // On the list, the file says what is asked of it.
         $this->actingAs($this->student, 'web')
-            ->get(route('student.review'))
+            ->get(route('student.documents'))
+            ->assertOk()
+            ->assertSee('Revision asked')
+            ->assertSee('Submit 2nd revision')
+            ->assertSee("openSubmission('{$this->item->id}', this, {$fileId})", false);
+
+        // Opened, it reads with the reviewer's decision and remarks.
+        $this->actingAs($this->student, 'web')
+            ->get(route('student.documents', ['file' => $fileId]))
             ->assertOk()
             ->assertSee('Chapter2_final')
             ->assertSee('Needs revision')
             ->assertSee('Submit 2nd revision')
-            ->assertSee("openSubmission('{$this->item->id}', this, ".DB::table('capstone_documents')->value('file_id').')', false)
+            ->assertSee("openSubmission('{$this->item->id}', this, {$fileId})", false)
             ->assertSee('Add three local studies.')
-            ->assertSee('Consultant · still reviewing');
+            ->assertSeeText('Consultant · not opened yet');
     }
 
     public function test_remarks_carry_their_section_to_the_viewer(): void

@@ -109,11 +109,13 @@ class TeamSeesItsOwnSubmissionsTest extends TestCase
         $this->reviewedDocumentBy($this->uploader);
 
         $html = $this->actingAs($this->teammate, 'web')
-            ->get(route('student.review'))
+            ->get(route('student.documents'))
             ->assertOk()
             ->getContent();
 
         $this->assertStringContainsString('Chapter1_2026-09-07.pdf', $html);
+        // Who sent it is on the row, for the rest of the team to see.
+        $this->assertStringContainsString(trim($this->uploader->f_name.' '.$this->uploader->l_name), $html);
     }
 
     public function test_a_teammate_can_open_the_remarks(): void
@@ -153,7 +155,7 @@ class TeamSeesItsOwnSubmissionsTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($outsider, 'web')
-            ->get(route('student.review'))
+            ->get(route('student.documents'))
             ->assertOk()
             ->assertDontSee('Chapter1_2026-09-07.pdf');
     }

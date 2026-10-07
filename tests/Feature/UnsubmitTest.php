@@ -72,7 +72,7 @@ class UnsubmitTest extends TestCase
     private function unsubmit(int $fileId): TestResponse
     {
         return $this->actingAs($this->student, 'web')
-            ->from(route('student.submission'))
+            ->from(route('student.documents'))
             ->delete(route('student.submission.unsubmit', $fileId));
     }
 
@@ -82,7 +82,7 @@ class UnsubmitTest extends TestCase
         $document = $review->document;
 
         $this->unsubmit($document->file_id)
-            ->assertRedirect(route('student.submission'))
+            ->assertRedirect(route('student.documents'))
             ->assertSessionHas('status');
 
         $this->assertNull(CapstoneDocument::find($document->file_id));
@@ -144,7 +144,7 @@ class UnsubmitTest extends TestCase
         $this->sent(1)->update(['review_status' => CapstoneDocumentReview::REVIEWED]);
         $open = $this->sent(2);
 
-        $html = $this->actingAs($this->student, 'web')->get(route('student.submission'))->assertOk()->getContent();
+        $html = $this->actingAs($this->student, 'web')->get(route('student.documents'))->assertOk()->getContent();
 
         $this->assertSame(1, substr_count($html, '>Unsubmit</button>'));
         $this->assertStringContainsString(route('student.submission.unsubmit', $open->file_id), $html);
@@ -152,5 +152,11 @@ class UnsubmitTest extends TestCase
         $this->assertStringNotContainsString('onsubmit=', $html);
         $this->assertStringContainsString("title: 'Unsubmit this file?'", $html);
         $this->assertStringContainsString('id="ad-names"', $html);
+
+        // Opened, an upload nobody has started on can be taken back from there too.
+        $this->actingAs($this->student, 'web')->get(route('student.documents', ['file' => $open->file_id]))
+            ->assertOk()->assertSee(route('student.submission.unsubmit', $open->file_id), false);
+        $this->actingAs($this->student, 'web')->get(route('student.documents', ['file' => $open->file_id - 1]))
+            ->assertOk()->assertDontSee(route('student.submission.unsubmit', $open->file_id - 1), false);
     }
 }

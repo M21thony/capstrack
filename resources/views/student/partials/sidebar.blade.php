@@ -119,16 +119,11 @@
       @endif
     </a>
     <div class="nav-section">Documents</div>
-    {{-- Its own page: the form, and what the team has already sent. A line's
-         Upload button on Progress, or Submit revision in the Review Viewer,
-         opens the form in place instead. --}}
-    <a href="{{ route('student.submission') }}" data-tour-target="student.submission" class="nav-item {{ request()->routeIs('student.submission') ? 'active' : '' }}">
+    {{-- What the team has sent and what its reviewers said, on one page:
+         Document Submission and Review Viewer used to be two. --}}
+    <a href="{{ route('student.documents') }}" data-tour-target="student.documents" class="nav-item {{ request()->routeIs('student.documents', 'student.submission', 'student.review') ? 'active' : '' }}">
       <x-portal-icon name="file-up" />
-      Document Submission
-    </a>
-    <a href="{{ route('student.review') }}" data-tour-target="student.review" class="nav-item {{ request()->routeIs('student.review') ? 'active' : '' }}">
-      <x-portal-icon name="feedback" />
-      Review Viewer
+      Documents
     </a>
     <a href="{{ route('student.duplication') }}" data-tour-target="student.duplication" class="nav-item {{ request()->routeIs('student.duplication') ? 'active' : '' }}">
       <x-portal-icon name="similarity" />
@@ -404,7 +399,7 @@
       'check' => route('student.submission.warnings'),
       'store' => route('student.submission.store'),
       'folders' => route('student.submission.subject-adviser-folders'),
-      'review' => route('student.review'),
+      'documents' => route('student.documents'),
       'csrf' => csrf_token(),
   ];
 @endphp

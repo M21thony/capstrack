@@ -60,6 +60,7 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\Student\ArchiveController as StudentArchiveController;
 use App\Http\Controllers\Student\DefenseScoresController;
+use App\Http\Controllers\Student\DocumentsController;
 use App\Http\Controllers\Student\ExpertController as StudentExpertController;
 use App\Http\Controllers\Student\ExpertEvaluationController;
 use App\Http\Controllers\Student\PortalTourController;
@@ -486,6 +487,10 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/team', [TeamController::class, 'index'])->name('student.team');
             Route::get('/experts', [StudentExpertController::class, 'index'])->name('student.experts');
             Route::post('/experts/evaluations', [ExpertEvaluationController::class, 'store'])->name('student.evaluations.store');
+            // Document Submission and Review Viewer in one: the team's files, each opening with its remarks.
+            Route::get('/documents', [DocumentsController::class, 'index'])->name('student.documents');
+            Route::get('/documents/{document}/file', [DocumentsController::class, 'file'])->name('student.documents.file');
+            Route::get('/documents/{document}/diagrams', [DocumentsController::class, 'diagrams'])->name('student.documents.diagrams');
             Route::get('/submission', [SubmissionController::class, 'create'])->name('student.submission');
             // Handles the actual file upload + multi-recipient Drive delivery
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');

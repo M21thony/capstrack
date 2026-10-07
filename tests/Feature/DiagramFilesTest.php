@@ -220,7 +220,7 @@ class DiagramFilesTest extends TestCase
             ->assertOk()->assertExactJson([['name' => 'dfd.drawio', 'xml' => self::DRAWIO]]);
 
         // The review page tells the viewer where to find them.
-        $this->actingAs($this->student, 'web')->get(route('student.review', ['review_id' => $review->review_id]))
+        $this->actingAs($this->student, 'web')->followingRedirects()->get(route('student.review', ['review_id' => $review->review_id]))
             ->assertOk()->assertSee('data-diagrams-url="'.route('student.review.diagrams', $review->review_id).'"', false);
 
         $outsider = Student::factory()->withCompleteProfile()->create();
@@ -233,7 +233,7 @@ class DiagramFilesTest extends TestCase
         $review = $this->version(1, null, $this->adviser());
         $review->update(['review_status' => CapstoneDocumentReview::REVIEWED, 'reviewed_at' => now()]);
 
-        $this->actingAs($this->student, 'web')->get(route('student.review', ['review_id' => $review->review_id]))
+        $this->actingAs($this->student, 'web')->followingRedirects()->get(route('student.review', ['review_id' => $review->review_id]))
             ->assertOk()->assertSee('data-diagrams-url=""', false);
     }
 
@@ -310,7 +310,7 @@ class DiagramFilesTest extends TestCase
         $review = $this->version(1, [['name' => 'dfd.drawio', 'path' => 'submissions/ch3-v1.pdf']], $this->adviser());
         $review->update(['review_status' => CapstoneDocumentReview::REVIEWED, 'reviewed_at' => now()]);
 
-        $this->actingAs($this->student, 'web')->get(route('student.review', ['review_id' => $review->review_id]))
+        $this->actingAs($this->student, 'web')->followingRedirects()->get(route('student.review', ['review_id' => $review->review_id]))
             ->assertOk()
             ->assertSee('data-pdf-url=""', false)
             ->assertSee('data-diagrams-url="'.route('student.review.diagrams', $review->review_id).'"', false);

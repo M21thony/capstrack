@@ -1,11 +1,11 @@
 /*
  * The upload pop-up. Every upload a student makes opens this one small
- * window over the page they are on - an Upload on a Progress line, Submit
- * in the Review Viewer, the Document Submission page, the phone's Submit.
+ * window over the page they are on - an Upload on a Progress line, Submit a
+ * file or Submit revision on Documents, the phone's Submit.
  *
- *   1  Choose file   the drop area, and who it goes to
- *   2  Check it      page one, quick checks, a full preview on demand
- *   3  Send          progress, then who got it
+ * It is one screen: the file (page one, quick checks, a full preview on
+ * demand), who it goes to, and Send. The phone's Submit keeps the three
+ * steps it had - choose file, check it, send - with its "What is this for?".
  *
  * Who it goes to comes from the server (SubmissionRecipients): a first
  * upload starts from its line's rule and the team may add or drop an
@@ -85,9 +85,11 @@ function problemWith(file, accept) {
 let S = null; // the open upload's state
 let dialog = null;
 
-function freshState(itemId, from, revises) {
+function freshState(itemId, from, revises, classic) {
   return {
     itemId: itemId || '',
+    // The phone's Submit: the three steps, as it always was.
+    classic: !!classic,
     // The upload a "Submit revision" is the next version of.
     revises: revises || null,
     from,
@@ -119,11 +121,11 @@ function freshState(itemId, from, revises) {
   };
 }
 
-export async function openSubmission(itemId, from, revises) {
+export async function openSubmission(itemId, from, revises, { classic = false } = {}) {
   if (!CONFIG.plan) return;
   if (dialog?.open) closeNow();
 
-  S = freshState(itemId, from, revises);
+  S = freshState(itemId, from, revises, classic);
   dialog = document.createElement('dialog');
   dialog.className = 'up';
   dialog.setAttribute('aria-labelledby', 'up-title');
@@ -436,6 +438,7 @@ function subText() {
 }
 
 function stepsHtml() {
+  if (!S.classic) return '';
   const at = { pick: 1, check: 2, sending: 3, failed: 3 }[S.step];
   if (!at) return '';
   const names = ['Choose file', 'Check it', 'Send'];
@@ -511,14 +514,16 @@ function goesToHtml() {
   const people = plan.people || [];
   const paper = !!plan.item?.paper;
   const locked = plan.locked || paper;
+  // One screen: the names are there to tap, no Change first.
+  const editing = S.editing || !S.classic;
   let right = '';
   if (plan.locked && !paper && plan.version > 1) right = `<span class="up-muted">same as version ${plan.version - 1}</span>`;
-  else if (!locked && people.some((p) => p.available)) right = linkBtn(S.editing ? 'Done' : 'Change', 'edit', ` aria-expanded="${S.editing}"`);
+  else if (S.classic && !locked && people.some((p) => p.available)) right = linkBtn(S.editing ? 'Done' : 'Change', 'edit', ` aria-expanded="${S.editing}"`);
 
   let pills;
   if (locked) {
     pills = people.map((p) => pill(p, { locked: true })).join('');
-  } else if (S.editing) {
+  } else if (editing) {
     pills = people.map((p) => pill(p, { toggle: true })).join('');
   } else {
     const on = people.filter((p) => p.available && S.picked.has(p.role));
@@ -528,7 +533,7 @@ function goesToHtml() {
   let hint = '';
   if (paper) hint = 'A signed paper always goes to your CaPSA to check.';
   else if (plan.locked) hint = 'A revision goes back to the people who read the last version.';
-  else if (S.editing) hint = 'Tap a name to add or remove it.' + (people.some((p) => p.role === 'subject_adviser' && p.note === 'format check') ? ' Your CaPSA only checks this chapter when they ask to check the format.' : '');
+  else if (S.classic && S.editing) hint = 'Tap a name to add or remove it.' + (people.some((p) => p.role === 'subject_adviser' && p.note === 'format check') ? ' Your CaPSA only checks this chapter when they ask to check the format.' : '');
   if (!paper && !people.some((p) => p.available)) hint = 'Nobody is assigned to your team yet, so there is no one to send it to.';
 
   let folder = '';
@@ -645,12 +650,15 @@ function bodyAndFoot() {
     case 'pick':
       return [
         lineSelect() + remarkHtml() + (needsLine() ? '' : dropHtml()) + (needsLine() ? '' : goesToHtml()),
-        btn('Cancel', 'close') + btn('Next', 'next', { primary: true, disabled: true, icon: 'right' }),
+        btn('Cancel', 'close') + (S.classic
+          ? btn('Next', 'next', { primary: true, disabled: true, icon: 'right' })
+          : btn(sendLabel(), 'send', { primary: true, disabled: true, icon: 'send' })),
       ];
     case 'check':
       return [
         fileCardHtml() + checkNotes() + diagramsHtml() + goesToHtml(),
-        btn('Back', 'back') + btn(sendLabel(), 'send', { primary: true, disabled: !canSend(), icon: 'send' }),
+        (S.classic ? btn('Back', 'back') : whyNot() + btn('Cancel', 'close'))
+          + btn(sendLabel(), 'send', { primary: true, disabled: !canSend(), icon: 'send' }),
       ];
     case 'sending':
       return [
@@ -677,11 +685,17 @@ function bodyAndFoot() {
       return [
         `<div class="up-sent"><span class="up-sent-ic">${svg('check', 22, 2.8)}</span><b>${S.plan?.item?.paper ? 'Handed in' : 'Sent'}</b><p>${what}</p></div>`
           + (noDrive.length ? note('info', `${noDrive.map((r) => esc(r.name || r.label)).join(', ')} ${noDrive.length === 1 ? 'reads' : 'read'} it in CapsTrack, not Google Drive.`) : ''),
-        (CONFIG.review && !S.plan?.item?.paper ? `<a class="up-btn" href="${esc(CONFIG.review)}">${svg('eye', 14)}Open Review Viewer</a>` : '') + btn('Done', 'done', { primary: true }),
+        (CONFIG.documents && !S.plan?.item?.paper ? `<a class="up-btn" href="${esc(CONFIG.documents)}">${svg('eye', 14)}Open Documents</a>` : '') + btn('Done', 'done', { primary: true }),
       ];
     }
   }
   return ['', ''];
+}
+
+/** Why Send is greyed out, when the file itself is fine. */
+function whyNot() {
+  if (canSend() || !S.plan || S.checking || S.broken || S.same || S.plan.item?.paper || S.plan.locked) return '';
+  return '<span class="up-why">Choose who it goes to.</span>';
 }
 
 function needsLine() {
@@ -949,8 +963,8 @@ try {
 } catch { /* no storage */ }
 
 window.openSubmission = openSubmission;
-// The phone's Submit still calls it by its old name.
-window.openSubmissionDrawer = openSubmission;
+// The phone's Submit still calls it by its old name, and keeps its three steps.
+window.openSubmissionDrawer = (itemId, from) => openSubmission(itemId, from, null, { classic: true });
 window.submissionToast = showToast;
 
 // The Document Submission page opened for one line (?item=) opens straight onto it.

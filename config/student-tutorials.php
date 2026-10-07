@@ -28,22 +28,13 @@ return [
             'Track pending and approved expert assignments.',
         ],
     ],
-    'submission' => [
-        'title' => 'Document Submission',
-        'summary' => 'Upload capstone documents for adviser review with version tracking.',
+    'documents' => [
+        'title' => 'Documents',
+        'summary' => 'Send documents to your reviewers and read their remarks, all on one page.',
         'steps' => [
-            'Choose the document type and add a short message to your adviser.',
-            'Upload PDF files within the size limit.',
-            'Follow the submission guide before sending final drafts.',
-        ],
-    ],
-    'review' => [
-        'title' => 'Review Viewer',
-        'summary' => 'Read adviser feedback and annotations on submitted documents.',
-        'steps' => [
-            'Open a document to view inline highlights and comments.',
-            'Filter by chapter or revision when available.',
-            'Address feedback before your next submission.',
+            'Press Submit a file, choose who it goes to, and check the preview before sending.',
+            'Each file lists every version, who sent it, and where each reviewer is.',
+            'Press View to open it with your reviewer\'s remarks beside it.',
         ],
     ],
     'duplication' => [

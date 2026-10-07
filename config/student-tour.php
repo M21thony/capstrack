@@ -52,8 +52,8 @@ return [
         [
             'key' => 'documents',
             'label' => 'Send chapters, read feedback',
-            'body' => 'Upload your documents here. Your experts\' comments show up in Review Viewer.',
-            'target' => ['student.submission', 'student.review'],
+            'body' => 'Send your documents here, and open any of them to read your experts\' comments.',
+            'target' => ['student.documents'],
         ],
         [
             'key' => 'progress',

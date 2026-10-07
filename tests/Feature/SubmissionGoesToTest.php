@@ -172,6 +172,35 @@ class SubmissionGoesToTest extends TestCase
         $this->assertCount(5, $reviews);
     }
 
+    /** A file for no line: the team picks who reads it, with nobody ticked and no CaPSA to pick. */
+    public function test_a_file_for_no_line_has_nobody_ticked_and_no_capsa(): void
+    {
+        $plan = $this->plan(null);
+
+        $this->assertSame(['adviser', 'consultant', 'grammarian'], array_keys($plan));
+        $this->assertSame([false, false, false], array_column($plan, 'on'));
+        $this->assertSame([true, true, true], array_column($plan, 'available'));
+    }
+
+    public function test_a_file_for_no_line_goes_only_to_who_the_team_picked(): void
+    {
+        $this->actingAs($this->student)->postJson(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->createWithContent('notes.pdf', 'notes'),
+            'recipients' => ['consultant', 'subject_adviser'],
+        ])->assertOk();
+
+        $this->assertSame(['consultant:'.$this->experts['consultant']->expert_id], $this->reviewsOfLatest());
+    }
+
+    public function test_a_file_for_no_line_with_nobody_picked_is_not_sent(): void
+    {
+        $this->actingAs($this->student)->postJson(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->createWithContent('notes.pdf', 'notes'),
+        ])->assertStatus(422)->assertJson(['message' => 'Pick at least one person to send this to.']);
+
+        $this->assertSame(0, CapstoneDocument::count());
+    }
+
     public function test_a_first_upload_only_goes_to_roles_its_line_offers(): void
     {
         $this->send($this->chapter('1'), ['adviser', 'grammarian'])->assertOk();

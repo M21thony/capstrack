@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
-use App\Models\PdfRemark;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -28,39 +28,20 @@ class StudentReviewController extends Controller
         );
     }
 
-    public function index(Request $request)
+    /**
+     * The Review Viewer is part of Documents now. A link to a review - a
+     * notification's, an email's - opens that file there with that
+     * reviewer's remarks; anything else opens the list.
+     */
+    public function index(Request $request): RedirectResponse
     {
-        $studentId = Auth::id();
+        $review = CapstoneDocumentReview::find($request->integer('review_id'));
 
-        // Every document anybody on this team uploaded, with all its reviews -
-        // turned in or not, since the picker also says who is still reviewing.
-        $documents = CapstoneDocument::forTeamOf($studentId)
-            ->with([
-                'deliverable',
-                'reviews' => fn ($q) => $q->with('expert')->orderByDesc('reviewed_at'),
-            ])
-            ->orderByDesc('created_at')
-            ->get();
+        if ($review && CapstoneDocument::forTeamOf(Auth::id())->whereKey($review->file_id)->exists()) {
+            return redirect()->route('student.documents', ['file' => $review->file_id, 'review' => $review->review_id]);
+        }
 
-        // The reviews actually turned in, newest document first - a document
-        // can have more than one, since it may go to several reviewer roles.
-        $turnedIn = $documents
-            ->flatMap(fn ($document) => $document->reviews
-                ->where('review_status', CapstoneDocumentReview::REVIEWED)
-                ->map(fn ($review) => ['document' => $document, 'review' => $review]))
-            ->values();
-
-        $selectedReviewId = (int) $request->query('review_id', 0);
-        $selected = $turnedIn->firstWhere('review.review_id', $selectedReviewId) ?? $turnedIn->first();
-
-        return view('student.review', [
-            'turnedIn' => $turnedIn,
-            'selected' => $selected,
-            'documents' => $documents->filter(fn ($d) => $d->reviews->isNotEmpty())->values(),
-            'general' => $selected ? $this->generalRemarks($selected['review']) : [],
-            'decision' => $selected ? $this->decision($selected['document'], $selected['review']) : null,
-            'others' => $selected ? $this->otherReviews($selected['document'], $selected['review']) : [],
-        ]);
+        return redirect()->route('student.documents');
     }
 
     public static function roleLabel(?string $role): string
@@ -81,56 +62,6 @@ class StudentReviewController extends Controller
             $review->verdict === CapstoneDocumentReview::NEEDS_REVISION => 'Needs revision',
             default => 'Reviewed',
         };
-    }
-
-    /** @return array<int, array{id: int, text: string, section: ?string}> */
-    private function generalRemarks(CapstoneDocumentReview $review): array
-    {
-        return PdfRemark::where('review_id', $review->review_id)
-            ->where('is_general', true)
-            ->orderBy('created_at')
-            ->get(['id', 'comment', 'section'])
-            ->filter(fn ($r) => filled($r->comment))
-            ->map(fn ($r) => ['id' => $r->id, 'text' => $r->comment, 'section' => $r->section])
-            ->values()
-            ->all();
-    }
-
-    /** What the reviewer decided, and what the team does next. */
-    private function decision(CapstoneDocument $document, CapstoneDocumentReview $review): array
-    {
-        $item = $document->deliverable;
-
-        return [
-            'verdict' => $review->verdict,
-            'reviewer' => $review->expert?->name ?? 'your reviewer',
-            'role' => self::roleLabel($review->role),
-            'date' => $review->reviewed_at?->format('M j'),
-            'round' => $document->roundLabel(),
-            'next' => $document->nextRoundLabel(),
-            'due' => $item?->due_date?->format('M j'),
-            'requirement' => $item?->title,
-            // The submit panel opens on this page; it needs the line, not a URL.
-            'itemId' => $item?->id,
-            // With no line, the file is still this upload's next version, and
-            // is checked against it.
-            'fileId' => $document->file_id,
-        ];
-    }
-
-    /** The same document's other reviewers, one click away once they have turned theirs in. */
-    private function otherReviews(CapstoneDocument $document, CapstoneDocumentReview $selected): array
-    {
-        return $document->reviews
-            ->reject(fn ($r) => $r->review_id === $selected->review_id)
-            ->map(fn ($r) => [
-                'label' => self::roleLabel($r->role).' · '.mb_strtolower(self::verdictLabel($r)),
-                'url' => $r->review_status === CapstoneDocumentReview::REVIEWED
-                    ? route('student.review', ['review_id' => $r->review_id])
-                    : null,
-            ])
-            ->values()
-            ->all();
     }
 
     /**
