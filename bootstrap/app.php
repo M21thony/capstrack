@@ -10,6 +10,7 @@ use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\PreventBackHistory;
 use App\Http\Middleware\PreventRequestForgery;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\ServerTiming;
 use App\Http\Middleware\TrackExpertActivity;
 use App\Http\Middleware\TrackStudentActivity;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -49,6 +50,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // On every response: web pages, the API, files and the health check.
         $middleware->append(SecurityHeaders::class);
+
+        // Local only: where each request's time went, in the browser's Network > Timing.
+        $middleware->prepend(ServerTiming::class);
 
         // Thirty idle minutes and anyone signed in, on any portal, is signed out.
         $middleware->web(append: [EndIdleSession::class], replace: [LaravelPreventRequestForgery::class => PreventRequestForgery::class]);
