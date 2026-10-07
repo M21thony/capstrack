@@ -90,7 +90,8 @@ export function useVersionDiff(currentUrl, base) {
   const [state, setState] = useState({ status: "idle" });
 
   useEffect(() => {
-    if (!currentUrl || !base) { setState({ status: "idle" }); return undefined; }
+    // A diagram sent as itself has no words to line up; its diagram compare shows what changed.
+    if (!currentUrl || !base?.file) { setState({ status: "idle" }); return undefined; }
     let live = true;
     setState({ status: "loading" });
     Promise.all([

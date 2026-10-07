@@ -205,8 +205,10 @@ function pictureAsPage({ src, width, height }) {
  * numPages stays the PDF's own.
  */
 export function withDiagramPages(pdf, pages) {
-  if (!pdf || !pages.length) return pdf;
+  if (!pages.length) return pdf;
   const extra = pages.map((p) => pictureAsPage(p.plain));
+  // A diagram sent as itself: its pages are the whole document.
+  if (!pdf) return { numPages: extra.length, getPage: (n) => Promise.resolve(extra[Number(n) - 1]) };
   return new Proxy(pdf, {
     get(target, key) {
       if (key === "getPage") {
@@ -263,6 +265,14 @@ export function useDiagramPages(url, otherUrl = null, side = "neu") {
     return () => { alive = false; };
   }, [url, otherUrl, side]);
   return state;
+}
+
+/** Stands where react-pdf's Document would for a diagram sent as itself, saying when its pages are not ready. */
+export function DiagramsOnly({ drawings, loading, children }) {
+  if (drawings.status === "error") return <div className="rr-error">Could not load the document: {drawings.note}</div>;
+  if (drawings.status !== "ready") return loading;
+  if (!drawings.pages.length) return <div className="rr-error">This diagram file has no pages to show.</div>;
+  return children;
 }
 
 /** One diagram page's body: its name, then the drawing filling the page's width, its words selectable over it. */

@@ -237,6 +237,95 @@ class DiagramFilesTest extends TestCase
             ->assertOk()->assertSee('data-diagrams-url=""', false);
     }
 
+    public function test_a_diagram_is_sent_as_the_document_itself_with_no_pdf(): void
+    {
+        $this->adviser();
+
+        foreach ([UploadedFile::fake()->createWithContent('dfd-level-1.drawio', self::DRAWIO), $this->visio('erd.vsdx')] as $diagram) {
+            $this->actingAs($this->student)->post(route('student.submission.store'), ['file' => $diagram, 'recipients' => ['adviser']])
+                ->assertOk()->assertJson(['success' => true]);
+        }
+
+        [$drawio, $visio] = CapstoneDocument::orderBy('file_id')->get()->all();
+        $this->assertTrue($drawio->isDiagram());
+        $this->assertSame([['name' => 'dfd-level-1.drawio', 'path' => $drawio->file_path]], $drawio->diagram_files);
+        $this->assertSame([['name' => 'dfd-level-1.drawio', 'xml' => self::DRAWIO]], $drawio->diagrams());
+        $this->assertTrue($visio->isDiagram());
+        $this->assertSame('erd.vsdx', $visio->diagrams()[0]['name']);
+        $this->assertArrayHasKey('vsdx', $visio->diagrams()[0]);
+    }
+
+    public function test_a_file_named_as_a_diagram_that_is_not_one_is_refused_as_the_document(): void
+    {
+        $this->adviser();
+
+        $this->actingAs($this->student)->post(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->createWithContent('dfd.drawio', 'not a diagram'),
+            'recipients' => ['adviser'],
+        ])->assertStatus(422)->assertJson(['success' => false]);
+        $this->actingAs($this->student)->post(route('student.submission.store'), [
+            'file' => $this->visio('erd.vsdx', real: false),
+            'recipients' => ['adviser'],
+        ])->assertStatus(422);
+
+        $this->assertSame(0, CapstoneDocument::count());
+    }
+
+    public function test_a_pdf_with_diagrams_is_not_read_as_a_diagram(): void
+    {
+        $review = $this->version(1, [['name' => 'dfd.drawio', 'path' => 'submissions/diagrams/v1.drawio']], $this->adviser());
+
+        $this->assertFalse($review->document->isDiagram());
+    }
+
+    public function test_the_annotator_reads_a_diagram_sent_as_itself_with_no_pdf(): void
+    {
+        $expert = $this->adviser();
+        $first = $this->version(1, [['name' => 'dfd.drawio', 'path' => 'submissions/ch3-v1.pdf']], $expert);
+        $current = $this->version(2, [['name' => 'dfd.drawio', 'path' => 'submissions/ch3-v2.pdf']], $expert);
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.docreview.annotate', $current->review_id))
+            ->assertOk()
+            ->assertViewHas('context', fn (array $context) => $context['diagramOnly'] === true
+                && $context['diagrams'] === route('reviews.diagrams', $current->review_id)
+                && $context['versions'][0]['file'] === null
+                && $context['versions'][0]['diagrams'] === route('reviews.versions.diagrams', [$current->review_id, $first->file_id]));
+        $this->actingAs($expert, 'expert')->getJson(route('reviews.diagrams', $current->review_id))
+            ->assertOk()->assertExactJson([['name' => 'dfd.drawio', 'xml' => self::DRAWIO]]);
+    }
+
+    public function test_the_annotator_reads_a_pdf_as_a_pdf(): void
+    {
+        $expert = $this->adviser();
+        $this->version(1, null, $expert);
+        $current = $this->version(2, [['name' => 'dfd.drawio', 'path' => 'submissions/diagrams/v2.drawio']], $expert);
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.docreview.annotate', $current->review_id))
+            ->assertOk()
+            ->assertViewHas('context', fn (array $context) => $context['diagramOnly'] === false && $context['versions'][0]['file'] !== null);
+    }
+
+    public function test_the_team_reads_its_reviewed_diagram_with_no_pdf(): void
+    {
+        $review = $this->version(1, [['name' => 'dfd.drawio', 'path' => 'submissions/ch3-v1.pdf']], $this->adviser());
+        $review->update(['review_status' => CapstoneDocumentReview::REVIEWED, 'reviewed_at' => now()]);
+
+        $this->actingAs($this->student, 'web')->get(route('student.review', ['review_id' => $review->review_id]))
+            ->assertOk()
+            ->assertSee('data-pdf-url=""', false)
+            ->assertSee('data-diagrams-url="'.route('student.review.diagrams', $review->review_id).'"', false);
+    }
+
+    public function test_a_diagrams_drive_copy_is_never_written_over_with_a_pdf(): void
+    {
+        $review = $this->version(1, [['name' => 'dfd.drawio', 'path' => 'submissions/ch3-v1.pdf']], $expert = $this->adviser());
+        $review->update(['drive_file_id' => 'drive-file-1']);
+
+        $this->actingAs($expert, 'expert')
+            ->call('PUT', route('reviews.sync-drive', $review->review_id), [], [], [], ['CONTENT_TYPE' => 'application/pdf', 'HTTP_ACCEPT' => 'application/json'], '%PDF-1.4')
+            ->assertStatus(422)->assertJson(['message' => 'A diagram\'s Google Drive copy is the team\'s own file and is left as it is.']);
+    }
+
     public function test_taking_an_upload_back_removes_its_diagrams_too(): void
     {
         $review = $this->version(1, [['name' => 'dfd.drawio', 'path' => 'submissions/diagrams/v1.drawio']], $this->adviser());

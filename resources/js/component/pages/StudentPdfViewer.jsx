@@ -3,7 +3,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import {
   FigureZoom, Highlights, PageStrip, ReaderTools, RemarksPanel, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
-import { DiagramPage, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
+import { DiagramPage, DiagramsOnly, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import { remarkFromServer } from "../reader/figures";
 import "../reader/reader.css";
 
@@ -59,16 +59,17 @@ function StudentPdfViewer({
   // was taken out of them since is coloured red against the newer version's.
   diagrams = null, newerDiagrams = null,
 }) {
-  const [numPages, setNumPages] = useState(null);
+  // A diagram sent as itself has no PDF: its diagram pages are all there is.
+  const [numPages, setNumPages] = useState(pdfUrl ? null : 0);
   const [error, setError] = useState(null);
   const [remarks, setRemarks] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [pdf, setPdf] = useState(null);
   const [zoomId, setZoomId] = useState(null);
   const drawings = useDiagramPages(diagrams, newerDiagrams, "old");
-  const totalPages = numPages ? numPages + drawings.pages.length : numPages;
+  const totalPages = numPages == null ? null : numPages + drawings.pages.length;
   // For snapshots of remarks, which may sit on a diagram page.
-  const pagesPdf = useMemo(() => withDiagramPages(pdf, drawings.pages), [pdf, drawings.pages]);
+  const pagesPdf = useMemo(() => (pdfUrl && !pdf ? null : withDiagramPages(pdf, drawings.pages)), [pdfUrl, pdf, drawings.pages]);
   const col = usePageColumn(totalPages);
 
   useEffect(() => {
@@ -109,7 +110,8 @@ function StudentPdfViewer({
     </>
   );
 
-  if (!pdfUrl) return null;
+  if (!pdfUrl && !diagrams) return null;
+  const Holder = pdfUrl ? Document : DiagramsOnly;
 
   return (
     <div className="rr-work">
@@ -118,13 +120,14 @@ function StudentPdfViewer({
         <div className="rr-hint">Click a highlight or its number to see the remark</div>
         <div className="rr-canvas" ref={col.canvasRef} onScroll={col.onScroll}>
           {error && <div className="rr-error">Could not load the document: {error}</div>}
-          <Document
+          <Holder
+            drawings={pdfUrl ? undefined : drawings}
             file={pdfUrl}
             onLoadSuccess={(doc) => { setNumPages(doc.numPages); setPdf(doc); setError(null); }}
             onLoadError={(err) => setError(err.message)}
             loading={<div className="rr-loading">Loading document…</div>}
           >
-            {numPages && Array.from({ length: totalPages }, (_, i) => {
+            {numPages != null && Array.from({ length: totalPages }, (_, i) => {
               const n = i + 1;
               const drawing = drawings.pages[n - numPages - 1];
               return (
@@ -163,7 +166,7 @@ function StudentPdfViewer({
                 </div>
               );
             })}
-          </Document>
+          </Holder>
         </div>
         <ReaderTools currentPage={col.currentPage} numPages={totalPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} />
       </section>

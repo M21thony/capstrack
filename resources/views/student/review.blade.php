@@ -164,7 +164,7 @@
   <div
     id="student-pdf-viewer-root"
     class="rv-work"
-    data-pdf-url="{{ route('student.review.pdf', $rev->review_id) }}"
+    data-pdf-url="{{ $selected['document']->isDiagram() ? '' : route('student.review.pdf', $rev->review_id) }}"
     data-remarks-url="{{ route('student.review.remarks', $rev->review_id) }}"
     data-diagrams-url="{{ $selected['document']->diagram_files ? route('student.review.diagrams', $rev->review_id) : '' }}"
     data-reviewer="{{ $reviewerName }}"

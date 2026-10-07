@@ -46,8 +46,10 @@ function App() {
   const [showChanges, setShowChanges] = useState(true);
   const params = new URLSearchParams(window.location.search);
   const reviewId = ctx.reviewId || params.get("reviewId") || params.get("fileID");
+  // None when the team sent the diagram file itself: its diagram pages are the document.
+  const pdfUrl = reviewId && !ctx.diagramOnly ? `/reviews/${reviewId}/pdf` : null;
   // Measured once: this document and the earlier version both draw from it.
-  const diff = useVersionDiff(reviewId ? `/reviews/${reviewId}/pdf` : null, baseVersion);
+  const diff = useVersionDiff(pdfUrl, baseVersion);
   const [focus, setFocus] = useState(null);
   // The diagram compare's progress and its boxes for the earlier version.
   const [figureView, setFigureView] = useState({ status: "idle", note: "", oldMarks: {} });
@@ -278,14 +280,19 @@ function App() {
   // comment cards are drawn in guaranteed empty space, never on top of the
   // document's own text.
   const renderAnnotatedPdf = async () => {
-    const response = await fetch(`/reviews/${reviewId}/pdf`);
-    if (!response.ok) throw new Error(`Failed to load PDF: ${response.status} ${response.statusText}`);
-
-    const pdfDoc = await PDFDocument.load(await response.arrayBuffer(), { ignoreEncryption: true, updateMetadata: false });
+    let pdfDoc;
+    if (pdfUrl) {
+      const response = await fetch(pdfUrl);
+      if (!response.ok) throw new Error(`Failed to load PDF: ${response.status} ${response.statusText}`);
+      pdfDoc = await PDFDocument.load(await response.arrayBuffer(), { ignoreEncryption: true, updateMetadata: false });
+    } else {
+      pdfDoc = await PDFDocument.create();
+    }
     // The team's draw.io diagrams follow as pages of their own, as in the reader, so their remarks land on them.
     if (ctx.diagrams) {
       try {
-        const pageWidth = pdfDoc.getPage(0).getWidth();
+        // A diagram sent as itself has no page to match, so it takes a letter page's width.
+        const pageWidth = pdfDoc.getPageCount() ? pdfDoc.getPage(0).getWidth() : 612;
         for (const { plain } of await diagramPages(ctx.diagrams)) {
           const picture = await pdfDoc.embedPng(await pngOf(plain));
           const pageHeight = (pageWidth * plain.height) / plain.width;
@@ -445,6 +452,8 @@ function App() {
   // Safe to call repeatedly: a sync already running just flags that another
   // is needed once it finishes, instead of running two heavy renders at once.
   const syncAnnotatedPdfToDrive = async () => {
+    // Its Drive copy is the team's own diagram file, left as it is.
+    if (ctx.diagramOnly) return;
     if (driveSyncRef.current.inFlight) { driveSyncRef.current.pending = true; return; }
     driveSyncRef.current.inFlight = true;
     setDriveSyncState("syncing");
@@ -532,7 +541,7 @@ function App() {
       />
       <div className={compareVersion ? "an-split" : "an-single"}>
         <PDFChecker
-          pdfUrl={reviewId ? `/reviews/${reviewId}/pdf` : null}
+          pdfUrl={pdfUrl}
           comments={comments}
           setComments={setComments}
           generalComments={generalComments}

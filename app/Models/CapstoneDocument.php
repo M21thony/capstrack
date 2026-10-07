@@ -49,6 +49,12 @@ class CapstoneDocument extends Model
             ->values()->all();
     }
 
+    /** Sent as a draw.io or Visio file itself rather than a PDF, so it is read as its diagram pages only. */
+    public function isDiagram(): bool
+    {
+        return $this->file_path !== null && in_array($this->file_path, array_column($this->diagram_files ?? [], 'path'), true);
+    }
+
     /** A file is sent for the uploader's team at the time, and stays that team's if they move. */
     protected static function booted(): void
     {

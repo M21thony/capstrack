@@ -248,7 +248,7 @@ class SubmissionGoesToTest extends TestCase
             ->assertJsonPath('item.paper', false)
             ->assertJsonPath('version', 2)
             ->assertJsonPath('round', '1st revision')
-            ->assertJsonPath('accept', ['pdf'])
+            ->assertJsonPath('accept', ['pdf', 'drawio', 'vsdx'])
             ->assertJsonPath('locked', true)
             ->assertJsonPath('people.0.label', 'CaPA')
             ->assertJsonPath('people.1.label', 'CaPSA')

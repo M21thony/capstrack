@@ -14,7 +14,7 @@ const json = (value, fallback) => {
 if (el) {
     createRoot(el).render(
         <StudentPdfViewer
-            pdfUrl={el.dataset.pdfUrl}
+            pdfUrl={el.dataset.pdfUrl || null}
             remarksUrl={el.dataset.remarksUrl}
             diagrams={el.dataset.diagramsUrl || null}
             reviewer={el.dataset.reviewer}

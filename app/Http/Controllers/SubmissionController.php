@@ -22,6 +22,7 @@ use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,9 @@ use Illuminate\Support\Str;
 
 class SubmissionController extends Controller
 {
+    /** The diagram files a team can send as the document itself. */
+    private const DIAGRAM_TYPES = ['drawio', 'vsdx'];
+
     public function __construct(
         private GoogleDriveService $drive,
         private RecipientResolver $resolver,
@@ -50,13 +54,7 @@ class SubmissionController extends Controller
             // The draw.io or Visio files of its diagrams, so a reviewer can be shown exactly what changed in them.
             'diagrams' => 'nullable|array|max:20',
             'diagrams.*' => ['file', 'max:5120', function (string $attribute, mixed $value, Closure $fail) {
-                $isDiagram = match (strtolower($value->getClientOriginalExtension())) {
-                    'drawio' => (bool) preg_match('/<(mxfile|mxGraphModel)\b/', (string) file_get_contents($value->getRealPath(), false, null, 0, 4096)),
-                    'vsdx' => $this->isVisioFile($value->getRealPath()),
-                    default => false,
-                };
-
-                if (! $isDiagram) {
+                if (! $this->isDiagramFile($value)) {
                     $fail('Diagrams must be draw.io (.drawio) or Visio (.vsdx) files.');
                 }
             }],
@@ -116,12 +114,23 @@ class SubmissionController extends Controller
         // it is as good as a scan. Anything else goes to a reviewer's
         // annotator, which reads documents.
         $isPaper = $item && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
-        $allowed = $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', 'doc', 'docx', 'ppt', 'pptx'];
+        $allowed = $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', 'doc', 'docx', 'ppt', 'pptx', ...self::DIAGRAM_TYPES];
 
         if ($item && ! in_array($originalExt, $allowed, true)) {
             return response()->json([
                 'success' => false,
-                'message' => $isPaper ? 'Upload the signed paper as a PDF, JPG or PNG.' : 'Upload this requirement as a PDF.',
+                'message' => $isPaper ? 'Upload the signed paper as a PDF, JPG or PNG.' : 'Upload this requirement as a PDF, or a draw.io or Visio diagram.',
+            ], 422);
+        }
+
+        // A diagram is sent as itself, the file the team drew, and read in
+        // the annotator as its pages: no PDF of it to lose the drawing in.
+        $isDiagram = ! $isPaper && in_array($originalExt, self::DIAGRAM_TYPES, true);
+
+        if ($isDiagram && ! $this->isDiagramFile($file)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That diagram won\'t open. Save it again from draw.io or Visio and add it here.',
             ], 422);
         }
 
@@ -183,9 +192,9 @@ class SubmissionController extends Controller
             'chapter' => $chapter,
             'deliverable_id' => $item?->id,
             'file_path' => $storedPath,
-            'diagram_files' => collect($request->file('diagrams', []))
+            'diagram_files' => collect($isDiagram ? [] : $request->file('diagrams', []))
                 ->map(fn ($diagram) => ['name' => $diagram->getClientOriginalName(), 'path' => $diagram->store('submissions/diagrams', 'local')])
-                ->values()->all() ?: null,
+                ->values()->all() ?: ($isDiagram ? [['name' => $file->getClientOriginalName(), 'path' => $storedPath]] : null),
             'file_version' => $lastVersion + 1,
             'document_status' => 'Pending',
         ]);
@@ -366,7 +375,7 @@ class SubmissionController extends Controller
             ] : null,
             'version' => $item ? $version : null,
             'round' => $version > 1 ? self::ordinal($version - 1).' revision' : null,
-            'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf'],
+            'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', ...self::DIAGRAM_TYPES],
             'locked' => $plan['locked'],
             'people' => array_map(fn ($p) => array_diff_key($p, ['expert_ids' => true]), $plan['people']),
             'remark' => $last && ! $isPaper ? $this->remarkOn($last) : null,
@@ -547,6 +556,16 @@ class SubmissionController extends Controller
     }
 
     /** A Visio drawing is a zip holding visio/document.xml. */
+    /** Whether this is a draw.io or Visio file that opens, by what is in it rather than its name. */
+    private function isDiagramFile(UploadedFile $file): bool
+    {
+        return match (strtolower($file->getClientOriginalExtension())) {
+            'drawio' => (bool) preg_match('/<(mxfile|mxGraphModel)\b/', (string) file_get_contents($file->getRealPath(), false, null, 0, 4096)),
+            'vsdx' => $this->isVisioFile($file->getRealPath()),
+            default => false,
+        };
+    }
+
     private function isVisioFile(string $path): bool
     {
         $zip = new \ZipArchive;

@@ -109,12 +109,14 @@ class DocReviewController extends Controller
                 'backUrl' => route('instructor.docreview'),
                 // The draw.io files of its diagrams, when the team sent them.
                 'diagrams' => $document?->diagram_files ? route('reviews.diagrams', $review->review_id) : null,
+                // Sent as the diagram file itself: its pages are the whole document, with no PDF before them.
+                'diagramOnly' => (bool) $document?->isDiagram(),
                 // Earlier rounds of the same requirement, to open beside this one.
                 'versions' => $document ? $document->earlierVersions()->map(fn ($v) => [
                     'id' => (int) $v->file_id,
                     'round' => $v->roundLabel(),
                     'uploaded' => $v->created_at?->format('M j, Y'),
-                    'file' => route('reviews.versions.file', [$review->review_id, $v->file_id]),
+                    'file' => $v->isDiagram() ? null : route('reviews.versions.file', [$review->review_id, $v->file_id]),
                     'remarks' => route('reviews.versions.remarks', [$review->review_id, $v->file_id]),
                     'diagrams' => $v->diagram_files ? route('reviews.versions.diagrams', [$review->review_id, $v->file_id]) : null,
                 ])->values() : [],

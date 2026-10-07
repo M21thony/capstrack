@@ -8,7 +8,7 @@ import {
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
 import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
-import { DiagramPage, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
+import { DiagramPage, DiagramsOnly, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import {
   DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, uniqueFigures,
 } from "../reader/figures";
@@ -109,7 +109,8 @@ function PDFChecker({
   startMode = "text", startTab = "remarks", checkedFigures = [], onToggleFigure = () => {},
   revisionStatus = {}, onRevision = () => {}, compareOpen = false, onFigures = () => {}, diagrams = null,
 }) {
-  const [numPages, setNumPages] = useState(null);
+  // A diagram sent as itself has no PDF: its diagram pages are all there is.
+  const [numPages, setNumPages] = useState(pdfUrl ? null : 0);
   const [pdf, setPdf] = useState(null);
   const [figures, setFigures] = useState([]);
   const [mode, setMode] = useState(startMode);
@@ -118,10 +119,11 @@ function PDFChecker({
   const [rendered, setRendered] = useState(() => new Set());
   // The team's draw.io files follow the PDF as pages of their own.
   const drawings = useDiagramPages(diagrams, base?.diagrams ?? null, "neu");
-  const totalPages = numPages ? numPages + drawings.pages.length : numPages;
+  const totalPages = numPages == null ? null : numPages + drawings.pages.length;
   // For snapshots of remarks, which may sit on a diagram page.
-  const pagesPdf = useMemo(() => withDiagramPages(pdf, drawings.pages), [pdf, drawings.pages]);
+  const pagesPdf = useMemo(() => (pdfUrl && !pdf ? null : withDiagramPages(pdf, drawings.pages)), [pdfUrl, pdf, drawings.pages]);
   const col = usePageColumn(totalPages);
+  const Holder = pdfUrl ? Document : DiagramsOnly;
 
   // Changes since an earlier version are only drawn, never kept as remarks.
   // Opening one also moves the earlier version, when it is open beside this.
@@ -503,14 +505,15 @@ function PDFChecker({
           }}
         >
           {error && <div className="rr-error">Could not load the document: {error}</div>}
-          {pdfUrl && (
-            <Document
+          {(pdfUrl || diagrams) && (
+            <Holder
+              drawings={pdfUrl ? undefined : drawings}
               file={pdfUrl}
               onLoadSuccess={(doc) => { setNumPages(doc.numPages); setPdf(doc); setError(null); }}
               onLoadError={(err) => setError(err.message)}
               loading={<div className="rr-loading">Loading document…</div>}
             >
-              {numPages && Array.from({ length: totalPages }, (_, i) => {
+              {numPages != null && Array.from({ length: totalPages }, (_, i) => {
                 const n = i + 1;
                 const drawing = drawings.pages[n - numPages - 1];
                 const pageRemarks = comments.filter((c) => Number(c.page_number) === n);
@@ -584,7 +587,7 @@ function PDFChecker({
                   </div>
                 );
               })}
-            </Document>
+            </Holder>
           )}
 
           {composing && (

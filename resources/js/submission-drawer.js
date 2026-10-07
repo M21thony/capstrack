@@ -62,6 +62,9 @@ function chapterInName(name) {
   return m ? parseInt(m[1], 10) : null;
 }
 
+/** A draw.io or Visio file, sent as itself and read as its diagram pages. */
+const isDiagram = (name) => ['drawio', 'vsdx'].includes(ext(name));
+
 /** What is wrong with this file for this line, in words that say how to fix it; null when nothing is. */
 function problemWith(file, accept) {
   const e = ext(file.name);
@@ -70,7 +73,7 @@ function problemWith(file, accept) {
     if (['doc', 'docx'].includes(e)) return `${name} is a Word file.</b> Save it as PDF (File → Save As → PDF), then add it here.`;
     if (['ppt', 'pptx'].includes(e)) return `${name} is a PowerPoint file.</b> Export it as PDF (File → Export → PDF), then add it here.`;
     if (['jpg', 'jpeg', 'png', 'heic', 'webp'].includes(e)) return `${name} is a photo.</b> This goes up as a PDF. Only signed papers can be photos.`;
-    return `${name} can’t be sent here.</b> Use ${accept.includes('png') ? 'a PDF, JPG or PNG' : 'a PDF'}.`;
+    return `${name} can’t be sent here.</b> Use ${accept.includes('png') ? 'a PDF, JPG or PNG' : 'a PDF, or a draw.io (.drawio) or Visio (.vsdx) diagram'}.`;
   }
   if (file.size > MAX_MB * 1024 * 1024) {
     return `${name} is ${mb(file.size)}</b>; the limit is ${MAX_MB} MB. Compress the pictures in it, or save it with “Reduce file size”, then add it again.`;
@@ -245,7 +248,8 @@ async function takeFile(file) {
   Object.assign(S, { file, step: 'check', pages: null, pdf: null, broken: false, thumbUrl: null, rotation: 0, same: null, warnings: [], checking: true, failure: null });
   render();
 
-  const reading = ext(file.name) === 'pdf' ? readPdf(file) : readImage(file);
+  // A diagram has nothing to read here: the reviewer's screen draws it.
+  const reading = ext(file.name) === 'pdf' ? readPdf(file) : isDiagram(file.name) ? null : readImage(file);
   await Promise.all([reading, serverCheck(file)]);
   if (S?.file === file) {
     S.checking = false;
@@ -480,7 +484,7 @@ function remarkHtml() {
 }
 
 function dropHtml() {
-  const kinds = S.plan?.accept?.includes('png') ? 'PDF, JPG or PNG · up to 25 MB · a clear phone photo is fine' : `PDF · up to ${MAX_MB} MB`;
+  const kinds = S.plan?.accept?.includes('png') ? 'PDF, JPG or PNG · up to 25 MB · a clear phone photo is fine' : `PDF, or a diagram (.drawio, .vsdx) · up to ${MAX_MB} MB`;
   const accept = (S.plan?.accept || ['pdf']).map((e) => '.' + e).join(',');
   return `<div class="up-drop${S.problem ? ' bad' : ''}" role="button" tabindex="0" data-act="browse" aria-describedby="up-drop-kinds">
       <span class="up-drop-ic">${svg('upload', 18)}</span>
@@ -542,7 +546,7 @@ function checksHtml() {
   const f = S.file;
   const isPdf = ext(f.name) === 'pdf';
   const items = [];
-  items.push(['ok', `${isPdf ? 'PDF' : 'Photo'}, ${mb(f.size)}`]);
+  items.push(['ok', `${isPdf ? 'PDF' : isDiagram(f.name) ? 'Diagram' : 'Photo'}, ${mb(f.size)}`]);
   if (isPdf) {
     if (S.broken) items.push(['bad', 'This PDF won’t open']);
     else if (S.pages == null) items.push(['wait', 'Reading the pages…']);
@@ -563,13 +567,14 @@ function checksHtml() {
 function fileCardHtml() {
   const f = S.file;
   const isPdf = ext(f.name) === 'pdf';
+  const diagram = isDiagram(f.name);
   const thumb = S.thumbUrl
     ? `<img src="${S.thumbUrl}" alt="" style="transform:rotate(${S.rotation}deg)">`
-    : `<span class="up-thumb-blank">${S.broken ? svg('alert', 20) : '<i class="up-spin"></i>'}</span>`;
-  const canPreview = !S.broken && (S.thumbUrl || !isPdf);
+    : `<span class="up-thumb-blank">${S.broken || diagram ? svg(diagram ? 'file' : 'alert', 20) : '<i class="up-spin"></i>'}</span>`;
+  const canPreview = !S.broken && !diagram && (S.thumbUrl || !isPdf);
   const tools = [
     canPreview ? linkBtn(isPdf ? 'Preview all pages' : 'Open full size', 'preview') : '',
-    !isPdf ? linkBtn('Rotate', 'rotate') : '',
+    !isPdf && !diagram ? linkBtn('Rotate', 'rotate') : '',
     linkBtn('Change file', 'browse', ' data-muted'),
   ].filter(Boolean).join('<span class="up-dot" aria-hidden="true">·</span>');
   const versionLine = S.plan?.item ? `Goes up as version ${S.plan.version}` : 'Feedback only · moves nothing on your checklist';
@@ -792,7 +797,7 @@ function onKeydown(e) {
 let pv = null;
 
 async function openPreview() {
-  if (!S?.file || S.broken) return;
+  if (!S?.file || S.broken || isDiagram(S.file.name)) return;
   const isPdf = ext(S.file.name) === 'pdf';
   pv = { page: 1, zoom: 1, total: isPdf ? (S.pages || 1) : 1 };
   const box = document.createElement('dialog');

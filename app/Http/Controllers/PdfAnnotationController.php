@@ -393,6 +393,11 @@ class PdfAnnotationController extends Controller
             return response()->json(['message' => 'This review has no Google Drive file to update.'], 422);
         }
 
+        // The Drive copy of a diagram is the team's own draw.io or Visio file; a PDF written over it would break it.
+        if ($review->document?->isDiagram()) {
+            return response()->json(['message' => 'A diagram\'s Google Drive copy is the team\'s own file and is left as it is.'], 422);
+        }
+
         try {
             $drive->updateFile($review->expert_id, $review->drive_file_id, $contents, 'application/pdf');
         } catch (\Exception $e) {
