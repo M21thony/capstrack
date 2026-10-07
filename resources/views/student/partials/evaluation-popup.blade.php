@@ -1,5 +1,5 @@
-{{-- Nudges a team leader whose team finished a phase but has not yet rated
-     the experts for it. Shown on every student page except the Evaluations
+{{-- Nudges a team leader whose team passed a defense but has not yet
+     evaluated the experts for it. Shown on every student page except the Evaluations
      tab itself; "Remind me later" quiets it on this device for an hour. --}}
 @php
   $evaluationsOwed = $evaluationsOwed ?? collect();
@@ -7,13 +7,13 @@
 @endphp
 @if($evaluationsOwed->isNotEmpty() && ! $onEvaluationsTab)
 @php
-  $owedPhases = $evaluationsOwed->groupBy('milestone_id')->map(fn ($rows) => [
-    'name' => $rows->first()->milestone,
+  $owedPhases = $evaluationsOwed->groupBy('defense_id')->map(fn ($rows) => [
+    'name' => $rows->first()->stage,
     'experts' => $rows->map(fn ($r) => $r->expert.' · '.$r->role_label)->unique()->values(),
   ])->values();
-  // Changes whenever something new is owed, so a fresh phase brings the
+  // Changes whenever something new is owed, so a fresh defense brings the
   // popup back even inside a snooze.
-  $owedKey = md5($evaluationsOwed->map(fn ($r) => $r->milestone_id.'-'.$r->expert_id.'-'.$r->role)->implode(','));
+  $owedKey = md5($evaluationsOwed->map(fn ($r) => $r->defense_id.'-'.$r->expert_id.'-'.$r->role)->implode(','));
 @endphp
 <style>
   #evp-overlay{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(24,25,31,.5);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
@@ -43,15 +43,15 @@
     </div>
     <div id="evp-title">Time to evaluate your experts</div>
     <div id="evp-sub">
-      Your team finished {{ $owedPhases->count() === 1 ? 'a phase' : $owedPhases->count().' phases' }} on the Progress Tracker.
-      As team leader, rate each expert from 1 to 5 stars with a comment. <b>The next phase stays locked until you do.</b>
+      Your team passed {{ $owedPhases->pluck('name')->implode(' and ') }}.
+      As team leader, answer your CaPSA's short evaluation of each expert, 1 to 5 stars per question. It is anonymous. <b>The next phase stays locked until you do.</b>
     </div>
     <ul id="evp-list">
       @foreach($owedPhases->take(3) as $phase)
         <li><b>{{ $phase['name'] }}</b><span>{{ $phase['experts']->implode(', ') }}</span></li>
       @endforeach
       @if($owedPhases->count() > 3)
-        <li><span>and {{ $owedPhases->count() - 3 }} more phase{{ $owedPhases->count() - 3 === 1 ? '' : 's' }}</span></li>
+        <li><span>and {{ $owedPhases->count() - 3 }} more defense{{ $owedPhases->count() - 3 === 1 ? '' : 's' }}</span></li>
       @endif
     </ul>
     <div id="evp-actions">

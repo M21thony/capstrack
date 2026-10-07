@@ -42,6 +42,11 @@
       <span class="nav-badge red">{{ $unseenDocReviewCount > 99 ? '99+' : $unseenDocReviewCount }}</span>
     @endif
   </a>
+  <div class="nav-section">Feedback</div>
+  <a href="{{ route('instructor.evaluations') }}" class="nav-item {{ (isset($currentPage) && $currentPage === 'evaluations') ? 'active' : '' }}">
+    <x-portal-icon name="trophy" />
+    My Evaluations
+  </a>
   <div class="nav-section">Account</div>
   <form id="expert-logout-form" action="{{ route('expert.logout') }}" method="POST" style="display: none;">
     @csrf

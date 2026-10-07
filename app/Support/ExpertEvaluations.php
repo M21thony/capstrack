@@ -2,70 +2,143 @@
 
 namespace App\Support;
 
+use App\Models\CapstoneExpert;
+use App\Models\DefenseSchedule;
+use App\Models\EvaluationTemplate;
 use App\Models\ExpertEvaluation;
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Services\Notifier;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The leader's evaluation of the team's experts, phase by phase.
+ * The leader's evaluation of the team's experts, once per passed defense.
  *
- * Every time the team finishes a milestone of the Progress Tracker - Getting
- * Started through Final Manuscript - the leader owes each of the team's
- * experts (adviser, consultant, grammarian) a rating of one to five stars and
- * a comment for that phase. Nothing marks a phase finished: it is read off
- * the checklist the way the Progress Tracker reads it (MilestoneProgress), so
- * a phase is due the moment every item in it is done.
+ * When a team passes a defense - Pre-proposal, Title, Pre Oral or Final Oral
+ * - its leader owes an evaluation of each engaged expert the CaPSA's
+ * evaluation for that defense covers. The CaPSA writes the questions
+ * (EvaluationTemplate); each is answered 1 to 5, and the expert's rating for
+ * that defense is the average. The leader is anonymous to the CaPSA and the
+ * expert.
  *
- * What is owed is worked out here and nowhere else - the popup, the Experts
- * page and the reminder all ask due(), so they cannot disagree.
+ * Only a defense decided after its evaluation was set up counts: one a team
+ * passed before the CaPSA had written any questions owes nothing, so adding
+ * an evaluation never reaches back and locks teams that are long past it.
+ *
+ * What is owed is worked out here and nowhere else - the Progress Tracker's
+ * gate, the popup, the Experts page and the reminder all ask owedForTeams(),
+ * so they cannot disagree.
  */
 class ExpertEvaluations
 {
-    public function __construct(private TeamChecklist $checklists) {}
+    /** A defense that ended in one of these was passed. */
+    public const PASSING = [DefenseOutcome::PASSED, DefenseOutcome::PASSED_WITH_REVISION];
 
     /**
-     * What the leader still owes: one row per finished phase and engaged
-     * expert, oldest phase first.
+     * What this team's leader still owes, earliest defense first.
      *
-     * @return Collection<int, object{milestone_id: int, milestone: string, position: int, expert_id: int, expert: string, role: string, role_label: string}>
+     * @return Collection<int, object{defense_id: int, stage: string, expert_id: int, expert: string, name: string, role: string, role_label: string, template_id: int}>
      */
     public function due(Team $team): Collection
     {
-        // Not cached: the next phase's lock is read fresh, and a list that
-        // lagged behind it would show a locked phase with nothing to rate.
-        return $this->owed($team);
+        return self::owedForTeams(collect([$team->team_id]))[(int) $team->team_id] ?? collect();
     }
 
     /**
-     * MilestoneProgress already knows, since a
-     * phase whose experts are not rated yet is not finished and holds the
-     * next gate shut - this only lays its answer out as rows.
+     * Every team's owed evaluations, in a handful of queries.
      *
-     * @return Collection<int, object>
+     * @param  Collection<int, int>  $teamIds
+     * @return array<int, Collection<int, object>>
      */
-    private function owed(Team $team): Collection
+    public static function owedForTeams(Collection $teamIds): array
     {
-        $checklist = $this->checklists->for($team);
+        $teamIds = $teamIds->map(fn ($id) => (int) $id)->unique()->values();
+        $out = $teamIds->mapWithKeys(fn ($id) => [$id => collect()])->all();
 
-        if (! $checklist) {
-            return collect();
+        if ($teamIds->isEmpty()) {
+            return $out;
         }
 
-        return MilestoneProgress::forTeam($checklist, (int) $team->team_id)->milestones
-            ->flatMap(fn ($m) => $m->evaluations_owed->map(fn ($e) => (object) [
-                'milestone_id' => (int) $m->milestone->id,
-                'milestone' => (string) $m->milestone->name,
-                'position' => (int) $m->milestone->position,
-                'expert_id' => $e->expert_id,
-                'expert' => $e->name,
-                'role' => $e->role,
-                'role_label' => ExpertEvaluation::ROLES[$e->role],
-            ]))
-            ->values();
+        $passed = DefenseSchedule::whereIn('team_id', $teamIds)
+            ->whereIn('outcome', self::PASSING)
+            ->orderByDesc('attempt')
+            ->get()
+            ->groupBy('team_id');
+
+        if ($passed->isEmpty()) {
+            return $out;
+        }
+
+        // Whose evaluation applies: the CaPSA of each team's section.
+        $teams = Team::whereIn('team_id', $passed->keys())->get()->keyBy('team_id');
+        $records = StudentSchoolYear::with('student')->whereIn('team_id', $passed->keys())->get()->groupBy('team_id');
+        $scope = app(SectionScope::class);
+        $checklists = app(TeamChecklist::class);
+        $capsaBySection = [];
+        $capsaOf = [];
+        foreach ($teams as $id => $team) {
+            $section = $scope->sectionFor($team, $records->get($id, collect()));
+            if (! array_key_exists($section, $capsaBySection)) {
+                $capsaBySection[$section] = $checklists->capsaFor($section)?->expert_id;
+            }
+            $capsaOf[$id] = $capsaBySection[$section];
+        }
+
+        $templates = EvaluationTemplate::active()
+            ->whereIn('capsa_id', array_filter(array_unique($capsaOf)))
+            ->whereHas('questions')
+            ->orderByDesc('id')
+            ->get();
+
+        if ($templates->isEmpty()) {
+            return $out;
+        }
+
+        $experts = self::engagedExperts($passed->keys());
+        $done = ExpertEvaluation::whereIn('team_id', $passed->keys())->whereNotNull('defense_id')
+            ->get(['team_id', 'defense_id', 'expert_id', 'role'])
+            ->mapWithKeys(fn ($e) => [$e->defense_id.'|'.$e->expert_id.'|'.$e->role => true]);
+
+        foreach ($passed as $teamId => $defenses) {
+            $capsaId = $capsaOf[$teamId] ?? null;
+
+            // The latest attempt of each stage is the one that passed.
+            foreach ($defenses->unique(fn ($d) => mb_strtolower($d->defense_type)) as $defense) {
+                $decided = $defense->outcome_recorded_at ?? $defense->schedule_date ?? $defense->updated_at ?? Carbon::now();
+
+                foreach ($experts->get($teamId, collect()) as $expert) {
+                    $template = $templates->first(fn (EvaluationTemplate $t) => (int) $t->capsa_id === (int) $capsaId
+                        && mb_strtolower($t->defense_type) === mb_strtolower($defense->defense_type)
+                        && $t->covers($expert->role)
+                        && $t->created_at <= $decided);
+
+                    if (! $template || $done->has($defense->defense_id.'|'.$expert->expert_id.'|'.$expert->role)) {
+                        continue;
+                    }
+
+                    $out[(int) $teamId]->push((object) [
+                        'defense_id' => (int) $defense->defense_id,
+                        'stage' => (string) $defense->defense_type,
+                        'expert_id' => $expert->expert_id,
+                        'expert' => $expert->name,
+                        'name' => $expert->name,
+                        'role' => $expert->role,
+                        'role_label' => ExpertEvaluation::ROLES[$expert->role],
+                        'template_id' => (int) $template->id,
+                    ]);
+                }
+            }
+
+            $out[(int) $teamId] = $out[(int) $teamId]
+                ->sortBy(fn ($row) => [self::stageOrder($row->stage), array_search($row->role, array_keys(ExpertEvaluation::ROLES), true)])
+                ->values();
+        }
+
+        return $out;
     }
 
     /**
@@ -76,37 +149,54 @@ class ExpertEvaluations
     public function history(Team $team): Collection
     {
         return ExpertEvaluation::where('team_id', $team->team_id)
-            ->with(['expert', 'milestone'])
+            ->with(['expert', 'defense'])
             ->latest()
             ->get();
     }
 
     /**
-     * Save the leader's rating. Only what is actually owed can be sent, and
-     * only by the team's leader.
+     * Save the leader's answers. Only what is actually owed can be sent, only
+     * by the team's leader, and every question needs a score from 1 to 5.
      *
+     * @param  array<int|string, mixed>  $answers  question id => 1..5
      * @return string|null why it was refused, or null when it was saved
      */
-    public function submit(Student $leader, Team $team, int $milestoneId, int $expertId, string $role, int $rating, string $comment): ?string
+    public function submit(Student $leader, Team $team, int $defenseId, int $expertId, string $role, array $answers): ?string
     {
         if ((int) $team->leader_id !== (int) $leader->student_id) {
             return 'Only your team leader evaluates the experts.';
         }
 
-        $owed = $this->due($team)->first(fn ($row) => $row->milestone_id === $milestoneId
+        $owed = $this->due($team)->first(fn ($row) => $row->defense_id === $defenseId
             && $row->expert_id === $expertId && $row->role === $role);
 
         if (! $owed) {
             return 'That evaluation is not due, or it was already sent.';
         }
 
+        $template = EvaluationTemplate::with('questions')->find($owed->template_id);
+        $scored = [];
+
+        foreach ($template->questions as $question) {
+            $score = (int) ($answers[$question->id] ?? 0);
+
+            if ($score < 1 || $score > 5) {
+                return 'Answer every question from 1 to 5.';
+            }
+
+            // The wording as it was asked, so editing the template later
+            // cannot change what this evaluation said.
+            $scored[] = ['question' => $question->question, 'score' => $score];
+        }
+
         ExpertEvaluation::create([
             'team_id' => $team->team_id,
             'expert_id' => $expertId,
-            'checklist_milestone_id' => $milestoneId,
+            'defense_id' => $defenseId,
+            'evaluation_template_id' => $template->id,
             'role' => $role,
-            'rating' => max(1, min(5, $rating)),
-            'comment' => trim($comment),
+            'answers' => $scored,
+            'rating' => round(collect($scored)->avg('score'), 2),
             'student_id' => $leader->student_id,
         ]);
 
@@ -114,10 +204,10 @@ class ExpertEvaluations
     }
 
     /**
-     * Tell the leader - bell, desktop popup and email - about each finished
-     * phase that still has evaluations owed, once per phase.
+     * Tell the leader - bell, desktop popup and email - about each passed
+     * defense that still has evaluations owed, once per defense.
      *
-     * @return int how many phases were announced
+     * @return int how many defenses were announced
      */
     public function remind(Team $team): int
     {
@@ -127,32 +217,32 @@ class ExpertEvaluations
             return 0;
         }
 
-        $owedPhases = $this->due($team)->groupBy('milestone_id');
+        $owedDefenses = $this->due($team)->groupBy('defense_id');
         $told = DB::table('expert_evaluation_reminders')->where('team_id', $team->team_id)
-            ->pluck('checklist_milestone_id')->map(fn ($id) => (int) $id)->all();
+            ->whereNotNull('defense_id')->pluck('defense_id')->map(fn ($id) => (int) $id)->all();
 
         $count = 0;
-        foreach ($owedPhases as $milestoneId => $rows) {
-            if (in_array((int) $milestoneId, $told, true)) {
+        foreach ($owedDefenses as $defenseId => $rows) {
+            if (in_array((int) $defenseId, $told, true)) {
                 continue;
             }
 
             DB::table('expert_evaluation_reminders')->insertOrIgnore([
                 'team_id' => $team->team_id,
-                'checklist_milestone_id' => $milestoneId,
+                'defense_id' => $defenseId,
                 'notified_at' => now(),
             ]);
 
-            $phase = $rows->first()->milestone;
+            $stage = $rows->first()->stage;
             $names = $rows->map(fn ($r) => $r->expert.' ('.$r->role_label.')')->unique()->implode(', ');
 
             Notifier::toStudent(
                 $leader,
                 'evaluation_due',
-                'Evaluate your experts: '.$phase,
-                'Your team finished <strong>'.e($phase).'</strong>. Rate '.e($names).' from 1 to 5 stars with a comment. The next phase stays locked until you do.',
+                'Evaluate your experts: '.$stage,
+                'Your team passed <strong>'.e($stage).'</strong>. Answer your CaPSA\'s evaluation for '.e($names).'. It is anonymous, and the next phase stays locked until it is done.',
                 route('student.experts', ['tab' => 'evaluations']),
-                ['tag' => 'evaluation:'.$milestoneId],
+                ['tag' => 'evaluation:defense:'.$defenseId],
             );
             $count++;
         }
@@ -161,47 +251,80 @@ class ExpertEvaluations
     }
 
     /**
-     * For each team: the experts it engaged (by the role it engaged them as)
-     * and the ratings already sent, keyed "milestone|expert|role". Read in
-     * bulk, for MilestoneProgress to work out which finished phases still owe
-     * a rating.
+     * The defenses coming up in this CaPSA's sections whose stage has no
+     * evaluation yet. The leaders of the teams that pass will owe one only if
+     * it exists before the defense is decided, so the CaPSA is asked for it
+     * as soon as the date is set.
+     *
+     * @return Collection<int, object{stage: string, teams: int, first: Carbon}>
+     */
+    public function upcomingWithoutEvaluation(CapstoneExpert $capsa): Collection
+    {
+        $sections = $capsa->sections ?? [];
+
+        if ($sections === []) {
+            return collect();
+        }
+
+        $covered = EvaluationTemplate::active()->where('capsa_id', $capsa->expert_id)->whereHas('questions')
+            ->pluck('defense_type')->map(fn ($stage) => mb_strtolower($stage))->unique()->all();
+
+        $upcoming = DefenseSchedule::whereNull('outcome')
+            ->whereNotNull('schedule_date')
+            ->where('schedule_date', '>=', now()->startOfDay())
+            ->get(['defense_id', 'team_id', 'defense_type', 'schedule_date'])
+            ->reject(fn ($d) => in_array(mb_strtolower((string) $d->defense_type), $covered, true));
+
+        if ($upcoming->isEmpty()) {
+            return collect();
+        }
+
+        $teams = Team::whereIn('team_id', $upcoming->pluck('team_id')->unique())->get();
+        $records = StudentSchoolYear::with('student')->whereIn('team_id', $teams->pluck('team_id'))->get()->groupBy('team_id');
+        $scope = app(SectionScope::class);
+        $mine = $teams->filter(fn (Team $team) => in_array($scope->sectionFor($team, $records->get($team->team_id, collect())), $sections, true))
+            ->pluck('team_id')->all();
+
+        return $upcoming->whereIn('team_id', $mine)
+            ->groupBy('defense_type')
+            ->map(fn (Collection $rows, string $stage) => (object) [
+                'stage' => $stage,
+                'teams' => $rows->pluck('team_id')->unique()->count(),
+                'first' => $rows->min('schedule_date'),
+            ])
+            ->sortBy(fn ($row) => self::stageOrder($row->stage))
+            ->values();
+    }
+
+    /** Position of a stage in the capstone, for ordering. */
+    public static function stageOrder(string $stage): int
+    {
+        $at = array_search(mb_strtolower($stage), array_map('mb_strtolower', EvaluationTemplate::STAGES), true);
+
+        return $at === false ? 99 : $at;
+    }
+
+    /**
+     * Each team's experts by the role they were engaged as.
      *
      * @param  Collection<int, int>  $teamIds
-     * @return array<int, array{experts: Collection<int, object{expert_id: int, name: string, role: string}>, done: array<string, true>}>
+     * @return Collection<int, Collection<int, object{expert_id: int, name: string, role: string}>>
      */
-    public static function ledgers(Collection $teamIds): array
+    private static function engagedExperts(Collection $teamIds): Collection
     {
-        $assignments = TeamExpertAssignment::whereIn('team_id', $teamIds)
+        return TeamExpertAssignment::whereIn('team_id', $teamIds)
             ->where('status', 'approved')
             ->with(['expert', 'expertRole.role'])
             ->get()
-            ->groupBy('team_id');
-
-        $sent = ExpertEvaluation::whereIn('team_id', $teamIds)
-            ->get(['team_id', 'checklist_milestone_id', 'expert_id', 'role'])
-            ->groupBy('team_id');
-
-        $roleOrder = array_keys(ExpertEvaluation::ROLES);
-        $out = [];
-
-        foreach ($teamIds as $teamId) {
-            $out[$teamId] = [
-                'experts' => $assignments->get($teamId, collect())
-                    ->map(fn (TeamExpertAssignment $a) => (object) [
-                        'expert_id' => (int) $a->expert_id,
-                        'name' => $a->expert?->name ?? 'Expert',
-                        'role' => strtolower(trim((string) $a->engaged_role_name)),
-                    ])
-                    ->filter(fn ($e) => array_key_exists($e->role, ExpertEvaluation::ROLES))
-                    ->unique(fn ($e) => $e->expert_id.'|'.$e->role)
-                    ->sortBy(fn ($e) => array_search($e->role, $roleOrder, true))
-                    ->values(),
-                'done' => $sent->get($teamId, collect())
-                    ->mapWithKeys(fn (ExpertEvaluation $e) => [$e->checklist_milestone_id.'|'.$e->expert_id.'|'.$e->role => true])
-                    ->all(),
-            ];
-        }
-
-        return $out;
+            ->groupBy('team_id')
+            ->map(fn ($rows) => $rows
+                ->map(fn (TeamExpertAssignment $a) => (object) [
+                    'expert_id' => (int) $a->expert_id,
+                    'name' => $a->expert?->name ?? 'Expert',
+                    'role' => strtolower(trim((string) $a->engaged_role_name)),
+                ])
+                ->filter(fn ($e) => array_key_exists($e->role, ExpertEvaluation::ROLES))
+                ->unique(fn ($e) => $e->expert_id.'|'.$e->role)
+                ->values());
     }
 }

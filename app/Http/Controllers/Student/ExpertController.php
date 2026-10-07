@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
+use App\Models\EvaluationTemplate;
 use App\Models\ExpertEvaluation;
 use App\Models\ExpertRemovalRequest;
 use App\Models\Student;
@@ -343,33 +344,19 @@ class ExpertController extends Controller
             // Who a change request may name instead of each expert the team
             // has: same role, room for the team, not already with it.
             'replacementOptions' => $isLeader && $team ? $this->replacementOptions($team, $student, $roleAssignments) : [],
-            // The Evaluations tab: what the leader still owes each expert for
-            // the phases the team has finished, and what was already sent.
             // What team leaders rated each listed expert, across every team
-            // and phase: the average and how many. Stars only - the comments
-            // stay with the team that wrote them.
+            // and defense: the average and how many. The rating is all a
+            // student sees - the answers stay with the CaPSA and the expert.
             'expertRatings' => ExpertEvaluation::whereIn('expert_id', $experts->pluck('expert_id'))
                 ->groupBy('expert_id')
                 ->selectRaw('expert_id, AVG(rating) as average, COUNT(*) as total')
                 ->get()
                 ->mapWithKeys(fn ($row) => [(int) $row->expert_id => ['average' => round((float) $row->average, 1), 'total' => (int) $row->total]])
                 ->all(),
-            // And what they wrote, so a team can read it before applying.
-            // Never which team wrote it.
-            'expertReviews' => ExpertEvaluation::whereIn('expert_id', $experts->pluck('expert_id'))
-                ->with('milestone:id,name')
-                ->latest()
-                ->get()
-                ->groupBy('expert_id')
-                ->map(fn ($rows) => $rows->take(30)->map(fn (ExpertEvaluation $e) => [
-                    'rating' => $e->rating,
-                    'comment' => $e->comment,
-                    'role' => $e->role,
-                    'phase' => $e->milestone?->name,
-                    'date' => $e->created_at?->format('M Y'),
-                ])->values()->all())
-                ->all(),
-            'evaluationsDue' => $team ? app(ExpertEvaluations::class)->due($team) : collect(),
+            // The Evaluations tab: what the leader still owes for the defenses
+            // the team has passed, the CaPSA's questions for each, and what was sent.
+            'evaluationsDue' => $evaluationsDue = ($team ? app(ExpertEvaluations::class)->due($team) : collect()),
+            'evaluationTemplates' => EvaluationTemplate::with('questions')->whereIn('id', $evaluationsDue->pluck('template_id')->unique())->get()->keyBy('id'),
             'evaluationHistory' => $team ? app(ExpertEvaluations::class)->history($team) : collect(),
             'teamConfirmed' => $team?->is_confirmed ?? false,
             'skillGroups' => $skillGroups,

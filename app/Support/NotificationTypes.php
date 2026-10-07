@@ -179,7 +179,7 @@ final class NotificationTypes
             'email' => true,
         ],
         'evaluation_due' => [
-            'label' => 'We finished a phase and our experts are waiting to be evaluated',
+            'label' => 'We passed a defense and our experts are waiting to be evaluated',
             'email' => true,
         ],
     ];

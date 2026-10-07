@@ -67,24 +67,21 @@ class ExpertRatingsAndStudyLeaveTest extends TestCase
 
         $this->findExperts()->assertOk()
             ->assertSee('Rated 4.3 out of 5')
-            ->assertSee('(3 ratings)')
-            ->assertSee('View comments');
+            ->assertSee('4.3<small>/5</small>', false)
+            ->assertSee('3 reviews');
     }
 
-    /** A team reads what earlier teams wrote - but never which team wrote it. */
-    public function test_students_can_read_the_comments_without_the_team_behind_them(): void
+    /** A student sees the stars and how many - never what was answered, or by whom. */
+    public function test_students_see_only_the_rating_and_the_count(): void
     {
         $expert = $this->adviser();
         $this->rated($expert, 5, 'Replied within a day every time.');
         $writer = Team::latest('team_id')->first();
 
-        $response = $this->findExperts()->assertOk();
-        $experts = $response->viewData('expertReviews');
-
-        $this->assertSame('Replied within a day every time.', $experts[$expert->expert_id][0]['comment']);
-        $this->assertSame(5, $experts[$expert->expert_id][0]['rating']);
-        $this->assertArrayNotHasKey('team_id', $experts[$expert->expert_id][0]);
-        $response->assertSee('Replied within a day every time.', false)
+        $this->findExperts()->assertOk()
+            ->assertSee('1 review')
+            ->assertDontSee('View comments')
+            ->assertDontSee('Replied within a day every time.')
             ->assertDontSee($writer->team_name);
     }
 
@@ -92,7 +89,7 @@ class ExpertRatingsAndStudyLeaveTest extends TestCase
     {
         $this->adviser();
 
-        $this->findExperts()->assertOk()->assertSee('No ratings yet');
+        $this->findExperts()->assertOk()->assertSee('No reviews yet');
     }
 
     public function test_an_expert_on_study_leave_carries_a_quiet_tag(): void

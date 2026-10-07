@@ -176,6 +176,9 @@
       $pendingLeaveRequests = $isCapsa ? App\Models\MemberLeaveRequest::pendingCountFor($admin) : 0;
       $teamManagementBadge = $unseenPendingVerifyTeamCount + $pendingLeaveRequests;
       $badge = fn (int $n) => $n > 99 ? '99+' : $n;
+      // Defense stages coming up in this CaPSA's sections with no expert
+      // evaluation yet - the badge here and the popup below.
+      $evaluationsToSetUp = $isCapsa ? app(App\Support\ExpertEvaluations::class)->upcomingWithoutEvaluation($admin) : collect();
     @endphp
 
     <div class="nav-section">Overview</div>
@@ -264,6 +267,13 @@
       <x-portal-icon name="rubric" />
       Grading Rubrics
     </a>
+    <a href="{{ route('capsa.evaluations') }}" class="nav-item {{ str_starts_with($currentRoute ?? '', 'capsa.evaluations') ? 'active' : '' }}">
+      <x-portal-icon name="feedback" />
+      Expert Evaluations
+      @if ($evaluationsToSetUp->isNotEmpty())
+        <span class="nav-badge red">{{ $badge($evaluationsToSetUp->count()) }}</span>
+      @endif
+    </a>
     @endif
 
     @if ($isExpert)
@@ -278,6 +288,10 @@
       @if ($unseenExpertDocReviewCount > 0)
         <span class="nav-badge red">{{ $badge($unseenExpertDocReviewCount) }}</span>
       @endif
+    </a>
+    <a href="{{ route('instructor.evaluations') }}" class="nav-item {{ $currentRoute === 'instructor.evaluations' ? 'active' : '' }}">
+      <x-portal-icon name="trophy" />
+      My Evaluations
     </a>
     @endif
 
@@ -382,3 +396,6 @@
   @include('instructor.partials.expert-profile')
 @endif
 @include('partials.sidebar-scroll-restore')
+@if ($isCapsa)
+  @include('capsa.partials.evaluation-required-popup', ['missing' => $evaluationsToSetUp])
+@endif

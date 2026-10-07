@@ -386,12 +386,12 @@
         </summary>
 
         @if ($group->evaluations_owed->isNotEmpty())
-          {{-- Finishing a phase ends with the leader rating each expert; the next phase waits for it. --}}
+          {{-- Passing a defense ends with the leader evaluating each expert; the next phase waits for it. --}}
           <div class="pt-gate is-eval">
             <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             <div>
               <b>{{ $isLeader ? 'Evaluate your experts to unlock the next phase' : 'Waiting on your leader to evaluate the experts' }}</b>
-              <span>{{ $group->evaluations_owed->map(fn ($e) => $e->name.' ('.ucfirst($e->role).')')->implode(', ') }} {{ $group->evaluations_owed->count() === 1 ? 'still needs' : 'still need' }} a 1 to 5 star rating with a comment for {{ $group->name }}.</span>
+              <span>{{ $group->evaluations_owed->map(fn ($e) => $e->name.' ('.ucfirst($e->role).')')->implode(', ') }} {{ $group->evaluations_owed->count() === 1 ? 'still needs' : 'still need' }} your anonymous evaluation for {{ $group->evaluations_owed->pluck('stage')->unique()->implode(' and ') }}.</span>
             </div>
             @if ($isLeader)<a class="pt-btn pt-btn-primary" href="{{ route('student.experts', ['tab' => 'evaluations']) }}">Evaluate now</a>@endif
           </div>

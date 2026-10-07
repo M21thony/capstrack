@@ -21,6 +21,7 @@ use App\Http\Controllers\Capsa\DefenseSchedulingController;
 use App\Http\Controllers\Capsa\DeliverableCheckController;
 use App\Http\Controllers\Capsa\DeliverableController;
 use App\Http\Controllers\Capsa\DocumentFileController;
+use App\Http\Controllers\Capsa\EvaluationTemplateController;
 use App\Http\Controllers\Capsa\ExpertRemovalRequestController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
 use App\Http\Controllers\Capsa\MilestonePageController;
@@ -43,6 +44,7 @@ use App\Http\Controllers\Instructor\ConsultationLogController;
 use App\Http\Controllers\Instructor\DashboardController as InstructorDashboardController;
 use App\Http\Controllers\Instructor\DefenseGoController;
 use App\Http\Controllers\Instructor\DocReviewController;
+use App\Http\Controllers\Instructor\EvaluationController as InstructorEvaluationController;
 use App\Http\Controllers\Instructor\GradingController;
 use App\Http\Controllers\Instructor\ProfileController as InstructorProfileController;
 use App\Http\Controllers\Instructor\ProgressController as InstructorProgressController;
@@ -269,6 +271,15 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // The file a team uploaded for a line, opened by the CaPSA to check it.
         Route::get('/documents/{document}/file', [DocumentFileController::class, 'show'])->name('documents.file');
         Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
+        // The questions team leaders answer about their experts after each
+        // defense, and the anonymous results.
+        Route::get('/evaluations', [EvaluationTemplateController::class, 'index'])->name('evaluations');
+        Route::get('/evaluations/new', [EvaluationTemplateController::class, 'create'])->name('evaluations.create');
+        Route::post('/evaluations', [EvaluationTemplateController::class, 'store'])->name('evaluations.store');
+        Route::get('/evaluations/{template}/edit', [EvaluationTemplateController::class, 'edit'])->name('evaluations.edit');
+        Route::put('/evaluations/{template}', [EvaluationTemplateController::class, 'update'])->name('evaluations.update');
+        Route::patch('/evaluations/{template}/turn-off', [EvaluationTemplateController::class, 'turnOff'])->name('evaluations.turn_off');
+        Route::delete('/evaluations/{template}', [EvaluationTemplateController::class, 'destroy'])->name('evaluations.destroy');
         Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
         Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
         Route::put('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('financial.expense-post.update');
@@ -336,6 +347,8 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
     Route::post('/grading/{defense}/abstain', [GradingController::class, 'abstain'])->name('grading.abstain');
     Route::delete('/grading/{defense}/abstain', [GradingController::class, 'withdrawAbstention'])->name('grading.abstain.withdraw');
+    // What team leaders answered about this expert, anonymously.
+    Route::get('/evaluations', [InstructorEvaluationController::class, 'index'])->name('evaluations');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
     Route::get('/docreview/{review}/annotate', [DocReviewController::class, 'annotate'])->name('docreview.annotate');
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
