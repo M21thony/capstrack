@@ -305,10 +305,10 @@ function PDFChecker({
   };
 
   const pickShape = (e, n) => {
-    if (!drawings.pages[n - numPages - 1]) { notify("Shape works on diagram pages. Use Box or Pin here."); return; }
-    if (beforeView && drawings.pages[n - numPages - 1].oldMarked) { notify("This is the earlier version. Press V to go back and pick a shape."); return; }
+    if (!drawings.pages[n - numPages - 1]) { notify("Shape works on diagram pages. Use Box or Pin here.", { type: "info" }); return; }
+    if (beforeView && drawings.pages[n - numPages - 1].oldMarked) { notify("This is the earlier version. Press V to go back and pick a shape.", { type: "info" }); return; }
     const hit = shapeUnder(e, n);
-    if (!hit) { notify("Click a box or an arrow on the diagram."); return; }
+    if (!hit) { notify("Click a box or an arrow on the diagram.", { type: "info" }); return; }
     const cell = shapeCell(hit.page, hit.id);
     // Shift+click adds the cell to the remark being written (or takes it off again).
     if (e.shiftKey && draft?.type === "shape" && !draft.drawing) {
@@ -369,12 +369,12 @@ function PDFChecker({
     const last = draft.highlightRects[draft.highlightRects.length - 1];
     const tooSmall = last.highlight_width < 0.02 || last.highlight_height < 0.015;
     if (adding) {
-      if (tooSmall) { setDraft((d) => ({ ...d, highlightRects: d.highlightRects.slice(0, -1) })); notify("Drag across the area to draw the box."); return; }
+      if (tooSmall) { setDraft((d) => ({ ...d, highlightRects: d.highlightRects.slice(0, -1) })); notify("Drag across the area to draw the box.", { type: "info" }); return; }
       setAdding(false);
       setPopPos(null);
       return;
     }
-    if (tooSmall) { setDraft(null); notify("Drag across the figure to draw a box around it."); return; }
+    if (tooSmall) { setDraft(null); notify("Drag across the figure to draw a box around it.", { type: "info" }); return; }
     beginRemark({ ...draft, drawing: false });
   };
 
