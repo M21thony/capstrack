@@ -117,9 +117,13 @@ class ExpertEvaluations
      * Tell the leader - bell, desktop popup and email - about each finished
      * phase that still has evaluations owed, once per phase.
      *
+     * The caller may pass what due() already worked out for this team, so a
+     * page that also shows it does not work it out twice.
+     *
+     * @param  Collection<int, object>|null  $due
      * @return int how many phases were announced
      */
-    public function remind(Team $team): int
+    public function remind(Team $team, ?Collection $due = null): int
     {
         $leader = $team->leader_id ? Student::find($team->leader_id) : null;
 
@@ -127,7 +131,7 @@ class ExpertEvaluations
             return 0;
         }
 
-        $owedPhases = $this->due($team)->groupBy('milestone_id');
+        $owedPhases = ($due ?? $this->due($team))->groupBy('milestone_id');
         $told = DB::table('expert_evaluation_reminders')->where('team_id', $team->team_id)
             ->pluck('checklist_milestone_id')->map(fn ($id) => (int) $id)->all();
 

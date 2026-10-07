@@ -144,21 +144,20 @@ class AppServiceProvider extends ServiceProvider
         // experts are, and the next defense. Worked out once a request,
         // however many student partials this composer runs for.
         ['members' => $panelMembers, 'experts' => $panelExperts, 'defense' => $panelDefense] = $panelTeam
-            ? once(fn () => $this->panelDetails($panelTeam))
+            ? $this->panelDetails($panelTeam)
             : ['members' => collect(), 'experts' => [], 'defense' => null];
 
         // A leader whose team finished a phase owes each expert an
         // evaluation: told once by bell and email the first time any
         // page notices, and nudged by the popup until it is done.
-        $evaluationsOwed = $panelTeam && (int) $panelTeam->leader_id === (int) $studentId
-            ? once(function () use ($panelTeam) {
-                $evaluations = app(ExpertEvaluations::class);
-                // A failed email must not take the page down with it.
-                rescue(fn () => $evaluations->remind($panelTeam));
+        $evaluationsOwed = collect();
 
-                return $evaluations->due($panelTeam);
-            })
-            : collect();
+        if ($panelTeam && (int) $panelTeam->leader_id === (int) $studentId) {
+            $evaluations = app(ExpertEvaluations::class);
+            $evaluationsOwed = $evaluations->due($panelTeam);
+            // A failed email must not take the page down with it.
+            rescue(fn () => $evaluations->remind($panelTeam, $evaluationsOwed));
+        }
 
         return compact(
             'unreadNotifications', 'unreadCount', 'bellNotifications', 'leaveDecisions', 'joinRequestPopups',

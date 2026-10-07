@@ -18,6 +18,7 @@ use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Support\ExpertEvaluations;
 use App\Support\MilestoneProgress;
+use App\Support\TeamChecklist;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -274,6 +275,36 @@ class ExpertEvaluationTest extends TestCase
 
         $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))->assertOk();
 
+        $this->assertSame(1, Notification::where('student_id', $this->leader->student_id)->where('type', 'evaluation_due')->count());
+    }
+
+    /**
+     * Every student page works out what the leader owes, for the popup and
+     * the reminder alike - once, not once for each.
+     */
+    public function test_a_page_works_out_what_is_owed_once(): void
+    {
+        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
+        $this->finish($this->gettingStarted);
+
+        $counting = new class(app(TeamChecklist::class)) extends ExpertEvaluations
+        {
+            public int $dueCalls = 0;
+
+            public function due(Team $team): Collection
+            {
+                $this->dueCalls++;
+
+                return parent::due($team);
+            }
+        };
+        $this->app->instance(ExpertEvaluations::class, $counting);
+
+        $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('Time to evaluate your experts');
+
+        $this->assertSame(1, $counting->dueCalls);
         $this->assertSame(1, Notification::where('student_id', $this->leader->student_id)->where('type', 'evaluation_due')->count());
     }
 
