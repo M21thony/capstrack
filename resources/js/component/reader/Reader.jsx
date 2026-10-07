@@ -274,7 +274,12 @@ function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measur
           </span>
         )}
       </div>
-      {isFigureRemark(r) ? (
+      {r.type === "shape" ? (
+        <div className="rr-cshape">
+          <span className={`rr-cshape-i${r.shape_ref?.cells?.[0]?.kind === "edge" ? " edge" : ""}`} aria-hidden="true" />
+          <b>{figureTitle(r)}</b>
+        </div>
+      ) : isFigureRemark(r) ? (
         <div className="rr-cfig">
           <button
             type="button"
