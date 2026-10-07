@@ -34,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
         'resources/js/defenses/defenses.js',
     ];
 
+    /** Where the student views' shared data is kept for the rest of a request. */
+    private const STUDENT_VIEW_DATA = 'capstrack.student_view_data';
+
     /**
      * Register any application services.
      */
@@ -64,81 +67,103 @@ class AppServiceProvider extends ServiceProvider
             fn (string $src): array => in_array($src, self::PAGE_DRAWING_SCRIPTS, true) ? ['blocking' => 'render'] : []
         );
 
+        // Every student view runs this - the page and each partial it pulls in
+        // (sidebar, notification bell, tutorial, ...) - so the data is worked
+        // out once a request, kept on the request, and handed to all of them
+        // rather than queried again per view. Kept on the request rather than
+        // in once(), which lives as long as the app does and so would carry
+        // one request's bell into the next.
         View::composer('student.*', function ($view) {
             if (auth()->check()) {
-                $studentId = auth()->id();
-                $unreadNotifications = Notification::where('student_id', $studentId)
-                    ->where('is_read', false)
-                    ->latest('created_at')
-                    ->take(10)
-                    ->get();
-                $unreadCount = Notification::where('student_id', $studentId)
-                    ->where('is_read', false)
-                    ->count();
-                // What the bell lists: the latest, read or not, so marking
-                // them read changes how they look, not whether they are there
-                // - the same list the expert bell shows.
-                $bellNotifications = Notification::where('student_id', $studentId)
-                    ->latest('created_at')
-                    ->take(15)
-                    ->get();
-                // A CaPSA's decision on a leave request opens in a pop-up with
-                // the whole of it, not just the line in the bell.
-                $leaveDecisions = LeaveDecisionDetails::forNotifications($bellNotifications, (int) $studentId);
-                // "Later" on a join-request popup stores its id in
-                // dismissed_invitations (see InvitationController::remindLater())
-                // rather than a persisted remind_me_at column - there's no
-                // such column on team_invitations.
-                $dismissedInvitationIds = (array) session('dismissed_invitations', []);
+                $request = request();
 
-                $joinRequestPopups = TeamInvitation::with(['sender', 'team'])
-                    ->where('receiver_id', $studentId)
-                    ->where('type', 'request')
-                    ->where('status', 'pending')
-                    ->whereNotIn('id', $dismissedInvitationIds)
-                    ->latest('created_at')
-                    ->get();
-                // The profile panel in the sidebar shows where this student
-                // stands in their capstone, and the sidebar is on every
-                // student page - so it is fetched once, here, rather than in
-                // each of a dozen controllers.
-                $enrolment = StudentSchoolYear::with('role')
-                    ->where('student_id', $studentId)
-                    ->first();
+                if (! $request->attributes->has(self::STUDENT_VIEW_DATA)) {
+                    $request->attributes->set(self::STUDENT_VIEW_DATA, $this->studentViewData(auth()->id()));
+                }
 
-                $panelTeam = $enrolment?->team_id ? Team::find($enrolment->team_id) : null;
-                $panelRole = $panelTeam && (int) $panelTeam->leader_id === (int) $studentId
-                    ? StudentRole::LEADER_ROLE_NAME
-                    : $enrolment?->role?->s_role_name;
-
-                // The rest of where they stand: who is on the team, who their
-                // experts are, and the next defense. Worked out once a request,
-                // however many student partials this composer runs for.
-                ['members' => $panelMembers, 'experts' => $panelExperts, 'defense' => $panelDefense] = $panelTeam
-                    ? once(fn () => $this->panelDetails($panelTeam))
-                    : ['members' => collect(), 'experts' => [], 'defense' => null];
-
-                // A leader whose team finished a phase owes each expert an
-                // evaluation: told once by bell and email the first time any
-                // page notices, and nudged by the popup until it is done.
-                $evaluationsOwed = $panelTeam && (int) $panelTeam->leader_id === (int) $studentId
-                    ? once(function () use ($panelTeam) {
-                        $evaluations = app(ExpertEvaluations::class);
-                        // A failed email must not take the page down with it.
-                        rescue(fn () => $evaluations->remind($panelTeam));
-
-                        return $evaluations->due($panelTeam);
-                    })
-                    : collect();
-
-                $view->with(compact(
-                    'unreadNotifications', 'unreadCount', 'bellNotifications', 'leaveDecisions', 'joinRequestPopups',
-                    'panelTeam', 'panelRole', 'panelMembers', 'panelExperts', 'panelDefense', 'evaluationsOwed'
-                ));
+                $view->with($request->attributes->get(self::STUDENT_VIEW_DATA));
             }
         });
 
         Route::model('review', CapstoneDocumentReview::class);
+    }
+
+    /**
+     * What every student view shares: the bell, join-request popups and the
+     * sidebar's profile panel.
+     *
+     * @return array<string, mixed>
+     */
+    private function studentViewData(int|string $studentId): array
+    {
+        $unreadNotifications = Notification::where('student_id', $studentId)
+            ->where('is_read', false)
+            ->latest('created_at')
+            ->take(10)
+            ->get();
+        $unreadCount = Notification::where('student_id', $studentId)
+            ->where('is_read', false)
+            ->count();
+        // What the bell lists: the latest, read or not, so marking
+        // them read changes how they look, not whether they are there
+        // - the same list the expert bell shows.
+        $bellNotifications = Notification::where('student_id', $studentId)
+            ->latest('created_at')
+            ->take(15)
+            ->get();
+        // A CaPSA's decision on a leave request opens in a pop-up with
+        // the whole of it, not just the line in the bell.
+        $leaveDecisions = LeaveDecisionDetails::forNotifications($bellNotifications, (int) $studentId);
+        // "Later" on a join-request popup stores its id in
+        // dismissed_invitations (see InvitationController::remindLater())
+        // rather than a persisted remind_me_at column - there's no
+        // such column on team_invitations.
+        $dismissedInvitationIds = (array) session('dismissed_invitations', []);
+
+        $joinRequestPopups = TeamInvitation::with(['sender', 'team'])
+            ->where('receiver_id', $studentId)
+            ->where('type', 'request')
+            ->where('status', 'pending')
+            ->whereNotIn('id', $dismissedInvitationIds)
+            ->latest('created_at')
+            ->get();
+        // The profile panel in the sidebar shows where this student
+        // stands in their capstone, and the sidebar is on every
+        // student page - so it is fetched once, here, rather than in
+        // each of a dozen controllers.
+        $enrolment = StudentSchoolYear::with('role')
+            ->where('student_id', $studentId)
+            ->first();
+
+        $panelTeam = $enrolment?->team_id ? Team::find($enrolment->team_id) : null;
+        $panelRole = $panelTeam && (int) $panelTeam->leader_id === (int) $studentId
+            ? StudentRole::LEADER_ROLE_NAME
+            : $enrolment?->role?->s_role_name;
+
+        // The rest of where they stand: who is on the team, who their
+        // experts are, and the next defense. Worked out once a request,
+        // however many student partials this composer runs for.
+        ['members' => $panelMembers, 'experts' => $panelExperts, 'defense' => $panelDefense] = $panelTeam
+            ? once(fn () => $this->panelDetails($panelTeam))
+            : ['members' => collect(), 'experts' => [], 'defense' => null];
+
+        // A leader whose team finished a phase owes each expert an
+        // evaluation: told once by bell and email the first time any
+        // page notices, and nudged by the popup until it is done.
+        $evaluationsOwed = $panelTeam && (int) $panelTeam->leader_id === (int) $studentId
+            ? once(function () use ($panelTeam) {
+                $evaluations = app(ExpertEvaluations::class);
+                // A failed email must not take the page down with it.
+                rescue(fn () => $evaluations->remind($panelTeam));
+
+                return $evaluations->due($panelTeam);
+            })
+            : collect();
+
+        return compact(
+            'unreadNotifications', 'unreadCount', 'bellNotifications', 'leaveDecisions', 'joinRequestPopups',
+            'panelTeam', 'panelRole', 'panelMembers', 'panelExperts', 'panelDefense', 'evaluationsOwed'
+        );
     }
 
     /**
