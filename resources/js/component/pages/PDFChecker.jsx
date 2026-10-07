@@ -305,10 +305,10 @@ function PDFChecker({
   };
 
   const pickShape = (e, n) => {
-    if (!drawings.pages[n - numPages - 1]) { notify("Shape works on diagram pages. Use Box or Pin here.", { type: "info" }); return; }
+    if (!drawings.pages[n - numPages - 1]) return;
     if (beforeView && drawings.pages[n - numPages - 1].oldMarked) { notify("This is the earlier version. Press V to go back and pick a shape.", { type: "info" }); return; }
     const hit = shapeUnder(e, n);
-    if (!hit) { notify("Click a box or an arrow on the diagram.", { type: "info" }); return; }
+    if (!hit) return;
     const cell = shapeCell(hit.page, hit.id);
     // Shift+click adds the cell to the remark being written (or takes it off again).
     if (e.shiftKey && draft?.type === "shape" && !draft.drawing) {
@@ -570,7 +570,11 @@ function PDFChecker({
                 const drawing = drawings.pages[n - numPages - 1];
                 // This version's remarks are not drawn on the earlier version's drawing.
                 const before = Boolean(beforeView && drawing?.oldMarked);
-                const pageRemarks = before ? [] : comments.filter((c) => Number(c.page_number) === n);
+                // A shape remark is outlined from its cells on the drawing, not from the outline it was saved with.
+                const pic = drawing && shownPicture(drawing, showChanges);
+                const outline = (c) => c.shape_ref.cells.flatMap((cell) => { const t = pic.targets.find((x) => x.id === cell.id); return t ? shapeRects(t, pic) : []; });
+                const pageRemarks = before ? [] : comments.filter((c) => Number(c.page_number) === n)
+                  .map((c) => (pic && c.type === "shape" && c.shape_ref && outline(c).length ? { ...c, highlightRects: outline(c) } : c));
                 return (
                   <div
                     key={n}
