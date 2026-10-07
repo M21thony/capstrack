@@ -108,6 +108,14 @@
     return found;
   }
 
+  // Puts a sheet where it covers, its skeleton lined up with the page.
+  function place(sheet) {
+    sheet.node.style.top = sheet.top + 'px';
+    sheet.node.style.height = (sheet.bottom - sheet.top) + 'px';
+    sheet.node.firstChild.style.top = (sheet.origin - sheet.top) + 'px';
+    return sheet;
+  }
+
   // The box around a few elements, as on screen now.
   function around(elements) {
     var box = null;
@@ -150,9 +158,9 @@
       cover.style.height = Math.max(0, bottom - top) + 'px';
       layer.style.left = -content.scrollLeft + 'px';
       layer.style.top = (now.top - top - content.scrollTop) + 'px';
-      if (tail && content.scrollHeight > tail.bottom) {
+      if (tail && !tail.done && content.scrollHeight > tail.bottom) {
         tail.bottom = content.scrollHeight;
-        tail.node.style.height = (tail.bottom - tail.top) + 'px';
+        place(tail);
       }
       if (foot) {
         var under = around(below);
@@ -272,9 +280,9 @@
     surface = visibleColour(surface) ? surface : '#eceef0';
 
     // The skeleton comes in bands - each run of cards with nothing between
-    // them - laid edge to edge down the whole page. A band in view gives
-    // way to the page after a moment; a band further down stays a skeleton,
-    // still loading, until it is scrolled into view, then gives way too.
+    // them - laid edge to edge down the whole page, so it can give way a
+    // part at a time: what is on screen first, the rest as it is scrolled
+    // to.
     pieces.sort(function (one, other) { return one.top - other.top; });
     var bands = [];
     pieces.forEach(function (piece) {
@@ -294,13 +302,16 @@
       var bottom = at === bands.length - 1 ? end : (band.bottom + bands[at + 1].top) / 2;
       var sheet = document.createElement('div');
       sheet.className = 'csk-sheet';
-      sheet.style.cssText = 'top:' + top + 'px;width:' + wide + 'px;height:' + (bottom - top) + 'px;background:' + surface;
+      sheet.style.cssText = 'width:' + wide + 'px;background:' + surface;
+      var inner = document.createElement('div');
+      inner.className = 'csk-layer';
       band.pieces.forEach(function (piece) {
         piece.node.style.top = (piece.top - top) + 'px';
-        sheet.appendChild(piece.node);
+        inner.appendChild(piece.node);
       });
+      sheet.appendChild(inner);
       layer.appendChild(sheet);
-      return { node: sheet, top: top, bottom: bottom, due: null, done: false };
+      return place({ node: sheet, origin: top, top: top, bottom: bottom, done: false });
     });
     tail = sheets[sheets.length - 1];
 
@@ -319,7 +330,7 @@
         footSheet.appendChild(piece.node);
       });
       cover.appendChild(footSheet);
-      foot = { node: footSheet, top: 0, bottom: 0, due: null, done: false, fixed: true };
+      foot = { node: footSheet, top: 0, bottom: 0, done: false, fixed: true };
       sheets.push(foot);
     }
 
@@ -343,15 +354,6 @@
     var shown = performance.now();
     var finished = false;
 
-    // A band counts as in view once a good part of it is - half of it, or
-    // for a band taller than that, 40% of the screen - not when only its
-    // top edge peeks in at the bottom of the screen.
-    function inView(sheet) {
-      if (sheet.fixed) return true;
-      var top = content.scrollTop;
-      var seen = Math.min(sheet.bottom, top + content.clientHeight) - Math.max(sheet.top, top);
-      return seen > 0 && seen >= Math.min((sheet.bottom - sheet.top) * 0.5, content.clientHeight * 0.4);
-    }
     function picturesReady() {
       var view = content.getBoundingClientRect();
       return Array.prototype.every.call(content.querySelectorAll('img'), function (image) {
@@ -364,6 +366,30 @@
       sheet.done = true;
       sheet.node.classList.add('csk-out');
       setTimeout(function () { sheet.node.remove(); }, 450);
+    }
+    // A sheet cut in two at a line across the page: the part below goes on
+    // as a sheet of its own, showing the rest of the same skeleton.
+    function cut(sheet, at) {
+      var rest = place({ node: sheet.node.cloneNode(true), origin: sheet.origin, top: at, bottom: sheet.bottom, done: false });
+      sheet.node.parentNode.insertBefore(rest.node, sheet.node.nextSibling);
+      sheet.bottom = at;
+      place(sheet);
+      sheets.splice(sheets.indexOf(sheet) + 1, 0, rest);
+      if (tail === sheet) tail = rest;
+      return rest;
+    }
+    // What was on screen gives way, down to the very edge of the screen;
+    // whatever lies above or below it stays a skeleton, still loading,
+    // until it is scrolled to.
+    function reveal(region) {
+      sheets.slice().forEach(function (sheet) {
+        if (sheet.done) return;
+        if (sheet.fixed) return lift(sheet);
+        if (sheet.bottom <= region.top || sheet.top >= region.bottom) return;
+        if (sheet.top < region.top) sheet = cut(sheet, region.top);
+        if (sheet.bottom > region.bottom) cut(sheet, region.bottom);
+        lift(sheet);
+      });
     }
     function finish() {
       if (finished) return;
@@ -384,14 +410,24 @@
     var stop = finishNow;
     active = stop;
 
-    // A band shows loading for 0.9s once it is first in view (the first
-    // ones from the first frame), and until the pictures in view are in -
-    // never more than 0.7s longer - then gives way.
+    // What is on screen shows loading for 0.9s (from the first frame, or
+    // from when it is scrolled to), and until the pictures in view are in -
+    // never more than 0.7s longer - then gives way. Scrolling on while that
+    // runs adds what comes on screen to the same moment.
+    var waiting = null;
     function schedule() {
-      var now = performance.now();
-      sheets.forEach(function (sheet) {
-        if (!sheet.done && sheet.due === null && inView(sheet)) sheet.due = Math.max(now, shown) + 900;
+      var top = content.scrollTop;
+      var bottom = top + content.clientHeight;
+      var covered = sheets.some(function (sheet) {
+        return !sheet.done && (sheet.fixed || (sheet.bottom > top && sheet.top < bottom));
       });
+      if (!covered) return;
+      if (waiting) {
+        waiting.top = Math.min(waiting.top, top);
+        waiting.bottom = Math.max(waiting.bottom, bottom);
+      } else {
+        waiting = { top: top, bottom: bottom, due: Math.max(performance.now(), shown) + 900 };
+      }
     }
     function onScroll() { follow(); schedule(); }
     function tick() {
@@ -400,12 +436,12 @@
       // A page left alone for long may change under the skeleton; past
       // 15s whatever is left gives way.
       if (now - shown > 15000) return finish();
-      var ready = null;
-      sheets.forEach(function (sheet) {
-        if (sheet.done || sheet.due === null || now < sheet.due) return;
-        if (ready === null) ready = picturesReady();
-        if (ready || now >= sheet.due + 700) lift(sheet);
-      });
+      if (waiting && now >= waiting.due && (now >= waiting.due + 700 || picturesReady())) {
+        var region = waiting;
+        waiting = null;
+        reveal(region);
+        schedule();
+      }
       if (sheets.every(function (sheet) { return sheet.done; })) finish();
     }
     schedule();
