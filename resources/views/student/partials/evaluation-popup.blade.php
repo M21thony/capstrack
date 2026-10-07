@@ -1,6 +1,7 @@
 {{-- Nudges a team leader whose team finished a phase but has not yet rated
      the experts for it. Shown on every student page except the Evaluations
-     tab itself; "Remind me later" quiets it on this device for an hour. --}}
+     tab itself, open from the page's first paint; "Remind me later" quiets it
+     on this device for an hour. --}}
 @php
   $evaluationsOwed = $evaluationsOwed ?? collect();
   $onEvaluationsTab = request()->routeIs('student.experts', 'student.consultation') && request('tab') === 'evaluations';
@@ -18,6 +19,7 @@
 <style nonce="{{ Vite::cspNonce() }}">
   #evp-overlay{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(24,25,31,.5);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
   #evp-overlay.active{opacity:1;visibility:visible}
+  #evp-overlay.evp-now,#evp-overlay.evp-now #evp-card{transition:none;animation:none}
   #evp-card{position:relative;width:440px;max-width:100%;max-height:calc(100dvh - 32px);overflow:auto;background:var(--bg2);color:var(--text);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.18),0 8px 24px rgba(0,0,0,.12);padding:24px;animation:evpIn .2s ease}
   @keyframes evpIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
   #evp-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(201,168,44,.16);color:#b8961c;margin-bottom:14px}
@@ -77,13 +79,17 @@
   document.getElementById('evp-later').addEventListener('click', later);
   overlay.addEventListener('click', function (e) { if (e.target === overlay) { later(); } });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlay.classList.contains('active')) { later(); } });
-  // After the page settles, and not on top of the portal tour: a new account
-  // sees the tour first and this on the next page.
-  setTimeout(function () {
+  // Open from the first paint, with no fade: it waited 700ms and faded in
+  // before, so every page came up bright and then dimmed under it - a flash
+  // on each click while it was owed. Shown at once, the screen stays dim from
+  // one page to the next.
+  overlay.classList.add('evp-now', 'active');
+  // Not on top of the portal tour: a new account sees the tour first and this
+  // on the next page.
+  document.addEventListener('DOMContentLoaded', function () {
     var tour = document.getElementById('portal-tour');
-    if (tour && tour.dataset.autoOpen === '1') { return; }
-    overlay.classList.add('active');
-  }, 700);
+    if (tour && tour.dataset.autoOpen === '1') { overlay.classList.remove('active'); }
+  });
 })();
 </script>
 @endif

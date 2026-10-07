@@ -280,6 +280,7 @@
 </style>
 @include('student.partials.duplication-ui')
 <x-dashboard.styles />
+  @include('student.partials.render-whole')
 </head>
 <body>
 @include('student.partials.sidebar')

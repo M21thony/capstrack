@@ -7,9 +7,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * A click in the student sidebar shows the next page's outline in the content
- * area straight away (student/partials/nav-skeleton), instead of the old page
- * sitting unchanged until the new one replaces it all at once.
+ * Student pages load without a flash.
+ *
+ * Right after signing in, and the first time each page is opened, the content
+ * area shows the page's outline while it loads (student/partials/nav-skeleton);
+ * a page already opened comes straight up. And every page holds its first
+ * paint until it has been read in full (student/partials/render-whole), so it
+ * never shows the sidebar over an empty content area.
  */
 class StudentNavSkeletonTest extends TestCase
 {
@@ -43,6 +47,39 @@ class StudentNavSkeletonTest extends TestCase
 
         $this->assertStringContainsString("content = document.querySelector('.main > .content');", $html);
         $this->assertStringContainsString('content.appendChild(template.content.cloneNode(true));', $html);
+    }
+
+    /** Once per page per sign-in: "opened" is kept under this sign-in's session. */
+    public function test_the_outline_is_shown_once_per_page_per_sign_in(): void
+    {
+        $html = $this->studentPage();
+
+        $this->assertStringContainsString("var SESSION = 'nsk:".substr(sha1(session()->getId()), 0, 12).":';", $html);
+        $this->assertStringContainsString('if (opened(url.pathname)) return;', $html);
+        $this->assertStringContainsString('if (!opened(here) && ownTemplate && first) {', $html);
+    }
+
+    /** Every page holds its first paint until it has been read in full. */
+    public function test_a_student_page_holds_its_first_paint_until_read_in_full(): void
+    {
+        $this->assertMatchesRegularExpression(
+            '/<script type="module" blocking="render" nonce="[^"]+">[^<]*<\/script>\s*<\/head>/',
+            $this->studentPage(),
+        );
+    }
+
+    /** A new student page must hold its paint too, or it flashes like the old ones. */
+    public function test_every_page_with_the_student_sidebar_holds_its_first_paint(): void
+    {
+        foreach (glob(resource_path('views/student/{,*/}*.blade.php'), GLOB_BRACE) as $view) {
+            $source = file_get_contents($view);
+
+            if (! str_contains($source, "@include('student.partials.sidebar')")) {
+                continue;
+            }
+
+            $this->assertStringContainsString("@include('student.partials.render-whole')", $source, basename($view).' does not hold its first paint.');
+        }
     }
 
     /** The content security policy only runs inline blocks that carry its nonce. */

@@ -327,6 +327,21 @@ class ExpertEvaluationTest extends TestCase
             ->assertDontSee('Time to evaluate your experts');
     }
 
+    /**
+     * The popup is open from the page's first paint: shown after a delay with
+     * a fade, every page came up bright and then dimmed under it.
+     */
+    public function test_the_popup_is_open_from_the_first_paint(): void
+    {
+        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
+        $this->finish($this->gettingStarted);
+
+        $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee("overlay.classList.add('evp-now', 'active');", false)
+            ->assertDontSee('}, 700);', false);
+    }
+
     public function test_members_get_no_popup_and_no_reminder(): void
     {
         $this->deliverable($this->gettingStarted, 'Team Assignment Form');

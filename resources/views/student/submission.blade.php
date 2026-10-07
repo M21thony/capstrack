@@ -8,6 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite(['resources/student-ui/styles.css'])
 <x-dashboard.styles />
+  @include('student.partials.render-whole')
 </head>
 <body>
 @include('student.partials.sidebar')
