@@ -41,6 +41,32 @@ class BrandAssetsTest extends TestCase
         $this->assertGreaterThan(0, filesize(public_path($path)));
     }
 
+    /**
+     * One mark everywhere: the same ink tile with a gold rim in the browser
+     * tab, the sidebar, the login page and every lockup, so the logo does not
+     * look different from one place to the next.
+     */
+    #[DataProvider('filesShowingTheTile')]
+    public function test_every_logo_uses_the_same_gold_rimmed_tile(string $path): void
+    {
+        $this->assertStringContainsString('fill="#141414" stroke="#F5B700"', file_get_contents(public_path($path)));
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function filesShowingTheTile(): array
+    {
+        return [
+            'mark' => ['images/brand/capstrack-mark.svg'],
+            'mark, small sizes' => ['images/brand/capstrack-mark-small.svg'],
+            'favicon' => ['favicon.svg'],
+            'logo, dark' => ['images/brand/capstrack-logo.svg'],
+            'logo, light' => ['images/brand/capstrack-logo-light.svg'],
+            'logo, stacked' => ['images/brand/capstrack-logo-stacked.svg'],
+            'logo without tagline, dark' => ['images/brand/capstrack-logo-ui.svg'],
+            'logo without tagline, light' => ['images/brand/capstrack-logo-ui-light.svg'],
+        ];
+    }
+
     /** A real .ico starts with a zero, a zero and the type 1 (icon). */
     public function test_the_favicon_is_a_real_icon_file(): void
     {
