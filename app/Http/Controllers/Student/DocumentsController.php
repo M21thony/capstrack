@@ -8,6 +8,7 @@ use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\PdfRemark;
 use App\Models\Student;
+use App\Support\SubmissionRecipients;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -124,6 +125,25 @@ class DocumentsController extends Controller
         ];
     }
 
+    /** A reviewer by the name the team knows them by: CaPA, Consultant, CaPSA. */
+    public static function roleLabel(?string $role): string
+    {
+        return SubmissionRecipients::LABELS[$role] ?? StudentReviewController::roleLabel($role);
+    }
+
+    /**
+     * What kind of file an upload is, by the name it was sent under: a
+     * diagram is kept on disk under another extension.
+     */
+    public static function fileKind(CapstoneDocument $document): string
+    {
+        $name = $document->isDiagram()
+            ? (collect($document->diagram_files)->firstWhere('path', $document->file_path)['name'] ?? $document->file_path)
+            : $document->file_path;
+
+        return strtolower(pathinfo((string) $name, PATHINFO_EXTENSION)) ?: 'pdf';
+    }
+
     /** @return array{0: string, 1: string} The label and its tone. */
     private static function status(CapstoneDocument $document): array
     {
@@ -153,7 +173,7 @@ class DocumentsController extends Controller
 
         return [
             'id' => $review->review_id,
-            'role' => StudentReviewController::roleLabel($review->role),
+            'role' => self::roleLabel($review->role),
             'name' => $review->expert?->name,
             'text' => $text,
             'tone' => $tone,
@@ -216,7 +236,7 @@ class DocumentsController extends Controller
         return [
             'verdict' => $review->verdict,
             'reviewer' => $review->expert?->name ?? 'your reviewer',
-            'role' => StudentReviewController::roleLabel($review->role),
+            'role' => self::roleLabel($review->role),
             'date' => $review->reviewed_at?->format('M j'),
             'round' => $document->roundLabel(),
             'next' => $document->nextRoundLabel(),

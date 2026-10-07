@@ -241,7 +241,9 @@ for (const [width, height] of [[390, 844], [320, 568]]) {
     if (sheet.top > 20) expect(sheet.shown, 'the form is squeezed out of the sheet').toBe(sheet.whole);
     else expect(sheet.shown).toBeGreaterThan(200);
     expect(sheet.footBottom).toBeLessThanOrEqual(height + 1);
-    await expect(page.locator('dialog.up[open] .up-body select').first()).toBeVisible();
+    // The phone's Submit is the same one screen as Documents': the file first, no "What is this for?".
+    await expect(page.locator('dialog.up[open] .up-drop')).toBeVisible();
+    await expect(page.locator('dialog.up[open] .up-body select')).toHaveCount(0);
     await context.close();
   });
 }

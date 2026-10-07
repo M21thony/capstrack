@@ -98,8 +98,8 @@ class DocumentsPageTest extends TestCase
         $this->assertSame([2, 1], $chapter3->versions->map(fn ($v) => (int) $v->document->file_version)->all());
 
         $response->assertSeeInOrder(['Chapter 3', 'Ch3_Methodology_v2', 'Mark Reyes', '(you)', 'Ch3_Methodology_v1', 'Jolina Ramos'], false);
-        $response->assertSeeText('Adviser · Reviewing');
-        $response->assertSeeText('Adviser · Needs revision');
+        $response->assertSeeText('CaPA · Reviewing');
+        $response->assertSeeText('CaPA · Needs revision');
         $response->assertSee(route('student.documents', ['file' => $second->file_id]), false);
     }
 
@@ -133,6 +133,25 @@ class DocumentsPageTest extends TestCase
         // The other reviewer's remarks are one click away.
         $response->assertSee(route('student.documents', ['file' => $document->file_id, 'review' => $adviser->review_id]));
         $response->assertSee('Submit 1st revision');
+    }
+
+    /** A diagram is kept on disk under another extension; the list says what was sent. */
+    public function test_a_diagram_is_shown_as_the_kind_of_file_it_was_sent_as(): void
+    {
+        Storage::disk('local')->put('documents/dfd.txt', '<mxfile></mxfile>');
+        CapstoneDocument::create([
+            'student_id' => $this->me->student_id,
+            'file_name' => '04-dfd-level-1',
+            'file_path' => 'documents/dfd.txt',
+            'file_version' => 1,
+            'document_status' => 'Submitted',
+            'diagram_files' => [['name' => '04-dfd-level-1.drawio', 'path' => 'documents/dfd.txt']],
+        ]);
+
+        $this->actingAs($this->me, 'web')->get(route('student.documents'))
+            ->assertOk()
+            ->assertSee('<span class="dc-ic drawio" aria-hidden="true">DRAWIO</span>', false)
+            ->assertDontSee('>TXT<', false);
     }
 
     public function test_the_file_and_its_diagrams_are_the_teams_only(): void

@@ -8,38 +8,31 @@
    ────────────────────────────────────────────────────────────── */
 
 dialog.up{
-  position:fixed;inset:0;margin:auto;height:fit-content;
-  width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);
-  padding:0;border:0;border-radius:14px;overflow:hidden;
+  /* A panel from the right, the height of the screen: the file, who it goes to, Send. */
+  position:fixed;inset:0 0 0 auto;margin:0;height:100vh;height:100dvh;max-height:none;
+  width:min(520px,100vw);max-width:100vw;
+  padding:0;border:0;border-radius:0;overflow:hidden;
   background:var(--bg2,#fff);color:var(--text,#1e2128);
-  box-shadow:0 24px 60px rgba(0,0,0,.3);font-family:inherit;
+  box-shadow:-12px 0 40px rgba(0,0,0,.2);font-family:inherit;
 }
 dialog.up[open]{display:flex;flex-direction:column}
+@media (prefers-reduced-motion:no-preference){
+  dialog.up[open]{animation:up-slide .2s ease-out}
+  @keyframes up-slide{from{transform:translateX(24px);opacity:.4}}
+}
 dialog.up::backdrop{background:rgba(15,16,22,.5)}
-.up-grab{display:none}
-.up-grab,.up-head,.up-steps,.up-foot{flex-shrink:0}
+.up-head,.up-foot{flex-shrink:0}
 
-.up-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 10px}
+.up-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 12px}
 .up-titles{flex:1;min-width:0}
-.up-titles h2{margin:0;font-size:15px;font-weight:700;line-height:1.35;color:var(--text)}
-.up-titles p{margin:2px 0 0;font-size:12px;color:var(--text3)}
+.up-titles h2{margin:0;font-size:17px;font-weight:700;line-height:1.35;color:var(--text)}
+.up-titles p{margin:2px 0 0;font-size:12.5px;color:var(--text3)}
 .up-x{
   width:32px;height:32px;flex-shrink:0;display:grid;place-items:center;
   border:1px solid var(--border);border-radius:8px;background:var(--bg2,#fff);color:var(--text3);cursor:pointer;
 }
 .up-x:hover:not(:disabled){color:var(--text);border-color:var(--border2)}
 .up-x:disabled{color:var(--border2);cursor:not-allowed}
-
-.up-steps{display:flex;align-items:center;gap:8px;margin:0;padding:0 16px 12px;list-style:none}
-.up-steps li{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;color:var(--text3)}
-.up-steps li + li::before{content:"";width:16px;height:1px;background:var(--border);margin-right:2px}
-.up-steps li > span{
-  width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
-  font-size:10.5px;font-weight:700;background:var(--bg4,#eef0f3);color:var(--text3);
-}
-.up-steps li.now,.up-steps li.done{color:var(--text)}
-.up-steps li.now{font-weight:600}
-.up-steps li.now > span,.up-steps li.done > span{background:var(--accent,#c9a82c);color:#1b1e26}
 
 /* flex-basis auto, not flex:1's 0: the pop-up is as tall as what it holds
    (height:fit-content), and an iPhone's WebKit measured a body with a 0
@@ -48,11 +41,11 @@ dialog.up::backdrop{background:rgba(15,16,22,.5)}
    It still shrinks, and scrolls, when there is more than the screen holds. */
 .up-body{
   flex:1 1 auto;min-height:0;overflow-y:auto;
-  display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-top:1px solid var(--border);
+  display:flex;flex-direction:column;gap:18px;padding:18px 20px;border-top:1px solid var(--border);
 }
 .up-foot{
   display:flex;align-items:center;justify-content:flex-end;gap:8px;
-  padding:12px 16px;border-top:1px solid var(--border);background:var(--bg3,#fafbfc);
+  padding:14px 20px;border-top:1px solid var(--border);background:var(--bg3,#fafbfc);
 }
 .up-loading{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px;color:var(--text3)}
 /* Why Send is greyed out, beside it. */
@@ -121,7 +114,7 @@ dialog.up::backdrop{background:rgba(15,16,22,.5)}
 .up-note-acts{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
 
 /* Check it */
-.up-file{display:flex;gap:14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg3,#fafbfc)}
+.up-file{display:flex;gap:14px;padding:12px;border:1px solid #bfe3cb;border-radius:12px;background:#f0faf3}
 .up-thumb{
   position:relative;width:92px;height:120px;flex-shrink:0;padding:0;overflow:hidden;
   border:1px solid var(--border);border-radius:4px;background:#fff;cursor:zoom-in;
@@ -146,21 +139,24 @@ dialog.up::backdrop{background:rgba(15,16,22,.5)}
 .up-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:auto;padding-top:4px}
 
 /* Who it goes to */
-.up-goes-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
-.up-pills{display:flex;flex-wrap:wrap;gap:6px}
+.up-goes-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.up-pills{display:flex;flex-wrap:wrap;gap:8px}
 .up-pill{
-  display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 10px;border-radius:999px;
-  border:1px solid #d9c98f;background:var(--accent-light,#faf7ed);color:var(--text);
-  font:inherit;font-size:11.5px;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 12px 0 5px;border-radius:999px;
+  border:1px solid var(--accent,#c9a82c);background:var(--accent-light,#faf7ed);color:var(--text);
+  font:inherit;font-size:13px;white-space:nowrap;max-width:100%;
 }
-.up-pill > svg{color:var(--accent3,#7a5f0a);flex-shrink:0}
-.up-pill b{font-weight:700}
-.up-pill span{color:var(--text3);font-weight:500;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.up-pill b{font-weight:600}
+.up-pill span{color:var(--text3);font-size:11.5px;font-weight:400;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.up-av{
+  width:24px;height:24px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  font-style:normal;font-size:10px;font-weight:700;background:var(--accent,#c9a82c);color:#1b1e26;
+}
 button.up-pill{cursor:pointer}
-.up-pill.off{border:1px dashed var(--border2,#c3c7d0);background:var(--bg2,#fff);color:var(--text3)}
-.up-pill.off > svg{color:var(--text3)}
+.up-pill.off{border-color:var(--border2,#c3c7d0);background:var(--bg2,#fff);color:var(--text3)}
+.up-pill.off .up-av{background:var(--bg4,#e4e6eb);color:var(--text3)}
 .up-pill.na{border:1px dashed var(--border);background:var(--bg3);color:var(--text3);opacity:.7}
-.up-pill.na > svg{color:var(--text3)}
+.up-pill.na .up-av{background:var(--bg4,#e4e6eb);color:var(--text3)}
 .up-hint{margin:6px 0 0;font-size:11.5px;line-height:1.45;color:var(--text3)}
 .up-goes .up-field{margin-top:10px}
 
@@ -178,12 +174,6 @@ button.up-pill{cursor:pointer}
 .up-row-top span{color:var(--text2)}
 .up-bar{height:6px;border-radius:3px;background:var(--bg4,#eef0f3);overflow:hidden}
 .up-bar i{display:block;height:100%;width:0;background:var(--accent,#c9a82c);transition:width .2s}
-
-/* Sent */
-.up-sent{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;text-align:center}
-.up-sent-ic{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:rgba(22,163,74,.1);color:var(--green,#15803d)}
-.up-sent > b{font-size:15px;color:var(--text)}
-.up-sent p{margin:0;font-size:12.5px;line-height:1.55;color:var(--text2)}
 
 /* Closing with a file not sent: asked once, over the pop-up. */
 .up-confirm{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(255,255,255,.78)}
@@ -203,25 +193,32 @@ button.up-pill{cursor:pointer}
 @keyframes up-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.up-spin{animation-duration:2.4s}.up-bar i{transition:none}}
 
-/* On a phone: a sheet from the bottom, thumb-sized buttons. */
+/* On a phone: the whole screen, thumb-sized buttons. */
 @media (max-width:600px){
-  dialog.up{
-    width:100%;max-width:100%;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);margin:auto 0 0;top:auto;
-    /* Held to the bottom, so its own content sets its height. */
-    height:auto;
-    border-radius:16px 16px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.25);
-  }
-  .up-grab{display:flex;justify-content:center;padding-top:8px}
-  .up-grab::before{content:"";width:40px;height:4px;border-radius:2px;background:#d7dae1}
-  .up-head{padding-top:8px}
+  dialog.up{width:100%;box-shadow:none}
+  .up-head{padding:calc(14px + env(safe-area-inset-top)) 16px 10px}
   .up-x{width:44px;height:44px;margin:-6px -10px 0 0;border:0}
-  .up-foot{padding:12px 16px calc(16px + env(safe-area-inset-bottom))}
-  .up-foot{flex-wrap:wrap}
+  .up-body{padding:16px}
+  .up-foot{padding:12px 16px calc(16px + env(safe-area-inset-bottom));flex-wrap:wrap}
   .up-why{flex-basis:100%;text-align:center}
   .up-foot .up-btn{flex:1;height:46px;font-size:14px}
   .up-foot .up-btn.primary{flex:2}
-  .up-pill{min-height:34px}
+  .up-pill{min-height:40px}
 }
+
+/* "Sent ... · Undo", after the page reloads. */
+.up-sent-toast{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2000;
+  display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);
+  padding:11px 14px 11px 16px;border-radius:12px;background:var(--navy-dark,#18191f);color:#fff;
+  font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.3);
+}
+.up-sent-toast > svg{color:#4ade80;flex-shrink:0}
+.up-sent-toast button{
+  flex-shrink:0;padding:0;border:0;background:none;font:inherit;font-weight:700;
+  color:var(--accent,#c9a82c);text-decoration:underline;text-underline-offset:3px;cursor:pointer;
+}
+@media (max-width:768px){.up-sent-toast{bottom:calc(90px + env(safe-area-inset-bottom))}}
 
 /* ── The full preview: every page, big ── */
 dialog.up-pv{
