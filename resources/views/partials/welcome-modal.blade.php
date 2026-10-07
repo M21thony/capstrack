@@ -6,7 +6,7 @@
 @if (session('show_welcome'))
     <div class="modal-overlay show" id="welcome-modal">
         <div class="modal-box" style="width:min(420px,94%);text-align:center;padding:32px 28px 28px">
-            <img src="{{ asset('images/brand/capstrack-mark-small.svg') }}" alt="" width="56" height="56" style="width:56px;height:56px;border-radius:14px;display:block;margin:0 auto 16px">
+            <img src="{{ asset('images/brand/capstrack-mark.svg') }}" alt="" width="56" height="56" style="width:56px;height:56px;border-radius:14px;display:block;margin:0 auto 16px">
             <div class="modal-title" style="font-size:17px;margin-bottom:4px">Welcome to CapsTRACK!</div>
             <div class="modal-sub" style="font-size:13px;margin-bottom:20px">
                 Hello, <strong>{{ $expert?->first_name }}</strong>! Your account has been approved.

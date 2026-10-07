@@ -63,9 +63,9 @@
 <div class="sidebar">
   <div class="sidebar-brand">
     <div class="brand-badge">
-      <img src="{{ asset('images/brand/capstrack-mark-small.svg') }}" alt="" width="38" height="38" style="width:38px;height:38px;border-radius:10px;flex-shrink:0;display:block">
+      <img src="{{ asset('images/brand/capstrack-mark.svg') }}" alt="" width="42" height="42" style="width:42px;height:42px;border-radius:10px;box-shadow:0 0 0 1px rgba(201,168,44,.25);flex-shrink:0;display:block">
       <div>
-        <div class="brand-name">CapsTrack</div>
+        <div class="brand-name"><img src="{{ asset('images/brand/capstrack-wordmark.svg') }}" alt="CapsTrack" style="height:15px;width:auto;display:block;margin-bottom:3px"></div>
         <div class="brand-sub">Student Portal</div>
       </div>
     </div>

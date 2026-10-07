@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -26,13 +27,14 @@ class BrandAssetsTest extends TestCase
             'logo, stacked' => ['images/brand/capstrack-logo-stacked.svg'],
             'logo without tagline, dark' => ['images/brand/capstrack-logo-ui.svg'],
             'logo without tagline, light' => ['images/brand/capstrack-logo-ui-light.svg'],
+            'wordmark' => ['images/brand/capstrack-wordmark.svg'],
             'favicon svg' => ['favicon.svg'],
             'favicon ico' => ['favicon.ico'],
             'apple touch icon' => ['apple-touch-icon.png'],
         ];
     }
 
-    /** @dataProvider brandFiles */
+    #[DataProvider('brandFiles')]
     public function test_each_brand_file_exists_and_is_not_empty(string $path): void
     {
         $this->assertFileExists(public_path($path));
@@ -56,13 +58,36 @@ class BrandAssetsTest extends TestCase
         ];
     }
 
-    /** @dataProvider viewsThatShowTheMark */
+    #[DataProvider('viewsThatShowTheMark')]
     public function test_the_view_uses_the_mark_and_not_the_old_layers_icon(string $view): void
     {
         $source = file_get_contents(resource_path('views/'.$view));
 
-        $this->assertStringContainsString('images/brand/capstrack-mark-small.svg', $source);
+        $this->assertStringContainsString("asset('images/brand/capstrack-mark.svg')", $source);
         $this->assertStringNotContainsString('M12 2L2 7l10 5 10-5-10-5', $source);
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function sidebars(): array
+    {
+        return [
+            'student sidebar' => ['student/partials/sidebar.blade.php'],
+            'admin sidebar' => ['capsa/_sidebar.blade.php'],
+            'expert sidebar' => ['instructor/partials/sidebar.blade.php'],
+        ];
+    }
+
+    /**
+     * At sidebar size a lone mark reads as a plain triangle, so the name
+     * beside it is the wordmark with its pyramid A's, not plain text.
+     */
+    #[DataProvider('sidebars')]
+    public function test_the_sidebar_names_the_app_with_the_wordmark(string $view): void
+    {
+        $source = file_get_contents(resource_path('views/'.$view));
+
+        $this->assertStringContainsString("asset('images/brand/capstrack-wordmark.svg')", $source);
+        $this->assertStringNotContainsString('capstrack-mark-small.svg', $source);
     }
 
     /** The login page shows the logo in its own colors, not the old one forced white. */
