@@ -300,7 +300,7 @@ export function shapeCell(page, id) {
 }
 
 /** The text spot under a point, as [node, offset]. */
-function caretAt(x, y) {
+export function caretAt(x, y) {
   const p = document.caretPositionFromPoint?.(x, y);
   if (p) return [p.offsetNode, p.offset];
   const r = document.caretRangeFromPoint?.(x, y);

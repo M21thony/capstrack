@@ -8,7 +8,7 @@ import {
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
 import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
-import { DiagramPage, DiagramsOnly, shapeCell, shapeRects, shownPicture, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
+import { DiagramPage, DiagramsOnly, caretAt, shapeCell, shapeRects, shownPicture, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import {
   boundsOf, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, shapeLabel, uniqueFigures,
 } from "../reader/figures";
@@ -27,6 +27,32 @@ const NAV_KEYS = new Set([
   "PageUp", "PageDown", "Shift", "Control", "Meta", "Alt", "Tab", "Escape",
 ]);
 const block = (e) => e.preventDefault();
+
+/**
+ * The text spot a drag at a point means, as [node, offset]: the words under it, or, beside
+ * the words, the end of the nearest words on that line to its left (the start if none are).
+ */
+function spotNear(layer, x, y) {
+  const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  const words = [];
+  while (walker.nextNode()) {
+    const t = walker.currentNode;
+    if (!t.data.trim()) continue;
+    range.selectNodeContents(t);
+    for (const b of range.getClientRects()) words.push({ t, b });
+  }
+  if (!words.length) return null;
+  const dy = (b) => Math.max(b.top - y, 0, y - b.bottom);
+  const nearest = Math.min(...words.map((w) => dy(w.b)));
+  const line = words.filter((w) => dy(w.b) <= nearest + 1);
+  const before = line.filter((w) => w.b.left <= x);
+  const w = before.length ? before.reduce((a, c) => (c.b.left > a.b.left ? c : a)) : line.reduce((a, c) => (c.b.left < a.b.left ? c : a));
+  if (x < w.b.left) return [w.t, 0];
+  if (x >= w.b.right) return [w.t, w.t.length];
+  const at = caretAt(x, Math.min(Math.max(y, w.b.top + 0.5), w.b.bottom - 0.5));
+  return at && at[0] === w.t ? at : [w.t, w.t.length];
+}
 const clamp = (n) => Math.min(1, Math.max(0, n));
 
 const HINTS = {
@@ -535,6 +561,24 @@ function PDFChecker({
   useEffect(() => { if (popPos) textRef.current?.focus({ preventScroll: true }); }, [popPos]);
   useEffect(() => { if (composingRef.current) setPopPos(null); }, [col.pageWidth]);
 
+  // The page is editable for keyboard users, and a drag left to the browser there jumps to
+  // the end of the page once it passes the words. So a drag picks its two ends itself.
+  const steerDrag = (e) => {
+    const layer = e.currentTarget.querySelector(".textLayer");
+    if (mode !== "text" || e.button !== 0 || e.detail > 1 || e.defaultPrevented || !layer?.contains(e.target)) return;
+    const anchor = spotNear(layer, e.clientX, e.clientY);
+    if (!anchor) return;
+    e.preventDefault();
+    const sel = window.getSelection();
+    sel.collapse(...anchor);
+    const follow = (m) => {
+      const focus = spotNear(layer, m.clientX, m.clientY);
+      if (focus) sel.setBaseAndExtent(...anchor, ...focus);
+    };
+    window.addEventListener("mousemove", follow);
+    window.addEventListener("mouseup", () => window.removeEventListener("mousemove", follow), { once: true });
+  };
+
   const onPageKey = (e) => {
     if (NAV_KEYS.has(e.key)) return;
     if ((e.ctrlKey || e.metaKey) && ["c", "a"].includes(e.key.toLowerCase())) return;
@@ -606,6 +650,7 @@ function PDFChecker({
                     onPaste={block}
                     onCut={block}
                     onDrop={block}
+                    onMouseDown={steerDrag}
                     onMouseUp={() => setTimeout(startFromSelection, 0)}
                   >
                     {drawing && <DiagramPage page={drawing} showChanges={showChanges} before={beforeView} />}
