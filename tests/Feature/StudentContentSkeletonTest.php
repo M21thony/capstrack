@@ -103,6 +103,15 @@ class StudentContentSkeletonTest extends TestCase
         $this->assertStringContainsString("cover.addEventListener('touchmove', function (event) {", $html);
     }
 
+    /** The skeleton keeps to the content area as it is now, so no strip of the real page shows below it. */
+    public function test_the_skeleton_keeps_to_the_content_area_as_it_settles(): void
+    {
+        $html = $this->studentPage();
+
+        $this->assertStringContainsString("cover.style.height = Math.max(0, bottom - top) + 'px';", $html);
+        $this->assertStringContainsString('resizing.observe(content);', $html);
+    }
+
     /** Table cells are never solid blocks: the words in them are lines, as anywhere else. */
     public function test_table_cells_are_drawn_as_lines_not_blocks(): void
     {

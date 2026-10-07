@@ -115,10 +115,28 @@
     var originX = box.left - content.scrollLeft;
     var originY = box.top - content.scrollTop;
     var layer = document.createElement('div');
-    // The blocks follow the content if it is scrolled.
+    var cover = null;
+    var sheets = [];
+    // The skeleton keeps to the content area as it is now, not as it was on
+    // the first frame: the area can still grow or move as the page settles,
+    // which used to leave a strip of the real page showing below the
+    // skeleton. The blocks follow the content as it is scrolled.
     function follow() {
+      if (!cover) return;
+      var now = content.getBoundingClientRect();
+      var top = Math.max(now.top, 0);
+      var bottom = Math.min(now.bottom, window.innerHeight);
+      cover.style.left = now.left + 'px';
+      cover.style.top = top + 'px';
+      cover.style.width = now.width + 'px';
+      cover.style.height = Math.max(0, bottom - top) + 'px';
       layer.style.left = -content.scrollLeft + 'px';
-      layer.style.top = -content.scrollTop + 'px';
+      layer.style.top = (now.top - top - content.scrollTop) + 'px';
+      var last = sheets[sheets.length - 1];
+      if (last && content.scrollHeight > last.bottom) {
+        last.bottom = content.scrollHeight;
+        last.node.style.height = (last.bottom - last.top) + 'px';
+      }
     }
     var count = 0;
     var pieces = [];
@@ -202,7 +220,7 @@
 
     for (var child = content.firstElementChild; child; child = child.nextElementSibling) walk(child);
 
-    var cover = document.createElement('div');
+    cover = document.createElement('div');
     cover.id = 'csk';
     cover.setAttribute('aria-hidden', 'true');
     var surface = getComputedStyle(content).backgroundColor;
@@ -210,7 +228,6 @@
       surface = getComputedStyle(holder.parentElement).backgroundColor;
     }
     surface = visibleColour(surface) ? surface : '#eceef0';
-    cover.style.cssText = 'left:' + box.left + 'px;top:' + box.top + 'px;width:' + box.width + 'px;height:' + box.height + 'px';
 
     // The skeleton comes in bands - each run of cards with nothing between
     // them - laid edge to edge down the whole page. A band in view gives
@@ -230,7 +247,7 @@
     if (!bands.length) bands.push({ top: 0, bottom: 0, pieces: [] });
     var end = Math.max(content.scrollHeight, bands[bands.length - 1].bottom);
     var wide = Math.max(content.scrollWidth, box.width);
-    var sheets = bands.map(function (band, at) {
+    sheets = bands.map(function (band, at) {
       var top = at === 0 ? 0 : (bands[at - 1].bottom + band.top) / 2;
       var bottom = at === bands.length - 1 ? end : (band.bottom + bands[at + 1].top) / 2;
       var sheet = document.createElement('div');
@@ -290,6 +307,7 @@
       if (finished) return;
       finished = true;
       clearInterval(ticking);
+      if (resizing) resizing.disconnect();
       content.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', finishNow);
       sheets.forEach(function (sheet) { if (!sheet.done) lift(sheet); });
@@ -315,6 +333,7 @@
     }
     function onScroll() { follow(); schedule(); }
     function tick() {
+      follow();
       var now = performance.now();
       // A page left alone for long may change under the skeleton; past
       // 15s whatever is left gives way.
@@ -330,6 +349,10 @@
     schedule();
     var ticking = setInterval(tick, 50);
     content.addEventListener('scroll', onScroll, { passive: true });
+    // Checked again before every frame the content area changes size in,
+    // so the skeleton never falls short of it.
+    var resizing = window.ResizeObserver ? new ResizeObserver(function () { follow(); schedule(); }) : null;
+    if (resizing) resizing.observe(content);
     window.addEventListener('resize', finishNow);
   }
 
@@ -340,9 +363,10 @@
   window.contentSkeleton = {
     seen: function (view) { firstOpening(view); },
     show: function (view) {
-      if (!firstOpening(view)) return;
-      // What is left of the page's skeleton belongs to what was there before.
+      // What is left of the skeleton further down belongs to the tab that was
+      // there before: it goes, whether or not this tab gets its own.
       if (active) active();
+      if (!firstOpening(view)) return;
       try { build(); } catch (e) {}
     },
   };
