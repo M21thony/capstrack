@@ -131,7 +131,7 @@ class DocumentsPageTest extends TestCase
         $response->assertSee(route('student.review.remarks', $consultant->review_id), false);
         $response->assertSee(route('student.review.clf', $consultant->review_id), false);
         // The other reviewer's remarks are one click away.
-        $response->assertSee(route('student.documents', ['file' => $document->file_id, 'review' => $adviser->review_id]), false);
+        $response->assertSee(route('student.documents', ['file' => $document->file_id, 'review' => $adviser->review_id]));
         $response->assertSee('Submit 1st revision');
     }
 
