@@ -12,23 +12,22 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 /**
- * The leader rating one of the team's experts for a finished phase.
+ * The leader answering the CaPSA's evaluation of one of the team's experts
+ * after a passed defense.
  */
 class ExpertEvaluationController extends Controller
 {
     public function store(Request $request, ExpertEvaluations $evaluations): RedirectResponse
     {
         $data = $request->validate([
-            'milestone_id' => ['required', 'integer'],
+            'defense_id' => ['required', 'integer'],
             'expert_id' => ['required', 'integer'],
             'role' => ['required', Rule::in(array_keys(ExpertEvaluation::ROLES))],
-            'rating' => ['required', 'integer', 'between:1,5'],
-            'comment' => ['required', 'string', 'min:3', 'max:1000'],
+            'answers' => ['required', 'array'],
+            'answers.*' => ['required', 'integer', 'between:1,5'],
         ], [
-            'rating.required' => 'Pick from 1 to 5 stars.',
-            'rating.between' => 'Pick from 1 to 5 stars.',
-            'comment.required' => 'Add a short comment about this expert.',
-            'comment.min' => 'Add a short comment about this expert.',
+            'answers.required' => 'Answer every question from 1 to 5.',
+            'answers.*.between' => 'Answer every question from 1 to 5.',
         ]);
 
         $student = Auth::user();
@@ -45,15 +44,14 @@ class ExpertEvaluationController extends Controller
         $refused = $evaluations->submit(
             $student,
             $team,
-            (int) $data['milestone_id'],
+            (int) $data['defense_id'],
             (int) $data['expert_id'],
             $data['role'],
-            (int) $data['rating'],
-            $data['comment'],
+            $data['answers'],
         );
 
         if ($refused) {
-            return redirect($back)->with('evaluation_error', $refused);
+            return redirect($back)->with('evaluation_error', $refused)->withInput();
         }
 
         return redirect($back)->with('evaluation_saved', 'Evaluation sent. Thank you!');

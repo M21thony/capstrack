@@ -8,8 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A team leader's rating of one of the team's experts for one phase of the
- * Progress Tracker: 1 to 5 stars and a comment. See App\Support\ExpertEvaluations.
+ * A team leader's evaluation of one of the team's experts after a passed
+ * defense: the CaPSA's questions, each answered 1-5, and the rating that is
+ * their average. Anonymous to the CaPSA and the expert - student_id is kept
+ * for the record and never shown. Rows from before evaluations followed
+ * defenses carry a Progress Tracker phase and a comment instead.
+ * See App\Support\ExpertEvaluations.
  */
 class ExpertEvaluation extends Model
 {
@@ -22,8 +26,11 @@ class ExpertEvaluation extends Model
     protected $fillable = [
         'team_id',
         'expert_id',
+        'defense_id',
+        'evaluation_template_id',
         'checklist_milestone_id',
         'role',
+        'answers',
         'rating',
         'comment',
         'student_id',
@@ -32,7 +39,10 @@ class ExpertEvaluation extends Model
     protected function casts(): array
     {
         return [
-            'rating' => 'integer',
+            // The average of the answers, so 4.6 rather than a whole star.
+            'rating' => 'float',
+            // Each question as it was worded, with its 1-5 score.
+            'answers' => 'array',
         ];
     }
 
@@ -44,6 +54,16 @@ class ExpertEvaluation extends Model
     public function milestone(): BelongsTo
     {
         return $this->belongsTo(ChecklistMilestone::class, 'checklist_milestone_id');
+    }
+
+    public function defense(): BelongsTo
+    {
+        return $this->belongsTo(DefenseSchedule::class, 'defense_id', 'defense_id');
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(EvaluationTemplate::class, 'evaluation_template_id')->withTrashed();
     }
 
     public function team(): BelongsTo

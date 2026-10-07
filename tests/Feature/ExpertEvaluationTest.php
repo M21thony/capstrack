@@ -6,8 +6,10 @@ use App\Mail\NotificationMail;
 use App\Models\CapstoneExpert;
 use App\Models\Checklist;
 use App\Models\ChecklistMilestone;
+use App\Models\DefenseSchedule;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
+use App\Models\EvaluationTemplate;
 use App\Models\ExpertEvaluation;
 use App\Models\ExpertRole;
 use App\Models\Notification;
@@ -16,10 +18,11 @@ use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Support\DefenseOutcome;
 use App\Support\ExpertEvaluations;
 use App\Support\MilestoneProgress;
-use App\Support\TeamChecklist;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
@@ -28,10 +31,10 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * After every phase of the Progress Tracker the team leader rates each of the
- * team's experts - adviser, consultant, grammarian - from 1 to 5 stars with a
- * comment. The leader is told by bell and email, nudged by a popup, and the
- * ratings live on the Experts page's Evaluations tab.
+ * After each defense a team passes - Pre-proposal, Title, Pre Oral, Final -
+ * the leader answers the CaPSA's evaluation of each expert it covers, 1 to 5
+ * stars per question; the rating is the average. The leader is told by bell
+ * and email, nudged by a popup, and the next phase waits for it.
  */
 class ExpertEvaluationTest extends TestCase
 {
@@ -44,9 +47,9 @@ class ExpertEvaluationTest extends TestCase
 
     private Checklist $checklist;
 
-    private ChecklistMilestone $gettingStarted;
-
     private ChecklistMilestone $proposal;
+
+    private ChecklistMilestone $chapters;
 
     private CapstoneExpert $capsa;
 
@@ -57,17 +60,26 @@ class ExpertEvaluationTest extends TestCase
     {
         parent::setUp();
         Mail::fake();
+        Carbon::setTestNow('2027-02-01 09:00:00');
 
         $capsa = $this->capsa = $this->capsaFor();
         [$this->team, $this->leader] = $this->teamInSection('Alpha');
 
         $this->checklist = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => 'BSIT', 'title' => 'Capstone Checklist']);
-        $this->gettingStarted = $this->checklist->milestones()->create(['name' => 'Getting Started', 'position' => 0]);
-        $this->proposal = $this->checklist->milestones()->create(['name' => 'Pre-proposal', 'position' => 1, 'requires_previous' => true]);
+        $this->proposal = $this->checklist->milestones()->create(['name' => 'Pre-proposal', 'position' => 0]);
+        $this->proposal->deliverables()->create(['title' => 'Pre-Proposal Oral Presentation', 'kind' => Deliverable::DEFENSE, 'defense_type' => DefenseOutcome::PRE_PROPOSAL, 'position' => 0]);
+        $this->chapters = $this->checklist->milestones()->create(['name' => 'Chapters', 'position' => 1, 'requires_previous' => true]);
+        $this->chapters->deliverables()->create(['title' => 'Chapter 1 Form', 'kind' => Deliverable::FORM, 'position' => 0]);
 
         foreach (['adviser', 'consultant', 'grammarian'] as $roleName) {
             $this->experts[$roleName] = $this->engage($roleName);
         }
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     private function engage(string $roleName, string $status = 'approved'): CapstoneExpert
@@ -83,20 +95,28 @@ class ExpertEvaluationTest extends TestCase
         return $expert;
     }
 
-    private function deliverable(ChecklistMilestone $milestone, string $title): Deliverable
+    /** @param  array<int, string>|null  $roles */
+    private function template(string $stage = DefenseOutcome::PRE_PROPOSAL, ?array $roles = null, ?CapstoneExpert $capsa = null, ?array $questions = null): EvaluationTemplate
     {
-        return $milestone->deliverables()->create([
-            'title' => $title,
-            'kind' => Deliverable::FORM,
-            'position' => (int) $milestone->deliverables()->max('position') + 1,
-        ]);
+        return EvaluationTemplate::factory()->withQuestions($questions)->create([
+            'capsa_id' => ($capsa ?? $this->capsa)->expert_id,
+            'defense_type' => $stage,
+            'roles' => $roles ?? array_keys(ExpertEvaluation::ROLES),
+        ])->load('questions');
     }
 
-    private function finish(ChecklistMilestone $milestone): void
+    private function decide(string $stage = DefenseOutcome::PRE_PROPOSAL, string $outcome = DefenseOutcome::PASSED, int $attempt = 1): DefenseSchedule
     {
-        foreach ($milestone->deliverables as $line) {
-            DeliverableCheck::create(['deliverable_id' => $line->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()]);
-        }
+        Carbon::setTestNow(now()->addDay());
+
+        return DefenseSchedule::create([
+            'team_id' => $this->team->team_id,
+            'defense_type' => $stage,
+            'attempt' => $attempt,
+            'schedule_date' => now(),
+            'outcome' => $outcome,
+            'outcome_recorded_at' => now(),
+        ]);
     }
 
     private function member(): Student
@@ -112,166 +132,201 @@ class ExpertEvaluationTest extends TestCase
         return app(ExpertEvaluations::class)->due($this->team->fresh());
     }
 
-    private function rate(Student $as, CapstoneExpert $expert, string $role, array $overrides = []): TestResponse
+    /** @param  array<int, int>|null  $scores  one per question, in order; 5 each by default */
+    private function answer(Student $as, DefenseSchedule $defense, CapstoneExpert $expert, string $role, EvaluationTemplate $template, ?array $scores = null, array $overrides = []): TestResponse
     {
+        $answers = [];
+        foreach ($template->questions->values() as $i => $question) {
+            $answers[$question->id] = $scores[$i] ?? 5;
+        }
+
         return $this->actingAs($as, 'web')->post(route('student.evaluations.store'), $overrides + [
-            'milestone_id' => $this->gettingStarted->id,
+            'defense_id' => $defense->defense_id,
             'expert_id' => $expert->expert_id,
             'role' => $role,
-            'rating' => 5,
-            'comment' => 'Answered every question quickly.',
+            'answers' => $answers,
         ]);
     }
 
-    public function test_nothing_is_owed_until_a_phase_is_finished(): void
+    private function answerAll(DefenseSchedule $defense, EvaluationTemplate $template): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->deliverable($this->gettingStarted, 'Topic List');
-
-        $this->assertCount(0, $this->due());
-
-        // One of two done is not finished.
-        DeliverableCheck::create(['deliverable_id' => $this->gettingStarted->deliverables()->first()->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()]);
-        $this->assertCount(0, $this->due());
+        foreach ($this->experts as $role => $expert) {
+            $this->answer($this->leader, $defense, $expert, $role, $template)->assertSessionHas('evaluation_saved');
+        }
     }
 
-    public function test_a_finished_phase_owes_one_rating_per_engaged_expert(): void
+    public function test_nothing_is_owed_until_a_defense_is_passed(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->deliverable($this->proposal, 'Pre-proposal Draft');
-        $this->finish($this->gettingStarted);
+        $this->template();
+        DefenseSchedule::create(['team_id' => $this->team->team_id, 'defense_type' => DefenseOutcome::PRE_PROPOSAL, 'attempt' => 1, 'schedule_date' => now()->addWeek()]);
+        $this->assertCount(0, $this->due());
+
+        $this->decide(outcome: DefenseOutcome::REDEFENSE, attempt: 2);
+        $this->assertCount(0, $this->due(), 'a re-defense is not a pass');
+    }
+
+    public function test_a_passed_defense_owes_one_evaluation_per_expert_the_capsas_evaluation_covers(): void
+    {
+        $this->template(roles: ['adviser', 'consultant']);
+        $pending = $this->engage('adviser', 'pending');
+        $defense = $this->decide(outcome: DefenseOutcome::PASSED_WITH_REVISION);
 
         $due = $this->due();
 
-        $this->assertSame(['adviser', 'consultant', 'grammarian'], $due->pluck('role')->all());
-        $this->assertSame([$this->gettingStarted->id], $due->pluck('milestone_id')->unique()->values()->all());
+        $this->assertSame(['adviser', 'consultant'], $due->pluck('role')->all());
+        $this->assertSame([$defense->defense_id], $due->pluck('defense_id')->unique()->values()->all());
+        $this->assertSame(DefenseOutcome::PRE_PROPOSAL, $due->first()->stage);
+        $this->assertNotContains($pending->expert_id, $due->pluck('expert_id'));
     }
 
-    public function test_an_empty_phase_or_an_expert_still_pending_owes_nothing(): void
+    public function test_only_the_teams_capsas_active_evaluation_for_that_defense_counts(): void
     {
-        // The second phase has nothing in it, so it is not "finished".
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
-        $pendingExpert = $this->engage('adviser', 'pending');
+        $this->template(stage: DefenseOutcome::TITLE_DEFENSE);
+        $this->template(capsa: $this->capsaFor(['BSCS-3A']));
+        EvaluationTemplate::factory()->inactive()->withQuestions()->create(['capsa_id' => $this->capsa->expert_id, 'defense_type' => DefenseOutcome::PRE_PROPOSAL]);
+        $this->decide();
 
-        $due = $this->due();
-
-        $this->assertCount(3, $due);
-        $this->assertNotContains($this->proposal->id, $due->pluck('milestone_id'));
-        $this->assertNotContains($pendingExpert->expert_id, $due->pluck('expert_id'));
+        $this->assertCount(0, $this->due());
     }
 
-    /**
-     * The real cache serializes, and refuses to bring objects back
-     * (cache.serializable_classes = false). A cached Collection came back as
-     * __PHP_Incomplete_Class and every student page of a leader crashed.
-     */
-    public function test_what_is_owed_survives_a_serializing_cache(): void
+    /** Setting up an evaluation never reaches back and locks a team long past that defense. */
+    public function test_an_evaluation_set_up_after_the_defense_was_decided_owes_nothing(): void
     {
-        config([
-            'cache.serializable_classes' => false,
-            'cache.stores.evaluation-test' => ['driver' => 'file', 'path' => storage_path('framework/testing/evaluation-cache')],
-            'cache.default' => 'evaluation-test',
-        ]);
-        Cache::store('evaluation-test')->flush();
+        $this->decide();
+        Carbon::setTestNow(now()->addDay());
+        $this->template();
 
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
-
-        $first = $this->due();
-        $cached = $this->due();
-
-        $this->assertCount(3, $cached);
-        $this->assertEquals($first, $cached);
-        $this->assertSame('Getting Started', $cached->first()->milestone);
-
-        $this->actingAs($this->leader, 'web')->get(route('student.experts', ['tab' => 'evaluations']))->assertOk();
-
-        Cache::store('evaluation-test')->flush();
+        $this->assertCount(0, $this->due());
     }
 
-    public function test_the_leader_rates_an_expert_and_it_is_no_longer_owed(): void
+    public function test_the_rating_is_the_average_of_the_answers(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $template = $this->template();
+        $defense = $this->decide();
 
-        $this->rate($this->leader, $this->experts['adviser'], 'adviser', ['rating' => 4])
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $template, [5, 4, 4, 3, 5])
             ->assertRedirect(route('student.experts', ['tab' => 'evaluations']))
             ->assertSessionHas('evaluation_saved');
 
-        $this->assertDatabaseHas('expert_evaluations', [
-            'team_id' => $this->team->team_id,
-            'expert_id' => $this->experts['adviser']->expert_id,
-            'checklist_milestone_id' => $this->gettingStarted->id,
-            'role' => 'adviser',
-            'rating' => 4,
-            'student_id' => $this->leader->student_id,
-        ]);
+        $evaluation = ExpertEvaluation::sole();
+        $this->assertSame(4.2, $evaluation->rating);
+        $this->assertSame($defense->defense_id, $evaluation->defense_id);
+        $this->assertSame($template->id, $evaluation->evaluation_template_id);
+        $this->assertCount(5, $evaluation->answers);
+        $this->assertSame(['question' => EvaluationTemplate::STANDARD_QUESTIONS[3], 'score' => 3], $evaluation->answers[3]);
+        $this->assertNull($evaluation->comment);
         $this->assertSame(['consultant', 'grammarian'], $this->due()->pluck('role')->all());
     }
 
-    public function test_the_same_rating_cannot_be_sent_twice(): void
+    public function test_all_fives_rate_the_expert_five(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $template = $this->template();
+        $defense = $this->decide();
 
-        $this->rate($this->leader, $this->experts['adviser'], 'adviser');
-        $this->rate($this->leader, $this->experts['adviser'], 'adviser')->assertSessionHas('evaluation_error');
+        $this->answer($this->leader, $defense, $this->experts['consultant'], 'consultant', $template);
+
+        $this->assertSame(5.0, ExpertEvaluation::sole()->rating);
+    }
+
+    public function test_the_wording_answered_is_kept_when_the_capsa_edits_the_questions(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $template);
+
+        $template->questions()->first()->update(['question' => 'Something else entirely.']);
+
+        $this->assertSame(EvaluationTemplate::STANDARD_QUESTIONS[0], ExpertEvaluation::sole()->answers[0]['question']);
+    }
+
+    public function test_every_question_needs_an_answer_from_one_to_five(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+        $adviser = $this->experts['adviser'];
+        $questions = $template->questions->pluck('id');
+
+        // One left out.
+        $this->actingAs($this->leader, 'web')->post(route('student.evaluations.store'), [
+            'defense_id' => $defense->defense_id, 'expert_id' => $adviser->expert_id, 'role' => 'adviser',
+            'answers' => $questions->take(4)->mapWithKeys(fn ($id) => [$id => 4])->all(),
+        ])->assertSessionHas('evaluation_error', 'Answer every question from 1 to 5.');
+
+        $this->answer($this->leader, $defense, $adviser, 'adviser', $template, [6])->assertSessionHasErrors('answers.'.$questions[0]);
+        $this->answer($this->leader, $defense, $adviser, 'adviser', $template, [0])->assertSessionHasErrors('answers.'.$questions[0]);
+        $this->answer($this->leader, $defense, $adviser, 'adviser', $template, overrides: ['answers' => []])->assertSessionHasErrors('answers');
+        $this->answer($this->leader, $defense, $adviser, 'panelist', $template)->assertSessionHasErrors('role');
+
+        $this->assertSame(0, ExpertEvaluation::count());
+    }
+
+    public function test_the_same_evaluation_cannot_be_sent_twice(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $template);
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $template)->assertSessionHas('evaluation_error');
 
         $this->assertSame(1, ExpertEvaluation::count());
     }
 
-    public function test_a_member_cannot_rate(): void
+    public function test_a_member_cannot_evaluate(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $template = $this->template();
+        $defense = $this->decide();
 
-        $this->rate($this->member(), $this->experts['adviser'], 'adviser')->assertSessionHas('evaluation_error');
+        $this->answer($this->member(), $defense, $this->experts['adviser'], 'adviser', $template)
+            ->assertSessionHas('evaluation_error', 'Only your team leader evaluates the experts.');
 
         $this->assertSame(0, ExpertEvaluation::count());
     }
 
-    public function test_a_phase_that_is_not_finished_cannot_be_rated(): void
+    public function test_a_defense_not_passed_cannot_be_evaluated(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
+        $template = $this->template();
+        $defense = $this->decide(outcome: DefenseOutcome::REDEFENSE);
 
-        $this->rate($this->leader, $this->experts['adviser'], 'adviser')->assertSessionHas('evaluation_error');
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $template)->assertSessionHas('evaluation_error');
 
         $this->assertSame(0, ExpertEvaluation::count());
     }
 
-    public function test_stars_and_a_comment_are_required(): void
+    public function test_each_defense_is_evaluated_on_its_own(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $proposal = $this->template();
+        $title = $this->template(stage: DefenseOutcome::TITLE_DEFENSE, roles: ['adviser']);
+        $first = $this->decide();
+        $this->answerAll($first, $proposal);
+        $this->assertCount(0, $this->due());
 
-        $this->rate($this->leader, $this->experts['adviser'], 'adviser', ['rating' => 6])->assertSessionHasErrors('rating');
-        $this->rate($this->leader, $this->experts['adviser'], 'adviser', ['rating' => 0])->assertSessionHasErrors('rating');
-        $this->rate($this->leader, $this->experts['adviser'], 'adviser', ['comment' => ''])->assertSessionHasErrors('comment');
-        $this->rate($this->leader, $this->experts['adviser'], 'panelist')->assertSessionHasErrors('role');
+        $second = $this->decide(stage: DefenseOutcome::TITLE_DEFENSE);
 
-        $this->assertSame(0, ExpertEvaluation::count());
+        $this->assertSame([[$second->defense_id, 'adviser']], $this->due()->map(fn ($r) => [$r->defense_id, $r->role])->all());
+        $this->answer($this->leader, $second, $this->experts['adviser'], 'adviser', $title)->assertSessionHas('evaluation_saved');
+        $this->assertSame(4, ExpertEvaluation::count());
     }
 
-    public function test_the_leader_is_told_once_per_phase_by_bell_and_email(): void
+    public function test_the_leader_is_told_once_per_defense_by_bell_and_email(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $this->template();
+        $this->decide();
 
         $this->artisan('evaluations:send-reminders')->assertSuccessful();
         $this->artisan('evaluations:send-reminders')->assertSuccessful();
 
         $bell = Notification::where('student_id', $this->leader->student_id)->where('type', 'evaluation_due')->get();
         $this->assertCount(1, $bell);
-        $this->assertSame('Evaluate your experts: Getting Started', $bell->first()->title);
+        $this->assertSame('Evaluate your experts: Pre-proposal Defense', $bell->first()->title);
+        $this->assertStringContainsString('anonymous', $bell->first()->message);
         $this->assertStringContainsString('tab=evaluations', $bell->first()->link);
         Mail::assertQueued(NotificationMail::class, fn ($mail) => $mail->hasTo($this->leader->email));
     }
 
     public function test_opening_any_page_tells_the_leader_without_waiting_for_the_schedule(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $this->template();
+        $this->decide();
 
         $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))->assertOk();
 
@@ -284,10 +339,10 @@ class ExpertEvaluationTest extends TestCase
      */
     public function test_a_page_works_out_what_is_owed_once(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $this->template();
+        $this->decide();
 
-        $counting = new class(app(TeamChecklist::class)) extends ExpertEvaluations
+        $counting = new class extends ExpertEvaluations
         {
             public int $dueCalls = 0;
 
@@ -308,33 +363,14 @@ class ExpertEvaluationTest extends TestCase
         $this->assertSame(1, Notification::where('student_id', $this->leader->student_id)->where('type', 'evaluation_due')->count());
     }
 
-    public function test_the_leader_sees_the_popup_until_everything_is_rated(): void
-    {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
-
-        $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
-            ->assertOk()
-            ->assertSee('Time to evaluate your experts')
-            ->assertSee('Evaluate now');
-
-        foreach ($this->experts as $role => $expert) {
-            $this->rate($this->leader, $expert, $role);
-        }
-
-        $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
-            ->assertOk()
-            ->assertDontSee('Time to evaluate your experts');
-    }
-
     /**
      * The popup is open from the page's first paint: shown after a delay with
      * a fade, every page came up bright and then dimmed under it.
      */
     public function test_the_popup_is_open_from_the_first_paint(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $this->template();
+        $this->decide();
 
         $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
             ->assertOk()
@@ -342,10 +378,28 @@ class ExpertEvaluationTest extends TestCase
             ->assertDontSee('}, 700);', false);
     }
 
+    public function test_the_leader_sees_the_popup_until_every_expert_is_evaluated(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+
+        $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('Time to evaluate your experts')
+            ->assertSee('Your team passed Pre-proposal Defense.')
+            ->assertSee('Evaluate now');
+
+        $this->answerAll($defense, $template);
+
+        $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Time to evaluate your experts');
+    }
+
     public function test_members_get_no_popup_and_no_reminder(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $this->template();
+        $this->decide();
         $member = $this->member();
 
         $this->actingAs($member, 'web')->get(route('student.dashboard'))
@@ -356,29 +410,34 @@ class ExpertEvaluationTest extends TestCase
         $this->assertSame(0, Notification::where('student_id', $member->student_id)->where('type', 'evaluation_due')->count());
     }
 
-    public function test_the_evaluations_tab_shows_the_forms_and_what_was_sent(): void
+    public function test_the_evaluations_tab_shows_the_questions_and_what_was_sent(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
-        $this->rate($this->leader, $this->experts['adviser'], 'adviser', ['rating' => 3, 'comment' => 'Helpful with the scope.']);
+        $template = $this->template(questions: ['Answered our questions quickly.', 'Explained the panel\'s comments.']);
+        $defense = $this->decide();
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $template, [5, 4]);
 
         $this->actingAs($this->leader, 'web')->get(route('student.experts', ['tab' => 'evaluations']))
             ->assertOk()
             ->assertSee('id="xh-panel-eval"', false)
-            ->assertSee('Getting Started')
+            ->assertSee('Defense passed')
+            ->assertSee('Pre-proposal Defense')
+            ->assertSee('Answered our questions quickly.')
+            ->assertSee('Explained the panel&#039;s comments.', false)
+            ->assertSee('name="answers['.$template->questions[0]->id.']"', false)
+            ->assertSee('5 · Excellent')
+            ->assertSee('Anonymous.')
             ->assertSee('Submit evaluation')
             ->assertSee($this->experts['consultant']->name)
             ->assertSee('Sent evaluations')
-            ->assertSee('Helpful with the scope.')
-            ->assertSee('3 out of 5 stars')
+            ->assertSee('4.5 out of 5', false)
             // the popup stays out of the way on the tab it points to
             ->assertDontSee('Time to evaluate your experts');
     }
 
     public function test_a_member_reads_the_tab_but_has_no_forms(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->finish($this->gettingStarted);
+        $this->template();
+        $this->decide();
 
         $this->actingAs($this->member(), 'web')->get(route('student.experts', ['tab' => 'evaluations']))
             ->assertOk()
@@ -386,44 +445,75 @@ class ExpertEvaluationTest extends TestCase
             ->assertDontSee('Submit evaluation');
     }
 
-    private function proposalGate(): object
+    /**
+     * The real cache serializes, and refuses to bring objects back
+     * (cache.serializable_classes = false). A cached Collection came back as
+     * __PHP_Incomplete_Class and every student page of a leader crashed.
+     */
+    public function test_what_is_owed_survives_a_serializing_cache(): void
     {
-        return MilestoneProgress::forTeam($this->checklist, $this->team->team_id)
-            ->milestones->first(fn ($m) => $m->milestone->id === $this->proposal->id);
+        config([
+            'cache.serializable_classes' => false,
+            'cache.stores.evaluation-test' => ['driver' => 'file', 'path' => storage_path('framework/testing/evaluation-cache')],
+            'cache.default' => 'evaluation-test',
+        ]);
+        Cache::store('evaluation-test')->flush();
+        $this->template();
+        $this->decide();
+
+        $first = $this->due();
+        $cached = $this->due();
+
+        $this->assertCount(3, $cached);
+        $this->assertEquals($first, $cached);
+
+        $this->actingAs($this->leader, 'web')->get(route('student.experts', ['tab' => 'evaluations']))->assertOk();
+
+        Cache::store('evaluation-test')->flush();
     }
 
-    public function test_the_next_phase_stays_locked_until_every_expert_is_rated(): void
+    private function chaptersGate(): object
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->deliverable($this->proposal, 'Final Title Form');
-        $this->finish($this->gettingStarted);
+        return MilestoneProgress::forTeam($this->checklist, $this->team->team_id)
+            ->milestones->first(fn ($m) => $m->milestone->id === $this->chapters->id);
+    }
 
-        $gate = $this->proposalGate();
-        $this->assertTrue($gate->locked, 'phase 1 is done but its experts are not rated');
-        $this->assertSame('the expert evaluation for Getting Started', $gate->requires);
+    public function test_the_next_phase_stays_locked_until_every_expert_is_evaluated(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
 
-        $this->rate($this->leader, $this->experts['adviser'], 'adviser');
-        $this->rate($this->leader, $this->experts['consultant'], 'consultant');
-        $this->assertTrue($this->proposalGate()->locked, 'one expert is still not rated');
+        $gate = $this->chaptersGate();
+        $this->assertTrue($gate->locked, 'the defense is passed but its experts are not evaluated');
+        $this->assertSame('the expert evaluation for Pre-proposal Defense', $gate->requires);
 
-        $this->rate($this->leader, $this->experts['grammarian'], 'grammarian');
-        $this->assertFalse($this->proposalGate()->locked);
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $template);
+        $this->answer($this->leader, $defense, $this->experts['consultant'], 'consultant', $template);
+        $this->assertTrue($this->chaptersGate()->locked, 'one expert is still not evaluated');
+
+        $this->answer($this->leader, $defense, $this->experts['grammarian'], 'grammarian', $template);
+        $this->assertFalse($this->chaptersGate()->locked);
+    }
+
+    public function test_without_an_evaluation_the_passed_defense_opens_the_next_phase(): void
+    {
+        $this->decide();
+
+        $this->assertFalse($this->chaptersGate()->locked);
     }
 
     public function test_the_capsa_cannot_close_anything_in_the_locked_phase(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $form = $this->deliverable($this->proposal, 'Final Title Form');
-        $this->finish($this->gettingStarted);
+        $template = $this->template();
+        $defense = $this->decide();
+        $form = $this->chapters->deliverables()->first();
 
         $this->actingAs($this->capsa, 'expert')
             ->putJson(route('capsa.deliverables.checks.update', [$form->id, $this->team->team_id]), ['status' => DeliverableCheck::COMPLETE])
             ->assertStatus(422)
-            ->assertJsonFragment(['message' => "Final Title Form can't be checked yet: it waits for the expert evaluation for Getting Started."]);
+            ->assertJsonFragment(['message' => "Chapter 1 Form can't be checked yet: it waits for the expert evaluation for Pre-proposal Defense."]);
 
-        foreach ($this->experts as $role => $expert) {
-            $this->rate($this->leader, $expert, $role);
-        }
+        $this->answerAll($defense, $template);
 
         $this->actingAs($this->capsa, 'expert')
             ->putJson(route('capsa.deliverables.checks.update', [$form->id, $this->team->team_id]), ['status' => DeliverableCheck::COMPLETE])
@@ -433,23 +523,22 @@ class ExpertEvaluationTest extends TestCase
     public function test_a_team_with_no_experts_yet_is_not_held_up(): void
     {
         TeamExpertAssignment::where('team_id', $this->team->team_id)->delete();
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->deliverable($this->proposal, 'Final Title Form');
-        $this->finish($this->gettingStarted);
+        $this->template();
+        $this->decide();
 
-        $this->assertFalse($this->proposalGate()->locked);
+        $this->assertFalse($this->chaptersGate()->locked);
     }
 
     public function test_the_progress_tracker_says_why_the_next_phase_is_locked(): void
     {
-        $this->deliverable($this->gettingStarted, 'Team Assignment Form');
-        $this->deliverable($this->proposal, 'Final Title Form');
-        $this->finish($this->gettingStarted);
+        $this->template();
+        $this->decide();
 
         $this->actingAs($this->leader, 'web')->get(route('student.progress'))
             ->assertOk()
             ->assertSee('Evaluate your experts to unlock the next phase')
-            ->assertSee('Opens after the expert evaluation for Getting Started.');
+            ->assertSee('your anonymous evaluation for Pre-proposal Defense')
+            ->assertSee('Opens after the expert evaluation for Pre-proposal Defense.');
 
         $this->actingAs($this->member(), 'web')->get(route('student.progress'))
             ->assertOk()

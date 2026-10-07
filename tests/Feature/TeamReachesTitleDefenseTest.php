@@ -10,7 +10,9 @@ use App\Models\Checklist;
 use App\Models\DefenseSchedule;
 use App\Models\DefenseWindow;
 use App\Models\Deliverable;
+use App\Models\EvaluationTemplate;
 use App\Models\ExpensePost;
+use App\Models\ExpertEvaluation;
 use App\Models\ExpertRole;
 use App\Models\FinancialRecord;
 use App\Models\GradingRubric;
@@ -77,6 +79,10 @@ class TeamReachesTitleDefenseTest extends TestCase
 
         $this->capsa = $this->capsaFor(['BSIT-4A']);
         $this->checklist = $this->departmentChecklist($this->capsa);
+        // The CaPSA's expert evaluation for every defense, set up from the start.
+        foreach (EvaluationTemplate::STAGES as $stage) {
+            EvaluationTemplate::factory()->withQuestions()->create(['capsa_id' => $this->capsa->expert_id, 'defense_type' => $stage]);
+        }
 
         foreach (range(1, 3) as $n) {
             $this->members[] = Student::factory()->withCompleteProfile()->withTourCompleted()->create([
@@ -168,19 +174,21 @@ class TeamReachesTitleDefenseTest extends TestCase
     }
 
     /**
-     * What a leader does after each phase: rate every expert for it. The next
-     * phase stays locked until they do (see ExpertEvaluations).
+     * What a leader does after each passed defense: answer the CaPSA's
+     * evaluation of every expert, 5 stars each. The next phase stays locked
+     * until they do (see ExpertEvaluations).
      */
     private function evaluateFinishedPhases(): void
     {
         foreach (app(ExpertEvaluations::class)->due($this->team) as $owed) {
+            $questions = EvaluationTemplate::findOrFail($owed->template_id)->questions;
+
             $this->actingAs($this->leader(), 'web')
                 ->post(route('student.evaluations.store'), [
-                    'milestone_id' => $owed->milestone_id,
+                    'defense_id' => $owed->defense_id,
                     'expert_id' => $owed->expert_id,
                     'role' => $owed->role,
-                    'rating' => 5,
-                    'comment' => 'Guided us well through '.$owed->milestone.'.',
+                    'answers' => $questions->mapWithKeys(fn ($q) => [$q->id => 5])->all(),
                 ])
                 ->assertSessionHas('evaluation_saved');
         }
@@ -423,9 +431,15 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->assertDone('pre_proposal_defense');
         $this->paper('final_title_form');
 
-        // Finished, but the leader has not rated the experts for it yet.
-        $this->assertSame('the expert evaluation for Pre-proposal', $this->state('chapter_1_draft')->waits_for);
+        // Passing it owed the leader's evaluation of each expert, answered
+        // before the next phase could open.
         $this->evaluateFinishedPhases();
+        $proposalDefense = DefenseSchedule::where('team_id', $this->team->team_id)->where('defense_type', DefenseOutcome::PRE_PROPOSAL)->firstOrFail();
+        $this->assertSame(
+            ['adviser', 'consultant', 'grammarian'],
+            ExpertEvaluation::where('defense_id', $proposalDefense->defense_id)->orderBy('role')->pluck('role')->all(),
+        );
+        $this->assertNull($this->state('chapter_1_draft')->waits_for);
 
         // Past the Pre-proposal, Chapters 1 to 3 open together: none waits for another.
         foreach ([1, 2, 3] as $n) {

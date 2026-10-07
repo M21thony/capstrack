@@ -147,7 +147,7 @@ class AppServiceProvider extends ServiceProvider
             ? $this->panelDetails($panelTeam)
             : ['members' => collect(), 'experts' => [], 'defense' => null];
 
-        // A leader whose team finished a phase owes each expert an
+        // A leader whose team passed a defense owes each expert an
         // evaluation: told once by bell and email the first time any
         // page notices, and nudged by the popup until it is done.
         $evaluationsOwed = collect();
