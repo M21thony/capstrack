@@ -307,29 +307,57 @@ function caretAt(x, y) {
   return r ? [r.startContainer, r.startOffset] : null;
 }
 
+/** How far a point is from a box, 0 inside it. */
+const gapTo = (x, y, b) => Math.hypot(Math.max(b.left - x, 0, x - b.right), Math.max(b.top - y, 0, y - b.bottom));
+
+/** A label's words: its text pieces, and the boxes they are drawn in on screen. */
+function shownWords(label) {
+  const walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT);
+  const texts = [];
+  while (walker.nextNode()) if (walker.currentNode.data.trim()) texts.push(walker.currentNode);
+  const range = document.createRange();
+  const boxes = texts.flatMap((t) => { range.selectNodeContents(t); return [...range.getClientRects()]; });
+  return { texts, boxes };
+}
+
+/** The spot in a label's words nearest a point: under it, or at the closest edge of the words. */
+function spotIn(label, x, y) {
+  const { texts, boxes } = shownWords(label);
+  if (!boxes.length) return null;
+  const b = boxes.reduce((best, box) => (gapTo(x, y, box) < gapTo(x, y, best) ? box : best));
+  const at = caretAt(Math.min(Math.max(x, b.left + 0.5), b.right - 0.5), Math.min(Math.max(y, b.top + 0.5), b.bottom - 0.5));
+  if (at && label.contains(at[0])) return at;
+  const last = texts.at(-1);
+  return x < b.left + b.width / 2 ? [texts[0], 0] : [last, last.length];
+}
+
 /** One diagram page's body: its name, then the drawing filling the page's width, its words selectable over it. */
 export function DiagramPage({ page, showChanges = true, before = false }) {
   const pic = shownPicture(page, showChanges, before);
   const words = useRef(null);
   useEffect(() => { words.current?.replaceChildren(pic.text.cloneNode(true)); }, [pic]);
-  // A drag keeps to the label it started on. Left to the browser, it takes every label between
-  // the two ends in file order, and those labels sit anywhere on the drawing.
+  // A drag selects in one label only: the one it starts on, or the nearest one when it starts
+  // just beside the words. Left to the browser, a drag takes every label between its two ends
+  // in file order, and those labels sit anywhere on the drawing.
   const holdToLabel = (e) => {
-    const label = e.target.closest?.("foreignObject, text");
-    const anchor = caretAt(e.clientX, e.clientY);
-    if (!label || e.button !== 0 || e.detail > 1 || !anchor || !label.contains(anchor[0])) return;
+    if (e.button !== 0 || e.detail > 1 || !words.current.closest("[contenteditable='true']")) return;
     e.preventDefault();
-    const walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT);
-    const texts = [];
-    while (walker.nextNode()) texts.push(walker.currentNode);
-    const last = texts.at(-1);
     const sel = window.getSelection();
+    sel.removeAllRanges();
+    let label = null;
+    let gap = 24;
+    for (const l of words.current.querySelectorAll("foreignObject, text")) {
+      for (const box of shownWords(l).boxes) {
+        const d = gapTo(e.clientX, e.clientY, box);
+        if (d < gap) { gap = d; label = l; }
+      }
+    }
+    const anchor = label && spotIn(label, e.clientX, e.clientY);
+    if (!anchor) return;
     sel.collapse(...anchor);
     const follow = (m) => {
-      const back = m.clientY < e.clientY - 4 || (Math.abs(m.clientY - e.clientY) <= 4 && m.clientX < e.clientX);
-      const at = caretAt(m.clientX, m.clientY);
-      const focus = at && label.contains(at[0]) ? at : back ? [texts[0], 0] : [last, last.length];
-      sel.setBaseAndExtent(...anchor, ...focus);
+      const focus = spotIn(label, m.clientX, m.clientY);
+      if (focus) sel.setBaseAndExtent(...anchor, ...focus);
     };
     window.addEventListener("mousemove", follow);
     window.addEventListener("mouseup", () => window.removeEventListener("mousemove", follow), { once: true });
