@@ -112,6 +112,15 @@ class StudentContentSkeletonTest extends TestCase
         $this->assertStringContainsString('resizing.observe(content);', $html);
     }
 
+    /** What sits under the content area in the page itself - Team Management's "Find members / Find team" key - loads with it. */
+    public function test_what_sits_under_the_content_area_loads_with_it(): void
+    {
+        $html = $this->studentPage();
+
+        $this->assertStringContainsString('for (var after = content.nextElementSibling; after; after = after.nextElementSibling) {', $html);
+        $this->assertStringContainsString("placed.position !== 'fixed' && placed.position !== 'absolute'", $html);
+    }
+
     /** Table cells are never solid blocks: the words in them are lines, as anywhere else. */
     public function test_table_cells_are_drawn_as_lines_not_blocks(): void
     {

@@ -22,8 +22,9 @@
 --}}
 <style nonce="{{ Vite::cspNonce() }}">
   html.csk-hide .main > .content { opacity: 0 !important; }
-  #csk { position: fixed; z-index: 30; overflow: hidden; pointer-events: none; }
-  #csk > div { position: absolute; left: 0; top: 0; }
+  #csk { position: fixed; z-index: 30; pointer-events: none; }
+  #csk > .csk-clip { position: absolute; inset: 0; overflow: hidden; }
+  #csk .csk-layer { position: absolute; left: 0; top: 0; }
   #csk .csk-sheet { position: absolute; left: 0; overflow: hidden; pointer-events: auto; transition: opacity .4s ease; }
   #csk .csk-sheet.csk-out { opacity: 0; pointer-events: none; }
   #csk i { position: absolute; display: block; box-sizing: border-box; }
@@ -107,6 +108,19 @@
     return found;
   }
 
+  // The box around a few elements, as on screen now.
+  function around(elements) {
+    var box = null;
+    elements.forEach(function (element) {
+      var rect = element.getBoundingClientRect();
+      box = box ? {
+        left: Math.min(box.left, rect.left), top: Math.min(box.top, rect.top),
+        right: Math.max(box.right, rect.right), bottom: Math.max(box.bottom, rect.bottom),
+      } : { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+    });
+    return box;
+  }
+
   function build() {
     var content = document.querySelector('.main > .content');
     if (!content) return root.classList.remove('csk-hide');
@@ -115,8 +129,12 @@
     var originX = box.left - content.scrollLeft;
     var originY = box.top - content.scrollTop;
     var layer = document.createElement('div');
+    layer.className = 'csk-layer';
     var cover = null;
     var sheets = [];
+    var tail = null;
+    var foot = null;
+    var below = [];
     // The skeleton keeps to the content area as it is now, not as it was on
     // the first frame: the area can still grow or move as the page settles,
     // which used to leave a strip of the real page showing below the
@@ -132,10 +150,14 @@
       cover.style.height = Math.max(0, bottom - top) + 'px';
       layer.style.left = -content.scrollLeft + 'px';
       layer.style.top = (now.top - top - content.scrollTop) + 'px';
-      var last = sheets[sheets.length - 1];
-      if (last && content.scrollHeight > last.bottom) {
-        last.bottom = content.scrollHeight;
-        last.node.style.height = (last.bottom - last.top) + 'px';
+      if (tail && content.scrollHeight > tail.bottom) {
+        tail.bottom = content.scrollHeight;
+        tail.node.style.height = (tail.bottom - tail.top) + 'px';
+      }
+      if (foot) {
+        var under = around(below);
+        foot.node.style.left = (under.left - now.left) + 'px';
+        foot.node.style.top = (under.top - top) + 'px';
       }
     }
     var count = 0;
@@ -220,6 +242,26 @@
 
     for (var child = content.firstElementChild; child; child = child.nextElementSibling) walk(child);
 
+    // What sits under the content area, in the page itself rather than in
+    // a dialog - Team Management's "Find members / Find team" key - is part
+    // of the page too: its own band, which stays where it is when the
+    // content scrolls.
+    for (var after = content.nextElementSibling; after; after = after.nextElementSibling) {
+      var placed = getComputedStyle(after);
+      var sized = after.getBoundingClientRect();
+      if (placed.display !== 'none' && placed.position !== 'fixed' && placed.position !== 'absolute' && sized.width >= 2 && sized.height >= 2) below.push(after);
+    }
+    var footPieces = [];
+    if (below.length) {
+      var under = around(below);
+      var contentPieces = pieces;
+      pieces = footPieces;
+      originX = under.left;
+      originY = under.top;
+      below.forEach(walk);
+      pieces = contentPieces;
+    }
+
     cover = document.createElement('div');
     cover.id = 'csk';
     cover.setAttribute('aria-hidden', 'true');
@@ -260,9 +302,28 @@
       layer.appendChild(sheet);
       return { node: sheet, top: top, bottom: bottom, due: null, done: false };
     });
+    tail = sheets[sheets.length - 1];
+
+    var clip = document.createElement('div');
+    clip.className = 'csk-clip';
+    clip.appendChild(layer);
+    cover.appendChild(clip);
+
+    if (below.length) {
+      var underBox = around(below);
+      var footSheet = document.createElement('div');
+      footSheet.className = 'csk-sheet';
+      footSheet.style.cssText = 'width:' + (underBox.right - underBox.left) + 'px;height:' + (underBox.bottom - underBox.top) + 'px;background:' + surface;
+      footPieces.forEach(function (piece) {
+        piece.node.style.top = piece.top + 'px';
+        footSheet.appendChild(piece.node);
+      });
+      cover.appendChild(footSheet);
+      foot = { node: footSheet, top: 0, bottom: 0, due: null, done: false, fixed: true };
+      sheets.push(foot);
+    }
 
     follow();
-    cover.appendChild(layer);
     document.body.appendChild(cover);
     root.classList.remove('csk-hide');
 
@@ -286,6 +347,7 @@
     // for a band taller than that, 40% of the screen - not when only its
     // top edge peeks in at the bottom of the screen.
     function inView(sheet) {
+      if (sheet.fixed) return true;
       var top = content.scrollTop;
       var seen = Math.min(sheet.bottom, top + content.clientHeight) - Math.max(sheet.top, top);
       return seen > 0 && seen >= Math.min((sheet.bottom - sheet.top) * 0.5, content.clientHeight * 0.4);
