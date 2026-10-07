@@ -98,6 +98,7 @@ class StudentContentSkeletonTest extends TestCase
         $this->assertStringNotContainsString('var reach', $html);
         $this->assertStringContainsString('if (!sheet.done && sheet.due === null && inView(sheet))', $html);
         $this->assertStringContainsString('function onScroll() { follow(); schedule(); }', $html);
+        $this->assertStringContainsString('return seen > 0 && seen >= Math.min((sheet.bottom - sheet.top) * 0.5, content.clientHeight * 0.4);', $html);
         $this->assertStringContainsString("cover.addEventListener('wheel', function (event) {", $html);
         $this->assertStringContainsString("cover.addEventListener('touchmove', function (event) {", $html);
     }

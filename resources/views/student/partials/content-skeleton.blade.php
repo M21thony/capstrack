@@ -265,9 +265,13 @@
     var shown = performance.now();
     var finished = false;
 
+    // A band counts as in view once a good part of it is - half of it, or
+    // for a band taller than that, 40% of the screen - not when only its
+    // top edge peeks in at the bottom of the screen.
     function inView(sheet) {
       var top = content.scrollTop;
-      return sheet.bottom > top && sheet.top < top + content.clientHeight;
+      var seen = Math.min(sheet.bottom, top + content.clientHeight) - Math.max(sheet.top, top);
+      return seen > 0 && seen >= Math.min((sheet.bottom - sheet.top) * 0.5, content.clientHeight * 0.4);
     }
     function picturesReady() {
       var view = content.getBoundingClientRect();
