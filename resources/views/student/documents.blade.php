@@ -62,7 +62,7 @@
   @container dc-list (max-width: 860px) {
     .dc-table thead { display: none; }
     .dc-table, .dc-table tbody, .dc-group, .dc-group th { display: block; }
-    .dc-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 190px auto; grid-template-areas: "v f w a" ". r r a"; gap: 4px 16px; align-items: center; padding: 8px 16px; }
+    .dc-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 190px 96px; grid-template-areas: "v f w a" ". r r a"; gap: 4px 16px; align-items: center; padding: 8px 16px; }
     .dc-row:last-child { padding-bottom: 14px; }
     .dc-row td, .dc-row:last-child td { padding: 0 !important; background: none !important; }
     .dc-v { grid-area: v; } .dc-f { grid-area: f; min-width: 0; } .dc-w { grid-area: w; min-width: 0; } .dc-r { grid-area: r; } .dc-a { grid-area: a; }
@@ -70,11 +70,16 @@
     .dc-file { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .dc-who { min-width: 0; } .dc-who > span { min-width: 0; overflow: hidden; }
     .dc-nm, .dc-date { overflow: hidden; text-overflow: ellipsis; }
-    .dc-a { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .dc-v, .dc-a { width: auto; }
+    .dc-a { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
     .dc-a > * { margin: 0; }
   }
   @container dc-list (max-width: 560px) {
-    .dc-row { grid-template-columns: 34px minmax(0, 1fr) auto; grid-template-areas: "v f a" ". w a" ". r r"; }
+    /* View and Unsubmit get a line of their own, under the reviewers: beside the name they covered the date. */
+    .dc-row { grid-template-columns: 34px minmax(0, 1fr); grid-template-areas: "v f" ". w" ". r" ". a"; }
+    .dc-a { flex-direction: row; justify-content: flex-start; align-items: center; gap: 8px; }
+    .dc-a > a, .dc-a > form { flex: 1; max-width: 160px; }
+    .dc-a .up-btn { width: 100%; }
     .dc-who > span { white-space: nowrap; text-overflow: ellipsis; }
     .dc-nm, .dc-date { display: inline; }
     .dc-date { margin-left: 4px; } .dc-date::before { content: "· "; }
