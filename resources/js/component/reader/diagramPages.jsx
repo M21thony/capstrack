@@ -234,7 +234,7 @@ export function DiagramsOnly({ drawings, loading, children }) {
   if (drawings.status === "error") return <div className="rr-error">Could not load the document: {drawings.note}</div>;
   if (drawings.status !== "ready") return loading;
   if (!drawings.pages.length) return <div className="rr-error">This diagram file has no pages to show.</div>;
-  return children;
+  return <div className="rr-doc">{children}</div>;
 }
 
 /** One diagram page's body: its name, then the drawing filling the page's width, its words selectable over it. */
