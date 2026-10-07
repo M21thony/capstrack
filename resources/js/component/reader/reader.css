@@ -263,3 +263,8 @@ select.rr-input{padding:4px 6px;min-height:30px;font-size:12.5px}
 /* A draw.io page after the PDF: the drawing fills the page, its name sits just above it. */
 .rr-diagram img{display:block;width:100%;height:auto}
 .rr-diagram-cap{position:absolute;bottom:100%;left:0;right:0;font-size:11px;line-height:18px;color:#5b5e6b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr-diagram{position:relative}
+.rr-diagram-text{position:absolute;inset:0}
+.rr-diagram-text svg{display:block}
+.rr-diagram-text *{color:transparent!important;fill:transparent!important;background:transparent!important;border-color:transparent!important;text-decoration-color:transparent!important}
+.rr-diagram-text ::selection{background:rgba(26,115,232,.3)!important}

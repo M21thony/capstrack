@@ -7,6 +7,7 @@ import FinishReview from "./component/FinishReview";
 import { useVersionDiff } from "./component/reader/useVersionDiff";
 import { Toast } from "./component/reader/Reader";
 import { remarkFromServer } from "./component/reader/figures";
+import { diagramPages, pngOf } from "./component/reader/diagramPages";
 import "./component/reader/reader.css";
 import "./App.css";
 
@@ -281,6 +282,19 @@ function App() {
     if (!response.ok) throw new Error(`Failed to load PDF: ${response.status} ${response.statusText}`);
 
     const pdfDoc = await PDFDocument.load(await response.arrayBuffer(), { ignoreEncryption: true, updateMetadata: false });
+    // The team's draw.io diagrams follow as pages of their own, as in the reader, so their remarks land on them.
+    if (ctx.diagrams) {
+      try {
+        const pageWidth = pdfDoc.getPage(0).getWidth();
+        for (const { plain } of await diagramPages(ctx.diagrams)) {
+          const picture = await pdfDoc.embedPng(await pngOf(plain));
+          const pageHeight = (pageWidth * plain.height) / plain.width;
+          pdfDoc.addPage([pageWidth, pageHeight]).drawImage(picture, { x: 0, y: 0, width: pageWidth, height: pageHeight });
+        }
+      } catch (e) {
+        console.warn("Could not add the diagram pages:", e);
+      }
+    }
     const pages = pdfDoc.getPages();
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);

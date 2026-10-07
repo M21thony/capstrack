@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { comparePages, holderOf, pairPages, readDrawio, withStyle } from "./drawioDiff.js";
 
 /*
@@ -93,7 +93,46 @@ function paint(model, spots, side) {
   return copy;
 }
 
-/** The page drawn by draw.io, as a picture (its labels can never run anything on this page). */
+const SVG_NS = "http://www.w3.org/2000/svg";
+const HTML_NS = "http://www.w3.org/1999/xhtml";
+// What a label is written with. Anything else (shapes, pictures, links, scripts) is left out.
+const TEXT_TAGS = new Set(["svg", "g", "switch", "foreignObject", "text", "tspan", "div", "span", "br", "p", "b", "i", "u", "s", "strong", "em", "font",
+  "strike", "sub", "sup", "ul", "ol", "li", "table", "thead", "tbody", "tr", "td", "th", "pre", "code", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"]);
+const TEXT_ATTRS = new Set(["x", "y", "dx", "dy", "width", "height", "transform", "style", "font-family", "font-size", "font-weight", "font-style",
+  "text-anchor", "dominant-baseline", "letter-spacing", "colspan", "rowspan", "align", "valign", "face", "size"]);
+const UNSAFE_STYLE = /url\s*\(|expression|javascript:|@import|behavior/i;
+
+/**
+ * The words of draw.io's picture, laid out exactly where it draws them, to lie
+ * see-through over the picture so a reviewer can select them. Rebuilt from
+ * nothing but text and its layout, so nothing in a label can run or load.
+ */
+export function textLayer(svg) {
+  const copy = (n) => {
+    if (n.nodeType === 3) return document.createTextNode(n.data);
+    if (n.nodeType !== 1) return null;
+    const name = n.localName, html = n.namespaceURI === HTML_NS, parent = n.parentNode?.localName;
+    // A label is written twice, as html and as plain text for old viewers: the html one is the one drawn.
+    if (name === "text" && parent === "switch" && n.parentNode.getElementsByTagNameNS(SVG_NS, "foreignObject").length) return null;
+    const tag = name === "a" ? (html ? "span" : parent === "text" || parent === "tspan" ? "tspan" : "g") : name;
+    if (!TEXT_TAGS.has(tag)) return null;
+    const el = document.createElementNS(html ? HTML_NS : SVG_NS, tag);
+    if (n !== svg) {
+      [...n.attributes].filter((a) => TEXT_ATTRS.has(a.name)).forEach((a) => {
+        el.setAttribute(a.name, a.name === "style" ? a.value.split(";").filter((d) => !UNSAFE_STYLE.test(d)).join(";") : a.value);
+      });
+    }
+    n.childNodes.forEach((c) => { const k = copy(c); if (k) el.append(k); });
+    return el;
+  };
+  const out = copy(svg);
+  out.setAttribute("viewBox", svg.getAttribute("viewBox"));
+  out.setAttribute("width", "100%");
+  out.setAttribute("height", "100%");
+  return out;
+}
+
+/** The page drawn by draw.io, as a picture (its labels can never run anything on this page), and its words. */
 function picture(model) {
   const { Graph, mxCodec, mxUtils } = window;
   const graph = new Graph(document.createElement("div"));
@@ -104,10 +143,55 @@ function picture(model) {
       src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(mxUtils.getXml(svg))}`,
       width: parseFloat(svg.getAttribute("width")) || 800,
       height: parseFloat(svg.getAttribute("height")) || 600,
+      text: textLayer(svg),
     };
   } finally {
     graph.destroy();
   }
+}
+
+const decoded = (src) => { const img = new Image(); img.src = src; return img.decode().then(() => img); };
+
+/** A picture as PNG bytes, drawn at this scale, for a PDF to carry. */
+export async function pngOf({ src, width, height }, scale = 2) {
+  const img = await decoded(src);
+  const canvas = Object.assign(document.createElement("canvas"), { width: Math.round(width * scale), height: Math.round(height * scale) });
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+/** A picture that answers like a pdf.js page, for code that draws pages by number. */
+function pictureAsPage({ src, width, height }) {
+  let img;
+  return {
+    getViewport: ({ scale = 1, offsetX = 0, offsetY = 0 } = {}) => ({ width: width * scale, height: height * scale, offsetX, offsetY }),
+    render: ({ canvasContext, viewport }) => ({
+      promise: (img ??= decoded(src)).then((i) => canvasContext.drawImage(i, viewport.offsetX, viewport.offsetY, viewport.width, viewport.height)),
+    }),
+  };
+}
+
+/**
+ * The PDF with the diagram pages after its own, numbered as the reader shows
+ * them, so a remark's snapshot on a diagram page is drawn like any other.
+ * numPages stays the PDF's own.
+ */
+export function withDiagramPages(pdf, pages) {
+  if (!pdf || !pages.length) return pdf;
+  const extra = pages.map((p) => pictureAsPage(p.plain));
+  return new Proxy(pdf, {
+    get(target, key) {
+      if (key === "getPage") {
+        return (n) => extra[Number(n) - target.numPages - 1] ? Promise.resolve(extra[Number(n) - target.numPages - 1]) : target.getPage(n);
+      }
+      const value = Reflect.get(target, key);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
 }
 
 /** Every page of the .drawio files at this address. */
@@ -157,13 +241,16 @@ export function useDiagramPages(url, otherUrl = null, side = "neu") {
   return state;
 }
 
-/** One diagram page's body: its name, then the drawing filling the page's width. */
+/** One diagram page's body: its name, then the drawing filling the page's width, its words selectable over it. */
 export function DiagramPage({ page, showChanges = true }) {
   const pic = (showChanges && page.marked) || page.plain;
+  const words = useRef(null);
+  useEffect(() => { words.current?.replaceChildren(pic.text.cloneNode(true)); }, [pic]);
   return (
     <div className="rr-diagram">
       <div className="rr-diagram-cap">{page.label}</div>
       <img src={pic.src} width={pic.width} height={pic.height} alt={`Diagram: ${page.label}`} draggable={false} />
+      <div ref={words} className="rr-diagram-text" />
     </div>
   );
 }

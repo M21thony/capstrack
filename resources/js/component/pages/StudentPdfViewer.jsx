@@ -3,7 +3,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import {
   FigureZoom, Highlights, PageStrip, ReaderTools, RemarksPanel, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
-import { DiagramPage, useDiagramPages } from "../reader/diagramPages";
+import { DiagramPage, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import { remarkFromServer } from "../reader/figures";
 import "../reader/reader.css";
 
@@ -67,6 +67,8 @@ function StudentPdfViewer({
   const [zoomId, setZoomId] = useState(null);
   const drawings = useDiagramPages(diagrams, newerDiagrams, "old");
   const totalPages = numPages ? numPages + drawings.pages.length : numPages;
+  // For snapshots of remarks, which may sit on a diagram page.
+  const pagesPdf = useMemo(() => withDiagramPages(pdf, drawings.pages), [pdf, drawings.pages]);
   const col = usePageColumn(totalPages);
 
   useEffect(() => {
@@ -174,11 +176,11 @@ function StudentPdfViewer({
         onOpen={open}
         readOnly
         top={top}
-        pdf={pdf}
+        pdf={pagesPdf}
         onZoom={setZoomId}
       />
       <FigureZoom
-        pdf={pdf}
+        pdf={pagesPdf}
         remark={zoomId != null ? remarks.find((r) => r.id === zoomId) : null}
         number={zoomId != null ? numbers[zoomId] : null}
         onClose={() => setZoomId(null)}

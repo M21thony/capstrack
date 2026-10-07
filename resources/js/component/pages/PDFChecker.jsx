@@ -8,7 +8,7 @@ import {
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
 import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
-import { DiagramPage, useDiagramPages } from "../reader/diagramPages";
+import { DiagramPage, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import {
   DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, uniqueFigures,
 } from "../reader/figures";
@@ -119,6 +119,8 @@ function PDFChecker({
   // The team's draw.io files follow the PDF as pages of their own.
   const drawings = useDiagramPages(diagrams, base?.diagrams ?? null, "neu");
   const totalPages = numPages ? numPages + drawings.pages.length : numPages;
+  // For snapshots of remarks, which may sit on a diagram page.
+  const pagesPdf = useMemo(() => withDiagramPages(pdf, drawings.pages), [pdf, drawings.pages]);
   const col = usePageColumn(totalPages);
 
   // Changes since an earlier version are only drawn, never kept as remarks.
@@ -598,7 +600,7 @@ function PDFChecker({
               {onFigure && (
                 <>
                   <div className="rr-pop-fig">
-                    <span className="rr-pop-thumb">{pdf && <FigureCrop pdf={pdf} remark={draftRemark} maxWidth={64} maxHeight={46} pending />}</span>
+                    <span className="rr-pop-thumb">{pagesPdf && <FigureCrop pdf={pagesPdf} remark={draftRemark} maxWidth={64} maxHeight={46} pending />}</span>
                     <div><b>{figure || where}</b><small>{figure ? where : "Not a numbered figure"}</small></div>
                   </div>
                   <div className="rr-pair">
@@ -702,11 +704,11 @@ function PDFChecker({
         onDelete={onDeleteComment}
         onAddGeneral={onAddGeneral}
         onDeleteGeneral={onDeleteGeneral}
-        pdf={pdf}
+        pdf={pagesPdf}
         onZoom={setZoomId}
       />
       )}
-      <FigureZoom pdf={pdf} remark={zoomRemark} number={zoomRemark ? numbers[zoomRemark.id] : null} onClose={() => setZoomId(null)} />
+      <FigureZoom pdf={pagesPdf} remark={zoomRemark} number={zoomRemark ? numbers[zoomRemark.id] : null} onClose={() => setZoomId(null)} />
     </div>
   );
 }
