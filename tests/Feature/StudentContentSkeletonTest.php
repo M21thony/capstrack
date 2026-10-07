@@ -44,7 +44,7 @@ class StudentContentSkeletonTest extends TestCase
         $html = $this->studentPage();
 
         $this->assertStringContainsString('#csk .csk-bone { background: #dde1e7; overflow: hidden; }', $html);
-        $this->assertStringContainsString("cover.style.cssText = 'left:' + box.left", $html);
+        $this->assertStringContainsString("sheet.style.cssText = 'top:' + top + 'px;width:' + wide + 'px;height:' + (bottom - top) + 'px;background:' + surface;", $html);
         $this->assertStringNotContainsString('.main > .content { opacity: .', $html);
     }
 
@@ -62,7 +62,8 @@ class StudentContentSkeletonTest extends TestCase
     {
         $html = $this->studentPage();
 
-        $this->assertStringContainsString("if (!firstOpening(view) || document.getElementById('csk')) return;", $html);
+        $this->assertStringContainsString('if (!firstOpening(view)) return;', $html);
+        $this->assertStringContainsString('if (active) active();', $html);
         $this->assertStringContainsString('seen: function (view) { firstOpening(view); },', $html);
     }
 
@@ -85,12 +86,18 @@ class StudentContentSkeletonTest extends TestCase
         $this->assertStringContainsString('window.contentSkeleton.seen(', $source);
     }
 
-    /** The whole page is drawn, down to its end, and can be scrolled while it loads. */
+    /**
+     * The whole page is drawn, down to its end, in bands: what is in view
+     * gives way first, and a band further down stays a skeleton, still
+     * loading, until it is scrolled into view.
+     */
     public function test_the_whole_page_is_drawn_and_can_be_scrolled_while_it_loads(): void
     {
         $html = $this->studentPage();
 
         $this->assertStringNotContainsString('var reach', $html);
+        $this->assertStringContainsString('if (!sheet.done && sheet.due === null && inView(sheet))', $html);
+        $this->assertStringContainsString('function onScroll() { follow(); schedule(); }', $html);
         $this->assertStringContainsString("cover.addEventListener('wheel', function (event) {", $html);
         $this->assertStringContainsString("cover.addEventListener('touchmove', function (event) {", $html);
     }
@@ -110,7 +117,7 @@ class StudentContentSkeletonTest extends TestCase
 
         $this->assertStringContainsString('animation: csk-wave 1s ease-in-out -.25s infinite;', $html);
         $this->assertStringContainsString('#csk .csk-bone::after {', $html);
-        $this->assertStringContainsString('(waited >= 900 && picturesReady())', $html);
+        $this->assertStringContainsString('sheet.due = Math.max(now, shown) + 900;', $html);
         $this->assertStringContainsString('#csk .csk-bone { animation: csk-breathe 1.2s ease-in-out infinite; }', $html);
     }
 

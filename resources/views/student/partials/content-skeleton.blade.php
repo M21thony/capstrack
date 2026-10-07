@@ -22,9 +22,10 @@
 --}}
 <style nonce="{{ Vite::cspNonce() }}">
   html.csk-hide .main > .content { opacity: 0 !important; }
-  #csk { position: fixed; z-index: 30; overflow: hidden; transition: opacity .4s ease; }
-  #csk.csk-out { opacity: 0; pointer-events: none; }
+  #csk { position: fixed; z-index: 30; overflow: hidden; pointer-events: none; }
   #csk > div { position: absolute; left: 0; top: 0; }
+  #csk .csk-sheet { position: absolute; left: 0; overflow: hidden; pointer-events: auto; transition: opacity .4s ease; }
+  #csk .csk-sheet.csk-out { opacity: 0; pointer-events: none; }
   #csk i { position: absolute; display: block; box-sizing: border-box; }
   #csk .csk-card { background: #fff; border: 1px solid #e3e6ea; }
   #csk .csk-frame { border: 1px solid #e3e6ea; }
@@ -71,6 +72,7 @@
   var MEDIA = { IMG: 1, SVG: 1, CANVAS: 1, VIDEO: 1, IFRAME: 1, INPUT: 1, SELECT: 1, TEXTAREA: 1, BUTTON: 1, PROGRESS: 1, METER: 1 };
   var SKIP = { SCRIPT: 1, STYLE: 1, TEMPLATE: 1, NOSCRIPT: 1, BR: 1, WBR: 1 };
   var LIMIT = 5000;
+  var active = null;
 
   function visibleColour(colour) {
     var match = /rgba?\(([^)]+)\)/.exec(colour || '');
@@ -119,13 +121,14 @@
       layer.style.top = -content.scrollTop + 'px';
     }
     var count = 0;
+    var pieces = [];
 
     function draw(kind, left, top, width, height, radius, edges) {
       if (count++ > LIMIT || width < 2 || height < 2) return;
       var piece = document.createElement('i');
       piece.className = kind;
-      piece.style.cssText = 'left:' + (left - originX) + 'px;top:' + (top - originY) + 'px;width:' + width + 'px;height:' + height + 'px;border-radius:' + radius + (edges ? ';border-width:' + edges : '');
-      layer.appendChild(piece);
+      piece.style.cssText = 'left:' + (left - originX) + 'px;width:' + width + 'px;height:' + height + 'px;border-radius:' + radius + (edges ? ';border-width:' + edges : '');
+      pieces.push({ node: piece, top: top - originY, bottom: top - originY + height });
     }
 
     // A line of words is a bar as wide as the words and a little shorter
@@ -206,16 +209,48 @@
     for (var holder = content; !visibleColour(surface) && holder.parentElement; holder = holder.parentElement) {
       surface = getComputedStyle(holder.parentElement).backgroundColor;
     }
-    cover.style.cssText = 'left:' + box.left + 'px;top:' + box.top + 'px;width:' + box.width + 'px;height:' + box.height + 'px;background:' + (visibleColour(surface) ? surface : '#eceef0');
+    surface = visibleColour(surface) ? surface : '#eceef0';
+    cover.style.cssText = 'left:' + box.left + 'px;top:' + box.top + 'px;width:' + box.width + 'px;height:' + box.height + 'px';
+
+    // The skeleton comes in bands - each run of cards with nothing between
+    // them - laid edge to edge down the whole page. A band in view gives
+    // way to the page after a moment; a band further down stays a skeleton,
+    // still loading, until it is scrolled into view, then gives way too.
+    pieces.sort(function (one, other) { return one.top - other.top; });
+    var bands = [];
+    pieces.forEach(function (piece) {
+      var band = bands[bands.length - 1];
+      if (band && piece.top <= band.bottom + 1) {
+        band.bottom = Math.max(band.bottom, piece.bottom);
+        band.pieces.push(piece);
+      } else {
+        bands.push({ top: piece.top, bottom: piece.bottom, pieces: [piece] });
+      }
+    });
+    if (!bands.length) bands.push({ top: 0, bottom: 0, pieces: [] });
+    var end = Math.max(content.scrollHeight, bands[bands.length - 1].bottom);
+    var wide = Math.max(content.scrollWidth, box.width);
+    var sheets = bands.map(function (band, at) {
+      var top = at === 0 ? 0 : (bands[at - 1].bottom + band.top) / 2;
+      var bottom = at === bands.length - 1 ? end : (band.bottom + bands[at + 1].top) / 2;
+      var sheet = document.createElement('div');
+      sheet.className = 'csk-sheet';
+      sheet.style.cssText = 'top:' + top + 'px;width:' + wide + 'px;height:' + (bottom - top) + 'px;background:' + surface;
+      band.pieces.forEach(function (piece) {
+        piece.node.style.top = (piece.top - top) + 'px';
+        sheet.appendChild(piece.node);
+      });
+      layer.appendChild(sheet);
+      return { node: sheet, top: top, bottom: bottom, due: null, done: false };
+    });
+
     follow();
     cover.appendChild(layer);
     document.body.appendChild(cover);
     root.classList.remove('csk-hide');
 
-    content.addEventListener('scroll', follow, { passive: true });
-    // The whole page is drawn, down to its end, so it can be scrolled while
-    // it loads: the wheel, or a finger, over the skeleton scrolls the
-    // content beneath.
+    // The page can be scrolled while it loads: the wheel, or a finger, over
+    // the skeleton scrolls the content beneath.
     cover.addEventListener('wheel', function (event) {
       content.scrollBy(event.deltaX, event.deltaY);
     }, { passive: true });
@@ -227,35 +262,71 @@
       fingerY = event.touches[0].clientY;
     }, { passive: true });
 
-    // The page underneath is already drawn: the skeleton stays long enough
-    // to be seen loading, and until the pictures in view
-    // have loaded (never more than 1.6s), then fades away over it.
     var shown = performance.now();
-    var done = false;
-    function reveal() {
-      if (done) return;
-      done = true;
-      window.removeEventListener('resize', reveal);
-      cover.classList.add('csk-out');
-      setTimeout(function () {
-        content.removeEventListener('scroll', follow);
-        cover.remove();
-      }, 450);
+    var finished = false;
+
+    function inView(sheet) {
+      var top = content.scrollTop;
+      return sheet.bottom > top && sheet.top < top + content.clientHeight;
     }
     function picturesReady() {
+      var view = content.getBoundingClientRect();
       return Array.prototype.every.call(content.querySelectorAll('img'), function (image) {
         if (image.complete) return true;
         var at = image.getBoundingClientRect();
-        return at.bottom < box.top || at.top > box.bottom || at.width === 0;
+        return at.bottom < view.top || at.top > view.bottom || at.width === 0;
       });
     }
-    (function wait() {
-      if (done) return;
-      var waited = performance.now() - shown;
-      if (waited >= 1600 || (waited >= 900 && picturesReady())) return reveal();
-      setTimeout(wait, 50);
-    })();
-    window.addEventListener('resize', reveal);
+    function lift(sheet) {
+      sheet.done = true;
+      sheet.node.classList.add('csk-out');
+      setTimeout(function () { sheet.node.remove(); }, 450);
+    }
+    function finish() {
+      if (finished) return;
+      finished = true;
+      clearInterval(ticking);
+      content.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', finishNow);
+      sheets.forEach(function (sheet) { if (!sheet.done) lift(sheet); });
+      setTimeout(function () { cover.remove(); }, 450);
+      if (active === stop) active = null;
+    }
+    function finishNow() {
+      sheets.forEach(function (sheet) { sheet.done = true; });
+      finish();
+      cover.remove();
+    }
+    var stop = finishNow;
+    active = stop;
+
+    // A band shows loading for 0.9s once it is first in view (the first
+    // ones from the first frame), and until the pictures in view are in -
+    // never more than 0.7s longer - then gives way.
+    function schedule() {
+      var now = performance.now();
+      sheets.forEach(function (sheet) {
+        if (!sheet.done && sheet.due === null && inView(sheet)) sheet.due = Math.max(now, shown) + 900;
+      });
+    }
+    function onScroll() { follow(); schedule(); }
+    function tick() {
+      var now = performance.now();
+      // A page left alone for long may change under the skeleton; past
+      // 15s whatever is left gives way.
+      if (now - shown > 15000) return finish();
+      var ready = null;
+      sheets.forEach(function (sheet) {
+        if (sheet.done || sheet.due === null || now < sheet.due) return;
+        if (ready === null) ready = picturesReady();
+        if (ready || now >= sheet.due + 700) lift(sheet);
+      });
+      if (sheets.every(function (sheet) { return sheet.done; })) finish();
+    }
+    schedule();
+    var ticking = setInterval(tick, 50);
+    content.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', finishNow);
   }
 
   // A tab that switches in place (Team's Financial Records, the Experts
@@ -265,7 +336,9 @@
   window.contentSkeleton = {
     seen: function (view) { firstOpening(view); },
     show: function (view) {
-      if (!firstOpening(view) || document.getElementById('csk')) return;
+      if (!firstOpening(view)) return;
+      // What is left of the page's skeleton belongs to what was there before.
+      if (active) active();
       try { build(); } catch (e) {}
     },
   };
