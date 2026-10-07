@@ -97,6 +97,22 @@ class PdfAnnotationController extends Controller
         ]);
     }
 
+    /** GET /reviews/{review}/diagrams - the .drawio files sent with the document under review: [{name, xml}]. */
+    public function diagrams(CapstoneDocumentReview $review)
+    {
+        $this->authorizeReview($review);
+
+        return $review->document?->diagrams() ?? [];
+    }
+
+    /** GET /reviews/{review}/versions/{document}/diagrams - the same for an earlier version. */
+    public function versionDiagrams(CapstoneDocumentReview $review, CapstoneDocument $document)
+    {
+        $this->authorizeVersion($review, $document);
+
+        return $document->diagrams();
+    }
+
     /** Only the reviewer of this review, and only the team's earlier uploads of this requirement. */
     private function authorizeVersion(CapstoneDocumentReview $review, CapstoneDocument $document): void
     {

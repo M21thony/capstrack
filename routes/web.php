@@ -366,6 +366,9 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
     // The team's earlier uploads of the same requirement, to compare against.
     Route::get('/{review}/versions/{document}/file', [PdfAnnotationController::class, 'versionFile'])->name('versions.file');
     Route::get('/{review}/versions/{document}/remarks', [PdfAnnotationController::class, 'versionRemarks'])->name('versions.remarks');
+    // The .drawio files sent with a version, to compare its diagrams exactly.
+    Route::get('/{review}/diagrams', [PdfAnnotationController::class, 'diagrams'])->name('diagrams');
+    Route::get('/{review}/versions/{document}/diagrams', [PdfAnnotationController::class, 'versionDiagrams'])->name('versions.diagrams');
     Route::post('/{review}/versions/{document}/remarks/{remark}/revision', [PdfAnnotationController::class, 'updateRevisionStatus'])->name('versions.remarks.revision');
 });
 
@@ -495,6 +498,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/review', [StudentReviewController::class, 'index'])->name('student.review');
             Route::get('/review/{review}/pdf', [StudentReviewController::class, 'file'])->name('student.review.pdf');
             Route::get('/review/{review}/remarks', [StudentReviewController::class, 'remarks'])->name('student.review.remarks');
+            Route::get('/review/{review}/diagrams', [StudentReviewController::class, 'diagrams'])->name('student.review.diagrams');
             Route::get('/review/{reviewId}/clf', [ConsultationLogController::class, 'generate'])->name('student.review.clf');
             Route::get('/duplication', [PreProposalController::class, 'edit'])->name('student.duplication');
             Route::get('/consultation', [StudentExpertController::class, 'consultations'])->name('student.consultation');

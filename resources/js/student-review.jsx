@@ -16,6 +16,7 @@ if (el) {
         <StudentPdfViewer
             pdfUrl={el.dataset.pdfUrl}
             remarksUrl={el.dataset.remarksUrl}
+            diagrams={el.dataset.diagramsUrl || null}
             reviewer={el.dataset.reviewer}
             general={json(el.dataset.general, [])}
             decision={json(el.dataset.decision, null)}

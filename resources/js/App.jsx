@@ -540,6 +540,7 @@ function App() {
           onRevision={setRevision}
           compareOpen={Boolean(compareVersion)}
           onFigures={setFigureView}
+          diagrams={ctx.diagrams}
         />
         {compareVersion && (
           <div className="an-pane-head">
@@ -569,6 +570,8 @@ function App() {
               key={compareVersion.id}
               pdfUrl={compareVersion.file}
               remarksUrl={compareVersion.remarks}
+              diagrams={compareVersion.diagrams}
+              newerDiagrams={showChanges ? ctx.diagrams : null}
               reviewer="you"
               marks={showChanges && diff.status === "ready" ? diff.oldMarks : null}
               figureMarks={showChanges ? figureView.oldMarks : null}

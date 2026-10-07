@@ -165,6 +165,7 @@
     class="rv-work"
     data-pdf-url="{{ route('student.review.pdf', $rev->review_id) }}"
     data-remarks-url="{{ route('student.review.remarks', $rev->review_id) }}"
+    data-diagrams-url="{{ $selected['document']->diagram_files ? route('student.review.diagrams', $rev->review_id) : '' }}"
     data-reviewer="{{ $reviewerName }}"
     data-general="{{ json_encode($general, JSON_UNESCAPED_UNICODE) }}"
     data-decision="{{ json_encode($decision, JSON_UNESCAPED_UNICODE) }}"

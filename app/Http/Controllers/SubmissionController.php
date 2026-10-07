@@ -18,6 +18,7 @@ use App\Support\SectionScope;
 use App\Support\StudentTeam;
 use App\Support\SubmissionRecipients;
 use App\Support\TeamChecklist;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,6 +47,15 @@ class SubmissionController extends Controller
             'recipients.*' => 'in:'.implode(',', SubmissionRecipients::ROLES),
             'subject_adviser_folder_id' => 'nullable|string',
             'deliverable_id' => 'nullable|integer',
+            // The draw.io files of its diagrams, so a reviewer can be shown exactly what changed in them.
+            'diagrams' => 'nullable|array|max:20',
+            'diagrams.*' => ['file', 'max:5120', function (string $attribute, mixed $value, Closure $fail) {
+                $head = (string) file_get_contents($value->getRealPath(), false, null, 0, 4096);
+
+                if (strtolower($value->getClientOriginalExtension()) !== 'drawio' || ! preg_match('/<(mxfile|mxGraphModel)\b/', $head)) {
+                    $fail('Diagrams must be draw.io files (.drawio).');
+                }
+            }],
         ]);
 
         $studentId = Auth::id(); // adjust guard if students use a named guard
@@ -169,6 +179,9 @@ class SubmissionController extends Controller
             'chapter' => $chapter,
             'deliverable_id' => $item?->id,
             'file_path' => $storedPath,
+            'diagram_files' => collect($request->file('diagrams', []))
+                ->map(fn ($diagram) => ['name' => $diagram->getClientOriginalName(), 'path' => $diagram->store('submissions/diagrams', 'local')])
+                ->values()->all() ?: null,
             'file_version' => $lastVersion + 1,
             'document_status' => 'Pending',
         ]);
@@ -524,7 +537,7 @@ class SubmissionController extends Controller
         // way leaves at worst an upload nobody is asked to review.
         $document->reviews()->delete();
         $document->delete();
-        Storage::disk('local')->delete($document->file_path);
+        Storage::disk('local')->delete([$document->file_path, ...array_column($document->diagram_files ?? [], 'path')]);
 
         return back()->with('status', $document->file_name.' was unsubmitted.');
     }

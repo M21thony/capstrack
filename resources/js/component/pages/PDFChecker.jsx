@@ -8,6 +8,7 @@ import {
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
 import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
+import { DiagramPage, useDiagramPages } from "../reader/diagramPages";
 import {
   DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, uniqueFigures,
 } from "../reader/figures";
@@ -106,7 +107,7 @@ function PDFChecker({
   onDeleteComment, selectedId, setSelectedId, notify, base = null, showChanges = true,
   diff = { status: "idle" }, onFocusChange,
   startMode = "text", startTab = "remarks", checkedFigures = [], onToggleFigure = () => {},
-  revisionStatus = {}, onRevision = () => {}, compareOpen = false, onFigures = () => {},
+  revisionStatus = {}, onRevision = () => {}, compareOpen = false, onFigures = () => {}, diagrams = null,
 }) {
   const [numPages, setNumPages] = useState(null);
   const [pdf, setPdf] = useState(null);
@@ -115,7 +116,10 @@ function PDFChecker({
   const [zoomId, setZoomId] = useState(null);
   const [error, setError] = useState(null);
   const [rendered, setRendered] = useState(() => new Set());
-  const col = usePageColumn(numPages);
+  // The team's draw.io files follow the PDF as pages of their own.
+  const drawings = useDiagramPages(diagrams, base?.diagrams ?? null, "neu");
+  const totalPages = numPages ? numPages + drawings.pages.length : numPages;
+  const col = usePageColumn(totalPages);
 
   // Changes since an earlier version are only drawn, never kept as remarks.
   // Opening one also moves the earlier version, when it is open beside this.
@@ -484,7 +488,7 @@ function PDFChecker({
 
   return (
     <div className="rr-work">
-      <PageStrip numPages={numPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} />
+      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} />
 
       <section className="rr-viewer" aria-label="Document">
         <div className="rr-hint">{showChanges && figureDiff.status === "loading" ? figureDiff.note || "Comparing the figures…" : hint}</div>
@@ -504,8 +508,9 @@ function PDFChecker({
               onLoadError={(err) => setError(err.message)}
               loading={<div className="rr-loading">Loading document…</div>}
             >
-              {numPages && Array.from({ length: numPages }, (_, i) => {
+              {numPages && Array.from({ length: totalPages }, (_, i) => {
                 const n = i + 1;
+                const drawing = drawings.pages[n - numPages - 1];
                 const pageRemarks = comments.filter((c) => Number(c.page_number) === n);
                 return (
                   <div
@@ -513,7 +518,7 @@ function PDFChecker({
                     ref={(el) => { col.pageRefs.current[n] = el; }}
                     data-page={n}
                     className={`rr-page${mode !== "text" ? " marking" : ""}${mode === "pin" ? " pinning" : ""}`}
-                    style={{ width: col.pageWidth, minHeight: rendered.has(n) ? undefined : Math.round((col.pageWidth * 11) / 8.5) }}
+                    style={{ width: col.pageWidth, minHeight: drawing || rendered.has(n) ? undefined : Math.round((col.pageWidth * 11) / 8.5) }}
                     onPointerDown={(e) => onMarkDown(e, n)}
                     onPointerMove={onMarkMove}
                     onPointerUp={onMarkUp}
@@ -530,7 +535,8 @@ function PDFChecker({
                     onDrop={block}
                     onMouseUp={() => setTimeout(startFromSelection, 0)}
                   >
-                    {col.visible.has(n) && (
+                    {drawing && <DiagramPage page={drawing} showChanges={showChanges} />}
+                    {!drawing && col.visible.has(n) && (
                       <Page
                         pageNumber={n}
                         width={col.pageWidth}
@@ -653,7 +659,7 @@ function PDFChecker({
             </div>
           )}
         </div>
-        <ReaderTools currentPage={col.currentPage} numPages={numPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} mode={mode} onMode={changeMode} />
+        <ReaderTools currentPage={col.currentPage} numPages={totalPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} mode={mode} onMode={changeMode} />
       </section>
 
       {base && tab === "changes" ? (

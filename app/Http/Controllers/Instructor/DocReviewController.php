@@ -107,6 +107,8 @@ class DocReviewController extends Controller
                 'requirement' => $item?->title,
                 'due' => $item?->due_date?->format('M j'),
                 'backUrl' => route('instructor.docreview'),
+                // The draw.io files of its diagrams, when the team sent them.
+                'diagrams' => $document?->diagram_files ? route('reviews.diagrams', $review->review_id) : null,
                 // Earlier rounds of the same requirement, to open beside this one.
                 'versions' => $document ? $document->earlierVersions()->map(fn ($v) => [
                     'id' => (int) $v->file_id,
@@ -114,6 +116,7 @@ class DocReviewController extends Controller
                     'uploaded' => $v->created_at?->format('M j, Y'),
                     'file' => route('reviews.versions.file', [$review->review_id, $v->file_id]),
                     'remarks' => route('reviews.versions.remarks', [$review->review_id, $v->file_id]),
+                    'diagrams' => $v->diagram_files ? route('reviews.versions.diagrams', [$review->review_id, $v->file_id]) : null,
                 ])->values() : [],
             ],
         ]);

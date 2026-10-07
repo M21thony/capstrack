@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import {
   FigureZoom, Highlights, PageStrip, ReaderTools, RemarksPanel, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
+import { DiagramPage, useDiagramPages } from "../reader/diagramPages";
 import { remarkFromServer } from "../reader/figures";
 import "../reader/reader.css";
 
@@ -54,6 +55,9 @@ function StudentPdfViewer({
   // Used only when it is the earlier version beside the annotator: what was
   // removed from it, and the change to scroll to.
   marks = null, focus = null, figureMarks = null,
+  // The team's draw.io files, shown after the PDF; beside the annotator, what
+  // was taken out of them since is coloured red against the newer version's.
+  diagrams = null, newerDiagrams = null,
 }) {
   const [numPages, setNumPages] = useState(null);
   const [error, setError] = useState(null);
@@ -61,7 +65,9 @@ function StudentPdfViewer({
   const [selectedId, setSelectedId] = useState(null);
   const [pdf, setPdf] = useState(null);
   const [zoomId, setZoomId] = useState(null);
-  const col = usePageColumn(numPages);
+  const drawings = useDiagramPages(diagrams, newerDiagrams, "old");
+  const totalPages = numPages ? numPages + drawings.pages.length : numPages;
+  const col = usePageColumn(totalPages);
 
   useEffect(() => {
     if (focus?.rect) col.goToRect(focus.page, focus.rect);
@@ -105,7 +111,7 @@ function StudentPdfViewer({
 
   return (
     <div className="rr-work">
-      <PageStrip numPages={numPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} />
+      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} />
       <section className="rr-viewer" aria-label="Your document with the reviewer's remarks">
         <div className="rr-hint">Click a highlight or its number to see the remark</div>
         <div className="rr-canvas" ref={col.canvasRef} onScroll={col.onScroll}>
@@ -116,8 +122,9 @@ function StudentPdfViewer({
             onLoadError={(err) => setError(err.message)}
             loading={<div className="rr-loading">Loading document…</div>}
           >
-            {numPages && Array.from({ length: numPages }, (_, i) => {
+            {numPages && Array.from({ length: totalPages }, (_, i) => {
               const n = i + 1;
+              const drawing = drawings.pages[n - numPages - 1];
               return (
                 <div
                   key={n}
@@ -127,9 +134,10 @@ function StudentPdfViewer({
                   style={{ width: col.pageWidth }}
                   aria-label={`Page ${n}`}
                 >
-                  {col.visible.has(n)
+                  {drawing && <DiagramPage page={drawing} />}
+                  {!drawing && (col.visible.has(n)
                     ? <Page pageNumber={n} width={col.pageWidth} renderTextLayer={false} renderAnnotationLayer={false} loading="" />
-                    : <div style={{ height: Math.round((col.pageWidth * 11) / 8.5) }} />}
+                    : <div style={{ height: Math.round((col.pageWidth * 11) / 8.5) }} />)}
                   {/* On the page itself, not in the overlay, so it can recolour the page's own lines. */}
                   {(figureMarks?.[n] || []).filter((m) => m.src).map((m) => m.rects.map((r, idx) => (
                     <img key={`${m.id}-${idx}`} className={`rr-figover${m.wash ? " wash" : ""}`} src={m.src} alt="" style={rectStyle(r)} />
@@ -155,7 +163,7 @@ function StudentPdfViewer({
             })}
           </Document>
         </div>
-        <ReaderTools currentPage={col.currentPage} numPages={numPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} />
+        <ReaderTools currentPage={col.currentPage} numPages={totalPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} />
       </section>
       <RemarksPanel
         title={`Remarks from ${reviewer}`}

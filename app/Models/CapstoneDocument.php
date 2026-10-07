@@ -6,6 +6,7 @@ use App\Support\StudentTeam;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 
 class CapstoneDocument extends Model
 {
@@ -22,7 +23,28 @@ class CapstoneDocument extends Model
         'document_status',
         'chapter',
         'deliverable_id',
+        'diagram_files',
     ];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        // The .drawio files sent with it: [{name, path}], or null for none.
+        return ['diagram_files' => 'array'];
+    }
+
+    /**
+     * The draw.io files sent with it, for the viewer to draw.
+     *
+     * @return list<array{name: string, xml: string}>
+     */
+    public function diagrams(): array
+    {
+        return collect($this->diagram_files ?? [])
+            ->filter(fn (array $file) => Storage::disk('local')->exists($file['path']))
+            ->map(fn (array $file) => ['name' => $file['name'], 'xml' => Storage::disk('local')->get($file['path'])])
+            ->values()->all();
+    }
 
     /** A file is sent for the uploader's team at the time, and stays that team's if they move. */
     protected static function booted(): void

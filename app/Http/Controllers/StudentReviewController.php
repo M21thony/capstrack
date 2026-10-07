@@ -171,4 +171,12 @@ class StudentReviewController extends Controller
             'mark_type', 'rects', 'figure_label', 'diagram_type',
         ]);
     }
+
+    /** The draw.io files sent with the reviewed document, shown after its pages. */
+    public function diagrams(CapstoneDocumentReview $review): array
+    {
+        $this->authorizeReview($review);
+
+        return $review->document->diagrams();
+    }
 }

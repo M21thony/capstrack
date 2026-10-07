@@ -102,6 +102,8 @@ function freshState(itemId, from, revises) {
     checking: false,
     same: null,
     warnings: [],
+    diagrams: [],
+    diagramProblem: null,
     picked: new Set(),
     editing: false,
     folders: [],
@@ -324,6 +326,7 @@ async function send() {
   if (S.plan.item) body.append('deliverable_id', S.plan.item.id);
   if (!S.plan.item?.paper) S.picked.forEach((role) => body.append('recipients[]', role));
   if (S.folder && S.picked.has('subject_adviser')) body.append('subject_adviser_folder_id', S.folder);
+  if (ext(S.file.name) === 'pdf') S.diagrams.forEach((d) => body.append('diagrams[]', d));
 
   S.step = 'sending';
   S.progress = 0;
@@ -597,6 +600,29 @@ function checkNotes() {
   return out;
 }
 
+/** The draw.io files of the document's diagrams, sent along so a reviewer sees exactly what changed in them. */
+function diagramsHtml() {
+  if (ext(S.file.name) !== 'pdf') return '';
+  const list = S.diagrams.length
+    ? '<ul class="up-checks">' + S.diagrams.map((d, i) => `<li class="ok">${svg('file', 13)}<span>${esc(d.name)} · ${mb(d.size)}</span>${linkBtn('Remove', 'undiagram', ` data-i="${i}" data-muted`)}</li>`).join('') + '</ul>'
+    : '';
+  return `<div class="up-goes"><div class="up-goes-h"><span class="up-label">Diagram files · optional</span>${linkBtn('Attach .drawio', 'diagrams')}</div>
+    ${list}<p class="up-hint">Made your diagrams in draw.io? Attach their .drawio files so your reviewer sees exactly what changed in them.</p>
+    ${S.diagramProblem ? note('error', S.diagramProblem) : ''}
+    <input type="file" id="up-diagrams" accept=".drawio" multiple hidden></div>`;
+}
+
+function takeDiagrams(files) {
+  const wrong = files.filter((f) => ext(f.name) !== 'drawio' || f.size > 5 * 1024 * 1024);
+  const room = 20 - S.diagrams.length;
+  const fine = files.filter((f) => !wrong.includes(f));
+  S.diagrams.push(...fine.slice(0, room));
+  S.diagramProblem = wrong.length
+    ? `<b>${esc(wrong[0].name)} wasn’t added.</b> Only draw.io files (.drawio) up to 5 MB.`
+    : (fine.length > room ? '<b>Up to 20 diagram files.</b> The rest weren’t added.' : null);
+  render();
+}
+
 function thumbRow(extra) {
   const f = S.file;
   const t = S.thumbUrl ? `<img src="${S.thumbUrl}" alt="" style="transform:rotate(${S.rotation}deg)">` : svg('file', 18);
@@ -618,7 +644,7 @@ function bodyAndFoot() {
       ];
     case 'check':
       return [
-        fileCardHtml() + checkNotes() + goesToHtml(),
+        fileCardHtml() + checkNotes() + diagramsHtml() + goesToHtml(),
         btn('Back', 'back') + btn(sendLabel(), 'send', { primary: true, disabled: !canSend(), icon: 'send' }),
       ];
     case 'sending':
@@ -722,6 +748,8 @@ function onClick(e) {
       render();
       focusFirst();
       break;
+    case 'diagrams': dialog.querySelector('#up-diagrams')?.click(); break;
+    case 'undiagram': S.diagrams.splice(parseInt(el.dataset.i, 10), 1); S.diagramProblem = null; render(); break;
     case 'rotate': S.rotation = (S.rotation + 90) % 360; render(); break;
     case 'preview': openPreview(); break;
     case 'send': send(); break;
@@ -735,6 +763,8 @@ function onChange(e) {
   if (e.target.id === 'up-file') {
     if (e.target.files.length) takeFile(e.target.files[0]);
     e.target.value = '';
+  } else if (e.target.id === 'up-diagrams') {
+    takeDiagrams([...e.target.files]);
   } else if (e.target.id === 'up-line') {
     S.itemId = e.target.value;
     if (S.itemId === 'none') {
