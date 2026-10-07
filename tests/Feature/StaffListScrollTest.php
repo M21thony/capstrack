@@ -86,7 +86,7 @@ class StaffListScrollTest extends TestCase
             ->assertSee('href="'.PublicAsset::url('css/admin.css').'"', false);
 
         $unversioned = collect(File::allFiles(resource_path('views')))
-            ->reject(fn ($file) => $file->getRelativePathname() === 'errors/layout.blade.php')
+            ->reject(fn ($file) => str_replace('\\', '/', $file->getRelativePathname()) === 'errors/layout.blade.php')
             ->filter(fn ($file) => str_contains($file->getContents(), "asset('css/"))
             ->map(fn ($file) => $file->getRelativePathname())->values()->all();
         $this->assertSame([], $unversioned);

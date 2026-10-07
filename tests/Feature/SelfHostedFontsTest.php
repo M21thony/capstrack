@@ -94,7 +94,7 @@ class SelfHostedFontsTest extends TestCase
         $missing = collect([public_path('css'), resource_path()])
             ->flatMap(fn (string $dir) => File::allFiles($dir))
             ->filter(fn ($file) => in_array($file->getExtension(), ['css', 'php'], true))
-            ->reject(fn ($file) => $file->getPathname() === public_path('css/fonts.css'))
+            ->reject(fn ($file) => $file->getRealPath() === realpath(public_path('css/fonts.css')))
             ->flatMap(function ($file) {
                 preg_match_all('/font(?:-family)?\s*:[^;}{\n]*[\'"]DM Sans[\'"](?!\s*,\s*[\'"]DM Sans Fallback)[^;}{\n]*/', $file->getContents(), $lists);
 

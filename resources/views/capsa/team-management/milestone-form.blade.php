@@ -82,7 +82,7 @@
           location.href = back;
         @else
           const made = await mlSend(@json(route('capsa.checklists.milestones.store', $checklist)), 'POST', body);
-          location.href = @json(route('capsa.team_management.milestones.show', '__ID__')).replace('__ID__', made.id);
+          location.href = (@json(route('capsa.team_management.milestones.show', '__ID__'))).replace('__ID__', made.id);
         @endif
       } catch (failure) {
         button.disabled = false;

@@ -8,6 +8,7 @@ use App\Models\ConsultationBooking;
 use App\Models\Notification;
 use App\Models\Role;
 use App\Models\Student;
+use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -335,6 +336,13 @@ class ConsultationBookingBelongsToItsTeamTest extends TestCase
         [$expert, $slot] = $this->adviserOf($old);
         $bookingId = $this->book($leader, $slot);
 
+        // While an expert has the team, the leader cannot end it alone.
+        $this->actingAs($leader, 'web')->delete(route('team.destroy'))->assertSessionHas('error', Team::HAS_EXPERT);
+        $this->assertDatabaseHas('team', ['team_id' => $old]);
+        $this->assertNotSame('cancelled', ConsultationBooking::find($bookingId)->booking_status);
+
+        // Once the CaPSA has released the expert, leaving ends the team.
+        DB::table('capstone_expert_application')->where('team_id', $old)->delete();
         $this->actingAs($leader, 'web')->delete(route('team.destroy'))->assertRedirect(route('student.team'));
         $this->assertDatabaseMissing('team', ['team_id' => $old]);
 

@@ -25,9 +25,9 @@
 .tx-btn.tx-gold{background:var(--accent,#c9a82c);border-color:var(--accent,#c9a82c);color:#18191f}
 .tx-btn.tx-gold:hover:not(:disabled){filter:brightness(.95);color:#18191f}
 
-dialog.tx-dialog{border:0;padding:0;border-radius:14px;width:min(460px,calc(100vw - 24px));max-height:calc(100vh - 32px);background:var(--bg2,#fff);color:var(--text,#18191f);box-shadow:0 24px 60px rgba(15,23,42,.35);font-family:inherit}
+dialog.tx-dialog{border:0;padding:0;border-radius:14px;width:min(460px,calc(100vw - 24px));max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);background:var(--bg2,#fff);color:var(--text,#18191f);box-shadow:0 24px 60px rgba(15,23,42,.35);font-family:inherit}
 dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px)}
-.tx-in{display:flex;flex-direction:column;max-height:calc(100vh - 32px)}
+.tx-in{display:flex;flex-direction:column;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px)}
 .tx-head{display:flex;align-items:flex-start;gap:12px;padding:18px 22px 12px}
 .tx-head h2{margin:0;font-size:17px;font-weight:700}
 .tx-head p{margin:2px 0 0;font-size:12.5px;color:var(--text3,#7a7d88)}

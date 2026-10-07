@@ -148,5 +148,9 @@ class UnsubmitTest extends TestCase
 
         $this->assertSame(1, substr_count($html, '>Unsubmit</button>'));
         $this->assertStringContainsString(route('student.submission.unsubmit', $open->file_id), $html);
+        // It asks first in the site's own dialog: an inline onsubmit is blocked by the page's security rules.
+        $this->assertStringNotContainsString('onsubmit=', $html);
+        $this->assertStringContainsString("title: 'Unsubmit this file?'", $html);
+        $this->assertStringContainsString('id="ad-names"', $html);
     }
 }

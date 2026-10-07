@@ -78,7 +78,7 @@ class ActionToastTest extends TestCase
     {
         $resources = File::get(resource_path('views/capsa/resources.blade.php'));
         $rubrics = File::get(resource_path('views/capsa/rubric_management.blade.php'));
-        $defenses = File::get(resource_path('js/defenses/defense-scheduling.js'));
+        $defenses = File::get(resource_path('js/defenses/defenses.js'));
 
         $this->assertStringContainsString("showToast('Upload failed.', 'error');", $resources);
         $this->assertStringNotContainsString("showToast('?", $resources);

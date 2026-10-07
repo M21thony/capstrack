@@ -81,7 +81,7 @@
 
   // The order endpoint wants every milestone, so only this one's list changes.
   mlSortable(document.getElementById('ml-reqs'), async ids => {
-    const order = @json($order).map(milestone => milestone.id === {{ $milestone->id }} ? { id: milestone.id, deliverables: ids } : milestone);
+    const order = (@json($order)).map(milestone => milestone.id === {{ $milestone->id }} ? { id: milestone.id, deliverables: ids } : milestone);
     await mlSend(@json(route('capsa.checklists.order.update', $milestone->checklist_id)), 'PUT', { milestones: order });
   });
 </script>

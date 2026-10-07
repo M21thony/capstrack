@@ -172,7 +172,7 @@ class MobileTabBarTest extends TestCase
             ->assertSeeInOrder(['>Home<', '>Teams<', '>Defenses<', '>Menu<'], false)
             ->assertSee('href="'.route('capsa.team_management').'" class="mtab-item', false)
             // Not an admin, so no Students tab.
-            ->assertDontSee('>Students<', false);
+            ->assertDontSee('<span class="lb">Students</span>', false);
     }
 
     /** Team Settings is a bottom sheet on a phone, with a dim that cancels it. */

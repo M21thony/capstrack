@@ -52,8 +52,7 @@
               <span class="sub-status {{ $doc->status[1] }}">{{ $doc->status[0] }}</span>
               <small>{{ $doc->name }} &middot; version {{ $doc->version }} &middot; {{ $doc->sent?->format('M j, Y g:i A') }}</small>
               @if ($doc->canUnsubmit)
-                <form class="sub-undo" method="POST" action="{{ route('student.submission.unsubmit', $doc->id) }}"
-                      onsubmit="return confirm('Unsubmit {{ addslashes($doc->name) }}? It goes back to not handed in and reviewers will no longer see it. Upload again when ready.')">
+                <form class="sub-undo" method="POST" action="{{ route('student.submission.unsubmit', $doc->id) }}" data-name="{{ $doc->name }}">
                   @csrf
                   @method('DELETE')
                   <button type="submit" class="up-btn">Unsubmit</button>
@@ -68,6 +67,20 @@
 </div>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-dialog')
+<script nonce="{{ Vite::cspNonce() }}">
+document.querySelectorAll('form.sub-undo').forEach(form => form.addEventListener('submit', async event => {
+  event.preventDefault();
+  const agreed = await confirmSheet({
+    title: 'Unsubmit this file?',
+    names: [form.dataset.name],
+    body: 'It goes back to not handed in and reviewers will no longer see it. Upload again when ready.',
+    confirmLabel: 'Unsubmit',
+    danger: true,
+  });
+  if (agreed) form.submit();
+}));
+</script>
 <script nonce="{{ Vite::cspNonce() }}">
 function toggleSidebar() { document.body.classList.toggle('sidebar-open'); }
 function closeSidebar() { document.body.classList.remove('sidebar-open'); }
