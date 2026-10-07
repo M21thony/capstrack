@@ -202,8 +202,10 @@ function adoptLabels(A, B, map) {
   const matched = new Set([...map.keys(), ...map.values()]);
   const loose = (cells) => cells.filter((c) => c.kind === "vertex" && c.text && !matched.has(c) && (c.shape === "text" || c.fill === "none"));
   const gap = (c, e) => Math.max(e.box[0] - c.box[2], c.box[0] - e.box[2], e.box[1] - c.box[3], c.box[1] - e.box[3], 0);
+  // A label pulled off an arrow lies where the arrow does; a table's column name, inside its table, is no label.
+  const near = (edge, cells) => loose(cells).filter((c) => !taken.has(c) && c.parent === edge.parent);
   const take = (edge, text, cells) => {
-    const best = loose(cells).filter((c) => !taken.has(c) && c.text === text).sort((x, y) => gap(x, edge) - gap(y, edge))[0];
+    const best = near(edge, cells).filter((c) => c.text === text).sort((x, y) => gap(x, edge) - gap(y, edge))[0];
     if (!best) return;
     taken.add(best);
     edge.text = [edge.text, best.text].filter(Boolean).join(" ");
@@ -217,7 +219,7 @@ function adoptLabels(A, B, map) {
   // A new (or gone) arrow with no words of its own takes the loose text touching it as its label.
   // ponytail: boxes are end-to-end, so two arrows between the same boxes may swap labels; both land in one spot anyway.
   [A, B].forEach((cells) => cells.filter((e) => e.kind === "edge" && !e.text && !matched.has(e)).forEach((edge) => {
-    const best = loose(cells).filter((c) => !taken.has(c) && gap(c, edge) <= 30).sort((x, y) => gap(x, edge) - gap(y, edge))[0];
+    const best = near(edge, cells).filter((c) => gap(c, edge) <= 30).sort((x, y) => gap(x, edge) - gap(y, edge))[0];
     if (best) take(edge, best.text, cells);
   }));
   return taken;

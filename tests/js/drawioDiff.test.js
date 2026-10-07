@@ -60,3 +60,17 @@ test("an arrow that ends on another arrow is read, whichever comes first", () =>
   ];
   assert.deepEqual(comparePages({ els }, { els }).spots, []);
 });
+
+test("a removed table is one change, its columns not taken for its lines' labels", () => {
+  const table = (id, x, column, name) => [
+    cell({ id, vertex: "1", parent: "1", value: id, style: "swimlane;" }, { x, y: 0, width: 200, height: 60 }),
+    cell({ id: column, vertex: "1", parent: id, value: name, style: "text;fillColor=none;" }, { x: 0, y: 24, width: 200, height: 30 }),
+    cell({ id: `${column}-key`, vertex: "1", parent: column, value: "", style: "rhombus;fillColor=#e05a4f;" }, { x: 4, y: 8, width: 12, height: 12 }),
+  ];
+  const teams = table("teams", 400, "team_id", "team_id");
+  const before = [cell({ id: "1" }), ...table("students", 0, "student_id", "student_id"), ...teams,
+    cell({ id: "fk", edge: "1", parent: "1", source: "student_id", target: "team_id", style: "endArrow=ERmany;" })];
+  const { spots } = comparePages({ els: before }, { els: [cell({ id: "1" }), ...teams] });
+  assert.equal(spots.length, 1);
+  assert.deepEqual(spots[0].said, ["− “students”", "− “student_id”", "1 line removed"]);
+});
