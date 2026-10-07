@@ -137,13 +137,13 @@ export const isFigureRemark = (remark) => ["box", "pin", "shape"].includes(remar
 
 /**
  * What a shape remark is about, from the cells it was tied to:
- * "Box: Validate login", "Arrow: User → Login", or a count for several.
+ * "Process: Validate login", "Arrow: User → Login", or a count for several.
  */
 export function shapeLabel(ref) {
   const cells = ref?.cells || [];
   const one = (c) => (c.kind === "edge"
     ? `Arrow: ${c.from || "?"} → ${c.to || "?"}${c.text ? ` (${c.text})` : ""}`
-    : `Box: ${c.text || "unnamed"}`);
+    : `${c.role || "Shape"}: ${c.text || "unnamed"}`);
   if (!cells.length) return "";
   if (cells.length === 1) return one(cells[0]);
   return cells.length === 2 ? `${one(cells[0])}; ${one(cells[1])}` : `${one(cells[0])} and ${cells.length - 1} more`;

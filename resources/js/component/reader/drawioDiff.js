@@ -66,7 +66,7 @@ function readPage(cellEls) {
       parent: el.getAttribute("parent"), source: el.getAttribute("source"), target: el.getAttribute("target"),
       lines, text: lines.join(" "), fs: +st.fontSize || 12, off: pt("offset"),
       exit: port("exitX", "exitY"), entry: port("entryX", "entryY"),
-      shape: st.shape || st.bare || (st.ellipse ? "ellipse" : "rect"),
+      shape: st.shape || st.bare || (st.ellipse ? "ellipse" : "rect"), rounded: st.rounded === "1",
       fill: colour(st.fillColor), stroke: colour(st.strokeColor), dashed: st.dashed === "1",
       heads: [st.startArrow || "none", st.endArrow || "classic"],
       rel: g ? [num("x"), num("y"), num("width"), num("height")] : [0, 0, 0, 0],
@@ -123,6 +123,38 @@ function readPage(cellEls) {
   const area = (b) => (b[2] - b[0]) * (b[3] - b[1]);
   vs.forEach((c) => { c.inner = vs.some((x) => x !== c && !x.hidden && (x.parentCell === c || (inside(x, c) && area(x.box) < area(c.box) / 2))); });
   return out;
+}
+
+/** What kind of diagram a page is, from the shapes on it. */
+function diagramKind(cells) {
+  const has = (test) => cells.some(test);
+  if (has((c) => c.kind === "edge" && c.heads.some((h) => /^ER/.test(h))) || has((c) => c.shape === "table")) return "erd";
+  if (has((c) => c.shape === "partialRectangle" || /^D\d+$/i.test(c.text))) return "dfd";
+  if (has((c) => /umlActor/.test(c.shape))) return "usecase";
+  return "flow";
+}
+
+const ROLES = {
+  dfd: [[/swimlane|ellipse|process/, "Process"], [/partialRectangle|cylinder|datastore/, "Data store"], [/^rect$|rectangle/, "Entity"]],
+  erd: [[/rhombus/, "Relationship"], [/ellipse/, "Attribute"], [/table|swimlane|^rect$/, "Entity"]],
+  usecase: [[/umlActor/, "Actor"], [/ellipse/, "Use case"], [/^rect$|swimlane/, "System"]],
+  flow: [[/rhombus|decision/, "Decision"], [/terminator|ellipse/, "Start/End"], [/parallelogram|flowchart\.data$/, "Input/Output"],
+    [/document/, "Document"], [/cylinder|database|stored_data/, "Data store"], [/umlActor/, "Actor"], [/swimlane/, "Lane"], [/^rect$|process/, "Process"]],
+};
+
+/**
+ * A shape's part in its diagram ("Process", "Entity", "Decision", …), guessed
+ * from how it is drawn, so a shape drawn some other way is just a "Shape".
+ * Words laid inside a shape (or a data store's number) speak for that shape.
+ */
+export function shapeRole(cell, cells) {
+  const kind = diagramKind(cells);
+  if (kind === "dfd" && /^D\d+$/i.test(cell.text)) return "Data store";
+  let c = cell;
+  for (let i = 0; i < 5 && c.shape === "text" && c.parentCell?.kind === "vertex"; i++) c = c.parentCell;
+  if (c.shape === "text") return "Label";
+  const shape = kind === "dfd" && c.shape === "rect" && c.rounded ? "process" : c.shape;
+  return ROLES[kind].find(([test]) => test.test(shape))?.[1] || "Shape";
 }
 
 /** Every page of a .drawio file: its name, its model, its raw cells (read again for each compare) and its shapes. */

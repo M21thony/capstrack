@@ -152,6 +152,7 @@ class PdfAnnotationController extends Controller
             'comments.*.shape_ref.cells.*.text' => 'nullable|string|max:500',
             'comments.*.shape_ref.cells.*.from' => 'nullable|string|max:500',
             'comments.*.shape_ref.cells.*.to' => 'nullable|string|max:500',
+            'comments.*.shape_ref.cells.*.role' => 'nullable|string|max:40',
             'comments.*.highlightRects' => 'nullable|array',
             'comments.*.highlightRects.*.top_position' => 'nullable|numeric',
             'comments.*.highlightRects.*.left_position' => 'nullable|numeric',

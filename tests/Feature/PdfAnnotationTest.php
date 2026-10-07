@@ -688,7 +688,7 @@ class PdfAnnotationTest extends TestCase
             'file' => 'erd.drawio',
             'page' => 'Page-1',
             'cells' => [
-                ['id' => 'login', 'kind' => 'vertex', 'text' => 'Validate login'],
+                ['id' => 'login', 'kind' => 'vertex', 'text' => 'Validate login', 'role' => 'Process'],
                 ['id' => 'e7', 'kind' => 'edge', 'from' => 'User', 'to' => 'Validate login'],
             ],
         ];

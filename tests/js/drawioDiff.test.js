@@ -2,7 +2,7 @@
 // page is, and how a shape is recoloured. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cellAt, comparePages, followShapes, pairPages, shapeRects, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
+import { cellAt, comparePages, followShapes, pairPages, shapeRects, shapeRole, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
 
 const page = (file, name, index, words = "") => ({ file, name, index, words: new Set(words.split(" ").filter(Boolean)) });
 
@@ -129,4 +129,15 @@ test("a slanted arrow goes in short steps, a box stays one box", () => {
   const slanted = shapeRects({ kind: "edge", box: [0, 0, 300, 300], pts: [[0, 0], [300, 300]], labels: [] }, pic);
   assert.ok(slanted.length > 10 && slanted.every((r) => r.highlight_width < 0.03));
   assert.equal(shapeRects({ kind: "vertex", box: [10, 10, 60, 40] }, pic).length, 1);
+});
+
+test("a shape is named by its part in the diagram", () => {
+  const cell = (shape, text = "", more = {}) => ({ kind: "vertex", shape, text, heads: [], ...more });
+  const process = cell("swimlane", "1.3");
+  const dfd = [process, cell("text", "Register Users", { parentCell: process }), cell("rect", "CaPSA"), cell("partialRectangle", "Users"), cell("rect", "D1")];
+  assert.deepEqual(dfd.map((c) => shapeRole(c, dfd)), ["Process", "Process", "Entity", "Data store", "Data store"]);
+  const flow = [cell("rhombus", "Valid login?"), cell("rect", "Open dashboard"), cell("cloud", "Internet")];
+  assert.deepEqual(flow.map((c) => shapeRole(c, flow)), ["Decision", "Process", "Shape"]);
+  const erd = [cell("rect", "Student"), cell("rhombus", "enrolls"), { kind: "edge", shape: "rect", text: "", heads: ["ERmandOne", "ERmany"] }];
+  assert.deepEqual(erd.slice(0, 2).map((c) => shapeRole(c, erd)), ["Entity", "Relationship"]);
 });

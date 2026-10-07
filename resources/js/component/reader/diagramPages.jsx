@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { comparePages, holderOf, pairPages, readDrawio, withStyle } from "./drawioDiff.js";
+import { comparePages, holderOf, pairPages, readDrawio, shapeRole, withStyle } from "./drawioDiff.js";
 
 export { shapeRects } from "./drawioDiff.js";
 import { textLayer } from "./textLayer.js";
@@ -296,7 +296,7 @@ export const shownPicture = (page, showChanges, before = false) => (before && pa
 export function shapeCell(page, id) {
   const c = page.cells.find((x) => x.id === id);
   if (!c) return { id, kind: "vertex", text: "" };
-  return { id, kind: c.kind, text: c.text || "", ...(c.kind === "edge" ? { from: c.from?.text || "", to: c.to?.text || "" } : {}) };
+  return { id, kind: c.kind, text: c.text || "", ...(c.kind === "edge" ? { from: c.from?.text || "", to: c.to?.text || "" } : { role: shapeRole(c, page.cells) }) };
 }
 
 /** One diagram page's body: its name, then the drawing filling the page's width, its words selectable over it. */
