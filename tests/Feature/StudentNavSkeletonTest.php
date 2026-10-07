@@ -63,7 +63,7 @@ class StudentNavSkeletonTest extends TestCase
     public function test_a_student_page_holds_its_first_paint_until_read_in_full(): void
     {
         $this->assertMatchesRegularExpression(
-            '/<script type="module" blocking="render" nonce="[^"]+">[^<]*<\/script>\s*<\/head>/',
+            '/<link rel="expect" href="#student-page-read" blocking="render">\s*<\/head>/',
             $this->studentPage(),
         );
     }

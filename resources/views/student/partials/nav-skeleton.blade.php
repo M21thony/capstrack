@@ -11,7 +11,7 @@
   - a click in the sidebar or the phone's tab bar to a page not yet opened
     swaps the content area for that page's outline while the server works;
   - the page itself, on its first opening, keeps the outline over its content
-    from the very first paint until it has finished loading.
+    from the very first paint for a short moment, then lets the page through.
 
   "Opened" is kept in sessionStorage under the sign-in's session, so signing
   in again starts over. Each <template> is one page's outline, matched on
@@ -276,14 +276,23 @@
   if (!opened(here) && ownTemplate && first) {
     first.appendChild(ownTemplate.content.cloneNode(true));
     first.hidden = false;
-    var shownAt = Date.now();
 
-    window.addEventListener('load', function () {
-      setTimeout(function () {
-        first.classList.add('nsk-done');
-        setTimeout(function () { first.remove(); }, 200);
-      }, Math.max(0, 350 - (Date.now() - shownAt)));
-    });
+    // The content is already drawn by the server: once the page is on
+    // screen, give the outline a short moment and let the page through. No
+    // waiting for pictures - a slow profile photo must not hold the page.
+    var reveal = function () {
+      requestAnimationFrame(function () {
+        setTimeout(function () {
+          first.classList.add('nsk-done');
+          setTimeout(function () { first.remove(); }, 200);
+        }, 300);
+      });
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', reveal);
+    } else {
+      reveal();
+    }
   } else if (first) {
     first.remove();
   }
