@@ -12,6 +12,11 @@ const json = (value, fallback) => {
 };
 
 if (el) {
+    // The page's first-time skeleton (student/partials/content-skeleton)
+    // waits for the document and the remarks, so it gives way to the reader
+    // as it will be, not to an empty one.
+    const ready = window.contentSkeleton ? window.contentSkeleton.hold() : null;
+
     createRoot(el).render(
         <StudentPdfViewer
             pdfUrl={el.dataset.pdfUrl || null}
@@ -21,6 +26,7 @@ if (el) {
             general={json(el.dataset.general, [])}
             decision={json(el.dataset.decision, null)}
             others={json(el.dataset.others, [])}
+            onReady={ready}
         />
     );
 }

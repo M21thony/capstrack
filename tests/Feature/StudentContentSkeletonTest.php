@@ -121,6 +121,32 @@ class StudentContentSkeletonTest extends TestCase
         $this->assertStringContainsString("placed.position !== 'fixed' && placed.position !== 'absolute'", $html);
     }
 
+    /**
+     * A page that draws part of itself once its data is in - the Review
+     * viewer's document and remarks - holds the skeleton until it has, and
+     * the skeleton is drawn again as the page fills in, so it matches what
+     * comes, not the empty page of the first frame.
+     */
+    public function test_the_skeleton_waits_for_and_follows_a_page_that_draws_itself(): void
+    {
+        $html = $this->studentPage();
+
+        $this->assertStringContainsString('hold: function () {', $html);
+        $this->assertStringContainsString('var held = !revealed && ((holds > 0 && now < shown + 4000) || redrawing);', $html);
+        $this->assertStringContainsString('watching.observe(content, { childList: true, subtree: true });', $html);
+
+        $viewer = file_get_contents(resource_path('js/student-review.jsx'));
+        $this->assertStringContainsString('window.contentSkeleton.hold()', $viewer);
+        $this->assertStringContainsString('onReady={ready}', $viewer);
+        $this->assertStringContainsString('if (onReady && remarksIn && (pageDrawn || error)) onReady();', file_get_contents(resource_path('js/component/pages/StudentPdfViewer.jsx')));
+    }
+
+    /** What is laid out but never drawn - the menu in a closed dropdown - has no skeleton. */
+    public function test_what_is_never_drawn_has_no_skeleton(): void
+    {
+        $this->assertStringContainsString('!element.checkVisibility({ contentVisibilityAuto: true })', $this->studentPage());
+    }
+
     /** Table cells are never solid blocks: the words in them are lines, as anywhere else. */
     public function test_table_cells_are_drawn_as_lines_not_blocks(): void
     {
@@ -134,7 +160,7 @@ class StudentContentSkeletonTest extends TestCase
     {
         $html = $this->studentPage();
 
-        $this->assertStringContainsString('animation: csk-wave 1s ease-in-out -.25s infinite;', $html);
+        $this->assertStringContainsString('animation: csk-wave 1s ease-in-out var(--csk-phase, -.25s) infinite;', $html);
         $this->assertStringContainsString('#csk .csk-bone::after {', $html);
         $this->assertStringContainsString('waiting = { top: top, bottom: bottom, due: Math.max(performance.now(), shown) + 900 };', $html);
         $this->assertStringContainsString('#csk .csk-bone { animation: csk-breathe 1.2s ease-in-out infinite; }', $html);

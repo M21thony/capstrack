@@ -58,6 +58,8 @@ function StudentPdfViewer({
   // The team's draw.io files, shown after the PDF; beside the annotator, what
   // was taken out of them since is coloured red against the newer version's.
   diagrams = null, newerDiagrams = null,
+  // Called once the document's first page is drawn and the remarks are in.
+  onReady = null,
 }) {
   // A diagram sent as itself has no PDF: its diagram pages are all there is.
   const [numPages, setNumPages] = useState(pdfUrl ? null : 0);
@@ -76,13 +78,21 @@ function StudentPdfViewer({
     if (focus?.rect) col.goToRect(focus.page, focus.rect);
   }, [focus]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [remarksIn, setRemarksIn] = useState(!remarksUrl);
+  const [pageDrawn, setPageDrawn] = useState(!pdfUrl);
+
   useEffect(() => {
     if (!remarksUrl) return;
     fetch(remarksUrl, { headers: { Accept: "application/json" } })
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setRemarks(data.map(remarkFromServer)))
-      .catch(() => setRemarks([]));
+      .catch(() => setRemarks([]))
+      .finally(() => setRemarksIn(true));
   }, [remarksUrl]);
+
+  useEffect(() => {
+    if (onReady && remarksIn && (pageDrawn || error)) onReady();
+  }, [onReady, remarksIn, pageDrawn, error]);
 
   const numbers = useMemo(() => numberRemarks(remarks), [remarks]);
   const counts = useMemo(() => {
@@ -141,7 +151,7 @@ function StudentPdfViewer({
                 >
                   {drawing && <DiagramPage page={drawing} />}
                   {!drawing && (col.visible.has(n)
-                    ? <Page pageNumber={n} width={col.pageWidth} renderTextLayer={false} renderAnnotationLayer={false} loading="" />
+                    ? <Page pageNumber={n} width={col.pageWidth} renderTextLayer={false} renderAnnotationLayer={false} loading="" onRenderSuccess={() => setPageDrawn(true)} onRenderError={() => setPageDrawn(true)} />
                     : <div style={{ height: Math.round((col.pageWidth * 11) / 8.5) }} />)}
                   {/* On the page itself, not in the overlay, so it can recolour the page's own lines. */}
                   {(figureMarks?.[n] || []).filter((m) => m.src).map((m) => m.rects.map((r, idx) => (

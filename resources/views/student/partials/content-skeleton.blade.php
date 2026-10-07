@@ -38,8 +38,11 @@
     content: ""; position: absolute; inset: 0;
     background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .85) 50%, rgba(255, 255, 255, 0) 100%);
     transform: translateX(-100%);
-    animation: csk-wave 1s ease-in-out -.25s infinite;
+    animation: csk-wave 1s ease-in-out var(--csk-phase, -.25s) infinite;
   }
+  /* A picture or a document page: a narrower, softer streak, so the block
+     still reads as grey. */
+  #csk .csk-wide::after { background: linear-gradient(90deg, rgba(255, 255, 255, 0) 35%, rgba(255, 255, 255, .5) 50%, rgba(255, 255, 255, 0) 65%); }
   @keyframes csk-wave { to { transform: translateX(100%); } }
   /* With reduced motion asked for (Windows' "Animation effects" off), no
      streak, but the blocks still breathe softly, so it still reads as
@@ -80,6 +83,13 @@
     if (!match) return colour && colour !== 'transparent';
     var parts = match[1].split(/[\s,\/]+/).filter(Boolean);
     return parts.length < 4 || parseFloat(parts[3]) > 0.04;
+  }
+
+  function alphaOf(colour) {
+    var match = /rgba?\(([^)]+)\)/.exec(colour || '');
+    if (!match) return colour && colour !== 'transparent' ? 1 : 0;
+    var parts = match[1].split(/[\s,\/]+/).filter(Boolean);
+    return parts.length < 4 ? 1 : parseFloat(parts[3]);
   }
 
   var SIDES = ['Top', 'Right', 'Bottom', 'Left'];
@@ -129,7 +139,7 @@
     return box;
   }
 
-  function build() {
+  function build(since) {
     var content = document.querySelector('.main > .content');
     if (!content) return root.classList.remove('csk-hide');
 
@@ -203,14 +213,21 @@
       if (count > LIMIT || SKIP[element.tagName] || element.id === 'csk') return;
       var style = getComputedStyle(element);
       if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0 || style.position === 'fixed') return;
+      // Laid out but never drawn - the menu inside a closed dropdown - is not
+      // part of what shows.
+      if (element.checkVisibility && !element.checkVisibility({ contentVisibilityAuto: true })) return;
 
       var rect = element.getBoundingClientRect();
       var sized = rect.width >= 2 && rect.height >= 2;
       var radius = style.borderRadius || '0';
       var tag = element.tagName.toUpperCase();
 
-      if (MEDIA[tag] || element.getAttribute('role') === 'button') {
-        if (sized) draw('csk-bone', rect.left, rect.top, rect.width, rect.height, radius === '0px' ? '6px' : radius);
+      // A big button - a remark card, a list row - is a card with words in
+      // it, like anything else that size, not one solid block.
+      var pressable = tag === 'BUTTON' || element.getAttribute('role') === 'button';
+      var big = rect.height > 64 || (rect.width > 360 && rect.height > 44);
+      if ((MEDIA[tag] && !(pressable && big)) || (pressable && !big)) {
+        if (sized) draw(rect.width > 240 && rect.height > 160 ? 'csk-bone csk-wide' : 'csk-bone', rect.left, rect.top, rect.width, rect.height, radius === '0px' ? '6px' : radius);
         return;
       }
 
@@ -228,6 +245,11 @@
       var filled = visibleColour(style.backgroundColor) || style.backgroundImage !== 'none';
       var bordered = hasEdge(style);
       var lifted = style.boxShadow !== 'none';
+      // A see-through mark laid over something else - a highlight on a
+      // document page - is not a card of its own.
+      if (style.position === 'absolute' && style.backgroundImage === 'none' && alphaOf(style.backgroundColor) < 0.5) {
+        filled = bordered = lifted = false;
+      }
       if (sized && (filled || bordered || lifted)) {
         // Badges, pills, chips, small buttons and bars are one solid block;
         // anything larger - or holding buttons of its own, like a row of
@@ -351,8 +373,11 @@
       fingerY = event.touches[0].clientY;
     }, { passive: true });
 
-    var shown = performance.now();
+    var shown = since || performance.now();
     var finished = false;
+    var revealed = false;
+    // Drawn again, the streak carries on from where it was.
+    cover.style.setProperty('--csk-phase', -((performance.now() - shown + 250) % 1000) + 'ms');
 
     function picturesReady() {
       var view = content.getBoundingClientRect();
@@ -382,6 +407,8 @@
     // whatever lies above or below it stays a skeleton, still loading,
     // until it is scrolled to.
     function reveal(region) {
+      revealed = true;
+      if (watching) watching.disconnect();
       sheets.slice().forEach(function (sheet) {
         if (sheet.done) return;
         if (sheet.fixed) return lift(sheet);
@@ -396,6 +423,7 @@
       finished = true;
       clearInterval(ticking);
       if (resizing) resizing.disconnect();
+      if (watching) watching.disconnect();
       content.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', finishNow);
       sheets.forEach(function (sheet) { if (!sheet.done) lift(sheet); });
@@ -436,7 +464,13 @@
       // A page left alone for long may change under the skeleton; past
       // 15s whatever is left gives way.
       if (now - shown > 15000) return finish();
-      if (waiting && now >= waiting.due && (now >= waiting.due + 700 || picturesReady())) {
+      // A page that draws part of itself once its data is in (the Review
+      // viewer's document and remarks) holds the first moment until it has
+      // - never more than 4s.
+      // Nor does it give way while it is about to be drawn again: the page
+      // changed, and the skeleton showing is the one from before.
+      var held = !revealed && ((holds > 0 && now < shown + 4000) || redrawing);
+      if (waiting && !held && now >= waiting.due && (now >= waiting.due + 700 || picturesReady())) {
         var region = waiting;
         waiting = null;
         reveal(region);
@@ -452,14 +486,54 @@
     var resizing = window.ResizeObserver ? new ResizeObserver(function () { follow(); schedule(); }) : null;
     if (resizing) resizing.observe(content);
     window.addEventListener('resize', finishNow);
+
+    // Until the first part gives way, the skeleton is drawn again whenever
+    // the page draws more of itself - a script filling in a document,
+    // remarks, a list - so it matches what will be there, not what was
+    // there on the first frame. At most every 150ms; the page stays covered
+    // in between.
+    var built = performance.now();
+    var redrawing = false;
+    var watching = window.MutationObserver ? new MutationObserver(function () {
+      if (redrawing || revealed || finished) return;
+      redrawing = true;
+      setTimeout(function () {
+        requestAnimationFrame(function () {
+          redrawing = false;
+          if (revealed || finished) return;
+          finished = true;
+          clearInterval(ticking);
+          if (resizing) resizing.disconnect();
+          watching.disconnect();
+          content.removeEventListener('scroll', onScroll);
+          window.removeEventListener('resize', finishNow);
+          cover.remove();
+          if (active === stop) active = null;
+          try { build(shown); } catch (e) {}
+        });
+      }, Math.max(0, 150 - (performance.now() - built)));
+    }) : null;
+    if (watching) watching.observe(content, { childList: true, subtree: true });
   }
 
   // A tab that switches in place (Team's Financial Records, the Experts
   // tabs) gets its own first-time skeleton: the page calls show() right
   // after drawing the tab, before the browser paints it, and seen() for the
   // tab it opened on.
+  var holds = 0;
   window.contentSkeleton = {
     seen: function (view) { firstOpening(view); },
+    // A page that draws part of itself once its data is in holds the
+    // skeleton until it has, by calling the function this returns.
+    hold: function () {
+      holds++;
+      var released = false;
+      return function () {
+        if (released) return;
+        released = true;
+        holds--;
+      };
+    },
     show: function (view) {
       // What is left of the skeleton further down belongs to the tab that was
       // there before: it goes, whether or not this tab gets its own.
