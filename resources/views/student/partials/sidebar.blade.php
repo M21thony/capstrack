@@ -431,3 +431,6 @@
 @include('partials.keyboard-aware')
 
 @include('student.partials.portal-tour')
+
+{{-- The next page's outline, shown the moment a sidebar or tab-bar link is clicked. --}}
+@include('student.partials.nav-skeleton')
