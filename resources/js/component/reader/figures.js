@@ -128,12 +128,26 @@ export function cropOf(remark, pad = 0.025) {
   };
   const b = boundsOf(marksOf(remark));
   if (remark.type === "pin") return fit({ left: b.left_position - 0.17, top: b.top_position - 0.15, width: 0.34, height: 0.24 });
-  if (remark.type !== "box") return fit({ left: 0.06, top: b.top_position - 0.04, width: 0.88, height: b.highlight_height + 0.08 });
+  if (remark.type !== "box" && remark.type !== "shape") return fit({ left: 0.06, top: b.top_position - 0.04, width: 0.88, height: b.highlight_height + 0.08 });
   return fit({ left: b.left_position - pad, top: b.top_position - pad, width: b.highlight_width + pad * 2, height: b.highlight_height + pad * 2 });
 }
 
 /** True for a remark drawn on a figure rather than on selected words. */
-export const isFigureRemark = (remark) => remark.type === "box" || remark.type === "pin";
+export const isFigureRemark = (remark) => ["box", "pin", "shape"].includes(remark.type);
+
+/**
+ * What a shape remark is about, from the cells it was tied to:
+ * "Box: Validate login", "Arrow: User → Login", or a count for several.
+ */
+export function shapeLabel(ref) {
+  const cells = ref?.cells || [];
+  const one = (c) => (c.kind === "edge"
+    ? `Arrow: ${c.from || "?"} → ${c.to || "?"}${c.text ? ` (${c.text})` : ""}`
+    : `Box: ${c.text || "unnamed"}`);
+  if (!cells.length) return "";
+  if (cells.length === 1) return one(cells[0]);
+  return cells.length === 2 ? `${one(cells[0])}; ${one(cells[1])}` : `${one(cells[0])} and ${cells.length - 1} more`;
+}
 
 /** A saved remark as the screen keeps it: every box of a figure remark, or the point of a pin. */
 export const remarkFromServer = (r) => {
@@ -144,7 +158,7 @@ export const remarkFromServer = (r) => {
     highlight_width: Number(r.highlight_width),
     highlight_height: Number(r.highlight_height),
   };
-  const rects = type === "box" && Array.isArray(r.rects) && r.rects.length
+  const rects = (type === "box" || type === "shape") && Array.isArray(r.rects) && r.rects.length
     ? r.rects.map((x) => ({
         top_position: Number(x.top_position),
         left_position: Number(x.left_position),
@@ -169,5 +183,6 @@ export const remarkFromServer = (r) => {
     revision_status: r.revision_status || null,
     carried_from_id: r.carried_from_id ?? null,
     highlightRects: rects,
+    shape_ref: r.shape_ref || null,
   };
 };

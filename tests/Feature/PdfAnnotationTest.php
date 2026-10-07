@@ -679,6 +679,66 @@ class PdfAnnotationTest extends TestCase
         $this->assertNull($remark->rects);
     }
 
+    public function test_stores_a_shape_remark_with_its_cells_and_boxes(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(35, $expert->expert_id, 'Reviewing');
+
+        $shape = [
+            'file' => 'erd.drawio',
+            'page' => 'Page-1',
+            'cells' => [
+                ['id' => 'login', 'kind' => 'vertex', 'text' => 'Validate login'],
+                ['id' => 'e7', 'kind' => 'edge', 'from' => 'User', 'to' => 'Validate login'],
+            ],
+        ];
+
+        $this->postJson("/reviews/{$reviewId}/remarks", ['comments' => [[
+            'type' => 'shape',
+            'page_number' => 4,
+            'text' => 'Name the data on this flow.',
+            'figure_label' => 'Box: Validate login',
+            'shape_ref' => $shape,
+            'highlightRects' => [
+                ['top_position' => 0.3, 'left_position' => 0.4, 'highlight_width' => 0.2, 'highlight_height' => 0.1],
+                ['top_position' => 0.2, 'left_position' => 0.1, 'highlight_width' => 0.3, 'highlight_height' => 0.15],
+            ],
+        ]]])->assertOk();
+
+        $remark = PdfRemark::where('review_id', $reviewId)->sole();
+        $this->assertSame('shape', $remark->mark_type);
+        $this->assertSame($shape, $remark->shape_ref);
+        // Each cell's box is kept, so everything that draws a box still draws it.
+        $this->assertCount(2, $remark->rects);
+        $this->assertEqualsWithDelta(0.2, (float) $remark->top_position, 1e-6);
+        $this->assertEqualsWithDelta(0.5, (float) $remark->highlight_width, 1e-6);
+
+        $this->getJson("/reviews/{$reviewId}/remarks")
+            ->assertOk()
+            ->assertJsonPath('0.mark_type', 'shape')
+            ->assertJsonPath('0.shape_ref.cells.1.to', 'Validate login');
+    }
+
+    public function test_a_shape_remark_needs_a_cell_and_other_marks_keep_no_shape(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(36, $expert->expert_id, 'Reviewing');
+
+        $this->postJson("/reviews/{$reviewId}/remarks", ['comments' => [[
+            'type' => 'shape', 'page_number' => 1, 'text' => 'x',
+            'shape_ref' => ['file' => 'a.drawio', 'cells' => [['id' => 'c1', 'kind' => 'circle']]],
+        ]]])->assertStatus(422)->assertJsonValidationErrors('comments.0.shape_ref.cells.0.kind');
+
+        // A box sent with a shape_ref by mistake does not keep it.
+        $this->postJson("/reviews/{$reviewId}/remarks", ['comments' => [[
+            'type' => 'box', 'page_number' => 1, 'text' => 'x',
+            'shape_ref' => ['cells' => [['id' => 'c1', 'kind' => 'vertex']]],
+            'highlightRects' => [['top_position' => 0.1, 'left_position' => 0.1, 'highlight_width' => 0.2, 'highlight_height' => 0.2]],
+        ]]])->assertOk();
+
+        $this->assertNull(PdfRemark::where('review_id', $reviewId)->sole()->shape_ref);
+    }
+
     public function test_a_text_remark_keeps_no_figure_number(): void
     {
         $expert = $this->loginAsApprovedExpert();

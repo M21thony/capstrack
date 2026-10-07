@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { pdfjs } from "react-pdf";
 import { Icon, KIND_LABEL, PagedList, figureTitle, kindOf } from "./Reader";
 import FigureCrop, { regionPixels } from "./FigureCrop";
-import { boundsOf, isFigureRemark, marksOf } from "./figures";
+import { boundsOf, isFigureRemark, marksOf, remarkFromServer } from "./figures";
+import { followShapes } from "./drawioDiff";
+import { shapeCell, shapeRect } from "./diagramPages";
 import { PICTURE_CHANGED, findPicture, greyOf, labelsAt, pictureDifference } from "./revisionCheck";
 import { compareFigures, highlighted, outlined } from "./figureDiff";
 
@@ -16,6 +18,57 @@ const atTarget = (r) => ({
 });
 
 const clamp = (n) => Math.min(1, Math.max(0, n));
+
+/**
+ * A shape remark from the earlier version, followed to its cells on this
+ * version's drawing (pages: the diagram pages, the first of them page first).
+ * A removed shape points at where it was, on the earlier drawing (target.before).
+ */
+function followShape(r, pages, first) {
+  const ref = r.shape_ref;
+  const at = pages.findIndex((p) => p.before?.file === ref.file && p.before?.name === ref.page);
+  if (at < 0) return { ...r, target: null, foundBy: "not found", changed: null, removedWords: "", addedWords: "" };
+  const page = pages[at];
+  const { status, cells } = followShapes(ref, page.compare);
+  const outline = (pic, ids) => ids.map((id) => pic.targets.find((t) => t.id === id)).filter(Boolean).map((t) => shapeRect(t, pic));
+  if (status === "removed") {
+    return {
+      ...r, shapeStatus: status, foundBy: "shape", changed: true, removedWords: "", addedWords: "",
+      target: { page: first + at, rects: outline(page.oldMarked, cells.map((c) => c.id)), before: true },
+    };
+  }
+  const kept = cells.filter((c) => c.neu);
+  const was = (id) => ref.cells.find((c) => c.id === id)?.text || "";
+  const renamed = kept.filter((c) => c.what.includes("renamed"));
+  return {
+    ...r,
+    shapeStatus: status,
+    shapeWhat: [...new Set(cells.flatMap((c) => c.what))],
+    foundBy: "shape",
+    changed: status !== "unchanged",
+    removedWords: renamed.map((c) => was(c.id)).join(" · "),
+    addedWords: renamed.map((c) => c.neu.text).join(" · "),
+    target: { page: first + at, rects: outline(page.marked || page.plain, kept.map((c) => c.neu.id)) },
+    shapeNow: { file: page.file, page: page.name, cells: kept.map((c) => shapeCell(page, c.neu.id)) },
+  };
+}
+
+/** The earlier version's shape remarks, followed to this version's drawings. */
+function useShapeRevision(base, pages, first) {
+  const [remarks, setRemarks] = useState([]);
+  useEffect(() => {
+    if (!base?.remarks) { setRemarks([]); return undefined; }
+    let alive = true;
+    fetch(base.remarks, { headers: { Accept: "application/json" } })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((rows) => alive && setRemarks(rows.map(remarkFromServer).filter((r) => r.type === "shape" && r.shape_ref)))
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [base?.remarks]);
+  return remarks.map((r) => followShape(r, pages, first));
+}
+
+const SHAPE_CHANGE = { renamed: "renamed", recoloured: "recoloured", reconnected: "reconnected", turned: "turned around", removed: "partly removed" };
 
 /**
  * A remark moved to where its diagram was found, or to the page the reviewer
@@ -112,6 +165,7 @@ const FOUND_BY = {
   "nearby text": (r) => `Found by the text around it · p.${r.target.page}`,
   "same place": (r) => `Not found by its text · showing the same place, p.${r.target.page}`,
   words: (r) => `p.${r.target.page}`,
+  shape: (r) => (r.target.before ? `Shown where it was, on the earlier version · p.${r.target.page}` : `Followed to the same shape · p.${r.target.page}`),
 };
 
 /** The part of the page a picture check compares: the box itself, or a small area around a pin. */
@@ -156,7 +210,7 @@ function usePictureChecks(items, oldPdf, newPdf) {
     (async () => {
       for (const r of items) {
         if (!alive) return;
-        if (!isFigureRemark(r) || !r.target || LOST.includes(r.foundBy) || r.unsettled) continue;
+        if (!isFigureRemark(r) || r.type === "shape" || !r.target || LOST.includes(r.foundBy) || r.unsettled) continue;
         try {
           // Only what the reviewer marked: the box itself, or a little around a
           // pin - not the margin a snapshot shows, which can catch the text
@@ -291,6 +345,12 @@ function finding(r, picture, pending = false) {
   if (pending) return { tone: "", text: "Looking for this diagram by its picture…" };
   if (!r.target) return { tone: "", text: "Could not find these words in this version. Use the page arrows in Compare to look for them, then decide." };
   if (r.foundBy === "picked place") return { tone: "", text: "The words could not be checked here. Look, then decide." };
+  if (r.type === "shape") {
+    if (!r.target) return { tone: "", text: "This diagram page is not in this version." };
+    if (r.shapeStatus === "removed") return { tone: "del", text: "This shape was removed." };
+    if (r.shapeStatus === "changed") return { tone: "mod", text: `Changed: ${r.shapeWhat.map((w) => SHAPE_CHANGE[w] || w).join(", ")}.`, removed: r.removedWords, added: r.addedWords };
+    return { tone: "", text: "No change to this shape." };
+  }
   if (LOST.includes(r.foundBy)) return { tone: "", text: "Could not find this diagram in this version. Use the page arrows in Compare to look for it, then decide." };
   if (!isFigureRemark(r)) {
     if (!r.changed) return { tone: "", text: "The quoted words did not change." };
@@ -380,6 +440,7 @@ const KIND = { added: ["Added", "add"], removed: ["Removed", "del"], reworded: [
 export default function ChangesPanel({
   top, base, diff, selectedChange, onOpenChange, onOpenRemark,
   pdf = null, revisionStatus = {}, onRevision = () => {}, onOpenRevision = () => {},
+  diagramPages = [], firstDiagramPage = 1, shownShapeId = null,
   figureDiff = { status: "idle", figures: [], note: "" }, onWantFigures = () => {},
 }) {
   const ready = diff.status === "ready";
@@ -387,13 +448,14 @@ export default function ChangesPanel({
   // Where the reviewer, or the picture search, put a remark instead.
   const [moved, setMoved] = useState({});
   const [looking, setLooking] = useState(null);
-  const revision = (diff.revision || []).map((r) => (moved[r.id]
+  const shapes = useShapeRevision(base, diagramPages, firstDiagramPage);
+  const revision = [...(diff.revision || []).map((r) => (moved[r.id]
     ? relocate(r, moved[r.id], diff)
-    : isFigureRemark(r) && ["same place", "nearby text", "labels", "caption"].includes(r.foundBy) ? { ...r, unsettled: true } : r));
+    : isFigureRemark(r) && ["same place", "nearby text", "labels", "caption"].includes(r.foundBy) ? { ...r, unsettled: true } : r)), ...shapes];
   const [filter, setFilter] = useState("remarks");
   const [comparing, setComparing] = useState(null);
   const [openFigure, setOpenFigure] = useState(null);
-  const oldPdf = useEarlierPdf(revision.length ? base?.file : null);
+  const oldPdf = useEarlierPdf(revision.some((r) => r.type !== "shape") ? base?.file : null);
   const pictures = usePictureChecks(revision, oldPdf, pdf);
   const showFilter = (k) => { setFilter(k); if (k === "figures") onWantFigures(); };
 
@@ -563,6 +625,7 @@ export default function ChangesPanel({
                     return (
                       <div
                         className={`rr-card text${status === "fixed" ? " is-fixed" : status === "not_fixed" ? " is-notyet" : ""}`}
+                        aria-current={shownShapeId === r.id || undefined}
                         role={measuring ? undefined : "button"}
                         tabIndex={measuring ? -1 : 0}
                         aria-disabled={!r.target}
@@ -571,9 +634,9 @@ export default function ChangesPanel({
                       >
                         <div className="rr-card-r1">
                           {isFigureRemark(r)
-                            ? <span className="rr-tag fig">{r.type === "pin" ? "Pin" : "Figure"}</span>
+                            ? <span className="rr-tag fig">{{ pin: "Pin", shape: "Shape" }[r.type] || "Figure"}</span>
                             : <span className="rr-tag">Highlighted text</span>}
-                          <span className={`rr-tag ${f.tone || ""}`}>{f.tone ? "Changed" : r.target && !LOST.includes(r.foundBy) ? "No change" : "Not found"}</span>
+                          <span className={`rr-tag ${f.tone || ""}`}>{f.tone === "del" ? "Removed" : f.tone ? "Changed" : r.target && !LOST.includes(r.foundBy) ? "No change" : "Not found"}</span>
                           <span className="rr-where">p.{r.page_number} on {base?.round}</span>
                         </div>
                         {isFigureRemark(r) ? <b className="rr-figname">{figureTitle(r)}</b> : r.selectedText && <div className="rr-q">“{r.selectedText}”</div>}
@@ -582,7 +645,9 @@ export default function ChangesPanel({
                         <Finding f={f} />
                         {r.target && <span className="rr-muted rr-foundby">{(FOUND_BY[r.foundBy] || FOUND_BY.words)(r)}</span>}
                         <div className="rr-row">
-                          <button type="button" className="rr-btn sm" tabIndex={measuring ? -1 : 0} onClick={(e) => { e.stopPropagation(); setComparing(r.id); }}>Compare</button>
+                          {r.type === "shape"
+                            ? r.target && <span className="rr-muted">{shownShapeId === r.id ? "Outlined on the page" : "Click to outline it"}</span>
+                            : <button type="button" className="rr-btn sm" tabIndex={measuring ? -1 : 0} onClick={(e) => { e.stopPropagation(); setComparing(r.id); }}>Compare</button>}
                           <span className="rr-spacer" />
                           <Verdict status={status} onSet={(v) => onRevision(r, v)} round={base?.round} />
                         </div>

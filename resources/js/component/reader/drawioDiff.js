@@ -234,7 +234,8 @@ function wordFlags(from, to) {
 
 /**
  * One page of the earlier file against one of this version's: { spots,
- * oldCells, newCells }. A spot is changes that belong together (a removed
+ * oldCells, newCells, map, items }. map takes an old cell to the new one it
+ * became; items are every change, one per cell and what happened. A spot is changes that belong together (a removed
  * box with its arrows), with its items and the words that say what changed.
  */
 export function comparePages(oldPage, newPage) {
@@ -264,7 +265,7 @@ export function comparePages(oldPage, newPage) {
     }
   });
   B.forEach((b) => { if (!kept.has(b)) items.push({ neu: b, what: "added", text: b.text, line: b.kind === "edge", hidden: b.hidden }); });
-  return { spots: group(items), oldCells: A, newCells: B };
+  return { spots: group(items), oldCells: A, newCells: B, map, items };
 }
 
 /** Changes that belong together (a removed box with its arrows and its inner words) as one spot. */
@@ -294,6 +295,51 @@ function group(items) {
     if (g.some((x) => x.what === "recoloured")) said.push("colour or line changed");
     return { said, items: g };
   });
+}
+
+/**
+ * Where a shape remark's cells went in the next version, from a comparePages
+ * result: { status: removed | changed | unchanged, cells: [{ id, neu, what }] }.
+ * neu is the new cell (null when gone); what lists how it changed
+ * (renamed, recoloured, reconnected, turned), or ["removed"].
+ */
+export function followShapes(ref, compare) {
+  const cells = (ref?.cells || []).map(({ id }) => {
+    const old = compare.oldCells.find((c) => c.id === id);
+    const neu = old ? compare.map.get(old) || null : null;
+    if (!neu) return { id, neu: null, what: ["removed"] };
+    return { id, neu, what: [...new Set(compare.items.filter((it) => it.old === old && it.neu).map((it) => it.what))] };
+  });
+  const gone = cells.filter((c) => !c.neu).length;
+  const status = cells.length && gone === cells.length ? "removed" : cells.some((c) => c.what.length) ? "changed" : "unchanged";
+  return { status, cells };
+}
+
+const segmentDist = ([ax, ay], [bx, by], x, y) => {
+  const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy;
+  const t = len ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len)) : 0;
+  return Math.hypot(x - ax - t * dx, y - ay - t * dy);
+};
+
+/**
+ * The shape or arrow under a click, from where each is drawn: [{ id, kind,
+ * box: [x1, y1, x2, y2], pts: [[x, y]…] (an arrow's line), labels: [box…] }].
+ * An arrow wins within tol of its line or on its words, the nearest one;
+ * otherwise the smallest shape holding the point, so a box beats its container.
+ */
+export function cellAt(targets, x, y, tol = 6) {
+  let best = null, bestDist = tol;
+  targets.forEach((t) => {
+    if (t.kind !== "edge") return;
+    const onLabel = (t.labels || []).some((b) => x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]);
+    const d = onLabel ? 0 : Math.min(...(t.pts || []).slice(1).map((p, i) => segmentDist(t.pts[i], p, x, y)));
+    if (d <= bestDist) { best = t; bestDist = d; }
+  });
+  if (best) return best;
+  const area = (b) => (b[2] - b[0]) * (b[3] - b[1]);
+  return targets
+    .filter((t) => t.kind === "vertex" && x >= t.box[0] && x <= t.box[2] && y >= t.box[1] && y <= t.box[3])
+    .sort((a, b) => area(a.box) - area(b.box))[0] || null;
 }
 
 /** A style with these keys set (draw.io styles are "name;key=value;…"). */

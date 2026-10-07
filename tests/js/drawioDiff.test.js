@@ -2,7 +2,7 @@
 // page is, and how a shape is recoloured. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { comparePages, pairPages, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
+import { cellAt, comparePages, followShapes, pairPages, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
 
 const page = (file, name, index, words = "") => ({ file, name, index, words: new Set(words.split(" ").filter(Boolean)) });
 
@@ -73,4 +73,42 @@ test("a removed table is one change, its columns not taken for its lines' labels
   const { spots } = comparePages({ els: before }, { els: [cell({ id: "1" }), ...teams] });
   assert.equal(spots.length, 1);
   assert.deepEqual(spots[0].said, ["− “students”", "− “student_id”", "1 line removed"]);
+});
+
+test("a click picks the arrow near its line, else the smallest box under it", () => {
+  const targets = [
+    { id: "pool", kind: "vertex", box: [0, 0, 400, 300] },
+    { id: "login", kind: "vertex", box: [20, 20, 120, 80] },
+    { id: "e1", kind: "edge", box: [120, 50, 300, 50], pts: [[120, 50], [300, 50]], labels: [[190, 30, 230, 45]] },
+  ];
+  assert.equal(cellAt(targets, 60, 50).id, "login");
+  assert.equal(cellAt(targets, 200, 200).id, "pool");
+  assert.equal(cellAt(targets, 200, 54).id, "e1");
+  assert.equal(cellAt(targets, 210, 35).id, "e1");
+  assert.equal(cellAt(targets, 200, 70).id, "pool");
+  assert.equal(cellAt(targets, 500, 500), null);
+});
+
+test("a shape remark follows its cell: unchanged, renamed, or removed", () => {
+  const before = [
+    cell({ id: "1" }),
+    cell({ id: "a", vertex: "1", parent: "1", value: "Login" }, { x: 0, y: 0, width: 80, height: 40 }),
+    cell({ id: "b", vertex: "1", parent: "1", value: "Dashboard" }, { x: 0, y: 200, width: 80, height: 40 }),
+    cell({ id: "c", vertex: "1", parent: "1", value: "Logout" }, { x: 200, y: 0, width: 80, height: 40 }),
+  ];
+  const after = [
+    cell({ id: "1" }),
+    cell({ id: "a2", vertex: "1", parent: "1", value: "Login" }, { x: 40, y: 0, width: 80, height: 40 }),
+    cell({ id: "b", vertex: "1", parent: "1", value: "Home" }, { x: 0, y: 200, width: 80, height: 40 }),
+  ];
+  const compare = comparePages({ els: before }, { els: after });
+  const ref = (...ids) => ({ cells: ids.map((id) => ({ id, kind: "vertex" })) });
+  const moved = followShapes(ref("a"), compare);
+  assert.equal(moved.status, "unchanged");
+  assert.equal(moved.cells[0].neu.id, "a2");
+  assert.deepEqual(followShapes(ref("b"), compare).cells[0].what, ["renamed"]);
+  assert.equal(followShapes(ref("b"), compare).status, "changed");
+  assert.equal(followShapes(ref("c"), compare).status, "removed");
+  assert.equal(followShapes(ref("a", "c"), compare).status, "changed");
+  assert.equal(followShapes(ref("gone"), compare).status, "removed");
 });
