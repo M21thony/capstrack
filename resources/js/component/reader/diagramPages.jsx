@@ -299,16 +299,46 @@ export function shapeCell(page, id) {
   return { id, kind: c.kind, text: c.text || "", ...(c.kind === "edge" ? { from: c.from?.text || "", to: c.to?.text || "" } : { role: shapeRole(c, page.cells) }) };
 }
 
+/** The text spot under a point, as [node, offset]. */
+function caretAt(x, y) {
+  const p = document.caretPositionFromPoint?.(x, y);
+  if (p) return [p.offsetNode, p.offset];
+  const r = document.caretRangeFromPoint?.(x, y);
+  return r ? [r.startContainer, r.startOffset] : null;
+}
+
 /** One diagram page's body: its name, then the drawing filling the page's width, its words selectable over it. */
 export function DiagramPage({ page, showChanges = true, before = false }) {
   const pic = shownPicture(page, showChanges, before);
   const words = useRef(null);
   useEffect(() => { words.current?.replaceChildren(pic.text.cloneNode(true)); }, [pic]);
+  // A drag keeps to the label it started on. Left to the browser, it takes every label between
+  // the two ends in file order, and those labels sit anywhere on the drawing.
+  const holdToLabel = (e) => {
+    const label = e.target.closest?.("foreignObject, text");
+    const anchor = caretAt(e.clientX, e.clientY);
+    if (!label || e.button !== 0 || e.detail > 1 || !anchor || !label.contains(anchor[0])) return;
+    e.preventDefault();
+    const walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT);
+    const texts = [];
+    while (walker.nextNode()) texts.push(walker.currentNode);
+    const last = texts.at(-1);
+    const sel = window.getSelection();
+    sel.collapse(...anchor);
+    const follow = (m) => {
+      const back = m.clientY < e.clientY - 4 || (Math.abs(m.clientY - e.clientY) <= 4 && m.clientX < e.clientX);
+      const at = caretAt(m.clientX, m.clientY);
+      const focus = at && label.contains(at[0]) ? at : back ? [texts[0], 0] : [last, last.length];
+      sel.setBaseAndExtent(...anchor, ...focus);
+    };
+    window.addEventListener("mousemove", follow);
+    window.addEventListener("mouseup", () => window.removeEventListener("mousemove", follow), { once: true });
+  };
   return (
     <div className="rr-diagram">
       <div className="rr-diagram-cap">{page.label}{before && page.oldMarked && " · earlier version"}</div>
       <img src={pic.src} width={pic.width} height={pic.height} alt={`Diagram: ${page.label}`} draggable={false} />
-      <div ref={words} className="rr-diagram-text" />
+      <div ref={words} className="rr-diagram-text" onMouseDown={holdToLabel} />
     </div>
   );
 }

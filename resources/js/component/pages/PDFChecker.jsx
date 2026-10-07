@@ -510,9 +510,16 @@ function PDFChecker({
     const aLeft = p.left - c.left + canvas.scrollLeft + anchor.left_position * p.width;
     const aMid = aLeft + (anchor.highlight_width * p.width) / 2;
     const pageMid = p.left - c.left + canvas.scrollLeft + p.width / 2;
+    const aRight = aLeft + anchor.highlight_width * p.width;
     let left;
     let flip = false;
-    if (c.right - p.right - gap >= w + 8) {
+    // A picked shape gets the box right next to it, since a diagram fills the page and its margin is far away.
+    if (draft.type === "shape" && aRight + gap + w + 8 <= canvas.scrollLeft + canvas.clientWidth) {
+      left = aRight + gap;
+    } else if (draft.type === "shape" && aLeft - gap - w >= canvas.scrollLeft + 8) {
+      left = aLeft - gap - w;
+      flip = true;
+    } else if (c.right - p.right - gap >= w + 8) {
       left = p.right - c.left + canvas.scrollLeft + gap;
     } else if (aMid < pageMid) {
       left = canvas.scrollLeft + canvas.clientWidth - w - 12;
