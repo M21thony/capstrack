@@ -23,19 +23,24 @@
   html.csk-hide .main > .content { opacity: 0 !important; }
   #csk { position: fixed; z-index: 30; overflow: hidden; transition: opacity .4s ease; }
   #csk.csk-out { opacity: 0; pointer-events: none; }
-  #csk::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(100deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, .55) 50%, rgba(255, 255, 255, 0) 70%);
-    transform: translateX(-100%); animation: csk-sweep 1.3s ease-in-out infinite;
-  }
   #csk > div { position: absolute; left: 0; top: 0; }
   #csk i { position: absolute; display: block; box-sizing: border-box; }
   #csk .csk-card { background: #fff; border: 1px solid #e3e6ea; }
   #csk .csk-frame { border: 1px solid #e3e6ea; }
-  #csk .csk-bone { background: #e3e6ea; }
-  @keyframes csk-sweep { to { transform: translateX(100%); } }
+  /* One light wave sweeping across every block at once: the gradient is
+     pinned to the screen, so each block shows its own slice of the same
+     wave. It starts already moving, over the content, on the first frame. */
+  #csk .csk-bone {
+    background-color: #e1e4e9;
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .75) 50%, rgba(255, 255, 255, 0) 100%);
+    background-size: 40vw 100%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    animation: csk-wave 1s linear -.3s infinite;
+  }
+  @keyframes csk-wave { from { background-position: -40vw 0; } to { background-position: 140vw 0; } }
   @media (prefers-reduced-motion: reduce) {
-    #csk::after { animation: none; display: none; }
+    #csk .csk-bone { animation: none; background-image: none; }
     #csk { transition: none; }
   }
 </style>
@@ -88,6 +93,12 @@
     var originX = box.left - content.scrollLeft;
     var originY = box.top - content.scrollTop;
     var layer = document.createElement('div');
+    // The blocks follow the content if it is scrolled. Moved by left and
+    // top, not a transform, which would unpin the wave from the screen.
+    function follow() {
+      layer.style.left = -content.scrollLeft + 'px';
+      layer.style.top = -content.scrollTop + 'px';
+    }
     var count = 0;
 
     function draw(kind, left, top, width, height, radius, edges) {
@@ -166,17 +177,16 @@
       surface = getComputedStyle(holder.parentElement).backgroundColor;
     }
     cover.style.cssText = 'left:' + box.left + 'px;top:' + box.top + 'px;width:' + box.width + 'px;height:' + box.height + 'px;background:' + (visibleColour(surface) ? surface : '#eceef0');
-    layer.style.transform = 'translate(' + -content.scrollLeft + 'px,' + -content.scrollTop + 'px)';
+    follow();
     cover.appendChild(layer);
     document.body.appendChild(cover);
     root.classList.remove('csk-hide');
 
-    function follow() { layer.style.transform = 'translate(' + -content.scrollLeft + 'px,' + -content.scrollTop + 'px)'; }
     content.addEventListener('scroll', follow, { passive: true });
 
-    // The page underneath is already drawn: the skeleton stays a moment,
-    // until the pictures in view have loaded (never more than 1.6s), then
-    // fades away over it.
+    // The page underneath is already drawn: the skeleton stays long enough
+    // for its wave to cross the page once, and until the pictures in view
+    // have loaded (never more than 1.6s), then fades away over it.
     var shown = performance.now();
     var done = false;
     function reveal() {
@@ -199,7 +209,7 @@
     (function wait() {
       if (done) return;
       var waited = performance.now() - shown;
-      if (waited >= 1600 || (waited >= 450 && picturesReady())) return reveal();
+      if (waited >= 1600 || (waited >= 700 && picturesReady())) return reveal();
       setTimeout(wait, 50);
     })();
     window.addEventListener('resize', reveal);
