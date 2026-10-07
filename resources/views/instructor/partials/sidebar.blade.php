@@ -9,7 +9,7 @@
 <div class="sidebar">
   @if(!isset($showBrand) || $showBrand)
     <div class="sidebar-brand">
-      <img src="{{ asset('images/brand/capstrack-mark.svg') }}" alt="" width="42" height="42" style="width:42px;height:42px;border-radius:10px;box-shadow:0 0 0 1px rgba(201,168,44,.25);flex-shrink:0;display:block">
+      <img src="{{ asset('images/brand/capstrack-mark.svg') }}" alt="" width="42" height="42" style="width:42px;height:42px;border-radius:10px;flex-shrink:0;display:block">
       <div>
         <div class="brand-name"><img src="{{ asset('images/brand/capstrack-wordmark.svg') }}" alt="CapsTrack" style="height:15px;width:auto;display:block;margin-bottom:3px"></div>
         <div class="brand-sub">Expert Portal</div>
