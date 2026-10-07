@@ -42,7 +42,7 @@ class StudentContentSkeletonTest extends TestCase
     {
         $html = $this->studentPage();
 
-        $this->assertStringContainsString('background-color: #e1e4e9;', $html);
+        $this->assertStringContainsString('#csk .csk-bone { background: #dde1e7; overflow: hidden; }', $html);
         $this->assertStringContainsString("cover.style.cssText = 'left:' + box.left", $html);
         $this->assertStringNotContainsString('.main > .content { opacity: .', $html);
     }
@@ -56,14 +56,15 @@ class StudentContentSkeletonTest extends TestCase
         $this->assertStringContainsString('if (opened) return;', $html);
     }
 
-    /** It is never a still picture: a wave sweeps every block, already moving on the first frame. */
+    /** It is never a still picture: a streak runs across every block, already moving on the first frame. */
     public function test_the_skeleton_shimmers_from_its_first_frame(): void
     {
         $html = $this->studentPage();
 
-        $this->assertStringContainsString('animation: csk-wave 1s linear -.3s infinite;', $html);
-        $this->assertStringContainsString('background-attachment: fixed;', $html);
-        $this->assertStringContainsString('(waited >= 700 && picturesReady())', $html);
+        $this->assertStringContainsString('animation: csk-wave 1s ease-in-out -.25s infinite;', $html);
+        $this->assertStringContainsString('#csk .csk-bone::after {', $html);
+        $this->assertStringContainsString('(waited >= 900 && picturesReady())', $html);
+        $this->assertStringContainsString('#csk .csk-bone { animation: csk-breathe 1.2s ease-in-out infinite; }', $html);
     }
 
     /** Whatever happens, the content never stays hidden. */

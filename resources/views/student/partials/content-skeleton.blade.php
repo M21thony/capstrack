@@ -27,21 +27,24 @@
   #csk i { position: absolute; display: block; box-sizing: border-box; }
   #csk .csk-card { background: #fff; border: 1px solid #e3e6ea; }
   #csk .csk-frame { border: 1px solid #e3e6ea; }
-  /* One light wave sweeping across every block at once: the gradient is
-     pinned to the screen, so each block shows its own slice of the same
-     wave. It starts already moving, over the content, on the first frame. */
-  #csk .csk-bone {
-    background-color: #e1e4e9;
-    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .75) 50%, rgba(255, 255, 255, 0) 100%);
-    background-size: 40vw 100%;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    animation: csk-wave 1s linear -.3s infinite;
+  /* Loading, plainly: a bright streak runs across every block, over and
+     over, already part-way across on the first frame. It moves by transform
+     alone, which the browser animates smoothly off the main thread. */
+  #csk .csk-bone { background: #dde1e7; overflow: hidden; }
+  #csk .csk-bone::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .85) 50%, rgba(255, 255, 255, 0) 100%);
+    transform: translateX(-100%);
+    animation: csk-wave 1s ease-in-out -.25s infinite;
   }
-  @keyframes csk-wave { from { background-position: -40vw 0; } to { background-position: 140vw 0; } }
+  @keyframes csk-wave { to { transform: translateX(100%); } }
+  /* With reduced motion asked for (Windows' "Animation effects" off), no
+     streak, but the blocks still breathe softly, so it still reads as
+     loading. */
+  @keyframes csk-breathe { 50% { opacity: .5; } }
   @media (prefers-reduced-motion: reduce) {
-    #csk .csk-bone { animation: none; background-image: none; }
-    #csk { transition: none; }
+    #csk .csk-bone::after { animation: none; display: none; }
+    #csk .csk-bone { animation: csk-breathe 1.2s ease-in-out infinite; }
   }
 </style>
 <script nonce="{{ Vite::cspNonce() }}">
@@ -93,8 +96,7 @@
     var originX = box.left - content.scrollLeft;
     var originY = box.top - content.scrollTop;
     var layer = document.createElement('div');
-    // The blocks follow the content if it is scrolled. Moved by left and
-    // top, not a transform, which would unpin the wave from the screen.
+    // The blocks follow the content if it is scrolled.
     function follow() {
       layer.style.left = -content.scrollLeft + 'px';
       layer.style.top = -content.scrollTop + 'px';
@@ -185,7 +187,7 @@
     content.addEventListener('scroll', follow, { passive: true });
 
     // The page underneath is already drawn: the skeleton stays long enough
-    // for its wave to cross the page once, and until the pictures in view
+    // to be seen loading, and until the pictures in view
     // have loaded (never more than 1.6s), then fades away over it.
     var shown = performance.now();
     var done = false;
@@ -209,7 +211,7 @@
     (function wait() {
       if (done) return;
       var waited = performance.now() - shown;
-      if (waited >= 1600 || (waited >= 700 && picturesReady())) return reveal();
+      if (waited >= 1600 || (waited >= 900 && picturesReady())) return reveal();
       setTimeout(wait, 50);
     })();
     window.addEventListener('resize', reveal);
