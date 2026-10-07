@@ -87,14 +87,18 @@ class TeamExpertAssignment extends Model
      */
     public function getEngagedRoleNameAttribute(): ?string
     {
+        // Loaded once and kept on the model: pages read this several times
+        // for the same assignment, and each read used to query again.
         if ($this->expert_role_id) {
-            return $this->relationLoaded('expertRole')
-                ? $this->expertRole?->role?->role_name
-                : ExpertRole::with('role')->find($this->expert_role_id)?->role?->role_name;
+            if (! $this->relationLoaded('expertRole') || (int) $this->expertRole?->expert_role_id !== (int) $this->expert_role_id) {
+                $this->load('expertRole.role');
+            }
+
+            return $this->expertRole?->role?->role_name;
         }
 
-        $qualified = $this->relationLoaded('role') ? $this->role : $this->role()->get();
+        $this->loadMissing('role');
 
-        return $qualified->count() === 1 ? $qualified->first()->role_name : null;
+        return $this->role->count() === 1 ? $this->role->first()->role_name : null;
     }
 }
