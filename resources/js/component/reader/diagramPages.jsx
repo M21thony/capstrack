@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { comparePages, holderOf, pairPages, readDrawio, withStyle } from "./drawioDiff.js";
+
+export { shapeRects } from "./drawioDiff.js";
 import { textLayer } from "./textLayer.js";
 
 /*
@@ -287,21 +289,8 @@ export function DiagramsOnly({ drawings, loading, children }) {
   return <div className="rr-doc">{children}</div>;
 }
 
-const fraction = (n) => Math.min(1, Math.max(0, n));
-
 /** The drawing a diagram page shows right now: the earlier version, this one with its changes coloured in, or plain. */
 export const shownPicture = (page, showChanges, before = false) => (before && page.oldMarked) || (showChanges && page.marked) || page.plain;
-
-/** A picked cell's outline as a mark on the page: its box and words, a little wider, as fractions of the picture. */
-export function shapeRect(target, pic, pad = 4) {
-  const boxes = [target.box, ...(target.labels || [])];
-  const x1 = Math.min(...boxes.map((b) => b[0])) - pad, y1 = Math.min(...boxes.map((b) => b[1])) - pad;
-  const x2 = Math.max(...boxes.map((b) => b[2])) + pad, y2 = Math.max(...boxes.map((b) => b[3])) + pad;
-  return {
-    top_position: fraction(y1 / pic.height), left_position: fraction(x1 / pic.width),
-    highlight_width: Math.min((x2 - x1) / pic.width, 1), highlight_height: Math.min((y2 - y1) / pic.height, 1),
-  };
-}
 
 /** What a shape remark keeps about a picked cell, so it can be found again in the next version. */
 export function shapeCell(page, id) {

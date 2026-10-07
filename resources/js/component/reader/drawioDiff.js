@@ -368,3 +368,33 @@ export function pairPages(mine, theirs) {
   pairs.sort((x, y) => y[0] - x[0]).forEach(([s, i, j]) => { if (s >= 0.3 && out[i] < 0 && !used.has(j)) { out[i] = j; used.add(j); } });
   return out;
 }
+
+const clampFraction = (n) => Math.min(1, Math.max(0, n));
+
+/**
+ * A picked cell's outline as marks on the page, as fractions of the picture: a box
+ * around a shape, and a thin band along each leg of an arrow (one box around a bent
+ * arrow would cover the shapes it goes around), plus its words.
+ */
+export function shapeRects(target, pic, pad = 4) {
+  const mark = ([x1, y1, x2, y2]) => ({
+    top_position: clampFraction((y1 - pad) / pic.height), left_position: clampFraction((x1 - pad) / pic.width),
+    highlight_width: Math.min((x2 - x1 + 2 * pad) / pic.width, 1), highlight_height: Math.min((y2 - y1 + 2 * pad) / pic.height, 1),
+  });
+  const labels = (target.labels || []).map(mark);
+  if (target.kind !== "edge" || (target.pts || []).length < 2) {
+    const boxes = [target.box, ...(target.labels || [])];
+    return [mark([Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))])];
+  }
+  const legs = target.pts.slice(1).flatMap(([x2, y2], i) => {
+    const [x1, y1] = target.pts[i];
+    // A slanted leg goes in short steps, so its bands stay close to the line.
+    const steps = Math.abs(x2 - x1) > 2 * pad && Math.abs(y2 - y1) > 2 * pad ? Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 12) : 1;
+    return Array.from({ length: steps }, (_, k) => {
+      const ax = x1 + ((x2 - x1) * k) / steps, ay = y1 + ((y2 - y1) * k) / steps;
+      const bx = x1 + ((x2 - x1) * (k + 1)) / steps, by = y1 + ((y2 - y1) * (k + 1)) / steps;
+      return mark([Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by)]);
+    });
+  });
+  return [...legs, ...labels];
+}

@@ -8,7 +8,7 @@ import {
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
 import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
-import { DiagramPage, DiagramsOnly, shapeCell, shapeRect, shownPicture, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
+import { DiagramPage, DiagramsOnly, shapeCell, shapeRects, shownPicture, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import {
   DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, shapeLabel, uniqueFigures,
 } from "../reader/figures";
@@ -294,14 +294,14 @@ function PDFChecker({
     return { x: clamp((e.clientX - b.left) / b.width), y: clamp((e.clientY - b.top) / b.height), b };
   };
 
-  // The cell under the pointer on a diagram page, in the drawing shown: { page, id, rect }.
+  // The cell under the pointer on a diagram page, in the drawing shown: { page, id, rects }.
   const shapeUnder = (e, n) => {
     const page = drawings.pages[n - numPages - 1];
     if (!page || (beforeView && page.oldMarked)) return null;
     const pic = shownPicture(page, showChanges);
     const { x, y } = pointOn(e, e.currentTarget);
     const t = cellAt(pic.targets || [], x * pic.width, y * pic.height);
-    return t && { page, id: t.id, rect: shapeRect(t, pic) };
+    return t && { page, id: t.id, rects: shapeRects(t, pic) };
   };
 
   const pickShape = (e, n) => {
@@ -315,14 +315,15 @@ function PDFChecker({
       if (n !== draft.pageNumber) { notify(`Shapes on one remark stay on one page. Pick on page ${draft.pageNumber}.`, { type: "error" }); return; }
       const at = draft.shape_ref.cells.findIndex((c) => c.id === cell.id);
       if (at >= 0 && draft.shape_ref.cells.length === 1) return;
-      setDraft((d) => (at >= 0
-        ? { ...d, highlightRects: d.highlightRects.filter((_, i) => i !== at), shape_ref: { ...d.shape_ref, cells: d.shape_ref.cells.filter((_, i) => i !== at) } }
-        : { ...d, highlightRects: [...d.highlightRects, hit.rect], shape_ref: { ...d.shape_ref, cells: [...d.shape_ref.cells, cell] } }));
+      const cells = at >= 0 ? draft.shape_ref.cells.filter((_, i) => i !== at) : [...draft.shape_ref.cells, cell];
+      const pic = shownPicture(hit.page, showChanges);
+      const highlightRects = cells.flatMap((c) => { const t = pic.targets.find((x) => x.id === c.id); return t ? shapeRects(t, pic) : []; });
+      setDraft((d) => ({ ...d, highlightRects, shape_ref: { ...d.shape_ref, cells } }));
       return;
     }
     if (composingRef.current) { closeBox(); return; }
     setSelectedId(null);
-    beginRemark({ type: "shape", pageNumber: n, highlightRects: [hit.rect], shape_ref: { file: hit.page.file, page: hit.page.name, cells: [cell] } });
+    beginRemark({ type: "shape", pageNumber: n, highlightRects: hit.rects, shape_ref: { file: hit.page.file, page: hit.page.name, cells: [cell] } });
   };
 
   const onMarkDown = (e, n) => {
@@ -351,7 +352,7 @@ function PDFChecker({
   const onMarkMove = (e, n) => {
     if (mode === "shape") {
       const hit = shapeUnder(e, n);
-      if ((hit?.id ?? null) !== (hoverShape?.n === n ? hoverShape.id : null)) setHoverShape(hit && { n, id: hit.id, rect: hit.rect });
+      if ((hit?.id ?? null) !== (hoverShape?.n === n ? hoverShape.id : null)) setHoverShape(hit && { n, id: hit.id, rects: hit.rects });
       return;
     }
     const d0 = drawing.current;
@@ -631,7 +632,7 @@ function PDFChecker({
                         <div key={idx} className={`rr-hl pending c-${kind}`} style={rectStyle(r)} />
                       ))}
                       {mode === "shape" && hoverShape?.n === n && !(draft?.type === "shape" && draft.shape_ref.cells.some((c) => c.id === hoverShape.id)) && (
-                        <div className="rr-box hover" style={rectStyle(hoverShape.rect)} />
+                        hoverShape.rects.map((r, idx) => <div key={`h${idx}`} className="rr-box hover" style={rectStyle(r)} />)
                       )}
                       {draft && !editing && draft.pageNumber === n && (draft.type === "box" || draft.type === "shape") && draft.highlightRects.map((r, idx) => (
                         <div key={idx} className="rr-box pending" style={rectStyle(r)} />

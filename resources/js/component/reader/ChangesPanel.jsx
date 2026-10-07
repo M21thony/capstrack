@@ -4,7 +4,7 @@ import { Icon, KIND_LABEL, PagedList, figureTitle, kindOf } from "./Reader";
 import FigureCrop, { regionPixels } from "./FigureCrop";
 import { boundsOf, isFigureRemark, marksOf, remarkFromServer } from "./figures";
 import { followShapes } from "./drawioDiff";
-import { shapeCell, shapeRect } from "./diagramPages";
+import { shapeCell, shapeRects } from "./diagramPages";
 import { PICTURE_CHANGED, findPicture, greyOf, labelsAt, pictureDifference } from "./revisionCheck";
 import { compareFigures, highlighted, outlined } from "./figureDiff";
 
@@ -30,7 +30,7 @@ function followShape(r, pages, first) {
   if (at < 0) return { ...r, target: null, foundBy: "not found", changed: null, removedWords: "", addedWords: "" };
   const page = pages[at];
   const { status, cells } = followShapes(ref, page.compare);
-  const outline = (pic, ids) => ids.map((id) => pic.targets.find((t) => t.id === id)).filter(Boolean).map((t) => shapeRect(t, pic));
+  const outline = (pic, ids) => ids.map((id) => pic.targets.find((t) => t.id === id)).filter(Boolean).flatMap((t) => shapeRects(t, pic));
   if (status === "removed") {
     return {
       ...r, shapeStatus: status, foundBy: "shape", changed: true, removedWords: "", addedWords: "",

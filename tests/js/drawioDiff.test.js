@@ -2,7 +2,7 @@
 // page is, and how a shape is recoloured. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cellAt, comparePages, followShapes, pairPages, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
+import { cellAt, comparePages, followShapes, pairPages, shapeRects, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
 
 const page = (file, name, index, words = "") => ({ file, name, index, words: new Set(words.split(" ").filter(Boolean)) });
 
@@ -111,4 +111,22 @@ test("a shape remark follows its cell: unchanged, renamed, or removed", () => {
   assert.equal(followShapes(ref("c"), compare).status, "removed");
   assert.equal(followShapes(ref("a", "c"), compare).status, "changed");
   assert.equal(followShapes(ref("gone"), compare).status, "removed");
+});
+
+test("a bent arrow is outlined along its legs, not by one box over what it goes around", () => {
+  const pic = { width: 1000, height: 1000 };
+  const arrow = { id: "e", kind: "edge", box: [100, 100, 500, 500], pts: [[100, 100], [500, 100], [500, 500]], labels: [] };
+  const rects = shapeRects(arrow, pic);
+  assert.equal(rects.length, 2);
+  // Nothing sits over the middle of the bend's box.
+  const covers = (r, x, y) => x >= r.left_position && x <= r.left_position + r.highlight_width && y >= r.top_position && y <= r.top_position + r.highlight_height;
+  assert.ok(!rects.some((r) => covers(r, 0.3, 0.3)));
+  assert.ok(covers(rects[0], 0.3, 0.1) && covers(rects[1], 0.5, 0.3));
+});
+
+test("a slanted arrow goes in short steps, a box stays one box", () => {
+  const pic = { width: 1000, height: 1000 };
+  const slanted = shapeRects({ kind: "edge", box: [0, 0, 300, 300], pts: [[0, 0], [300, 300]], labels: [] }, pic);
+  assert.ok(slanted.length > 10 && slanted.every((r) => r.highlight_width < 0.03));
+  assert.equal(shapeRects({ kind: "vertex", box: [10, 10, 60, 40] }, pic).length, 1);
 });
