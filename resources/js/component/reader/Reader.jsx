@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import FigureCrop from "./FigureCrop";
-import { DIAGRAM_LABEL, isFigureRemark } from "./figures";
+import { DIAGRAM_LABEL, isFigureRemark, shapeLabel } from "./figures";
 
 /*
  * The pieces the reviewer's annotator and the student's Review Viewer share:
@@ -55,6 +55,7 @@ const PATHS = {
   text: (<><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></>),
   box: <rect x="4" y="5" width="16" height="14" rx="1" strokeDasharray="3 2.5" />,
   pin: (<><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z" /><circle cx="12" cy="10" r="2" /></>),
+  shape: (<><rect x="3" y="4" width="8" height="6" rx="1" /><rect x="13" y="14" width="8" height="6" rx="1" /><path d="M7 10v7h6" /></>),
 };
 export function Icon({ name }) {
   return (
@@ -84,10 +85,11 @@ export function Highlights({ remarks, numbers, selectedId, onSelect, clickable =
     }
     if (!rects.length) return null;
     const first = rects[0];
-    if (r.type === "box") {
+    if (r.type === "box" || r.type === "shape") {
       return (
         <React.Fragment key={r.id}>
-          {rects.map((rect, i) => <div key={i} className={`rr-box c-${kind}${on ? " on" : ""}`} style={rectStyle(rect)} />)}
+          {/* A shape remark is just its number until picked, so outlines never pile up over crossing arrows. */}
+          {(r.type === "box" || on || override?.id === r.id) && rects.map((rect, i) => <div key={i} className={`rr-box c-${kind}${on ? " on" : ""}`} style={rectStyle(rect)} />)}
           <button type="button" className={`rr-num rr-boxn c-${kind}${on ? " on" : ""}`} style={{ top: pct(first.top_position), left: pct(first.left_position) }} onClick={select} aria-label={label} title={title}>
             {numbers[r.id]}
           </button>
@@ -133,9 +135,10 @@ export function SectionPicker({ value, onChange, none = "No section" }) {
   );
 }
 
-export const figureTitle = (r) => r.figure_label || (r.type === "pin" ? "Pin" : "Boxed area");
+export const figureTitle = (r) => r.figure_label || shapeLabel(r.shape_ref) || (r.type === "pin" ? "Pin" : "Boxed area");
+const count = (n, one) => (n > 1 ? `${n} ${one}s` : one[0].toUpperCase() + one.slice(1));
 export const figureDetail = (r) => [
-  r.type === "pin" ? "Pin" : (r.highlightRects?.length > 1 ? `${r.highlightRects.length} boxes` : "Box"),
+  r.type === "pin" ? "Pin" : r.type === "shape" ? count(r.shape_ref?.cells?.length || 1, "shape") : count(r.highlightRects?.length || 1, "box"),
   DIAGRAM_LABEL[r.diagram_type] || "",
 ].filter(Boolean).join(" · ");
 
@@ -261,7 +264,7 @@ function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measur
       <div className="rr-card-r1">
         <span className="rr-no">{n}</span>
         {isFigureRemark(r)
-          ? <span className="rr-tag fig">{r.type === "pin" ? "Pin" : "Figure"}</span>
+          ? <span className="rr-tag fig">{{ pin: "Pin", shape: "Shape" }[r.type] || "Figure"}</span>
           : <span className="rr-tag">Highlighted text</span>}
         <span className="rr-where">p.{r.page_number}{r.section ? ` · ${r.section}` : ""}</span>
         {!readOnly && (
@@ -271,7 +274,12 @@ function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measur
           </span>
         )}
       </div>
-      {isFigureRemark(r) ? (
+      {r.type === "shape" ? (
+        <div className="rr-cshape">
+          <span className={`rr-cshape-i${r.shape_ref?.cells?.[0]?.kind === "edge" ? " edge" : ""}`} aria-hidden="true" />
+          <b>{figureTitle(r)}</b>
+        </div>
+      ) : isFigureRemark(r) ? (
         <div className="rr-cfig">
           <button
             type="button"
@@ -360,7 +368,7 @@ export function RemarksPanel({
         )}
       </div>
       {!readOnly && (
-        <p className="rr-help">Select text on a page to comment on those words. Use <b>Box</b> or <b>Pin</b> in the page toolbar for a figure. Use <b>General remark</b> for comments about the whole document.</p>
+        <p className="rr-help">Select text on a page to comment on those words. Use <b>Box</b> or <b>Pin</b> in the page toolbar for a figure, or <b>Shape</b> to pick one box or arrow on a diagram page. Use <b>General remark</b> for comments about the whole document.</p>
       )}
       <div className="rr-side-body">
         <div className="rr-filter" role="group" aria-label="Show">
@@ -454,16 +462,27 @@ export function PageStrip({ numPages, currentPage, counts, onGo }) {
 }
 
 /** Page and zoom controls, floating over the bottom of the document. */
-const MODES = [["text", "Select text", "T"], ["box", "Draw a box over a figure", "B"], ["pin", "Pin one spot", "P"]];
+const MODES = [
+  ["text", "Select text", "T"], ["box", "Draw a box over a figure", "B"], ["pin", "Pin one spot", "P"],
+  ["shape", "Pick a box or arrow on a diagram", "S"],
+];
 
-export function ReaderTools({ currentPage, numPages, zoom, onGo, onZoom, mode = null, onMode = null }) {
+export function ReaderTools({
+  currentPage, numPages, zoom, onGo, onZoom, mode = null, onMode = null, shapes = false, before = null, beforeLabel = "", onBefore = null,
+}) {
   return (
     <div className="rr-tools" role="toolbar" aria-label="Pages">
       {onMode && (
         <>
-          {MODES.map(([m, label, key]) => (
+          {MODES.filter(([m]) => shapes || m !== "shape").map(([m, label, key]) => (
             <button key={m} type="button" className={`rr-btn icon ghost${mode === m ? " on" : ""}`} aria-pressed={mode === m} aria-label={label} title={`${label} (${key})`} onClick={() => onMode(m)}><Icon name={m} /></button>
           ))}
+          <span className="rr-sep" aria-hidden="true" />
+        </>
+      )}
+      {before !== null && (
+        <>
+          <button type="button" className={`rr-btn sm ghost${before ? " on" : ""}`} aria-pressed={before} title="Show the diagrams as they were in the earlier version (V)" onClick={onBefore}>{beforeLabel}</button>
           <span className="rr-sep" aria-hidden="true" />
         </>
       )}

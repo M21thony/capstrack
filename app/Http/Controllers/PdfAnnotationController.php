@@ -143,6 +143,16 @@ class PdfAnnotationController extends Controller
             'comments.*.type' => ['nullable', Rule::in(PdfRemark::MARK_TYPES)],
             'comments.*.figure_label' => 'nullable|string|max:40',
             'comments.*.diagram_type' => ['nullable', Rule::in(PdfRemark::DIAGRAM_TYPES)],
+            'comments.*.shape_ref' => 'nullable|array',
+            'comments.*.shape_ref.file' => 'nullable|string|max:255',
+            'comments.*.shape_ref.page' => 'nullable|string|max:255',
+            'comments.*.shape_ref.cells' => 'required_with:comments.*.shape_ref|array|min:1',
+            'comments.*.shape_ref.cells.*.id' => 'required|string|max:255',
+            'comments.*.shape_ref.cells.*.kind' => 'required|in:vertex,edge',
+            'comments.*.shape_ref.cells.*.text' => 'nullable|string|max:500',
+            'comments.*.shape_ref.cells.*.from' => 'nullable|string|max:500',
+            'comments.*.shape_ref.cells.*.to' => 'nullable|string|max:500',
+            'comments.*.shape_ref.cells.*.role' => 'nullable|string|max:40',
             'comments.*.highlightRects' => 'nullable|array',
             'comments.*.highlightRects.*.top_position' => 'nullable|numeric',
             'comments.*.highlightRects.*.left_position' => 'nullable|numeric',
@@ -179,6 +189,8 @@ class PdfAnnotationController extends Controller
                 'figure_label' => $onFigure ? ($comment['figure_label'] ?? null) : null,
                 'diagram_type' => $onFigure ? ($comment['diagram_type'] ?? null) : null,
                 'carried_from_id' => $comment['carried_from_id'] ?? null,
+                // Which diagram cells a shape remark is about, so it can find them in the next version.
+                'shape_ref' => $type === 'shape' ? ($comment['shape_ref'] ?? null) : null,
             ];
 
             if ($type !== 'pin' && ! empty($rects)) {
@@ -196,7 +208,7 @@ class PdfAnnotationController extends Controller
                     'highlight_height' => $maxBottom - $minTop,
                     // Each box of a figure remark, so two boxes on one remark
                     // come back as two boxes instead of one around both.
-                    'rects' => $type === 'box' ? array_values($rects) : null,
+                    'rects' => in_array($type, ['box', 'shape'], true) ? array_values($rects) : null,
                 ];
             } else {
                 // A pin, or a remark with no highlight: a point on the page.

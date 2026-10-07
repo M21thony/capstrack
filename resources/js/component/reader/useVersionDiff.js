@@ -101,7 +101,8 @@ export function useVersionDiff(currentUrl, base) {
     ])
       .then(([oldWords, newWords, remarks]) => {
         if (!live) return;
-        const earlier = remarks.map(remarkFromServer);
+        // Shape remarks are followed on the drawing instead (ChangesPanel).
+        const earlier = remarks.map(remarkFromServer).filter((r) => r.type !== "shape");
         if (!oldWords.length || !newWords.length) {
           // No text to line up - a scanned or diagrams-only PDF. Figure remarks
           // are still checked, in the same place, by comparing the pictures.

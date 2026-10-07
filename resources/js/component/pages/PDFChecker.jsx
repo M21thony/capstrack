@@ -8,10 +8,11 @@ import {
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
 import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
-import { DiagramPage, DiagramsOnly, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
+import { DiagramPage, DiagramsOnly, shapeCell, shapeRects, shownPicture, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import {
-  DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, uniqueFigures,
+  boundsOf, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, shapeLabel, uniqueFigures,
 } from "../reader/figures";
+import { cellAt } from "../reader/drawioDiff";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -31,6 +32,7 @@ const clamp = (n) => Math.min(1, Math.max(0, n));
 const HINTS = {
   box: "Drag over a figure to add a remark",
   pin: "Click one spot on a figure to add a remark",
+  shape: "Click a box or arrow on a diagram page · Shift+click adds another",
 };
 
 /**
@@ -209,6 +211,13 @@ function PDFChecker({
   const [diagramType, setDiagramType] = useState("");
   // Drawing another box onto the same remark: the remark box steps aside meanwhile.
   const [adding, setAdding] = useState(false);
+  // The cell under the pointer while picking shapes: { n, id, rect }.
+  const [hoverShape, setHoverShape] = useState(null);
+  // The earlier version's shape remark a What changed card is outlining: { id, page, rects, before }.
+  const [shownShape, setShownShape] = useState(null);
+  // Diagram pages show the earlier version's drawing instead (V).
+  const [beforeView, setBeforeView] = useState(false);
+  const hasBefore = drawings.pages.some((p) => p.oldMarked);
   const drawing = useRef(null);
   const [popPos, setPopPos] = useState(null);
   const [selecting, setSelecting] = useState(false);
@@ -259,18 +268,21 @@ function PDFChecker({
   };
 
   const changeMode = (next) => {
+    if (next === "shape" && !drawings.pages.length) return;
     if (next !== "box" && adding) { setAdding(false); setPopPos(null); }
+    if (next !== "shape") setHoverShape(null);
     if (next !== "text") window.getSelection()?.removeAllRanges();
     setMode(next);
   };
 
-  // T, B and P switch how the page is marked; Esc finishes adding boxes.
+  // T, B, P and S switch how the page is marked; V flips diagrams to the earlier version; Esc finishes adding boxes.
   useEffect(() => {
     const onKey = (e) => {
       if (document.querySelector("dialog[open]")) return;
       if (e.key === "Escape" && adding) { setAdding(false); setPopPos(null); return; }
       if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.("input, textarea, select")) return;
-      const next = { t: "text", b: "box", p: "pin" }[e.key.toLowerCase()];
+      if (e.key.toLowerCase() === "v" && hasBefore) { setBeforeView((v) => !v); return; }
+      const next = { t: "text", b: "box", p: "pin", s: "shape" }[e.key.toLowerCase()];
       if (next) changeMode(next);
     };
     document.addEventListener("keydown", onKey);
@@ -282,8 +294,41 @@ function PDFChecker({
     return { x: clamp((e.clientX - b.left) / b.width), y: clamp((e.clientY - b.top) / b.height), b };
   };
 
+  // The cell under the pointer on a diagram page, in the drawing shown: { page, id, rects }.
+  const shapeUnder = (e, n) => {
+    const page = drawings.pages[n - numPages - 1];
+    if (!page || (beforeView && page.oldMarked)) return null;
+    const pic = shownPicture(page, showChanges);
+    const { x, y } = pointOn(e, e.currentTarget);
+    const t = cellAt(pic.targets || [], x * pic.width, y * pic.height);
+    return t && { page, id: t.id, rects: shapeRects(t, pic) };
+  };
+
+  const pickShape = (e, n) => {
+    if (!drawings.pages[n - numPages - 1]) return;
+    if (beforeView && drawings.pages[n - numPages - 1].oldMarked) { notify("This is the earlier version. Press V to go back and pick a shape.", { type: "info" }); return; }
+    const hit = shapeUnder(e, n);
+    if (!hit) return;
+    const cell = shapeCell(hit.page, hit.id);
+    // Shift+click adds the cell to the remark being written (or takes it off again).
+    if (e.shiftKey && draft?.type === "shape" && !draft.drawing) {
+      if (n !== draft.pageNumber) { notify(`Shapes on one remark stay on one page. Pick on page ${draft.pageNumber}.`, { type: "error" }); return; }
+      const at = draft.shape_ref.cells.findIndex((c) => c.id === cell.id);
+      if (at >= 0 && draft.shape_ref.cells.length === 1) return;
+      const cells = at >= 0 ? draft.shape_ref.cells.filter((_, i) => i !== at) : [...draft.shape_ref.cells, cell];
+      const pic = shownPicture(hit.page, showChanges);
+      const highlightRects = cells.flatMap((c) => { const t = pic.targets.find((x) => x.id === c.id); return t ? shapeRects(t, pic) : []; });
+      setDraft((d) => ({ ...d, highlightRects, shape_ref: { ...d.shape_ref, cells } }));
+      return;
+    }
+    if (composingRef.current) { closeBox(); return; }
+    setSelectedId(null);
+    beginRemark({ type: "shape", pageNumber: n, highlightRects: hit.rects, shape_ref: { file: hit.page.file, page: hit.page.name, cells: [cell] } });
+  };
+
   const onMarkDown = (e, n) => {
     if (mode === "text" || e.button !== 0 || e.target.closest(".rr-num, .rr-pin")) return;
+    if (mode === "shape") { e.preventDefault(); pickShape(e, n); return; }
     if (adding) {
       if (n !== draft.pageNumber) { notify(`Boxes on one remark stay on one page. Draw on page ${draft.pageNumber}.`, { type: "error" }); return; }
     } else if (composingRef.current) { closeBox(); return; }
@@ -304,7 +349,12 @@ function PDFChecker({
     }
   };
 
-  const onMarkMove = (e) => {
+  const onMarkMove = (e, n) => {
+    if (mode === "shape") {
+      const hit = shapeUnder(e, n);
+      if ((hit?.id ?? null) !== (hoverShape?.n === n ? hoverShape.id : null)) setHoverShape(hit && { n, id: hit.id, rects: hit.rects });
+      return;
+    }
     const d0 = drawing.current;
     if (!d0 || e.pointerId !== d0.id) return;
     const x = clamp((e.clientX - d0.b.left) / d0.b.width);
@@ -320,12 +370,12 @@ function PDFChecker({
     const last = draft.highlightRects[draft.highlightRects.length - 1];
     const tooSmall = last.highlight_width < 0.02 || last.highlight_height < 0.015;
     if (adding) {
-      if (tooSmall) { setDraft((d) => ({ ...d, highlightRects: d.highlightRects.slice(0, -1) })); notify("Drag across the area to draw the box."); return; }
+      if (tooSmall) { setDraft((d) => ({ ...d, highlightRects: d.highlightRects.slice(0, -1) })); notify("Drag across the area to draw the box.", { type: "info" }); return; }
       setAdding(false);
       setPopPos(null);
       return;
     }
-    if (tooSmall) { setDraft(null); notify("Drag across the figure to draw a box around it."); return; }
+    if (tooSmall) { setDraft(null); notify("Drag across the figure to draw a box around it.", { type: "info" }); return; }
     beginRemark({ ...draft, drawing: false });
   };
 
@@ -385,6 +435,7 @@ function PDFChecker({
       highlightRects: (c.highlightRects || []).map((r) => ({ ...r })),
       x_position: c.x_position,
       y_position: c.y_position,
+      shape_ref: c.shape_ref || null,
     });
     setSelectedId(id);
     setEditingId(id);
@@ -411,9 +462,9 @@ function PDFChecker({
     const figureFields = { figure_label: onFigure ? figure || null : null, diagram_type: onFigure ? diagramType || null : null };
     if (editing) {
       setComments((prev) => prev.map((c) => (c.id === editing.id
-        ? { ...c, text: body, color: kind, section: sectionValue, ...figureFields, ...(draft.type === "box" ? { highlightRects: draft.highlightRects } : {}) }
+        ? { ...c, text: body, color: kind, section: sectionValue, ...figureFields, ...(draft.type === "box" || draft.type === "shape" ? { highlightRects: draft.highlightRects, shape_ref: draft.shape_ref ?? null } : {}) }
         : c)));
-      setSelectedId(editing.id);
+      setSelectedId(draft.type === "shape" ? null : editing.id);
     } else {
       const id = `new-${Date.now()}`;
       const first = draft.highlightRects[0];
@@ -429,10 +480,12 @@ function PDFChecker({
         selectedText: onFigure ? null : draft.selectedText,
         section: sectionValue,
         highlightRects: draft.highlightRects,
+        shape_ref: draft.type === "shape" ? draft.shape_ref : null,
         color: kind,
         ...figureFields,
       }]);
-      setSelectedId(id);
+      // A shape remark lets go once added, so its outline is off the drawing.
+      setSelectedId(draft.type === "shape" ? null : id);
     }
     closeBox();
   };
@@ -445,8 +498,9 @@ function PDFChecker({
     const wrapper = col.pageRefs.current[draft.pageNumber];
     const pop = popRef.current;
     if (!canvas || !wrapper || !pop) return;
-    const anchor = draft.highlightRects?.[0]
-      || { top_position: Number(draft.y_position) || 0, left_position: Number(draft.x_position) || 0.5, highlight_width: 0, highlight_height: 0 };
+    // Beside the whole mark (every box, or every leg of an arrow), not just its first piece.
+    const anchor = draft.highlightRects?.length ? boundsOf(draft.highlightRects)
+      : { top_position: Number(draft.y_position) || 0, left_position: Number(draft.x_position) || 0.5, highlight_width: 0, highlight_height: 0 };
     const c = canvas.getBoundingClientRect();
     const p = (wrapper.querySelector(".react-pdf__Page") || wrapper).getBoundingClientRect();
     const w = pop.offsetWidth;
@@ -466,7 +520,8 @@ function PDFChecker({
       left = Math.max(canvas.scrollLeft + 12, aLeft - w - gap);
       flip = true;
     }
-    const top = Math.max(canvas.scrollTop + 8, ay - 28);
+    // Kept inside the visible part of the page, so it never opens below the screen.
+    const top = Math.max(canvas.scrollTop + 8, Math.min(ay - 28, canvas.scrollTop + canvas.clientHeight - h - 8));
     setPopPos({ left, top, ay: Math.min(Math.max(14, ay - top), h - 14), flip });
   });
 
@@ -483,8 +538,7 @@ function PDFChecker({
   const quote = draft?.type === "text" ? draft.selectedText : null;
   const onFigure = draft && draft.type !== "text";
   const draftRemark = draft && { ...draft, page_number: draft.pageNumber, color: kind };
-  const where = draft ? (draft.type === "pin" ? `Pin on page ${draft.pageNumber}` : `${draft.highlightRects.length > 1 ? `${draft.highlightRects.length} boxes` : "Box"} on page ${draft.pageNumber}`) : "";
-  const figureOptions = figure && !figures.some((f) => f.label === figure) ? [...figures, { label: figure, page: draft?.pageNumber }] : figures;
+  const where = draft ? (draft.type === "shape" ? `${shapeLabel(draft.shape_ref)} · page ${draft.pageNumber}` : draft.type === "pin" ? `Pin on page ${draft.pageNumber}` : `${draft.highlightRects.length > 1 ? `${draft.highlightRects.length} boxes` : "Box"} on page ${draft.pageNumber}`) : "";
   const zoomRemark = zoomId != null ? comments.find((c) => c.id === zoomId) : null;
   const hint = mode === "text"
     ? (selecting ? "Press Enter to add a remark on the selected words" : "Select text to add a remark")
@@ -516,16 +570,23 @@ function PDFChecker({
               {numPages != null && Array.from({ length: totalPages }, (_, i) => {
                 const n = i + 1;
                 const drawing = drawings.pages[n - numPages - 1];
-                const pageRemarks = comments.filter((c) => Number(c.page_number) === n);
+                // This version's remarks are not drawn on the earlier version's drawing.
+                const before = Boolean(beforeView && drawing?.oldMarked);
+                // A shape remark is outlined from its cells on the drawing, not from the outline it was saved with.
+                const pic = drawing && shownPicture(drawing, showChanges);
+                const outline = (c) => c.shape_ref.cells.flatMap((cell) => { const t = pic.targets.find((x) => x.id === cell.id); return t ? shapeRects(t, pic) : []; });
+                const pageRemarks = before ? [] : comments.filter((c) => Number(c.page_number) === n)
+                  .map((c) => (pic && c.type === "shape" && c.shape_ref && outline(c).length ? { ...c, highlightRects: outline(c) } : c));
                 return (
                   <div
                     key={n}
                     ref={(el) => { col.pageRefs.current[n] = el; }}
                     data-page={n}
-                    className={`rr-page${mode !== "text" ? " marking" : ""}${mode === "pin" ? " pinning" : ""}`}
+                    className={`rr-page${mode !== "text" ? " marking" : ""}${mode === "pin" ? " pinning" : ""}${mode === "shape" && drawing ? " shaping" : ""}`}
                     style={{ width: col.pageWidth, minHeight: drawing || rendered.has(n) ? undefined : Math.round((col.pageWidth * 11) / 8.5) }}
                     onPointerDown={(e) => onMarkDown(e, n)}
-                    onPointerMove={onMarkMove}
+                    onPointerMove={(e) => onMarkMove(e, n)}
+                    onPointerLeave={() => setHoverShape(null)}
                     onPointerUp={onMarkUp}
                     onPointerCancel={onMarkCancel}
                     contentEditable={mode === "text"}
@@ -540,7 +601,7 @@ function PDFChecker({
                     onDrop={block}
                     onMouseUp={() => setTimeout(startFromSelection, 0)}
                   >
-                    {drawing && <DiagramPage page={drawing} showChanges={showChanges} />}
+                    {drawing && <DiagramPage page={drawing} showChanges={showChanges} before={beforeView} />}
                     {!drawing && col.visible.has(n) && (
                       <Page
                         pageNumber={n}
@@ -555,7 +616,10 @@ function PDFChecker({
                     {showChanges && (figureTints.now[n] || []).map((t) => (
                       <img key={t.id} className={`rr-figover${t.wash ? " wash" : ""}`} src={t.src} alt="" contentEditable={false} style={rectStyle(t.rects[0])} />
                     ))}
-                    <div className="rr-overlay" contentEditable={false}>
+                    <div className={`rr-overlay${before || (drawing && showChanges && drawing.marked) ? " ink" : ""}`} contentEditable={false}>
+                      {shownShape?.page === n && Boolean(shownShape.before) === before && shownShape.rects.map((r, idx) => (
+                        <div key={`s${idx}`} className="rr-box" style={rectStyle(r)} />
+                      ))}
                       {(marks[n] || []).map((m) => m.rects.map((r, idx) => (
                         <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
                       )))}
@@ -568,12 +632,15 @@ function PDFChecker({
                         numbers={numbers}
                         selectedId={selectedId}
                         onSelect={openRemark}
-                        override={editing ? { id: editing.id, kind, rects: draft?.type === "box" ? draft.highlightRects : null } : null}
+                        override={editing ? { id: editing.id, kind, rects: draft?.type === "box" || draft?.type === "shape" ? draft.highlightRects : null } : null}
                       />
                       {draft && !editing && draft.pageNumber === n && draft.type === "text" && draft.highlightRects.map((r, idx) => (
                         <div key={idx} className={`rr-hl pending c-${kind}`} style={rectStyle(r)} />
                       ))}
-                      {draft && !editing && draft.pageNumber === n && draft.type === "box" && draft.highlightRects.map((r, idx) => (
+                      {mode === "shape" && hoverShape?.n === n && !(draft?.type === "shape" && draft.shape_ref.cells.some((c) => c.id === hoverShape.id)) && (
+                        hoverShape.rects.map((r, idx) => <div key={`h${idx}`} className="rr-box hover" style={rectStyle(r)} />)
+                      )}
+                      {draft && !editing && draft.pageNumber === n && (draft.type === "box" || draft.type === "shape") && draft.highlightRects.map((r, idx) => (
                         <div key={idx} className="rr-box pending" style={rectStyle(r)} />
                       ))}
                       {draft && !editing && draft.pageNumber === n && draft.type === "pin" && (
@@ -601,33 +668,10 @@ function PDFChecker({
             >
               {quote && <div className="rr-pop-quote">“{quote}”</div>}
               {onFigure && (
-                <>
-                  <div className="rr-pop-fig">
-                    <span className="rr-pop-thumb">{pagesPdf && <FigureCrop pdf={pagesPdf} remark={draftRemark} maxWidth={64} maxHeight={46} pending />}</span>
-                    <div><b>{figure || where}</b><small>{figure ? where : "Not a numbered figure"}</small></div>
-                  </div>
-                  <div className="rr-pair">
-                    <label className="rr-fld">Figure
-                      <select
-                        className="rr-input"
-                        value={figure}
-                        onChange={(e) => {
-                          const next = e.target.value;
-                          setFigure(next);
-                          if (!diagramType) setDiagramType(guessDiagramType(figures.find((f) => f.label === next)?.title));
-                        }}
-                      >
-                        <option value="">Not a numbered figure</option>
-                        {figureOptions.map((f) => <option key={f.label} value={f.label}>{f.label}{f.page ? ` (p. ${f.page})` : ""}</option>)}
-                      </select>
-                    </label>
-                    <label className="rr-fld">Diagram type
-                      <select className="rr-input" value={diagramType} onChange={(e) => setDiagramType(e.target.value)}>
-                        {DIAGRAM_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-                      </select>
-                    </label>
-                  </div>
-                </>
+                <div className="rr-pop-fig">
+                  <span className="rr-pop-thumb">{pagesPdf && <FigureCrop pdf={pagesPdf} remark={draftRemark} maxWidth={64} maxHeight={46} pending />}</span>
+                  <div><b>{figure || where}</b>{figure && <small>{where}</small>}</div>
+                </div>
               )}
               <div className="rr-kinds" role="group" aria-label="Kind of remark">
                 {KINDS.map((k) => (
@@ -656,7 +700,7 @@ function PDFChecker({
               <div className="rr-row">
                 {draft.type === "box"
                   ? <button type="button" className="rr-btn sm ghost" onClick={() => { setAdding(true); changeMode("box"); }}>+ Box</button>
-                  : <span className="rr-muted">Ctrl+Enter to add</span>}
+                  : <span className="rr-muted">{draft.type === "shape" ? "Shift+click adds a shape" : "Ctrl+Enter to add"}</span>}
                 <span className="rr-spacer" />
                 <button type="button" className="rr-btn sm" onClick={closeBox}>Cancel</button>
                 <button type="button" className="rr-btn sm tint" onClick={saveBox}>{editing ? "Save remark" : "Add remark"}</button>
@@ -664,7 +708,8 @@ function PDFChecker({
             </div>
           )}
         </div>
-        <ReaderTools currentPage={col.currentPage} numPages={totalPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} mode={mode} onMode={changeMode} />
+        <ReaderTools currentPage={col.currentPage} numPages={totalPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} mode={mode} onMode={changeMode} shapes={drawings.pages.length > 0}
+          before={hasBefore ? beforeView : null} beforeLabel={base?.round || "Earlier version"} onBefore={() => setBeforeView((v) => !v)} />
       </section>
 
       {base && tab === "changes" ? (
@@ -680,7 +725,17 @@ function PDFChecker({
           onWantFigures={() => setFiguresWanted(true)}
           revisionStatus={revisionStatus}
           onRevision={onRevision}
+          diagramPages={drawings.pages}
+          firstDiagramPage={(numPages ?? 0) + 1}
+          shownShapeId={shownShape?.id}
           onOpenRevision={(r) => {
+            // A shape card outlines its shape on the page; clicking it again hides it.
+            if (r.type === "shape") {
+              const hide = shownShape?.id === r.id;
+              setShownShape(hide ? null : { id: r.id, ...r.target });
+              setBeforeView(!hide && Boolean(r.target.before));
+              if (hide) return;
+            }
             col.goToRect(r.target.page, r.target.rects[0] || { top_position: r.target.y });
             onFocusChange?.({ id: `r${r.id}`, oldPage: r.page_number, oldRect: r.highlightRects[0] || { top_position: r.y_position } });
           }}

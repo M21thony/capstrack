@@ -96,7 +96,7 @@ export default function FigureCrop({ pdf, remark, maxWidth, maxHeight, pad, pend
         ctx.lineWidth = 2 * dpr;
         ctx.strokeStyle = "#fff";
         ctx.stroke();
-      } else if (remark.type === "box") {
+      } else if (remark.type === "box" || remark.type === "shape") {
         if (pending) ctx.setLineDash([6 * dpr, 4 * dpr]);
         rects.forEach((r) => ctx.strokeRect(x(r.left_position), y(r.top_position), (r.highlight_width / crop.width) * canvas.width, (r.highlight_height / crop.height) * canvas.height));
       } else {

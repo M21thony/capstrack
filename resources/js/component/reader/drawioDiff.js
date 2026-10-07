@@ -66,7 +66,7 @@ function readPage(cellEls) {
       parent: el.getAttribute("parent"), source: el.getAttribute("source"), target: el.getAttribute("target"),
       lines, text: lines.join(" "), fs: +st.fontSize || 12, off: pt("offset"),
       exit: port("exitX", "exitY"), entry: port("entryX", "entryY"),
-      shape: st.shape || st.bare || (st.ellipse ? "ellipse" : "rect"),
+      shape: st.shape || st.bare || (st.ellipse ? "ellipse" : "rect"), rounded: st.rounded === "1",
       fill: colour(st.fillColor), stroke: colour(st.strokeColor), dashed: st.dashed === "1",
       heads: [st.startArrow || "none", st.endArrow || "classic"],
       rel: g ? [num("x"), num("y"), num("width"), num("height")] : [0, 0, 0, 0],
@@ -123,6 +123,38 @@ function readPage(cellEls) {
   const area = (b) => (b[2] - b[0]) * (b[3] - b[1]);
   vs.forEach((c) => { c.inner = vs.some((x) => x !== c && !x.hidden && (x.parentCell === c || (inside(x, c) && area(x.box) < area(c.box) / 2))); });
   return out;
+}
+
+/** What kind of diagram a page is, from the shapes on it. */
+function diagramKind(cells) {
+  const has = (test) => cells.some(test);
+  if (has((c) => c.kind === "edge" && c.heads.some((h) => /^ER/.test(h))) || has((c) => c.shape === "table")) return "erd";
+  if (has((c) => c.shape === "partialRectangle" || /^D\d+$/i.test(c.text))) return "dfd";
+  if (has((c) => /umlActor/.test(c.shape))) return "usecase";
+  return "flow";
+}
+
+const ROLES = {
+  dfd: [[/swimlane|ellipse|process/, "Process"], [/partialRectangle|cylinder|datastore/, "Data store"], [/^rect$|rectangle/, "Entity"]],
+  erd: [[/rhombus/, "Relationship"], [/ellipse/, "Attribute"], [/table|swimlane|^rect$/, "Entity"]],
+  usecase: [[/umlActor/, "Actor"], [/ellipse/, "Use case"], [/^rect$|swimlane/, "System"]],
+  flow: [[/rhombus|decision/, "Decision"], [/terminator|ellipse/, "Start/End"], [/parallelogram|flowchart\.data$/, "Input/Output"],
+    [/document/, "Document"], [/cylinder|database|stored_data/, "Data store"], [/umlActor/, "Actor"], [/swimlane/, "Lane"], [/^rect$|process/, "Process"]],
+};
+
+/**
+ * A shape's part in its diagram ("Process", "Entity", "Decision", …), guessed
+ * from how it is drawn, so a shape drawn some other way is just a "Shape".
+ * Words laid inside a shape (or a data store's number) speak for that shape.
+ */
+export function shapeRole(cell, cells) {
+  const kind = diagramKind(cells);
+  if (kind === "dfd" && /^D\d+$/i.test(cell.text)) return "Data store";
+  let c = cell;
+  for (let i = 0; i < 5 && c.shape === "text" && c.parentCell?.kind === "vertex"; i++) c = c.parentCell;
+  if (c.shape === "text") return "Label";
+  const shape = kind === "dfd" && c.shape === "rect" && c.rounded ? "process" : c.shape;
+  return ROLES[kind].find(([test]) => test.test(shape))?.[1] || "Shape";
 }
 
 /** Every page of a .drawio file: its name, its model, its raw cells (read again for each compare) and its shapes. */
@@ -234,7 +266,8 @@ function wordFlags(from, to) {
 
 /**
  * One page of the earlier file against one of this version's: { spots,
- * oldCells, newCells }. A spot is changes that belong together (a removed
+ * oldCells, newCells, map, items }. map takes an old cell to the new one it
+ * became; items are every change, one per cell and what happened. A spot is changes that belong together (a removed
  * box with its arrows), with its items and the words that say what changed.
  */
 export function comparePages(oldPage, newPage) {
@@ -264,7 +297,7 @@ export function comparePages(oldPage, newPage) {
     }
   });
   B.forEach((b) => { if (!kept.has(b)) items.push({ neu: b, what: "added", text: b.text, line: b.kind === "edge", hidden: b.hidden }); });
-  return { spots: group(items), oldCells: A, newCells: B };
+  return { spots: group(items), oldCells: A, newCells: B, map, items };
 }
 
 /** Changes that belong together (a removed box with its arrows and its inner words) as one spot. */
@@ -296,6 +329,51 @@ function group(items) {
   });
 }
 
+/**
+ * Where a shape remark's cells went in the next version, from a comparePages
+ * result: { status: removed | changed | unchanged, cells: [{ id, neu, what }] }.
+ * neu is the new cell (null when gone); what lists how it changed
+ * (renamed, recoloured, reconnected, turned), or ["removed"].
+ */
+export function followShapes(ref, compare) {
+  const cells = (ref?.cells || []).map(({ id }) => {
+    const old = compare.oldCells.find((c) => c.id === id);
+    const neu = old ? compare.map.get(old) || null : null;
+    if (!neu) return { id, neu: null, what: ["removed"] };
+    return { id, neu, what: [...new Set(compare.items.filter((it) => it.old === old && it.neu).map((it) => it.what))] };
+  });
+  const gone = cells.filter((c) => !c.neu).length;
+  const status = cells.length && gone === cells.length ? "removed" : cells.some((c) => c.what.length) ? "changed" : "unchanged";
+  return { status, cells };
+}
+
+const segmentDist = ([ax, ay], [bx, by], x, y) => {
+  const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy;
+  const t = len ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len)) : 0;
+  return Math.hypot(x - ax - t * dx, y - ay - t * dy);
+};
+
+/**
+ * The shape or arrow under a click, from where each is drawn: [{ id, kind,
+ * box: [x1, y1, x2, y2], pts: [[x, y]…] (an arrow's line), labels: [box…] }].
+ * An arrow wins within tol of its line or on its words, the nearest one;
+ * otherwise the smallest shape holding the point, so a box beats its container.
+ */
+export function cellAt(targets, x, y, tol = 6) {
+  let best = null, bestDist = tol;
+  targets.forEach((t) => {
+    if (t.kind !== "edge") return;
+    const onLabel = (t.labels || []).some((b) => x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]);
+    const d = onLabel ? 0 : Math.min(...(t.pts || []).slice(1).map((p, i) => segmentDist(t.pts[i], p, x, y)));
+    if (d <= bestDist) { best = t; bestDist = d; }
+  });
+  if (best) return best;
+  const area = (b) => (b[2] - b[0]) * (b[3] - b[1]);
+  return targets
+    .filter((t) => t.kind === "vertex" && x >= t.box[0] && x <= t.box[2] && y >= t.box[1] && y <= t.box[3])
+    .sort((a, b) => area(a.box) - area(b.box))[0] || null;
+}
+
 /** A style with these keys set (draw.io styles are "name;key=value;…"). */
 export function withStyle(style, set) {
   const kept = (style || "").split(";").filter((kv) => kv && !(kv.split("=")[0] in set));
@@ -321,4 +399,34 @@ export function pairPages(mine, theirs) {
   mine.forEach((p, i) => { if (out[i] < 0) theirs.forEach((q, j) => { if (!used.has(j)) pairs.push([shared(p.words, q.words), i, j]); }); });
   pairs.sort((x, y) => y[0] - x[0]).forEach(([s, i, j]) => { if (s >= 0.3 && out[i] < 0 && !used.has(j)) { out[i] = j; used.add(j); } });
   return out;
+}
+
+const clampFraction = (n) => Math.min(1, Math.max(0, n));
+
+/**
+ * A picked cell's outline as marks on the page, as fractions of the picture: a box
+ * around a shape, and a thin band along each leg of an arrow (one box around a bent
+ * arrow would cover the shapes it goes around), plus its words.
+ */
+export function shapeRects(target, pic, pad = 4) {
+  const mark = ([x1, y1, x2, y2]) => ({
+    top_position: clampFraction((y1 - pad) / pic.height), left_position: clampFraction((x1 - pad) / pic.width),
+    highlight_width: Math.min((x2 - x1 + 2 * pad) / pic.width, 1), highlight_height: Math.min((y2 - y1 + 2 * pad) / pic.height, 1),
+  });
+  const labels = (target.labels || []).map(mark);
+  if (target.kind !== "edge" || (target.pts || []).length < 2) {
+    const boxes = [target.box, ...(target.labels || [])];
+    return [mark([Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))])];
+  }
+  const legs = target.pts.slice(1).flatMap(([x2, y2], i) => {
+    const [x1, y1] = target.pts[i];
+    // A slanted leg goes in short steps, so its bands stay close to the line.
+    const steps = Math.abs(x2 - x1) > 2 * pad && Math.abs(y2 - y1) > 2 * pad ? Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 12) : 1;
+    return Array.from({ length: steps }, (_, k) => {
+      const ax = x1 + ((x2 - x1) * k) / steps, ay = y1 + ((y2 - y1) * k) / steps;
+      const bx = x1 + ((x2 - x1) * (k + 1)) / steps, by = y1 + ((y2 - y1) * (k + 1)) / steps;
+      return mark([Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by)]);
+    });
+  });
+  return [...legs, ...labels];
 }

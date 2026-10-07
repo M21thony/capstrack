@@ -102,7 +102,8 @@ function App() {
       return;
     }
     const carried = (c) => String(c.carried_from_id) === String(item.id);
-    if (next === "not_fixed" && item.target && !commentsRef.current.some(carried)) {
+    // A removed shape points at the earlier drawing (target.before), so nothing is carried onto this one.
+    if (next === "not_fixed" && item.target && !item.target.before && !commentsRef.current.some(carried)) {
       const t = item.target;
       setComments((prev) => [...prev, {
         id: `new-${Date.now()}`,
@@ -119,6 +120,7 @@ function App() {
         color: item.color,
         figure_label: item.type === "text" ? null : item.figureNow || item.figure_label,
         diagram_type: item.type === "text" ? null : item.diagram_type,
+        shape_ref: item.type === "shape" ? item.shapeNow || item.shape_ref : null,
         carried_from_id: item.id,
       }]);
       showToast("Added to this review as still not fixed.");
@@ -335,7 +337,7 @@ function App() {
         }
         (comment.highlightRects || []).forEach((rect) => {
           try {
-            if (comment.type === "box") {
+            if (comment.type === "box" || comment.type === "shape") {
               // An outline, so the diagram under it stays readable.
               page.drawRectangle({
                 x: (rect.left_position || 0) * width,

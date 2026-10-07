@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { comparePages, holderOf, pairPages, readDrawio, withStyle } from "./drawioDiff.js";
+import { comparePages, holderOf, pairPages, readDrawio, shapeRole, withStyle } from "./drawioDiff.js";
+
+export { shapeRects } from "./drawioDiff.js";
 import { textLayer } from "./textLayer.js";
 
 /*
@@ -117,19 +119,57 @@ function paint(model, spots, side) {
   return copy;
 }
 
-/** The page drawn by draw.io, as a picture (its labels can never run anything on this page), and its words. */
+const BORDER = 12;
+
+/**
+ * Where each shape and arrow is drawn on the picture, in its pixels, for
+ * picking one with a click: [{ id, kind, box, pts, labels }]. An arrow's
+ * label shapes count as the arrow.
+ */
+function targetsOf(graph) {
+  const model = graph.getModel();
+  const bounds = graph.getGraphBounds();
+  // getSvg moves the drawing so it starts BORDER pixels in from the corner.
+  const dx = Math.floor(BORDER - bounds.x), dy = Math.floor(BORDER - bounds.y);
+  const boxOf = (b) => [b.x + dx, b.y + dy, b.x + b.width + dx, b.y + b.height + dy];
+  const out = new Map();
+  Object.values(model.cells).forEach((cell) => {
+    const state = graph.view.getState(cell);
+    if (!state || !model.isVisible(cell)) return;
+    const parent = model.getParent(cell);
+    if (model.isVertex(cell) && model.isEdge(parent)) {
+      const edge = out.get(parent.id);
+      if (edge) edge.labels.push(boxOf(state));
+      else out.set(parent.id, { id: parent.id, kind: "edge", box: null, pts: [], labels: [boxOf(state)] });
+      return;
+    }
+    if (model.isEdge(cell)) {
+      const t = out.get(cell.id) || { id: cell.id, kind: "edge", labels: [] };
+      t.pts = (state.absolutePoints || []).filter(Boolean).map((p) => [p.x + dx, p.y + dy]);
+      t.box = boxOf(state);
+      if (state.text?.boundingBox) t.labels.push(boxOf(state.text.boundingBox));
+      out.set(cell.id, t);
+    } else if (model.isVertex(cell)) {
+      out.set(cell.id, { id: cell.id, kind: "vertex", box: boxOf(state) });
+    }
+  });
+  return [...out.values()].filter((t) => t.box);
+}
+
+/** The page drawn by draw.io, as a picture (its labels can never run anything on this page), its words, and where each cell is. */
 function picture(model) {
   const { Graph, mxCodec, mxUtils } = window;
   const graph = new Graph(document.createElement("div"));
   try {
     // Reading a model unwraps its data-carrying shapes in place, so it reads a copy: the compare still needs the original.
     new mxCodec(model.ownerDocument).decode(model.cloneNode(true), graph.getModel());
-    const svg = graph.getSvg("#ffffff", 1, 12, null, null, true);
+    const svg = graph.getSvg("#ffffff", 1, BORDER, null, null, true);
     return {
       src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(mxUtils.getXml(svg))}`,
       width: parseFloat(svg.getAttribute("width")) || 800,
       height: parseFloat(svg.getAttribute("height")) || 600,
       text: textLayer(svg),
+      targets: targetsOf(graph),
     };
   } finally {
     graph.destroy();
@@ -195,21 +235,33 @@ async function pagesAt(url) {
 }
 
 /**
- * The diagram pages of one version: [{ key, label, plain, marked, said }].
- * With the other version's files, marked is this side's changes coloured in
- * (side "neu" for the version under review, "old" for the earlier one); a
- * page with no partner is all put in, or all taken out.
+ * The diagram pages of one version: [{ key, label, file, name, cells, plain,
+ * marked, said, before, compare, oldMarked }]. With the other version's files,
+ * marked is this side's changes coloured in (side "neu" for the version under
+ * review, "old" for the earlier one); a page with no partner is all added, or
+ * all removed. On the "neu" side, before is the earlier page it was paired
+ * with ({ file, name }), compare what comparePages found, and oldMarked that
+ * earlier page drawn with its removed parts in red.
  */
 export async function diagramPages(url, otherUrl = null, side = "neu") {
   const [mine, theirs] = await Promise.all([pagesAt(url), otherUrl ? pagesAt(otherUrl) : null, loadViewer()]);
   const partner = theirs ? pairPages(mine, theirs) : [];
   return mine.map((p, i) => {
-    const page = { key: `${p.file}#${p.index}`, label: [p.file, p.name].filter(Boolean).join(" — "), plain: picture(p.model), marked: null, said: [] };
+    const page = {
+      key: `${p.file}#${p.index}`, label: [p.file, p.name].filter(Boolean).join(" — "), file: p.file, name: p.name,
+      cells: p.cells, plain: picture(p.model), marked: null, said: [],
+    };
     if (!theirs) return page;
     const other = theirs[partner[i]] || { els: [] };
-    const { spots } = side === "old" ? comparePages(p, other) : comparePages(other, p);
+    const compare = side === "old" ? comparePages(p, other) : comparePages(other, p);
+    const { spots } = compare;
     page.said = spots.flatMap((s) => s.said);
     if (spots.length) page.marked = picture(paint(p.model, spots, side));
+    if (side === "neu" && other.model) {
+      page.before = { file: other.file, name: other.name };
+      page.compare = compare;
+      page.oldMarked = picture(spots.length ? paint(other.model, spots, "old") : other.model);
+    }
     return page;
   });
 }
@@ -237,14 +289,24 @@ export function DiagramsOnly({ drawings, loading, children }) {
   return <div className="rr-doc">{children}</div>;
 }
 
+/** The drawing a diagram page shows right now: the earlier version, this one with its changes coloured in, or plain. */
+export const shownPicture = (page, showChanges, before = false) => (before && page.oldMarked) || (showChanges && page.marked) || page.plain;
+
+/** What a shape remark keeps about a picked cell, so it can be found again in the next version. */
+export function shapeCell(page, id) {
+  const c = page.cells.find((x) => x.id === id);
+  if (!c) return { id, kind: "vertex", text: "" };
+  return { id, kind: c.kind, text: c.text || "", ...(c.kind === "edge" ? { from: c.from?.text || "", to: c.to?.text || "" } : { role: shapeRole(c, page.cells) }) };
+}
+
 /** One diagram page's body: its name, then the drawing filling the page's width, its words selectable over it. */
-export function DiagramPage({ page, showChanges = true }) {
-  const pic = (showChanges && page.marked) || page.plain;
+export function DiagramPage({ page, showChanges = true, before = false }) {
+  const pic = shownPicture(page, showChanges, before);
   const words = useRef(null);
   useEffect(() => { words.current?.replaceChildren(pic.text.cloneNode(true)); }, [pic]);
   return (
     <div className="rr-diagram">
-      <div className="rr-diagram-cap">{page.label}</div>
+      <div className="rr-diagram-cap">{page.label}{before && page.oldMarked && " · earlier version"}</div>
       <img src={pic.src} width={pic.width} height={pic.height} alt={`Diagram: ${page.label}`} draggable={false} />
       <div ref={words} className="rr-diagram-text" />
     </div>

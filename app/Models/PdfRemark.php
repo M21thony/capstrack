@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class PdfRemark extends Model
 {
-    /** Selected words, a box (or several) drawn over a figure, or a pin on one spot. */
-    public const MARK_TYPES = ['text', 'box', 'pin'];
+    /** Selected words, a box (or several) drawn over a figure, a pin on one spot, or shapes picked on a diagram. */
+    public const MARK_TYPES = ['text', 'box', 'pin', 'shape'];
 
     /** The kinds of diagram a figure remark can be about; the quick remarks follow them. */
     public const DIAGRAM_TYPES = ['ERD', 'DFD', 'UseCase', 'Flowchart', 'Architecture', 'UI'];
@@ -23,13 +23,14 @@ class PdfRemark extends Model
         'review_id', 'page_number', 'top_position', 'left_position',
         'highlight_width', 'highlight_height', 'color', 'comment',
         'selected_text', 'is_general', 'section',
-        'mark_type', 'rects', 'figure_label', 'diagram_type',
+        'mark_type', 'rects', 'shape_ref', 'figure_label', 'diagram_type',
         'revision_status', 'revision_checked_at', 'carried_from_id',
     ];
 
     protected $casts = [
         'is_general' => 'boolean',
         'rects' => 'array',
+        'shape_ref' => 'array',
         'revision_checked_at' => 'datetime',
     ];
 
