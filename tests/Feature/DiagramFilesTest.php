@@ -29,6 +29,18 @@ class DiagramFilesTest extends TestCase
 
     private Student $student;
 
+    /** A Visio drawing: a zip holding visio/document.xml, or a zip without one. */
+    private function visio(string $name, bool $real = true): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'vsdx');
+        $zip = new \ZipArchive;
+        $zip->open($path, \ZipArchive::OVERWRITE);
+        $zip->addFromString($real ? 'visio/document.xml' : 'word/document.xml', '<VisioDocument/>');
+        $zip->close();
+
+        return new UploadedFile($path, $name, 'application/vnd.ms-visio.drawing', null, true);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -96,6 +108,29 @@ class DiagramFilesTest extends TestCase
         foreach ($files as $file) {
             Storage::disk('local')->assertExists($file['path']);
         }
+    }
+
+    public function test_visio_files_are_taken_and_given_to_the_viewer_as_base64(): void
+    {
+        $this->adviser();
+
+        $this->send([$this->visio('dfd.vsdx'), UploadedFile::fake()->createWithContent('erd.drawio', self::DRAWIO)])->assertOk();
+
+        $document = CapstoneDocument::first();
+        $this->assertSame(['dfd.vsdx', 'erd.drawio'], array_column($document->diagram_files, 'name'));
+        $visio = Storage::disk('local')->get($document->diagram_files[0]['path']);
+        $this->assertSame([['name' => 'dfd.vsdx', 'vsdx' => base64_encode($visio)], ['name' => 'erd.drawio', 'xml' => self::DRAWIO]], $document->diagrams());
+    }
+
+    public function test_a_file_named_vsdx_that_is_not_a_visio_drawing_is_refused(): void
+    {
+        $this->adviser();
+
+        // A zip of something else, and not a zip at all.
+        $this->send([$this->visio('dfd.vsdx', real: false)])->assertSessionHasErrors('diagrams.0');
+        $this->send([UploadedFile::fake()->createWithContent('dfd.vsdx', self::DRAWIO)])->assertSessionHasErrors('diagrams.0');
+
+        $this->assertSame(0, CapstoneDocument::count());
     }
 
     public function test_a_document_without_diagrams_keeps_none(): void

@@ -2,7 +2,7 @@
 // page is, and how a shape is recoloured. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pairPages, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
+import { comparePages, pairPages, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
 
 const page = (file, name, index, words = "") => ({ file, name, index, words: new Set(words.split(" ").filter(Boolean)) });
 
@@ -38,4 +38,25 @@ test("a style keeps its own keys and takes the new values", () => {
     "rounded=0;whiteSpace=wrap;fillColor=#e0f7e8;gradientColor=none;");
   assert.equal(withStyle("text;html=1", { html: 1 }), "text;html=1;");
   assert.equal(withStyle(null, { strokeWidth: 2 }), "strokeWidth=2;");
+});
+
+// Just enough of a draw.io cell for reading a page: its attributes and, for a shape, its place.
+const cell = (attrs, box) => {
+  const geometry = box && { getAttribute: (n) => box[n], getElementsByTagName: () => [] };
+  return {
+    parentNode: { nodeName: "root" },
+    getAttribute: (n) => attrs[n] ?? null,
+    getElementsByTagName: (t) => (t === "mxGeometry" && geometry ? [geometry] : []),
+  };
+};
+
+test("an arrow that ends on another arrow is read, whichever comes first", () => {
+  const els = [
+    cell({ id: "1" }),
+    cell({ id: "late", edge: "1", parent: "1", source: "early", target: "b", value: "Yes" }),
+    cell({ id: "a", vertex: "1", parent: "1", value: "Start" }, { x: 0, y: 0, width: 80, height: 40 }),
+    cell({ id: "b", vertex: "1", parent: "1", value: "End" }, { x: 0, y: 200, width: 80, height: 40 }),
+    cell({ id: "early", edge: "1", parent: "1", source: "a", target: "b" }),
+  ];
+  assert.deepEqual(comparePages({ els }, { els }).spots, []);
 });

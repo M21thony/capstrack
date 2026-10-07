@@ -10,18 +10,41 @@ import { comparePages, holderOf, pairPages, readDrawio, withStyle } from "./draw
 
 const VIEWER = "/vendor/drawio";
 let viewer = null;
+let visio = null;
 
-/** draw.io's viewer, loaded once. Its paths point here first, so it never reaches out to diagrams.net. */
+const script = (src) => new Promise((resolve, reject) => {
+  const s = Object.assign(document.createElement("script"), { src: `${VIEWER}/${src}`, onload: resolve, onerror: reject });
+  document.head.append(s);
+});
+
+/**
+ * draw.io's viewer and its shape library (AWS, Cisco, flowchart…), loaded
+ * once. Its paths point here first, so it never reaches out to diagrams.net.
+ */
 export function loadViewer() {
-  viewer ??= new Promise((resolve, reject) => {
-    ["PROXY_URL", "DRAWIO_LIGHTBOX_URL", "VSS_CONVERT_URL", "DRAWIO_LOG_URL"].forEach((k) => { window[k] = ""; });
-    ["STYLE_PATH", "SHAPES_PATH", "STENCIL_PATH", "DRAW_MATH_URL", "GRAPH_IMAGE_PATH", "mxImageBasePath", "mxBasePath"].forEach((k) => { window[k] = VIEWER; });
-    const s = Object.assign(document.createElement("script"), { src: `${VIEWER}/viewer-static.min.js` });
-    s.onload = resolve;
-    s.onerror = () => { viewer = null; reject(new Error("The diagram viewer did not load.")); };
-    document.head.append(s);
-  });
+  ["PROXY_URL", "DRAWIO_LIGHTBOX_URL", "VSS_CONVERT_URL", "DRAWIO_LOG_URL"].forEach((k) => { window[k] = ""; });
+  ["STYLE_PATH", "SHAPES_PATH", "STENCIL_PATH", "DRAW_MATH_URL", "GRAPH_IMAGE_PATH", "mxImageBasePath", "mxBasePath"].forEach((k) => { window[k] = VIEWER; });
+  viewer ??= script("viewer-static.min.js").then(() => script("stencils.min.js"))
+    .catch(() => { viewer = null; throw new Error("The diagram viewer did not load."); });
   return viewer;
+}
+
+/** draw.io's Visio reader, loaded once, only when a team attached a .vsdx. */
+function loadVisio() {
+  // The reader ends by adding a menu action to draw.io's editor, which the viewer doesn't have.
+  window.EditorUi ??= function EditorUi() {};
+  visio ??= loadViewer().then(() => script("vsdx/jszip.min.js")).then(() => script("vsdx/bmpDecoder.js")).then(() => script("vsdx/importer.js"))
+    .catch(() => { visio = null; throw new Error("The Visio reader did not load."); });
+  return visio;
+}
+
+/** A .vsdx (sent as base64) turned into draw.io's own file, by draw.io's reader, here in the browser. */
+async function visioToDrawio(base64) {
+  await loadVisio();
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  return new Promise((resolve, reject) => {
+    new window.com.mxgraph.io.mxVsdxCodec().decodeVsdx(new Blob([bytes]), (xml) => (xml ? resolve(xml) : reject(new Error("Not a Visio file"))), null, reject);
+  });
 }
 
 const GREEN = { fill: "#e0f7e8", line: "#1a7f37", word: "#abf2bc" };
@@ -137,7 +160,8 @@ function picture(model) {
   const { Graph, mxCodec, mxUtils } = window;
   const graph = new Graph(document.createElement("div"));
   try {
-    new mxCodec(model.ownerDocument).decode(model, graph.getModel());
+    // Reading a model unwraps its data-carrying shapes in place, so it reads a copy: the compare still needs the original.
+    new mxCodec(model.ownerDocument).decode(model.cloneNode(true), graph.getModel());
     const svg = graph.getSvg("#ffffff", 1, 12, null, null, true);
     return {
       src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(mxUtils.getXml(svg))}`,
@@ -194,12 +218,12 @@ export function withDiagramPages(pdf, pages) {
   });
 }
 
-/** Every page of the .drawio files at this address. */
+/** Every page of the .drawio and .vsdx files at this address. */
 async function pagesAt(url) {
   const r = await fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } });
   if (!r.ok) throw new Error(`Could not load the diagrams (${r.status}).`);
   const files = await r.json();
-  const read = await Promise.all(files.map((f) => readDrawio(f.xml).catch(() => [])));
+  const read = await Promise.all(files.map((f) => (f.vsdx ? visioToDrawio(f.vsdx) : Promise.resolve(f.xml)).then(readDrawio).catch(() => [])));
   return files.flatMap((f, n) => read[n].filter((p) => p.model).map((p, index) => ({
     ...p, file: f.name, index,
     words: new Set(p.cells.flatMap((c) => c.text.toLowerCase().split(" ").filter(Boolean))),

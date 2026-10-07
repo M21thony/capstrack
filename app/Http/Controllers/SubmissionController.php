@@ -47,13 +47,17 @@ class SubmissionController extends Controller
             'recipients.*' => 'in:'.implode(',', SubmissionRecipients::ROLES),
             'subject_adviser_folder_id' => 'nullable|string',
             'deliverable_id' => 'nullable|integer',
-            // The draw.io files of its diagrams, so a reviewer can be shown exactly what changed in them.
+            // The draw.io or Visio files of its diagrams, so a reviewer can be shown exactly what changed in them.
             'diagrams' => 'nullable|array|max:20',
             'diagrams.*' => ['file', 'max:5120', function (string $attribute, mixed $value, Closure $fail) {
-                $head = (string) file_get_contents($value->getRealPath(), false, null, 0, 4096);
+                $isDiagram = match (strtolower($value->getClientOriginalExtension())) {
+                    'drawio' => (bool) preg_match('/<(mxfile|mxGraphModel)\b/', (string) file_get_contents($value->getRealPath(), false, null, 0, 4096)),
+                    'vsdx' => $this->isVisioFile($value->getRealPath()),
+                    default => false,
+                };
 
-                if (strtolower($value->getClientOriginalExtension()) !== 'drawio' || ! preg_match('/<(mxfile|mxGraphModel)\b/', $head)) {
-                    $fail('Diagrams must be draw.io files (.drawio).');
+                if (! $isDiagram) {
+                    $fail('Diagrams must be draw.io (.drawio) or Visio (.vsdx) files.');
                 }
             }],
         ]);
@@ -540,6 +544,21 @@ class SubmissionController extends Controller
         Storage::disk('local')->delete([$document->file_path, ...array_column($document->diagram_files ?? [], 'path')]);
 
         return back()->with('status', $document->file_name.' was unsubmitted.');
+    }
+
+    /** A Visio drawing is a zip holding visio/document.xml. */
+    private function isVisioFile(string $path): bool
+    {
+        $zip = new \ZipArchive;
+
+        if ($zip->open($path) !== true) {
+            return false;
+        }
+
+        $hasDocument = $zip->locateName('visio/document.xml') !== false;
+        $zip->close();
+
+        return $hasDocument;
     }
 
     /**

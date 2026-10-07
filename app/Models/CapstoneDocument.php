@@ -29,20 +29,23 @@ class CapstoneDocument extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        // The .drawio files sent with it: [{name, path}], or null for none.
+        // The .drawio and .vsdx files sent with it: [{name, path}], or null for none.
         return ['diagram_files' => 'array'];
     }
 
     /**
-     * The draw.io files sent with it, for the viewer to draw.
+     * The draw.io and Visio files sent with it, for the viewer to draw. A
+     * Visio file is a zip, so it goes as base64 for the browser to convert.
      *
-     * @return list<array{name: string, xml: string}>
+     * @return list<array{name: string, xml?: string, vsdx?: string}>
      */
     public function diagrams(): array
     {
         return collect($this->diagram_files ?? [])
             ->filter(fn (array $file) => Storage::disk('local')->exists($file['path']))
-            ->map(fn (array $file) => ['name' => $file['name'], 'xml' => Storage::disk('local')->get($file['path'])])
+            ->map(fn (array $file) => str_ends_with(strtolower($file['name']), '.vsdx')
+                ? ['name' => $file['name'], 'vsdx' => base64_encode(Storage::disk('local')->get($file['path']))]
+                : ['name' => $file['name'], 'xml' => Storage::disk('local')->get($file['path'])])
             ->values()->all();
     }
 

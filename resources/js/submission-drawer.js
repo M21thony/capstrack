@@ -600,25 +600,25 @@ function checkNotes() {
   return out;
 }
 
-/** The draw.io files of the document's diagrams, sent along so a reviewer sees exactly what changed in them. */
+/** The draw.io or Visio files of the document's diagrams, sent along so a reviewer sees exactly what changed in them. */
 function diagramsHtml() {
   if (ext(S.file.name) !== 'pdf') return '';
   const list = S.diagrams.length
     ? '<ul class="up-checks">' + S.diagrams.map((d, i) => `<li class="ok">${svg('file', 13)}<span>${esc(d.name)} · ${mb(d.size)}</span>${linkBtn('Remove', 'undiagram', ` data-i="${i}" data-muted`)}</li>`).join('') + '</ul>'
     : '';
-  return `<div class="up-goes"><div class="up-goes-h"><span class="up-label">Diagram files · optional</span>${linkBtn('Attach .drawio', 'diagrams')}</div>
-    ${list}<p class="up-hint">Made your diagrams in draw.io? Attach their .drawio files so your reviewer sees exactly what changed in them.</p>
+  return `<div class="up-goes"><div class="up-goes-h"><span class="up-label">Diagram files · optional</span>${linkBtn('Attach .drawio / .vsdx', 'diagrams')}</div>
+    ${list}<p class="up-hint">Made your diagrams in draw.io or Visio? Attach their .drawio or .vsdx files so your reviewer sees exactly what changed in them.</p>
     ${S.diagramProblem ? note('error', S.diagramProblem) : ''}
-    <input type="file" id="up-diagrams" accept=".drawio" multiple hidden></div>`;
+    <input type="file" id="up-diagrams" accept=".drawio,.vsdx" multiple hidden></div>`;
 }
 
 function takeDiagrams(files) {
-  const wrong = files.filter((f) => ext(f.name) !== 'drawio' || f.size > 5 * 1024 * 1024);
+  const wrong = files.filter((f) => !['drawio', 'vsdx'].includes(ext(f.name)) || f.size > 5 * 1024 * 1024);
   const room = 20 - S.diagrams.length;
   const fine = files.filter((f) => !wrong.includes(f));
   S.diagrams.push(...fine.slice(0, room));
   S.diagramProblem = wrong.length
-    ? `<b>${esc(wrong[0].name)} wasn’t added.</b> Only draw.io files (.drawio) up to 5 MB.`
+    ? `<b>${esc(wrong[0].name)} wasn’t added.</b> Only draw.io (.drawio) or Visio (.vsdx) files up to 5 MB.`
     : (fine.length > room ? '<b>Up to 20 diagram files.</b> The rest weren’t added.' : null);
   render();
 }

@@ -113,7 +113,8 @@ function readPage(cellEls) {
     const [ox, oy] = c.parentCell?.kind === "vertex" ? c.parentCell.box : [0, 0];
     c.bends = c.bends.map(([x, y]) => [x + ox, y + oy]);
     c.ends = c.ends.map((p) => p && [p[0] + ox, p[1] + oy]);
-    const ps = [c.from ? centre(c.from.box) : c.ends[0], ...c.bends, c.to ? centre(c.to.box) : c.ends[1]].filter(Boolean);
+    // An arrow may end on another arrow (Visio files do this), which may not have its place yet.
+    const ps = [c.from?.box ? centre(c.from.box) : c.ends[0], ...c.bends, c.to?.box ? centre(c.to.box) : c.ends[1]].filter(Boolean);
     c.box = ps.length ? [Math.min(...ps.map((p) => p[0])), Math.min(...ps.map((p) => p[1])), Math.max(...ps.map((p) => p[0])), Math.max(...ps.map((p) => p[1]))] : [0, 0, 0, 0];
   });
   // A container: something is drawn in it, as its child or only laid on top of it.
