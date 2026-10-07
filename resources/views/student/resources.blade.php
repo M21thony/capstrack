@@ -21,7 +21,7 @@
   }
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
-  @include('student.partials.render-whole')
+  @include('partials.render-whole')
 </head>
 <body>
 

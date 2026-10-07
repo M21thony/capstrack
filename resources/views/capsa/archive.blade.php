@@ -50,6 +50,7 @@
   .abs-text{text-align:left}
 }
 </style>
+  @include('partials.render-whole')
 </head>
 <body>
 @php

@@ -7,7 +7,7 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite(['resources/student-ui/styles.css', 'resources/student-ui/Styles/experts.css'])
-  @include('student.partials.render-whole')
+  @include('partials.render-whole')
 </head>
 <body>
 @include('student.partials.sidebar')

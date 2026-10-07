@@ -8,7 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite(['resources/student-ui/Styles/team.css', 'resources/css/financial.css', 'resources/js/financial/student.js'])
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
-  @include('student.partials.render-whole')
+  @include('partials.render-whole')
 </head>
 <style nonce="{{ Vite::cspNonce() }}">
 @keyframes spin { to { transform: rotate(360deg); } }

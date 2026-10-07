@@ -86,6 +86,7 @@
     .gl-go{display:inline-block}
   }
 </style>
+  @include('partials.render-whole')
 </head>
 <body>
 

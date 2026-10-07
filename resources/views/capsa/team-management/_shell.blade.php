@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/team-management.css') }}"/>
 @stack('head')
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
+  @include('partials.render-whole')
 </head>
 <body>
 

@@ -15,13 +15,17 @@
   session, so signing in again starts over.
 
   This runs from the sidebar, before the content has been read, and hides the
-  content until the first frame; student/partials/render-whole holds that
+  content until the first frame; partials/render-whole holds that
   frame until the whole page has been read, so the skeleton is taken from the
   finished layout. Only the content area takes part; the sidebar and the top
   bar are drawn as they are.
 --}}
 <style nonce="{{ Vite::cspNonce() }}">
-  html.csk-hide .main > .content { opacity: 0 !important; }
+  /* Hidden until the skeleton is drawn over it, on the first frame. The id
+     outranks partials/skeleton-head's "#real-content is shown" on staff
+     pages. */
+  html.csk-hide .main > :not(.topbar),
+  html.csk-hide .main > #real-content { opacity: 0 !important; }
   #csk { position: fixed; z-index: 30; pointer-events: none; }
   #csk > .csk-clip { position: absolute; inset: 0; overflow: hidden; }
   #csk .csk-layer { position: absolute; left: 0; top: 0; }
@@ -126,22 +130,51 @@
     return sheet;
   }
 
-  // The box around a few elements, as on screen now.
-  function around(elements) {
-    var box = null;
-    elements.forEach(function (element) {
-      var rect = element.getBoundingClientRect();
-      box = box ? {
-        left: Math.min(box.left, rect.left), top: Math.min(box.top, rect.top),
-        right: Math.max(box.right, rect.right), bottom: Math.max(box.bottom, rect.bottom),
-      } : { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
-    });
-    return box;
+  // The page's own part, beside the sidebar and under the top bar: the
+  // largest thing in .main that is not the top bar - .content on student
+  // pages, a wrapper around it on most staff pages, the whole Defenses or
+  // Financial board on theirs.
+  function areaOf(main) {
+    var best = null;
+    var largest = 0;
+    for (var child = main.firstElementChild; child; child = child.nextElementSibling) {
+      if (SKIP[child.tagName] || child.classList.contains('topbar')) continue;
+      var style = getComputedStyle(child);
+      if (style.display === 'none' || style.position === 'fixed') continue;
+      var rect = child.getBoundingClientRect();
+      if (rect.width * rect.height > largest) {
+        largest = rect.width * rect.height;
+        best = child;
+      }
+    }
+    return best;
+  }
+
+  // What scrolls in it: the area itself, or the box filling it that does.
+  function scrollerIn(area) {
+    for (var element = area; element;) {
+      if (/(auto|scroll|overlay)/.test(getComputedStyle(element).overflowY)) return element;
+      var inside = null;
+      for (var child = element.firstElementChild; child; child = child.nextElementSibling) {
+        var rect = child.getBoundingClientRect();
+        if (rect.height >= element.clientHeight * 0.6 && rect.width >= element.clientWidth * 0.6) {
+          inside = child;
+          break;
+        }
+      }
+      element = inside;
+    }
+    return area;
   }
 
   function build(since) {
-    var content = document.querySelector('.main > .content');
-    if (!content) return root.classList.remove('csk-hide');
+    var main = document.querySelector('.main');
+    var area = main && areaOf(main);
+    if (!area) {
+      if (document.readyState === 'loading') return requestAnimationFrame(function () { build(since); });
+      return root.classList.remove('csk-hide');
+    }
+    var content = scrollerIn(area);
 
     var box = content.getBoundingClientRect();
     var originX = box.left - content.scrollLeft;
@@ -151,8 +184,7 @@
     var cover = null;
     var sheets = [];
     var tail = null;
-    var foot = null;
-    var below = [];
+    var fixed = [];
     // The skeleton keeps to the content area as it is now, not as it was on
     // the first frame: the area can still grow or move as the page settles,
     // which used to leave a strip of the real page showing below the
@@ -172,11 +204,11 @@
         tail.bottom = content.scrollHeight;
         place(tail);
       }
-      if (foot) {
-        var under = around(below);
-        foot.node.style.left = (under.left - now.left) + 'px';
-        foot.node.style.top = (under.top - top) + 'px';
-      }
+      fixed.forEach(function (part) {
+        var at = part.element.getBoundingClientRect();
+        part.node.style.left = (at.left - now.left) + 'px';
+        part.node.style.top = (at.top - top) + 'px';
+      });
     }
     var count = 0;
     var pieces = [];
@@ -272,25 +304,29 @@
 
     for (var child = content.firstElementChild; child; child = child.nextElementSibling) walk(child);
 
-    // What sits under the content area, in the page itself rather than in
-    // a dialog - Team Management's "Find members / Find team" key - is part
-    // of the page too: its own band, which stays where it is when the
-    // content scrolls.
-    for (var after = content.nextElementSibling; after; after = after.nextElementSibling) {
-      var placed = getComputedStyle(after);
-      var sized = after.getBoundingClientRect();
-      if (placed.display !== 'none' && placed.position !== 'fixed' && placed.position !== 'absolute' && sized.width >= 2 && sized.height >= 2) below.push(after);
+    // What sits around the part that scrolls, in the page itself rather
+    // than in a dialog - Team Management's "Find members / Find team" key, a
+    // staff page's header above its list - is part of the page too: each its
+    // own piece of skeleton, which stays where it is as the content scrolls.
+    var parts = [];
+    for (var inner = content; inner && inner !== main && inner.parentElement; inner = inner.parentElement) {
+      for (var beside = inner.parentElement.firstElementChild; beside; beside = beside.nextElementSibling) {
+        if (beside === inner || SKIP[beside.tagName] || beside.classList.contains('topbar')) continue;
+        var placed = getComputedStyle(beside);
+        var sized = beside.getBoundingClientRect();
+        if (placed.display !== 'none' && placed.visibility !== 'hidden' && placed.position !== 'fixed' && sized.width >= 2 && sized.height >= 2) {
+          parts.push({ element: beside, pieces: [], box: sized });
+        }
+      }
     }
-    var footPieces = [];
-    if (below.length) {
-      var under = around(below);
-      var contentPieces = pieces;
-      pieces = footPieces;
-      originX = under.left;
-      originY = under.top;
-      below.forEach(walk);
-      pieces = contentPieces;
-    }
+    var contentPieces = pieces;
+    parts.forEach(function (part) {
+      pieces = part.pieces;
+      originX = part.box.left;
+      originY = part.box.top;
+      walk(part.element);
+    });
+    pieces = contentPieces;
 
     cover = document.createElement('div');
     cover.id = 'csk';
@@ -342,23 +378,26 @@
     clip.appendChild(layer);
     cover.appendChild(clip);
 
-    if (below.length) {
-      var underBox = around(below);
-      var footSheet = document.createElement('div');
-      footSheet.className = 'csk-sheet';
-      footSheet.style.cssText = 'width:' + (underBox.right - underBox.left) + 'px;height:' + (underBox.bottom - underBox.top) + 'px;background:' + surface;
-      footPieces.forEach(function (piece) {
+    parts.forEach(function (part) {
+      var partSheet = document.createElement('div');
+      partSheet.className = 'csk-sheet';
+      partSheet.style.cssText = 'width:' + part.box.width + 'px;height:' + part.box.height + 'px;background:' + surface;
+      part.pieces.forEach(function (piece) {
         piece.node.style.top = piece.top + 'px';
-        footSheet.appendChild(piece.node);
+        partSheet.appendChild(piece.node);
       });
-      cover.appendChild(footSheet);
-      foot = { node: footSheet, top: 0, bottom: 0, done: false, fixed: true };
-      sheets.push(foot);
-    }
+      cover.appendChild(partSheet);
+      var record = { node: partSheet, element: part.element, top: 0, bottom: 0, done: false, fixed: true };
+      fixed.push(record);
+      sheets.push(record);
+    });
 
     follow();
     document.body.appendChild(cover);
-    root.classList.remove('csk-hide');
+    // A page still being read stays hidden under its skeleton; the skeleton
+    // is drawn again as the rest comes in, and the last time, once all of
+    // it has, lets it show.
+    if (document.readyState !== 'loading') root.classList.remove('csk-hide');
 
     // The page can be scrolled while it loads: the wheel, or a finger, over
     // the skeleton scrolls the content beneath.
@@ -494,7 +533,7 @@
     // in between.
     var built = performance.now();
     var redrawing = false;
-    var watching = window.MutationObserver ? new MutationObserver(function () {
+    function redraw(soon) {
       if (redrawing || revealed || finished) return;
       redrawing = true;
       setTimeout(function () {
@@ -509,11 +548,13 @@
           window.removeEventListener('resize', finishNow);
           cover.remove();
           if (active === stop) active = null;
-          try { build(shown); } catch (e) {}
+          try { build(shown); } catch (e) { root.classList.remove('csk-hide'); }
         });
-      }, Math.max(0, 150 - (performance.now() - built)));
-    }) : null;
-    if (watching) watching.observe(content, { childList: true, subtree: true });
+      }, soon ? 0 : Math.max(0, 150 - (performance.now() - built)));
+    }
+    redrawNow = function () { redraw(true); };
+    var watching = window.MutationObserver ? new MutationObserver(function () { redraw(false); }) : null;
+    if (watching) watching.observe(document.readyState === 'loading' ? main : content, { childList: true, subtree: true });
   }
 
   // A tab that switches in place (Team's Financial Records, the Experts
@@ -521,6 +562,11 @@
   // after drawing the tab, before the browser paints it, and seen() for the
   // tab it opened on.
   var holds = 0;
+  var redrawNow = null;
+  // The page has been read to its end: the skeleton is drawn from all of it.
+  document.addEventListener('readystatechange', function () {
+    if (document.readyState === 'interactive' && redrawNow) redrawNow();
+  });
   window.contentSkeleton = {
     seen: function (view) { firstOpening(view); },
     // A page that draws part of itself once its data is in holds the
@@ -547,8 +593,7 @@
   root.classList.add('csk-hide');
 
   // The first frame: render-whole holds it until the page has been read.
-  requestAnimationFrame(function first() {
-    if (document.readyState === 'loading') return requestAnimationFrame(first);
+  requestAnimationFrame(function () {
     try { build(); } catch (e) { root.classList.remove('csk-hide'); }
   });
   // Whatever happens, the content never stays hidden.

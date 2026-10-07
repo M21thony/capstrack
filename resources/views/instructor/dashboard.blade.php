@@ -52,6 +52,7 @@
   .ann-modal-date{font-size:12px;color:var(--text3)}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'block'])
+  @include('partials.render-whole')
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'dashboard'])

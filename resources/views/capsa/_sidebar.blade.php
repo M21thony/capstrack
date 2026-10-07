@@ -382,3 +382,6 @@
   @include('instructor.partials.expert-profile')
 @endif
 @include('partials.sidebar-scroll-restore')
+
+{{-- A page's first opening since signing in comes up as its own skeleton. --}}
+@include('partials.content-skeleton')

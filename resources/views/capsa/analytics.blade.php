@@ -210,6 +210,7 @@
 }
 @media (prefers-reduced-motion:reduce){.an-seg,.an-hm,.an-col,.an-tip{transition:none}}
 </style>
+  @include('partials.render-whole')
 </head>
 <body>
 @php

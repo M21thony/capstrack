@@ -8,6 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 @vite(['resources/css/financial.css', 'resources/js/financial/capsa.js'])
+  @include('partials.render-whole')
 </head>
 <body>
 

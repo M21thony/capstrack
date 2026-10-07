@@ -8,6 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
+  @include('partials.render-whole')
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'teams'])

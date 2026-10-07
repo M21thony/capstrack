@@ -95,6 +95,7 @@
     .sec-prog{padding-top:0}
   }
 </style>
+  @include('partials.render-whole')
 </head>
 <body>
 

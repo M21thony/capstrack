@@ -85,4 +85,7 @@
 @include('partials.staff-portal-tour', ['tourKey' => 'expert', 'expert' => $expert])
 @include('partials.table-export')
 @include('partials.sidebar-scroll-restore')
+
+{{-- A page's first opening since signing in comes up as its own skeleton. --}}
+@include('partials.content-skeleton')
 @endif

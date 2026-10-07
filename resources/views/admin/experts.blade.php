@@ -450,6 +450,7 @@
   /* Skeleton styles now live in admin.css, shared across every admin page */
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
+  @include('partials.render-whole')
 </head>
 <body>
 

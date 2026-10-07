@@ -118,7 +118,7 @@
   #archive-toast.error { border-left-color: var(--red); }
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
-  @include('student.partials.render-whole')
+  @include('partials.render-whole')
 </head>
 <body>
 @include('student.partials.sidebar')

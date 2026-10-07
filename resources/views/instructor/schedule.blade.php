@@ -8,6 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/schedule.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
+  @include('partials.render-whole')
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'schedule'])
@@ -2783,7 +2784,10 @@ async function confirmCancellationDecision() {
   }
 }
 
-initCalendar();
+// The page's first-time skeleton (partials/content-skeleton) waits for the
+// calendar's slots, so it gives way to the calendar as it will be.
+const calendarDrawn = window.contentSkeleton ? window.contentSkeleton.hold() : null;
+initCalendar().finally(() => { if (calendarDrawn) calendarDrawn(); });
 
 // Re-render time-dependent UI (the 'Ongoing' status) once a minute, so a
 // slot flips from 'Booked' to 'Ongoing' — and back to past — without the

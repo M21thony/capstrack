@@ -46,7 +46,7 @@
 .ds-card p{margin:6px 0 0;color:var(--text2);white-space:pre-line}
 @media (max-width:900px){.ds-grid{grid-template-columns:1fr}.ds-sheet,.ds-remarks{max-height:none}}
 </style>
-  @include('student.partials.render-whole')
+  @include('partials.render-whole')
 </head>
 <body>
 @include('student.partials.sidebar')

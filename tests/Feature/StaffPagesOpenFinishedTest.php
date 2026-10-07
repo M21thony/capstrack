@@ -75,7 +75,9 @@ class StaffPagesOpenFinishedTest extends TestCase
 
         $html = $this->actingAs($this->capsa(), 'expert')->get(route('capsa.team_management'))->assertOk()->getContent();
 
-        $this->assertStringNotContainsString('blocking="render"', $html);
+        // The page itself is still held until it has been read in full
+        // (partials/render-whole), but no script holds it.
+        $this->assertDoesNotMatchRegularExpression('#<script[^>]*blocking="render"#', $html);
     }
 
     public function test_the_fee_tabs_keep_their_row_only_when_there_are_fees(): void

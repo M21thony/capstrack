@@ -15,7 +15,7 @@ use Tests\TestCase;
  * blocks drawn from the page's own cards, words, pictures and buttons, in
  * their exact places, which then fade over the page already drawn beneath. A
  * page already opened comes straight up. And every page holds its first
- * paint until it has been read in full (student/partials/render-whole), so
+ * paint until it has been read in full (partials/render-whole), so
  * the skeleton is taken from the finished layout.
  */
 class StudentContentSkeletonTest extends TestCase
@@ -34,8 +34,9 @@ class StudentContentSkeletonTest extends TestCase
     {
         $html = $this->studentPage();
 
-        $this->assertStringContainsString('html.csk-hide .main > .content { opacity: 0 !important; }', $html);
-        $this->assertStringContainsString("var content = document.querySelector('.main > .content');", $html);
+        $this->assertStringContainsString('html.csk-hide .main > :not(.topbar),', $html);
+        $this->assertStringContainsString("if (SKIP[child.tagName] || child.classList.contains('topbar')) continue;", $html);
+        $this->assertStringContainsString('var content = scrollerIn(area);', $html);
     }
 
     /** A real skeleton: solid blocks over an opaque cover, not the page faded behind it. */
@@ -117,8 +118,8 @@ class StudentContentSkeletonTest extends TestCase
     {
         $html = $this->studentPage();
 
-        $this->assertStringContainsString('for (var after = content.nextElementSibling; after; after = after.nextElementSibling) {', $html);
-        $this->assertStringContainsString("placed.position !== 'fixed' && placed.position !== 'absolute'", $html);
+        $this->assertStringContainsString('for (var beside = inner.parentElement.firstElementChild; beside; beside = beside.nextElementSibling) {', $html);
+        $this->assertStringContainsString("placed.position !== 'fixed'", $html);
     }
 
     /**
@@ -133,7 +134,7 @@ class StudentContentSkeletonTest extends TestCase
 
         $this->assertStringContainsString('hold: function () {', $html);
         $this->assertStringContainsString('var held = !revealed && ((holds > 0 && now < shown + 4000) || redrawing);', $html);
-        $this->assertStringContainsString('watching.observe(content, { childList: true, subtree: true });', $html);
+        $this->assertStringContainsString("watching.observe(document.readyState === 'loading' ? main : content, { childList: true, subtree: true });", $html);
 
         $viewer = file_get_contents(resource_path('js/student-review.jsx'));
         $this->assertStringContainsString('window.contentSkeleton.hold()', $viewer);
@@ -203,7 +204,7 @@ class StudentContentSkeletonTest extends TestCase
                 continue;
             }
 
-            $this->assertStringContainsString("@include('student.partials.render-whole')", $source, basename($view).' does not hold its first paint.');
+            $this->assertStringContainsString("@include('partials.render-whole')", $source, basename($view).' does not hold its first paint.');
         }
     }
 
@@ -213,6 +214,6 @@ class StudentContentSkeletonTest extends TestCase
         $html = $this->studentPage();
 
         $this->assertMatchesRegularExpression('/<script nonce="[^"]+">\s*\(function \(\) \{\s*if \(window\.__contentSkeleton\)/', $html);
-        $this->assertMatchesRegularExpression('/<style nonce="[^"]+">\s*html\.csk-hide/', $html);
+        $this->assertMatchesRegularExpression('/<style nonce="[^"]+">\s*\/\* Hidden until the skeleton is drawn/', $html);
     }
 }

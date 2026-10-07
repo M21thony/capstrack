@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <x-dashboard.styles />
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
+  @include('partials.render-whole')
 </head>
 <body>
 

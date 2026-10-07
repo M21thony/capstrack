@@ -15,7 +15,7 @@
 @vite('resources/student-ui/styles.css')
 @include('student.partials.duplication-ui')
 <x-dashboard.styles />
-  @include('student.partials.render-whole')
+  @include('partials.render-whole')
 </head>
 <body>
 @include('student.partials.sidebar')

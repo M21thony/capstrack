@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/team-management.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
+  @include('partials.render-whole')
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'teams', 'totalTeams' => $totalTeams])

@@ -6,7 +6,7 @@
 <title>My Profile - CapsTrack Student Portal</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="styles.css"/>
-  @include('student.partials.render-whole')
+  @include('partials.render-whole')
 </head>
 <body>
 

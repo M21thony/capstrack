@@ -76,7 +76,7 @@
 @media (max-width:760px){.now-grid{grid-template-columns:1fr}.now-row{flex-direction:column;gap:2px}.now-row b{min-width:0}}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
-  @include('student.partials.render-whole')
+  @include('partials.render-whole')
 </head>
 <body>
 @include('student.partials.sidebar')

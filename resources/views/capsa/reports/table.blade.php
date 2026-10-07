@@ -148,6 +148,7 @@
 }
 @media (prefers-reduced-motion:reduce){.rp-scroll{scroll-behavior:auto}.rp-toast{transition:none}}
 </style>
+  @include('partials.render-whole')
 </head>
 <body>
 

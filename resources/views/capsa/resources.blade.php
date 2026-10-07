@@ -8,6 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
+  @include('partials.render-whole')
 </head>
 <body>
 

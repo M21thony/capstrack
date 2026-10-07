@@ -62,6 +62,7 @@
   }
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
+  @include('partials.render-whole')
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'docreview'])

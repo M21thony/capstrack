@@ -32,6 +32,7 @@
 }
 @media (max-width:520px){.rp-period{grid-template-columns:1fr}.rp-period-foot{flex-direction:column;align-items:flex-start}}
 </style>
+  @include('partials.render-whole')
 </head>
 <body>
 

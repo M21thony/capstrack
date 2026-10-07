@@ -49,6 +49,7 @@
 .badge-gray{background:var(--bg4);color:var(--text3)}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
+  @include('partials.render-whole')
 </head>
 <body>
 

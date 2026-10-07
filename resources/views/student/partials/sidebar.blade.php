@@ -433,4 +433,4 @@
 @include('student.partials.portal-tour')
 
 {{-- A page's first opening since signing in comes up as its own skeleton. --}}
-@include('student.partials.content-skeleton')
+@include('partials.content-skeleton')

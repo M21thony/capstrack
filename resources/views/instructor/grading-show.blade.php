@@ -158,6 +158,7 @@
   }
   @media (prefers-reduced-motion: reduce){.gs *{transition:none!important}}
 </style>
+  @include('partials.render-whole')
 </head>
 <body>
 
