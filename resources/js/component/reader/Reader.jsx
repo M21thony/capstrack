@@ -529,7 +529,7 @@ export function usePageColumn(numPages) {
 
   const goToPage = (n, smooth = true) => {
     const el = pageRefs.current[n];
-    if (el) canvasRef.current?.scrollTo({ top: el.offsetTop - 20, behavior: smooth ? "smooth" : "auto" });
+    if (el) canvasRef.current?.scrollTo({ top: el.offsetTop - 56, behavior: smooth ? "smooth" : "auto" });
   };
 
   const goToRect = (n, rect, smooth = true) => {
