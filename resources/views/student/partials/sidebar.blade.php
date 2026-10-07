@@ -400,6 +400,8 @@
       'store' => route('student.submission.store'),
       'folders' => route('student.submission.subject-adviser-folders'),
       'documents' => route('student.documents'),
+      // Undo on the notice after a send takes the file back, as Unsubmit does.
+      'unsubmit' => route('student.submission.unsubmit', ['document' => '__ID__']),
       'csrf' => csrf_token(),
   ];
 @endphp

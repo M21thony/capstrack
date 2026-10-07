@@ -124,17 +124,20 @@ class StudentPhoneLayoutTest extends TestCase
     }
 
     /**
-     * The upload sheet came up on an iPhone as a header, a sliver and its
-     * buttons: WebKit measured its flex:1 body (a 0 basis) as 0 tall inside a
-     * pop-up sized by its content. The body's basis is its content now.
+     * The upload pop-up came up on an iPhone as a header, a sliver and its
+     * buttons: WebKit measured its flex:1 body (a 0 basis) as 0 tall. It is a
+     * panel the height of the screen now - the whole screen on a phone - with
+     * its head and Send fixed and the body, its basis its content, scrolling
+     * between them.
      */
-    public function test_the_upload_sheet_is_as_tall_as_what_it_holds_on_an_iphone(): void
+    public function test_the_upload_pop_up_shows_all_it_holds_on_an_iphone(): void
     {
         $css = File::get(public_path('css/submission-drawer.css'));
 
         $this->assertStringContainsString(".up-body{\n  flex:1 1 auto;min-height:0;overflow-y:auto;", $css);
-        $this->assertStringContainsString('.up-grab,.up-head,.up-steps,.up-foot{flex-shrink:0}', $css);
-        $this->assertStringContainsString("margin:auto 0 0;top:auto;\n    /* Held to the bottom, so its own content sets its height. */\n    height:auto;", $css);
+        $this->assertStringContainsString('.up-head,.up-foot{flex-shrink:0}', $css);
+        $this->assertStringContainsString('position:fixed;inset:0 0 0 auto;margin:0;height:100vh;height:100dvh;max-height:none;', $css);
+        $this->assertStringContainsString("@media (max-width:600px){\n  dialog.up{width:100%;box-shadow:none}", $css);
     }
 
     /** Every student page on a phone: the dashboard's top bar and side margins, not a desktop's 26px. */

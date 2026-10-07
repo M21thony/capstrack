@@ -14,7 +14,7 @@
      where each reviewer is. A version opens on this page with its remarks
      beside it. The list is a table when there is room and one compact row
      per version when there is not. */
-  .dc-card { max-width: 1160px; margin: 0 auto; container: dc-list / inline-size; }
+  .dc-card { max-width: 1160px; container: dc-list / inline-size; }
   .dc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .dc-table { width: 100%; border-collapse: collapse; }
   .dc-table thead th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); background: var(--bg3); padding: 8px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -223,7 +223,7 @@
         <table class="dc-table">
           <thead><tr><th scope="col">Version</th><th scope="col">File</th><th scope="col">Submitted</th><th scope="col">Review</th><th scope="col"><span class="dc-sr">Actions</span></th></tr></thead>
           @foreach ($groups as $group)
-            @php $ext = strtolower(pathinfo((string) $group->latest->file_path, PATHINFO_EXTENSION)) ?: 'pdf'; @endphp
+            @php $ext = \App\Http\Controllers\Student\DocumentsController::fileKind($group->latest); @endphp
             <tbody>
               <tr class="dc-group">
                 <th colspan="5" scope="rowgroup">

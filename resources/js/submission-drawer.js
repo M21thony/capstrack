@@ -3,9 +3,11 @@
  * window over the page they are on - an Upload on a Progress line, Submit a
  * file or Submit revision on Documents, the phone's Submit.
  *
- * It is one screen: the file (page one, quick checks, a full preview on
- * demand), who it goes to, and Send. The phone's Submit keeps the three
- * steps it had - choose file, check it, send - with its "What is this for?".
+ * It is one screen, a panel from the right (the whole screen on a phone):
+ * the file (page one, quick checks, a full preview on demand), its diagram
+ * files, who it goes to - nobody ticked for a file for no line - and Send,
+ * which says who gets it. Once sent, the page says so with an Undo that
+ * takes it back while nobody has opened it.
  *
  * Who it goes to comes from the server (SubmissionRecipients): a first
  * upload starts from its line's rule and the team may add or drop an
@@ -85,11 +87,9 @@ function problemWith(file, accept) {
 let S = null; // the open upload's state
 let dialog = null;
 
-function freshState(itemId, from, revises, classic) {
+function freshState(itemId, from, revises) {
   return {
     itemId: itemId || '',
-    // The phone's Submit: the three steps, as it always was.
-    classic: !!classic,
     // The upload a "Submit revision" is the next version of.
     revises: revises || null,
     from,
@@ -110,7 +110,6 @@ function freshState(itemId, from, revises, classic) {
     diagrams: [],
     diagramProblem: null,
     picked: new Set(),
-    editing: false,
     folders: [],
     folder: '',
     progress: 0,
@@ -121,11 +120,11 @@ function freshState(itemId, from, revises, classic) {
   };
 }
 
-export async function openSubmission(itemId, from, revises, { classic = false } = {}) {
+export async function openSubmission(itemId, from, revises) {
   if (!CONFIG.plan) return;
   if (dialog?.open) closeNow();
 
-  S = freshState(itemId, from, revises, classic);
+  S = freshState(itemId, from, revises);
   dialog = document.createElement('dialog');
   dialog.className = 'up';
   dialog.setAttribute('aria-labelledby', 'up-title');
@@ -364,8 +363,10 @@ async function send() {
       S.step = 'sent';
       S.result = data;
       try {
-        sessionStorage.setItem(TOAST_KEY, sentLine(true));
+        sessionStorage.setItem(TOAST_KEY, JSON.stringify({ message: sentLine(true), file: data.document?.file_id || null }));
       } catch { /* no storage: no notice after the reload */ }
+      closeNow();
+      return;
     } else {
       S.step = 'failed';
       S.failure = data.message
@@ -405,9 +406,8 @@ function peopleOn() {
 
 function sendLabel() {
   if (S.plan?.item?.paper) return 'Hand in';
-  if (S.plan?.round) return 'Send revision';
-  const n = peopleOn().reduce((sum, p) => sum + (p.role === 'panel' ? (parseInt(p.name, 10) || 1) : 1), 0);
-  return n ? `Send to ${n} ${n === 1 ? 'person' : 'people'}` : 'Send';
+  const labels = [...new Set(peopleOn().map((p) => p.label))];
+  return labels.length ? 'Send to ' + labels.join(', ') : 'Send';
 }
 
 /** "your CaPA and CaPSA" - for the notice back on the page. */
@@ -422,9 +422,9 @@ function sentLine(forToast) {
 }
 
 function titleText() {
-  if (!S.plan) return 'Submit a document';
+  if (!S.plan) return 'Submit a file';
   const item = S.plan.item;
-  if (!item) return 'Submit a document';
+  if (!item) return 'Submit a file';
   return S.plan.round ? `${item.title} · ${S.plan.round}` : item.title;
 }
 
@@ -435,18 +435,6 @@ function subText() {
   if (item.paper) return 'Signed paper · your CaPSA checks it';
   if (S.plan.round) return `Goes up as version ${S.plan.version}`;
   return [item.phase, item.due ? 'due ' + item.due : null].filter(Boolean).join(' · ');
-}
-
-function stepsHtml() {
-  if (!S.classic) return '';
-  const at = { pick: 1, check: 2, sending: 3, failed: 3 }[S.step];
-  if (!at) return '';
-  const names = ['Choose file', 'Check it', 'Send'];
-  return '<ol class="up-steps">' + names.map((n, i) => {
-    const k = i + 1;
-    const cls = k < at ? 'done' : (k === at ? 'now' : '');
-    return `<li class="${cls}"${k === at ? ' aria-current="step"' : ''}><span>${k < at ? svg('check', 10, 3) : k}</span>${n}</li>`;
-  }).join('') + '</ol>';
 }
 
 function note(kind, html, actions = '') {
@@ -497,10 +485,12 @@ function dropHtml() {
     </div>` + (S.problem ? note('error', S.problem) : '');
 }
 
+const initials = (name) => String(name || '?').replace(/^(Dr|Prof|Engr|Mr|Ms|Mrs)\.?\s+/i, '').split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+
 function pill(p, { locked = false, toggle = false } = {}) {
   const on = locked || S.picked.has(p.role);
   const who = [p.name, p.note].filter(Boolean).join(' · ');
-  const inner = `${svg(locked ? 'lock' : (on ? 'check' : 'plus'), 11, 2.6)}<b>${esc(p.label)}</b>${who ? `<span>${esc(who)}</span>` : ''}`;
+  const inner = `<i class="up-av" aria-hidden="true">${esc(initials(p.name || p.label))}</i><b>${esc(p.label)}</b>${who ? `<span>${esc(who)}</span>` : ''}`;
   if (toggle && p.available) {
     return `<button type="button" class="up-pill${on ? ' on' : ' off'}" data-act="toggle" data-role="${p.role}" aria-pressed="${on}">${inner}</button>`;
   }
@@ -514,26 +504,16 @@ function goesToHtml() {
   const people = plan.people || [];
   const paper = !!plan.item?.paper;
   const locked = plan.locked || paper;
-  // One screen: the names are there to tap, no Change first.
-  const editing = S.editing || !S.classic;
   let right = '';
   if (plan.locked && !paper && plan.version > 1) right = `<span class="up-muted">same as version ${plan.version - 1}</span>`;
-  else if (S.classic && !locked && people.some((p) => p.available)) right = linkBtn(S.editing ? 'Done' : 'Change', 'edit', ` aria-expanded="${S.editing}"`);
 
-  let pills;
-  if (locked) {
-    pills = people.map((p) => pill(p, { locked: true })).join('');
-  } else if (editing) {
-    pills = people.map((p) => pill(p, { toggle: true })).join('');
-  } else {
-    const on = people.filter((p) => p.available && S.picked.has(p.role));
-    pills = on.length ? on.map((p) => pill(p)).join('') : `<span class="up-muted">Nobody yet. Press Change to pick who reads it.</span>`;
-  }
+  // The names are there to tap.
+  const pills = people.map((p) => pill(p, locked ? { locked: true } : { toggle: true })).join('');
 
   let hint = '';
   if (paper) hint = 'A signed paper always goes to your CaPSA to check.';
   else if (plan.locked) hint = 'A revision goes back to the people who read the last version.';
-  else if (S.classic && S.editing) hint = 'Tap a name to add or remove it.' + (people.some((p) => p.role === 'subject_adviser' && p.note === 'format check') ? ' Your CaPSA only checks this chapter when they ask to check the format.' : '');
+  else if (people.some((p) => p.role === 'subject_adviser' && p.note === 'format check')) hint = 'Your CaPSA only checks this chapter when they ask to check the format.';
   if (!paper && !people.some((p) => p.available)) hint = 'Nobody is assigned to your team yet, so there is no one to send it to.';
 
   let folder = '';
@@ -543,7 +523,7 @@ function goesToHtml() {
         `<option value="${esc(f.drive_folder_id)}"${S.folder === f.drive_folder_id ? ' selected' : ''}>${esc(f.name)}</option>`).join('')}</select></div>`;
   }
 
-  return `<div class="up-goes"><div class="up-goes-h"><span class="up-label">${plan.locked && !paper ? 'Goes back to' : 'Goes to'}</span>${right}</div>
+  return `<div class="up-goes"><div class="up-goes-h"><span class="up-label">${plan.locked && !paper ? 'Goes back to' : 'Send to'}</span>${right}</div>
     <div class="up-pills">${pills}</div>${hint ? `<p class="up-hint">${hint}</p>` : ''}${folder}</div>`;
 }
 
@@ -650,15 +630,12 @@ function bodyAndFoot() {
     case 'pick':
       return [
         lineSelect() + remarkHtml() + (needsLine() ? '' : dropHtml()) + (needsLine() ? '' : goesToHtml()),
-        btn('Cancel', 'close') + (S.classic
-          ? btn('Next', 'next', { primary: true, disabled: true, icon: 'right' })
-          : btn(sendLabel(), 'send', { primary: true, disabled: true, icon: 'send' })),
+        btn('Cancel', 'close') + btn(sendLabel(), 'send', { primary: true, disabled: true, icon: 'send' }),
       ];
     case 'check':
       return [
         fileCardHtml() + checkNotes() + diagramsHtml() + goesToHtml(),
-        (S.classic ? btn('Back', 'back') : whyNot() + btn('Cancel', 'close'))
-          + btn(sendLabel(), 'send', { primary: true, disabled: !canSend(), icon: 'send' }),
+        whyNot() + btn('Cancel', 'close') + btn(sendLabel(), 'send', { primary: true, disabled: !canSend(), icon: 'send' }),
       ];
     case 'sending':
       return [
@@ -673,21 +650,6 @@ function bodyAndFoot() {
           + note('error', S.failure.startsWith('<b>') ? S.failure : esc(S.failure)),
         btn('Cancel', 'close') + btn('Try again', 'send', { primary: true, icon: 'retry' }),
       ];
-    case 'sent': {
-      const recips = S.result?.recipients || [];
-      const names = recips.map((r) => `<b>${esc(r.name || r.label)}</b>${r.name ? ` (${esc(r.label)})` : ''}`);
-      const list = names.length <= 1 ? (names[0] || '') : names.slice(0, -1).join(', ') + ' and ' + names.at(-1);
-      const version = S.result?.document?.file_version;
-      const what = S.plan?.item?.paper
-        ? 'It went to your CaPSA to check. You’ll get a notice once it’s checked.'
-        : `${version ? `Version ${version}` : 'It'} went to ${list}.<br>You’ll get a notice when they reply.`;
-      const noDrive = recips.filter((r) => ['not_connected', 'failed'].includes(r.status));
-      return [
-        `<div class="up-sent"><span class="up-sent-ic">${svg('check', 22, 2.8)}</span><b>${S.plan?.item?.paper ? 'Handed in' : 'Sent'}</b><p>${what}</p></div>`
-          + (noDrive.length ? note('info', `${noDrive.map((r) => esc(r.name || r.label)).join(', ')} ${noDrive.length === 1 ? 'reads' : 'read'} it in CapsTrack, not Google Drive.`) : ''),
-        (CONFIG.documents && !S.plan?.item?.paper ? `<a class="up-btn" href="${esc(CONFIG.documents)}">${svg('eye', 14)}Open Documents</a>` : '') + btn('Done', 'done', { primary: true }),
-      ];
-    }
   }
   return ['', ''];
 }
@@ -721,12 +683,10 @@ function render() {
     : '';
   dialog.classList.toggle('is-sent', S.step === 'sent');
   dialog.innerHTML = `
-    <div class="up-grab" aria-hidden="true"></div>
     <div class="up-head">
       <div class="up-titles"><h2 id="up-title">${esc(titleText())}</h2>${subText() ? `<p>${esc(subText())}</p>` : ''}</div>
       <button type="button" class="up-x" data-act="close" aria-label="${sending ? 'Wait for it to finish sending' : 'Close'}"${sending ? ' disabled' : ''}>${svg('x', 15, 2.2)}</button>
     </div>
-    ${stepsHtml()}
     <div class="up-body">${body}</div>
     <div class="up-foot">${foot}</div>
     ${confirm}`;
@@ -752,7 +712,6 @@ function onClick(e) {
     case 'keep': S.confirmingClose = false; render(); focusFirst(); break;
     case 'discard': closeNow(); break;
     case 'browse': dialog.querySelector('#up-file')?.click(); break;
-    case 'edit': S.editing = !S.editing; render(); dialog.querySelector('[data-act="edit"]')?.focus(); break;
     case 'toggle': {
       const role = el.dataset.role;
       if (S.picked.has(role)) S.picked.delete(role); else S.picked.add(role);
@@ -760,20 +719,12 @@ function onClick(e) {
       dialog.querySelector(`[data-act="toggle"][data-role="${role}"]`)?.focus();
       break;
     }
-    case 'back':
-      S.step = 'pick';
-      S.file = null;
-      S.problem = null;
-      render();
-      focusFirst();
-      break;
     case 'diagrams': dialog.querySelector('#up-diagrams')?.click(); break;
     case 'undiagram': S.diagrams.splice(parseInt(el.dataset.i, 10), 1); S.diagramProblem = null; render(); break;
     case 'rotate': S.rotation = (S.rotation + 90) % 360; render(); break;
     case 'preview': openPreview(); break;
     case 'send': send(); break;
     case 'stop': S.xhr?.abort(); break;
-    case 'done': closeNow(); break;
     case 'relist': S.itemId = ''; loadPlan(); break;
   }
 }
@@ -954,17 +905,46 @@ export function showToast(message, type) {
   showToast._t = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
+/**
+ * "Sent ... · Undo": Undo takes the file back - the same Unsubmit as on
+ * Documents, which only works while nobody has opened it.
+ */
+function showSentToast({ message, file }) {
+  if (!file || !CONFIG.unsubmit) { showToast(message, 'success'); return; }
+  const toast = document.createElement('div');
+  toast.className = 'up-sent-toast';
+  toast.setAttribute('role', 'status');
+  toast.innerHTML = `${svg('check', 15, 2.6)}<span>${esc(message)}</span><button type="button">Undo</button>`;
+  document.body.append(toast);
+  const gone = setTimeout(() => toast.remove(), 4000);
+  toast.querySelector('button').addEventListener('click', async (e) => {
+    clearTimeout(gone);
+    e.target.disabled = true;
+    try {
+      await fetch(CONFIG.unsubmit.replace('__ID__', encodeURIComponent(file)), {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': CONFIG.csrf, Accept: 'text/html' },
+        credentials: 'same-origin',
+      });
+    } finally {
+      window.location.reload();
+    }
+  });
+}
+
 try {
   const pending = sessionStorage.getItem(TOAST_KEY);
   if (pending) {
     sessionStorage.removeItem(TOAST_KEY);
-    showToast(pending, 'success');
+    let notice;
+    try { notice = JSON.parse(pending); } catch { notice = { message: pending }; }
+    showSentToast(typeof notice === 'object' && notice ? notice : { message: pending });
   }
 } catch { /* no storage */ }
 
 window.openSubmission = openSubmission;
-// The phone's Submit still calls it by its old name, and keeps its three steps.
-window.openSubmissionDrawer = (itemId, from) => openSubmission(itemId, from, null, { classic: true });
+// The phone's Submit still calls it by its old name: a file for no line, as on Documents.
+window.openSubmissionDrawer = (itemId, from) => openSubmission(itemId || 'none', from);
 window.submissionToast = showToast;
 
 // The Document Submission page opened for one line (?item=) opens straight onto it.

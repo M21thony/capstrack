@@ -74,6 +74,8 @@ class SubmissionDrawerMarkupTest extends TestCase
         $response->assertSee(json_encode(route('student.submission.plan')), false);
         $response->assertSee(json_encode(route('student.submission.store')), false);
         $response->assertSee(json_encode(route('student.documents')), false);
+        // The notice after a send can take it back, as Unsubmit does.
+        $response->assertSee(json_encode(route('student.submission.unsubmit', ['document' => '__ID__'])), false);
         $response->assertSee('id="submission-toast"', false);
         $response->assertDontSee('name="submission-form-url"', false);
         $response->assertDontSee('id="submission-form-root"', false);
