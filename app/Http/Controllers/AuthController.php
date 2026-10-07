@@ -17,6 +17,32 @@ use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     /**
+     * What every sign-in asks Google for: who the person is, and nothing
+     * else. Nothing here is a "sensitive" scope, so a student never meets
+     * Google's "this app hasn't been verified" warning, and does not count
+     * towards the 100 users an unverified app may have.
+     */
+    public const GOOGLE_SIGN_IN_SCOPES = ['openid', 'email', 'profile'];
+
+    /**
+     * What an expert's account is asked for on top, once: their Google
+     * Calendar's events (consultation bookings and defense panels are put on
+     * it) and the Drive files the app itself makes (annotated PDFs).
+     * calendar.events, not the whole calendar - the app only adds, changes
+     * and removes its own events.
+     */
+    public const GOOGLE_EXPERT_SCOPES = [
+        'https://www.googleapis.com/auth/calendar.events',
+        'https://www.googleapis.com/auth/drive.file',
+    ];
+
+    /**
+     * Calendar access an expert may already have given under the old, wider
+     * scope; it covers the events, so they are not asked again.
+     */
+    private const GOOGLE_OLD_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+
+    /**
      * Show the sign-in page.
      */
     public function login()
@@ -123,6 +149,8 @@ class AuthController extends Controller
 
         $state = Str::random(40);
         session(['oauth_state' => $state]);
+        // A sign-in left half-way through does not count as having been asked.
+        session()->forget('google_expert_scopes_asked');
 
         if (empty($clientId)) {
             return response()->json([
@@ -139,6 +167,26 @@ class AuthController extends Controller
     }
 
     /**
+     * Whether what Google says an account granted covers an expert's
+     * Calendar and Drive access.
+     */
+    private function grantsExpertScopes(string $granted): bool
+    {
+        $granted = preg_split('/\s+/', trim($granted)) ?: [];
+
+        foreach (self::GOOGLE_EXPERT_SCOPES as $scope) {
+            $covered = in_array($scope, $granted, true)
+                || (str_ends_with($scope, '/calendar.events') && in_array(self::GOOGLE_OLD_CALENDAR_SCOPE, $granted, true));
+
+            if (! $covered) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Where sign-in sends people.
      *
      * access_type=offline (without forcing prompt=consent) still gets a
@@ -152,16 +200,25 @@ class AuthController extends Controller
      *
      * $forceConsent is the way back for an account we hold no refresh token
      * for at all — see the retry in handleGoogleCallback.
+     *
+     * $forExpert asks for an expert's Calendar and Drive access on top of the
+     * sign-in itself, for the Google account $loginHint names. Everyone else
+     * is asked only who they are. include_granted_scopes keeps what an
+     * account has given before, so an expert is asked for this only once.
      */
-    private function googleAuthUrl(string $state, bool $forceConsent = false): string
+    private function googleAuthUrl(string $state, bool $forceConsent = false, bool $forExpert = false, ?string $loginHint = null): string
     {
+        $scopes = $forExpert
+            ? [...self::GOOGLE_SIGN_IN_SCOPES, ...self::GOOGLE_EXPERT_SCOPES]
+            : self::GOOGLE_SIGN_IN_SCOPES;
+
         $query = http_build_query(array_filter([
             'client_id' => config('services.google.client_id'),
             'redirect_uri' => config('services.google.redirect_uri'),
             'response_type' => 'code',
-            // Added Drive scope (drive.file = access only to files the app creates/opens,
-            // safer than full 'drive' scope) alongside the existing calendar/profile scopes.
-            'scope' => 'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file',
+            'scope' => implode(' ', $scopes),
+            'include_granted_scopes' => 'true',
+            'login_hint' => $loginHint,
             'state' => $state,
             'access_type' => 'offline',
             'prompt' => $forceConsent ? 'consent' : null,
@@ -266,6 +323,20 @@ class AuthController extends Controller
 
             if ($expert) {
                 if ($expert->approved_status) {
+                    // Signing in asks only who someone is. An expert's account
+                    // is then asked, once, for Calendar and Drive - what their
+                    // bookings and annotated PDFs need - and what Google says
+                    // was granted carries it from then on. Asked once per
+                    // sign-in: an expert who unticks it still gets in.
+                    if (! $this->grantsExpertScopes((string) $response->json('scope', ''))
+                        && ! $request->session()->pull('google_expert_scopes_asked', false)) {
+                        $state = Str::random(40);
+                        $request->session()->put('oauth_state', $state);
+                        $request->session()->put('google_expert_scopes_asked', true);
+
+                        return redirect()->away($this->googleAuthUrl($state, forExpert: true, loginHint: $email));
+                    }
+
                     // Google only sends refresh_token on first consent (or when
                     // prompt=consent is forced); keep the old one if it's missing
                     // this time rather than overwriting a working connection with
@@ -296,7 +367,7 @@ class AuthController extends Controller
                         $request->session()->put('oauth_state', $state);
                         $request->session()->put('google_forced_consent', true);
 
-                        return redirect()->away($this->googleAuthUrl($state, forceConsent: true));
+                        return redirect()->away($this->googleAuthUrl($state, forceConsent: true, forExpert: true, loginHint: $email));
                     }
 
                     // Whoever added them typed a name from what they knew,

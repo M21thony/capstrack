@@ -12,6 +12,9 @@ use Tests\TestCase;
 
 class GoogleAuthTest extends TestCase
 {
+    /** An account that has given everything it is asked for. */
+    private const GRANTED = 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file';
+
     use RefreshDatabase;
 
     public function test_real_google_callback_captures_avatar_from_google_account(): void
@@ -36,6 +39,8 @@ class GoogleAuthTest extends TestCase
                 'refresh_token' => 'fake-refresh-token',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
+                // What Google says was granted - always part of its answer.
+                'scope' => self::GRANTED,
             ]),
             'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
                 'email' => 'juan.delacruz@my.cspc.edu.ph',
@@ -80,6 +85,8 @@ class GoogleAuthTest extends TestCase
                 'access_token' => 'fake-access-token',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
+                // What Google says was granted - always part of its answer.
+                'scope' => self::GRANTED,
             ]),
             'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
                 'email' => 'returning.student@my.cspc.edu.ph',
@@ -115,6 +122,8 @@ class GoogleAuthTest extends TestCase
                 'refresh_token' => 'fake-refresh-token',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
+                // What Google says was granted - always part of its answer.
+                'scope' => self::GRANTED,
             ]),
             'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
                 'email' => 'existing.expert@gmail.com',
@@ -325,6 +334,8 @@ class GoogleAuthTest extends TestCase
                 'refresh_token' => 'fake-refresh-token',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
+                // What Google says was granted - always part of its answer.
+                'scope' => self::GRANTED,
             ]),
             'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
                 'email' => 'typed.name@gmail.com',
@@ -360,6 +371,8 @@ class GoogleAuthTest extends TestCase
                 'refresh_token' => 'fake-refresh-token',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
+                // What Google says was granted - always part of its answer.
+                'scope' => self::GRANTED,
             ]),
             'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
                 'email' => 'keeps.name@gmail.com',

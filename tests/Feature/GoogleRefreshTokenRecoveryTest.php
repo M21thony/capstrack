@@ -6,6 +6,7 @@ use App\Models\CapstoneExpert;
 use App\Models\GoogleDriveToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
@@ -51,6 +52,8 @@ class GoogleRefreshTokenRecoveryTest extends TestCase
                 'access_token' => 'access-1',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
+                // An expert account that has already given Calendar and Drive.
+                'scope' => 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file',
             ]);
         }
 
@@ -64,7 +67,7 @@ class GoogleRefreshTokenRecoveryTest extends TestCase
         ]);
     }
 
-    private function signIn(string $state): \Illuminate\Testing\TestResponse
+    private function signIn(string $state): TestResponse
     {
         return $this->withSession(['oauth_state' => $state])
             ->get("/login/google/callback?state={$state}&code=fake-code");

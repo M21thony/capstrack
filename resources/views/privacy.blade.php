@@ -22,8 +22,8 @@
   <h2>Information we collect</h2>
   <ul>
     <li><strong>Google account details:</strong> your name, email address, and profile picture, used to identify you and sign you in.</li>
-    <li><strong>Google Calendar:</strong> used to add and update consultation and defense schedules on your calendar.</li>
-    <li><strong>Google Drive:</strong> access is limited to files CapsTRACK itself creates or that you choose to open with it, used to store capstone documents. CapsTRACK cannot see any other files in your Drive.</li>
+    <li><strong>Google Calendar (advisers, panel members and coordinators only):</strong> access is limited to calendar events. CapsTRACK adds consultation bookings and defense schedules to your calendar, updates them when they are rescheduled, and removes them when they are cancelled. Students are not asked for Calendar access.</li>
+    <li><strong>Google Drive (advisers, panel members and coordinators only):</strong> access is limited to files CapsTRACK itself creates or that you choose to open with it, used to store capstone documents. CapsTRACK cannot see any other files in your Drive. Students are not asked for Drive access.</li>
     <li><strong>Information you enter:</strong> team details, titles, submissions, comments, and schedules you add inside CapsTRACK.</li>
   </ul>
 
