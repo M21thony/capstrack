@@ -1373,6 +1373,9 @@ var ACT = {
     } catch (e) { /* ignore */ }
     render();
     if (tab === 'find') { FIND.rows = 2; findPage(); }
+    // A tab opened for the first time since signing in comes up as its
+    // skeleton (student/partials/content-skeleton), like a page.
+    if (window.contentSkeleton) { window.contentSkeleton.show(tab); }
     $(tab === 'find' ? 'xh-tab-find' : (tab === 'evaluations' ? 'xh-tab-eval' : 'xh-tab-book')).focus();
   },
   slot: function (el, e) {
@@ -1676,6 +1679,7 @@ document.addEventListener('visibilitychange', function () { if (document.visibil
 })();
 
 render();
+if (window.contentSkeleton) { window.contentSkeleton.seen(S.tab); }
 })();
 
 // -- Mobile sidebar --

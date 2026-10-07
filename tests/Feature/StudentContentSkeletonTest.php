@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -53,7 +54,43 @@ class StudentContentSkeletonTest extends TestCase
         $html = $this->studentPage();
 
         $this->assertStringContainsString("var key = 'csk:".substr(sha1(session()->getId()), 0, 12).":' + ", $html);
-        $this->assertStringContainsString('if (opened) return;', $html);
+        $this->assertStringContainsString('if (!firstOpening()) return;', $html);
+    }
+
+    /** A tab that switches in place gets its own first-time skeleton, like a page. */
+    public function test_a_tab_switched_in_place_gets_its_own_first_time_skeleton(): void
+    {
+        $html = $this->studentPage();
+
+        $this->assertStringContainsString("if (!firstOpening(view) || document.getElementById('csk')) return;", $html);
+        $this->assertStringContainsString('seen: function (view) { firstOpening(view); },', $html);
+    }
+
+    /** @return array<string, array{0: string, 1: string}> */
+    public static function pagesWithTabs(): array
+    {
+        return [
+            'team management' => ['student/team.blade.php', 'window.contentSkeleton.show(which);'],
+            'experts' => ['student/experts.blade.php', 'window.contentSkeleton.show(tab);'],
+        ];
+    }
+
+    /** Each page whose tabs switch in place hands every switch to the skeleton, and the tab it opened on. */
+    #[DataProvider('pagesWithTabs')]
+    public function test_the_page_hands_its_tab_switches_to_the_skeleton(string $view, string $show): void
+    {
+        $source = file_get_contents(resource_path('views/'.$view));
+
+        $this->assertStringContainsString($show, $source);
+        $this->assertStringContainsString('window.contentSkeleton.seen(', $source);
+    }
+
+    /** Table cells are never solid blocks: the words in them are lines, as anywhere else. */
+    public function test_table_cells_are_drawn_as_lines_not_blocks(): void
+    {
+        $html = $this->studentPage();
+
+        $this->assertStringContainsString("if (TABLE[tag] && tag !== 'TABLE') {", $html);
     }
 
     /** It is never a still picture: a streak runs across every block, already moving on the first frame. */

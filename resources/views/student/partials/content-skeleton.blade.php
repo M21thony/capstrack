@@ -10,7 +10,8 @@
   moves, jumps or flashes.
 
   Once per page per sign-in: a page already opened since signing in comes
-  straight up. "Opened" is kept in sessionStorage under the sign-in's
+  straight up. A tab that switches in place without loading a page (Team's
+  Financial Records, the Experts tabs) is treated as a page of its own. "Opened" is kept in sessionStorage under the sign-in's
   session, so signing in again starts over.
 
   This runs from the sidebar, before the content has been read, and hides the
@@ -55,12 +56,18 @@
   var root = document.documentElement;
   var key = 'csk:{{ substr(sha1(session()->getId()), 0, 12) }}:' + (location.pathname.replace(/\/+$/, '') || '/');
 
-  var opened = true;
-  try { opened = sessionStorage.getItem(key) === '1'; sessionStorage.setItem(key, '1'); } catch (e) {}
-  if (opened) return;
+  // Whether this page - or one of its tabs - is being opened for the first
+  // time since signing in; marks it opened either way.
+  function firstOpening(view) {
+    var opened = true;
+    try {
+      opened = sessionStorage.getItem(key + (view ? '#' + view : '')) === '1';
+      sessionStorage.setItem(key + (view ? '#' + view : ''), '1');
+    } catch (e) {}
+    return !opened;
+  }
 
-  root.classList.add('csk-hide');
-
+  var TABLE = { TABLE: 1, THEAD: 1, TBODY: 1, TFOOT: 1, TR: 1, TD: 1, TH: 1 };
   var MEDIA = { IMG: 1, SVG: 1, CANVAS: 1, VIDEO: 1, IFRAME: 1, INPUT: 1, SELECT: 1, TEXTAREA: 1, BUTTON: 1, PROGRESS: 1, METER: 1 };
   var SKIP = { SCRIPT: 1, STYLE: 1, TEMPLATE: 1, NOSCRIPT: 1, BR: 1, WBR: 1 };
   var LIMIT = 2500;
@@ -92,7 +99,7 @@
     if (!content) return root.classList.remove('csk-hide');
 
     var box = content.getBoundingClientRect();
-    var reach = box.top + Math.max(window.innerHeight, box.height) * 1.5;
+    var reach = box.bottom + box.height;
     var originX = box.left - content.scrollLeft;
     var originY = box.top - content.scrollTop;
     var layer = document.createElement('div');
@@ -137,13 +144,24 @@
       if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0 || style.position === 'fixed') return;
 
       var rect = element.getBoundingClientRect();
-      if (rect.top > reach) return;
+      if (rect.top > reach || rect.bottom < box.top - box.height) return;
       var sized = rect.width >= 2 && rect.height >= 2;
       var radius = style.borderRadius || '0';
       var tag = element.tagName.toUpperCase();
 
       if (MEDIA[tag] || element.getAttribute('role') === 'button') {
         if (sized) draw('csk-bone', rect.left, rect.top, rect.width, rect.height, radius === '0px' ? '6px' : radius);
+        return;
+      }
+
+      // A table keeps its rules between rows; its cells are never blocks,
+      // only the words and buttons in them.
+      if (TABLE[tag] && tag !== 'TABLE') {
+        if (sized && hasEdge(style)) draw('csk-frame', rect.left, rect.top, rect.width, rect.height, '0', edges(style));
+        for (var cell = element.firstChild; cell; cell = cell.nextSibling) {
+          if (cell.nodeType === 3 && cell.nodeValue.trim() !== '') lines(cell, style);
+          else if (cell.nodeType === 1) walk(cell);
+        }
         return;
       }
 
@@ -155,7 +173,7 @@
         // anything larger - or holding buttons of its own, like a row of
         // tabs - is a card, drawn in place with its own contents.
         var small = (rect.height <= 56 && rect.width <= 360) || rect.height <= 14 || (tag === 'A' && rect.height <= 64);
-        if (small && (tag === 'A' || !element.querySelector('button, a, input, select, textarea, [role="button"]'))) {
+        if (small && tag !== 'TABLE' && (tag === 'A' || !element.querySelector('button, a, input, select, textarea, [role="button"]'))) {
           draw('csk-bone', rect.left, rect.top, rect.width, rect.height, radius === '0px' ? '6px' : radius);
           return;
         }
@@ -216,6 +234,21 @@
     })();
     window.addEventListener('resize', reveal);
   }
+
+  // A tab that switches in place (Team's Financial Records, the Experts
+  // tabs) gets its own first-time skeleton: the page calls show() right
+  // after drawing the tab, before the browser paints it, and seen() for the
+  // tab it opened on.
+  window.contentSkeleton = {
+    seen: function (view) { firstOpening(view); },
+    show: function (view) {
+      if (!firstOpening(view) || document.getElementById('csk')) return;
+      try { build(); } catch (e) {}
+    },
+  };
+
+  if (!firstOpening()) return;
+  root.classList.add('csk-hide');
 
   // The first frame: render-whole holds it until the page has been read.
   requestAnimationFrame(function first() {

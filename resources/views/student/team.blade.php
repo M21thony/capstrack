@@ -271,7 +271,12 @@
         var url = new URL(location.href);
         if (fin) { url.searchParams.set('tab', 'financial'); } else { url.searchParams.delete('tab'); }
         history.replaceState(null, '', url.pathname + url.search + url.hash);
+        // The first time a tab is opened since signing in, it comes up as
+        // its skeleton (student/partials/content-skeleton), like a page.
+        if (window.contentSkeleton) { window.contentSkeleton.show(which); }
       }
+
+      if (window.contentSkeleton) { window.contentSkeleton.seen('{{ $tab === 'financial' ? 'financial' : 'team' }}'); }
 
       tabs.forEach(function (b, i) {
         b.addEventListener('click', function () { show(b.getAttribute('data-tm-tab')); });
