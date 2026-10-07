@@ -10,7 +10,7 @@ import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figur
 import FigureCrop from "../reader/FigureCrop";
 import { DiagramPage, DiagramsOnly, shapeCell, shapeRects, shownPicture, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import {
-  DIAGRAM_TYPES, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, shapeLabel, uniqueFigures,
+  boundsOf, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, shapeLabel, uniqueFigures,
 } from "../reader/figures";
 import { cellAt } from "../reader/drawioDiff";
 
@@ -464,7 +464,7 @@ function PDFChecker({
       setComments((prev) => prev.map((c) => (c.id === editing.id
         ? { ...c, text: body, color: kind, section: sectionValue, ...figureFields, ...(draft.type === "box" || draft.type === "shape" ? { highlightRects: draft.highlightRects, shape_ref: draft.shape_ref ?? null } : {}) }
         : c)));
-      setSelectedId(editing.id);
+      setSelectedId(draft.type === "shape" ? null : editing.id);
     } else {
       const id = `new-${Date.now()}`;
       const first = draft.highlightRects[0];
@@ -484,7 +484,8 @@ function PDFChecker({
         color: kind,
         ...figureFields,
       }]);
-      setSelectedId(id);
+      // A shape remark lets go once added, so its outline is off the drawing.
+      setSelectedId(draft.type === "shape" ? null : id);
     }
     closeBox();
   };
@@ -497,8 +498,9 @@ function PDFChecker({
     const wrapper = col.pageRefs.current[draft.pageNumber];
     const pop = popRef.current;
     if (!canvas || !wrapper || !pop) return;
-    const anchor = draft.highlightRects?.[0]
-      || { top_position: Number(draft.y_position) || 0, left_position: Number(draft.x_position) || 0.5, highlight_width: 0, highlight_height: 0 };
+    // Beside the whole mark (every box, or every leg of an arrow), not just its first piece.
+    const anchor = draft.highlightRects?.length ? boundsOf(draft.highlightRects)
+      : { top_position: Number(draft.y_position) || 0, left_position: Number(draft.x_position) || 0.5, highlight_width: 0, highlight_height: 0 };
     const c = canvas.getBoundingClientRect();
     const p = (wrapper.querySelector(".react-pdf__Page") || wrapper).getBoundingClientRect();
     const w = pop.offsetWidth;
@@ -518,7 +520,8 @@ function PDFChecker({
       left = Math.max(canvas.scrollLeft + 12, aLeft - w - gap);
       flip = true;
     }
-    const top = Math.max(canvas.scrollTop + 8, ay - 28);
+    // Kept inside the visible part of the page, so it never opens below the screen.
+    const top = Math.max(canvas.scrollTop + 8, Math.min(ay - 28, canvas.scrollTop + canvas.clientHeight - h - 8));
     setPopPos({ left, top, ay: Math.min(Math.max(14, ay - top), h - 14), flip });
   });
 
@@ -536,7 +539,6 @@ function PDFChecker({
   const onFigure = draft && draft.type !== "text";
   const draftRemark = draft && { ...draft, page_number: draft.pageNumber, color: kind };
   const where = draft ? (draft.type === "shape" ? `${shapeLabel(draft.shape_ref)} · page ${draft.pageNumber}` : draft.type === "pin" ? `Pin on page ${draft.pageNumber}` : `${draft.highlightRects.length > 1 ? `${draft.highlightRects.length} boxes` : "Box"} on page ${draft.pageNumber}`) : "";
-  const figureOptions = figure && !figures.some((f) => f.label === figure) ? [...figures, { label: figure, page: draft?.pageNumber }] : figures;
   const zoomRemark = zoomId != null ? comments.find((c) => c.id === zoomId) : null;
   const hint = mode === "text"
     ? (selecting ? "Press Enter to add a remark on the selected words" : "Select text to add a remark")
@@ -666,33 +668,10 @@ function PDFChecker({
             >
               {quote && <div className="rr-pop-quote">“{quote}”</div>}
               {onFigure && (
-                <>
-                  <div className="rr-pop-fig">
-                    <span className="rr-pop-thumb">{pagesPdf && <FigureCrop pdf={pagesPdf} remark={draftRemark} maxWidth={64} maxHeight={46} pending />}</span>
-                    <div><b>{figure || where}</b><small>{figure ? where : "Not a numbered figure"}</small></div>
-                  </div>
-                  <div className="rr-pair">
-                    <label className="rr-fld">Figure
-                      <select
-                        className="rr-input"
-                        value={figure}
-                        onChange={(e) => {
-                          const next = e.target.value;
-                          setFigure(next);
-                          if (!diagramType) setDiagramType(guessDiagramType(figures.find((f) => f.label === next)?.title));
-                        }}
-                      >
-                        <option value="">Not a numbered figure</option>
-                        {figureOptions.map((f) => <option key={f.label} value={f.label}>{f.label}{f.page ? ` (p. ${f.page})` : ""}</option>)}
-                      </select>
-                    </label>
-                    <label className="rr-fld">Diagram type
-                      <select className="rr-input" value={diagramType} onChange={(e) => setDiagramType(e.target.value)}>
-                        {DIAGRAM_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-                      </select>
-                    </label>
-                  </div>
-                </>
+                <div className="rr-pop-fig">
+                  <span className="rr-pop-thumb">{pagesPdf && <FigureCrop pdf={pagesPdf} remark={draftRemark} maxWidth={64} maxHeight={46} pending />}</span>
+                  <div><b>{figure || where}</b>{figure && <small>{where}</small>}</div>
+                </div>
               )}
               <div className="rr-kinds" role="group" aria-label="Kind of remark">
                 {KINDS.map((k) => (

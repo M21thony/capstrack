@@ -88,7 +88,8 @@ export function Highlights({ remarks, numbers, selectedId, onSelect, clickable =
     if (r.type === "box" || r.type === "shape") {
       return (
         <React.Fragment key={r.id}>
-          {rects.map((rect, i) => <div key={i} className={`rr-box c-${kind}${on ? " on" : ""}`} style={rectStyle(rect)} />)}
+          {/* A shape remark is just its number until picked, so outlines never pile up over crossing arrows. */}
+          {(r.type === "box" || on || override?.id === r.id) && rects.map((rect, i) => <div key={i} className={`rr-box c-${kind}${on ? " on" : ""}`} style={rectStyle(rect)} />)}
           <button type="button" className={`rr-num rr-boxn c-${kind}${on ? " on" : ""}`} style={{ top: pct(first.top_position), left: pct(first.left_position) }} onClick={select} aria-label={label} title={title}>
             {numbers[r.id]}
           </button>
