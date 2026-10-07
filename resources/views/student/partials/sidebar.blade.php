@@ -432,5 +432,5 @@
 
 @include('student.partials.portal-tour')
 
-{{-- The next page's outline, shown the moment a sidebar or tab-bar link is clicked. --}}
-@include('student.partials.nav-skeleton')
+{{-- A page's first opening since signing in comes up as its own skeleton. --}}
+@include('student.partials.content-skeleton')
