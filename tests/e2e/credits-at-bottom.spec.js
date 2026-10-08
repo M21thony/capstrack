@@ -13,7 +13,7 @@ import { expect, test } from '@playwright/test';
  */
 
 const PAGES = {
-  student: ['dashboard', 'progress', 'resources'],
+  student: ['dashboard', 'progress', 'resources', 'team'],
   adviser: ['dashboard', 'docreview', 'grading', 'schedule'],
   capsa: ['dashboard', 'announcements', 'financial'],
   admin: ['dashboard', 'settings'],

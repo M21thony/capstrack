@@ -1152,10 +1152,9 @@
       </div>
   </div>
 
-   <div class="legal-credits" style="margin-top: 4px;">
-       <div class="credits-title">System Developers</div>
-      <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
-  </div>
+   {{-- The developers' credit comes from partials/mobile-tabbar, which puts
+        it last on the page and holds it at the foot of the screen. A copy of
+        its own here was left where it stood, halfway up a short page. --}}
 
   <div class="modal-overlay" id="detailModal" onclick="if(event.target==this) this.classList.remove('active')">
       <div class="card" style="width: 380px; padding: 28px; position: relative;">
