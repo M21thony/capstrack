@@ -3,15 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
+use App\Models\DuplicationCheck;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\RecipientResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -279,16 +279,32 @@ class SubmissionRecipientsTest extends TestCase
         $expertRoleId = DB::table('expert_roles')
             ->where('expert_id', $expert->expert_id)->value('expert_role_id');
 
-        // A team with no approved pre-proposal has to attach one.
-        Storage::fake('public');
+        // Applying needs a pre-proposal the CaPSA recommended.
+        $check = DuplicationCheck::create([
+            'student_s_y_id' => StudentSchoolYear::where('team_id', $team->team_id)->value('s_y_id'),
+            'document_path' => 'duplication-checks/recommended.pdf',
+            'concepts' => ['title' => 'Recommended Title'],
+            'top_score' => 20,
+            'verdict' => 'Passed',
+            'matches' => [],
+            'instructors_suggested' => [],
+        ]);
+        $proposal = CapstonePreProposal::create([
+            'team_id' => $team->team_id, 'duplication_check_id' => $check->id, 'slot' => 1,
+            'title' => 'Recommended Title', 'sdg_goals' => 'SDG 4 - Quality Education',
+            'research_agenda' => ['Applications and Systems Development'],
+            'problem_statement' => 'A problem.', 'proposed_solution' => 'A solution.', 'scope' => 'A scope.',
+            'limitations' => 'A limitation.', 'sdm' => 'Agile Development Methodology',
+            'approved_status' => true, 'submitted_at' => now(),
+        ]);
+        $team->update(['selected_pre_proposal_id' => $proposal->id]);
 
         $this->actingAs($leader, 'web')
-            ->post(route('api.student.assignments.store'), [
+            ->postJson(route('api.student.assignments.store'), [
                 'expert_id' => $expert->expert_id,
                 'expert_role_id' => $expertRoleId,
                 'message' => 'Good morning sir, we would like you as our adviser.',
-                'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 40, 'application/pdf'),
-            ], ['Accept' => 'application/json'])
+            ])
             ->assertSuccessful();
 
         $this->assertDatabaseCount('capstone_expert_application', 1);

@@ -20,7 +20,8 @@ class StudentExpertApplyTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeLeaderWithTeam(): array
+    /** A leader and team; by default their pre-proposal is already recommended, since nothing can be applied for without one. */
+    private function makeLeaderWithTeam(bool $recommended = true): array
     {
         $student = Student::create([
             'email' => 'leader@my.cspc.edu.ph',
@@ -37,6 +38,10 @@ class StudentExpertApplyTest extends TestCase
         ]);
 
         StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+
+        if ($recommended) {
+            $this->approvedPreProposal($team, $student);
+        }
 
         return [$student, $team];
     }
@@ -82,7 +87,6 @@ class StudentExpertApplyTest extends TestCase
         $response = $this->postJson('/api/assignments', [
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $adviserRoleId,
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'We would like to work with you.',
         ]);
 
@@ -108,7 +112,6 @@ class StudentExpertApplyTest extends TestCase
 
         $response = $this->postJson('/api/assignments', [
             'expert_id' => $expert->expert_id,
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'We would like to work with you.',
         ]);
 
@@ -127,7 +130,6 @@ class StudentExpertApplyTest extends TestCase
         $response = $this->postJson('/api/assignments', [
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $this->expertRoleId($otherExpert, 'consultant'),
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'We would like to work with you.',
         ]);
 
@@ -153,7 +155,6 @@ class StudentExpertApplyTest extends TestCase
         $response = $this->postJson('/api/assignments', [
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $this->expertRoleId($expert, 'consultant'),
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'Also be our consultant please.',
         ]);
 
@@ -187,13 +188,13 @@ class StudentExpertApplyTest extends TestCase
             'member_count' => 5,
         ]);
         StudentSchoolYear::create(['student_id' => $studentB->student_id, 'team_id' => $teamB->team_id]);
+        $this->approvedPreProposal($teamB, $studentB);
 
         $this->actingAs($studentB, 'web');
 
         $response = $this->postJson('/api/assignments', [
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $this->expertRoleId($expert, 'consultant'),
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'Please be our consultant.',
         ]);
 
@@ -218,7 +219,6 @@ class StudentExpertApplyTest extends TestCase
         $response = $this->postJson('/api/assignments', [
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $capsaExpertRoleId,
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'We would like to work with you.',
         ]);
 
@@ -241,7 +241,6 @@ class StudentExpertApplyTest extends TestCase
         $response = $this->postJson('/api/assignments', [
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $this->expertRoleId($expert, 'adviser'),
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'Trying again.',
         ]);
 
@@ -296,7 +295,6 @@ class StudentExpertApplyTest extends TestCase
         $response = $this->postJson('/api/assignments', [
             'expert_id' => $another->expert_id,
             'expert_role_id' => $this->expertRoleId($another, 'adviser'),
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'Be our adviser too.',
         ]);
 
@@ -323,7 +321,6 @@ class StudentExpertApplyTest extends TestCase
         $this->postJson('/api/assignments', [
             'expert_id' => $consultant->expert_id,
             'expert_role_id' => $this->expertRoleId($consultant, 'consultant'),
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'Be our consultant.',
         ])->assertOk();
     }
@@ -354,7 +351,6 @@ class StudentExpertApplyTest extends TestCase
         $this->postJson('/api/assignments', [
             'expert_id' => $second->expert_id,
             'expert_role_id' => $this->expertRoleId($second, 'adviser'),
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'Be our adviser.',
         ])
             ->assertStatus(409)
@@ -382,7 +378,6 @@ class StudentExpertApplyTest extends TestCase
         $this->postJson('/api/assignments', [
             'expert_id' => $second->expert_id,
             'expert_role_id' => $this->expertRoleId($second, 'consultant'),
-            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'Be our consultant.',
         ])->assertOk();
     }
@@ -468,7 +463,7 @@ class StudentExpertApplyTest extends TestCase
      */
     public function test_a_team_with_an_approved_pre_proposal_applies_without_attaching_a_file(): void
     {
-        [$student, $team] = $this->makeLeaderWithTeam();
+        [$student, $team] = $this->makeLeaderWithTeam(recommended: false);
         $proposal = $this->approvedPreProposal($team, $student);
         $expert = $this->makeAdviserExpert();
 
@@ -486,10 +481,10 @@ class StudentExpertApplyTest extends TestCase
         $this->assertNull($assignment->proposal_file);
     }
 
-    /** Without one, there is nothing to send, so a file is still required. */
-    public function test_a_team_with_no_approved_pre_proposal_must_still_attach_one(): void
+    /** No recommended pre-proposal, no application - an uploaded PDF does not stand in for one. */
+    public function test_a_team_without_a_recommended_pre_proposal_cannot_apply(): void
     {
-        [$student, $team] = $this->makeLeaderWithTeam();
+        [$student, $team] = $this->makeLeaderWithTeam(recommended: false);
         $expert = $this->makeAdviserExpert();
 
         $this->actingAs($student, 'web');
@@ -497,11 +492,25 @@ class StudentExpertApplyTest extends TestCase
         $response = $this->postJson('/api/assignments', [
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $this->expertRoleId($expert, 'adviser'),
+            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'Please be our adviser.',
         ]);
 
         $response->assertStatus(422);
-        $this->assertStringContainsString('Attach your proposal', $response->json('message'));
+        $this->assertStringContainsString('recommended by your CaPSA', $response->json('message'));
+        $this->assertSame(0, TeamExpertAssignment::where('team_id', $team->team_id)->count());
+    }
+
+    /** The page says why, and offers no Apply button. */
+    public function test_the_page_tells_a_team_without_a_recommended_pre_proposal_it_cannot_apply_yet(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam(recommended: false);
+        $team->update(['is_confirmed' => true]);
+        $this->makeAdviserExpert();
+
+        $this->actingAs($student, 'web')->get('/student/experts?tab=find')->assertOk()
+            ->assertSee('Your pre-proposal has to be recommended by your CaPSA before you can apply for experts.')
+            ->assertDontSee('"apply":true', false);
     }
 
     /**

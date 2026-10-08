@@ -71,7 +71,7 @@
     $activePending = (! $activeFilled && isset($rolesSpokenFor[$activeRole]) && $rolesSpokenFor[$activeRole]->status === 'pending')
       ? $rolesSpokenFor[$activeRole] : null;
 
-    $canApply = $team && $isLeader && $teamConfirmed;
+    $canApply = $team && $isLeader && $teamConfirmed && $approvedProposal;
     $studentProgram = \App\Models\Student::mapCourseToProgram(auth()->user()->course ?? '');
 
     // Who a card is, what they do, how much room they have and what this
@@ -260,6 +260,8 @@
             <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Only your team leader can apply for experts. You can still browse who is available.</span></div>
           @elseif(! $teamConfirmed)
             <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your team has to be verified before you can apply for experts. You can still browse who is available.</span></div>
+          @elseif(! $approvedProposal)
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your pre-proposal has to be recommended by your CaPSA before you can apply for experts. You can still browse who is available.</span></div>
           @endif
 
           @if($activeFilled)
@@ -495,7 +497,7 @@
             <h2 id="xh-how-h">How it works</h2>
             <ol class="xh-steps">
               <li><i>1</i><span>Pick the role you still need from the cards above.</span></li>
-              <li><i>2</i><span>Your team leader applies{{ $approvedProposal ? ', with your approved pre-proposal attached' : ' and attaches your pre-proposal' }}.</span></li>
+              <li><i>2</i><span>Your team leader applies, with your recommended pre-proposal attached.</span></li>
               <li><i>3</i><span>The expert accepts or declines. Once they accept, book sessions with them in Consultations.</span></li>
               <li><i>4</i><span>To change an expert later, ask your section's CaPSA. They decide.</span></li>
             </ol>
@@ -1156,13 +1158,9 @@ function openApply(id, draft) {
     return '<label class="xh-rp r-' + c.name + '"><input type="radio" name="xh-apply-role" value="' + c.expert_role_id + '" data-name="' + c.name + '"' + (Number(pick) === Number(c.expert_role_id) ? ' checked' : '') + '>'
       + '<span>' + esc(ucfirst(c.name)) + '</span></label>';
   }).join('');
-  var proposal = D.hasApprovedProposal
-    ? '<div class="xh-field"><span class="xh-flabel">Recommended pre-proposal</span><div class="xh-attach">' + ICON.file
-      + '<div class="xh-attach-meta"><b>' + esc(D.proposalTitle) + '</b><span>Approved by your CaPSA. It is sent with this application, so there is nothing to upload.</span></div>'
-      + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="proposal">Preview</button></div></div>'
-    : '<div class="xh-field" id="xh-f-file"><label for="xh-apply-file">Recommended pre-proposal (PDF) <span class="xh-req">*</span></label>'
-      + filePicker('xh-apply-file', draft && draft.file ? draft.file.name : '')
-      + '<span class="xh-fmeta"><span class="xh-ferr">Attach your recommended pre-proposal as a PDF.</span></span></div>';
+  var proposal = '<div class="xh-field"><span class="xh-flabel">Recommended pre-proposal</span><div class="xh-attach">' + ICON.file
+    + '<div class="xh-attach-meta"><b>' + esc(D.proposalTitle) + '</b><span>Recommended by your CaPSA. It is sent with this application, so there is nothing to upload.</span></div>'
+    + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="proposal">Preview</button></div></div>';
   openDialog(head('Apply to ' + esc(p.name), 'Your application goes to the expert. They accept or decline.')
     + '<div class="xh-dlg-body" data-expert="' + p.id + '">'
     + '<fieldset class="xh-field" id="xh-f-role"><legend class="xh-flabel">Apply as <span class="xh-req">*</span></legend>'
@@ -1182,7 +1180,7 @@ function openReview(d) {
     + '<div class="xh-dlg-body"><dl class="xh-rows">'
     + '<div class="xh-row"><dt>Expert</dt><dd>' + esc(p.name) + '</dd></div>'
     + '<div class="xh-row"><dt>Applying as</dt><dd>' + esc(ucfirst(d.roleName)) + '</dd></div>'
-    + '<div class="xh-row"><dt>Proposal</dt><dd>' + esc(D.hasApprovedProposal ? D.proposalTitle : (d.file ? d.file.name : '')) + '</dd></div>'
+    + '<div class="xh-row"><dt>Proposal</dt><dd>' + esc(D.proposalTitle) + '</dd></div>'
     + '<div class="xh-row"><dt>Message</dt><dd>' + esc(d.message) + '</dd></div></dl></div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="apply-edit">Edit</button><button type="button" class="xh-btn xh-gold" data-xh="apply-send">' + ICON.check + 'Send application</button></div>');
 }
@@ -1472,15 +1470,8 @@ var ACT = {
       $('xh-f-msg').classList.add('is-bad');
       ok = false;
     }
-    var file = S.draft && S.draft.file ? S.draft.file : null;
-    if (!D.hasApprovedProposal) {
-      var input = $('xh-apply-file');
-      if (input && input.files && input.files[0]) { file = input.files[0]; }
-      $('xh-f-file').classList.toggle('is-bad', !file);
-      if (!file) { ok = false; }
-    }
     if (!ok) { return; }
-    S.draft = { expertId: body.dataset.expert, roleId: picked.value, roleName: picked.dataset.name, message: msg, file: file };
+    S.draft = { expertId: body.dataset.expert, roleId: picked.value, roleName: picked.dataset.name, message: msg };
     dlg.close();
     openReview(S.draft);
   },
@@ -1491,7 +1482,6 @@ var ACT = {
     form.append('expert_id', d.expertId);
     form.append('expert_role_id', d.roleId);
     form.append('message', d.message);
-    if (d.file) { form.append('proposal_file', d.file); }
     busy(el, 'Sending…');
     send(D.urls.apply, 'POST', form, true).then(function (data) {
       if (data.success) {
@@ -1636,7 +1626,6 @@ document.addEventListener('change', function (e) {
   if (e.target.classList && e.target.classList.contains('xh-file-input')) { syncFilePicker(e.target); }
   if (e.target.id === 'xh-change-to' || e.target.id === 'xh-change-file') { $('xh-change-send').disabled = !changeReady(); }
   if (e.target.name === 'xh-apply-role') { $('xh-f-role').classList.remove('is-bad'); }
-  if (e.target.id === 'xh-apply-file' && e.target.files && e.target.files[0]) { $('xh-f-file').classList.remove('is-bad'); }
 });
 document.querySelector('.xh-seg').addEventListener('keydown', function (e) {
   if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
