@@ -278,11 +278,10 @@ function scheduledList(list) {
   return table(['When', 'Venue', 'Team', 'Panel', 'Status', 'Actions'], rows.map(r => r.html), `Nothing scheduled for ${esc(S.stage)} yet.`);
 }
 
-function windowDays() {
-  const w = win();
+function windowDays(start = win().start, end = win().end) {
   const out = [];
-  if (!w.start) return out;
-  for (let d = new Date(w.start + 'T00:00'); d <= new Date(w.end + 'T00:00'); d.setDate(d.getDate() + 1)) {
+  if (!start) return out;
+  for (let d = new Date(start + 'T00:00'); d <= new Date(end + 'T00:00'); d.setDate(d.getDate() + 1)) {
     const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     if (!isWeekend(iso)) out.push(iso);
   }
@@ -637,8 +636,11 @@ async function openGenerate() {
 function drawGenerate() {
   const w = G.window;
   const min = TODAY > w.start_date ? TODAY : w.start_date;
+  // The window's weekdays spelled out, since a date box shows 12/10/2026 - October 12 or December 10?
+  const days = windowDays(min, w.end_date);
+  const dayOptions = x => (days.includes(x.date) ? days : [x.date, ...days]).map(d => `<option value="${d}"${d === x.date ? ' selected' : ''}>${fmtDay(d)}</option>`).join('');
   let html = G.rows.length ? `<div class="tablewrap"><table class="draft"><thead><tr><th></th><th>Team</th><th>Panel</th><th>Date</th><th>Time</th><th>Venue</th></tr></thead><tbody>${G.rows.map((x, i) => `<tr data-i="${i}"><td><input type="checkbox" data-g="on"${x.on ? ' checked' : ''} aria-label="Include ${esc(x.team.name)}"></td><td><b>${esc(x.team.name)}</b><br><span class="muted" style="font-size:12px">${esc(x.team.section)}</span>${x.skipped ? `<span class="muted" style="display:block;font-size:11.5px" data-skip>${esc(x.skipped)}</span>` : ''}<span class="clash-note" data-clash></span></td><td>${panelHtml(x.team)}</td>`
-    + `<td><input type="date" data-g="date" value="${x.date}" min="${min}" max="${w.end_date}" aria-label="Date"></td>`
+    + `<td><select data-g="date" aria-label="Date">${dayOptions(x)}</select></td>`
     + `<td><select data-g="time" aria-label="Time">${G.time_slots.map(s => `<option value="${s}"${s === x.time ? ' selected' : ''}>${slotLabel(s, addMinutes(s, G.minutes))}</option>`).join('')}</select></td>`
     + `<td><select data-g="venue" aria-label="Venue">${G.venues.map(v => `<option${v === x.venue ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`
     : '<div class="empty">No team is ready to schedule yet.</div>';
