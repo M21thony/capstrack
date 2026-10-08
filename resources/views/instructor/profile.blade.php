@@ -19,10 +19,25 @@
   .pp-cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
   .pp-aside{position:sticky;top:0}
 
-  .pp-who{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;margin:0 0 14px;font-size:12.5px;color:var(--text3)}
-  .pp-who h1{margin:0;font-size:15px;font-weight:700;color:var(--text)}
-  .pp-role{padding:2px 8px;border-radius:6px;font-size:11.5px;font-weight:600;background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
-  .pp-who a{color:var(--accent3);font-weight:600}
+  /* Who this is, as a header: the photo, the name the degree follows, and the
+     roles the administrator gave them. */
+  .pp-id{display:flex;align-items:center;gap:14px 18px;flex-wrap:wrap;margin:0 0 16px;padding:16px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:14px}
+  .pp-id-photo{width:54px;height:54px;border-radius:50%;object-fit:cover;flex-shrink:0;box-shadow:0 0 0 2px var(--bg2),0 0 0 4px rgba(201,168,44,.65)}
+  .pp-id-main{min-width:0;flex:1 1 220px}
+  .pp-id-main h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--text);line-height:1.2;overflow-wrap:anywhere}
+  .pp-id-mail{font-size:12.5px;color:var(--text3);margin-top:3px;overflow-wrap:anywhere}
+  .pp-id-roles{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .pp-id-chips{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+  .pp-role{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;background:var(--bg4);color:var(--text2);border:1px solid var(--border)}
+  .pp-role.adviser{background:var(--accent-light);color:var(--accent3);border-color:rgba(201,168,44,.45)}
+  .pp-role.consultant{background:var(--cyan-bg);color:#0e6a84;border-color:rgba(8,145,178,.3)}
+  .pp-role.grammarian{background:var(--green-bg);color:#15803d;border-color:rgba(22,163,74,.3)}
+  .pp-role.capstone_adviser{background:var(--blue-bg);color:var(--blue);border-color:rgba(29,78,216,.25)}
+  .pp-id-lock{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text3)}
+  .pp-id-lock svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .pp-id-edit{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 13px;border:1px solid var(--border2);border-radius:9px;background:var(--bg2);color:var(--text);font-size:12.5px;font-weight:600;text-decoration:none;white-space:nowrap}
+  .pp-id-edit:hover{border-color:var(--accent);background:var(--accent-light)}
+  .pp-id-edit svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
   .pp-sheet,.pp-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px}
   .pp-sec{padding:18px 22px}
@@ -35,15 +50,13 @@
   .pp-status.full{background:var(--amber-bg);color:var(--amber)}
   .pp-status i{width:7px;height:7px;border-radius:50%;background:currentColor}
   .pp-progs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .pp-prog{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 6px 3px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text3)}
+  /* A number typed per program; 0 or blank means no teams from it. */
+  .pp-prog{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 5px 4px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text3)}
   .pp-prog.on{border-color:rgba(201,168,44,.6);background:var(--accent-light);color:var(--text)}
-  .pp-prog label{display:flex;align-items:center;gap:9px;flex:1;min-height:36px;cursor:pointer;font-size:13.5px;font-weight:700}
-  .pp-prog input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
-  .pp-stepper{display:flex;align-items:center;gap:2px}
-  .pp-step{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font:inherit;font-size:15px;line-height:1;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}
-  .pp-step:hover:not(:disabled){background:var(--bg4)}
-  .pp-step:disabled{opacity:.35;cursor:not-allowed}
-  .pp-count{min-width:26px;text-align:center;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+  .pp-prog label{flex:1;font-size:13.5px;font-weight:700;cursor:pointer}
+  .pp-prog input{width:64px;height:34px;border:1px solid var(--border2);border-radius:8px;padding:0 8px;background:var(--bg2);font:inherit;font-size:14px;font-weight:700;color:var(--text);text-align:center;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+  .pp-prog input::-webkit-outer-spin-button,.pp-prog input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .pp-prog input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
   .pp-foot{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px;font-size:12px;color:var(--text3)}
   .pp-foot b{color:var(--text)}
   .pp-foot .pp-warn{color:var(--amber)}
@@ -124,6 +137,11 @@
   }
   @media (max-width:640px){
     .pp-cols{gap:10px}
+    .pp-id{padding:14px 16px}
+    .pp-id-photo{width:44px;height:44px}
+    .pp-id-main h1{font-size:17px}
+    .pp-id-roles{align-items:flex-start;width:100%}
+    .pp-id-chips{justify-content:flex-start}
     .pp-sec{padding:16px}
     .pp-progs{gap:6px}
     .pp-prog{padding-left:9px}
@@ -174,17 +192,26 @@
     <div class="pp-page">
 
       {{-- Who this is. Name, email and roles are set elsewhere; the degree follows the form below. --}}
-      <div class="pp-who">
-        <h1 id="pp-who">{{ $expert->first_name }} {{ $expert->last_name }}<span id="pp-who-degree">{{ $expert->degreeText() ? ', '.$expert->degreeText() : '' }}</span></h1>
-        <span>{{ $expert->email }}</span>
-        @foreach ($expert->roles as $role)
-          <span class="pp-role">{{ $role->label }}</span>
-        @endforeach
-        <span>Roles are set by the administrator</span>
+      <header class="pp-id">
+        <img class="pp-id-photo" src="{{ $expert->avatarUrl() }}" alt="" onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}'">
+        <div class="pp-id-main">
+          <h1 id="pp-who">{{ $expert->first_name }} {{ $expert->last_name }}<span id="pp-who-degree">{{ $expert->degreeText() ? ', '.$expert->degreeText() : '' }}</span></h1>
+          <div class="pp-id-mail">{{ $expert->email }}</div>
+        </div>
+        <div class="pp-id-roles">
+          <div class="pp-id-chips">
+            @forelse ($expert->roles as $role)
+              <span class="pp-role {{ $role->role_name }}">{{ $role->label }}</span>
+            @empty
+              <span class="pp-role">No role yet</span>
+            @endforelse
+          </div>
+          <span class="pp-id-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Roles are set by the administrator</span>
+        </div>
         @if ($staffProfileRoute)
-          <span>Name, photo and sections: <a href="{{ route($staffProfileRoute) }}">{{ $expert->is_admin ? 'Admin' : 'CaPSA' }} profile</a></span>
+          <a class="pp-id-edit" href="{{ route($staffProfileRoute) }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Name, photo and sections</a>
         @endif
-      </div>
+      </header>
 
       <div class="pp-cols">
         <div class="pp-sheet">
@@ -194,19 +221,12 @@
               <h2 id="pp-slots-h">Team slots</h2>
               <span class="pp-status" id="pp-status" role="status"><i></i><span id="pp-status-text"></span></span>
             </div>
-            <p class="pp-help">Tick each program you take teams from, then set how many.</p>
+            <p class="pp-help">Type how many teams you take from each program. Leave it at 0 for a program you don't take.</p>
             <div class="pp-progs">
               @foreach (\App\Models\CapstoneExpert::PROGRAMS as $program)
                 <div class="pp-prog" data-program="{{ $program }}">
-                  <label>
-                    <input type="checkbox" id="pp-prog-{{ $program }}">
-                    {{ $program }}
-                  </label>
-                  <div class="pp-stepper">
-                    <button type="button" class="pp-step" data-step="-1" aria-label="Fewer {{ $program }} teams">&minus;</button>
-                    <output class="pp-count" aria-live="polite"></output>
-                    <button type="button" class="pp-step" data-step="1" aria-label="More {{ $program }} teams">+</button>
-                  </div>
+                  <label for="pp-prog-{{ $program }}">{{ $program }}</label>
+                  <input type="number" id="pp-prog-{{ $program }}" min="0" max="20" step="1" inputmode="numeric" placeholder="0" aria-label="{{ $program }} teams you take">
                 </div>
               @endforeach
             </div>
@@ -340,8 +360,6 @@ function closeSidebar() {
   function norm(v) { return String(v).trim().toLowerCase(); }
 
   var state = copy(saved);
-  // What a program's stepper goes back to when it is ticked again.
-  var lastCount = PROGRAMS.reduce(function (o, p) { o[p] = state.programs[p] || 1; return o; }, {});
   var side = @json($firstSide);
   var group = GROUPS.length ? GROUPS[0].name : null;
   var justSaved = false;
@@ -357,12 +375,10 @@ function closeSidebar() {
 
   function renderPrograms() {
     document.querySelectorAll('.pp-prog').forEach(function (row) {
-      var p = row.dataset.program, n = state.programs[p] || 0, on = n > 0;
-      row.classList.toggle('on', on);
-      row.querySelector('input').checked = on;
-      row.querySelector('.pp-count').textContent = n;
-      row.querySelector('[data-step="-1"]').disabled = !on || n <= 1;
-      row.querySelector('[data-step="1"]').disabled = !on || n >= 20;
+      var p = row.dataset.program, n = state.programs[p] || 0, box = row.querySelector('input');
+      row.classList.toggle('on', n > 0);
+      // Left alone while it is being typed in, so the caret does not jump.
+      if (document.activeElement !== box) box.value = n ? n : '';
     });
     var t = total();
     if (!t && FLAT_LIMIT && !dirty()) t = FLAT_LIMIT;
@@ -372,7 +388,7 @@ function closeSidebar() {
     var taken = el('pp-taken');
     taken.className = t < TEAMS_HANDLED ? 'pp-warn' : '';
     taken.innerHTML = !t
-      ? 'Tick at least one program to take teams.'
+      ? 'Type a number for at least one program to take teams.'
       : (t < TEAMS_HANDLED
         ? 'You handle <b>' + TEAMS_HANDLED + '</b> teams, more than your limit of <b>' + t + '</b>. No new team comes to you until you are below it.'
         : 'You handle <b>' + TEAMS_HANDLED + '</b> of <b>' + t + '</b> ' + (t === 1 ? 'team' : 'teams'));
@@ -472,22 +488,16 @@ function closeSidebar() {
   function changed() { justSaved = false; renderSaveBar(); }
   function renderAll() { renderPrograms(); renderAreas(); renderDegree(); renderEmail(); renderSaveBar(); }
 
-  document.querySelectorAll('.pp-prog').forEach(function (row) {
-    var p = row.dataset.program;
-    row.querySelector('input').addEventListener('change', function (e) {
-      if (state.programs[p] > 0) lastCount[p] = state.programs[p];
-      state.programs[p] = e.target.checked ? (lastCount[p] || 1) : 0;
+  document.querySelectorAll('.pp-prog input').forEach(function (box) {
+    var p = box.closest('.pp-prog').dataset.program;
+    box.addEventListener('input', function () {
+      var n = parseInt(box.value, 10);
+      state.programs[p] = isNaN(n) ? 0 : Math.min(20, Math.max(0, n));
       changed();
       renderPrograms();
     });
-    row.querySelectorAll('.pp-step').forEach(function (b) {
-      b.addEventListener('click', function () {
-        state.programs[p] = Math.min(20, Math.max(1, (state.programs[p] || 0) + Number(b.dataset.step)));
-        lastCount[p] = state.programs[p];
-        changed();
-        renderPrograms();
-      });
-    });
+    // Tidied once they move on: 25 becomes 20, -1 or blank becomes 0.
+    box.addEventListener('blur', renderPrograms);
   });
 
   document.querySelectorAll('.pp-tabs [data-side]').forEach(function (b) {
@@ -535,7 +545,7 @@ function closeSidebar() {
     var profileChanged = part(state, ['degree', 'programs', 'areas']) !== part(saved, ['degree', 'programs', 'areas']);
     var emailChanged = JSON.stringify(state.email) !== JSON.stringify(saved.email);
     if (profileChanged && total() < 1) {
-      renderSaveBar('Tick at least one program and how many teams you take from it.', 'failed');
+      renderSaveBar('Type how many teams you take from at least one program.', 'failed');
       return;
     }
     btn.disabled = true;
