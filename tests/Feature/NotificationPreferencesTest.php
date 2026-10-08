@@ -86,7 +86,21 @@ class NotificationPreferencesTest extends TestCase
         }
     }
 
-    public function test_a_switched_off_notification_is_never_written_or_pushed(): void
+    public function test_a_switched_off_notification_is_never_written_or_pushed_to_a_student(): void
+    {
+        Queue::fake();
+
+        $student = Student::factory()->create();
+        $student->saveNotificationPrefs(['web.review_finished' => false], true);
+
+        Notifier::toStudent($student, 'review_finished', 'Review finished', 'Your adviser reviewed your document.');
+
+        $this->assertSame(0, Notification::where('student_id', $student->student_id)->count());
+        Queue::assertNotPushed(SendWebPush::class);
+    }
+
+    /** An expert chooses emails only; the bell, and its desktop pop-up, always get it. */
+    public function test_an_expert_always_gets_the_bell_whatever_an_older_page_saved(): void
     {
         Queue::fake();
 
@@ -95,8 +109,8 @@ class NotificationPreferencesTest extends TestCase
 
         Notifier::toExpert($expert, 'consultation_booked', 'Consultation booked', 'A team booked you.');
 
-        $this->assertSame(0, Notification::where('expert_id', $expert->expert_id)->count());
-        Queue::assertNotPushed(SendWebPush::class);
+        $this->assertSame(1, Notification::where('expert_id', $expert->expert_id)->count());
+        Queue::assertPushed(SendWebPush::class);
     }
 
     public function test_a_switched_on_notification_still_goes_out(): void

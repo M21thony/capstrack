@@ -109,7 +109,7 @@ class StaffProfileAndDashboardTilesTest extends TestCase
 
         // Their name and sections stay on the CaPSA profile, one link away.
         $this->actingAs($capsa, 'expert')->get(route('instructor.profile'))->assertOk()
-            ->assertSee('Programs and team slots')
+            ->assertSee('Team slots')
             ->assertSee('href="'.route('capsa.profile').'">CaPSA profile</a>', false);
     }
 

@@ -128,13 +128,13 @@ class InstructorProfileTest extends TestCase
 
         $response = $this->actingAs($expert->fresh(), 'expert')->get(route('instructor.profile'))->assertOk();
 
-        $response->assertSee('What students see')
+        $response->assertSee('Team slots')
             ->assertSee($expert->email)
             ->assertSee('<option value="MIT" selected>MIT</option>', false)
             ->assertSee('data-program="BSIT"', false)
             ->assertSee('data-side="adviser"', false)
             ->assertSee('Research Methods')
-            ->assertSee('No ratings from team leaders yet')
+            ->assertDontSee('What students see')
             ->assertDontSee('id="ep-overlay"', false);
 
         $this->assertSame(['BSIT' => 3, 'BSIS' => 2], $response->viewData('programSlots'));
@@ -142,38 +142,50 @@ class InstructorProfileTest extends TestCase
         $this->assertSame(0, $response->viewData('teamsHandled'));
     }
 
-    public function test_the_profile_page_shows_the_rating_from_team_leaders(): void
+    /** The rating lives on My Evaluations; the profile keeps to what the expert changes. */
+    public function test_the_profile_keeps_to_what_the_expert_changes(): void
     {
         $expert = $this->makeExpert();
         $leader = Student::factory()->withCompleteProfile()->create();
         $team = Team::create(['team_name' => 'Rated', 'team_status' => 'Active', 'is_confirmed' => true, 'leader_id' => $leader->student_id]);
-        foreach ([5, 4] as $rating) {
-            ExpertEvaluation::factory()->create(['expert_id' => $expert->expert_id, 'team_id' => $team->team_id, 'student_id' => $leader->student_id, 'rating' => $rating]);
-        }
+        ExpertEvaluation::factory()->create(['expert_id' => $expert->expert_id, 'team_id' => $team->team_id, 'student_id' => $leader->student_id, 'rating' => 5]);
 
         $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
-            ->assertSee('<b>4.5</b> from 2 team leader ratings', false);
+            ->assertSeeInOrder(['Team slots', 'Research areas', 'Degree', 'Email notifications'])
+            ->assertDontSee('team leader rating');
     }
 
-    /** Notifications are a row of the profile, grouped, and saved by the same bar. */
-    public function test_the_notification_switches_are_grouped_and_show_what_is_saved(): void
+    /** Four email switches, one per kind of work; a group is on while any email in it is. */
+    public function test_email_switches_are_grouped_and_show_what_is_saved(): void
     {
         $expert = $this->makeExpert();
-        $expert->forceFill(['notification_prefs' => ['email.review_reminder' => false]])->save();
+        $expert->forceFill(['notification_prefs' => [
+            'email.expert_application' => false, 'email.leave_request_received' => false,
+            'email.review_reminder' => false,
+        ]])->save();
 
         $response = $this->actingAs($expert->fresh(), 'expert')->get(route('instructor.profile'))->assertOk();
 
-        $response->assertSeeInOrder(['Teams', 'A team applies to me', 'Consultations', 'Documents', 'Announcements'])
-            ->assertSee('data-key="web.document_submitted"', false)
-            ->assertSee('id="pp-perm-text"', false)
+        $response->assertSeeInOrder(['Email notifications', 'Teams', 'Consultations', 'Documents', 'Announcements'])
             ->assertSee('id="notifications"', false)
+            ->assertSee('Turn on')
+            ->assertDontSee('Notify me at all')
             ->assertDontSee('class="notif-prefs"', false);
 
-        $prefs = $response->viewData('notificationPrefs');
-        $this->assertTrue($prefs['all']);
-        $this->assertFalse($prefs['email.review_reminder']);
-        $this->assertTrue($prefs['web.review_reminder']);
-        $this->assertArrayNotHasKey('Other', $response->viewData('notificationGroups'), 'every expert notification has a group');
+        $groups = $response->viewData('emailGroups');
+        $this->assertSame(['teams', 'consultations', 'documents', 'announcements'], array_keys($groups), 'every expert email has a group');
+        $this->assertFalse($groups['teams']['on'], 'both team emails are off');
+        $this->assertTrue($groups['documents']['on'], 'one documents email is still on');
+    }
+
+    public function test_email_switches_are_all_off_when_everything_was_switched_off(): void
+    {
+        $expert = $this->makeExpert();
+        $expert->forceFill(['notification_prefs' => ['all' => false]])->save();
+
+        $groups = $this->actingAs($expert->fresh(), 'expert')->get(route('instructor.profile'))->viewData('emailGroups');
+
+        $this->assertSame([false], array_values(array_unique(array_column($groups, 'on'))));
     }
 
     public function test_guest_cannot_update_capacity(): void

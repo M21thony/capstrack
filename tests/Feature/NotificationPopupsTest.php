@@ -134,7 +134,8 @@ class NotificationPopupsTest extends TestCase
             ->assertSee('data-at="2026-09-25T14:30:00+08:00"', false);
     }
 
-    public function test_an_expert_who_turned_announcements_off_is_not_told(): void
+    /** Experts choose emails only now; a bell switch left off on an older page hides nothing. */
+    public function test_an_old_bell_switch_does_not_hide_an_announcement_from_an_expert(): void
     {
         $adviser = CapstoneExpert::factory()->create([
             'approved_status' => true, 'is_admin' => false,
@@ -143,6 +144,6 @@ class NotificationPopupsTest extends TestCase
 
         $this->announce($this->capsa(), ['expert']);
 
-        $this->assertFalse(Notification::where('expert_id', $adviser->expert_id)->exists());
+        $this->assertTrue(Notification::where('expert_id', $adviser->expert_id)->exists());
     }
 }

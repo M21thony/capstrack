@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
-use App\Models\ExpertEvaluation;
 use App\Models\ExpertExpertise;
 use App\Support\NotificationTypes;
 use Illuminate\Http\JsonResponse;
@@ -39,11 +38,7 @@ class ProfileController extends Controller
 
         $teamsHandled = $expert->teamAssignments()->where('status', 'approved')->count();
 
-        $rating = ExpertEvaluation::where('expert_id', $expert->expert_id)
-            ->selectRaw('AVG(rating) as average, COUNT(*) as total')
-            ->first();
-
-        [$notificationGroups, $notificationPrefs] = $this->notificationSwitches($expert);
+        [$emailGroups, $bellTypes] = $this->emailGroups($expert);
 
         return view('instructor.profile', [
             'currentPage' => 'profile',
@@ -53,60 +48,54 @@ class ProfileController extends Controller
             'programSlots' => $programSlots,
             'teamsHandled' => $teamsHandled,
             'slotSuggestion' => $expert->slotSuggestion($teamsHandled),
-            'ratingAverage' => (int) ($rating?->total ?? 0) > 0 ? round((float) $rating->average, 1) : null,
-            'ratingCount' => (int) ($rating?->total ?? 0),
             // A CaPSA or Admin who also advises keeps their name and sections
             // on their own portal's profile page.
             'staffProfileRoute' => $expert->is_staff ? ($expert->is_admin ? 'admin.profile' : 'capsa.profile') : null,
-            'notificationGroups' => $notificationGroups,
-            'notificationPrefs' => $notificationPrefs,
+            'emailGroups' => $emailGroups,
+            'bellTypes' => $bellTypes,
         ]);
     }
 
     /**
-     * The notification switches, grouped by what they are about, and where
-     * each one stands. A kind not named in a group still shows, under Other.
+     * The email switches: one per kind of work, each covering the
+     * notifications about it. A group is on while any email in it is.
+     * Everything always reaches the bell, so only email is a choice here.
      *
-     * @return array{0: array<string, list<array{type: string, label: string, web: bool, email: bool}>>, 1: array<string, bool>}
+     * @return array{0: array<string, array{label: string, help: string, types: list<string>, on: bool}>, 1: list<string>}
      */
-    private function notificationSwitches(CapstoneExpert $expert): array
+    private function emailGroups(CapstoneExpert $expert): array
     {
         $types = NotificationTypes::for($expert->notificationAudience());
         $saved = $expert->notification_prefs ?? [];
+        $all = ($saved['all'] ?? true) !== false;
+
         $byGroup = [
-            'Teams' => ['expert_application', 'leave_request_received'],
-            'Consultations' => ['consultation_booked', 'consultation_cancelled', 'consultation_reminder'],
-            'Documents' => ['document_submitted', 'paper_to_check', 'review_reminder'],
-            'Announcements' => ['announcement'],
+            'teams' => ['Teams', 'A team applies to you, or a student asks to leave or be removed', ['expert_application', 'leave_request_received']],
+            'consultations' => ['Consultations', 'Bookings, cancellations, and a reminder on the day', ['consultation_booked', 'consultation_cancelled', 'consultation_reminder']],
+            'documents' => ['Documents', 'Documents and signed papers to review, and a reminder when they wait', ['document_submitted', 'paper_to_check', 'review_reminder']],
+            'announcements' => ['Announcements', 'Important or urgent announcements from a CaPSA', ['announcement']],
         ];
-        $byGroup['Other'] = array_values(array_diff(array_keys($types), array_merge(...array_values($byGroup))));
+        $grouped = array_merge(...array_column($byGroup, 2));
+        $byGroup['other'] = ['Other', 'Anything else CapsTrack emails you about', array_values(array_diff(array_keys($types), $grouped))];
 
         $groups = [];
-        $prefs = ['all' => ($saved['all'] ?? true) !== false];
-
-        foreach ($byGroup as $group => $keys) {
-            foreach ($keys as $type) {
-                if (! isset($types[$type])) {
-                    continue;
-                }
-
-                $switch = [
-                    'type' => $type,
-                    'label' => $types[$type]['label'],
-                    'web' => $types[$type]['web'] ?? true,
-                    'email' => (bool) $types[$type]['email'],
-                ];
-                $groups[$group][] = $switch;
-
-                foreach (['web', 'email'] as $channel) {
-                    if ($switch[$channel]) {
-                        $prefs[$channel.'.'.$type] = ($saved[$channel.'.'.$type] ?? true) !== false;
-                    }
-                }
+        foreach ($byGroup as $key => [$label, $help, $keys]) {
+            $emailed = array_values(array_filter($keys, fn (string $type) => ! empty($types[$type]['email'])));
+            if ($emailed === []) {
+                continue;
             }
+
+            $groups[$key] = [
+                'label' => $label,
+                'help' => $help,
+                'types' => $emailed,
+                'on' => $all && collect($emailed)->contains(fn (string $type) => ($saved['email.'.$type] ?? true) !== false),
+            ];
         }
 
-        return [$groups, $prefs];
+        $bellTypes = array_keys(array_filter($types, fn (array $type) => $type['web'] ?? true));
+
+        return [$groups, $bellTypes];
     }
 
     /**

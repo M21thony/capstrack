@@ -74,7 +74,10 @@ class Notifier
             // Bell and email are separate switches. Writing the row is what
             // sends the email (see Notification::booted), so when the bell is
             // off the email has to be sent here or it would be lost with it.
-            if (! $person->wants($type, 'web')) {
+            // An expert's bell gets everything: their profile only lets them
+            // choose which emails they get, so a bell switched off on an
+            // older page cannot hide a team's application from them.
+            if ($person instanceof Student && ! $person->wants($type, 'web')) {
                 NotificationMailer::send($person, $type, $title, $message, $link);
 
                 return;

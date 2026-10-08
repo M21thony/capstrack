@@ -130,14 +130,15 @@ class NotificationEmailTest extends TestCase
         Mail::assertQueued(NotificationMail::class, fn (NotificationMail $mail) => $mail->hasTo($other->email));
     }
 
-    public function test_switching_the_desktop_popup_off_does_not_lose_the_email(): void
+    /** An expert's bell keeps everything now, even with a bell switch left off on an older page, and the email still goes. */
+    public function test_an_old_bell_switch_does_not_hide_anything_from_an_expert_or_lose_the_email(): void
     {
         Mail::fake();
         $expert = $this->expert(['notification_prefs' => ['web.document_submitted' => false]]);
 
         Notifier::toExpert($expert, 'document_submitted', 'Document submitted', 'A team sent a document.');
 
-        $this->assertSame(0, Notification::where('expert_id', $expert->expert_id)->count());
+        $this->assertSame(1, Notification::where('expert_id', $expert->expert_id)->count());
         Mail::assertQueued(NotificationMail::class, fn (NotificationMail $mail) => $mail->hasTo($expert->email));
     }
 
@@ -221,9 +222,8 @@ class NotificationEmailTest extends TestCase
 
         $this->actingAs($expert, 'expert')->get(route('instructor.profile'))
             ->assertOk()
-            ->assertSee('data-key="email.expert_application"', false)
-            ->assertSee('data-key="email.document_submitted"', false)
-            ->assertSee('data-key="email.leave_request_received"', false);
+            ->assertSee('data-types="email.expert_application email.leave_request_received"', false)
+            ->assertSee('data-types="email.document_submitted email.paper_to_check email.review_reminder"', false);
     }
 
     public function test_a_student_can_switch_an_email_off_and_stops_getting_it(): void
