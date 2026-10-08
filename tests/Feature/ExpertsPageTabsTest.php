@@ -263,6 +263,21 @@ class ExpertsPageTabsTest extends TestCase
         $this->assertStringNotContainsString('fit your team', $html);
     }
 
+    /** View profile is a small link, not a full button, so two rows of cards fit on screen. */
+    public function test_view_profile_is_a_link_on_each_card(): void
+    {
+        [$student] = $this->leader();
+        $expert = $this->expert('Neil', 'adviser');
+
+        $card = $this->card($this->actingAs($student, 'web')
+            ->get(route('student.experts', ['role' => 'adviser']))->getContent(), $expert);
+
+        $this->assertStringContainsString('class="xh-viewlink" data-xh="profile"', $card);
+        $this->assertStringContainsString('View profile <span aria-hidden="true">→</span>', $card);
+        $this->assertStringNotContainsString('class="xh-btn xh-ghost" data-xh="profile"', $card);
+        $this->assertStringContainsString('.xh-viewlink{', file_get_contents(resource_path('student-ui/Styles/experts.css')));
+    }
+
     /** A merge once kept main's stylesheet and left these as bare browser buttons. */
     public function test_the_find_experts_controls_keep_their_styles(): void
     {
