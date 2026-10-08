@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Log;
  * was given. "Go" is kept on the defense. "Not ready" calls the date off: the
  * date it lost is kept in defense_cancellations, the slot is freed, and the
  * team waits under Ready to schedule for its CaPSA to give it a new one.
- * The CaPSA may record an answer the CaPA gave in person.
+ * The CaPSA may record an answer the CaPA gave in person. The same cancel runs
+ * on its own on the defense day when the requirements are still open.
  */
 class CapaGo
 {
@@ -52,6 +53,16 @@ class CapaGo
             return;
         }
 
+        $this->cancel($schedule, 'The CaPA said the team is not ready yet', $note, $by->expert_id);
+    }
+
+    /**
+     * Call the date off and put the team back under Ready to schedule. Used
+     * for "Not ready", and by defenses:cancel-unready - with no one to name
+     * as $cancelledBy - when the requirements were still open on the day.
+     */
+    public function cancel(DefenseSchedule $schedule, string $reason, ?string $note, ?int $cancelledBy): void
+    {
         $schedule->loadMissing('panels.expert', 'team');
         $was = $schedule->schedule_date->copy();
 
@@ -62,7 +73,7 @@ class CapaGo
             'was_scheduled_at' => $was,
             'venue' => $schedule->venue,
             'note' => $note ? trim($note) : null,
-            'cancelled_by' => $by->expert_id,
+            'cancelled_by' => $cancelledBy,
         ]);
 
         foreach ($schedule->panels->filter(fn ($p) => $p->google_event_id) as $panel) {
@@ -78,7 +89,7 @@ class CapaGo
 
         $team = $schedule->team?->team_name ?? 'The team';
         $title = $schedule->defense_type.' cancelled: '.$team;
-        $message = $team.'\'s '.$schedule->defense_type.' on '.$was->format('M j, g:i A').' is cancelled. The CaPA said the team is not ready yet'
+        $message = $team.'\'s '.$schedule->defense_type.' on '.$was->format('M j, g:i A').' is cancelled. '.$reason
             .($note ? ' ('.trim($note).')' : '').'. The CaPSA will set a new date.';
 
         Notifier::toStudents(

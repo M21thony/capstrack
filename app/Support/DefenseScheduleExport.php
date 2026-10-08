@@ -95,7 +95,7 @@ class DefenseScheduleExport
                 'status' => $this->statusOf($schedule, $stage, $deadline, $lastCancelled, $earlier),
                 // What a team waiting for a date lost, for the Schedule column.
                 'note' => match (true) {
-                    $lastCancelled !== null => 'Was '.$lastCancelled->was_scheduled_at->format('M j, g:i A').'. CaPA: not ready'.($lastCancelled->note ? ' ('.$lastCancelled->note.')' : '').'.',
+                    $lastCancelled !== null => 'Was '.$lastCancelled->was_scheduled_at->format('M j, g:i A').'. '.($lastCancelled->cancelled_by ? 'CaPA: not ready' : 'Requirements not complete').($lastCancelled->note ? ' ('.$lastCancelled->note.')' : '').'.',
                     $earlier?->schedule_date !== null => 'Defended '.$earlier->schedule_date->format('M j').'.',
                     default => null,
                 },

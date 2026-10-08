@@ -299,8 +299,9 @@ class DefenseBoard
     /**
      * The tries at this stage that did not end in a pass, oldest first: dates
      * the CaPA cancelled, and defenses the panel sent back for a redefense.
+     * A cancel nobody made ('auto') was defenses:cancel-unready, on the day.
      *
-     * @return array<int, array{kind: string, date: string, note: ?string}>
+     * @return array<int, array{kind: string, date: string, note: ?string, auto?: bool}>
      */
     private function triesOf(Team $team, string $stage, ?DefenseSchedule $current, Collection $cancellations): array
     {
@@ -308,6 +309,7 @@ class DefenseBoard
             'kind' => 'cancelled',
             'date' => $c->was_scheduled_at->toDateString(),
             'note' => $c->note,
+            'auto' => $c->cancelled_by === null,
         ]);
 
         $redefenses = $team->defenseSchedules

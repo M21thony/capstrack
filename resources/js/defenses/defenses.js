@@ -104,7 +104,7 @@ function teamCell(t, extra = '') {
 function triesPill(t) {
   const last = t.tries[t.tries.length - 1];
   if (!last || !t.waiting) return '';
-  if (last.kind === 'cancelled') return `<span class="pill p-red" title="${esc('The CaPA did not give the go' + (last.note ? ': ' + last.note : '') + '.')}">Cancelled ${fmtShort(last.date)} · reschedule</span>`;
+  if (last.kind === 'cancelled') return `<span class="pill p-red" title="${esc((last.auto ? 'Requirements not complete by the defense date' : 'The CaPA did not give the go') + (last.note ? ': ' + last.note : '') + '.')}">Cancelled ${fmtShort(last.date)} · reschedule</span>`;
   const until = win().end;
   return `<span class="pill p-amber" title="The panel asked for a redefense on ${fmtDay(last.date)}. Waits for a new date.">${esc(last.note || 'Redefense')}${until ? ` (until ${fmtShort(until)})` : ''}</span>`;
 }
@@ -369,7 +369,7 @@ function openDrawer(id) {
     else label = !t.panel ? 'Waiting for a panel' : j.attempt > 1 ? 'Waiting for a redefense date' : 'Not yet';
     if (j.stage === S.stage && needsAnswer(t)) label += t.capa === 'go' ? ' · CaPA: Go' : ' · waiting for the CaPA\'s go';
     const tries = j.stage === S.stage && t.tries.length
-      ? `<ul class="tries">${t.tries.map(x => `<li><b>${x.kind === 'cancelled' ? 'Cancelled' : esc(x.note || 'Redefense')}</b> · ${fmtDay(x.date)}${x.kind === 'cancelled' ? ` · CaPA: not ready${x.note ? ' (' + esc(x.note) + ')' : ''}` : ''}</li>`).join('')}</ul>` : '';
+      ? `<ul class="tries">${t.tries.map(x => `<li><b>${x.kind === 'cancelled' ? 'Cancelled' : esc(x.note || 'Redefense')}</b> · ${fmtDay(x.date)}${x.kind === 'cancelled' ? ` · ${x.auto ? 'Requirements not complete' : 'CaPA: not ready'}${x.note ? ' (' + esc(x.note) + ')' : ''}` : ''}</li>`).join('')}</ul>` : '';
     return `<li><span class="${dot}">${dot.includes('done') ? '✓' : i + 1}</span><div><b>${esc(j.stage)}</b><span>${esc(label)}</span>${tries}</div></li>`;
   }).join('');
   const returnees = t.member_list.filter(m => m.returnee).length;
