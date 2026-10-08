@@ -239,6 +239,8 @@
       overlay.classList.remove('active');
     });
   }
+  // The X and the backdrop call it from onclick, which only sees window.
+  window.jrpClose = jrpClose;
 
   var confirmOverlay = document.getElementById('jrp-confirm-overlay');
   var confirmIcon = document.getElementById('jrp-confirm-icon');

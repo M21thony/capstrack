@@ -73,6 +73,20 @@ class TeamInvitePopupTest extends TestCase
         $this->assertStringNotContainsString("remindUrl.replace('__ID__', id), {\n        method: 'POST'", $html);
     }
 
+    /**
+     * The X and the backdrop call jrpClose() from onclick, which only sees
+     * window. It was private to the script, so the popup could not be closed.
+     */
+    public function test_the_popup_can_be_closed(): void
+    {
+        [$leader] = $this->leaderWithTeam();
+
+        $html = $this->actingAs($leader, 'web')->get(route('student.team'))->getContent();
+
+        $this->assertStringContainsString('jrpClose()" class="pm-close-btn"', $html);
+        $this->assertStringContainsString('window.jrpClose = jrpClose;', $html);
+    }
+
     /** The endpoint itself, so the verb the page sends is the verb it wants. */
     public function test_the_reminder_endpoint_takes_a_put(): void
     {
