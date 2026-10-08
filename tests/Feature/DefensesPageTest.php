@@ -50,6 +50,10 @@ class DefensesPageTest extends TestCase
 
         $this->actingAs($this->capsa, 'expert')->get(route('capsa.defenses', ['step' => 'wizard']))
             ->assertViewHas('state', fn ($state) => $state['step'] === 'ready');
+
+        // There is no Not ready step any more: an old link to it opens on Ready.
+        $this->actingAs($this->capsa, 'expert')->get(route('capsa.defenses', ['step' => 'blocked']))
+            ->assertViewHas('state', fn ($state) => $state['step'] === 'ready');
     }
 
     public function test_the_page_carries_the_days_panelists_are_away(): void

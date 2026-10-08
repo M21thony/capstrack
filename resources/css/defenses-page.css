@@ -100,7 +100,6 @@
 .dp .step[aria-selected="true"] .k i{background:var(--gold);color:var(--on-gold)}
 .dp .step .n{font-size:26px;font-weight:700;line-height:1.15}
 .dp .step .s{font-size:12.5px;color:var(--ink-2)}
-.dp .step .n.red{color:var(--red)}
 .dp .step .n.green{color:var(--green)}
 .dp .step::after{content:"";position:absolute;right:-7px;top:50%;width:12px;height:12px;background:inherit;border-top:1px solid var(--line);border-right:1px solid var(--line);transform:translateY(-50%) rotate(45deg);z-index:1}
 .dp .step:last-child::after{display:none}
