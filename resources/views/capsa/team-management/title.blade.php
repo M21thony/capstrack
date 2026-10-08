@@ -136,7 +136,7 @@
             <span class="no">#{{ $k + 1 }}</span>
             <span class="tx">
               <span class="tt">{{ $match['title'] }}</span>
-              <span class="mm">{{ collect([$match['academic_year'], $match['program'], $match['reason']])->filter()->implode(' · ') }}</span>
+              <span class="mm">{{ collect([$match['recommended'], $match['academic_year'], $match['program'], $match['reason']])->filter()->implode(' · ') }}</span>
             </span>
             <span class="ps"><x-tm-sim :score="$match['score']" /></span>
           </a>

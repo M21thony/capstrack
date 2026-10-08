@@ -1954,7 +1954,7 @@ function renderMatchItem(m, i, checkId) {
       </div>
       <div>
         <div class="t">${escapeHtml(m.title)}</div>
-        <div class="mt">${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}</div>
+        <div class="mt">${m.recommended ? escapeHtml(m.recommended) : `${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}`}</div>
         ${why ? `<div class="wy">${escapeHtml(why)}</div>` : ''}
       </div>
     </a>`;

@@ -77,6 +77,7 @@ class PreProposalPayload
                         'reason' => $m['reason'] ?? null,
                         'program' => $m['program'] ?? null,
                         'academic_year' => $m['academic_year'] ?? null,
+                        'recommended' => $m['recommended'] ?? null,
                         'authors' => $m['authors'] ?? null,
                         'abstract' => $m['abstract'] ?? null,
                         'similarities' => $m['similarities'] ?? null,

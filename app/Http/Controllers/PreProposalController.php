@@ -251,7 +251,9 @@ class PreProposalController extends Controller
             }
 
             $concepts = $this->service->extractKeyConcepts($pdfText);
-            $matches = $this->service->findSimilarDocuments($concepts, 10);
+            $matches = $this->service->findSimilarDocuments(
+                $concepts, 10, StudentSchoolYear::where('student_id', $request->user()->student_id)->value('team_id')
+            );
             $instructors = $this->service->suggestInstructors($concepts);
 
             // Only a judged match may set the verdict. An unassessed one
@@ -272,6 +274,8 @@ class PreProposalController extends Controller
                 'authors' => $m['document']->authors,
                 'academic_year' => $m['document']->academic_year,
                 'program' => $m['document']->program,
+                // Set when the match is another team's title recommended this year, not an archive study.
+                'recommended' => $m['recommended'] ?? null,
                 'score' => $m['score'],
                 'reason' => $m['reason'],
                 'similarities' => $m['similarities'] ?? '',

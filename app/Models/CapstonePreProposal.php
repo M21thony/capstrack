@@ -35,6 +35,9 @@ class CapstonePreProposal extends Model
         'submitted_at',
     ];
 
+    /** A few thousand numbers no page needs. */
+    protected $hidden = ['embedding'];
+
     protected $casts = [
         'research_agenda' => 'array',
         'tags' => 'array',
@@ -43,6 +46,17 @@ class CapstonePreProposal extends Model
         'retired_at' => 'datetime',
         'adviser_decided_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        // The duplication check's stored embedding is of these three; a
+        // revised title must be read again, not compared as it was.
+        static::saving(function (self $proposal) {
+            if ($proposal->isDirty(['title', 'problem_statement', 'proposed_solution'])) {
+                $proposal->embedding = null;
+            }
+        });
+    }
 
     public function team(): BelongsTo
     {

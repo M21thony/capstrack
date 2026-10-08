@@ -127,6 +127,7 @@
       @php
         $mScore = SimilarityBand::scoreOf($m);
         $why = $m['similarities'] ?? ($m['reason'] ?? null);
+        $from = $m['recommended'] ?? (($m['academic_year'] ?? 'N/A').(! empty($m['program']) ? ' · '.$m['program'] : ''));
       @endphp
       <a class="rp-row" href="{{ route('student.duplication.similar', [$check->id, $i + 1]) }}" title="{{ $m['title'] ?? '' }}">
         <span class="rp-rank">
@@ -135,7 +136,7 @@
         </span>
         <span class="rp-what">
           <b>{{ $m['title'] ?? '' }}</b>
-          <small><span>{{ $m['academic_year'] ?? 'N/A' }}@if (! empty($m['program'])) &middot; {{ $m['program'] }}@endif</span>@if ($why) &middot; {{ $why }}@endif</small>
+          <small><span>{{ $from }}</span>@if ($why) &middot; {{ $why }}@endif</small>
         </span>
       </a>
     @empty
