@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CapstoneExpert;
 use App\Models\ExpertExpertise;
+use App\Models\Setting;
 use App\Models\Student;
 use App\Support\SectionCatalog;
 use Illuminate\Http\RedirectResponse;
@@ -44,7 +45,7 @@ class AdminProfileController extends Controller
 
         $allAvailableSections = self::getAllAvailableSections();
 
-        $schoolYear = $admin->school_year;
+        $schoolYear = Setting::get('current_school_year');
 
         // Research areas per side: each expert role they hold, and panels -
         // the same lists their expert profile panel edits.
@@ -70,12 +71,11 @@ class AdminProfileController extends Controller
             'last_name' => ['required', 'string', 'max:50'],
             'suffix' => ['nullable', 'string', 'max:50'],
             'credentials' => ['nullable', 'string', 'max:50'],
-            'school_year' => ['nullable', 'string', 'max:20'],
-            'sections' => ['nullable', 'array'],
-            'sections.*' => ['string', 'max:50'],
         ]);
 
-        $sections = $request->input('sections', []);
+        // Sections and the school year are the Admin's to set (Expert
+        // Management and Settings); this page used to let a CaPSA change their
+        // own, and a save with none ticked wiped them.
 
         $data = [
             'first_name' => $request->input('first_name'),
@@ -83,16 +83,11 @@ class AdminProfileController extends Controller
             'last_name' => $request->input('last_name'),
             'suffix' => $request->input('suffix'),
             'credentials' => $request->input('credentials'),
-            'sections' => ! empty($sections) ? json_encode($sections) : null,
         ];
 
         // The degree is read from the credentials written after their name.
         if ($data['credentials'] !== $admin->credentials) {
             $data += CapstoneExpert::degreeFromCredentials($data['credentials']);
-        }
-
-        if ($request->filled('school_year')) {
-            $data['school_year'] = $request->input('school_year');
         }
 
         CapstoneExpert::where('expert_id', $admin->expert_id)->update($data);

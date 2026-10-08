@@ -74,4 +74,30 @@ class CapsaProfileTabsTest extends TestCase
             ->put(route('capsa.profile.update'), ['first_name' => 'Rosa', 'last_name' => 'Cruz', 'tab' => 'elsewhere'])
             ->assertRedirect(route('capsa.profile'));
     }
+
+    /** Sections and the school year are the Admin's; a CaPSA's own save neither changes nor wipes them. */
+    public function test_a_capsa_cannot_change_their_own_sections_or_school_year(): void
+    {
+        $capsa = $this->capsa();
+        $capsa->forceFill(['school_year' => '2026-2027'])->save();
+
+        $this->actingAs($capsa, 'expert')->put(route('capsa.profile.update'), [
+            'first_name' => 'Rosa', 'last_name' => 'Cruz',
+            'sections' => ['BSCS-1A'], 'school_year' => '1999-2000',
+        ])->assertRedirect();
+
+        $capsa = $capsa->fresh();
+        $this->assertSame('Rosa', $capsa->first_name);
+        $this->assertSame(['BSIT-3A'], $capsa->sections);
+        $this->assertSame('2026-2027', $capsa->school_year);
+
+        // A save with no sections at all used to clear them.
+        $this->actingAs($capsa, 'expert')->put(route('capsa.profile.update'), ['first_name' => 'Rosa', 'last_name' => 'Reyes'])->assertRedirect();
+        $this->assertSame(['BSIT-3A'], $capsa->fresh()->sections);
+
+        $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertOk()
+            ->assertDontSee('name="sections[]"', false)
+            ->assertDontSee('name="school_year"', false)
+            ->assertSee('Set by the administrator.');
+    }
 }

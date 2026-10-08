@@ -1,20 +1,3 @@
-@php
-  $currentYear = (int) date('Y');
-  $ayStart = $currentYear;           // e.g. 2026
-  $ayEnd = $currentYear + 1;        // e.g. 2027
-
-  $shortStart = substr((string) $ayStart, -2); // e.g. 26
-  $shortEnd = substr((string) $ayEnd, -2);     // e.g. 27
-
-  // Keep stored dropdown `value` format as `${YY}-1`.
-  // Example when $currentYear=2026:
-  // - 26-1 => First Semester 2026-2027 (26-1)
-  // - 27-1 => Second Semester 2026-2027 (27-1)
-  $semOptions = [
-    $shortStart . '-1' => 'First Semester ' . $ayStart . '-' . $ayEnd . ' (' . $shortStart . '-1)',
-    $shortEnd . '-1' => 'Second Semester ' . $ayStart . '-' . $ayEnd . ' (' . $shortEnd . '-1)',
-  ];
-@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -278,7 +261,7 @@
         $initials = method_exists($admin, 'avatarInitials') ? $admin->avatarInitials() : strtoupper(substr($admin->name ?? 'U', 0, 2));
         $roleLabels = $admin->roles->pluck('role_name')->map(fn ($r) => \App\Models\Role::labelFor($r))->unique()->values();
         $isSubjectAdviser = $admin->roles->pluck('role_name')->contains('capstone_adviser');
-        $schoolYearLabel = $semOptions[$schoolYear] ?? null;
+        $schoolYearLabel = $schoolYear ? 'School year '.$schoolYear : null;
 
         // The page in tabs, so nothing is a long scroll away. ?tab= picks one,
         // and a save comes back to the tab it was made from.
@@ -367,15 +350,6 @@
                   <label class="label" for="credentials">Credentials</label>
                   <input id="credentials" name="credentials" maxlength="50" class="input" placeholder="e.g. MIT, LPT" value="{{ old('credentials', $admin->credentials) }}" />
                 </div>
-                <div class="pf-field">
-                  <label class="label" for="school_year">School year</label>
-                  <select name="school_year" id="school_year" class="input">
-                    <option value="">Select school year</option>
-                    @foreach ($semOptions as $code => $label)
-                      <option value="{{ $code }}" {{ old('school_year', $schoolYear) === $code ? 'selected' : '' }}>{{ $label }}</option>
-                    @endforeach
-                  </select>
-                </div>
               </div>
 
               {{-- Set elsewhere, shown for reference. --}}
@@ -396,26 +370,17 @@
                   <h2 class="pf-card-title">Assigned sections</h2>
                   <p class="pf-card-desc">The sections whose teams you manage.</p>
                 </div>
-                <span class="pf-count" id="pf-section-count">{{ count($sectionList) }} / {{ count($allAvailableSections) }}</span>
               </div>
 
-              @if (count($allAvailableSections) > 5)
-                <div class="pf-search">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-                  <input type="text" id="pf-section-search" placeholder="Search sections…" autocomplete="off" />
-                </div>
-              @endif
-
-              <div class="pf-sections-list" id="pf-sections-list">
-                @forelse ($allAvailableSections as $section)
-                  <label class="pf-section-opt" data-section-name="{{ strtolower($section) }}">
-                    <input type="checkbox" name="sections[]" value="{{ $section }}" class="pf-section-checkbox" {{ in_array($section, $sectionList) ? 'checked' : '' }} />
-                    <span>{{ $section }}</span>
-                  </label>
+              {{-- Set by the Admin in Expert Management; shown here for reference. --}}
+              <div class="pf-sections-list">
+                @forelse ($sectionList as $section)
+                  <div class="pf-section-opt"><span>{{ $section }}</span></div>
                 @empty
-                  <div class="pf-empty">No sections available.</div>
+                  <div class="pf-empty">No sections yet. The administrator assigns them.</div>
                 @endforelse
               </div>
+              <p class="pf-card-desc" style="margin-top:10px">Set by the administrator.</p>
             </section>
           </aside>
         </div>
@@ -544,31 +509,6 @@ function resetAvatar() {
   img.className = 'app-avatar';
   img.style.objectFit = 'cover';
   avatarPreviewRoot.appendChild(img);
-}
-
-// Section search filter (display-only; does not change submitted values)
-var sectionSearch = document.getElementById('pf-section-search');
-if (sectionSearch) {
-  sectionSearch.addEventListener('input', function (e) {
-    var q = e.target.value.trim().toLowerCase();
-    document.querySelectorAll('#pf-sections-list .pf-section-opt').forEach(function (opt) {
-      var name = opt.getAttribute('data-section-name') || '';
-      opt.style.display = name.indexOf(q) !== -1 ? '' : 'none';
-    });
-  });
-}
-
-// Live selected-sections counter
-var sectionCheckboxes = document.querySelectorAll('.pf-section-checkbox');
-var sectionCountEl = document.getElementById('pf-section-count');
-if (sectionCheckboxes.length && sectionCountEl) {
-  var total = sectionCheckboxes.length;
-  sectionCheckboxes.forEach(function (cb) {
-    cb.addEventListener('change', function () {
-      var selected = document.querySelectorAll('.pf-section-checkbox:checked').length;
-      sectionCountEl.textContent = selected + ' / ' + total;
-    });
-  });
 }
 
 // Tabs: one part of the profile at a time, remembered in the address so a
