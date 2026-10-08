@@ -90,7 +90,7 @@
 .dp .window-chip b{color:var(--ink)}
 .dp .window-chip svg{width:15px;height:15px;color:var(--gold-ink)}
 .dp .window-chip button{border:0;background:transparent;color:var(--gold-ink);font-weight:700;padding:4px 2px;text-decoration:underline;text-underline-offset:3px}
-.dp .pipe{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.dp .pipe{display:grid;grid-template-columns:repeat(var(--steps,4),minmax(0,1fr));gap:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .dp .step{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px 18px 14px 22px;border:0;background:transparent;text-align:left;border-right:1px solid var(--line);min-width:0}
 .dp .step:last-child{border-right:0}
 .dp .step:hover{background:var(--surface-2)}

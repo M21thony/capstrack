@@ -3,7 +3,9 @@
  *
  * A team moves left to right along four steps for the stage in view: its
  * panel made final (Panel not final), whatever still holds it back (Not
- * ready), Ready to schedule, and Scheduled. The steps are the page's main
+ * ready), Ready to schedule, and Scheduled. The panel is set on the
+ * Pre-proposal board only; it then sits every stage through Final Oral, so
+ * the later boards start at Not ready. The steps are the page's main
  * filter; the stage tabs above them pick which defense. Drawn from the JSON
  * the page carries; a stage switch redraws in place, a save reloads.
  */
@@ -61,10 +63,12 @@ const owed = t => t.blockers.filter(b => b.warn);
 const missingExperts = t => t.blockers.find(b => b.key === 'experts');
 const isDraft = t => !!t.panel && t.panel_status === 'draft';
 const isFinal = t => !!t.panel && t.panel_status === 'final';
+const isPre = () => S.stage === S.stages[0];
+const steps = () => (isPre() ? STEPS : STEPS.slice(1));
 
 function stepOf(t) {
   if (t.schedule || t.outcome) return 'scheduled';
-  if (!t.panel || isDraft(t)) return 'panel';
+  if (!t.panel || isDraft(t)) return isPre() ? 'panel' : 'blocked';
   if (hard(t).length) return 'blocked';
   return 'ready';
 }
@@ -136,6 +140,7 @@ function panelButton(t, big = false) {
   if (isFinal(t)) {
     return `<button type="button" class="btn ghost${sm} lockbtn" data-act="cantsit" data-id="${t.id}" title="Final since ${t.panel_final_since ? fmtDay(t.panel_final_since) : 'it was finalized'}. This panel sits every defense through Final Oral. If someone can't make it, mark them away or replace them.">${ICON.lock}Panelist can't sit</button>`;
   }
+  if (!isPre()) return '';
   if (isDraft(t)) return `<button type="button" class="btn ghost${sm}" data-act="assign-one" data-id="${t.id}">Change panel</button>`;
   // A panel from before panels were finalized: change it as before.
   return t.panel ? `<button type="button" class="btn ghost${sm}" data-act="assign-one" data-id="${t.id}">Change panel</button>` : '';
@@ -146,6 +151,7 @@ const table = (heads, rows, empty) => `<div class="tablewrap"><table><thead><tr>
 
 /* ---------------- render ---------------- */
 function render() {
+  if (P.step === 'panel' && !isPre()) P.step = 'ready';
   $('stages').innerHTML = S.stages.map(stg => {
     const p = S.progress?.[stg];
     return `<button type="button" role="tab" data-act="stage" data-stage="${esc(stg)}" aria-selected="${stg === S.stage}">${SHORT[stg]} ${p ? `<span class="prog">${p.done}/${p.of}</span>` : ''}</button>`;
@@ -169,7 +175,8 @@ function render() {
 
   const counts = { panel: 0, blocked: 0, ready: 0, scheduled: 0 };
   TEAMS.forEach(t => { counts[stepOf(t)]++; });
-  $('pipe').innerHTML = STEPS.map(([k, label, sub], i) => `<button type="button" class="step" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}"><span class="k"><i>${i + 1}</i>${label}</span><span class="n${k === 'blocked' && counts[k] ? ' red' : k === 'ready' && counts[k] ? ' green' : ''}">${counts[k]}</span><span class="s">${sub}</span></button>`).join('');
+  $('pipe').style.setProperty('--steps', steps().length);
+  $('pipe').innerHTML = steps().map(([k, label, sub], i) => `<button type="button" class="step" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}"><span class="k"><i>${i + 1}</i>${label}</span><span class="n${k === 'blocked' && counts[k] ? ' red' : k === 'ready' && counts[k] ? ' green' : ''}">${counts[k]}</span><span class="s">${sub}</span></button>`).join('');
 
   renderMini(counts);
   renderTools();
@@ -179,7 +186,7 @@ function render() {
 
 function renderMini(counts) {
   $('mini').innerHTML = `<div class="stages" role="tablist" aria-label="Defense stage">${S.stages.map(stg => `<button type="button" role="tab" data-act="stage" data-stage="${esc(stg)}" aria-selected="${stg === S.stage}">${SHORT[stg]}</button>`).join('')}</div>`
-    + `<div class="mini-steps" role="tablist" aria-label="Where each team is">${STEPS.map(([k, label]) => `<button type="button" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}">${label.replace('Ready to schedule', 'Ready').replace('Panel not final', 'Panel')} <b>${counts[k]}</b></button>`).join('')}</div>`
+    + `<div class="mini-steps" role="tablist" aria-label="Where each team is">${steps().map(([k, label]) => `<button type="button" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}">${label.replace('Ready to schedule', 'Ready').replace('Panel not final', 'Panel')} <b>${counts[k]}</b></button>`).join('')}</div>`
     + `<label class="search" for="mq">${ICON.search}<span class="sr">Search team or title</span><input id="mq" type="search" placeholder="Search team" value="${esc(P.q)}"></label>`
     + '<span class="grow"></span>'
     + `<button type="button" class="btn gold sm" data-act="generate"${win().start ? '' : ' disabled'}>${ICON.spark}Generate</button>`;
@@ -669,7 +676,7 @@ function checkGenerate() {
 /* Keyboard shortcuts. */
 const KEYS = [
   ['Finding', [['Search teams', ['/']], ['Leave the search, or close a window', ['Esc']]]],
-  ['Moving around', [['Panel not final · Not ready · Ready · Scheduled', ['1', '2', '3', '4']], ['Previous or next defense', ['[', ']']], ['List, Week or Rooms (when Scheduled)', ['V']], ['Back to the top', ['T']]]],
+  ['Moving around', [['The steps, left to right', ['1', '2', '3', '4']], ['Previous or next defense', ['[', ']']], ['List, Week or Rooms (when Scheduled)', ['V']], ['Back to the top', ['T']]]],
   ['Doing', [['Assign panel', ['A']], ['Generate schedule', ['G']], ['Defense window', ['W']], ['These shortcuts', ['?']]]],
 ];
 function openKeys() {
@@ -939,7 +946,7 @@ document.addEventListener('keydown', e => {
   const flash = el => { if (el) { el.classList.remove('keyflash'); void el.offsetWidth; el.classList.add('keyflash'); } };
   if (k === '/') { e.preventDefault(); const q = miniOn ? $('mq') : $('q'); q.focus(); q.select(); return; }
   if (k === '?') { e.preventDefault(); openKeys(); return; }
-  if (['1', '2', '3', '4'].includes(k)) { P.step = STEPS[+k - 1][0]; P.reason = ''; render(); flash(root.querySelector(`#pipe [data-step="${P.step}"]`)); return; }
+  if (steps()[+k - 1]) { P.step = steps()[+k - 1][0]; P.reason = ''; render(); flash(root.querySelector(`#pipe [data-step="${P.step}"]`)); return; }
   if (k === '[' || k === ']') {
     const i = S.stages.indexOf(S.stage) + (k === ']' ? 1 : -1);
     if (i >= 0 && i < S.stages.length) loadStage(S.stages[i]);
@@ -947,7 +954,7 @@ document.addEventListener('keydown', e => {
   }
   const lower = k.toLowerCase();
   if (lower === 'v' && P.step === 'scheduled') { P.view = { list: 'week', week: 'rooms', rooms: 'list' }[P.view]; render(); return; }
-  if (lower === 'a') { openAssign([...P.picked]); return; }
+  if (lower === 'a' && isPre()) { openAssign([...P.picked]); return; }
   if (lower === 'g') { openGenerate(); return; }
   if (lower === 'w') { openWindow(); return; }
   if (lower === 't') { ACT.top(); }
