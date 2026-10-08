@@ -108,6 +108,9 @@
       $expertPayloads[$expert->expert_id] = [
         'id' => $expert->expert_id,
         'name' => $expert->name,
+        // Written the way the expert's own profile page previews it.
+        'profileName' => trim($expert->first_name.' '.$expert->last_name).($expert->degreeText() ? ', '.$expert->degreeText() : ''),
+        'email' => $expert->email,
         'initials' => $expert->avatarInitials(),
         'avatar' => $expert->hasAvatarImage() ? $expert->avatarUrl() : null,
         'roles' => $roles->all(),
@@ -1113,36 +1116,34 @@ function send(url, method, body, isForm) {
     .then(function (r) { return r.json().catch(function () { return { success: false, message: 'Something went wrong (' + r.status + '). Try again.' }; }); });
 }
 
-function capOf(p) {
-  if (p.max < 1) { return { text: 'Capacity not set', cls: 'is-unset', pct: 0 }; }
-  if (p.used >= p.max) { return { text: 'Full · ' + p.used + ' of ' + p.max + ' teams', cls: 'is-full', pct: 100 }; }
-  return { text: (p.max - p.used) + ' of ' + p.max + ' slots open', cls: 'is-ok', pct: Math.round(p.used / p.max * 100) };
+// One block per team slot, the way the expert sees it on their own profile.
+function slotsHtml(p) {
+  if (p.max < 1) { return '<div class="xh-prof-slots"><b>Not taking teams yet</b><span>No team limit set</span></div>'; }
+  var open = Math.max(p.max - p.used, 0), cells = '';
+  for (var i = 0; i < Math.max(p.max, p.used); i++) { cells += i < p.used ? '<span class="' + (i < p.max ? 'is-taken' : 'is-over') + '"></span>' : '<span></span>'; }
+  return '<div class="xh-prof-slots"><b>' + (open === 0 ? 'No team slots open' : open + (open === 1 ? ' team slot open' : ' team slots open')) + '</b>'
+    + '<span>' + (p.max < p.used ? 'Limit ' + p.max + ', handling ' + p.used : p.used + ' of ' + p.max + ' taken') + '</span></div>'
+    + '<div class="xh-prof-meter" role="img" aria-label="' + p.used + ' of ' + p.max + ' team slots taken">' + cells + '</div>';
 }
-
-function ratingHtml(p) {
-  if (!p.ratings) { return '<span class="xh-rating-n">No reviews yet</span>'; }
-  var stars = '';
-  for (var s = 1; s <= 5; s++) { stars += '<svg viewBox="0 0 24 24" class="' + (s <= Math.round(p.rating) ? 'is-on' : '') + '" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'; }
-  return '<span class="xh-stars" role="img" aria-label="Rated ' + p.rating + ' out of 5">' + stars + '</span><b>' + Number(p.rating).toFixed(1) + '<small>/5</small></b><span class="xh-rating-n">' + Number(p.ratings).toLocaleString() + (p.ratings === 1 ? ' review' : ' reviews') + '</span>';
-}
+// The same card the expert sees as "What students see" on their profile page.
 function openProfile(id) {
   var p = EXPERTS[id];
   if (!p) { return; }
   var role = p.roles.indexOf(D.activeRole) !== -1 ? D.activeRole : p.roles[0];
-  var c = capOf(p);
   var action = p.apply
     ? '<button type="button" class="xh-btn xh-gold" data-xh="apply" data-id="' + p.id + '">Apply</button>'
     : (p.status ? '<span class="xh-pill xh-' + p.status.tone + ' xh-pill-center">' + esc(p.status.text) + '</span>' : '');
-  openDialog('<div class="xh-dlg-head"><div class="xh-profile-top xh-ttl r-' + role + '">' + avatar(p, role, 'xh-xl') + '<div><h2>' + esc(p.name) + '</h2><div class="xh-chips">'
-    + p.roles.map(function (r) { return '<span class="xh-chip r-' + r + '">' + ucfirst(r) + '</span>'; }).join('') + '</div></div></div>'
+  openDialog('<div class="xh-prof-head">' + avatar(p, role, 'xh-lg') + '<div class="xh-ttl"><h2>' + esc(p.profileName) + '</h2>'
+    + (p.email ? '<div class="xh-prof-email">' + esc(p.email) + '</div>' : '') + '</div>'
     + '<button type="button" class="xh-x" data-xh="close" aria-label="Close">' + ICON.x + '</button></div>'
-    + '<div class="xh-dlg-body"><div class="xh-sec"><span class="xh-lbl">Rating from team leaders</span><div class="xh-rating">' + ratingHtml(p) + '</div></div>'
-    + '<div class="xh-sec"><span class="xh-lbl">Research area as ' + esc({{ Illuminate\Support\Js::from(\App\Models\ExpertExpertise::SIDES[$activeRole] ?? ucfirst($activeRole)) }}) + '</span><div class="xh-tags">'
-    + (p.tags.length ? p.tags.map(function (t) { return '<span class="xh-tag">' + esc(t) + '</span>'; }).join('') : '<span class="xh-tag">Not filled in yet</span>') + '</div></div>'
-    + '<div class="xh-sec"><span class="xh-lbl">Teams they can take</span><div class="xh-caprow"><span>' + (p.max > 0 ? p.used + ' of ' + p.max + ' taken' : 'They have not set this yet') + '</span><b class="' + c.cls + '">' + c.text + '</b></div>'
-    + '<div class="xh-meter' + (c.cls === 'is-full' ? ' is-full' : '') + '"><i style="width:' + c.pct + '%"></i></div></div>'
+    + '<div class="xh-dlg-body xh-prof-body"><div class="xh-chips">'
+    + (p.roles.length ? p.roles.map(function (r) { return '<span class="xh-chip r-' + r + '">' + ucfirst(r) + '</span>'; }).join('') : '<span class="xh-chip">No role yet</span>') + '</div>'
+    + '<div>' + slotsHtml(p) + '</div>'
+    + '<div><div class="xh-prof-sub">Research areas as ' + esc({{ Illuminate\Support\Js::from(\App\Models\ExpertExpertise::SIDES[$activeRole] ?? ucfirst($activeRole)) }}) + '</div><div class="xh-tags">'
+    + (p.tags.length ? p.tags.map(function (t) { return '<span class="xh-tag">' + esc(t) + '</span>'; }).join('') : '<span class="xh-prof-none">None yet</span>') + '</div></div>'
     + (p.studyLeave ? '<p class="xh-leave"><span class="xh-leave-tag">Study leave</span> May be slow to reply and hard to book. Plan sessions early.</p>' : '')
-    + '<p class="xh-note">An expert can take only one role per team.</p></div>'
+    + '<div class="xh-prof-rating"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>'
+    + (p.ratings ? '<b>' + Number(p.rating).toFixed(1) + '</b> from ' + p.ratings + (p.ratings === 1 ? ' team leader rating' : ' team leader ratings') : 'No ratings from team leaders yet') + '</div></div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Close</button>' + action + '</div>');
 }
 
