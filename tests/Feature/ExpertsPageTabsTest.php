@@ -262,4 +262,14 @@ class ExpertsPageTabsTest extends TestCase
         $this->assertStringNotContainsString('is-match', $html);
         $this->assertStringNotContainsString('fit your team', $html);
     }
+
+    /** A merge once kept main's stylesheet and left these as bare browser buttons. */
+    public function test_the_find_experts_controls_keep_their_styles(): void
+    {
+        $css = file_get_contents(resource_path('student-ui/Styles/experts.css'));
+
+        foreach (['.xh-bar{', '.xh-side{', '.xh-side button{', '.xh-pgnav{', '.xh-pg{', '.xh-dots{', '.xh-xcard.xh-fit{', '.xh-fitmark{', '.xh-xcard.is-closed{'] as $rule) {
+            $this->assertStringContainsString($rule, $css);
+        }
+    }
 }
