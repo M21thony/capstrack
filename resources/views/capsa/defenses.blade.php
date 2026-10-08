@@ -26,8 +26,9 @@
   </div>
 
   {{-- Drawn by resources/js/defenses/defenses.js from the JSON below. A team
-       moves left to right along four steps - Panel not final, Not ready,
-       Ready to schedule, Scheduled - for the stage in view. --}}
+       moves left to right along the steps for the stage in view - Panel not
+       final (Pre-proposal only), Ready to schedule, Scheduled. Only the team
+       list scrolls. --}}
   <div class="dp" id="dp"
        data-state="{{ json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}"
        data-urls="{{ json_encode([
@@ -47,15 +48,13 @@
            'rubrics' => route('capsa.rubric_management'),
        ], JSON_UNESCAPED_SLASHES) }}">
 
-    <div class="mini" id="mini" aria-label="Quick controls" inert></div>
-
     <main class="content">
       <div class="head">
         <div>
           <p>Give each team a panel, then a date. Your section(s): <b>{{ $state['sections'] ? implode(', ', $state['sections']) : 'All sections' }}</b>.</p>
         </div>
         <div class="head-acts">
-          <button type="button" class="keys-btn" data-act="keys" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"><kbd>?</kbd></button>
+          <button type="button" class="btn ghost keys-btn" data-act="keys" title="Keyboard shortcuts (?)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>Shortcuts</button>
           {{-- Every defense for the stage in view, in the department's spreadsheet
                layout (App\Support\DefenseScheduleWorkbook). Kept in step with the
                stage in JS, since the stage switches without a reload. --}}
@@ -83,11 +82,11 @@
         <div class="tools" id="tools"></div>
         <div class="selbar" id="selbar" hidden></div>
         <div id="boardBody" data-export="Defenses"></div>
+        <div class="foot" id="boardFoot"></div>
       </section>
     </main>
 
     <dialog class="dlg" id="dlg" aria-labelledby="dlgTitle"></dialog>
-    <button type="button" class="totop" id="totop" data-act="top" aria-label="Back to the top (T)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Top</button>
   </div>
 </div>
 

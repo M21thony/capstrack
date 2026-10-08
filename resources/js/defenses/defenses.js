@@ -100,39 +100,52 @@ function expertsHtml(t) {
   return '<div class="people">' + line('Adv', t.adviser, 'adviser') + line('Con', t.consultant, 'consultant') + line('Gra', t.grammarian, 'grammarian') + '</div>';
 }
 
-function teamCell(t, extra = '') {
+function teamCell(t) {
   const r = t.member_list.filter(m => m.returnee);
-  return `<div class="team"><span class="tbadge">${esc(initials(t.name))}</span><span class="meta"><button type="button" data-act="drawer" data-id="${t.id}">${esc(t.name)}</button><span>${esc(t.section)}${extra}</span>`
+  return `<div class="team"><span class="tbadge">${esc(initials(t.name))}</span><span class="meta"><button type="button" data-act="drawer" data-id="${t.id}">${esc(t.name)}</button><span>${esc(t.section)} · ${t.members} ${t.members === 1 ? 'member' : 'members'}</span>`
     + (r.length ? `<span class="ret" title="${esc('Returnee' + (r.length > 1 ? 's' : '') + ': ' + r.map(m => m.name).join('; '))}">↺ ${r.length > 1 ? r.length + ' returnees' : 'Returnee'}</span>` : '') + '</span></div>';
 }
 
-function triesPill(t) {
+const titleCell = t => `<td><span class="clamp">${esc(t.title || '—')}</span></td>`;
+
+/* Status in plain coloured words (.st), with the detail on a smaller line under it. */
+function triesStatus(t) {
   const last = t.tries[t.tries.length - 1];
   if (!last || !t.waiting) return '';
-  if (last.kind === 'cancelled') return `<span class="pill p-red" title="${esc((last.auto ? 'Requirements not complete by the defense date' : 'The CaPA did not give the go') + (last.note ? ': ' + last.note : '') + '.')}">Cancelled ${fmtShort(last.date)} · reschedule</span>`;
+  if (last.kind === 'cancelled') return `<div class="st bad" title="${esc((last.auto ? 'Requirements not complete by the defense date' : 'The CaPA did not give the go') + (last.note ? ': ' + last.note : '') + '.')}">Cancelled ${fmtShort(last.date)}<small>Reschedule</small></div>`;
   const until = win().end;
-  return `<span class="pill p-amber" title="The panel asked for a redefense on ${fmtDay(last.date)}. Waits for a new date.">${esc(last.note || 'Redefense')}${until ? ` (until ${fmtShort(until)})` : ''}</span>`;
+  return `<div class="st warn" title="The panel asked for a redefense on ${fmtDay(last.date)}. Waits for a new date.">${esc(last.note || 'Redefense')}${until ? `<small>until ${fmtShort(until)}</small>` : ''}</div>`;
 }
 
-function reqPill(t) {
-  return owed(t).map(b => `<span class="pill p-amber" title="Doesn't stop scheduling. Follow it up before the defense.">⚠ ${esc(b.text)}</span>`).join('');
+function readyStatus(t) {
+  const tries = triesStatus(t);
+  if (tries) return tries;
+  const [first, ...rest] = hard(t);
+  if (first) return `<div class="st bad">${esc(first.text)}${rest.map(b => `<small>${esc(b.text)}</small>`).join('')}</div>`;
+  const warns = owed(t);
+  if (!warns.length) return '<div class="st ok" title="Adviser &amp; consultant · Panel final · Requirements done">✓ All set</div>';
+  const req = warns.find(b => b.key === 'req');
+  const head = req ? `⚠ Requirements not done<small>${esc(req.text.replace(/^Requirements not done:\s*/, ''))}</small>` : `⚠ ${esc(warns[0].text)}`;
+  const others = warns.filter(b => b !== (req || warns[0])).map(b => `<small>⚠ ${esc(b.text)}</small>`).join('');
+  return `<div class="st warn" title="Doesn't stop scheduling. Follow it up before the defense.">${head}${others}</div>`;
 }
 
-function resultPill(t) {
-  if (t.outcome) return `<span class="pill ${t.passed ? 'p-green' : t.outcome_tone === 'fail' ? 'p-red' : 'p-amber'}">${esc(t.outcome)}</span>`;
+function resultStatus(t) {
+  const more = [capaLine(t), awayLine(t), t.tries.length ? `<small title="${esc(t.tries.map(x => `${x.kind === 'cancelled' ? 'Cancelled' : 'Redefense'} ${fmtShort(x.date)}`).join(', '))}">${t.tries.length} earlier ${t.tries.length === 1 ? 'try' : 'tries'}</small>` : ''].join('');
+  if (t.outcome) return `<div class="st ${t.passed ? 'ok' : t.outcome_tone === 'fail' ? 'bad' : 'warn'}">${esc(t.outcome)}${more}</div>`;
   const past = new Date(`${t.schedule.date}T${t.schedule.time}`) < new Date();
-  return past ? `<span class="pill p-red">Awaiting result${t.panel_size ? ` · ${t.graded}/${t.panel_size} graded` : ''}</span>` : '<span class="pill p-blue">Ongoing</span>';
+  return past ? `<div class="st bad">Awaiting result${t.panel_size ? `<small>${t.graded}/${t.panel_size} graded</small>` : ''}${more}</div>` : `<div class="st wait">Upcoming${more}</div>`;
 }
 
-function capaPill(t) {
+function capaLine(t) {
   if (!needsAnswer(t)) return '';
-  return t.capa === 'go' ? '<span class="pill p-green">✓ CaPA: Go</span>' : '<span class="pill p-gray">Waiting for CaPA\'s go</span>';
+  return t.capa === 'go' ? '<small>✓ CaPA: Go</small>' : '<small>Waiting for CaPA\'s go</small>';
 }
 
-function awayPill(t) {
+function awayLine(t) {
   if (!t.schedule || t.outcome) return '';
   const a = awayOn(panelIds(t), t.schedule.date)[0];
-  return a ? `<span class="pill p-amber" title="${esc(nameOf(a.expert_id))} keeps the seat. Move the defense, or hold it without them.">⚠ ${esc(shortName(a.expert_id).split(' ').slice(-1)[0])} away</span>` : '';
+  return a ? `<small title="${esc(nameOf(a.expert_id))} keeps the seat. Move the defense, or hold it without them.">⚠ ${esc(shortName(a.expert_id).split(' ').slice(-1)[0])} away</small>` : '';
 }
 
 function panelButton(t, big = false) {
@@ -154,12 +167,11 @@ function render() {
   if (!steps().some(([k]) => k === P.step)) P.step = 'ready';
   $('stages').innerHTML = S.stages.map(stg => {
     const p = S.progress?.[stg];
-    return `<button type="button" role="tab" data-act="stage" data-stage="${esc(stg)}" aria-selected="${stg === S.stage}">${SHORT[stg]} ${p ? `<span class="prog">${p.done}/${p.of}</span>` : ''}</button>`;
+    return `<button type="button" role="tab" data-act="stage" data-stage="${esc(stg)}" aria-selected="${stg === S.stage}"${p ? ` title="${p.done} of ${p.of} teams have a ${SHORT[stg]} date or result"` : ''}>${SHORT[stg]}${p ? `<small>${p.done} of ${p.of} have a date</small>` : ''}</button>`;
   }).join('');
 
   const w = win();
-  $('windowChip').innerHTML = ICON.cal + `<span>${SHORT[S.stage]} window: <b>${w.start ? `${fmtDay(w.start)} – ${fmtDay(w.end)}` : 'not set'}</b>${w.start ? ` · ${w.minutes >= 60 && w.minutes % 30 === 0 ? (w.minutes / 60) + ' hr' : w.minutes + ' min'} each` : ''}</span>`
-    + (w.set_by ? `<span class="who" title="${esc(`Every section shares this window. Last set by ${w.set_by}${w.set_on ? ' on ' + fmtDay(w.set_on) : ''}.`)}">All sections</span>` : '')
+  $('windowChip').innerHTML = ICON.cal + `<span${w.set_by ? ` title="${esc(`Every section shares this window. Last set by ${w.set_by}${w.set_on ? ' on ' + fmtDay(w.set_on) : ''}.`)}"` : ''}>${SHORT[S.stage]} window: <b>${w.start ? `${fmtDay(w.start)} – ${fmtDay(w.end)}` : 'not set'}</b>${w.start ? ` · ${w.minutes >= 60 && w.minutes % 30 === 0 ? (w.minutes / 60) + ' hr' : w.minutes + ' min'} each` : ''}${w.set_by ? ' · All sections' : ''}</span>`
     + `<button type="button" data-act="window">${w.start ? 'Change' : 'Set dates'}</button>`;
 
   $('genBtn').disabled = !w.start;
@@ -175,28 +187,21 @@ function render() {
 
   const counts = { panel: 0, ready: 0, scheduled: 0 };
   TEAMS.forEach(t => { const s = stepOf(t); if (s) counts[s]++; });
-  $('pipe').style.setProperty('--steps', steps().length);
-  $('pipe').innerHTML = steps().map(([k, label, sub], i) => `<button type="button" class="step" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}"><span class="k"><i>${i + 1}</i>${label}</span><span class="n${k === 'ready' && counts[k] ? ' green' : ''}">${counts[k]}</span><span class="s">${sub}</span></button>`).join('');
+  // The steps as one flow line: the count in a circle, the name and a note beside it.
+  const ARROW = '<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  $('pipe').innerHTML = steps().map(([k, label, sub]) => `<button type="button" class="step" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}"><span class="c${k === 'ready' && counts[k] ? ' green' : ''}">${counts[k]}</span><span class="t"><b>${label}</b><small>${sub}</small></span></button>`).join(ARROW);
 
-  renderMini(counts);
   renderTools();
   renderBoard();
+  $('boardBody').scrollTop = 0;
   syncUrl();
-}
-
-function renderMini(counts) {
-  $('mini').innerHTML = `<div class="stages" role="tablist" aria-label="Defense stage">${S.stages.map(stg => `<button type="button" role="tab" data-act="stage" data-stage="${esc(stg)}" aria-selected="${stg === S.stage}">${SHORT[stg]}</button>`).join('')}</div>`
-    + `<div class="mini-steps" role="tablist" aria-label="Where each team is">${steps().map(([k, label]) => `<button type="button" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}">${label.replace('Ready to schedule', 'Ready').replace('Panel not final', 'Panel')} <b>${counts[k]}</b></button>`).join('')}</div>`
-    + `<label class="search" for="mq">${ICON.search}<span class="sr">Search team or title</span><input id="mq" type="search" placeholder="Search team" value="${esc(P.q)}"></label>`
-    + '<span class="grow"></span>'
-    + `<button type="button" class="btn gold sm" data-act="generate"${win().start ? '' : ' disabled'}>${ICON.spark}Generate</button>`;
 }
 
 function renderTools() {
   const hint = {
-    panel: 'Draft panels can be changed, and panelists moved between teams. Finalize a panel when it is set: from then on it sits every defense through Final Oral.',
-    ready: 'Teams on their first try, teams the CaPA cancelled, and teams up for a redefense all wait here for a date. Missing requirements don\'t stop scheduling.',
-    scheduled: P.view === 'rooms' ? 'Every room, every section, one day at a time.' : 'Other sections\' bookings are shown greyed out, so you can see why a room or panelist is taken.',
+    panel: 'Panels start as drafts. Finalize one when it\'s set; it then sits every defense through Final Oral.',
+    ready: 'Every team here can get a date. Missing requirements don\'t stop scheduling.',
+    scheduled: P.view === 'rooms' ? 'Every room, every section, one day at a time.' : 'Sorted by date. Turn on Other sections to see why a room or panelist is taken.',
   }[P.step];
   const sections = [...new Set(TEAMS.map(t => t.section))].sort();
   let html = `<span class="hint">${hint}</span>`
@@ -211,7 +216,6 @@ function renderTools() {
     html += `<label class="toggle" for="othersT"><input type="checkbox" id="othersT"${P.others ? ' checked' : ''}>Other sections</label>`
       + `<div class="viewseg" role="group" aria-label="View">${[['list', 'List'], ['week', 'Week'], ['rooms', 'Rooms']].map(([k, l]) => `<button type="button" data-act="view" data-view="${k}" aria-pressed="${P.view === k}">${l}</button>`).join('')}</div>`;
   }
-  if (P.step === 'panel') html += `<button type="button" class="btn gold sm" data-act="assign-open">${ICON.users}Assign panel</button>`;
   $('tools').innerHTML = html;
 }
 
@@ -224,17 +228,17 @@ function renderBoard() {
     const pickable = list.filter(t => !missingExperts(t));
     const allOn = pickable.length > 0 && pickable.every(t => P.picked.has(t.id));
     const drafts = list.filter(isDraft);
-    body = (drafts.length ? `<div class="draftbar"><span class="pill p-blue">Draft</span><span class="txt"><b>${drafts.length} draft ${drafts.length === 1 ? 'panel' : 'panels'}.</b> Change them or move panelists between teams freely. Finalize when set: a final panel sits every defense through Final Oral.</span><button type="button" class="btn gold sm" data-act="finalize-all">${ICON.lock}Finalize all ${drafts.length}</button></div>` : '')
-      + table([`<input type="checkbox" id="pickAll" aria-label="Select every team that can take a panel"${allOn ? ' checked' : ''}>`, 'Team', 'Capstone title', 'Team experts', 'Panel', 'Actions'], list.map(t => {
+    body = (drafts.length ? `<div class="draftbar"><span class="txt"><b>${drafts.length} draft ${drafts.length === 1 ? 'panel' : 'panels'}.</b> Change them or move panelists between teams freely. Finalize when set: a final panel sits every defense through Final Oral.</span><button type="button" class="btn gold sm" data-act="finalize-all">${ICON.lock}Finalize all ${drafts.length}</button></div>` : '')
+      + table([`<input type="checkbox" id="pickAll" aria-label="Select every team that can take a panel"${allOn ? ' checked' : ''}>`, 'Team', 'Capstone title', 'Panel', 'Team experts', 'Actions'], list.map(t => {
         const miss = missingExperts(t);
-        const cell = miss ? `<span class="pill p-red">${esc(miss.text)}</span>`
-          : t.panel ? `<div class="draftcell"><span class="pill p-blue">Draft</span>${panelHtml(t)}</div>`
-          : '<span class="pill p-gold">No panel yet</span>';
+        const cell = miss ? `<span class="st bad">${esc(miss.text)}</span>`
+          : t.panel ? `<div class="draftcell"><span class="st wait">Draft</span>${panelHtml(t)}</div>`
+          : '<span class="st none">No panel yet</span>';
         const acts = miss ? `<button type="button" class="btn ghost sm" disabled title="${esc(miss.text)} first">Assign panel</button>`
           : t.panel ? `<button type="button" class="btn ghost sm" data-act="assign-one" data-id="${t.id}">Change</button><button type="button" class="btn gold sm" data-act="finalize" data-id="${t.id}">Finalize</button>`
           : `<button type="button" class="btn gold sm" data-act="assign-one" data-id="${t.id}">Assign panel</button>`;
         return `<tr class="${P.picked.has(t.id) ? 'picked' : ''}"><td style="width:36px"><input type="checkbox" data-pick="${t.id}"${P.picked.has(t.id) ? ' checked' : ''}${miss ? ' disabled' : ''} aria-label="Select ${esc(t.name)}"></td>`
-          + `<td>${teamCell(t, ` · ${t.members} ${t.members === 1 ? 'member' : 'members'}`)}</td><td><span class="clamp">${esc(t.title || '—')}</span></td><td>${expertsHtml(t)}</td><td>${cell}</td><td><div class="acts">${acts}</div></td></tr>`;
+          + `<td>${teamCell(t)}</td>${titleCell(t)}<td>${cell}</td><td>${expertsHtml(t)}</td><td><div class="acts">${acts}</div></td></tr>`;
       }), 'Every panel is final.');
     const n = P.picked.size;
     if (n) {
@@ -248,15 +252,15 @@ function renderBoard() {
     list = list.filter(t => !P.reason || (t.waiting || 'new') === P.reason);
     // A team still short of a panel or an expert stays here, tagged red, and
     // is left out of Generate schedule (the server skips it too).
-    const checks = [['experts', 'Adviser & consultant'], !isPre() && ['prev', 'Previous stage passed'], ['panel', 'Panel final'], ['req', 'Requirements done'], !isPre() && ['fees', 'Fees verified']].filter(Boolean);
-    body = table(['Team', 'Panel', 'Checks', 'Actions'], list.map(t => `<tr><td>${teamCell(t)}</td><td>${panelHtml(t)}</td><td><div class="checks">${triesPill(t)}${hard(t).map(b => `<span class="pill p-red">${esc(b.text)}</span>`).join('')}${checks.filter(([k]) => !t.blockers.some(b => b.key === k || (k === 'panel' && b.key === 'draft'))).map(([, c]) => `<span class="pill p-green">✓ ${c}</span>`).join('')}${reqPill(t)}</div></td>`
+    body = table(['Team', 'Capstone title', 'Panel', 'Status', 'Actions'], list.map(t => `<tr><td>${teamCell(t)}</td>${titleCell(t)}<td>${panelHtml(t)}</td><td>${readyStatus(t)}</td>`
       + `<td><div class="acts">${panelButton(t)}<button type="button" class="btn gold sm" data-act="schedule" data-id="${t.id}"${hard(t).length ? ` disabled title="${esc(hard(t)[0].text)}"` : ''}>Schedule</button></div></td></tr>`),
       `No team is waiting for a ${esc(S.stage)} date.`);
   } else {
     body = P.view === 'week' ? weekView(list) : P.view === 'rooms' ? roomsView(list) : scheduledList(list);
   }
 
-  $('boardBody').innerHTML = body + `<div class="foot"><span>Showing ${list.length} of ${TEAMS.filter(stepOf).length} ${TEAMS.filter(stepOf).length === 1 ? 'team' : 'teams'}</span><span>${esc(S.stage)}</span></div>`;
+  $('boardBody').innerHTML = body;
+  $('boardFoot').innerHTML = `<span>Showing ${list.length} of ${TEAMS.filter(stepOf).length} ${TEAMS.filter(stepOf).length === 1 ? 'team' : 'teams'}</span><span>${esc(S.stage)}</span>`;
 }
 
 const otherHere = () => (S.other || []).filter(o => o.stage === S.stage);
@@ -264,18 +268,18 @@ const otherHere = () => (S.other || []).filter(o => o.stage === S.stage);
 function scheduledList(list) {
   const rows = list.map(t => ({
     at: t.schedule.date + t.schedule.time,
-    html: `<tr><td class="when"><b>${fmtDay(t.schedule.date)}</b><span>${slotLabel(t.schedule.time, t.schedule.end)}</span></td><td>${esc(t.schedule.venue)}</td><td>${teamCell(t)}</td><td>${panelHtml(t)}</td>`
-      + `<td><div class="checks">${resultPill(t)}${capaPill(t)}${awayPill(t)}${t.tries.length ? `<span class="pill p-gray" title="${esc(t.tries.map(x => `${x.kind === 'cancelled' ? 'Cancelled' : 'Redefense'} ${fmtShort(x.date)}`).join(', '))}">${t.tries.length} earlier ${t.tries.length === 1 ? 'try' : 'tries'}</span>` : ''}</div></td>`
+    html: `<tr><td>${teamCell(t)}</td>${titleCell(t)}<td>${panelHtml(t)}</td><td class="when"><b>${fmtDay(t.schedule.date)} · ${slotLabel(t.schedule.time, t.schedule.end)}</b><span>${esc(t.schedule.venue)}</span></td>`
+      + `<td>${resultStatus(t)}</td>`
       + `<td><div class="acts">${needsAnswer(t) ? `<button type="button" class="btn ghost sm" data-act="capa" data-id="${t.id}">CaPA's answer</button>` : ''}${t.outcome ? '' : `<button type="button" class="btn ghost sm" data-act="move" data-id="${t.id}">${ICON.edit}Change</button>`}</div></td></tr>`,
   }));
   if (P.others && !P.q && !P.section) {
     otherHere().forEach(o => rows.push({
       at: o.date + o.time,
-      html: `<tr class="other"><td class="when"><b>${fmtDay(o.date)}</b><span>${slotLabel(o.time, o.end)}</span></td><td>${esc(o.venue)}</td><td><b>${esc(o.section)}</b><br><span class="muted" style="font-size:12px">Another section</span></td><td><div class="people">${o.panel.map(id => `<div><span>${esc(nameOf(id))}</span></div>`).join('')}</div></td><td></td><td></td></tr>`,
+      html: `<tr class="other"><td><b>${esc(o.section)}</b><br><span class="muted" style="font-size:12px">Another section</span></td><td></td><td><div class="people">${o.panel.map(id => `<div><span>${esc(nameOf(id))}</span></div>`).join('')}</div></td><td class="when"><b>${fmtDay(o.date)} · ${slotLabel(o.time, o.end)}</b><span>${esc(o.venue)}</span></td><td></td><td></td></tr>`,
     }));
   }
   rows.sort((a, b) => a.at.localeCompare(b.at));
-  return table(['When', 'Venue', 'Team', 'Panel', 'Status', 'Actions'], rows.map(r => r.html), `Nothing scheduled for ${esc(S.stage)} yet.`);
+  return table(['Team', 'Capstone title', 'Panel', 'When & where', 'Status', 'Actions'], rows.map(r => r.html), `Nothing scheduled for ${esc(S.stage)} yet.`);
 }
 
 function windowDays(start = win().start, end = win().end) {
@@ -382,7 +386,7 @@ function openDrawer(id) {
     + `<p style="margin:0;font-weight:600">${esc(t.title || 'No title yet')}</p>`
     + `<div><span class="lbl">Members${returnees ? ` · ${returnees} returnee${returnees > 1 ? 's' : ''}` : ''}</span><ul class="members">${t.member_list.map(m => `<li><span class="grow">${esc(m.name)}</span><label class="toggle ret-toggle${m.returnee ? ' on' : ''}"><input type="checkbox" data-returnee="${m.id}"${m.returnee ? ' checked' : ''}>↺ Returnee</label></li>`).join('') || '<li class="muted">No members on record.</li>'}</ul></div>`
     + `<div><span class="lbl">Team experts</span>${expertsHtml(t)}</div>`
-    + `<div><span class="lbl">Panel${isDraft(t) ? ' <span class="pill p-blue">Draft</span>' : ''}</span>${panelHtml(t)}`
+    + `<div><span class="lbl">Panel${isDraft(t) ? ' · Draft' : ''}</span>${panelHtml(t)}`
     + (isFinal(t) ? `<p class="muted" style="margin:6px 0 0;font-size:12.5px;display:flex;gap:6px;align-items:center">${ICON.lock}Final${t.panel_final_since ? ' since ' + fmtDay(t.panel_final_since) : ''}: sits every defense through Final Oral. If someone can't sit, mark them away or replace just that person.</p>`
       : isDraft(t) ? '<p class="muted" style="margin:6px 0 0;font-size:12.5px">Draft. Change it, or move panelists to another team, until you finalize it.</p>' : '') + '</div>'
     + `<div><span class="lbl">Defenses</span><ol class="journey">${journey}</ol></div></div>`
@@ -672,7 +676,7 @@ function checkGenerate() {
 /* Keyboard shortcuts. */
 const KEYS = [
   ['Finding', [['Search teams', ['/']], ['Leave the search, or close a window', ['Esc']]]],
-  ['Moving around', [['The steps, left to right', ['1', '2', '3']], ['Previous or next defense', ['[', ']']], ['List, Week or Rooms (when Scheduled)', ['V']], ['Back to the top', ['T']]]],
+  ['Moving around', [['The steps, left to right', ['1', '2', '3']], ['Previous or next defense', ['[', ']']], ['List, Week or Rooms (when Scheduled)', ['V']]]],
   ['Doing', [['Assign panel', ['A']], ['Generate schedule', ['G']], ['Defense window', ['W']], ['These shortcuts', ['?']]]],
 ];
 function openKeys() {
@@ -707,11 +711,10 @@ function syncUrl() {
 const closeDlg = () => dlg.close();
 const ACT = {
   close: closeDlg,
-  stage: el => { loadStage(el.dataset.stage); keepBoardInView(el); },
-  step: el => { P.step = el.dataset.step; P.reason = ''; render(); keepBoardInView(el); },
+  stage: el => loadStage(el.dataset.stage),
+  step: el => { P.step = el.dataset.step; P.reason = ''; render(); },
   view: el => { P.view = el.dataset.view; render(); },
   rday: el => { P.rday = el.dataset.d; renderBoard(); },
-  top: () => root.scrollTo({ top: 0, behavior: 'smooth' }),
   keys: openKeys,
   window: openWindow,
   generate: openGenerate,
@@ -826,13 +829,6 @@ const ACT = {
   },
 };
 
-/* Switching from the compact bar lands you at the top of the new list, not halfway down it. */
-function keepBoardInView(el) {
-  if (!el.closest('#mini')) return;
-  const board = root.querySelector('.board');
-  root.scrollTo({ top: Math.max(0, board.offsetTop - $('mini').offsetHeight - 8) });
-}
-
 root.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
   if (!el || el.disabled) return;
@@ -842,11 +838,9 @@ root.addEventListener('click', e => {
 
 root.addEventListener('input', e => {
   const t = e.target;
-  if (t.id === 'q' || t.id === 'mq') {
+  if (t.id === 'q') {
     P.q = t.value;
     renderBoard();
-    const other = $(t.id === 'q' ? 'mq' : 'q');
-    if (other) other.value = P.q;
   } else if (t.id === 'aTq' || t.id === 'aQ') {
     A[t.id === 'aTq' ? 'tq' : 'q'] = t.value;
     drawAssign();
@@ -913,26 +907,10 @@ root.addEventListener('change', async e => {
   }
 });
 
-/* ---------------- the compact bar and back-to-top on a long list ---------------- */
-let miniOn = false;
-function syncScroll() {
-  const pipe = $('pipe');
-  const on = pipe.offsetTop + pipe.offsetHeight < root.scrollTop;
-  if (on !== miniOn) {
-    miniOn = on;
-    $('mini').classList.toggle('on', on);
-    $('mini').inert = !on;
-  }
-  root.style.setProperty('--stick', on ? $('mini').offsetHeight + 'px' : '0px');
-  $('totop').classList.toggle('on', root.scrollTop > 600);
-}
-root.addEventListener('scroll', syncScroll, { passive: true });
-window.addEventListener('resize', syncScroll);
-
 /* ---------------- keyboard ---------------- */
 document.addEventListener('keydown', e => {
   const typing = e.target.closest('input, select, textarea, [contenteditable="true"]');
-  if (e.key === 'Escape' && typing && (e.target.id === 'q' || e.target.id === 'mq')) {
+  if (e.key === 'Escape' && typing && e.target.id === 'q') {
     if (e.target.value) { P.q = ''; e.target.value = ''; renderBoard(); } else { e.target.blur(); }
     e.preventDefault();
     return;
@@ -940,7 +918,7 @@ document.addEventListener('keydown', e => {
   if (typing || e.ctrlKey || e.metaKey || e.altKey || dlg.open) return;
   const k = e.key;
   const flash = el => { if (el) { el.classList.remove('keyflash'); void el.offsetWidth; el.classList.add('keyflash'); } };
-  if (k === '/') { e.preventDefault(); const q = miniOn ? $('mq') : $('q'); q.focus(); q.select(); return; }
+  if (k === '/') { e.preventDefault(); const q = $('q'); q.focus(); q.select(); return; }
   if (k === '?') { e.preventDefault(); openKeys(); return; }
   if (steps()[+k - 1]) { P.step = steps()[+k - 1][0]; P.reason = ''; render(); flash(root.querySelector(`#pipe [data-step="${P.step}"]`)); return; }
   if (k === '[' || k === ']') {
@@ -952,10 +930,8 @@ document.addEventListener('keydown', e => {
   if (lower === 'v' && P.step === 'scheduled') { P.view = { list: 'week', week: 'rooms', rooms: 'list' }[P.view]; render(); return; }
   if (lower === 'a' && isPre()) { openAssign([...P.picked]); return; }
   if (lower === 'g') { openGenerate(); return; }
-  if (lower === 'w') { openWindow(); return; }
-  if (lower === 't') { ACT.top(); }
+  if (lower === 'w') { openWindow(); }
 });
 
 render();
-syncScroll();
 showFlash();
