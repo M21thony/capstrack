@@ -369,7 +369,7 @@
             </div>
           </section>
 
-          <section class="pp-row" aria-labelledby="pp-notif-h">
+          <section class="pp-row" id="notifications" aria-labelledby="pp-notif-h">
             <div class="pp-row-label">
               <h2 id="pp-notif-h">Notifications</h2>
               <p>How CapsTrack tells you when a team needs you. Desktop pops up in the corner of your screen; email goes to your Google address.</p>

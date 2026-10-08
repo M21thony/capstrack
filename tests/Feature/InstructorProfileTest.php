@@ -166,6 +166,7 @@ class InstructorProfileTest extends TestCase
         $response->assertSeeInOrder(['Teams', 'A team applies to me', 'Consultations', 'Documents', 'Announcements'])
             ->assertSee('data-key="web.document_submitted"', false)
             ->assertSee('id="pp-perm-text"', false)
+            ->assertSee('id="notifications"', false)
             ->assertDontSee('class="notif-prefs"', false);
 
         $prefs = $response->viewData('notificationPrefs');
