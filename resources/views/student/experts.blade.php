@@ -453,7 +453,7 @@
                     @endif
                   </div>
                   <div class="xh-xact">
-                    <button type="button" class="xh-btn xh-ghost" data-xh="profile" data-id="{{ $expert->expert_id }}">View profile</button>
+                    <button type="button" class="xh-viewlink" data-xh="profile" data-id="{{ $expert->expert_id }}">View profile <span aria-hidden="true">→</span></button>
                     @if($p['apply'])
                       <button type="button" class="xh-btn xh-gold" data-xh="apply" data-apply-expert="{{ $expert->expert_id }}" data-id="{{ $expert->expert_id }}">Apply</button>
                     @elseif($p['status'])
