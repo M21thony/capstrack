@@ -495,7 +495,7 @@
            an editing page is editable, and two of these are not. --}}
       <p class="table-legend">
         <b>Sections</b> are yours to set.
-        <b>Accepts</b> and <b>Expertise</b> belong to the expert &mdash; they choose which programs
+        <b>Accepts</b> and <b>Research Areas</b> belong to the expert &mdash; they choose which programs
         to take teams from and how many, on their own profile.
       </p>
     </div>
@@ -554,7 +554,7 @@
     <div class="page-filters page-filters-inline">
       <div class="experts-search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="input" id="experts-search-input" placeholder="Search experts by name or expertise..."/>
+        <input class="input" id="experts-search-input" placeholder="Search experts by name or research area..."/>
       </div>
       {{-- Signed in or not, and how many teams someone takes, are the
            faculty's business; what this list is managed by is whether the
@@ -583,7 +583,7 @@
                  is width the sections and the expertise need more. --}}
             <th style="padding-left:20px">CaPSA</th>
             <th>Sections</th>
-            <th>Expertise</th>
+            <th>Research Areas</th>
             <th>Accepts <span class="th-owner">expert sets</span></th>
             <th style="text-align:right;padding-right:20px">Action</th>
           </tr>
@@ -775,7 +775,7 @@
             {{-- A chip each, so a long name truncates on its own instead of
                  being joined to the next one and cut mid-word. The counter
                  opens the detail panel, where the full list already is. --}}
-            <td data-label="Expertise" class="cx-skills" title="{{ $expertiseFull }}">
+            <td data-label="Research Areas" class="cx-skills" title="{{ $expertiseFull }}">
               @if ($expertiseList->isEmpty())
                 <span style="color:var(--text3)">None specified</span>
               @else
@@ -1666,7 +1666,7 @@ function openExpertDetail(data) {
       const line = document.createElement('div');
       line.className = 'expert-detail-side';
       const label = document.createElement('b');
-      label.textContent = side + ': ';
+      label.textContent = 'As ' + side + ': ';
       line.appendChild(label);
       line.appendChild(document.createTextNode(fields.join(', ')));
       detailExpertise.appendChild(line);

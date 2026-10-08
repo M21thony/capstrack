@@ -285,7 +285,7 @@
 
       <!-- Expertise Tags -->
       <div class="ep-field">
-        <div class="ep-label">Research Areas</div>
+        <div class="ep-label">Research Area as</div>
         @php
           // One list per side: each role they are engaged as, and panels.
           // A side not filled in yet starts from the list that stood for all.

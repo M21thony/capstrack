@@ -436,7 +436,7 @@
               <div class="pf-side-tabs" role="tablist" aria-label="Research areas for">
                 @foreach ($expertSides ?? [] as $side => $label)
                   <button type="button" role="tab" class="pf-side-tab{{ $loop->first ? ' on' : '' }}" data-side="{{ $side }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" onclick="selectExpertiseSide('{{ $side }}')">
-                    {{ $label }} <span class="pf-side-n" data-side-count="{{ $side }}">{{ count($expertiseBySide[$side] ?? []) }}</span>
+                    as {{ $label }} <span class="pf-side-n" data-side-count="{{ $side }}">{{ count($expertiseBySide[$side] ?? []) }}</span>
                   </button>
                 @endforeach
               </div>

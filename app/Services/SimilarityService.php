@@ -1360,7 +1360,7 @@ PROMPT;
         $listJson = json_encode($candidates->map(fn ($e) => [
             'id' => $e->expert_id,
             'name' => $e->name,
-            'expertise' => $e->allExpertise()->implode(', ') ?: 'General',
+            'expertise' => $this->expertiseText($e, $role),
         ])->values()->all());
 
         $prompt = "You are matching a capstone pre-proposal to {$label}s.\n"
@@ -1428,10 +1428,22 @@ PROMPT;
         return array_values($picked);
     }
 
+    /**
+     * The research areas the expert listed for this role, so a consultant is
+     * matched on their consultant areas and not their adviser ones. All of
+     * them when they have not split their areas by role.
+     */
+    private function expertiseText(CapstoneExpert $expert, string $role): string
+    {
+        $fields = $expert->expertiseFor($role);
+
+        return ($fields->isNotEmpty() ? $fields : $expert->allExpertise())->implode(', ') ?: 'General';
+    }
+
     /** @return array<string,mixed> */
     private function suggestion($expert, string $role, string $label, string $reason): array
     {
-        $expertise = $expert->allExpertise()->implode(', ') ?: 'General';
+        $expertise = $this->expertiseText($expert, $role);
 
         return [
             'id' => $expert->expert_id,

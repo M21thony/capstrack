@@ -70,7 +70,7 @@ class CapsaExpertsTableTest extends TestCase
         $html = $this->actingAs($this->capsa(), 'expert')
             ->get(route('capsa.experts'))->assertOk()->getContent();
 
-        foreach (['Expert</th>', '<th>Role(s)</th>', '<th>Expertise</th>', 'Action</th>'] as $header) {
+        foreach (['Expert</th>', '<th>Role(s)</th>', '<th>Research Areas</th>', 'Action</th>'] as $header) {
             $this->assertStringContainsString($header, $html);
         }
     }

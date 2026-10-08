@@ -96,7 +96,7 @@ class ExpertResearchAreasBySideTest extends TestCase
             ->assertSee('data-side="consultant"', false)
             ->assertSee('data-side="panel"', false)
             ->assertDontSee('data-side="grammarian"', false)
-            ->assertSee('Research Areas');
+            ->assertSee('Research Area as');
     }
 
     public function test_students_browsing_a_role_see_and_filter_by_that_side(): void
@@ -134,7 +134,7 @@ class ExpertResearchAreasBySideTest extends TestCase
         $capsa = $this->capsaWhoAdvises();
 
         $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertOk()
-            ->assertSee('Research Areas')
+            ->assertSee('Research Area as')
             ->assertSee('data-side="adviser"', false)
             ->assertSee('data-side="panel"', false)
             ->assertDontSee('data-side="consultant"', false);

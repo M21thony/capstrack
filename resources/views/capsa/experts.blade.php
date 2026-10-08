@@ -423,7 +423,7 @@
            not say so invites trying the others. --}}
       <p class="table-legend">
         <b>Roles</b> are yours to set.
-        <b>Accepts</b> and <b>Expertise</b> belong to the expert &mdash; they choose which programs
+        <b>Accepts</b> and <b>Research Areas</b> belong to the expert &mdash; they choose which programs
         to take teams from and how many, on their own profile.
       </p>
     </div>
@@ -457,7 +457,7 @@
     <div class="page-filters">
       <div class="experts-search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="input" id="experts-search-input" placeholder="Search experts by name or expertise..."/>
+        <input class="input" id="experts-search-input" placeholder="Search experts by name or research area..."/>
       </div>
       <select class="input page-filter" id="experts-role-filter">
         <option>All Roles</option>
@@ -503,7 +503,7 @@
                  is width the expertise needs more. --}}
             <th style="padding-left:20px">Expert</th>
             <th>Role(s)</th>
-            <th>Expertise</th>
+            <th>Research Areas</th>
             <th>Accepts <span class="th-owner">expert sets</span></th>
             <th style="text-align:right;padding-right:20px">Action</th>
           </tr>
@@ -626,7 +626,7 @@
             {{-- A chip each, so a long name truncates on its own instead of
                  being joined to the next one and cut mid-word. The counter
                  opens the detail panel, where the full list already is. --}}
-            <td data-label="Expertise" class="cx-skills" title="{{ $expertiseFull }}">
+            <td data-label="Research Areas" class="cx-skills" title="{{ $expertiseFull }}">
               @if ($expertiseList->isEmpty())
                 <span style="color:var(--text3)">None specified</span>
               @else
@@ -1277,7 +1277,7 @@ function renderExpertRosterPreview(data) {
   if (data.skipped) summary.push(`<span style="color:#b91c1c"><strong>${data.skipped}</strong> skipped</span>`);
   document.getElementById('expertRosterSummary').innerHTML = summary.join('');
 
-  const head = '<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Expertise</th><th>Action</th></tr></thead>';
+  const head = '<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Research Areas</th><th>Action</th></tr></thead>';
 
   const body = data.rows.map(row => {
     const [cls, label] = EXPERT_ROSTER_ACTIONS[row.action] || EXPERT_ROSTER_ACTIONS.unchanged;
@@ -1561,7 +1561,7 @@ function openExpertDetail(data) {
       const line = document.createElement('div');
       line.className = 'expert-detail-side';
       const label = document.createElement('b');
-      label.textContent = side + ': ';
+      label.textContent = 'As ' + side + ': ';
       line.appendChild(label);
       line.appendChild(document.createTextNode(fields.join(', ')));
       detailExpertise.appendChild(line);

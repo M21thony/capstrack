@@ -313,8 +313,8 @@
               <button type="submit" class="xh-search-go" aria-label="Search experts">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
               </button>
-              <span class="xh-sr">Search by name or expertise</span>
-              <input id="xh-q" type="search" name="q" value="{{ $search }}" enterkeyhint="search" placeholder="Name or expertise, e.g. Technical Writing" autocomplete="off">
+              <span class="xh-sr">Search by name or research area</span>
+              <input id="xh-q" type="search" name="q" value="{{ $search }}" enterkeyhint="search" placeholder="Name or research area, e.g. Technical Writing" autocomplete="off">
             </label>
             <div class="xh-skill" id="xh-skill">
               <button type="button" class="xh-chip-btn" id="xh-skill-trigger" data-xh="skill-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="xh-skill-pop">
@@ -423,7 +423,7 @@
                     </div>
                   </div>
                   <div class="xh-sec">
-                    <span class="xh-lbl">Expertise</span>
+                    <span class="xh-lbl">Research area as {{ \App\Models\ExpertExpertise::SIDES[$activeRole] ?? ucfirst($activeRole) }}</span>
                     <div class="xh-tags">
                       @forelse($cardTags as $tag)
                         <span class="xh-tag{{ $expert->is_open && in_array($tag, $expert->matching_fields, true) ? ' is-match' : '' }}">{{ $tag }}</span>
@@ -1135,7 +1135,7 @@ function openProfile(id) {
     + p.roles.map(function (r) { return '<span class="xh-chip r-' + r + '">' + ucfirst(r) + '</span>'; }).join('') + '</div></div></div>'
     + '<button type="button" class="xh-x" data-xh="close" aria-label="Close">' + ICON.x + '</button></div>'
     + '<div class="xh-dlg-body"><div class="xh-sec"><span class="xh-lbl">Rating from team leaders</span><div class="xh-rating">' + ratingHtml(p) + '</div></div>'
-    + '<div class="xh-sec"><span class="xh-lbl">Expertise</span><div class="xh-tags">'
+    + '<div class="xh-sec"><span class="xh-lbl">Research area as ' + esc({{ Illuminate\Support\Js::from(\App\Models\ExpertExpertise::SIDES[$activeRole] ?? ucfirst($activeRole)) }}) + '</span><div class="xh-tags">'
     + (p.tags.length ? p.tags.map(function (t) { return '<span class="xh-tag">' + esc(t) + '</span>'; }).join('') : '<span class="xh-tag">Not filled in yet</span>') + '</div></div>'
     + '<div class="xh-sec"><span class="xh-lbl">Teams they can take</span><div class="xh-caprow"><span>' + (p.max > 0 ? p.used + ' of ' + p.max + ' taken' : 'They have not set this yet') + '</span><b class="' + c.cls + '">' + c.text + '</b></div>'
     + '<div class="xh-meter' + (c.cls === 'is-full' ? ' is-full' : '') + '"><i style="width:' + c.pct + '%"></i></div></div>'

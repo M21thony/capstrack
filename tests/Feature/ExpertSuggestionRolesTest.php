@@ -166,6 +166,23 @@ class ExpertSuggestionRolesTest extends TestCase
         $this->assertSame('Neil Inocencio', $out['consultant']['name']);
     }
 
+    /** Each role is matched on the research areas the expert keeps for that role. */
+    public function test_each_role_uses_that_roles_research_areas(): void
+    {
+        $both = $this->expert('Neil Inocencio', 'adviser', []);
+        $both->roles()->attach(Role::firstOrCreate(['role_name' => 'consultant'])->role_id);
+        $both->expertise()->create(['expertise_field' => 'Academic Writing', 'side' => 'adviser']);
+        $both->expertise()->create(['expertise_field' => 'Machine Learning', 'side' => 'consultant']);
+
+        $this->alwaysPicksTheFirst();
+
+        $out = collect(app(SimilarityService::class)->suggestInstructors($this->concepts()))
+            ->keyBy('role');
+
+        $this->assertSame('Academic Writing', $out['adviser']['expertise']);
+        $this->assertSame('Machine Learning', $out['consultant']['expertise']);
+    }
+
     /** A role nobody holds is left out rather than filled with anybody. */
     public function test_a_role_with_no_candidates_is_skipped(): void
     {

@@ -17,7 +17,7 @@ class ExpertExpertise extends Model
      * them as, and sitting on a defense panel. A null side is a list from
      * before sides existed, or one a CaPSA entered, and stands for all of them.
      */
-    public const SIDES = ['adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'panel' => 'Panel'];
+    public const SIDES = ['adviser' => 'CaPA', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'panel' => 'Panel'];
 
     /** Rows that speak for this side: its own, and the ones for every side. */
     public function scopeForSide($query, string $side)
