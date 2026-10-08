@@ -2,7 +2,7 @@
   The To do tab: every decision waiting on this person, in one list.
 
   Grouped by kind, the item that has waited longest first in each group, and
-  anything waiting three days or more says so in red. Decided keeps what was
+  anything waiting three days or more says so in red. Completed keeps what was
   settled lately, so an item does not just vanish.
 --}}
 @php
@@ -17,7 +17,7 @@
 <div class="tools">
   <div class="seg" role="group" aria-label="Show">
     <button type="button" data-todo-mode="waiting" aria-pressed="true">Pending</button>
-    <button type="button" data-todo-mode="decided" aria-pressed="false">Decided</button>
+    <button type="button" data-todo-mode="decided" aria-pressed="false">Completed</button>
   </div>
 </div>
 
@@ -76,7 +76,7 @@
 
     <div id="tm-todo-decided" hidden>
       @if ($decided->isEmpty())
-        <div class="empty"><b>Nothing decided yet</b>What you approve, decline or check shows up here.</div>
+        <div class="empty"><b>Nothing completed yet</b>What you approve, decline or check shows up here.</div>
       @else
         <ul class="todo">
           @foreach ($decided as $done)

@@ -141,6 +141,16 @@ class TeamHubTest extends TestCase
         $this->assertMatchesRegularExpression('/id="tm-todo" role="tabpanel"\s+hidden/', $html);
     }
 
+    /** What has been settled is shown under Completed, not Decided. */
+    public function test_settled_items_sit_under_completed(): void
+    {
+        $this->actingAs($this->capsa(), 'expert')->get(route('capsa.team_management'))
+            ->assertOk()
+            ->assertSee('data-todo-mode="decided" aria-pressed="false">Completed</button>', false)
+            ->assertSee('Nothing completed yet')
+            ->assertDontSee('>Decided</button>', false);
+    }
+
     public function test_my_teams_lists_an_experts_invitations_and_teams(): void
     {
         $expert = $this->expert('adviser', 'consultant');
