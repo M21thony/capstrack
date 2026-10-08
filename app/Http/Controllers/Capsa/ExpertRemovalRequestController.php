@@ -8,7 +8,7 @@ use App\Models\ExpertRemovalRequest;
 use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
-use App\Models\Team;
+use App\Services\Notifier;
 use App\Support\ExpertApplications;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,8 +17,8 @@ use Illuminate\Validation\Rule;
 
 /**
  * The CaPSA deciding whether a team may let go of an expert who already took
- * them on. Approving removes the expert, which frees the role for the team to
- * apply to someone else.
+ * them on. Approving swaps in the replacement the team picked, assigned
+ * outright: the CaPSA decides, not the replacement.
  */
 class ExpertRemovalRequestController extends Controller
 {
@@ -63,6 +63,24 @@ class ExpertRemovalRequestController extends Controller
             }
 
             $role = $assignment->engaged_role_name ?: 'expert';
+            $replacement = $removal->replacement;
+            $leader = $team->leader_id ? Student::find($team->leader_id) : null;
+            $swapping = $removal->replacement_expert_id && $leader;
+
+            // The replacement the team picked is assigned outright, so they
+            // are checked before anyone is removed: approving never leaves
+            // the team with neither expert. A replacement who filled up while
+            // the request waited is the CaPSA's to decline.
+            if ($swapping) {
+                $refusal = $replacement
+                    ? $this->applications->refusal($team, $leader, $replacement, (int) $removal->replacement_expert_role_id, $assignment->assignment_id)
+                    : ['message' => 'That expert is no longer in the system.'];
+
+                if ($refusal) {
+                    return $this->fail(($replacement?->name ?? 'The replacement they picked').' cannot take '.$team->team_name.': '
+                        .lcfirst(rtrim($refusal['message'], '.')).'. Decline the request so the team can pick someone else.', 422);
+                }
+            }
 
             if ($assignment->proposal_file) {
                 Storage::disk('public')->delete($assignment->proposal_file);
@@ -70,35 +88,50 @@ class ExpertRemovalRequestController extends Controller
 
             $assignment->delete();
 
+            Notifier::toExpert(
+                (int) $assignment->expert_id,
+                'expert_application',
+                'Removed from a team',
+                'The CaPSA removed you as the '.e($role).' of '.$teamName.'.',
+                route('instructor.teams'),
+                ['team_id' => $team->team_id],
+            );
+
+            $replaced = $swapping ? $this->applications->send(
+                $team,
+                $replacement,
+                (int) $removal->replacement_expert_role_id,
+                (string) $removal->replacement_message,
+                $removal->replacement_proposal_file,
+                $team->selected_pre_proposal_id ?: null,
+                approved: true,
+            ) : null;
+
             $removal->update([
                 'status' => ExpertRemovalRequest::APPROVED,
                 'decided_by' => $capsa->expert_id,
                 'decision_note' => $note,
                 'decided_at' => now(),
+                'replacement_assignment_id' => $replaced?->assignment_id,
+                'replacement_outcome' => $replaced ? ExpertRemovalRequest::REPLACEMENT_ASSIGNED : null,
             ]);
-
-            // The team named who it wants instead: the application to them
-            // goes out now, if they can still take the team. They accept or
-            // decline it like any other.
-            [$then, $outcome] = $this->applyToReplacement($removal, $team);
 
             foreach (StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id') as $studentId) {
                 Notification::create([
                     'student_id' => $studentId,
                     'type' => 'expert_removal_approved',
                     'title' => 'Expert change approved',
-                    'message' => 'Your CaPSA approved removing <strong>'.e($expertName).'</strong> as the '.e($role).' of '.$teamName.'. '
-                        .($then ?? 'You can apply to another '.e($role).' now.').($note ? ' Note: "'.e($note).'"' : ''),
+                    'message' => ($replaced
+                        ? 'Your CaPSA approved your change: <strong>'.e($replacement->name).'</strong> is now the '.e($role).' of '.$teamName.' in place of <strong>'.e($expertName).'</strong>.'
+                        : 'Your CaPSA approved removing <strong>'.e($expertName).'</strong> as the '.e($role).' of '.$teamName.'. You can apply to another '.e($role).' now.')
+                        .($note ? ' Note: "'.e($note).'"' : ''),
                     'link' => route('student.experts'),
                 ]);
             }
 
-            $message = 'Approved. '.$expertName.' is no longer with '.$team->team_name.'.'
-                .match ($outcome) {
-                    ExpertRemovalRequest::REPLACEMENT_SENT => ' Their application went to '.$removal->replacement?->name.'.',
-                    ExpertRemovalRequest::REPLACEMENT_UNAVAILABLE => ' '.$removal->replacement?->name.' could not take them any more, so the team was told to pick someone else.',
-                    default => '',
-                };
+            $message = $replaced
+                ? 'Approved. '.$replacement->name.' is now the '.$role.' of '.$team->team_name.' in place of '.$expertName.'.'
+                : 'Approved. '.$expertName.' is no longer with '.$team->team_name.'.';
         } else {
             // The PDF meant for the replacement never goes anywhere now.
             if ($removal->replacement_proposal_file) {
@@ -136,47 +169,6 @@ class ExpertRemovalRequestController extends Controller
                 'decision_note' => $removal->decision_note,
             ],
         ]);
-    }
-
-    /**
-     * Apply to the replacement the team picked, if they can still take it.
-     *
-     * @return array{0: ?string, 1: ?string} what to tell the team, and the outcome
-     */
-    private function applyToReplacement(ExpertRemovalRequest $removal, Team $team): array
-    {
-        $replacement = $removal->replacement;
-        $leader = $team->leader_id ? Student::find($team->leader_id) : null;
-
-        if (! $removal->replacement_expert_id || ! $leader) {
-            return [null, null];
-        }
-
-        $refusal = $replacement
-            ? $this->applications->refusal($team, $leader, $replacement, (int) $removal->replacement_expert_role_id)
-            : ['message' => 'That expert is no longer in the system.'];
-
-        if ($refusal) {
-            if ($removal->replacement_proposal_file) {
-                Storage::disk('public')->delete($removal->replacement_proposal_file);
-            }
-            $removal->update(['replacement_outcome' => ExpertRemovalRequest::REPLACEMENT_UNAVAILABLE, 'replacement_proposal_file' => null]);
-
-            return ['Your application to <strong>'.e($replacement?->name ?? 'the expert you picked').'</strong> could not be sent: '.e(rtrim($refusal['message'], '.')).'. Pick another one on the Experts page.', ExpertRemovalRequest::REPLACEMENT_UNAVAILABLE];
-        }
-
-        $assignment = $this->applications->send(
-            $team,
-            $replacement,
-            (int) $removal->replacement_expert_role_id,
-            (string) $removal->replacement_message,
-            $removal->replacement_proposal_file,
-            $team->selected_pre_proposal_id ?: null,
-        );
-
-        $removal->update(['replacement_outcome' => ExpertRemovalRequest::REPLACEMENT_SENT, 'replacement_assignment_id' => $assignment->assignment_id]);
-
-        return ['Your application went to <strong>'.e($replacement->name).'</strong>, who will accept or decline it.', ExpertRemovalRequest::REPLACEMENT_SENT];
     }
 
     private function fail(string $message, int $status): JsonResponse
