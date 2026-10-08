@@ -11,6 +11,8 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Js;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -276,6 +278,30 @@ class ExpertsPageTabsTest extends TestCase
         $this->assertStringContainsString('View profile <span aria-hidden="true">→</span>', $card);
         $this->assertStringNotContainsString('class="xh-btn xh-ghost" data-xh="profile"', $card);
         $this->assertStringContainsString('.xh-viewlink{', file_get_contents(resource_path('student-ui/Styles/experts.css')));
+    }
+
+    /** View profile is the card the expert sees as "What students see", with Apply under it. */
+    public function test_view_profile_shows_the_card_the_expert_previews(): void
+    {
+        [$student] = $this->leader();
+        $expert = $this->expert('Neil', 'adviser');
+        $expert->update(['degree_title' => 'MIT', 'credentials' => 'MIT']);
+
+        $html = $this->actingAs($student, 'web')
+            ->get(route('student.experts', ['role' => 'adviser']))->assertOk()->getContent();
+
+        // The payload is written by Js::from, which escapes its quotes.
+        $field = fn (string $key, string $value) => Str::between((string) Js::from([$key => $value]), '{', '}');
+        $this->assertStringContainsString($field('profileName', $expert->first_name.' '.$expert->last_name.', MIT'), $html);
+        $this->assertStringContainsString($field('email', $expert->email), $html);
+        $this->assertStringContainsString('class="xh-prof-head"', $html);
+        $this->assertStringContainsString('No ratings from teams yet', $html);
+        $this->assertStringContainsString('data-xh="apply"', $html);
+
+        $css = file_get_contents(resource_path('student-ui/Styles/experts.css'));
+        foreach (['.xh-prof-head{', '.xh-prof-meter span{', '.xh-prof-meter span.is-taken{', '.xh-prof-rating{'] as $rule) {
+            $this->assertStringContainsString($rule, $css);
+        }
     }
 
     /** A merge once kept main's stylesheet and left these as bare browser buttons. */
