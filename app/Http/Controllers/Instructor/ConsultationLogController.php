@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Models\CapstoneDocument;
 use App\Models\Deliverable;
 use App\Models\PdfRemark;
 use App\Models\Team;
@@ -26,7 +27,7 @@ class ConsultationLogController extends Controller
             ->leftJoin('deliverables as dl', 'dl.id', '=', 'd.deliverable_id')
             ->where('r.review_id', $reviewId)
             ->select([
-                'r.review_id', 'r.reviewed_at', 'r.created_at as review_created_at',
+                'r.review_id', 'r.file_id', 'r.reviewed_at', 'r.created_at as review_created_at',
                 'r.verdict', 'r.verdict_at',
                 'd.file_name', 'd.chapter', 'd.student_id',
                 't.team_id', 't.team_name', 't.project_title',
@@ -91,6 +92,8 @@ class ConsultationLogController extends Controller
             'alias' => $review->team_name,
             'proponents' => $proponents,
             'chapter' => $review->chapter ?? '—',
+            // What was reviewed: a .drawio or .vsdx sent on its own is a diagram.
+            'kind' => CapstoneDocument::find($review->file_id)?->isDiagram() ? 'DIAGRAM' : 'MANUSCRIPT',
             'consultationDate' => $consultationDate,
             'deadline' => $deadline,
             'approvedAt' => $review->verdict === 'approved'
