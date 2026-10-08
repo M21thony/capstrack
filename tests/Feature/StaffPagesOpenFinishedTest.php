@@ -124,9 +124,10 @@ class StaffPagesOpenFinishedTest extends TestCase
             ->assertSee('id="gdrive-connect-btn" style="font-size:12px;display:none"', false);
     }
 
+    /** The shared card, as the CaPSA profile shows it; an expert's profile has switches of its own. */
     public function test_the_notification_settings_are_styled_and_filled_before_they_are_shown(): void
     {
-        $html = $this->actingAs($this->adviser(), 'expert')->get(route('instructor.profile'))->assertOk()->getContent();
+        $html = $this->actingAs($this->capsa(), 'expert')->get(route('capsa.profile'))->assertOk()->getContent();
 
         $styles = strpos($html, '.notif-prefs{');
         $card = strpos($html, 'class="notif-prefs');

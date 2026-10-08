@@ -155,6 +155,26 @@ class InstructorProfileTest extends TestCase
             ->assertSee('<b>4.5</b> from 2 team leader ratings', false);
     }
 
+    /** Notifications are a row of the profile, grouped, and saved by the same bar. */
+    public function test_the_notification_switches_are_grouped_and_show_what_is_saved(): void
+    {
+        $expert = $this->makeExpert();
+        $expert->forceFill(['notification_prefs' => ['email.review_reminder' => false]])->save();
+
+        $response = $this->actingAs($expert->fresh(), 'expert')->get(route('instructor.profile'))->assertOk();
+
+        $response->assertSeeInOrder(['Teams', 'A team applies to me', 'Consultations', 'Documents', 'Announcements'])
+            ->assertSee('data-key="web.document_submitted"', false)
+            ->assertSee('id="pp-perm-text"', false)
+            ->assertDontSee('class="notif-prefs"', false);
+
+        $prefs = $response->viewData('notificationPrefs');
+        $this->assertTrue($prefs['all']);
+        $this->assertFalse($prefs['email.review_reminder']);
+        $this->assertTrue($prefs['web.review_reminder']);
+        $this->assertArrayNotHasKey('Other', $response->viewData('notificationGroups'), 'every expert notification has a group');
+    }
+
     public function test_guest_cannot_update_capacity(): void
     {
         // EnsureExpertIsAuthenticated always redirects to /login, even for

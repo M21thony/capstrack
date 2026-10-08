@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\ExpertEvaluation;
 use App\Models\ExpertExpertise;
+use App\Support\NotificationTypes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,8 @@ class ProfileController extends Controller
             ->selectRaw('AVG(rating) as average, COUNT(*) as total')
             ->first();
 
+        [$notificationGroups, $notificationPrefs] = $this->notificationSwitches($expert);
+
         return view('instructor.profile', [
             'currentPage' => 'profile',
             'expert' => $expert,
@@ -55,7 +58,55 @@ class ProfileController extends Controller
             // A CaPSA or Admin who also advises keeps their name and sections
             // on their own portal's profile page.
             'staffProfileRoute' => $expert->is_staff ? ($expert->is_admin ? 'admin.profile' : 'capsa.profile') : null,
+            'notificationGroups' => $notificationGroups,
+            'notificationPrefs' => $notificationPrefs,
         ]);
+    }
+
+    /**
+     * The notification switches, grouped by what they are about, and where
+     * each one stands. A kind not named in a group still shows, under Other.
+     *
+     * @return array{0: array<string, list<array{type: string, label: string, web: bool, email: bool}>>, 1: array<string, bool>}
+     */
+    private function notificationSwitches(CapstoneExpert $expert): array
+    {
+        $types = NotificationTypes::for($expert->notificationAudience());
+        $saved = $expert->notification_prefs ?? [];
+        $byGroup = [
+            'Teams' => ['expert_application', 'leave_request_received'],
+            'Consultations' => ['consultation_booked', 'consultation_cancelled', 'consultation_reminder'],
+            'Documents' => ['document_submitted', 'paper_to_check', 'review_reminder'],
+            'Announcements' => ['announcement'],
+        ];
+        $byGroup['Other'] = array_values(array_diff(array_keys($types), array_merge(...array_values($byGroup))));
+
+        $groups = [];
+        $prefs = ['all' => ($saved['all'] ?? true) !== false];
+
+        foreach ($byGroup as $group => $keys) {
+            foreach ($keys as $type) {
+                if (! isset($types[$type])) {
+                    continue;
+                }
+
+                $switch = [
+                    'type' => $type,
+                    'label' => $types[$type]['label'],
+                    'web' => $types[$type]['web'] ?? true,
+                    'email' => (bool) $types[$type]['email'],
+                ];
+                $groups[$group][] = $switch;
+
+                foreach (['web', 'email'] as $channel) {
+                    if ($switch[$channel]) {
+                        $prefs[$channel.'.'.$type] = ($saved[$channel.'.'.$type] ?? true) !== false;
+                    }
+                }
+            }
+        }
+
+        return [$groups, $prefs];
     }
 
     /**

@@ -97,7 +97,28 @@
   .pp-hint{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.45}
 
   /* The notification switches are a shared card; here it takes the full width. */
-  .pp-main .notif-prefs{max-width:none;box-shadow:none}
+  /* Notifications: one switch per channel, grouped by what they are about. */
+  .pp-switch{appearance:none;-webkit-appearance:none;width:32px;height:18px;border-radius:9px;background:var(--border2);position:relative;cursor:pointer;margin:0;flex:0 0 auto;transition:background .15s}
+  .pp-switch::before{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .pp-switch:checked{background:var(--accent)}
+  .pp-switch:checked::before{transform:translateX(14px)}
+  .pp-switch:disabled{opacity:.4;cursor:not-allowed}
+  @media (prefers-reduced-motion: reduce){.pp-switch,.pp-switch::before{transition:none}}
+  .pp-master{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:10px;background:var(--bg3);border:1px solid var(--border)}
+  .pp-master label{display:block;font-size:13px;font-weight:700;color:var(--text);cursor:pointer}
+  .pp-master small{display:block;font-size:11.5px;color:var(--text3);margin-top:1px}
+  .pp-allow{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;margin-left:6px;border:1px solid var(--accent);border-radius:6px;background:var(--accent-light);color:var(--accent3);font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+  .pp-allow:hover{background:var(--accent);color:#18191f}
+  .pp-allow[hidden]{display:none}
+  .pp-ngrid{margin-top:8px}
+  .pp-ncols,.pp-nitem{display:grid;grid-template-columns:minmax(0,1fr) 56px 56px;align-items:center;gap:8px}
+  .pp-ncols{font-size:11px;font-weight:600;color:var(--text3);text-align:center;padding-bottom:2px}
+  .pp-ngroup{font-size:11.5px;font-weight:700;color:var(--text2);padding:9px 0 3px;border-top:1px solid var(--bg4)}
+  .pp-ncols + .pp-ngroup{border-top:0}
+  .pp-nitem{min-height:32px;padding:3px 0;font-size:12.5px;line-height:1.35;color:var(--text)}
+  .pp-ncell{display:flex;justify-content:center}
+  .pp-nnone{color:var(--text3);opacity:.6}
+  .pp-ngrid.off .pp-nitem,.pp-ngrid.off .pp-ngroup,.pp-ngrid.off .pp-ncols{opacity:.45}
 
   /* What students see. */
   .pp-cap{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 2px 6px;font-size:12px;font-weight:600;color:var(--text2)}
@@ -175,6 +196,7 @@
     .pp-head h2{font-size:14px}
     .pp-body{padding:10px 14px 12px;gap:10px}
     .pp-side{font-size:11.5px;gap:4px;padding:0 4px}
+    .pp-ncols,.pp-nitem{grid-template-columns:minmax(0,1fr) 46px 46px;gap:6px}
     .pp-savebar{width:auto;flex-wrap:wrap;gap:10px}
     .pp-save-msg{flex:1 1 100%}
     .pp-save-btns{width:100%}
@@ -347,9 +369,59 @@
             </div>
           </section>
 
-        </div>
+          <section class="pp-row" aria-labelledby="pp-notif-h">
+            <div class="pp-row-label">
+              <h2 id="pp-notif-h">Notifications</h2>
+              <p>How CapsTrack tells you when a team needs you. Desktop pops up in the corner of your screen; email goes to your Google address.</p>
+            </div>
+            <div class="pp-control">
+              <div class="pp-master">
+                <span>
+                  <label for="pp-n-all">Notify me at all</label>
+                  <small><span id="pp-perm-text"></span><button type="button" class="pp-allow" id="pp-allow" hidden>Allow</button></small>
+                </span>
+                <input class="pp-switch" type="checkbox" id="pp-n-all" data-key="all">
+              </div>
+              <script nonce="{{ Vite::cspNonce() }}">
+              // Said as the box is drawn, so it never grows in afterwards.
+              (function () {
+                var wrap = document.getElementById('notif-wrap');
+                var supported = !!(wrap && wrap.dataset.vapid && window.isSecureContext
+                  && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
+                var state = supported ? Notification.permission : 'unsupported';
+                var text = document.getElementById('pp-perm-text');
+                text.textContent = {
+                  granted: 'Desktop pop-ups are on in this browser.',
+                  denied: 'This browser blocks pop-ups from CapsTrack. Allow them in its site settings.',
+                  'default': 'Desktop pop-ups are not set up in this browser yet.'
+                }[state] || 'Desktop pop-ups need CapsTrack opened over https://.';
+                document.getElementById('pp-allow').hidden = state !== 'default';
+              })();
+              </script>
+              <div class="pp-ngrid" id="pp-ngrid">
+                <div class="pp-ncols" aria-hidden="true"><span></span><span>Desktop</span><span>Email</span></div>
+                @foreach ($notificationGroups as $group => $switches)
+                  <div class="pp-ngroup">{{ $group }}</div>
+                  @foreach ($switches as $switch)
+                    <div class="pp-nitem">
+                      <span>{{ $switch['label'] }}</span>
+                      @foreach (['web' => 'Desktop', 'email' => 'Email'] as $channel => $channelName)
+                        <span class="pp-ncell">
+                          @if ($switch[$channel])
+                            <input class="pp-switch" type="checkbox" id="pp-n-{{ $channel }}-{{ $switch['type'] }}" data-key="{{ $channel }}.{{ $switch['type'] }}" aria-label="{{ $channelName }}: {{ $switch['label'] }}">
+                          @else
+                            <span class="pp-nnone" title="{{ $channel === 'web' ? 'Shows in the bell only' : 'No email is sent for this' }}">&mdash;</span>
+                          @endif
+                        </span>
+                      @endforeach
+                    </div>
+                  @endforeach
+                @endforeach
+              </div>
+            </div>
+          </section>
 
-        @include('partials.notification-settings')
+        </div>
       </div>
     </div>
 
@@ -367,6 +439,7 @@
 </div>
 
 @include('instructor.partials.skeleton-toggle')
+<script src="/js/capstrack-push.js" defer></script>
 
 <script nonce="{{ Vite::cspNonce() }}">
 /* Mobile sidebar toggle */
@@ -406,7 +479,8 @@ function closeSidebar() {
   var saved = {
     degree: @json($expert->degree_title ?? ''),
     programs: PROGRAMS.reduce(function (o, p) { o[p] = 0; return o; }, {}),
-    areas: @json((object) $researchAreas)
+    areas: @json((object) $researchAreas),
+    notifs: @json((object) $notificationPrefs)
   };
   Object.assign(saved.programs, @json((object) $programSlots));
   Object.keys(SIDES).forEach(function (side) { if (!saved.areas[side]) saved.areas[side] = []; });
@@ -596,7 +670,31 @@ function closeSidebar() {
 
   function changed() { justSaved = false; renderSaveBar(); }
 
-  function renderAll() { renderDegree(); renderPrograms(); renderAreas(); renderSaveBar(); }
+  function renderNotifs() {
+    el('pp-ngrid').classList.toggle('off', !state.notifs.all);
+    document.querySelectorAll('.pp-switch[data-key]').forEach(function (sw) {
+      sw.checked = !!state.notifs[sw.dataset.key];
+      if (sw.dataset.key !== 'all') sw.disabled = !state.notifs.all;
+    });
+  }
+
+  function renderAll() { renderDegree(); renderPrograms(); renderAreas(); renderNotifs(); renderSaveBar(); }
+
+  document.querySelectorAll('.pp-switch[data-key]').forEach(function (sw) {
+    sw.addEventListener('change', function () { state.notifs[sw.dataset.key] = sw.checked; changed(); renderNotifs(); });
+  });
+
+  el('pp-allow').addEventListener('click', function () {
+    var allow = this;
+    if (!window.CapsTrackPush) return;
+    allow.disabled = true;
+    window.CapsTrackPush.enable().then(function (permission) {
+      allow.hidden = true;
+      el('pp-perm-text').textContent = permission === 'granted'
+        ? 'Desktop pop-ups are on in this browser.'
+        : 'This browser blocks pop-ups from CapsTrack. Allow them in its site settings.';
+    });
+  });
 
   el('pp-degree').addEventListener('change', function (e) { state.degree = e.target.value; changed(); renderDegree(); });
 
@@ -632,32 +730,50 @@ function closeSidebar() {
     renderAll();
   });
 
+  function part(obj, keys) { return JSON.stringify(keys.map(function (k) { return obj[k]; })); }
+
+  async function put(url, body) {
+    var res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'X-CSRF-TOKEN': @json(csrf_token()), 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    var json = await res.json().catch(function () { return {}; });
+    if (!res.ok || json.success === false) throw new Error(json.message || 'Could not save. Try again.');
+    return json;
+  }
+
+  // The profile and the notification switches are saved where each always
+  // has been; only the part that changed is sent.
   el('pp-save-btn').addEventListener('click', async function () {
     var btn = this;
-    if (total() < 1) {
+    var profileChanged = part(state, ['degree', 'programs', 'areas']) !== part(saved, ['degree', 'programs', 'areas']);
+    var notifsChanged = JSON.stringify(state.notifs) !== JSON.stringify(saved.notifs);
+    if (profileChanged && total() < 1) {
       renderSaveBar('Tick at least one program and how many teams you take from it.', 'failed');
       return;
     }
     btn.disabled = true;
     try {
-      var res = await fetch(@json(route('instructor.profile.update')), {
-        method: 'PUT',
-        headers: { 'X-CSRF-TOKEN': @json(csrf_token()), 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null })
-      });
-      var json = await res.json().catch(function () { return {}; });
-      if (!res.ok || !json.success) {
-        renderSaveBar(json.message || 'Could not save. Try again.', 'failed');
-        return;
+      if (profileChanged) {
+        var json = await put(@json(route('instructor.profile.update')), { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null });
+        if (json.expertise_by_side) {
+          Object.keys(SIDES).forEach(function (s) { state.areas[s] = json.expertise_by_side[s] || []; });
+        }
+        saved.degree = state.degree;
+        saved.programs = copy(state.programs);
+        saved.areas = copy(state.areas);
       }
-      if (json.expertise_by_side) {
-        Object.keys(SIDES).forEach(function (s) { state.areas[s] = json.expertise_by_side[s] || []; });
+      if (notifsChanged) {
+        var on = {};
+        Object.keys(state.notifs).forEach(function (k) { if (k !== 'all') on[k] = state.notifs[k]; });
+        await put(@json(route('instructor.notifications.preferences')), { all: state.notifs.all, on: on });
+        saved.notifs = copy(state.notifs);
       }
-      saved = copy(state);
       justSaved = true;
       renderAll();
     } catch (e) {
-      renderSaveBar('Could not reach CapsTrack. Check your connection and try again.', 'failed');
+      renderSaveBar(e.message && e.message.indexOf('Failed to fetch') < 0 ? e.message : 'Could not reach CapsTrack. Check your connection and try again.', 'failed');
     } finally {
       btn.disabled = false;
     }
