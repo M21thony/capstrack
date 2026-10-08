@@ -6,7 +6,7 @@
     @if (! empty($i['role_label']))
       <div class="sx-role">Recommended {{ $i['role_label'] }}</div>
     @endif
-    <div class="n">{{ $i['name'] ?? '' }}</div>
+    <div class="n">{{ $i['name'] ?? '' }}@if (! empty($i['study_leave']))<span class="sx-leave">On study leave</span>@endif</div>
     <div class="x">{{ $i['expertise'] ?? '' }}</div>
     <div class="r">{{ $i['reason'] ?? '' }}</div>
   </div>

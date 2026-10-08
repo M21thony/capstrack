@@ -18,6 +18,8 @@ const AWAY_REASONS = BOOT.away_reasons;
 const SHORT = { 'Pre-proposal Defense': 'Pre-proposal', 'Title Defense': 'Title', 'Pre Oral Defense': 'Pre Oral', 'Final Oral Defense': 'Final Oral' };
 const SEATS = [['chair', 'Panel Chair', "Master's degree or higher"], ['m1', 'Member 1', 'Any degree'], ['m2', 'Member 2', 'Any degree']];
 const SEAT_ROLE = { chair: 'Panel Chair', m1: 'Member 1', m2: 'Member 2' };
+// Still pickable: the CaPSA may want them anyway, the tag just says so.
+const LEAVE = e => (e.leave ? ' <span class="leave">On study leave</span>' : '');
 const STEPS = [
   ['panel', 'Panel not final', 'No panel yet, or still a draft'],
   ['blocked', 'Not ready', 'Fee not verified, or previous stage not passed'],
@@ -429,7 +431,7 @@ function drawAssign() {
       const on = A.seats[A.active] === e.id;
       const where = SEATS.find(([k]) => A.seats[k] === e.id);
       const why = A.active === 'chair' && !e.chair ? 'Needs a Master\'s to chair' : taken.includes(e.id) ? 'Already ' + where[1] : '';
-      return `<button type="button" class="ex${on ? ' on' : ''}" data-act="pick-ex" data-id="${e.id}"${why ? ' disabled' : ''}><span class="av">${esc(initials(e.name))}</span><span class="grow"><b>${suggested(e) ? '<span class="star" title="Matches the teams\' project tags">★</span>' : ''}${esc(e.name)}${e.degree ? ` <span class="deg">${esc(e.degree)}</span>` : ''}</b><span>${esc(why || e.tags.join(', ') || 'No expertise listed')}</span></span><span class="use">${on ? 'Picked' : why ? '' : 'Set as ' + SEAT_ROLE[A.active]}</span></button>`;
+      return `<button type="button" class="ex${on ? ' on' : ''}" data-act="pick-ex" data-id="${e.id}"${why ? ' disabled' : ''}><span class="av">${esc(initials(e.name))}</span><span class="grow"><b>${suggested(e) ? '<span class="star" title="Matches the teams\' project tags">★</span>' : ''}${esc(e.name)}${e.degree ? ` <span class="deg">${esc(e.degree)}</span>` : ''}${LEAVE(e)}</b><span>${esc(why || e.tags.join(', ') || 'No expertise listed')}</span></span><span class="use">${on ? 'Picked' : why ? '' : 'Set as ' + SEAT_ROLE[A.active]}</span></button>`;
     }).join('') || '<div class="empty">No expert matches.</div>'}</div></div>`;
   $('aBody').innerHTML = `<div class="assign">${left}${right}</div>`;
   const n = A.teams.size;
@@ -491,7 +493,7 @@ function drawCantSit() {
         + `<div class="list" style="max-height:260px">${list.map(e => {
           const why = RP.seat === 'chair' && !e.chair ? 'Needs a Master\'s to chair' : '';
           const on = RP.pick === e.id;
-          return `<button type="button" class="ex${on ? ' on' : ''}" data-act="rp-pick" data-id="${e.id}"${why ? ' disabled' : ''}><span class="av">${esc(initials(e.name))}</span><span class="grow"><b>${esc(e.name)}${e.degree ? ` <span class="deg">${esc(e.degree)}</span>` : ''}</b><span>${esc(why || e.tags.join(', ') || 'No expertise listed')}</span></span><span class="use">${on ? 'Picked' : why ? '' : 'Pick'}</span></button>`;
+          return `<button type="button" class="ex${on ? ' on' : ''}" data-act="rp-pick" data-id="${e.id}"${why ? ' disabled' : ''}><span class="av">${esc(initials(e.name))}</span><span class="grow"><b>${esc(e.name)}${e.degree ? ` <span class="deg">${esc(e.degree)}</span>` : ''}${LEAVE(e)}</b><span>${esc(why || e.tags.join(', ') || 'No expertise listed')}</span></span><span class="use">${on ? 'Picked' : why ? '' : 'Pick'}</span></button>`;
         }).join('') || '<div class="empty">No expert matches.</div>'}</div></div>`
         + `<div class="banner blue">${ICON.info}<span class="txt">Defenses already held keep <b>${esc(nameOf(out))}</b> on record. The new panelist sits every defense still to come, and both are told.</span></div>`;
     }

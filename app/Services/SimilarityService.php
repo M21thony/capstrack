@@ -1454,6 +1454,8 @@ PROMPT;
             // here: this array is stored on the duplication check, so a word
             // baked in now would never reach a scan that already ran.
             'role_label' => $label,
+            // Still suggested, but tagged: they may be slow to reply.
+            'study_leave' => (bool) $expert->on_study_leave,
             'reason' => $reason !== ''
                 ? $reason
                 : 'Holds the '.strtolower($label).' role, with expertise in '.$expertise.'.',

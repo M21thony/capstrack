@@ -3,11 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\DuplicationCheck;
 use App\Models\ExpertEvaluation;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Services\OllamaSSHClient;
+use App\Services\SimilarityService;
+use App\Support\DefenseBoard;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -170,5 +174,62 @@ class ExpertRatingsAndStudyLeaveTest extends TestCase
             ->assertSee('class="cx-leave-tag"', false)
             ->assertSee('End study leave')
             ->assertSee('id="addExpertStudyLeave"', false);
+    }
+
+    /** Still suggested by the AI, but tagged, and every card draws the tag. */
+    public function test_an_expert_on_study_leave_is_still_suggested_with_the_tag(): void
+    {
+        $expert = $this->adviser(['on_study_leave' => true]);
+
+        $this->mock(OllamaSSHClient::class, function ($mock) {
+            $mock->shouldReceive('warmup')->andReturn(null);
+            $mock->shouldReceive('generate')->andReturnUsing(function (string $prompt) {
+                preg_match('/"id":(\d+)/', $prompt, $m);
+
+                return '[{"id":'.($m[1] ?? 0).',"reason":"Because."}]';
+            });
+        });
+
+        $out = app(SimilarityService::class)->suggestInstructors([
+            'domain' => 'Web', 'keywords' => ['web'], 'main_topic' => 'A site', 'problem_statement' => 'Slow.',
+        ]);
+
+        $this->assertSame([$expert->expert_id], array_column($out, 'id'));
+        $this->assertTrue($out[0]['study_leave']);
+
+        foreach (['duplication.blade.php', 'duplication/_expert.blade.php'] as $view) {
+            $this->assertStringContainsString('<span class="sx-leave">On study leave</span>', file_get_contents(resource_path('views/student/'.$view)));
+        }
+    }
+
+    /** A saved report reads the leave now, not when the check ran. */
+    public function test_a_saved_report_shows_the_current_study_leave(): void
+    {
+        $nowOnLeave = $this->adviser(['on_study_leave' => true]);
+        $backFromLeave = $this->adviser();
+
+        $check = DuplicationCheck::create([
+            'student_s_y_id' => StudentSchoolYear::where('student_id', $this->student->student_id)->value('s_y_id'),
+            'document_path' => 'duplication-checks/x.pdf', 'concepts' => [], 'top_score' => 20, 'verdict' => 'Passed', 'matches' => [],
+            'instructors_suggested' => [
+                ['id' => $nowOnLeave->expert_id, 'name' => 'A', 'expertise' => 'x', 'reason' => '', 'role' => 'adviser', 'role_label' => 'Adviser'],
+                ['id' => $backFromLeave->expert_id, 'name' => 'B', 'expertise' => 'x', 'reason' => '', 'role' => 'adviser', 'role_label' => 'Adviser', 'study_leave' => true],
+            ],
+        ]);
+
+        $this->assertSame([true, false], array_column($check->suggestionsForDisplay(), 'study_leave'));
+    }
+
+    /** The defense panel picker still lists them, tagged, so the CaPSA can choose them on purpose. */
+    public function test_the_panel_picker_tags_an_expert_on_study_leave(): void
+    {
+        $onLeave = $this->adviser(['on_study_leave' => true, 'first_login_at' => now()]);
+        $around = $this->adviser(['first_login_at' => now()]);
+
+        $rows = app(DefenseBoard::class)->panelists()->keyBy('id');
+
+        $this->assertTrue($rows[$onLeave->expert_id]['leave']);
+        $this->assertFalse($rows[$around->expert_id]['leave']);
+        $this->assertSame(2, substr_count(file_get_contents(resource_path('js/defenses/defenses.js')), '${LEAVE(e)}'), 'both panel pickers draw the tag');
     }
 }

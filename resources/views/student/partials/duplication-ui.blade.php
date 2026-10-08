@@ -120,6 +120,8 @@
    list, and one copy beats two. */
 .sx-role{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
     color:var(--accent3,#8a6e10);margin-bottom:2px}
+.sx-leave{display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;
+    vertical-align:1px;background:rgba(180,83,9,.09);color:#b45309;border:1px solid rgba(180,83,9,.18)}
   .instructor-item {
   display: flex; gap: 10px; align-items: flex-start;
   padding: 8px 0;
