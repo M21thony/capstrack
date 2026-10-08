@@ -220,7 +220,8 @@ test('on a phone a CaPSA name card opens My Profile', async ({ browser }) => {
   await noTour(page);
   await page.locator('.mtab .mtab-item').last().tap();
   await expect.poll(() => page.evaluate(() => Math.round(document.querySelector('.sidebar').getBoundingClientRect().left))).toBe(0);
-  await Promise.all([page.waitForURL(/\/capsa\/profile$/), page.locator('.sidebar .sidebar-user').tap()]);
+  // A CaPSA who also advises has one profile, the expert one.
+  await Promise.all([page.waitForURL(/\/(capsa|instructor)\/profile$/), page.locator('.sidebar .sidebar-user').tap()]);
   await context.close();
 });
 

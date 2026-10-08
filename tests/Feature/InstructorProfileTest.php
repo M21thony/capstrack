@@ -155,6 +155,20 @@ class InstructorProfileTest extends TestCase
             ->assertDontSee('team leader rating');
     }
 
+    /** Save and Discard are the portal's own buttons, and the outcome shows on the shared Success / Error card. */
+    public function test_the_save_bar_uses_the_portal_buttons_and_success_card(): void
+    {
+        $expert = $this->makeExpert();
+
+        $response = $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk();
+
+        $response->assertSee('class="btn btn-ghost" id="pp-discard"', false)
+            ->assertSee('class="btn btn-primary" id="pp-save-btn"', false)
+            ->assertSee('id="ct-action-toasts"', false)
+            ->assertSee("toast('Your profile was saved.', 'success')", false)
+            ->assertDontSee('Changes saved');
+    }
+
     /** Four email switches, one per kind of work; a group is on while any email in it is. */
     public function test_email_switches_are_grouped_and_show_what_is_saved(): void
     {

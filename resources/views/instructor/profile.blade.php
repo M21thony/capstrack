@@ -35,10 +35,8 @@
   .pp-role.capstone_adviser{background:var(--blue-bg);color:var(--blue);border-color:rgba(29,78,216,.25)}
   .pp-id-lock{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text3)}
   .pp-id-lock svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  .pp-id-edit{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 13px;border:1px solid var(--border2);border-radius:9px;background:var(--bg2);color:var(--text);font-size:12.5px;font-weight:600;text-decoration:none;white-space:nowrap}
-  .pp-id-edit:hover{border-color:var(--accent);background:var(--accent-light)}
-  .pp-id-edit svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  .pp-id-edit[aria-pressed="true"]{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
+  .pp-id-edit{white-space:nowrap}
+  .pp-id-edit svg{stroke-linecap:round;stroke-linejoin:round}
   /* The degree is what is written after the name, so it is picked there. */
   .pp-name{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 0}
   .pp-name .pp-comma{font-size:19px;font-weight:700;color:var(--text);margin-right:6px}
@@ -57,8 +55,7 @@
   .pp-fold-add{display:flex;gap:8px}
   .pp-fold-add input{flex:1;min-width:0;height:38px;border:1px solid var(--border2);border-radius:9px;padding:0 12px;font:inherit;font-size:13px;color:var(--text);background:var(--bg2)}
   .pp-fold-add input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
-  .pp-fold-add button{min-height:38px;padding:0 14px;border:0;border-radius:9px;background:var(--navy-dark);color:#fff;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
-  .pp-fold-add button:disabled{opacity:.6;cursor:default}
+  .pp-fold-add .btn{flex-shrink:0;justify-content:center}
   .pp-folds{display:flex;flex-direction:column;margin-top:8px}
   .pp-fold{display:flex;align-items:center;gap:10px;padding:8px 2px;font-size:13px;color:var(--text);border-bottom:1px solid var(--bg4)}
   .pp-fold:last-child{border-bottom:0}
@@ -137,19 +134,12 @@
   .pp-save{position:sticky;bottom:0;padding:14px 0 18px;display:none}
   .pp-save.on{display:block}
   /* As wide as what it says, so the notification toasts in the corner never cover Save. */
-  .pp-savebar{display:flex;width:fit-content;max-width:100%;align-items:center;gap:16px;padding:8px 10px 8px 16px;border-radius:12px;background:var(--navy-dark);color:#fff;box-shadow:0 8px 28px rgba(15,17,23,.25)}
-  .pp-save-msg{display:flex;align-items:center;gap:9px;min-width:0;font-size:12.5px;font-weight:600}
+  .pp-savebar{display:flex;width:fit-content;max-width:100%;align-items:center;gap:16px;padding:10px 12px 10px 18px;border-radius:14px;background:var(--bg2);border:1px solid var(--border);box-shadow:0 10px 30px rgba(15,17,23,.12)}
+  .pp-save-msg{display:flex;align-items:center;gap:9px;min-width:0;font-size:13px;font-weight:600;color:var(--text2)}
   .pp-save-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:var(--accent)}
-  .pp-save.saved .pp-save-dot{background:#22c55e}
-  .pp-save.failed .pp-save-dot{background:#f87171}
   .pp-save-btns{display:flex;gap:8px}
-  .pp-save.saved .pp-save-btns{display:none}
-  .pp-btn{min-height:34px;padding:0 14px;border-radius:8px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
-  .pp-btn-ghost{border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff}
-  .pp-btn-ghost:hover{background:rgba(255,255,255,.08)}
-  .pp-btn-save{border:0;background:var(--accent);color:#18191f;font-weight:700;padding:0 16px}
-  .pp-btn-save:hover{background:var(--accent2)}
-  .pp-btn:disabled{opacity:.6;cursor:default}
+  .pp-save-btns .btn{justify-content:center}
+  .pp .btn:disabled{opacity:.6;cursor:default}
 
   .pp :focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
   .pp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -179,7 +169,7 @@
     .pp-savebar{width:auto;flex-wrap:wrap;gap:10px}
     .pp-save-msg{flex:1 1 100%}
     .pp-save-btns{width:100%}
-    .pp-save-btns .pp-btn{flex:1}
+    .pp-save-btns .btn{flex:1}
   }
 </style>
 </head>
@@ -269,7 +259,7 @@
           <span class="pp-id-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>{{ $capsaSections !== null ? 'Roles and sections are set by the administrator' : 'Roles are set by the administrator' }}</span>
         </div>
         @if ($canEditName)
-          <button type="button" class="pp-id-edit" id="pp-name-btn" aria-pressed="false" aria-controls="pp-name-form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit name</span></button>
+          <button type="button" class="btn btn-ghost pp-id-edit" id="pp-name-btn" aria-pressed="false" aria-controls="pp-name-form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit name</span></button>
         @endif
       </header>
 
@@ -327,7 +317,7 @@
               <div class="pp-fold-add">
                 <label for="pp-fold-name" class="pp-sr">Folder name</label>
                 <input id="pp-fold-name" maxlength="150" placeholder="e.g. Batch 2026 - Section A">
-                <button type="button" id="pp-fold-add">Add folder</button>
+                <button type="button" class="btn btn-primary" id="pp-fold-add">Add folder</button>
               </div>
               <div class="pp-folds" id="pp-folds"><div class="pp-fold-note">Loading folders…</div></div>
             </section>
@@ -355,10 +345,10 @@
 
       <div class="pp-save" id="pp-save">
         <div class="pp-savebar">
-          <div class="pp-save-msg" role="status"><span class="pp-save-dot"></span><span id="pp-save-text">You have unsaved changes</span></div>
+          <div class="pp-save-msg"><span class="pp-save-dot"></span><span>You have unsaved changes</span></div>
           <div class="pp-save-btns">
-            <button type="button" class="pp-btn pp-btn-ghost" id="pp-discard">Discard</button>
-            <button type="button" class="pp-btn pp-btn-save" id="pp-save-btn">Save changes</button>
+            <button type="button" class="btn btn-ghost" id="pp-discard">Discard</button>
+            <button type="button" class="btn btn-primary" id="pp-save-btn">Save changes</button>
           </div>
         </div>
       </div>
@@ -423,7 +413,6 @@ function closeSidebar() {
   var state = copy(saved);
   var side = @json($firstSide);
   var group = GROUPS.length ? GROUPS[0].name : null;
-  var justSaved = false;
 
   var el = function (id) { return document.getElementById(id); };
   var input = el('pp-area-input');
@@ -542,6 +531,8 @@ function closeSidebar() {
     el('pp-id-view').hidden = editingName;
     el('pp-name-btn').setAttribute('aria-pressed', editingName ? 'true' : 'false');
     el('pp-name-btn').querySelector('span').textContent = editingName ? 'Done' : 'Edit name';
+    el('pp-name-btn').classList.toggle('btn-primary', editingName);
+    el('pp-name-btn').classList.toggle('btn-ghost', !editingName);
     [['pp-first', 'first'], ['pp-middle', 'middle'], ['pp-last', 'last'], ['pp-suffix', 'suffix']].forEach(function (f) {
       if (document.activeElement !== el(f[0])) el(f[0]).value = n[f[1]] || '';
     });
@@ -551,15 +542,14 @@ function closeSidebar() {
     document.querySelectorAll('.pp-switch[data-group]').forEach(function (sw) { sw.checked = !!state.email[sw.dataset.group]; });
   }
 
-  function renderSaveBar(text, cls) {
-    var bar = el('pp-save');
-    bar.classList.toggle('on', dirty() || justSaved || cls === 'failed');
-    bar.classList.toggle('saved', !dirty() && justSaved && cls !== 'failed');
-    bar.classList.toggle('failed', cls === 'failed');
-    el('pp-save-text').textContent = text || (dirty() ? 'You have unsaved changes' : 'Changes saved');
+  function renderSaveBar() { el('pp-save').classList.toggle('on', dirty()); }
+
+  // The same Success / Error card every other page shows.
+  function toast(message, type) {
+    if (window.ctToast) { window.ctToast(message, type); }
   }
 
-  function changed() { justSaved = false; renderSaveBar(); }
+  function changed() { renderSaveBar(); }
   function renderAll() { renderPrograms(); renderAreas(); renderDegree(); renderName(); renderEmail(); renderSaveBar(); }
 
   if (CAN_EDIT_NAME) {
@@ -607,7 +597,6 @@ function closeSidebar() {
     state = copy(saved);
     el('pp-degree').value = state.degree;
     editingName = false;
-    justSaved = false;
     renderAll();
   });
 
@@ -633,11 +622,11 @@ function closeSidebar() {
     if (CAN_EDIT_NAME && (!state.name.first.trim() || !state.name.last.trim())) {
       editingName = true;
       renderName();
-      renderSaveBar('Your first and last name cannot be blank.', 'failed');
+      toast('Your first and last name cannot be blank.', 'error');
       return;
     }
     if (profileChanged && total() < 1) {
-      renderSaveBar('Type how many teams you take from at least one program.', 'failed');
+      toast('Type how many teams you take from at least one program.', 'error');
       return;
     }
     btn.disabled = true;
@@ -667,10 +656,10 @@ function closeSidebar() {
         await put(@json(route('instructor.notifications.preferences')), { all: true, on: on });
         saved.email = copy(state.email);
       }
-      justSaved = true;
       renderAll();
+      toast('Your profile was saved.', 'success');
     } catch (e) {
-      renderSaveBar(e.message && e.message.indexOf('fetch') < 0 ? e.message : 'Could not reach CapsTrack. Check your connection and try again.', 'failed');
+      toast(e.message && e.message.indexOf('fetch') < 0 ? e.message : 'Network error. Check your connection and try again.', 'error');
     } finally {
       btn.disabled = false;
     }
@@ -695,8 +684,8 @@ function closeSidebar() {
           del.disabled = true;
           fetch(foldUrl + '/' + f.id, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': @json(csrf_token()), 'Accept': 'application/json' } })
             .then(function (r) { return r.json(); })
-            .then(function (d) { if (d.success === false) throw new Error(d.message); loadFolders(); })
-            .catch(function (e) { del.disabled = false; foldNote((e && e.message) || 'Could not remove the folder. Try again.', true); });
+            .then(function (d) { if (d.success === false) throw new Error(d.message); loadFolders(); toast('\u201c' + f.name + '\u201d was removed.', 'success'); })
+            .catch(function (e) { del.disabled = false; toast((e && e.message) || 'Could not remove the folder. Try again.', 'error'); });
         });
         row.appendChild(del);
         folds.appendChild(row);
@@ -719,8 +708,9 @@ function closeSidebar() {
           if (d.success === false) throw new Error(d.message);
           foldInput.value = '';
           loadFolders();
+          toast('\u201c' + name + '\u201d was added.', 'success');
         })
-        .catch(function (e) { foldNote('\u201c' + name + '\u201d was not created. ' + ((e && e.message) || 'Connect Google Drive in Resources first.'), true); })
+        .catch(function (e) { toast('\u201c' + name + '\u201d was not created. ' + ((e && e.message) || 'Connect Google Drive in Resources first.'), 'error'); })
         .then(function () { foldBtn.disabled = false; foldBtn.textContent = 'Add folder'; });
     };
     foldBtn.addEventListener('click', addFolder);
