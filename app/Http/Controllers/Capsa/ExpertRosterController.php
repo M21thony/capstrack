@@ -295,9 +295,11 @@ class ExpertRosterController extends Controller
 
             // program_slots is the same "1 - BSIT, 5 - BSIS" free text the
             // request form writes, so one shape is read everywhere. Without
-            // a per-programme count, the slot number is spread across the
-            // programmes named; without programmes, only the overall cap is
-            // set and the expert says which programmes themselves.
+            // a per-programme count, each programme named may fill the slot
+            // number, and the slot number is still the total: 5 slots for
+            // BSIT and BSIS is five teams, not ten. Without programmes, only
+            // the overall cap is set and the expert says which programmes
+            // themselves.
             if ($person['programs'] !== null || $person['slots'] !== null) {
                 $account = CapstoneExpert::withTrashed()->find($expertId);
 
@@ -311,9 +313,7 @@ class ExpertRosterController extends Controller
                     }
 
                     if ($person['slots'] !== null) {
-                        $account->max_teams = $person['programs'] !== null
-                            ? $each * count($person['programs'])
-                            : $person['slots'];
+                        $account->max_teams = $person['slots'];
                     }
 
                     $account->save();

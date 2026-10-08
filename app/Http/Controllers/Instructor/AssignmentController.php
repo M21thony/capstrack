@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstonePreProposal;
 use App\Models\DefenseSchedule;
 use App\Models\Notification;
+use App\Models\Student;
 use App\Models\TeamExpertAssignment;
 use App\Models\TitleChangeRequest;
 use App\Services\RecipientResolver;
 use App\Support\DefenseBoard;
+use App\Support\ExpertApplications;
 use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -205,17 +207,15 @@ class AssignmentController extends Controller
             ], 422);
         }
 
-        $slotsUsed = TeamExpertAssignment::where('expert_id', $expert->expert_id)
-            ->where('status', 'approved')
-            ->count();
+        $leader = $assignment->team?->leader;
+        $full = app(ExpertApplications::class)->fullAt($expert, Student::mapCourseToProgram($leader->course ?? ''));
 
-        // Unset is not nought - see the same guard in StudentExpertController.
-        $maxTeams = $expert->max_teams ?? 0;
-
-        if ($maxTeams > 0 && $slotsUsed >= $maxTeams) {
+        if ($full) {
             return response()->json([
                 'success' => false,
-                'message' => 'You have reached your maximum number of teams.',
+                'message' => $full['program']
+                    ? "You have reached your limit of {$full['cap']} {$full['program']} team(s)."
+                    : 'You have reached your maximum number of teams.',
             ], 422);
         }
 
