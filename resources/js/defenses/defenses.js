@@ -1,9 +1,11 @@
 /*
  * Defenses: a team's panel and its defense dates, on one page.
  *
- * A team moves left to right along four steps for the stage in view: its
- * panel made final (Panel not final), whatever still holds it back (Not
- * ready), Ready to schedule, and Scheduled. The steps are the page's main
+ * A team moves left to right along the steps for the stage in view: its
+ * panel made final (Panel not final), Ready to schedule, and Scheduled. The
+ * panel is set on the Pre-proposal board only; it then sits every stage
+ * through Final Oral, so the later boards start at Ready to schedule. A team
+ * shows on a later board once it has passed the stage before. The steps are the page's main
  * filter; the stage tabs above them pick which defense. Drawn from the JSON
  * the page carries; a stage switch redraws in place, a save reloads.
  */
@@ -22,8 +24,7 @@ const SEAT_ROLE = { chair: 'Panel Chair', m1: 'Member 1', m2: 'Member 2' };
 const LEAVE = e => (e.leave ? ' <span class="leave">On study leave</span>' : '');
 const STEPS = [
   ['panel', 'Panel not final', 'No panel yet, or still a draft'],
-  ['blocked', 'Not ready', 'Fee not verified, or previous stage not passed'],
-  ['ready', 'Ready to schedule', 'Panel final, fee and previous stage done'],
+  ['ready', 'Ready to schedule', 'Waiting for a date'],
   ['scheduled', 'Scheduled', 'Has a date, or a result'],
 ];
 const REPLACE_REASONS = ['Resigned', 'Long leave', 'Account deactivated', 'Other'];
@@ -61,11 +62,14 @@ const owed = t => t.blockers.filter(b => b.warn);
 const missingExperts = t => t.blockers.find(b => b.key === 'experts');
 const isDraft = t => !!t.panel && t.panel_status === 'draft';
 const isFinal = t => !!t.panel && t.panel_status === 'final';
+const isPre = () => S.stage === S.stages[0];
+const steps = () => (isPre() ? STEPS : STEPS.slice(1));
 
+/* null: the team has not reached this stage yet, so it is not on this board. */
 function stepOf(t) {
   if (t.schedule || t.outcome) return 'scheduled';
-  if (!t.panel || isDraft(t)) return 'panel';
-  if (hard(t).length) return 'blocked';
+  if (isPre() && (!t.panel || isDraft(t))) return 'panel';
+  if (t.blockers.some(b => b.key === 'prev')) return null;
   return 'ready';
 }
 
@@ -136,6 +140,7 @@ function panelButton(t, big = false) {
   if (isFinal(t)) {
     return `<button type="button" class="btn ghost${sm} lockbtn" data-act="cantsit" data-id="${t.id}" title="Final since ${t.panel_final_since ? fmtDay(t.panel_final_since) : 'it was finalized'}. This panel sits every defense through Final Oral. If someone can't make it, mark them away or replace them.">${ICON.lock}Panelist can't sit</button>`;
   }
+  if (!isPre()) return '';
   if (isDraft(t)) return `<button type="button" class="btn ghost${sm}" data-act="assign-one" data-id="${t.id}">Change panel</button>`;
   // A panel from before panels were finalized: change it as before.
   return t.panel ? `<button type="button" class="btn ghost${sm}" data-act="assign-one" data-id="${t.id}">Change panel</button>` : '';
@@ -146,6 +151,7 @@ const table = (heads, rows, empty) => `<div class="tablewrap"><table><thead><tr>
 
 /* ---------------- render ---------------- */
 function render() {
+  if (!steps().some(([k]) => k === P.step)) P.step = 'ready';
   $('stages').innerHTML = S.stages.map(stg => {
     const p = S.progress?.[stg];
     return `<button type="button" role="tab" data-act="stage" data-stage="${esc(stg)}" aria-selected="${stg === S.stage}">${SHORT[stg]} ${p ? `<span class="prog">${p.done}/${p.of}</span>` : ''}</button>`;
@@ -167,9 +173,10 @@ function render() {
     $('rubricWarnText').innerHTML = `No active grading rubric for ${esc(S.stage)}${programs} yet. Panelists can't grade these defenses until one is set up in <a href="${esc(URLS.rubrics)}">Grading Rubrics</a>.`;
   }
 
-  const counts = { panel: 0, blocked: 0, ready: 0, scheduled: 0 };
-  TEAMS.forEach(t => { counts[stepOf(t)]++; });
-  $('pipe').innerHTML = STEPS.map(([k, label, sub], i) => `<button type="button" class="step" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}"><span class="k"><i>${i + 1}</i>${label}</span><span class="n${k === 'blocked' && counts[k] ? ' red' : k === 'ready' && counts[k] ? ' green' : ''}">${counts[k]}</span><span class="s">${sub}</span></button>`).join('');
+  const counts = { panel: 0, ready: 0, scheduled: 0 };
+  TEAMS.forEach(t => { const s = stepOf(t); if (s) counts[s]++; });
+  $('pipe').style.setProperty('--steps', steps().length);
+  $('pipe').innerHTML = steps().map(([k, label, sub], i) => `<button type="button" class="step" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}"><span class="k"><i>${i + 1}</i>${label}</span><span class="n${k === 'ready' && counts[k] ? ' green' : ''}">${counts[k]}</span><span class="s">${sub}</span></button>`).join('');
 
   renderMini(counts);
   renderTools();
@@ -179,7 +186,7 @@ function render() {
 
 function renderMini(counts) {
   $('mini').innerHTML = `<div class="stages" role="tablist" aria-label="Defense stage">${S.stages.map(stg => `<button type="button" role="tab" data-act="stage" data-stage="${esc(stg)}" aria-selected="${stg === S.stage}">${SHORT[stg]}</button>`).join('')}</div>`
-    + `<div class="mini-steps" role="tablist" aria-label="Where each team is">${STEPS.map(([k, label]) => `<button type="button" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}">${label.replace('Ready to schedule', 'Ready').replace('Panel not final', 'Panel')} <b>${counts[k]}</b></button>`).join('')}</div>`
+    + `<div class="mini-steps" role="tablist" aria-label="Where each team is">${steps().map(([k, label]) => `<button type="button" role="tab" data-act="step" data-step="${k}" aria-selected="${P.step === k}">${label.replace('Ready to schedule', 'Ready').replace('Panel not final', 'Panel')} <b>${counts[k]}</b></button>`).join('')}</div>`
     + `<label class="search" for="mq">${ICON.search}<span class="sr">Search team or title</span><input id="mq" type="search" placeholder="Search team" value="${esc(P.q)}"></label>`
     + '<span class="grow"></span>'
     + `<button type="button" class="btn gold sm" data-act="generate"${win().start ? '' : ' disabled'}>${ICON.spark}Generate</button>`;
@@ -188,7 +195,6 @@ function renderMini(counts) {
 function renderTools() {
   const hint = {
     panel: 'Draft panels can be changed, and panelists moved between teams. Finalize a panel when it is set: from then on it sits every defense through Final Oral.',
-    blocked: 'These teams are left out of Generate schedule until they finish what is listed. Requirements don\'t hold a team here.',
     ready: 'Teams on their first try, teams the CaPA cancelled, and teams up for a redefense all wait here for a date. Missing requirements don\'t stop scheduling.',
     scheduled: P.view === 'rooms' ? 'Every room, every section, one day at a time.' : 'Other sections\' bookings are shown greyed out, so you can see why a room or panelist is taken.',
   }[P.step];
@@ -196,9 +202,6 @@ function renderTools() {
   let html = `<span class="hint">${hint}</span>`
     + `<label class="search" for="q">${ICON.search}<span class="sr">Search team or title</span><input id="q" type="search" placeholder="Search team or title" aria-keyshortcuts="/" value="${esc(P.q)}"><kbd aria-hidden="true" title="Press / to search">/</kbd></label>`
     + (sections.length > 1 ? `<select class="field" id="secF" aria-label="Section"><option value="">All sections</option>${sections.map(s => `<option${s === P.section ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>` : '');
-  if (P.step === 'blocked') {
-    html += `<select class="field" id="reasonF" aria-label="What is missing"><option value="">Everything missing</option>${[['prev', 'Previous stage not passed'], ['experts', 'Missing adviser or consultant']].map(r => `<option value="${r[0]}"${P.reason === r[0] ? ' selected' : ''}>${r[1]}</option>`).join('')}</select>`;
-  }
   if (P.step === 'ready') {
     const c = { new: 0, cancelled: 0, redefense: 0 };
     TEAMS.filter(t => stepOf(t) === 'ready').forEach(t => { c[t.waiting || 'new']++; });
@@ -241,21 +244,19 @@ function renderBoard() {
         + (drafted ? `<button type="button" class="btn ghost sm" data-act="finalize-picked">${ICON.lock}Finalize ${drafted} ${drafted === 1 ? 'draft' : 'drafts'}</button>` : '')
         + `<button type="button" class="btn gold sm" data-act="assign-open">${ICON.users}Assign panel to selected</button>`;
     }
-  } else if (P.step === 'blocked') {
-    list = list.filter(t => !P.reason || hard(t).some(b => b.key === P.reason));
-    body = table(['Team', 'Panel', 'Still needs', 'Actions'], list.map(t => `<tr><td>${teamCell(t)}</td><td>${panelHtml(t)}</td><td><div class="checks">${triesPill(t)}${hard(t).map(b => `<span class="pill p-red">${esc(b.text)}</span>`).join('')}${reqPill(t)}</div></td><td><div class="acts">${panelButton(t)}</div></td></tr>`),
-      'Nothing is holding a team back.');
   } else if (P.step === 'ready') {
     list = list.filter(t => !P.reason || (t.waiting || 'new') === P.reason);
-    const checks = [['', 'Adviser & consultant'], S.stage !== S.stages[0] && ['', 'Previous stage passed'], ['', 'Panel final'], ['req', 'Requirements done'], S.stage !== S.stages[0] && ['fees', 'Fees verified']].filter(Boolean);
-    body = table(['Team', 'Panel', 'Checks', 'Actions'], list.map(t => `<tr><td>${teamCell(t)}</td><td>${panelHtml(t)}</td><td><div class="checks">${triesPill(t)}${checks.filter(([k]) => !owed(t).some(b => b.key === k)).map(([, c]) => `<span class="pill p-green">✓ ${c}</span>`).join('')}${reqPill(t)}</div></td>`
-      + `<td><div class="acts">${panelButton(t)}<button type="button" class="btn gold sm" data-act="schedule" data-id="${t.id}">Schedule</button></div></td></tr>`),
-      `No team is ready for ${esc(S.stage)} yet. "Not ready" says what each one still needs.`);
+    // A team still short of a panel or an expert stays here, tagged red, and
+    // is left out of Generate schedule (the server skips it too).
+    const checks = [['experts', 'Adviser & consultant'], !isPre() && ['prev', 'Previous stage passed'], ['panel', 'Panel final'], ['req', 'Requirements done'], !isPre() && ['fees', 'Fees verified']].filter(Boolean);
+    body = table(['Team', 'Panel', 'Checks', 'Actions'], list.map(t => `<tr><td>${teamCell(t)}</td><td>${panelHtml(t)}</td><td><div class="checks">${triesPill(t)}${hard(t).map(b => `<span class="pill p-red">${esc(b.text)}</span>`).join('')}${checks.filter(([k]) => !t.blockers.some(b => b.key === k || (k === 'panel' && b.key === 'draft'))).map(([, c]) => `<span class="pill p-green">✓ ${c}</span>`).join('')}${reqPill(t)}</div></td>`
+      + `<td><div class="acts">${panelButton(t)}<button type="button" class="btn gold sm" data-act="schedule" data-id="${t.id}"${hard(t).length ? ` disabled title="${esc(hard(t)[0].text)}"` : ''}>Schedule</button></div></td></tr>`),
+      `No team is waiting for a ${esc(S.stage)} date.`);
   } else {
     body = P.view === 'week' ? weekView(list) : P.view === 'rooms' ? roomsView(list) : scheduledList(list);
   }
 
-  $('boardBody').innerHTML = body + `<div class="foot"><span>Showing ${list.length} of ${TEAMS.length} ${TEAMS.length === 1 ? 'team' : 'teams'}</span><span>${esc(S.stage)}</span></div>`;
+  $('boardBody').innerHTML = body + `<div class="foot"><span>Showing ${list.length} of ${TEAMS.filter(stepOf).length} ${TEAMS.filter(stepOf).length === 1 ? 'team' : 'teams'}</span><span>${esc(S.stage)}</span></div>`;
 }
 
 const otherHere = () => (S.other || []).filter(o => o.stage === S.stage);
@@ -365,7 +366,7 @@ function openDrawer(id) {
     if (j.passed) { dot += ' done'; label = `${j.outcome} · ${fmtDay(j.date)}`; }
     else if (j.outcome) { dot += ' bad'; label = `${j.outcome}${j.date ? ' · ' + fmtDay(j.date) : ''}`; }
     else if (j.date) { dot += ' now'; label = `${fmtDay(j.date)}, ${slotLabel(j.time)} · ${j.venue}`; }
-    else if (j.stage === S.stage && t.panel) { dot += ' now'; label = step === 'ready' ? 'Ready to schedule' : step === 'blocked' ? hard(t).map(b => b.text).join(' · ') : 'Waiting for a final panel'; }
+    else if (j.stage === S.stage && t.panel) { dot += ' now'; label = step !== 'ready' ? 'Waiting for a final panel' : hard(t).length ? hard(t).map(b => b.text).join(' · ') : 'Ready to schedule'; }
     else label = !t.panel ? 'Waiting for a panel' : j.attempt > 1 ? 'Waiting for a redefense date' : 'Not yet';
     if (j.stage === S.stage && needsAnswer(t)) label += t.capa === 'go' ? ' · CaPA: Go' : ' · waiting for the CaPA\'s go';
     const tries = j.stage === S.stage && t.tries.length
@@ -377,7 +378,7 @@ function openDrawer(id) {
     ? (missingExperts(t) ? '' : isDraft(t)
       ? `<button type="button" class="btn ghost" data-act="assign-one" data-id="${t.id}">Change panel</button><button type="button" class="btn gold" data-act="finalize" data-id="${t.id}">${ICON.lock}Finalize panel</button>`
       : `<button type="button" class="btn gold" data-act="assign-one" data-id="${t.id}">Assign panel</button>`)
-    : panelButton(t, true) + (step === 'ready' ? `<button type="button" class="btn gold" data-act="schedule" data-id="${t.id}">Schedule ${SHORT[S.stage]}</button>` : '');
+    : panelButton(t, true) + (step === 'ready' && !hard(t).length ? `<button type="button" class="btn gold" data-act="schedule" data-id="${t.id}">Schedule ${SHORT[S.stage]}</button>` : '');
   openDialog(head(esc(t.name), `${esc(t.section)} · ${t.members} ${t.members === 1 ? 'member' : 'members'}`) + '<div class="db">'
     + `<p style="margin:0;font-weight:600">${esc(t.title || 'No title yet')}</p>`
     + `<div><span class="lbl">Members${returnees ? ` · ${returnees} returnee${returnees > 1 ? 's' : ''}` : ''}</span><ul class="members">${t.member_list.map(m => `<li><span class="grow">${esc(m.name)}</span><label class="toggle ret-toggle${m.returnee ? ' on' : ''}"><input type="checkbox" data-returnee="${m.id}"${m.returnee ? ' checked' : ''}>↺ Returnee</label></li>`).join('') || '<li class="muted">No members on record.</li>'}</ul></div>`
@@ -669,7 +670,7 @@ function checkGenerate() {
 /* Keyboard shortcuts. */
 const KEYS = [
   ['Finding', [['Search teams', ['/']], ['Leave the search, or close a window', ['Esc']]]],
-  ['Moving around', [['Panel not final · Not ready · Ready · Scheduled', ['1', '2', '3', '4']], ['Previous or next defense', ['[', ']']], ['List, Week or Rooms (when Scheduled)', ['V']], ['Back to the top', ['T']]]],
+  ['Moving around', [['The steps, left to right', ['1', '2', '3']], ['Previous or next defense', ['[', ']']], ['List, Week or Rooms (when Scheduled)', ['V']], ['Back to the top', ['T']]]],
   ['Doing', [['Assign panel', ['A']], ['Generate schedule', ['G']], ['Defense window', ['W']], ['These shortcuts', ['?']]]],
 ];
 function openKeys() {
@@ -939,7 +940,7 @@ document.addEventListener('keydown', e => {
   const flash = el => { if (el) { el.classList.remove('keyflash'); void el.offsetWidth; el.classList.add('keyflash'); } };
   if (k === '/') { e.preventDefault(); const q = miniOn ? $('mq') : $('q'); q.focus(); q.select(); return; }
   if (k === '?') { e.preventDefault(); openKeys(); return; }
-  if (['1', '2', '3', '4'].includes(k)) { P.step = STEPS[+k - 1][0]; P.reason = ''; render(); flash(root.querySelector(`#pipe [data-step="${P.step}"]`)); return; }
+  if (steps()[+k - 1]) { P.step = steps()[+k - 1][0]; P.reason = ''; render(); flash(root.querySelector(`#pipe [data-step="${P.step}"]`)); return; }
   if (k === '[' || k === ']') {
     const i = S.stages.indexOf(S.stage) + (k === ']' ? 1 : -1);
     if (i >= 0 && i < S.stages.length) loadStage(S.stages[i]);
@@ -947,7 +948,7 @@ document.addEventListener('keydown', e => {
   }
   const lower = k.toLowerCase();
   if (lower === 'v' && P.step === 'scheduled') { P.view = { list: 'week', week: 'rooms', rooms: 'list' }[P.view]; render(); return; }
-  if (lower === 'a') { openAssign([...P.picked]); return; }
+  if (lower === 'a' && isPre()) { openAssign([...P.picked]); return; }
   if (lower === 'g') { openGenerate(); return; }
   if (lower === 'w') { openWindow(); return; }
   if (lower === 't') { ACT.top(); }

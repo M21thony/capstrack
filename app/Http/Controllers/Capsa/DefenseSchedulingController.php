@@ -26,8 +26,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class DefenseSchedulingController extends Controller
 {
-    /** Where a team is, for the stage in view - the page's four steps. */
-    private const STEPS = ['panel', 'blocked', 'ready', 'scheduled'];
+    /** Where a team is, for the stage in view - the page's steps. */
+    private const STEPS = ['panel', 'ready', 'scheduled'];
 
     public function __construct(private DefenseBoard $board) {}
 
