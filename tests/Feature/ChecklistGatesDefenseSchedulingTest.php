@@ -129,8 +129,8 @@ class ChecklistGatesDefenseSchedulingTest extends TestCase
         $this->addDeliverable($checklist, ['title' => 'Signed (Noted) TD RSC']);
 
         $this->assertStringContainsString('Signed Title Defense Hearing Notice', $this->owed(DefenseOutcome::TITLE_DEFENSE)['Bravo'] ?? '');
-        // What holds the team back is the Title Defense fee, which this test does not set - not the checklist.
-        $this->assertSame('Fees not verified.', $this->notReady(DefenseOutcome::TITLE_DEFENSE)['Bravo'] ?? '');
+        // Neither the checklist nor the unpaid Title Defense fee holds the team back - only warnings.
+        $this->assertArrayNotHasKey('Bravo', $this->notReady(DefenseOutcome::TITLE_DEFENSE)->all());
 
         $this->complete($notice, $team);
 

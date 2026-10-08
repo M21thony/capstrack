@@ -92,7 +92,7 @@
     </tr>
 
     <tr>
-        <td class="section-title" style="height:70px; white-space:nowrap; vertical-align:middle;">PROTOTYPE</td>
+        <td class="section-title" style="height:70px; white-space:nowrap; vertical-align:middle;">{{ $kind ?? 'MANUSCRIPT' }}</td>
         <td class="col-header-sm">Date of<br>Consultation</td>
         <td class="col-header-sm"># of Modules<br>Fully Implemented</td>
         <td class="col-header-sm"># of Modules<br>Partially Implemented</td>

@@ -34,7 +34,7 @@ final class NotificationTypes
 
     public const EXPERT = [
         'expert_application' => [
-            'label' => 'A team applies to me, or a CaPSA assigns me to or removes me from a team',
+            'label' => 'A team applies to me, or a CaPSA removes me from a team',
             'email' => true,
         ],
         'consultation_booked' => [

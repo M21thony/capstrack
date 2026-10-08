@@ -17,8 +17,8 @@ use Illuminate\Validation\Rule;
 
 /**
  * The CaPSA deciding whether a team may let go of an expert who already took
- * them on. Approving swaps in the replacement the team picked, assigned
- * outright: the CaPSA decides, not the replacement.
+ * them on. Approving removes the expert and sends the team's application to
+ * the replacement it picked, who accepts or declines it like any other.
  */
 class ExpertRemovalRequestController extends Controller
 {
@@ -67,10 +67,10 @@ class ExpertRemovalRequestController extends Controller
             $leader = $team->leader_id ? Student::find($team->leader_id) : null;
             $swapping = $removal->replacement_expert_id && $leader;
 
-            // The replacement the team picked is assigned outright, so they
-            // are checked before anyone is removed: approving never leaves
-            // the team with neither expert. A replacement who filled up while
-            // the request waited is the CaPSA's to decline.
+            // The replacement is checked before anyone is removed, so the old
+            // expert never goes for an application that cannot be sent. A
+            // replacement who filled up while the request waited is the
+            // CaPSA's to decline.
             if ($swapping) {
                 $refusal = $replacement
                     ? $this->applications->refusal($team, $leader, $replacement, (int) $removal->replacement_expert_role_id, $assignment->assignment_id)
@@ -104,7 +104,6 @@ class ExpertRemovalRequestController extends Controller
                 (string) $removal->replacement_message,
                 $removal->replacement_proposal_file,
                 $team->selected_pre_proposal_id ?: null,
-                approved: true,
             ) : null;
 
             $removal->update([
@@ -113,7 +112,7 @@ class ExpertRemovalRequestController extends Controller
                 'decision_note' => $note,
                 'decided_at' => now(),
                 'replacement_assignment_id' => $replaced?->assignment_id,
-                'replacement_outcome' => $replaced ? ExpertRemovalRequest::REPLACEMENT_ASSIGNED : null,
+                'replacement_outcome' => $replaced ? ExpertRemovalRequest::REPLACEMENT_SENT : null,
             ]);
 
             foreach (StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id') as $studentId) {
@@ -121,17 +120,17 @@ class ExpertRemovalRequestController extends Controller
                     'student_id' => $studentId,
                     'type' => 'expert_removal_approved',
                     'title' => 'Expert change approved',
-                    'message' => ($replaced
-                        ? 'Your CaPSA approved your change: <strong>'.e($replacement->name).'</strong> is now the '.e($role).' of '.$teamName.' in place of <strong>'.e($expertName).'</strong>.'
-                        : 'Your CaPSA approved removing <strong>'.e($expertName).'</strong> as the '.e($role).' of '.$teamName.'. You can apply to another '.e($role).' now.')
+                    'message' => 'Your CaPSA approved removing <strong>'.e($expertName).'</strong> as the '.e($role).' of '.$teamName.'. '
+                        .($replaced
+                            ? 'Your application went to <strong>'.e($replacement->name).'</strong>, who will accept or decline it.'
+                            : 'You can apply to another '.e($role).' now.')
                         .($note ? ' Note: "'.e($note).'"' : ''),
                     'link' => route('student.experts'),
                 ]);
             }
 
-            $message = $replaced
-                ? 'Approved. '.$replacement->name.' is now the '.$role.' of '.$team->team_name.' in place of '.$expertName.'.'
-                : 'Approved. '.$expertName.' is no longer with '.$team->team_name.'.';
+            $message = 'Approved. '.$expertName.' is no longer with '.$team->team_name.'.'
+                .($replaced ? ' Their application went to '.$replacement->name.'.' : '');
         } else {
             // The PDF meant for the replacement never goes anywhere now.
             if ($removal->replacement_proposal_file) {

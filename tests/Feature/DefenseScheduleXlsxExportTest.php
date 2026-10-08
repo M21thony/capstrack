@@ -174,12 +174,23 @@ class DefenseScheduleXlsxExportTest extends TestCase
     {
         $team = $this->team('Bravo');
         $schedule = $this->schedule($team);
-        DefenseCancellation::create(['defense_id' => $schedule->defense_id, 'team_id' => $team->team_id, 'defense_type' => self::STAGE, 'was_scheduled_at' => '2027-01-15 10:00:00', 'venue' => 'Mac Lab', 'note' => 'Chapter 3 not done']);
+        DefenseCancellation::create(['defense_id' => $schedule->defense_id, 'team_id' => $team->team_id, 'defense_type' => self::STAGE, 'was_scheduled_at' => '2027-01-15 10:00:00', 'venue' => 'Mac Lab', 'note' => 'Chapter 3 not done', 'cancelled_by' => $this->capsa->expert_id]);
 
         $sheet = $this->download()->getActiveSheet();
 
         $this->assertSame('CANCELLED · WAITING FOR A NEW DATE', $sheet->getCell('D7')->getValue());
         $this->assertStringContainsString('Was Jan 15, 10:00 AM. CaPA: not ready (Chapter 3 not done).', (string) $sheet->getCell('B7')->getValue());
+    }
+
+    public function test_a_defense_cancelled_on_the_day_for_open_requirements_says_so(): void
+    {
+        $team = $this->team('Bravo');
+        $schedule = $this->schedule($team);
+        DefenseCancellation::create(['defense_id' => $schedule->defense_id, 'team_id' => $team->team_id, 'defense_type' => self::STAGE, 'was_scheduled_at' => '2027-01-15 10:00:00', 'venue' => 'Mac Lab', 'note' => 'Signed Hearing Notice']);
+
+        $sheet = $this->download()->getActiveSheet();
+
+        $this->assertStringContainsString('Was Jan 15, 10:00 AM. Requirements not complete (Signed Hearing Notice).', (string) $sheet->getCell('B7')->getValue());
     }
 
     public function test_a_team_up_for_a_redefense_says_so_while_it_waits(): void

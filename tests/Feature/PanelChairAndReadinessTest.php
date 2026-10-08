@@ -13,8 +13,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Two rules before a CaPSA can assign a panel: the team has its adviser,
- * consultant and grammarian, and the Panel Chair holds a Master's or higher.
+ * Two rules before a CaPSA can assign a panel: the team has its adviser and
+ * consultant (the grammarian may come later), and the Panel Chair holds a
+ * Master's or higher.
  * And suggested teams are the ones whose project meets the panel's expertise.
  */
 class PanelChairAndReadinessTest extends TestCase
@@ -61,26 +62,35 @@ class PanelChairAndReadinessTest extends TestCase
 
     // ── the team must be ready ───────────────────────────────────────────
 
-    public function test_a_team_without_its_grammarian_cannot_be_given_a_panel(): void
+    public function test_a_team_without_its_consultant_cannot_be_given_a_panel(): void
     {
-        $team = $this->team(staff: ['adviser', 'consultant']);
+        $team = $this->team(staff: ['adviser', 'grammarian']);
 
         $this->assign($team, CapstoneExpert::factory()->create(['approved_status' => true]))
             ->assertStatus(422)
-            ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'still needs a grammarian'))->etc());
+            ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'still needs a consultant'))->etc());
 
         $this->assertSame(0, DefensePanel::count());
+    }
+
+    public function test_a_team_without_its_grammarian_can_still_be_given_a_panel(): void
+    {
+        $team = $this->team(staff: ['adviser', 'consultant']);
+
+        $this->assign($team, CapstoneExpert::factory()->create(['approved_status' => true]))->assertOk();
+
+        $this->assertGreaterThan(0, DefensePanel::count());
     }
 
     public function test_a_team_with_nobody_yet_is_told_every_role_it_needs(): void
     {
         $team = $this->team(staffed: false);
 
-        $this->assertSame(['adviser', 'consultant', 'grammarian'], $team->missingExpertRoles());
+        $this->assertSame(['adviser', 'consultant'], $team->missingExpertRoles());
 
         $this->assign($team, CapstoneExpert::factory()->create(['approved_status' => true]))
             ->assertStatus(422)
-            ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'an adviser, a consultant and a grammarian'))->etc());
+            ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'an adviser and a consultant'))->etc());
     }
 
     /** A request not yet accepted is not a role filled. */
@@ -118,7 +128,7 @@ class PanelChairAndReadinessTest extends TestCase
             ->get(route('capsa.panel_assignment', ['defense_type' => 'Pre-proposal Defense']))
             ->assertOk()
             ->assertViewHas('state', fn ($state) => collect($state['teams'])->firstWhere('id', $unready->team_id)['blockers'][0]
-                === ['key' => 'experts', 'text' => 'Needs a consultant and a grammarian']);
+                === ['key' => 'experts', 'text' => 'Needs a consultant', 'warn' => false]);
     }
 
     // ── the chair's degree ───────────────────────────────────────────────

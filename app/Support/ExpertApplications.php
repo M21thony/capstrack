@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
  * A team applying to an expert: whether it may, and sending it.
  *
  * Asked by Apply on the Experts page and by an approved change request,
- * which assigns the replacement the team picked. Both go through the same
+ * which applies to the replacement the team picked. Both go through the same
  * checks, so a replacement who filled up while the CaPSA was deciding is
  * refused just as a direct application would be.
  */
@@ -47,29 +47,17 @@ class ExpertApplications
             return ['message' => 'This expert does not accept teams from your program.', 'status' => 422];
         }
 
-        // Per-program cap first, when the expert set one. "1 - BSIT, 5 - BSIS"
-        // has to mean one BSIT team, not just six teams in total - the overall
-        // count alone would happily let all six be BSIT.
         $programCap = $expert->slotsForProgram($program);
 
-        if ($programCap !== null) {
-            if ($programCap < 1) {
-                return ['message' => 'This expert does not accept teams from your program.', 'status' => 422];
-            }
-
-            if ($expert->approvedTeamCountForProgram($program) >= $programCap) {
-                return ['message' => "This expert has already reached their limit of {$programCap} {$program} team(s).", 'status' => 422];
-            }
+        if ($programCap !== null && $programCap < 1) {
+            return ['message' => 'This expert does not accept teams from your program.', 'status' => 422];
         }
 
-        // Overall cap still applies on top. A capacity nobody has set is not a
-        // capacity of nought: an expert who has not opened their profile yet
-        // would otherwise be full from the moment their account was made.
-        $maxTeams = $expert->max_teams ?? 0;
-        $slotsUsed = TeamExpertAssignment::where('expert_id', $expert->expert_id)->where('status', 'approved')->count();
-
-        if ($maxTeams > 0 && $slotsUsed >= $maxTeams) {
-            return ['message' => 'This expert has reached their maximum number of teams.', 'status' => 422];
+        if ($full = $this->fullAt($expert, $program)) {
+            return ['message' => $full['program']
+                ? "This expert has already reached their limit of {$full['cap']} {$full['program']} team(s)."
+                : 'This expert has reached their maximum number of teams.',
+                'status' => 422];
         }
 
         // The chosen role has to be one this expert actually holds, and one a
@@ -121,6 +109,34 @@ class ExpertApplications
         return null;
     }
 
+    /**
+     * The cap one more team from this program would break, or null when the
+     * expert has room. Asked when a team applies and again when the expert
+     * approves, since several applications can wait at once and each fits
+     * on its own.
+     *
+     * Per-program cap first, when the expert set one: "1 - BSIT, 5 - BSIS"
+     * has to mean one BSIT team, not just six teams in total. The overall cap
+     * still applies on top. A capacity nobody has set is not a capacity of
+     * nought: an expert who has not opened their profile yet would otherwise
+     * be full from the moment their account was made.
+     *
+     * @return array{cap: int, program: string|null}|null
+     */
+    public function fullAt(CapstoneExpert $expert, ?string $program): ?array
+    {
+        $programCap = $expert->slotsForProgram($program);
+
+        if ($programCap !== null && $expert->approvedTeamCountForProgram($program) >= $programCap) {
+            return ['cap' => $programCap, 'program' => $program];
+        }
+
+        $maxTeams = $expert->max_teams ?? 0;
+        $slotsUsed = TeamExpertAssignment::where('expert_id', $expert->expert_id)->where('status', 'approved')->count();
+
+        return $maxTeams > 0 && $slotsUsed >= $maxTeams ? ['cap' => $maxTeams, 'program' => null] : null;
+    }
+
     /** The role an expert_roles row stands for, when it is this expert's and one a team may engage. */
     public function roleName(CapstoneExpert $expert, int $expertRoleId): ?string
     {
@@ -132,34 +148,26 @@ class ExpertApplications
             ->value('roles.role_name');
     }
 
-    /**
-     * Send the application, and tell the expert. Checks are refusal()'s job.
-     *
-     * $approved is the CaPSA approving a change request: the replacement is
-     * assigned outright rather than asked.
-     */
-    public function send(Team $team, CapstoneExpert $expert, int $expertRoleId, string $message, ?string $proposalFile, ?int $preProposalId, bool $approved = false): TeamExpertAssignment
+    /** Send the application, and tell the expert. Checks are refusal()'s job. */
+    public function send(Team $team, CapstoneExpert $expert, int $expertRoleId, string $message, ?string $proposalFile, ?int $preProposalId): TeamExpertAssignment
     {
         $assignment = TeamExpertAssignment::create([
             'team_id' => $team->team_id,
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $expertRoleId,
-            'status' => $approved ? 'approved' : 'pending',
+            'status' => 'pending',
             'proposal_file' => $proposalFile,
             'pre_proposal_id' => $preProposalId,
             'message' => $message,
         ]);
 
         $role = $assignment->engaged_role_name;
-        $as = $role ? ' as their '.e($role) : '';
         Notifier::toExpert(
             (int) $assignment->expert_id,
             'expert_application',
-            $approved ? 'New team' : 'New application',
-            $approved
-                ? 'The CaPSA assigned you to <strong>'.e($team->team_name).'</strong>'.$as.'.'
-                : '<strong>'.e($team->team_name).'</strong> applied to you'.$as.'.',
-            $approved ? route('instructor.teams') : route('instructor.assignments'),
+            'New application',
+            '<strong>'.e($team->team_name).'</strong> applied to you'.($role ? ' as their '.e($role) : '').'.',
+            route('instructor.assignments'),
             ['team_id' => $team->team_id],
         );
 

@@ -88,7 +88,8 @@ class ExpertRosterProgramColumnsTest extends TestCase
         // The same "n - PROGRAM" shape the request form writes, so one
         // format is read everywhere.
         $this->assertSame('2 - BSIT, 2 - BSIS', $expert->program_slots);
-        $this->assertSame(4, (int) $expert->max_teams);
+        // The slot number is the total: two teams, not two per program.
+        $this->assertSame(2, (int) $expert->max_teams);
         $this->assertTrue($expert->hasSetPrograms());
     }
 

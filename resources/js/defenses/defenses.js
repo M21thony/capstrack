@@ -55,8 +55,9 @@ const ICON = {
 };
 
 /* ---------------- where a team is ---------------- */
-const hard = t => t.blockers.filter(b => b.key !== 'req');
-const owed = t => t.blockers.filter(b => b.key === 'req');
+/** What keeps a team from a date, and what is only a warning (DefenseBoard::HARD_KEYS decides). */
+const hard = t => t.blockers.filter(b => !b.warn);
+const owed = t => t.blockers.filter(b => b.warn);
 const missingExperts = t => t.blockers.find(b => b.key === 'experts');
 const isDraft = t => !!t.panel && t.panel_status === 'draft';
 const isFinal = t => !!t.panel && t.panel_status === 'final';
@@ -104,14 +105,13 @@ function teamCell(t, extra = '') {
 function triesPill(t) {
   const last = t.tries[t.tries.length - 1];
   if (!last || !t.waiting) return '';
-  if (last.kind === 'cancelled') return `<span class="pill p-red" title="${esc('The CaPA did not give the go' + (last.note ? ': ' + last.note : '') + '.')}">Cancelled ${fmtShort(last.date)} · reschedule</span>`;
+  if (last.kind === 'cancelled') return `<span class="pill p-red" title="${esc((last.auto ? 'Requirements not complete by the defense date' : 'The CaPA did not give the go') + (last.note ? ': ' + last.note : '') + '.')}">Cancelled ${fmtShort(last.date)} · reschedule</span>`;
   const until = win().end;
   return `<span class="pill p-amber" title="The panel asked for a redefense on ${fmtDay(last.date)}. Waits for a new date.">${esc(last.note || 'Redefense')}${until ? ` (until ${fmtShort(until)})` : ''}</span>`;
 }
 
 function reqPill(t) {
-  const r = owed(t);
-  return r.length ? `<span class="pill p-amber" title="Doesn't stop scheduling. The panel follows it up.">⚠ ${esc(r[0].text)}</span>` : '';
+  return owed(t).map(b => `<span class="pill p-amber" title="Doesn't stop scheduling. Follow it up before the defense.">⚠ ${esc(b.text)}</span>`).join('');
 }
 
 function resultPill(t) {
@@ -197,7 +197,7 @@ function renderTools() {
     + `<label class="search" for="q">${ICON.search}<span class="sr">Search team or title</span><input id="q" type="search" placeholder="Search team or title" aria-keyshortcuts="/" value="${esc(P.q)}"><kbd aria-hidden="true" title="Press / to search">/</kbd></label>`
     + (sections.length > 1 ? `<select class="field" id="secF" aria-label="Section"><option value="">All sections</option>${sections.map(s => `<option${s === P.section ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>` : '');
   if (P.step === 'blocked') {
-    html += `<select class="field" id="reasonF" aria-label="What is missing"><option value="">Everything missing</option>${[['prev', 'Previous stage not passed'], ['fees', 'Fees not verified'], ['experts', 'Missing experts'], ['own-panelist', 'Own adviser on the panel']].map(r => `<option value="${r[0]}"${P.reason === r[0] ? ' selected' : ''}>${r[1]}</option>`).join('')}</select>`;
+    html += `<select class="field" id="reasonF" aria-label="What is missing"><option value="">Everything missing</option>${[['prev', 'Previous stage not passed'], ['experts', 'Missing adviser or consultant']].map(r => `<option value="${r[0]}"${P.reason === r[0] ? ' selected' : ''}>${r[1]}</option>`).join('')}</select>`;
   }
   if (P.step === 'ready') {
     const c = { new: 0, cancelled: 0, redefense: 0 };
@@ -247,8 +247,8 @@ function renderBoard() {
       'Nothing is holding a team back.');
   } else if (P.step === 'ready') {
     list = list.filter(t => !P.reason || (t.waiting || 'new') === P.reason);
-    const checks = ['Experts', S.stage !== S.stages[0] && 'Previous stage passed', 'Panel final', S.stage !== S.stages[0] && 'Fees verified'].filter(Boolean);
-    body = table(['Team', 'Panel', 'Checks', 'Actions'], list.map(t => `<tr><td>${teamCell(t)}</td><td>${panelHtml(t)}</td><td><div class="checks">${triesPill(t)}${checks.map(c => `<span class="pill p-green">✓ ${c}</span>`).join('')}${reqPill(t) || '<span class="pill p-green">✓ Requirements done</span>'}</div></td>`
+    const checks = [['', 'Adviser & consultant'], S.stage !== S.stages[0] && ['', 'Previous stage passed'], ['', 'Panel final'], ['req', 'Requirements done'], S.stage !== S.stages[0] && ['fees', 'Fees verified']].filter(Boolean);
+    body = table(['Team', 'Panel', 'Checks', 'Actions'], list.map(t => `<tr><td>${teamCell(t)}</td><td>${panelHtml(t)}</td><td><div class="checks">${triesPill(t)}${checks.filter(([k]) => !owed(t).some(b => b.key === k)).map(([, c]) => `<span class="pill p-green">✓ ${c}</span>`).join('')}${reqPill(t)}</div></td>`
       + `<td><div class="acts">${panelButton(t)}<button type="button" class="btn gold sm" data-act="schedule" data-id="${t.id}">Schedule</button></div></td></tr>`),
       `No team is ready for ${esc(S.stage)} yet. "Not ready" says what each one still needs.`);
   } else {
@@ -369,7 +369,7 @@ function openDrawer(id) {
     else label = !t.panel ? 'Waiting for a panel' : j.attempt > 1 ? 'Waiting for a redefense date' : 'Not yet';
     if (j.stage === S.stage && needsAnswer(t)) label += t.capa === 'go' ? ' · CaPA: Go' : ' · waiting for the CaPA\'s go';
     const tries = j.stage === S.stage && t.tries.length
-      ? `<ul class="tries">${t.tries.map(x => `<li><b>${x.kind === 'cancelled' ? 'Cancelled' : esc(x.note || 'Redefense')}</b> · ${fmtDay(x.date)}${x.kind === 'cancelled' ? ` · CaPA: not ready${x.note ? ' (' + esc(x.note) + ')' : ''}` : ''}</li>`).join('')}</ul>` : '';
+      ? `<ul class="tries">${t.tries.map(x => `<li><b>${x.kind === 'cancelled' ? 'Cancelled' : esc(x.note || 'Redefense')}</b> · ${fmtDay(x.date)}${x.kind === 'cancelled' ? ` · ${x.auto ? 'Requirements not complete' : 'CaPA: not ready'}${x.note ? ' (' + esc(x.note) + ')' : ''}` : ''}</li>`).join('')}</ul>` : '';
     return `<li><span class="${dot}">${dot.includes('done') ? '✓' : i + 1}</span><div><b>${esc(j.stage)}</b><span>${esc(label)}</span>${tries}</div></li>`;
   }).join('');
   const returnees = t.member_list.filter(m => m.returnee).length;

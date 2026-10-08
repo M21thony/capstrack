@@ -11,6 +11,7 @@ use App\Models\Team;
 use App\Support\StudentTeam;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 /**
@@ -60,15 +61,16 @@ class TeamSeesItsOwnSubmissionsTest extends TestCase
         ]);
     }
 
-    private function reviewedDocumentBy(Student $student): CapstoneDocumentReview
+    private function reviewedDocumentBy(Student $student, bool $diagram = false): CapstoneDocumentReview
     {
         $document = CapstoneDocument::create([
             'student_id' => $student->student_id,
-            'file_name' => 'Chapter1_2026-09-07.pdf',
-            'file_path' => 'documents/chapter1.pdf',
+            'file_name' => $diagram ? 'UseCase.drawio' : 'Chapter1_2026-09-07.pdf',
+            'file_path' => $diagram ? 'documents/usecase.drawio' : 'documents/chapter1.pdf',
             'file_version' => 1,
             'document_status' => 'Submitted',
             'chapter' => 'Chapter 1',
+            'diagram_files' => $diagram ? [['name' => 'UseCase.drawio', 'path' => 'documents/usecase.drawio']] : null,
         ]);
 
         return CapstoneDocumentReview::create([
@@ -203,6 +205,32 @@ class TeamSeesItsOwnSubmissionsTest extends TestCase
 
         $this->assertStringContainsString('APPROVED', $html);
         $this->assertStringNotContainsString($approvedAt->format('F j, Y'), $html);
+    }
+
+    /** The kind printed on the form, as the PDF was handed it. */
+    private function clfKindFor(CapstoneDocumentReview $review): ?string
+    {
+        $kind = null;
+        View::composer('instructor.pdf.consultation-log', function ($view) use (&$kind) {
+            $kind = $view->getData()['kind'] ?? null;
+        });
+
+        $this->actingAs($this->uploader, 'web')
+            ->get(route('student.review.clf', $review->review_id))
+            ->assertOk();
+
+        return $kind;
+    }
+
+    /** The form used to say PROTOTYPE whatever was reviewed. */
+    public function test_a_reviewed_pdf_is_logged_as_the_manuscript(): void
+    {
+        $this->assertSame('MANUSCRIPT', $this->clfKindFor($this->reviewedDocumentBy($this->uploader)));
+    }
+
+    public function test_a_reviewed_diagram_file_is_logged_as_a_diagram(): void
+    {
+        $this->assertSame('DIAGRAM', $this->clfKindFor($this->reviewedDocumentBy($this->uploader, diagram: true)));
     }
 
     /**
