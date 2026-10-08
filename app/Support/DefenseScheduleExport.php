@@ -63,8 +63,9 @@ class DefenseScheduleExport
             ->get()
             ->groupBy('defense_id');
 
-        return $teams->map(function (Team $team) use ($stage, $sections, $experts, $paidStudentIds, $deadline, $cancelled) {
-            $schedule = $team->defenseSchedules->where('defense_type', $stage)->sortByDesc('attempt')->first();
+        return $teams->flatMap(function (Team $team) use ($stage, $sections, $experts, $paidStudentIds, $deadline, $cancelled) {
+            $attempts = $team->defenseSchedules->where('defense_type', $stage)->sortBy('attempt');
+            $schedule = $attempts->last();
             $lastCancelled = $schedule && ! $schedule->schedule_date ? $cancelled->get($schedule->defense_id)?->first() : null;
             $earlier = $schedule && ! $schedule->schedule_date && $schedule->attempt > 1
                 ? $team->defenseSchedules->where('defense_type', $stage)->where('attempt', $schedule->attempt - 1)->first()
@@ -82,7 +83,7 @@ class DefenseScheduleExport
                 ])
                 ->values();
 
-            return [
+            $row = [
                 'id' => (int) $team->team_id,
                 'section' => $sections[$team->team_id],
                 'alias' => $team->team_name,
@@ -95,7 +96,7 @@ class DefenseScheduleExport
                 'status' => $this->statusOf($schedule, $stage, $deadline, $lastCancelled, $earlier),
                 // What a team waiting for a date lost, for the Schedule column.
                 'note' => match (true) {
-                    $lastCancelled !== null => 'Was '.$lastCancelled->was_scheduled_at->format('M j, g:i A').'. '.($lastCancelled->cancelled_by ? 'CaPA: not ready' : 'Requirements not complete').($lastCancelled->note ? ' ('.$lastCancelled->note.')' : '').'.',
+                    $lastCancelled !== null => 'Was '.$lastCancelled->was_scheduled_at->format('M j, g:i A').'. CaPA: not ready'.($lastCancelled->note ? ' ('.$lastCancelled->note.')' : '').'.',
                     $earlier?->schedule_date !== null => 'Defended '.$earlier->schedule_date->format('M j').'.',
                     default => null,
                 },
@@ -109,6 +110,24 @@ class DefenseScheduleExport
                 'similarity' => $team->selectedPreProposal?->duplicationCheck?->top_score,
                 'row_count' => max(self::MIN_ROWS, $members->count()),
             ];
+
+            // A defense cancelled on the day keeps its own row on its own
+            // date, as the department's sheet does ("Cancelled - Resched Oct 14").
+            $cancelledOnTheDay = $attempts
+                ->filter(fn ($s) => $s->outcome === DefenseOutcome::CANCELLED && $s->schedule_date)
+                ->map(function ($s) use ($row, $attempts) {
+                    $next = $attempts->firstWhere('attempt', $s->attempt + 1)?->schedule_date;
+
+                    return array_merge($row, [
+                        'schedule' => ['date' => $s->schedule_date, 'end' => DefenseBoard::endOf($s)],
+                        'venue' => $s->venue,
+                        'status' => ['key' => 'cancelled', 'label' => 'CANCELLED'.($next ? ' · RESCHED '.mb_strtoupper($next->format('M j')) : ''), 'tone' => 'fail'],
+                        'note' => null,
+                    ]);
+                })->values();
+
+            // Still waiting for its new date: the cancelled row already says so.
+            return $earlier?->outcome === DefenseOutcome::CANCELLED && ! $lastCancelled ? $cancelledOnTheDay : $cancelledOnTheDay->push($row);
         })->sortBy(fn (array $row) => ($row['schedule'] !== null ? $row['schedule']['date']->toDateTimeString() : '9999').'|'.$row['alias'])
             ->values()->all();
     }

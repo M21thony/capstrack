@@ -182,15 +182,33 @@ class DefenseScheduleXlsxExportTest extends TestCase
         $this->assertStringContainsString('Was Jan 15, 10:00 AM. CaPA: not ready (Chapter 3 not done).', (string) $sheet->getCell('B7')->getValue());
     }
 
-    public function test_a_defense_cancelled_on_the_day_for_open_requirements_says_so(): void
+    /** Cancelled on the day: the row keeps its date and venue, and the team does not wait twice. */
+    public function test_a_defense_cancelled_on_the_day_keeps_its_date(): void
     {
         $team = $this->team('Bravo');
-        $schedule = $this->schedule($team);
-        DefenseCancellation::create(['defense_id' => $schedule->defense_id, 'team_id' => $team->team_id, 'defense_type' => self::STAGE, 'was_scheduled_at' => '2027-01-15 10:00:00', 'venue' => 'Mac Lab', 'note' => 'Signed Hearing Notice']);
+        $this->schedule($team, '2027-01-15 10:00:00', DefenseOutcome::CANCELLED);
+        DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => self::STAGE, 'attempt' => 2]);
 
         $sheet = $this->download()->getActiveSheet();
 
-        $this->assertStringContainsString('Was Jan 15, 10:00 AM. Requirements not complete (Signed Hearing Notice).', (string) $sheet->getCell('B7')->getValue());
+        $this->assertSame('FRIDAY, JANUARY 15, 2027   ·   1 defense', $sheet->getCell('A6')->getValue());
+        $this->assertSame('CANCELLED', $sheet->getCell('D7')->getValue());
+        $this->assertSame('Mac Lab', $sheet->getCell('C7')->getValue());
+        $this->assertSame(['CANCELLED'], array_values(array_filter(array_column($sheet->rangeToArray('D7:D40'), 0))));
+    }
+
+    /** Once the CaPSA sets the new date, the cancelled row says when, and the new date gets its own row. */
+    public function test_a_defense_cancelled_on_the_day_says_when_it_was_rescheduled(): void
+    {
+        $team = $this->team('Bravo');
+        $this->schedule($team, '2027-01-15 10:00:00', DefenseOutcome::CANCELLED);
+        DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => self::STAGE, 'attempt' => 2, 'schedule_date' => '2027-01-20 08:00:00', 'venue' => 'Room 4']);
+
+        $sheet = $this->download()->getActiveSheet();
+        $status = array_values(array_filter(array_column($sheet->rangeToArray('D7:D40'), 0)));
+
+        $this->assertSame('CANCELLED · RESCHED JAN 20', $sheet->getCell('D7')->getValue());
+        $this->assertSame(['CANCELLED · RESCHED JAN 20', 'ONGOING'], $status);
     }
 
     public function test_a_team_up_for_a_redefense_says_so_while_it_waits(): void

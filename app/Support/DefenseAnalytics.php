@@ -296,7 +296,8 @@ class DefenseAnalytics
      */
     private function stageRow(Team $team, string $stage, string $current): array
     {
-        $attempts = $team->defenseSchedules->where('defense_type', $stage)->sortBy('attempt')->values();
+        // A defense cancelled on the day was never heard, so it is not a try.
+        $attempts = $team->defenseSchedules->where('defense_type', $stage)->where('outcome', '!==', DefenseOutcome::CANCELLED)->sortBy('attempt')->values();
 
         if ($attempts->isEmpty()) {
             return ['status' => 'not_scheduled', 'attempts' => 0, 'year' => null, 'first' => null];

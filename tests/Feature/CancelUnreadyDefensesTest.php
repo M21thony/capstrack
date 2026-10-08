@@ -20,8 +20,9 @@ use Tests\TestCase;
 
 /**
  * On the defense day, a team whose requirements above that defense are still
- * open loses its date and waits under Ready to schedule, as with the CaPA's
- * "Not ready" - with no one named as having cancelled it.
+ * open is marked Cancelled. The defense keeps its date, venue and panel, the
+ * way the department's own sheet keeps the row, and the team's next try
+ * waits under Ready to schedule for the CaPSA's Assign date.
  */
 class CancelUnreadyDefensesTest extends TestCase
 {
@@ -64,11 +65,18 @@ class CancelUnreadyDefensesTest extends TestCase
 
         $this->artisan('defenses:cancel-unready')->assertSuccessful();
 
-        $cancellation = DefenseCancellation::sole();
-        $this->assertNull($cancellation->cancelled_by);
-        $this->assertSame('Signed Hearing Notice', $cancellation->note);
-        $this->assertSame('Mac Lab', $cancellation->venue);
-        $this->assertNull($defense->fresh()->schedule_date);
+        $defense->refresh();
+        $this->assertSame(DefenseOutcome::CANCELLED, $defense->outcome);
+        $this->assertSame('Signed Hearing Notice', $defense->outcome_remarks);
+        $this->assertSame(today()->setTime(13, 0)->toDateTimeString(), $defense->schedule_date->toDateTimeString());
+        $this->assertSame('Mac Lab', $defense->venue);
+        $this->assertSame(0, DefenseCancellation::count());
+
+        $next = DefenseSchedule::where('team_id', $this->team->team_id)->where('attempt', 2)->sole();
+        $this->assertNull($next->schedule_date);
+        $this->assertNull($next->outcome);
+        $this->assertTrue(DefensePanel::where('defense_id', $next->defense_id)->where('expert_id', $this->chair->expert_id)->exists());
+
         $this->assertTrue(Notification::where('student_id', $this->leader->student_id)->where('message', 'like', '%requirements were not complete%')->exists());
         $this->assertTrue(Notification::where('expert_id', $this->chair->expert_id)->where('title', 'like', '%cancelled%')->exists());
     }
@@ -80,21 +88,21 @@ class CancelUnreadyDefensesTest extends TestCase
 
         $this->artisan('defenses:cancel-unready')->assertSuccessful();
 
-        $this->assertSame(0, DefenseCancellation::count());
-        $this->assertNotNull($defense->fresh()->schedule_date);
+        $this->assertNull($defense->fresh()->outcome);
+        $this->assertSame(1, DefenseSchedule::count());
     }
 
     public function test_only_todays_undecided_defenses_are_looked_at(): void
     {
         $tomorrow = $this->defenseOn(today()->addDay()->setTime(13, 0));
         $this->artisan('defenses:cancel-unready')->assertSuccessful();
-        $this->assertNotNull($tomorrow->fresh()->schedule_date);
+        $this->assertNull($tomorrow->fresh()->outcome);
 
         $tomorrow->delete();
         $decided = $this->defenseOn(today()->setTime(8, 0), 'Passed');
         $this->artisan('defenses:cancel-unready')->assertSuccessful();
-        $this->assertNotNull($decided->fresh()->schedule_date);
+        $this->assertSame('Passed', $decided->fresh()->outcome);
 
-        $this->assertSame(0, DefenseCancellation::count());
+        $this->assertSame(1, DefenseSchedule::count());
     }
 }

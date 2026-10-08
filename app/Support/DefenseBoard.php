@@ -304,8 +304,8 @@ class DefenseBoard
 
     /**
      * The tries at this stage that did not end in a pass, oldest first: dates
-     * the CaPA cancelled, and defenses the panel sent back for a redefense.
-     * A cancel nobody made ('auto') was defenses:cancel-unready, on the day.
+     * the CaPA cancelled, defenses cancelled on the day for open requirements
+     * ('auto' - they keep their date), and redefenses the panel asked for.
      *
      * @return array<int, array{kind: string, date: string, note: ?string, auto?: bool}>
      */
@@ -315,15 +315,17 @@ class DefenseBoard
             'kind' => 'cancelled',
             'date' => $c->was_scheduled_at->toDateString(),
             'note' => $c->note,
-            'auto' => $c->cancelled_by === null,
+            'auto' => false,
         ]);
 
-        $redefenses = $team->defenseSchedules
+        $earlier = $team->defenseSchedules
             ->where('defense_type', $stage)
-            ->filter(fn (DefenseSchedule $s) => $s !== $current && $s->schedule_date && DefenseOutcome::requiresRedefense($s->outcome))
-            ->map(fn (DefenseSchedule $s) => ['kind' => 'redefense', 'date' => $s->schedule_date->toDateString(), 'note' => $s->outcomeLabel()]);
+            ->filter(fn (DefenseSchedule $s) => $s !== $current && $s->schedule_date && (DefenseOutcome::requiresRedefense($s->outcome) || $s->outcome === DefenseOutcome::CANCELLED))
+            ->map(fn (DefenseSchedule $s) => $s->outcome === DefenseOutcome::CANCELLED
+                ? ['kind' => 'cancelled', 'date' => $s->schedule_date->toDateString(), 'note' => $s->outcome_remarks, 'auto' => true]
+                : ['kind' => 'redefense', 'date' => $s->schedule_date->toDateString(), 'note' => $s->outcomeLabel()]);
 
-        return $tries->concat($redefenses)->sortBy('date')->values()->all();
+        return $tries->concat($earlier)->sortBy('date')->values()->all();
     }
 
     /**

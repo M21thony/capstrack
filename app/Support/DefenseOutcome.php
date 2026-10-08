@@ -22,9 +22,19 @@ namespace App\Support;
 class DefenseOutcome
 {
     public const PASSED = 'passed';
+
     public const PASSED_WITH_REVISION = 'passed_with_revision';
+
     public const REDEFENSE = 'redefense';
+
     public const REDEFENSE_NEW_TITLE = 'redefense_new_title';
+
+    /**
+     * Not a panel's decision: set on the defense day by defenses:cancel-unready
+     * when the requirements are still open. The defense keeps its date, venue
+     * and panel, and the team's next try waits for a new date.
+     */
+    public const CANCELLED = 'cancelled';
 
     public const PRE_PROPOSAL = 'Pre-proposal Defense';
 
@@ -74,6 +84,7 @@ class DefenseOutcome
             // redefense, so the qualifier is noise there.
             self::REDEFENSE => $defenseType === self::PRE_PROPOSAL ? 'Redefense with major revision' : 'Redefense',
             self::REDEFENSE_NEW_TITLE => 'Redefense with a new title',
+            self::CANCELLED => 'Cancelled',
             default => 'Not decided yet',
         };
     }
@@ -85,6 +96,7 @@ class DefenseOutcome
             self::PASSED_WITH_REVISION => 'The team moves on, but has corrections to make first.',
             self::REDEFENSE => 'The team defends this stage again with the same title.',
             self::REDEFENSE_NEW_TITLE => 'The team starts over with a new title, and submits fresh pre-proposals.',
+            self::CANCELLED => 'The requirements were not complete by the defense date. The team waits for a new date.',
             default => '',
         };
     }
@@ -104,7 +116,7 @@ class DefenseOutcome
         return match ($outcome) {
             self::PASSED, self::PASSED_WITH_REVISION => 'pass',
             self::REDEFENSE => 'major',
-            self::REDEFENSE_NEW_TITLE => 'fail',
+            self::REDEFENSE_NEW_TITLE, self::CANCELLED => 'fail',
             default => 'none',
         };
     }

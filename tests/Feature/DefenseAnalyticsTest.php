@@ -212,6 +212,19 @@ class DefenseAnalyticsTest extends TestCase
         $this->assertEquals(0, $td['first_try_rate']);
     }
 
+    /** Cancelled on the day for open requirements: never heard, so not a try and not a failed first try. */
+    public function test_a_defense_cancelled_on_the_day_is_not_a_try(): void
+    {
+        $team = $this->team('Cancelled First');
+        $this->defend($team, self::TD, DefenseOutcome::CANCELLED, self::THIS_YEAR, 1);
+        $this->defend($team, self::TD, DefenseOutcome::PASSED, self::THIS_YEAR, 2);
+
+        $td = $this->analyse($this->admin())['stages'][self::TD];
+
+        $this->assertSame(1, $td['passed']);
+        $this->assertEquals(100, $td['first_try_rate']);
+    }
+
     public function test_teams_still_waiting_for_a_result_are_not_counted_against_the_pass_rate(): void
     {
         $this->defend($this->team('Done'), self::PPD, DefenseOutcome::PASSED);

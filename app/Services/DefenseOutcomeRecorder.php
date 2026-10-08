@@ -70,7 +70,7 @@ class DefenseOutcomeRecorder
      * Capstone 2. Only the date is left blank: it comes from Generate
      * schedule on Defense Scheduling, like any other defense.
      */
-    private function openNextAttempt(DefenseSchedule $defense): DefenseSchedule
+    public function openNextAttempt(DefenseSchedule $defense): DefenseSchedule
     {
         $next = (int) DefenseSchedule::where('team_id', $defense->team_id)
             ->where('defense_type', $defense->defense_type)

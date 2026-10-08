@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Services\CapaGo;
 use App\Support\DefenseOutcome;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -149,6 +150,21 @@ class CapaGoTest extends TestCase
         $row = $this->row();
         $this->assertSame('redefense', $row['waiting']);
         $this->assertSame('redefense', $row['tries'][0]['kind']);
+    }
+
+    /** Cancelled on the day for open requirements: the date stays on record, and the team waits for a new one. */
+    public function test_a_defense_cancelled_on_the_day_waits_for_a_new_date(): void
+    {
+        $defense = $this->defense();
+        $defense->update(['schedule_date' => now()->setTime(8, 0), 'end_date' => now()->setTime(10, 0)]);
+
+        app(CapaGo::class)->cancelOnTheDay($defense->fresh(), 'Signed Hearing Notice');
+
+        $row = $this->row();
+        $this->assertSame('cancelled', $row['waiting']);
+        $this->assertSame(['kind' => 'cancelled', 'date' => today()->toDateString(), 'note' => 'Signed Hearing Notice', 'auto' => true], $row['tries'][0]);
+        $this->assertSame(2, $row['attempt']);
+        $this->assertSame(0, DefenseCancellation::count());
     }
 
     public function test_scheduling_a_title_defense_asks_the_adviser_for_the_go(): void
