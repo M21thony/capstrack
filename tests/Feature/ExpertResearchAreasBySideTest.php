@@ -148,7 +148,8 @@ class ExpertResearchAreasBySideTest extends TestCase
     {
         $capsa = $this->capsaWhoAdvises();
 
-        $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertOk()
+        $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertRedirect(route('instructor.profile'));
+        $this->actingAs($capsa, 'expert')->get(route('instructor.profile'))->assertOk()
             ->assertSee('Research areas')
             ->assertSee('data-side="adviser"', false)
             ->assertSee('data-side="panel"', false)

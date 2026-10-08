@@ -38,6 +38,35 @@
   .pp-id-edit{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 13px;border:1px solid var(--border2);border-radius:9px;background:var(--bg2);color:var(--text);font-size:12.5px;font-weight:600;text-decoration:none;white-space:nowrap}
   .pp-id-edit:hover{border-color:var(--accent);background:var(--accent-light)}
   .pp-id-edit svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .pp-id-edit[aria-pressed="true"]{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
+  /* The degree is what is written after the name, so it is picked there. */
+  .pp-name{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 0}
+  .pp-name .pp-comma{font-size:19px;font-weight:700;color:var(--text);margin-right:6px}
+  .pp-deg-pick{align-self:center;height:30px;max-width:100%;border:1px dashed var(--border2);border-radius:8px;padding:0 6px;background:var(--bg2);font:inherit;font-size:16px;font-weight:700;color:var(--text);cursor:pointer}
+  .pp-deg-pick:hover,.pp-deg-pick:focus{border-style:solid;border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-glow)}
+  .pp-id-mail .pp-chair{margin-left:10px;font-size:12px}
+  .pp-name-form{flex:1 1 440px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 90px;gap:8px}
+  .pp-name-form label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:600;color:var(--text2)}
+  .pp-name-form input{height:36px;border:1px solid var(--border2);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;color:var(--text);background:var(--bg2)}
+  .pp-name-form input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .pp-name-form[hidden],.pp-id-main[hidden]{display:none}
+  .pp-id-secs{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:5px;font-size:12px;color:var(--text3)}
+  .pp-id-secs b{padding:2px 8px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:11.5px}
+
+  .pp-tag{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:2px 8px}
+  .pp-fold-add{display:flex;gap:8px}
+  .pp-fold-add input{flex:1;min-width:0;height:38px;border:1px solid var(--border2);border-radius:9px;padding:0 12px;font:inherit;font-size:13px;color:var(--text);background:var(--bg2)}
+  .pp-fold-add input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .pp-fold-add button{min-height:38px;padding:0 14px;border:0;border-radius:9px;background:var(--navy-dark);color:#fff;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+  .pp-fold-add button:disabled{opacity:.6;cursor:default}
+  .pp-folds{display:flex;flex-direction:column;margin-top:8px}
+  .pp-fold{display:flex;align-items:center;gap:10px;padding:8px 2px;font-size:13px;color:var(--text);border-bottom:1px solid var(--bg4)}
+  .pp-fold:last-child{border-bottom:0}
+  .pp-fold span{flex:1;min-width:0;overflow-wrap:anywhere}
+  .pp-fold button{border:0;background:transparent;color:var(--text3);font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:4px 6px;border-radius:6px}
+  .pp-fold button:hover{background:var(--bg3);color:var(--red)}
+  .pp-fold-note{font-size:12.5px;color:var(--text3);padding:8px 2px}
+  .pp-fold-note.err{color:var(--red)}
 
   .pp-sheet,.pp-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px}
   .pp-sec{padding:18px 22px}
@@ -85,7 +114,6 @@
   .pp-pop-list button span{font-size:11.5px;color:var(--text3)}
   .pp-pop-empty{padding:8px 10px;font-size:12.5px;color:var(--text3)}
 
-  .pp-degree{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
   .pp-select{height:38px;width:220px;max-width:100%;border:1px solid var(--border2);border-radius:9px;padding:0 10px;font:inherit;font-size:13px;color:var(--text);background:var(--bg2)}
   .pp-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
   .pp-chair{font-size:12.5px;font-weight:600}
@@ -141,7 +169,8 @@
     .pp-id-photo{width:44px;height:44px}
     .pp-id-main h1{font-size:17px}
     .pp-id-roles{align-items:flex-start;width:100%}
-    .pp-id-chips{justify-content:flex-start}
+    .pp-id-chips,.pp-id-secs{justify-content:flex-start}
+    .pp-name-form{grid-template-columns:repeat(2,minmax(0,1fr))}
     .pp-sec{padding:16px}
     .pp-progs{gap:6px}
     .pp-prog{padding-left:9px}
@@ -163,6 +192,7 @@
   $degreeLevels = collect(\App\Models\CapstoneExpert::DEGREE_TITLES)
       ->flatMap(fn ($titles, $level) => collect($titles)->mapWithKeys(fn ($title) => [$title => $level]));
   $firstSide = array_key_first($researchSides) ?? 'panel';
+  $nameParts = ['first' => $expert->first_name ?? '', 'middle' => $expert->middle_name ?? '', 'last' => $expert->last_name ?? '', 'suffix' => $expert->suffix ?? ''];
 @endphp
 
 <div class="main">
@@ -191,13 +221,32 @@
   <div class="content pp">
     <div class="pp-page">
 
-      {{-- Who this is. Name, email and roles are set elsewhere; the degree follows the form below. --}}
+      {{-- Who this is. The degree is picked beside the name it follows; a
+           CaPSA or Admin edits their own name here too. Roles and sections
+           are the Admin's, so they only show. --}}
       <header class="pp-id">
-        <img class="pp-id-photo" src="{{ $expert->avatarUrl() }}" alt="" onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}'">
-        <div class="pp-id-main">
-          <h1 id="pp-who">{{ $expert->first_name }} {{ $expert->last_name }}<span id="pp-who-degree">{{ $expert->degreeText() ? ', '.$expert->degreeText() : '' }}</span></h1>
-          <div class="pp-id-mail">{{ $expert->email }}</div>
+        <img class="pp-id-photo" src="{{ $expert->avatarUrl() }}" alt="" title="Your photo comes from your Google account" onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}'">
+        <div class="pp-id-main" id="pp-id-view">
+          <div class="pp-name">
+            <h1 id="pp-who">{{ collect([$expert->first_name, $expert->middle_name, $expert->last_name])->filter()->implode(' ') }}{{ $expert->suffix ? ' '.$expert->suffix : '' }}</h1><span class="pp-comma">,</span>
+            <label for="pp-degree" class="pp-sr">Degree shown after your name</label>
+            @include('partials.degree-select', [
+                'id' => 'pp-degree',
+                'selected' => $expert->degree_title,
+                'blank' => 'No degree',
+                'attrs' => 'class="pp-deg-pick"',
+            ])
+          </div>
+          <div class="pp-id-mail">{{ $expert->email }} <span class="pp-chair" id="pp-chair" aria-live="polite"></span></div>
         </div>
+        @if ($canEditName)
+          <div class="pp-name-form" id="pp-name-form" hidden>
+            <label>First name<input id="pp-first" autocomplete="given-name" maxlength="50"></label>
+            <label>Middle name<input id="pp-middle" autocomplete="additional-name" maxlength="50" placeholder="Optional"></label>
+            <label>Last name<input id="pp-last" autocomplete="family-name" maxlength="50"></label>
+            <label>Suffix<input id="pp-suffix" maxlength="50" placeholder="e.g. Jr."></label>
+          </div>
+        @endif
         <div class="pp-id-roles">
           <div class="pp-id-chips">
             @forelse ($expert->roles as $role)
@@ -206,10 +255,21 @@
               <span class="pp-role">No role yet</span>
             @endforelse
           </div>
-          <span class="pp-id-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Roles are set by the administrator</span>
+          @if ($capsaSections !== null)
+            <div class="pp-id-secs">
+              <span>CaPSA of</span>
+              @forelse ($capsaSections as $section)
+                <b>{{ $section }}</b>
+              @empty
+                <span>no sections yet</span>
+              @endforelse
+              @if ($schoolYear)<span>{{ $schoolYear }}</span>@endif
+            </div>
+          @endif
+          <span class="pp-id-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>{{ $capsaSections !== null ? 'Roles and sections are set by the administrator' : 'Roles are set by the administrator' }}</span>
         </div>
-        @if ($staffProfileRoute)
-          <a class="pp-id-edit" href="{{ route($staffProfileRoute) }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Name, photo and sections</a>
+        @if ($canEditName)
+          <button type="button" class="pp-id-edit" id="pp-name-btn" aria-pressed="false" aria-controls="pp-name-form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit name</span></button>
         @endif
       </header>
 
@@ -260,19 +320,18 @@
             </div>
           </section>
 
-          <section class="pp-sec" aria-labelledby="pp-degree-h">
-            <div class="pp-sec-h"><h2 id="pp-degree-h">Degree</h2></div>
-            <p class="pp-help">Shown after your name. A Panel Chair needs a master's degree or higher.</p>
-            <div class="pp-degree">
-              <label for="pp-degree" class="pp-sr">Highest degree</label>
-              @include('partials.degree-select', [
-                  'id' => 'pp-degree',
-                  'selected' => $expert->degree_title,
-                  'attrs' => 'class="pp-select"',
-              ])
-              <span class="pp-chair" id="pp-chair" aria-live="polite"></span>
-            </div>
-          </section>
+          @if ($isSubjectAdviser)
+            <section class="pp-sec" aria-labelledby="pp-folders-h">
+              <div class="pp-sec-h"><h2 id="pp-folders-h">Submission folders</h2><span class="pp-tag">Subject Adviser</span></div>
+              <p class="pp-help">Students pick one of these when they submit to you. Without any, each team gets a folder of its own in your Google Drive.</p>
+              <div class="pp-fold-add">
+                <label for="pp-fold-name" class="pp-sr">Folder name</label>
+                <input id="pp-fold-name" maxlength="150" placeholder="e.g. Batch 2026 - Section A">
+                <button type="button" id="pp-fold-add">Add folder</button>
+              </div>
+              <div class="pp-folds" id="pp-folds"><div class="pp-fold-note">Loading folders…</div></div>
+            </section>
+          @endif
 
         </div>
 
@@ -347,7 +406,9 @@ function closeSidebar() {
   var GROUPS = Object.entries(@json(\App\Support\SkillCatalog::groups())).map(function (g) { return { name: g[0], items: g[1] }; });
   var KNOWN = GROUPS.reduce(function (all, g) { return all.concat(g.items.map(function (i) { return { name: i, group: g.name }; })); }, []);
 
+  var CAN_EDIT_NAME = @json($canEditName);
   var saved = {
+    name: CAN_EDIT_NAME ? @json($nameParts) : null,
     degree: @json($expert->degree_title ?? ''),
     programs: PROGRAMS.reduce(function (o, p) { o[p] = 0; return o; }, {}),
     areas: @json((object) $researchAreas),
@@ -469,8 +530,21 @@ function closeSidebar() {
   function renderDegree() {
     var level = DEGREE_LEVELS[state.degree] || null, canChair = level === 'master' || level === 'doctorate', chair = el('pp-chair');
     chair.className = 'pp-chair ' + (canChair ? 'yes' : 'no');
-    chair.textContent = canChair ? '✓ You can chair a defense panel' : 'You can sit on a panel, but not chair it';
-    el('pp-who-degree').textContent = state.degree ? ', ' + state.degree : '';
+    chair.textContent = canChair ? '\u2713 Can chair a defense panel' : 'Can sit on a panel, not chair it';
+  }
+
+  var editingName = false;
+  function renderName() {
+    if (!CAN_EDIT_NAME) return;
+    var n = state.name;
+    el('pp-who').textContent = [n.first, n.middle, n.last].filter(function (x) { return x && x.trim(); }).join(' ') + (n.suffix && n.suffix.trim() ? ' ' + n.suffix.trim() : '');
+    el('pp-name-form').hidden = !editingName;
+    el('pp-id-view').hidden = editingName;
+    el('pp-name-btn').setAttribute('aria-pressed', editingName ? 'true' : 'false');
+    el('pp-name-btn').querySelector('span').textContent = editingName ? 'Done' : 'Edit name';
+    [['pp-first', 'first'], ['pp-middle', 'middle'], ['pp-last', 'last'], ['pp-suffix', 'suffix']].forEach(function (f) {
+      if (document.activeElement !== el(f[0])) el(f[0]).value = n[f[1]] || '';
+    });
   }
 
   function renderEmail() {
@@ -486,7 +560,18 @@ function closeSidebar() {
   }
 
   function changed() { justSaved = false; renderSaveBar(); }
-  function renderAll() { renderPrograms(); renderAreas(); renderDegree(); renderEmail(); renderSaveBar(); }
+  function renderAll() { renderPrograms(); renderAreas(); renderDegree(); renderName(); renderEmail(); renderSaveBar(); }
+
+  if (CAN_EDIT_NAME) {
+    el('pp-name-btn').addEventListener('click', function () {
+      editingName = !editingName;
+      renderName();
+      if (editingName) el('pp-first').focus();
+    });
+    [['pp-first', 'first'], ['pp-middle', 'middle'], ['pp-last', 'last'], ['pp-suffix', 'suffix']].forEach(function (f) {
+      el(f[0]).addEventListener('input', function (e) { state.name[f[1]] = e.target.value; changed(); renderName(); });
+    });
+  }
 
   document.querySelectorAll('.pp-prog input').forEach(function (box) {
     var p = box.closest('.pp-prog').dataset.program;
@@ -521,6 +606,7 @@ function closeSidebar() {
   el('pp-discard').addEventListener('click', function () {
     state = copy(saved);
     el('pp-degree').value = state.degree;
+    editingName = false;
     justSaved = false;
     renderAll();
   });
@@ -542,8 +628,14 @@ function closeSidebar() {
   // been; only the part that changed is sent.
   el('pp-save-btn').addEventListener('click', async function () {
     var btn = this;
-    var profileChanged = part(state, ['degree', 'programs', 'areas']) !== part(saved, ['degree', 'programs', 'areas']);
+    var profileChanged = part(state, ['name', 'degree', 'programs', 'areas']) !== part(saved, ['name', 'degree', 'programs', 'areas']);
     var emailChanged = JSON.stringify(state.email) !== JSON.stringify(saved.email);
+    if (CAN_EDIT_NAME && (!state.name.first.trim() || !state.name.last.trim())) {
+      editingName = true;
+      renderName();
+      renderSaveBar('Your first and last name cannot be blank.', 'failed');
+      return;
+    }
     if (profileChanged && total() < 1) {
       renderSaveBar('Type how many teams you take from at least one program.', 'failed');
       return;
@@ -551,11 +643,17 @@ function closeSidebar() {
     btn.disabled = true;
     try {
       if (profileChanged) {
-        var json = await put(@json(route('instructor.profile.update')), { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null });
+        var body = { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null };
+        if (CAN_EDIT_NAME) {
+          body.name = { first_name: state.name.first, middle_name: state.name.middle, last_name: state.name.last, suffix: state.name.suffix };
+        }
+        var json = await put(@json(route('instructor.profile.update')), body);
         if (json.expertise_by_side) {
           Object.keys(SIDES).forEach(function (s) { state.areas[s] = json.expertise_by_side[s] || []; });
         }
         saved.degree = state.degree;
+        saved.name = copy(state.name);
+        editingName = false;
         saved.programs = copy(state.programs);
         saved.areas = copy(state.areas);
       }
@@ -577,6 +675,58 @@ function closeSidebar() {
       btn.disabled = false;
     }
   });
+
+  // Submission folders live in the Subject Adviser's Google Drive, so each
+  // one is made or removed at once rather than with the save bar.
+  var folds = el('pp-folds');
+  if (folds) {
+    var foldInput = el('pp-fold-name'), foldBtn = el('pp-fold-add');
+    var foldUrl = @json(route('gdrive.submission-folders.index'));
+    var foldNote = function (text, err) { folds.innerHTML = ''; folds.appendChild(make('div', 'pp-fold-note' + (err ? ' err' : ''), text)); };
+    var drawFolders = function (list) {
+      folds.innerHTML = '';
+      if (!list.length) { foldNote('No folders yet. Each team gets a folder of its own.'); return; }
+      list.forEach(function (f) {
+        var row = make('div', 'pp-fold'), del = make('button', null, 'Remove');
+        row.appendChild(make('span', null, f.name));
+        del.type = 'button';
+        del.setAttribute('aria-label', 'Remove ' + f.name);
+        del.addEventListener('click', function () {
+          del.disabled = true;
+          fetch(foldUrl + '/' + f.id, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': @json(csrf_token()), 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d.success === false) throw new Error(d.message); loadFolders(); })
+            .catch(function (e) { del.disabled = false; foldNote((e && e.message) || 'Could not remove the folder. Try again.', true); });
+        });
+        row.appendChild(del);
+        folds.appendChild(row);
+      });
+    };
+    var loadFolders = function () {
+      fetch(foldUrl, { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { drawFolders(d.folders || []); })
+        .catch(function () { foldNote('Could not load your folders. Reload the page to try again.', true); });
+    };
+    var addFolder = function () {
+      var name = foldInput.value.trim();
+      if (!name) { foldInput.focus(); return; }
+      foldBtn.disabled = true;
+      foldBtn.textContent = 'Adding\u2026';
+      fetch(foldUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': @json(csrf_token()), 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.success === false) throw new Error(d.message);
+          foldInput.value = '';
+          loadFolders();
+        })
+        .catch(function (e) { foldNote('\u201c' + name + '\u201d was not created. ' + ((e && e.message) || 'Connect Google Drive in Resources first.'), true); })
+        .then(function () { foldBtn.disabled = false; foldBtn.textContent = 'Add folder'; });
+    };
+    foldBtn.addEventListener('click', addFolder);
+    foldInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addFolder(); } });
+    loadFolders();
+  }
 
   window.addEventListener('beforeunload', function (e) { if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
 

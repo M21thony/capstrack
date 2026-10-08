@@ -35,9 +35,15 @@ class AdminProfileController extends Controller
         return SectionCatalog::tidy($sections);
     }
 
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
         $admin = auth('expert')->user();
+
+        // One profile for an account that also advises: its name, sections
+        // and folders are on the expert profile with everything else.
+        if ($admin->roles()->whereIn('role_name', CapstoneExpert::STUDENT_FACING_ROLES)->exists()) {
+            return redirect()->route('instructor.profile');
+        }
 
         $admin->load('expertise');
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Instructor;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\ExpertExpertise;
+use App\Models\Setting;
 use App\Support\NotificationTypes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,7 +51,13 @@ class ProfileController extends Controller
             'slotSuggestion' => $expert->slotSuggestion($teamsHandled),
             // A CaPSA or Admin who also advises keeps their name and sections
             // on their own portal's profile page.
-            'staffProfileRoute' => $expert->is_staff ? ($expert->is_admin ? 'admin.profile' : 'capsa.profile') : null,
+            // A CaPSA or Admin who also advises keeps everything here: their
+            // name, and for a CaPSA the sections the Admin gave them and,
+            // as Subject Adviser, the folders students submit into.
+            'canEditName' => $expert->is_staff,
+            'capsaSections' => $expert->is_capsa ? ($expert->sections ?? []) : null,
+            'schoolYear' => Setting::get('current_school_year'),
+            'isSubjectAdviser' => in_array(CapstoneExpert::CAPSA_ROLE, $heldRoles, true),
             'emailGroups' => $emailGroups,
             'bellTypes' => $bellTypes,
         ]);
@@ -122,6 +129,12 @@ class ProfileController extends Controller
             'expertise.*' => ['string', 'max:100'],
             'highest_degree' => ['nullable', 'in:'.implode(',', array_keys(CapstoneExpert::DEGREES))],
             'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
+            // A CaPSA's or Admin's own name; other experts' names are the Admin's.
+            'name' => ['sometimes', 'array'],
+            'name.first_name' => ['required_with:name', 'string', 'max:50'],
+            'name.middle_name' => ['nullable', 'string', 'max:50'],
+            'name.last_name' => ['required_with:name', 'string', 'max:50'],
+            'name.suffix' => ['nullable', 'string', 'max:50'],
         ]);
 
         $validator->after(function ($v) use ($request) {
@@ -203,11 +216,15 @@ class ProfileController extends Controller
             ? CapstoneExpert::degreeFromTitle($validated['degree'] ?? null)
             : ($request->has('highest_degree') ? ['highest_degree' => $validated['highest_degree'] ?? null] : []);
 
-        DB::transaction(function () use ($expert, $accepted, $raw, $bySide, $degree) {
+        $name = $expert->is_staff && $request->has('name')
+            ? collect($validated['name'])->only(['first_name', 'middle_name', 'last_name', 'suffix'])->map(fn ($part) => filled($part) ? trim($part) : null)->all()
+            : [];
+
+        DB::transaction(function () use ($expert, $accepted, $raw, $bySide, $degree, $name) {
             $expert->update([
                 'program_slots' => $raw,
                 'max_teams' => array_sum($accepted),
-            ] + $degree);
+            ] + $degree + $name);
 
             // Replace rather than merge - the panel sends the full list it
             // is showing, so anything missing from it was removed there.

@@ -107,10 +107,41 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $this->assertMatchesRegularExpression('#<a class="sidebar-user sidebar-user-link" href="'.preg_quote(route('instructor.profile'), '#').'" aria-label="My profile"\s+id="ep-trigger"\s*>#', $html);
         $this->assertStringNotContainsString('id="ep-overlay"', $html);
 
-        // Their name and sections stay on the CaPSA profile, one link away.
+        // One profile: their name, sections and folders are on it too, and
+        // the old CaPSA profile sends them there.
         $this->actingAs($capsa, 'expert')->get(route('instructor.profile'))->assertOk()
             ->assertSee('Team slots')
-            ->assertSee('<a class="pp-id-edit" href="'.route('capsa.profile').'">', false);
+            ->assertSee('id="pp-name-btn"', false)
+            ->assertSeeInOrder(['CaPSA of', 'BSIT-4B'])
+            ->assertSee('Roles and sections are set by the administrator')
+            ->assertSee('id="pp-folders-h"', false);
+        $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertRedirect(route('instructor.profile'));
+    }
+
+    /** A CaPSA who advises edits their own name on the one profile; an ordinary expert cannot. */
+    public function test_only_a_capsa_or_admin_edits_their_name_on_the_profile(): void
+    {
+        $capsa = $this->capsa(alsoAdviser: true);
+        $capsa->update(['program_slots' => '2 - BSIT', 'max_teams' => 2]);
+        $payload = fn (string $first) => [
+            'program_slots' => ['BSIT' => 2], 'expertise_by_side' => ['adviser' => [], 'panel' => []],
+            'name' => ['first_name' => $first, 'middle_name' => null, 'last_name' => 'Balilla', 'suffix' => 'Jr.'],
+        ];
+
+        $this->actingAs($capsa, 'expert')->putJson(route('instructor.profile.update'), $payload('Mark'))->assertOk();
+        $this->assertSame(['Mark', 'Balilla', 'Jr.'], [$capsa->fresh()->first_name, $capsa->fresh()->last_name, $capsa->fresh()->suffix]);
+
+        $this->actingAs($capsa, 'expert')->putJson(route('instructor.profile.update'), $payload(''))->assertStatus(422);
+
+        $adviser = $this->adviser();
+        $name = [$adviser->first_name, $adviser->last_name];
+        $this->actingAs($adviser, 'expert')->putJson(route('instructor.profile.update'), $payload('Someone'))->assertOk();
+        $this->assertSame($name, [$adviser->fresh()->first_name, $adviser->fresh()->last_name]);
+
+        $this->actingAs($adviser, 'expert')->get(route('instructor.profile'))->assertOk()
+            ->assertDontSee('id="pp-name-btn"', false)
+            ->assertDontSee('CaPSA of')
+            ->assertDontSee('id="pp-folders-h"', false);
     }
 
     public function test_a_capsa_card_opens_the_capsa_profile_page(): void

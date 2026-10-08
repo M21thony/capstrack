@@ -151,7 +151,7 @@ class InstructorProfileTest extends TestCase
         ExpertEvaluation::factory()->create(['expert_id' => $expert->expert_id, 'team_id' => $team->team_id, 'student_id' => $leader->student_id, 'rating' => 5]);
 
         $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
-            ->assertSeeInOrder(['Team slots', 'Research areas', 'Degree', 'Email notifications'])
+            ->assertSeeInOrder(['Degree shown after your name', 'Team slots', 'Research areas', 'Email notifications'])
             ->assertDontSee('team leader rating');
     }
 
