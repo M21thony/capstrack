@@ -1845,7 +1845,7 @@ function renderResult(data, fileName, onLoad) {
         <div class="avatar">${escapeHtml((i.name || '?').charAt(0))}</div>
         <div style="min-width:0">
           ${i.role_label ? `<div class="sx-role">Recommended ${escapeHtml(i.role_label)}</div>` : ''}
-          <div style="font-size:12px;font-weight:500;color:var(--text)">${escapeHtml(i.name)}</div>
+          <div style="font-size:12px;font-weight:500;color:var(--text)">${escapeHtml(i.name)}${i.study_leave ? '<span class="sx-leave">On study leave</span>' : ''}</div>
           <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">${escapeHtml(i.expertise || '')}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(i.reason || '')}</div>
         </div>

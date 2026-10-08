@@ -55,6 +55,12 @@ class DuplicationCheck extends Model
             ? collect()
             : CapstoneExpert::with('roles')->whereIn('expert_id', $missing)->get()->keyBy('expert_id');
 
+        $onLeave = CapstoneExpert::whereIn('expert_id', $stored->pluck('id')->filter())
+            ->where('on_study_leave', true)
+            ->pluck('expert_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         return $stored->map(function (array $suggestion) use ($roles) {
             if (filled($suggestion['role_label'] ?? null)) {
                 return $suggestion;
@@ -73,6 +79,10 @@ class DuplicationCheck extends Model
             return $suggestion + ['role' => $role, 'role_label' => Role::labelFor($role)];
         })
             ->filter()
+            // Read now, not when the check ran: leave starts and ends.
+            ->map(fn (array $suggestion) => array_merge($suggestion, [
+                'study_leave' => in_array((int) ($suggestion['id'] ?? 0), $onLeave, true),
+            ]))
             ->values()
             ->all();
     }
