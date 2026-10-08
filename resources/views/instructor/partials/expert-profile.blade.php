@@ -261,6 +261,13 @@
           different number per program - e.g. 1 BSIT team and 5 BSIS teams.
           <span id="ep-slot-total" style="display:block;margin-top:3px;font-weight:600;color:var(--text2)"></span>
         </div>
+        @php $slotSuggestion = $expert?->slotSuggestion($expert->teamAssignments()->where('status', 'approved')->count()); @endphp
+        @if ($slotSuggestion)
+          <div style="font-size:11px;color:var(--text3);margin-top:7px">
+            Suggestion: <b style="color:var(--text2)">{{ $slotSuggestion }}</b>
+            <span style="display:block;margin-top:2px">From how quickly you review your teams' documents. It's up to you.</span>
+          </div>
+        @endif
       </div>
 
       <div class="ep-divider"></div>

@@ -669,6 +669,9 @@
                   @endforeach
                 </div>
               @endif
+              @if ($takesTeams && $slotsSet && ($suggestion = $expert->slotSuggestion($teamCount)))
+                <div style="font-size:11px;color:var(--text3);margin-top:4px">Suggestion: <b style="color:var(--text2)">{{ $suggestion }}</b></div>
+              @endif
             </td>
 
             <td data-label="Action">

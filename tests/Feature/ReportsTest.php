@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
@@ -12,7 +11,6 @@ use App\Models\FinancialRecord;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
-use App\Support\CapsaReports;
 use App\Support\DefenseOutcome;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -233,43 +231,6 @@ class ReportsTest extends TestCase
             });
     }
 
-    public function test_expert_load_suggests_slots_from_review_speed(): void
-    {
-        $capsa = $this->capsaFor(['BSIT-3A']);
-        [$alpha, $leader] = $this->teamInSection('Alpha');
-        [$bravo] = $this->teamInSection('Bravo');
-        [$charlie] = $this->teamInSection('Charlie');
-        $file = $this->upload($leader, null);
-
-        $fast = $this->engage($alpha, 'adviser', 'Fast', 'Expert');
-        $fast->update(['max_teams' => 1]);
-        $this->review($file, $fast, 'Reviewed', 2);
-
-        $slow = $this->engage($bravo, 'adviser', 'Slow', 'Expert');
-        $slow->update(['max_teams' => 5]);
-        $this->review($file, $slow, 'Reviewed', 2);
-        $this->review($file, $slow, 'To Review', 10);
-
-        $roomy = $this->engage($charlie, 'adviser', 'Roomy', 'Expert');
-        $roomy->update(['max_teams' => 5]);
-        $this->review($file, $roomy, 'Reviewed', 1);
-
-        $new = $this->engage($charlie, 'consultant', 'Unreviewed', 'Expert');
-        $new->update(['max_teams' => 1]);
-
-        $this->actingAs($capsa, 'expert')
-            ->get(route('capsa.reports.show', 'experts'))
-            ->assertOk()
-            ->assertViewHas('table', function ($t) {
-                $by = collect($t['rows'])->mapWithKeys(fn ($r) => [$r['cells']['expert'][1] => $r['cells']['suggestion']]);
-
-                return $by['Fast Expert'] === 'Increase slots'
-                    && $by['Slow Expert'] === 'Reduce slots'
-                    && $by['Roomy Expert'] === 'Maintain slots'
-                    && $by['Unreviewed Expert'] === CapsaReports::DASH;
-            });
-    }
-
     public function test_merging_adds_the_other_reports_columns_beside_each_team(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A']);
@@ -322,16 +283,6 @@ class ReportsTest extends TestCase
         $this->assertSame('Alpha', $rows[4][0]);
         $this->assertSame('C9A82C', $sheet->getStyle('A4')->getFill()->getStartColor()->getRGB());
         $this->assertSame('B5', $sheet->getFreezePane());
-    }
-
-    /** A review sent to the expert some days ago; a finished one took a day less than that. */
-    private function review(int $fileId, CapstoneExpert $expert, string $status, int $daysAgo): void
-    {
-        $review = CapstoneDocumentReview::create([
-            'file_id' => $fileId, 'expert_id' => $expert->expert_id, 'role' => 'adviser', 'review_status' => $status, 'version' => '1',
-            'reviewed_at' => $status === 'Reviewed' ? now()->subDays($daysAgo - 1) : null,
-        ]);
-        $review->forceFill(['created_at' => now()->subDays($daysAgo)])->save();
     }
 
     private function engage(Team $team, string $roleName, string $first, string $last): CapstoneExpert

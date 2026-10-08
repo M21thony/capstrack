@@ -336,6 +336,36 @@ class CapstoneExpert extends Authenticatable
         return Str::substr($this->email ?? 'E', 0, 2);
     }
 
+    /**
+     * Increase, Maintain or Reduce slots, from how quickly the expert has
+     * reviewed their teams' documents in the last 180 days. Shown to the
+     * expert and the CaPSA as a suggestion only - the expert decides.
+     * Null when there is no slot limit or no finished review to judge by.
+     */
+    public function slotSuggestion(int $teams): ?string
+    {
+        $max = (int) ($this->max_teams ?? 0);
+        // ponytail: one query per expert; preload reviews if the expert list grows past a few dozen.
+        $reviews = $max === 0 ? collect() : CapstoneDocumentReview::where('expert_id', $this->expert_id)
+            ->where('created_at', '>=', now()->subDays(180))
+            ->get(['review_status', 'created_at', 'reviewed_at']);
+        $done = $reviews->where('review_status', CapstoneDocumentReview::REVIEWED)->whereNotNull('reviewed_at');
+        if ($done->isEmpty()) {
+            return null;
+        }
+
+        $averageDays = $done->avg(fn ($r) => $r->created_at->diffInHours($r->reviewed_at) / 24);
+        $longestWait = $reviews->whereIn('review_status', [CapstoneDocumentReview::AWAITING, CapstoneDocumentReview::IN_PROGRESS])
+            ->map(fn ($r) => $r->created_at->diffInHours(now()) / 24)
+            ->max() ?? 0;
+
+        return match (true) {
+            $averageDays > 7 || $longestWait > 7 => 'Reduce slots',
+            $teams >= $max && $averageDays <= 3 && $longestWait <= 3 => 'Increase slots',
+            default => 'Maintain slots',
+        };
+    }
+
     // program_slots preserves whatever the roster upload's "Max Number of
     // Teams" cell actually said, which is sometimes a flat number and
     // sometimes a real per-program split like "1 - BSIT, 1 - BSIS" (see
