@@ -1,7 +1,7 @@
 {{-- Shared by the CaPSA's Expert Evaluations pages and the expert's My
      Evaluations: the stage cards, the question editor and the anonymous
      results. Built on the tokens admin.css and expert.css both define. --}}
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
 .ev-page{display:flex;flex-direction:column;gap:18px;max-width:1180px}
 .ev-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .ev-head h1{font-size:22px;font-weight:700;letter-spacing:-.3px;color:var(--text)}

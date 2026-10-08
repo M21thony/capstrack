@@ -154,7 +154,7 @@
     </span>
   </li>
 </template>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var MAX = {{ $max }};
   var STANDARD = @json(\App\Models\EvaluationTemplate::STANDARD_QUESTIONS);

@@ -111,6 +111,24 @@ class SecurityHeadersTest extends TestCase
         $this->assertNull(collect($this->get('/login')->headers->getCookies())->first(fn ($cookie) => $cookie->getName() === 'XSRF-TOKEN'));
     }
 
+    /**
+     * A block written without the nonce is refused by the browser, with no
+     * error on the page: the evaluation styles went missing that way and an
+     * empty My Evaluations drew its star icon the width of the screen.
+     * Emails and PDFs are not served under the policy, so they are left out.
+     */
+    public function test_no_view_writes_an_inline_block_without_the_nonce(): void
+    {
+        $missing = collect(File::allFiles(resource_path('views')))
+            ->reject(fn ($file) => preg_match('#(^|/)(emails|pdf)/|pdf\.blade\.php$#', $file->getRelativePathname()))
+            ->filter(fn ($file) => preg_match('#^\s*<(style|script)>#m', $file->getContents()))
+            ->map(fn ($file) => $file->getRelativePathname())
+            ->values()
+            ->all();
+
+        $this->assertSame([], $missing);
+    }
+
     private function nonceOf($response): ?string
     {
         preg_match("/'nonce-([^']+)'/", (string) $response->headers->get('Content-Security-Policy'), $nonce);
