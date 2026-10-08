@@ -23,7 +23,7 @@ class ExpertRemovalRequestTest extends TestCase
 
     private const REASON = 'Our adviser moved to another campus this semester.';
 
-    /** The adviser the team names instead - assigned once the CaPSA approves. */
+    /** The adviser the team names instead - applied to once the CaPSA approves. */
     private ?CapstoneExpert $replacement = null;
 
     protected function setUp(): void
@@ -112,7 +112,7 @@ class ExpertRemovalRequestTest extends TestCase
         $this->assertSame(0, ExpertRemovalRequest::count());
     }
 
-    public function test_approving_assigns_the_replacement_and_tells_both_experts(): void
+    public function test_approving_sends_the_application_to_the_replacement_and_tells_the_old_expert(): void
     {
         [$leader, $team, $assignment, $capsa] = $this->teamWithAdviser();
         $this->askToRemove($leader, $assignment)->assertOk();
@@ -126,16 +126,16 @@ class ExpertRemovalRequestTest extends TestCase
         $this->assertDatabaseMissing('capstone_expert_application', ['assignment_id' => $assignment->assignment_id]);
         $replaced = TeamExpertAssignment::where('team_id', $team->team_id)->where('expert_id', $this->replacement->expert_id)->first();
         $this->assertNotNull($replaced);
-        $this->assertSame('approved', $replaced->status, 'the CaPSA decides, not the replacement');
+        $this->assertSame('pending', $replaced->status, 'the replacement still accepts or declines');
         $this->assertSame('adviser', $replaced->engaged_role_name);
         $this->assertSame($removal->replacement_proposal_file, $replaced->proposal_file);
         $removal->refresh();
-        $this->assertSame(ExpertRemovalRequest::REPLACEMENT_ASSIGNED, $removal->replacement_outcome);
+        $this->assertSame(ExpertRemovalRequest::REPLACEMENT_SENT, $removal->replacement_outcome);
         $this->assertSame($replaced->assignment_id, $removal->replacement_assignment_id);
 
-        $this->assertDatabaseHas('notifications', ['expert_id' => $this->replacement->expert_id, 'type' => 'expert_application', 'title' => 'New team']);
+        $this->assertDatabaseHas('notifications', ['expert_id' => $this->replacement->expert_id, 'type' => 'expert_application', 'title' => 'New application']);
         $this->assertDatabaseHas('notifications', ['expert_id' => $assignment->expert_id, 'type' => 'expert_application', 'title' => 'Removed from a team']);
-        $this->assertStringContainsString('is now the adviser', Notification::where('student_id', $leader->student_id)->where('title', 'Expert change approved')->value('message'));
+        $this->assertStringContainsString('Your application went to', Notification::where('student_id', $leader->student_id)->where('title', 'Expert change approved')->value('message'));
     }
 
     public function test_a_replacement_who_filled_up_meanwhile_blocks_the_approval(): void
@@ -189,7 +189,7 @@ class ExpertRemovalRequestTest extends TestCase
         $this->askToRemove($leader, $assignment)->assertOk();
 
         $this->actingAs($leader, 'web')->get(route('student.experts', ['tab' => 'find', 'role' => 'adviser']))
-            ->assertOk()->assertSee('becomes your adviser', false);
+            ->assertOk()->assertSee('If approved, your application goes to', false);
         $this->actingAs($capsa, 'expert')->get(route('capsa.team_management', ['tab' => 'leave_requests']))
             ->assertOk()->assertSee('Replacement they picked');
     }

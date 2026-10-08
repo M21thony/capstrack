@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
  * A team applying to an expert: whether it may, and sending it.
  *
  * Asked by Apply on the Experts page and by an approved change request,
- * which assigns the replacement the team picked. Both go through the same
+ * which applies to the replacement the team picked. Both go through the same
  * checks, so a replacement who filled up while the CaPSA was deciding is
  * refused just as a direct application would be.
  */
@@ -148,34 +148,26 @@ class ExpertApplications
             ->value('roles.role_name');
     }
 
-    /**
-     * Send the application, and tell the expert. Checks are refusal()'s job.
-     *
-     * $approved is the CaPSA approving a change request: the replacement is
-     * assigned outright rather than asked.
-     */
-    public function send(Team $team, CapstoneExpert $expert, int $expertRoleId, string $message, ?string $proposalFile, ?int $preProposalId, bool $approved = false): TeamExpertAssignment
+    /** Send the application, and tell the expert. Checks are refusal()'s job. */
+    public function send(Team $team, CapstoneExpert $expert, int $expertRoleId, string $message, ?string $proposalFile, ?int $preProposalId): TeamExpertAssignment
     {
         $assignment = TeamExpertAssignment::create([
             'team_id' => $team->team_id,
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $expertRoleId,
-            'status' => $approved ? 'approved' : 'pending',
+            'status' => 'pending',
             'proposal_file' => $proposalFile,
             'pre_proposal_id' => $preProposalId,
             'message' => $message,
         ]);
 
         $role = $assignment->engaged_role_name;
-        $as = $role ? ' as their '.e($role) : '';
         Notifier::toExpert(
             (int) $assignment->expert_id,
             'expert_application',
-            $approved ? 'New team' : 'New application',
-            $approved
-                ? 'The CaPSA assigned you to <strong>'.e($team->team_name).'</strong>'.$as.'.'
-                : '<strong>'.e($team->team_name).'</strong> applied to you'.$as.'.',
-            $approved ? route('instructor.teams') : route('instructor.assignments'),
+            'New application',
+            '<strong>'.e($team->team_name).'</strong> applied to you'.($role ? ' as their '.e($role) : '').'.',
+            route('instructor.assignments'),
             ['team_id' => $team->team_id],
         );
 

@@ -187,7 +187,7 @@
 
             <p class="rr-reason"><span class="rr-reason-label">Leader's reason</span>{{ $r->reason }}</p>
             @if($r->replacement)
-              <p class="rr-reason"><span class="rr-reason-label">Replacement they picked</span><b>{{ $r->replacement->name }}</b> · assigned to the team as soon as you approve, if they still have a slot.</p>
+              <p class="rr-reason"><span class="rr-reason-label">Replacement they picked</span><b>{{ $r->replacement->name }}</b> · their application goes out as soon as you approve, if they still have a slot.</p>
             @endif
 
             <div class="rr-actions">
@@ -313,7 +313,7 @@
         : [
             { text: d.member + ' is removed as the ' + d.role + ' of ' + d.team + ' straight away.' },
             { text: d.replacement
-                ? d.replacement + ' becomes the ' + d.role + ' of ' + d.team + ' straight away. Both experts are notified.'
+                ? 'Their application goes to ' + d.replacement + ' if they still have a slot. ' + d.replacement + ' accepts or declines it.'
                 : 'The team can apply to another ' + d.role + '.' },
             { text: 'Every member of the team is notified.' },
           ];

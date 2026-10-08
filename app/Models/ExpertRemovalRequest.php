@@ -25,10 +25,11 @@ class ExpertRemovalRequest extends Model
     public const REASON_MIN = 15;
 
     /**
-     * The replacement was assigned to the team when the CaPSA approved. Older
-     * rows hold 'sent' or 'unavailable', from when approving only applied.
+     * The application to the replacement went out when the CaPSA approved.
+     * Older rows may hold 'unavailable', from before a full replacement
+     * blocked the approval instead.
      */
-    public const REPLACEMENT_ASSIGNED = 'assigned';
+    public const REPLACEMENT_SENT = 'sent';
 
     protected $fillable = [
         'team_id',
