@@ -129,11 +129,11 @@
        plain Admin/CaPSA account with no expert duties. Such an account's card
        opens its own profile page instead: it used to do nothing at all, and
        on a phone the menu is the only way there. --}}
-  @if ($adminHasExpertRole)
-  <div class="sidebar-user" id="ep-trigger" onclick="openExpertProfile()" style="cursor:pointer">
-  @else
-  <a class="sidebar-user sidebar-user-link" href="{{ route($rolePrefix.'profile') }}" aria-label="My profile" @if ($currentRoute === $rolePrefix.'profile') aria-current="page" @endif>
-  @endif
+  {{-- An account that also advises opens its expert profile page (team
+       slots, degree, research areas), which links on to this portal's own
+       profile page for the name and sections. --}}
+  @php $profileRoute = $adminHasExpertRole ? 'instructor.profile' : $rolePrefix.'profile'; @endphp
+  <a class="sidebar-user sidebar-user-link" href="{{ route($profileRoute) }}" aria-label="My profile" @if ($adminHasExpertRole) id="ep-trigger" @endif @if ($currentRoute === $profileRoute) aria-current="page" @endif>
     <div class="avatar" style="padding:0;overflow:hidden;">
       <img
         src="{{ $admin?->avatarUrl() ?? asset('images/default-avatar.jpg') }}"
@@ -155,11 +155,7 @@
       <div class="user-role" title="{{ $adminEmail }}">CCS · CSPC</div>
     </div>
     <div class="status-dot"></div>
-  @if ($adminHasExpertRole)
-  </div>
-  @else
   </a>
-  @endif
   <nav class="nav">
     @php
       // Sorted by what the page is about, not by which hat the account wears.
@@ -392,9 +388,6 @@
 {{-- The guided tour: the CaPSA's, or the Admin's for an admin who is not also a CaPSA. --}}
 @include('partials.staff-portal-tour', ['tourKey' => $isCapsa ? 'capsa' : 'admin', 'expert' => $admin])
 @include('partials.table-export')
-@if ($adminHasExpertRole)
-  @include('instructor.partials.expert-profile')
-@endif
 @include('partials.sidebar-scroll-restore')
 
 {{-- A page's first opening since signing in comes up as its own skeleton. --}}

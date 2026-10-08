@@ -492,10 +492,6 @@ document.querySelectorAll('a[data-back]').forEach(function (link) {
   });
 });
 </script>
-{{-- The Expert portal's sidebar opens the profile panel from here. --}}
-@if ($portal === 'instructor')
-  @include('instructor.partials.expert-profile')
-@endif
 @include('capsa.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
 <script nonce="{{ Vite::cspNonce() }}">
 var REPORT = {

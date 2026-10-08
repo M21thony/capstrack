@@ -88,7 +88,8 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $html = $this->actingAs($adviser, 'expert')->get(route('instructor.profile'))->assertOk()->getContent();
         $this->assertMatchesRegularExpression($link.'\s+aria-current="page"\s*>#', $html);
 
-        $stillIncluding = collect(File::files(resource_path('views/instructor')))
+        $this->assertFileDoesNotExist(resource_path('views/instructor/partials/expert-profile.blade.php'));
+        $stillIncluding = collect(File::allFiles(resource_path('views')))
             ->filter(fn ($file) => str_contains($file->getContents(), "@include('instructor.partials.expert-profile')"))
             ->map(fn ($file) => $file->getFilename())
             ->values()
@@ -97,14 +98,19 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $this->assertSame([], $stillIncluding);
     }
 
-    /** A CaPSA who also advises keeps the drawer, and on a phone it rises from the bottom over everything. */
-    public function test_on_a_phone_the_profile_panel_rises_from_the_bottom_over_everything(): void
+    /** A CaPSA who also advises opens the same expert profile page, inside their own portal. */
+    public function test_a_capsa_who_also_advises_opens_the_expert_profile_page(): void
     {
-        $html = $this->actingAs($this->capsa(alsoAdviser: true), 'expert')->get(route('capsa.dashboard'))->assertOk()->getContent();
+        $capsa = $this->capsa(alsoAdviser: true);
 
-        $this->assertMatchesRegularExpression('#@media \(max-width:768px\)\{\s*\.ep-overlay\{z-index:1100!important\}\s*\.ep-overlay\.open\{background:rgba\(15,17,23,\.45\);pointer-events:all\}\s*\.ep-modal\{\s*left:0!important;right:0;top:auto!important;bottom:0;\s*width:100%!important#', $html);
-        // The floating bar steps out of the way while it is open.
-        $this->assertStringContainsString("'.modal-overlay, .upload-scrim, .ct-modal-overlay, .profile-overlay, .ep-overlay,", $html);
+        $html = $this->actingAs($capsa, 'expert')->get(route('capsa.dashboard'))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('#<a class="sidebar-user sidebar-user-link" href="'.preg_quote(route('instructor.profile'), '#').'" aria-label="My profile"\s+id="ep-trigger"\s*>#', $html);
+        $this->assertStringNotContainsString('id="ep-overlay"', $html);
+
+        // Their name and sections stay on the CaPSA profile, one link away.
+        $this->actingAs($capsa, 'expert')->get(route('instructor.profile'))->assertOk()
+            ->assertSee('Programs and team slots')
+            ->assertSee('href="'.route('capsa.profile').'">CaPSA profile</a>', false);
     }
 
     public function test_a_capsa_card_opens_the_capsa_profile_page(): void
@@ -116,14 +122,6 @@ class StaffProfileAndDashboardTilesTest extends TestCase
 
         $html = $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertOk()->getContent();
         $this->assertMatchesRegularExpression('#<a class="sidebar-user sidebar-user-link" href="'.preg_quote(route('capsa.profile'), '#').'" aria-label="My profile"\s+aria-current="page"\s*>#', $html);
-    }
-
-    public function test_a_capsa_who_also_advises_still_opens_the_expert_profile_panel(): void
-    {
-        $html = $this->actingAs($this->capsa(alsoAdviser: true), 'expert')->get(route('capsa.dashboard'))->assertOk()->getContent();
-
-        $this->assertStringContainsString('<div class="sidebar-user" id="ep-trigger" onclick="openExpertProfile()" style="cursor:pointer">', $html);
-        $this->assertStringNotContainsString('sidebar-user-link', $html);
     }
 
     /** Over every page's own dimming layer, which Grading Rubrics keeps at 999. */

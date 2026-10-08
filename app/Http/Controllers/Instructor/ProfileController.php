@@ -52,6 +52,9 @@ class ProfileController extends Controller
             'slotSuggestion' => $expert->slotSuggestion($teamsHandled),
             'ratingAverage' => (int) ($rating?->total ?? 0) > 0 ? round((float) $rating->average, 1) : null,
             'ratingCount' => (int) ($rating?->total ?? 0),
+            // A CaPSA or Admin who also advises keeps their name and sections
+            // on their own portal's profile page.
+            'staffProfileRoute' => $expert->is_staff ? ($expert->is_admin ? 'admin.profile' : 'capsa.profile') : null,
         ]);
     }
 

@@ -149,13 +149,14 @@ class ExpertResearchAreasBySideTest extends TestCase
         $capsa = $this->capsaWhoAdvises();
 
         $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertOk()
-            ->assertSee('Research Area as')
+            ->assertSee('Research areas')
             ->assertSee('data-side="adviser"', false)
             ->assertSee('data-side="panel"', false)
             ->assertDontSee('data-side="consultant"', false);
 
-        $this->actingAs($capsa, 'expert')->get(route('capsa.dashboard'))->assertOk()
-            ->assertSee('id="ep-side-tabs"', false);
+        $this->actingAs($capsa, 'expert')->get(route('instructor.profile'))->assertOk()
+            ->assertSee('data-side="adviser"', false)
+            ->assertSee('data-side="panel"', false);
     }
 
     public function test_saving_the_capsa_profile_keeps_each_side(): void

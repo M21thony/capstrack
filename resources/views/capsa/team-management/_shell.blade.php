@@ -75,9 +75,6 @@
 @include($portal === 'capsa' ? 'capsa.partials.skeleton-toggle' : 'instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
 <div id="tm-toast" class="toast"></div>
 @stack('scripts')
-@if ($portal !== 'capsa')
-  @include('instructor.partials.expert-profile')
-@endif
 @include('partials.escape-closes-modals')
 </body>
 </html>

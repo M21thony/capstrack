@@ -16,7 +16,7 @@
   /* #real-content is the scroller here; .content scrolling too would pin
      the sticky aside and save bar to a box that never moves. */
   .pp.content{padding-bottom:0;overflow:visible}
-  .pp-layout{max-width:1160px;display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:18px;align-items:start}
+  .pp-layout{max-width:1400px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
   .pp-aside{grid-column:2;grid-row:1;position:sticky;top:0}
   .pp-main{grid-column:1;grid-row:1;min-width:0;display:flex;flex-direction:column;gap:18px}
 
@@ -27,6 +27,8 @@
   .pp-row h2{margin:0 0 3px;font-size:13.5px;font-weight:700;color:var(--text)}
   .pp-row-label p{margin:0;font-size:12px;line-height:1.45;color:var(--text2)}
   .pp-control{min-width:0}
+  .pp-staff-note{margin:0;font-size:12.5px;color:var(--text2)}
+  .pp-staff-note a{color:var(--accent3);font-weight:600}
 
   .pp-degree{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
   .pp-select{height:36px;width:100%;max-width:240px;border:1px solid var(--border2);border-radius:8px;padding:0 10px;
@@ -91,7 +93,6 @@
   .pp-opt{font:inherit;font-size:11.5px;min-height:24px;padding:0 9px;border-radius:6px;border:1px dashed var(--border2);
           background:var(--bg2);color:var(--text2);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pp-opt:hover{border-color:var(--accent);background:var(--accent-light);color:var(--text)}
-  .pp-opt.taken{border-style:solid;border-color:var(--accent);background:var(--accent);color:#18191f}
   .pp-opt.own{border-color:var(--accent);color:var(--text);font-weight:600}
   .pp-hint{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.45}
 
@@ -134,7 +135,7 @@
   .pp-rating b{color:var(--text)}
 
   /* Only there while something is unsaved, or just saved. */
-  .pp-save{position:sticky;bottom:0;padding:14px 0 16px;display:none;max-width:1160px}
+  .pp-save{position:sticky;bottom:0;padding:14px 0 16px;display:none;max-width:1400px}
   /* As wide as what it says, so the notification toasts in the corner never cover Save. */
   .pp-save.on{display:block}
   .pp-savebar{display:flex;width:fit-content;max-width:100%;align-items:center;gap:16px;padding:8px 10px 8px 16px;border-radius:12px;background:var(--navy-dark);
@@ -275,6 +276,9 @@
       </aside>
 
       <div class="pp-main">
+        @if ($staffProfileRoute)
+          <p class="pp-staff-note">Your name, photo and assigned sections are on your <a href="{{ route($staffProfileRoute) }}">{{ $expert->is_admin ? 'Admin' : 'CaPSA' }} profile</a>.</p>
+        @endif
         <div class="pp-sheet">
 
           <section class="pp-row" aria-labelledby="pp-degree-h">
@@ -339,7 +343,7 @@
               </div>
               <div class="pp-groups" id="pp-groups" role="group" aria-label="Research area groups"></div>
               <div class="pp-pick" id="pp-pick"></div>
-              <div class="pp-hint">Click an area to add it, and click it again to remove it. Not on the list? Type it and press Enter.</div>
+              <div class="pp-hint">Click an area to add it, and remove one with its &times; above. Not on the list? Type it and press Enter.</div>
             </div>
           </section>
 
@@ -528,14 +532,23 @@ function closeSidebar() {
       pick.appendChild(button('pp-opt own', '+ Add “' + typed + '”', function () { addTyped(); }));
     }
 
+    // What is taken already shows as chips above, so the list only offers the rest.
     function opt(name) {
-      var taken = has(name);
-      pick.appendChild(button('pp-opt' + (taken ? ' taken' : ''), (taken ? '✓ ' : '+ ') + name, function () { toggle(name); }, taken));
+      if (has(name)) return;
+      pick.appendChild(button('pp-opt', '+ ' + name, function () { toggle(name); }));
+    }
+    function none(text) {
+      var note = document.createElement('span');
+      note.className = 'pp-hint';
+      note.style.margin = '0';
+      note.textContent = text;
+      pick.appendChild(note);
     }
 
     // A search crosses every group, so the matches show together.
     if (q) {
       KNOWN.filter(function (k) { return norm(k).indexOf(q) >= 0; }).forEach(opt);
+      if (!pick.children.length) none('Nothing else matches. Press Enter to add it as your own.');
       groupsEl.hidden = true;
       return;
     }
@@ -548,6 +561,7 @@ function closeSidebar() {
     });
     var active = GROUPS.find(function (g) { return g.name === group; });
     (active ? active.items : []).forEach(opt);
+    if (active && !pick.children.length) none('You have every area in this group.');
   }
 
   function toggle(name) {
