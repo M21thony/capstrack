@@ -99,6 +99,21 @@ class ExpertResearchAreasBySideTest extends TestCase
             ->assertSee('Research Area as');
     }
 
+    public function test_the_picker_offers_every_area_and_accepts_ones_not_on_the_list(): void
+    {
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'max_teams' => 4, 'program_slots' => '4 - BLIS', 'first_login_at' => now()]);
+        $expert->roles()->attach(Role::firstOrCreate(['role_name' => 'adviser'])->role_id);
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk()
+            ->assertSee('Embedded Systems')
+            ->assertDontSee('EP_PROGRAM_SKILLS')
+            ->assertSee('Search, or type your own research area');
+
+        $this->save($expert, ['adviser' => ['Blockchain Governance']])->assertOk();
+
+        $this->assertSame(['Blockchain Governance'], $expert->fresh()->expertiseFor('adviser')->all());
+    }
+
     public function test_students_browsing_a_role_see_and_filter_by_that_side(): void
     {
         $leader = Student::factory()->withCompleteProfile()->create(['course' => 'Bachelor of Science in Information Technology']);

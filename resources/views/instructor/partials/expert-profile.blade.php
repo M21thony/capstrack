@@ -106,8 +106,6 @@
   .ep-side-tab.on{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(24,25,31,.14)}
   .ep-side-n{font-size:10px;font-weight:700;padding:0 6px;border-radius:999px;background:var(--border);color:var(--text2)}
   .ep-side-tab.on .ep-side-n{background:var(--accent);color:#18191f}
-  .ep-picker-empty{font-size:11.5px;color:var(--text3);padding:14px 12px;text-align:center;
-                   border:1px dashed var(--border);border-radius:9px}
   .ep-search-ico{width:14px;height:14px;flex-shrink:0;stroke:var(--text3);fill:none;stroke-width:2}
   .ep-search-clear{width:20px;height:20px;flex-shrink:0;border:none;background:transparent;
                    cursor:pointer;color:var(--text3);align-items:center;justify-content:center;
@@ -121,6 +119,7 @@
     max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
   .ep-quick-chip:hover{border-color:var(--accent);background:var(--accent-light);color:var(--text)}
+  .ep-add-own{border-style:dashed;border-color:var(--accent);color:var(--text)}
   /* Taken. The same chip gives it back, so there is no second list of little
      x buttons to hunt through to change your mind. */
   .ep-quick-chip.picked{border-color:var(--accent);background:var(--accent);color:#18191f}
@@ -313,7 +312,7 @@
         <div class="ep-tag-input-row">
           <svg class="ep-search-ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <input class="ep-tag-input" id="ep-tag-input" type="text" autocomplete="off"
-                 placeholder="Type to narrow the list below"
+                 placeholder="Search, or type your own research area"
                  onkeydown="handleTagKey(event)" oninput="epRenderQuickGroups()"/>
           <button type="button" class="ep-search-clear" id="ep-search-clear" onclick="epClearSearch()" title="Clear" style="display:none">
             <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -323,8 +322,8 @@
         <div class="ep-quick-groups" id="ep-quick-groups"></div>
 
         <div class="ep-picker-hint">
-          Click to take one, click again to drop it. Anything not on the list &mdash;
-          type it and press Enter.
+          Click to take one, click again to drop it. Not on the list? Type it in
+          the box and click <b>+ Add</b>.
         </div>
       </div>
 
@@ -387,47 +386,9 @@ function epRenderSideCounts(){
 const EP_ALL_GROUPS = Object.entries(@json(\App\Support\SkillCatalog::groups()))
   .map(([name, items]) => ({ name, items }));
 
-// CaPSA asked that each programme have its own areas of expertise: the four
-// are not the same subject, and offering a BLIS adviser "Embedded Systems"
-// made the picker longer without making it more useful. Ticking a programme
-// above narrows what is suggested here; ticking none shows everything, because
-// narrowing to nothing would leave an expert with no technical skills at all.
-const EP_PROGRAM_SKILLS = @json(\App\Support\SkillCatalog::programSkills());
-const EP_SHARED_GROUPS = @json(\App\Support\SkillCatalog::sharedGroups());
-
-// Every skill the catalogue knows, whichever programme it belongs to. What is
-// SUGGESTED narrows by programme; what is RECOGNISED must not, or a skill
-// typed from another programme would be treated as something nobody has heard
-// of - and an expert is free to type any of them.
+// Every skill the catalogue knows. The panel found experts boxed in when the
+// suggestions narrowed to the programmes they ticked, so all of it is offered.
 const EP_ALL_SKILLS = EP_ALL_GROUPS.flatMap(g => g.items.map(i => ({ name: i, group: g.name })));
-
-/** The programmes ticked in Programs Accepted, right now. */
-function epCheckedPrograms(){
-  return [...document.querySelectorAll('.ep-program-row')]
-    .filter(row => row.querySelector('.ep-program-check')?.checked)
-    .map(row => row.dataset.program);
-}
-
-/** The catalogue as this expert's programmes see it. */
-function epSkillGroups(){
-  const codes = epCheckedPrograms().filter(c => EP_PROGRAM_SKILLS[c]);
-
-  if (!codes.length) return EP_ALL_GROUPS;
-
-  const allowed = new Set();
-  codes.forEach(c => EP_PROGRAM_SKILLS[c].forEach(s => allowed.add(epNorm(s))));
-
-  return EP_ALL_GROUPS
-    // Research craft and language belong to every programme - a capstone in
-    // any of them needs a literature review and a proofread.
-    .map(g => EP_SHARED_GROUPS.includes(g.name)
-      ? g
-      // Something already taken stays on show even when it belongs to
-      // another programme. Hiding it would leave a skill they hold with no
-      // tick beside it anywhere in this list, which reads as not having it.
-      : { name: g.name, items: g.items.filter(i => allowed.has(epNorm(i)) || epHasTag(i)) })
-    .filter(g => g.items.length);
-}
 
 function epNorm(v){ return String(v).trim().toLowerCase(); }
 function epHasTag(name){ return epTags.some(t => epNorm(t) === epNorm(name)); }
@@ -451,11 +412,11 @@ let epActiveGroup = null;
 
 function epShortLabel(name){ return EP_SHORT_LABELS[name] || name; }
 
-/** The groups worth showing: filtered by programme, then by what was typed. */
+/** The groups worth showing, filtered by what was typed. */
 function epVisibleGroups(){
   const q = epNorm(document.getElementById('ep-tag-input')?.value || '');
 
-  const groups = epSkillGroups()
+  const groups = EP_ALL_GROUPS
     .map(g => ({ name: g.name, items: g.items.filter(i => !q || epNorm(i).includes(q)) }))
     .filter(g => g.items.length);
 
@@ -491,9 +452,16 @@ function epRenderQuickGroups(){
 
   const groups = epVisibleGroups();
 
+  // Typed something that is not on the list and not taken yet: offer it as
+  // its own button, so adding an area of their own is never a guess.
+  const typed = raw.trim();
+  const addOwn = typed && !epHasTag(typed) && !EP_ALL_SKILLS.some(s => epNorm(s.name) === epNorm(typed))
+    ? '<button type="button" class="ep-quick-chip ep-add-own" onclick="addTag()">+ Add &ldquo;'
+      + epEscape(typed) + '&rdquo;</button>'
+    : '';
+
   if (!groups.length) {
-    wrap.innerHTML = '<div class="ep-picker-empty">Nothing matches &ldquo;'
-      + epEscape(raw.trim()) + '&rdquo;. Press Enter to add it anyway.</div>';
+    wrap.innerHTML = '<div class="ep-quick-chips">' + addOwn + '</div>';
 
     return;
   }
@@ -513,7 +481,7 @@ function epRenderQuickGroups(){
   }).join('');
 
   if (searching) {
-    wrap.innerHTML = '<div class="ep-quick-chips">'
+    wrap.innerHTML = '<div class="ep-quick-chips">' + addOwn
       + chipsFor(groups.flatMap(g => g.items)) + '</div>';
 
     return;
@@ -600,8 +568,6 @@ function epToggleProgram(cb){
   num.disabled = !cb.checked;
   if (cb.checked && (!num.value || Number(num.value) < 1)) num.value = 1;
   epUpdateSlotTotal();
-  // What they take teams from decides what they are offered to be expert in.
-  epRenderQuickGroups();
 }
 
 function epUpdateSlotTotal(){
