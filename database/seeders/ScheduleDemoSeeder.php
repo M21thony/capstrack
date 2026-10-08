@@ -19,8 +19,9 @@ use Illuminate\Support\Collection;
 
 /**
  * Dummy BSIT-3A/3B teams for showing Generate schedule on the Pre-proposal
- * Defense: eight ready teams across three panels, plus one team with no panel
- * and one with no grammarian, so the "not ready" list has something too.
+ * Defense: nine teams across three panels - one of them with no grammarian,
+ * which is only a warning - plus one team with no panel, so the "not ready"
+ * list has something too.
  * Every account is @example.test, so saving a schedule emails no real person.
  *
  *   php artisan db:seed --class=ScheduleDemoSeeder

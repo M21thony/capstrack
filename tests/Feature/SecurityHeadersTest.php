@@ -120,7 +120,7 @@ class SecurityHeadersTest extends TestCase
     public function test_no_view_writes_an_inline_block_without_the_nonce(): void
     {
         $missing = collect(File::allFiles(resource_path('views')))
-            ->reject(fn ($file) => preg_match('#(^|/)(emails|pdf)/|pdf\.blade\.php$#', $file->getRelativePathname()))
+            ->reject(fn ($file) => preg_match('#(^|[/\\\\])(emails|pdf)[/\\\\]|pdf\.blade\.php$#', $file->getRelativePathname()))
             ->filter(fn ($file) => preg_match('#^\s*<(style|script)>#m', $file->getContents()))
             ->map(fn ($file) => $file->getRelativePathname())
             ->values()

@@ -15,7 +15,8 @@ class ScheduleDemoSeederTest extends TestCase
     use RefreshDatabase;
 
     /** The CaPSA has the department checklist, whose forms come before the Pre-proposal Defense. */
-    public function test_generate_schedule_suggests_the_eight_ready_demo_teams_and_lists_the_other_two(): void
+    /** A missing grammarian is only a warning, so the team without one is still given a date. */
+    public function test_generate_schedule_suggests_every_demo_team_with_a_panel(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A', 'BSIT-3B']);
         $this->departmentChecklist($capsa);
@@ -26,10 +27,9 @@ class ScheduleDemoSeederTest extends TestCase
             ->assertOk()
             ->json('data');
 
-        $this->assertCount(8, $data['draft']);
-        $notReady = collect($data['not_ready'])->pluck('reason', 'team_name');
-        $this->assertSame('No panel assigned yet.', $notReady['Demo Bug Busters']);
-        $this->assertStringContainsString('grammarian', $notReady['Demo Script Kiddos']);
+        $this->assertCount(9, $data['draft']);
+        $this->assertContains('Demo Script Kiddos', array_column($data['draft'], 'team_name'));
+        $this->assertSame(['Demo Bug Busters' => 'No panel assigned yet.'], collect($data['not_ready'])->pluck('reason', 'team_name')->all());
     }
 
     public function test_running_it_twice_adds_nothing_the_second_time(): void
