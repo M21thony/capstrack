@@ -80,7 +80,7 @@ class SlotSuggestionTest extends TestCase
             ->assertSee('Increase slots');
 
         $this->actingAs($expert, 'expert')
-            ->get(route('instructor.dashboard'))
+            ->get(route('instructor.profile'))
             ->assertOk()
             ->assertSee('Increase slots');
     }

@@ -292,7 +292,6 @@
     </div>
   </div>
 </div>
-@include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
 <script nonce="{{ Vite::cspNonce() }}">
 /* The three controls above the table were markup only - typing in the box

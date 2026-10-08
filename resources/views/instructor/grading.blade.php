@@ -216,7 +216,6 @@
   </div>
 </div>
 
-@include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 
 <script nonce="{{ Vite::cspNonce() }}">

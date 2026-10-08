@@ -52,7 +52,6 @@
 <div id="tm-toast" class="toast"></div>
 @include('instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
 @include('capsa.team-management._hub-script')
-@include('instructor.partials.expert-profile')
 @include('partials.escape-closes-modals')
 </body>
 </html>

@@ -122,7 +122,6 @@
   </div>
 </div>
 
-@include('instructor.partials.expert-profile')
 
 <script nonce="{{ Vite::cspNonce() }}">
 /* Mobile sidebar toggle */

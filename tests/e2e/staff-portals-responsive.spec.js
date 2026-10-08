@@ -187,7 +187,7 @@ test('the expert dashboard tiles are counts, and a CaPSA tile opens its page', a
 // The profile from the floating bar on a phone: the avatar opens the menu,
 // the name card at its top opens the profile - whole, on screen, Save
 // within reach - and a tap on the page behind closes it again.
-test('on a phone the expert profile opens whole from the floating bar', async ({ browser }) => {
+test('on a phone the expert profile opens from the floating bar as a page of its own', async ({ browser }) => {
   const { context, page } = await phone(browser, 360, 640);
   await signIn(page, 'adviser', 'progress');
   await page.waitForTimeout(900);
@@ -198,18 +198,17 @@ test('on a phone the expert profile opens whole from the floating bar', async ({
   await page.locator('.mtab .mtab-item').last().tap();
   await expect.poll(() => page.evaluate(() => Math.round(document.querySelector('.sidebar').getBoundingClientRect().left))).toBe(0);
   await page.locator('.sidebar .sidebar-user').tap();
-  await page.waitForTimeout(500);
+  await page.waitForURL(/\/instructor\/profile$/);
+  await page.waitForTimeout(900);
+  await noTour(page);
 
-  const sheet = await page.locator('#ep-modal').boundingBox();
-  expect(sheet.x).toBe(0);
-  expect(sheet.width).toBe(360);
-  expect(sheet.y + sheet.height).toBeLessThanOrEqual(640);
-  const save = await page.locator('#ep-save-btn').boundingBox();
-  expect(save.y + save.height, 'Save is on the screen').toBeLessThanOrEqual(640);
-  await expect(page.locator('.mtab')).toHaveClass(/is-covered/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth), 'no sideways scroll').toBeLessThanOrEqual(360);
 
-  await page.mouse.click(180, 30);
-  await expect(page.locator('#ep-overlay')).not.toHaveClass(/open/);
+  // A change brings up Save, clear of the floating bar.
+  await page.locator('.pp-prog input').first().tap();
+  const bar = await page.locator('.pp-savebar').boundingBox();
+  const tabs = await page.locator('.mtab').boundingBox();
+  expect(bar.y + bar.height, 'Save is above the floating bar').toBeLessThanOrEqual(tabs.y);
   expect(errors).toEqual([]);
   await context.close();
 });

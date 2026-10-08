@@ -49,7 +49,8 @@
     }
   @endphp
 
-  <div class="sidebar-user" id="ep-trigger" onclick="openExpertProfile()">
+  {{-- The profile is a page of its own; it used to open a 300px drawer. --}}
+  <a class="sidebar-user" id="ep-trigger" href="{{ route('instructor.profile') }}" aria-label="My profile" style="color:inherit;text-decoration:none" @if ($currentRouteName === 'instructor.profile') aria-current="page" @endif>
     <div class="avatar" style="padding:0;overflow:hidden;">
       <img src="{{ $expert?->avatarUrl() ?? asset('images/default-avatar.jpg') }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" loading="lazy">
     </div>
@@ -62,7 +63,7 @@
     <div class="su-caret">
       <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
-  </div>
+  </a>
 
   @include('instructor.partials.sidebar-nav', [
     'currentPage' => $currentPage ?? '',

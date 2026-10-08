@@ -4,18 +4,54 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
+use App\Models\ExpertEvaluation;
 use App\Models\ExpertExpertise;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public function index()
+    /**
+     * The expert's profile page: what they may change on the left, and on
+     * the right how students see them while they choose an expert.
+     */
+    public function index(): View
     {
+        $expert = auth('expert')->user();
+
+        // One research area list per role they hold, and one for panels.
+        $heldRoles = $expert->roles()->pluck('role_name')->all();
+        $sides = collect(ExpertExpertise::SIDES)
+            ->filter(fn (string $label, string $side) => $side === 'panel' || in_array($side, $heldRoles, true));
+
+        // What they last saved per program. A flat number with no split
+        // ("ALL") ticks nothing, so they choose the programs themselves.
+        $programSlots = [];
+        foreach ($expert->parsedCapacity() as [$program, $max]) {
+            if ($program !== 'ALL') {
+                $programSlots[$program] = (int) $max;
+            }
+        }
+
+        $teamsHandled = $expert->teamAssignments()->where('status', 'approved')->count();
+
+        $rating = ExpertEvaluation::where('expert_id', $expert->expert_id)
+            ->selectRaw('AVG(rating) as average, COUNT(*) as total')
+            ->first();
+
         return view('instructor.profile', [
             'currentPage' => 'profile',
+            'expert' => $expert,
+            'researchSides' => $sides->all(),
+            'researchAreas' => $sides->map(fn (string $label, string $side) => $expert->expertiseFor($side)->all())->all(),
+            'programSlots' => $programSlots,
+            'teamsHandled' => $teamsHandled,
+            'slotSuggestion' => $expert->slotSuggestion($teamsHandled),
+            'ratingAverage' => (int) ($rating?->total ?? 0) > 0 ? round((float) $rating->average, 1) : null,
+            'ratingCount' => (int) ($rating?->total ?? 0),
         ]);
     }
 

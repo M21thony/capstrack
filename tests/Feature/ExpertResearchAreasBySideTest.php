@@ -91,12 +91,12 @@ class ExpertResearchAreasBySideTest extends TestCase
     {
         $expert = $this->expert(['adviser', 'consultant']);
 
-        $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk()
+        $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
             ->assertSee('data-side="adviser"', false)
             ->assertSee('data-side="consultant"', false)
             ->assertSee('data-side="panel"', false)
             ->assertDontSee('data-side="grammarian"', false)
-            ->assertSee('Research Area as');
+            ->assertSee('Research areas');
     }
 
     public function test_the_picker_offers_every_area_and_accepts_ones_not_on_the_list(): void
@@ -104,7 +104,7 @@ class ExpertResearchAreasBySideTest extends TestCase
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'max_teams' => 4, 'program_slots' => '4 - BLIS', 'first_login_at' => now()]);
         $expert->roles()->attach(Role::firstOrCreate(['role_name' => 'adviser'])->role_id);
 
-        $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk()
+        $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
             ->assertSee('Embedded Systems')
             ->assertDontSee('EP_PROGRAM_SKILLS')
             ->assertSee('Search, or type your own research area');

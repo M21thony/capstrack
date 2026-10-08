@@ -176,11 +176,6 @@
   </div>
   </div>
 </div>
-{{-- The sidebar draws a clickable name that calls openExpertProfile(),
-     which is declared in this partial. Without it the trigger was on the
-     page and the function was not, so clicking your own name here did
-     nothing at all. --}}
-@include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 
 {{-- The expert profile panel is included once for every instructor page by

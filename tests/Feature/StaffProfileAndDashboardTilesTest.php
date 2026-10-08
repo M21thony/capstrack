@@ -75,25 +75,32 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $this->assertStringContainsString('oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, \'\')"', $html);
     }
 
-    public function test_every_expert_page_with_the_sidebar_carries_the_profile_panel_it_opens(): void
+    /** The profile is a page of its own now, not a 300px drawer beside the sidebar. */
+    public function test_the_expert_card_opens_the_profile_page(): void
     {
-        $missing = collect(File::files(resource_path('views/instructor')))
-            ->filter(fn ($file) => str_contains($file->getContents(), "@include('instructor.partials.sidebar'"))
-            ->reject(fn ($file) => str_contains($file->getContents(), "@include('instructor.partials.expert-profile')"))
+        $adviser = $this->adviser();
+        $link = '#<a class="sidebar-user" id="ep-trigger" href="'.preg_quote(route('instructor.profile'), '#').'" aria-label="My profile" style="color:inherit;text-decoration:none"';
+
+        $html = $this->actingAs($adviser, 'expert')->get(route('instructor.progress'))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression($link.'\s*>#', $html);
+        $this->assertStringNotContainsString('id="ep-overlay"', $html);
+
+        $html = $this->actingAs($adviser, 'expert')->get(route('instructor.profile'))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression($link.'\s+aria-current="page"\s*>#', $html);
+
+        $stillIncluding = collect(File::files(resource_path('views/instructor')))
+            ->filter(fn ($file) => str_contains($file->getContents(), "@include('instructor.partials.expert-profile')"))
             ->map(fn ($file) => $file->getFilename())
             ->values()
             ->all();
 
-        $this->assertSame([], $missing);
-
-        $html = $this->actingAs($this->adviser(), 'expert')->get(route('instructor.progress'))->assertOk()->getContent();
-        $this->assertStringContainsString('id="ep-overlay"', $html);
-        $this->assertStringContainsString('function openExpertProfile()', $html);
+        $this->assertSame([], $stillIncluding);
     }
 
+    /** A CaPSA who also advises keeps the drawer, and on a phone it rises from the bottom over everything. */
     public function test_on_a_phone_the_profile_panel_rises_from_the_bottom_over_everything(): void
     {
-        $html = $this->actingAs($this->adviser(), 'expert')->get(route('instructor.dashboard'))->assertOk()->getContent();
+        $html = $this->actingAs($this->capsa(alsoAdviser: true), 'expert')->get(route('capsa.dashboard'))->assertOk()->getContent();
 
         $this->assertMatchesRegularExpression('#@media \(max-width:768px\)\{\s*\.ep-overlay\{z-index:1100!important\}\s*\.ep-overlay\.open\{background:rgba\(15,17,23,\.45\);pointer-events:all\}\s*\.ep-modal\{\s*left:0!important;right:0;top:auto!important;bottom:0;\s*width:100%!important#', $html);
         // The floating bar steps out of the way while it is open.

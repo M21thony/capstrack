@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\ExpertEvaluation;
+use App\Models\Role;
+use App\Models\Student;
+use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -112,6 +116,43 @@ class InstructorProfileTest extends TestCase
 
         sort($skills);
         $this->assertSame(['Machine Learning', 'Technical Writing'], $skills);
+    }
+
+    /** The profile is a page: what the expert can change, and how students see them. */
+    public function test_the_profile_page_shows_the_form_and_what_students_see(): void
+    {
+        $expert = $this->makeExpert();
+        $expert->update(['program_slots' => '3 - BSIT, 2 - BSIS', 'max_teams' => 5, 'credentials' => 'MIT']);
+        $expert->roles()->attach(Role::firstOrCreate(['role_name' => 'adviser'])->role_id);
+        DB::table('expert_expertise')->insert(['expert_id' => $expert->expert_id, 'expertise_field' => 'Research Methods', 'side' => 'adviser']);
+
+        $response = $this->actingAs($expert->fresh(), 'expert')->get(route('instructor.profile'))->assertOk();
+
+        $response->assertSee('What students see')
+            ->assertSee($expert->email)
+            ->assertSee('<option value="MIT" selected>MIT</option>', false)
+            ->assertSee('data-program="BSIT"', false)
+            ->assertSee('data-side="adviser"', false)
+            ->assertSee('Research Methods')
+            ->assertSee('No ratings from team leaders yet')
+            ->assertDontSee('id="ep-overlay"', false);
+
+        $this->assertSame(['BSIT' => 3, 'BSIS' => 2], $response->viewData('programSlots'));
+        $this->assertSame(['adviser' => ['Research Methods'], 'panel' => []], $response->viewData('researchAreas'));
+        $this->assertSame(0, $response->viewData('teamsHandled'));
+    }
+
+    public function test_the_profile_page_shows_the_rating_from_team_leaders(): void
+    {
+        $expert = $this->makeExpert();
+        $leader = Student::factory()->withCompleteProfile()->create();
+        $team = Team::create(['team_name' => 'Rated', 'team_status' => 'Active', 'is_confirmed' => true, 'leader_id' => $leader->student_id]);
+        foreach ([5, 4] as $rating) {
+            ExpertEvaluation::factory()->create(['expert_id' => $expert->expert_id, 'team_id' => $team->team_id, 'student_id' => $leader->student_id, 'rating' => $rating]);
+        }
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
+            ->assertSee('<b>4.5</b> from 2 team leader ratings', false);
     }
 
     public function test_guest_cannot_update_capacity(): void
