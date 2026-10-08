@@ -156,13 +156,14 @@ class Team extends Model
         return $years->max() >= 4 ? 2 : 1;
     }
 
-    /** The experts a team must have before it can be given a defense panel. */
+    /** The three experts every team ends up with. */
     public const REQUIRED_EXPERT_ROLES = ['adviser', 'consultant', 'grammarian'];
 
+    /** The ones it needs before it can be given a defense panel; the grammarian may come later. */
+    public const PANEL_EXPERT_ROLES = ['adviser', 'consultant'];
+
     /**
-     * Which of those roles the team has not filled yet.
-     *
-     * Getting started on the checklist is securing all three. Until then
+     * Which of the panel roles the team has not filled yet. Until then
      * nobody has read the work, so there is nothing for a panel to defend.
      *
      * @return array<int, string>
@@ -178,7 +179,7 @@ class Team extends Model
             ->unique()
             ->all();
 
-        return array_values(array_diff(self::REQUIRED_EXPERT_ROLES, $filled));
+        return array_values(array_diff(self::PANEL_EXPERT_ROLES, $filled));
     }
 
     /**

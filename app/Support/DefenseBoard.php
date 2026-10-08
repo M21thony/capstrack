@@ -37,10 +37,12 @@ class DefenseBoard
     public const PAID_STAGES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense'];
 
     /**
-     * Shown, but not in the way of a date: a team still owing requirements
-     * can be scheduled, and the panel follows them up.
+     * The only things that keep a team from a date: an adviser and a
+     * consultant (no panel without them), a panel, and the stage before
+     * passed. The rest - requirements, fees, a grammarian, the team's own
+     * expert on its panel - is shown as a warning and followed up.
      */
-    public const WARNING_KEYS = ['req'];
+    public const HARD_KEYS = ['experts', 'prev', 'panel', 'draft'];
 
     public const VENUES = ['NAS Lab', 'Mac Lab', 'ERP Lab', 'Open Lab', 'CS Lab', 'IT Lab 1', 'IT Lab 2', 'Conference Room'];
 
@@ -75,12 +77,12 @@ class DefenseBoard
     /**
      * The blockers that keep a team from a date - every one but the warnings.
      *
-     * @param  array<int, array{key: string, text: string}>  $blockers
-     * @return array<int, array{key: string, text: string}>
+     * @param  array<int, array{key: string, text: string, warn: bool}>  $blockers
+     * @return array<int, array{key: string, text: string, warn: bool}>
      */
     public static function hardBlockers(array $blockers): array
     {
-        return array_values(array_filter($blockers, fn (array $b) => ! in_array($b['key'], self::WARNING_KEYS, true)));
+        return array_values(array_filter($blockers, fn (array $b) => ! $b['warn']));
     }
 
     /** Whether this stage needs the CaPA's go before it is held: all but the pre-proposal. */
@@ -251,17 +253,21 @@ class DefenseBoard
     /**
      * What stands between this team and a date, in the order it is cleared.
      *
-     * @return array<int, array{key: string, text: string}>
+     * @return array<int, array{key: string, text: string, warn: bool}>
      */
     private function blockers(Team $team, string $stage, Collection $roles, ?DefenseSchedule $schedule, Collection $paid): array
     {
-        $missing = array_values(array_diff(Team::REQUIRED_EXPERT_ROLES, $roles->keys()->all()));
+        $missing = array_values(array_diff(Team::PANEL_EXPERT_ROLES, $roles->keys()->all()));
         $at = array_search($stage, self::STAGES, true);
         $previous = $at > 0 ? self::STAGES[$at - 1] : null;
         $out = [];
 
         if ($missing !== []) {
             $out[] = ['key' => 'experts', 'text' => 'Needs '.self::listRoles($missing)];
+        }
+
+        if (! $roles->has('grammarian')) {
+            $out[] = ['key' => 'grammarian', 'text' => 'No grammarian yet'];
         }
 
         if ($previous && ! $this->progress->hasPassed($team, $previous, $team->defenseSchedules)) {
@@ -293,7 +299,7 @@ class DefenseBoard
             $out[] = ['key' => 'fees', 'text' => 'Fees not verified'];
         }
 
-        return $out;
+        return array_map(fn (array $b) => $b + ['warn' => ! in_array($b['key'], self::HARD_KEYS, true)], $out);
     }
 
     /**

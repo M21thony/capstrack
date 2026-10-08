@@ -80,6 +80,12 @@ class GenerateDefenseScheduleTest extends TestCase
             ->postJson(route('api.admin.panel_assignment.schedule-drafts.store'), ['defense_type' => $stage]);
     }
 
+    private function board(string $stage = self::STAGE)
+    {
+        return $this->actingAs($this->capsa, 'expert')
+            ->getJson(route('api.admin.panel_assignment.board', ['defense_type' => $stage]));
+    }
+
     // ── the suggestion ───────────────────────────────────────────────────
 
     public function test_every_ready_team_is_suggested_a_slot_and_nothing_is_saved(): void
@@ -117,12 +123,12 @@ class GenerateDefenseScheduleTest extends TestCase
     public function test_teams_that_are_not_ready_are_listed_with_what_they_need(): void
     {
         $this->team('No Panel');
-        $this->panel($this->team('No Grammarian', staffed: false), CapstoneExpert::factory()->create(['approved_status' => true]));
+        $this->panel($this->team('No Experts', staffed: false), CapstoneExpert::factory()->create(['approved_status' => true]));
 
         $notReady = collect($this->draft()->assertOk()->json('data.not_ready'))->pluck('reason', 'team_name');
 
         $this->assertSame('No panel assigned yet.', $notReady['No Panel']);
-        $this->assertStringContainsString('Needs an adviser, a consultant and a grammarian', $notReady['No Grammarian']);
+        $this->assertSame('Needs an adviser and a consultant.', $notReady['No Experts']);
     }
 
     public function test_a_later_stage_needs_the_one_before_it_passed(): void
@@ -564,7 +570,8 @@ class GenerateDefenseScheduleTest extends TestCase
         $this->assertStringContainsString('NAS Lab is taken at this time', $skipped['Charlie']);
     }
 
-    public function test_a_team_whose_adviser_sits_on_its_panel_cannot_be_scheduled(): void
+    /** Only experts, a panel and the stage before hold a team back; the rest is a warning. */
+    public function test_a_team_whose_adviser_sits_on_its_panel_is_still_scheduled_with_a_warning(): void
     {
         $team = $this->team('Alpha');
         $adviser = CapstoneExpert::find(TeamExpertAssignment::where('team_id', $team->team_id)->orderBy('id')->value('expert_id'));
@@ -572,8 +579,21 @@ class GenerateDefenseScheduleTest extends TestCase
 
         $data = $this->draft()->assertOk()->json('data');
 
-        $this->assertSame([], $data['draft']);
-        $this->assertStringContainsString($adviser->name." is this team's adviser", $data['not_ready'][0]['reason']);
+        $this->assertSame(['Alpha'], array_column($data['draft'], 'team_name'));
+        $this->assertSame([], $data['not_ready']);
+        $warning = collect($this->board()->json('data.teams.0.blockers'))->firstWhere('key', 'own-panelist');
+        $this->assertTrue($warning['warn']);
+        $this->assertStringContainsString($adviser->name." is this team's adviser", $warning['text']);
+    }
+
+    public function test_a_team_without_a_grammarian_is_still_scheduled_with_a_warning(): void
+    {
+        $team = $this->team('Alpha');
+        TeamExpertAssignment::where('team_id', $team->team_id)->get()->firstWhere('engaged_role_name', 'grammarian')->delete();
+        $this->panel($team, CapstoneExpert::factory()->create(['approved_status' => true]));
+
+        $this->assertSame(['Alpha'], array_column($this->draft()->assertOk()->json('data.draft'), 'team_name'));
+        $this->assertContains(['key' => 'grammarian', 'text' => 'No grammarian yet', 'warn' => true], $this->board()->json('data.teams.0.blockers'));
     }
 
     public function test_the_window_saves_its_length(): void
