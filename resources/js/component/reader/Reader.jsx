@@ -432,29 +432,37 @@ export function RemarksPanel({
   );
 }
 
-/** The page strip: one small page per page, with how many remarks are on it. */
-export function PageStrip({ numPages, currentPage, counts, onGo }) {
+/**
+ * The page strip: one small page per page, with how many remarks are on it.
+ * Diagram pages, from firstDiagramPage on, sit under a "Diagrams" divider.
+ */
+export function PageStrip({ numPages, currentPage, counts, onGo, firstDiagramPage = null }) {
   if (!numPages) return <nav className="rr-strip" aria-label="Pages" />;
   return (
     <nav className="rr-strip" aria-label="Pages">
       {Array.from({ length: numPages }, (_, i) => {
         const n = i + 1;
         const c = counts[n] || 0;
+        const isDiagram = firstDiagramPage != null && n >= firstDiagramPage;
         return (
-          <button
-            key={n}
-            type="button"
-            className="rr-thumb"
-            aria-current={n === currentPage}
-            aria-label={`Page ${n}${c ? `, ${c} remark${c === 1 ? "" : "s"}` : ""}`}
-            onClick={() => onGo(n)}
-          >
-            <span className="rr-lines" aria-hidden="true">
-              {[62, 88, 80, 94, 70, 86, 76, 90].map((w, k) => <i key={k} style={{ width: `${w}%` }} />)}
-            </span>
-            <span className="rr-pn">{n}</span>
-            {c > 0 && <span className="rr-rc">{c}</span>}
-          </button>
+          <React.Fragment key={n}>
+            {n === firstDiagramPage && <div className="rr-strip-divide">Diagrams</div>}
+            <button
+              type="button"
+              className={`rr-thumb${isDiagram ? " diagram" : ""}`}
+              aria-current={n === currentPage}
+              aria-label={`${isDiagram ? "Diagram page" : "Page"} ${n}${c ? `, ${c} remark${c === 1 ? "" : "s"}` : ""}`}
+              onClick={() => onGo(n)}
+            >
+              {isDiagram ? <span className="rr-dtag" aria-hidden="true">Diagram</span> : (
+                <span className="rr-lines" aria-hidden="true">
+                  {[62, 88, 80, 94, 70, 86, 76, 90].map((w, k) => <i key={k} style={{ width: `${w}%` }} />)}
+                </span>
+              )}
+              <span className="rr-pn">{n}</span>
+              {c > 0 && <span className="rr-rc">{c}</span>}
+            </button>
+          </React.Fragment>
         );
       })}
     </nav>

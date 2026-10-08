@@ -611,7 +611,6 @@ function App() {
         onConfirm={handleTurnIn}
         remarks={comments}
         general={generalComments}
-        verdict={reviewVerdict}
         busy={busy}
         ctx={ctx}
       />

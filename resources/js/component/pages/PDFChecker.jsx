@@ -10,7 +10,7 @@ import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figur
 import FigureCrop from "../reader/FigureCrop";
 import { DiagramPage, DiagramsOnly, caretAt, shapeCell, shapeRects, shownPicture, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import {
-  boundsOf, captionsOnPage, figureFor, guessDiagramType, marksOf, quickRemarksFor, shapeLabel, uniqueFigures,
+  boundsOf, captionsOnPage, figureFor, guessDiagramType, marksOf, shapeLabel, uniqueFigures,
 } from "../reader/figures";
 import { cellAt } from "../reader/drawioDiff";
 
@@ -66,12 +66,13 @@ const HINTS = {
  * it has a remark, or the reviewer marked it checked. So a figure is never
  * missed in a long chapter.
  */
-function FiguresPanel({ top, figures, comments, checked, onToggle, onGo }) {
+function FiguresPanel({ top, attached, figures, comments, checked, onToggle, onGo }) {
   const count = (label) => comments.filter((c) => c.figure_label === label).length;
   const done = figures.filter((f) => count(f.label) || checked.includes(f.label)).length;
   return (
     <aside className="rr-side" aria-label="Figures">
       {top}
+      {attached}
       {figures.length ? (
         <>
           <p className="rr-help">
@@ -122,6 +123,26 @@ function FiguresPanel({ top, figures, comments, checked, onToggle, onGo }) {
 }
 
 /**
+ * The team's diagram files, which sit after the PDF's last page. Listed at the
+ * top of the side panel so a reviewer knows they are there, and can jump to one.
+ */
+function AttachedDiagrams({ pages, firstPage, onOpen }) {
+  const files = new Set(pages.map((p) => p.file)).size;
+  return (
+    <section className="rr-attached" aria-label="Attached diagrams">
+      <div className="rr-attached-head">Attached diagrams · {files} {files === 1 ? "file" : "files"}</div>
+      <p className="rr-help rr-help-tight">The team sent these diagram files with the chapter. They come after the last page. Open one to remark on its boxes and arrows.</p>
+      {pages.map((p, i) => (
+        <div key={p.key} className="rr-drow">
+          <div><b title={p.label}>{p.label}</b><small>Page {firstPage + i}</small></div>
+          <button type="button" className="rr-btn sm tint" onClick={() => onOpen(firstPage + i)}>Open</button>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/**
  * The document being reviewed, with the remarks on it.
  *
  * Select words - with the mouse, or Shift and the arrow keys then Enter - and
@@ -152,6 +173,14 @@ function PDFChecker({
   const pagesPdf = useMemo(() => (pdfUrl && !pdf ? null : withDiagramPages(pdf, drawings.pages)), [pdfUrl, pdf, drawings.pages]);
   const col = usePageColumn(totalPages);
   const Holder = pdfUrl ? Document : DiagramsOnly;
+  // Diagram pages after a PDF are easy to miss, so they are marked and listed.
+  const firstDiagramPage = numPages && drawings.pages.length ? numPages + 1 : null;
+  const [flashPage, setFlashPage] = useState(null);
+  const openDiagram = (n) => {
+    col.goToPage(n);
+    setFlashPage(null);
+    requestAnimationFrame(() => setFlashPage(n));
+  };
 
   // Changes since an earlier version are only drawn, never kept as remarks.
   // Opening one also moves the earlier version, when it is open beside this.
@@ -412,11 +441,6 @@ function PDFChecker({
     else setDraft(null);
   };
 
-  const addQuick = (q) => {
-    setText((t) => (t.includes(q) ? t : (t.trim() ? `${t.trim()} ${q}` : q)));
-    textRef.current?.focus();
-  };
-
   const startFromSelection = () => {
     if (mode !== "text" || composingRef.current) return;
     const sel = window.getSelection();
@@ -597,7 +621,7 @@ function PDFChecker({
 
   return (
     <div className="rr-work">
-      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} />
+      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} firstDiagramPage={firstDiagramPage} />
 
       <section className="rr-viewer" aria-label="Document">
         <div className="rr-hint">{showChanges && figureDiff.status === "loading" ? figureDiff.note || "Comparing the figures…" : hint}</div>
@@ -633,7 +657,8 @@ function PDFChecker({
                     key={n}
                     ref={(el) => { col.pageRefs.current[n] = el; }}
                     data-page={n}
-                    className={`rr-page${mode !== "text" ? " marking" : ""}${mode === "pin" ? " pinning" : ""}${mode === "shape" && drawing ? " shaping" : ""}`}
+                    className={`rr-page${mode !== "text" ? " marking" : ""}${mode === "pin" ? " pinning" : ""}${mode === "shape" && drawing ? " shaping" : ""}${n === flashPage ? " flash" : ""}`}
+                    onAnimationEnd={(e) => { if (e.animationName === "rr-flash") setFlashPage(null); }}
                     style={{ width: col.pageWidth, minHeight: drawing || rendered.has(n) ? undefined : Math.round((col.pageWidth * 11) / 8.5) }}
                     onPointerDown={(e) => onMarkDown(e, n)}
                     onPointerMove={(e) => onMarkMove(e, n)}
@@ -741,13 +766,6 @@ function PDFChecker({
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveBox(); } }}
               />
-              {onFigure && (
-                <div className="rr-quick" role="group" aria-label="Quick remarks">
-                  {quickRemarksFor(diagramType).map((q) => (
-                    <button key={q} type="button" className="rr-qchip" onClick={() => addQuick(q)}>{q}</button>
-                  ))}
-                </div>
-              )}
               <SectionPicker value={section} onChange={setSection} />
               <div className="rr-row">
                 {draft.type === "box"
@@ -795,6 +813,7 @@ function PDFChecker({
       ) : tab === "figures" ? (
         <FiguresPanel
           top={tabs}
+          attached={firstDiagramPage && <AttachedDiagrams pages={drawings.pages} firstPage={firstDiagramPage} onOpen={openDiagram} />}
           figures={figures}
           comments={comments}
           checked={checkedFigures}
