@@ -1143,7 +1143,7 @@ function openProfile(id) {
     + (p.tags.length ? p.tags.map(function (t) { return '<span class="xh-tag">' + esc(t) + '</span>'; }).join('') : '<span class="xh-prof-none">None yet</span>') + '</div></div>'
     + (p.studyLeave ? '<p class="xh-leave"><span class="xh-leave-tag">Study leave</span> May be slow to reply and hard to book. Plan sessions early.</p>' : '')
     + '<div class="xh-prof-rating"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>'
-    + (p.ratings ? '<b>' + Number(p.rating).toFixed(1) + '</b> from ' + p.ratings + (p.ratings === 1 ? ' team leader rating' : ' team leader ratings') : 'No ratings from team leaders yet') + '</div></div>'
+    + (p.ratings ? '<b>' + Number(p.rating).toFixed(1) + '</b> from ' + p.ratings + (p.ratings === 1 ? ' team leader rating' : ' team leader ratings') : 'No ratings from teams yet') + '</div></div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Close</button>' + action + '</div>');
 }
 

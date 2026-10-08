@@ -295,7 +295,7 @@ class ExpertsPageTabsTest extends TestCase
         $this->assertStringContainsString($field('profileName', $expert->first_name.' '.$expert->last_name.', MIT'), $html);
         $this->assertStringContainsString($field('email', $expert->email), $html);
         $this->assertStringContainsString('class="xh-prof-head"', $html);
-        $this->assertStringContainsString('No ratings from team leaders yet', $html);
+        $this->assertStringContainsString('No ratings from teams yet', $html);
         $this->assertStringContainsString('data-xh="apply"', $html);
 
         $css = file_get_contents(resource_path('student-ui/Styles/experts.css'));
