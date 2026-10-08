@@ -33,7 +33,7 @@ class CancelUnreadyDefenses extends Command
                 $open = $schedule->team?->checklistBlockersFor($schedule->defense_type) ?? [];
 
                 if ($open) {
-                    $go->cancelOnTheDay($schedule, Str::limit(implode(', ', $open), 250));
+                    $go->cancel($schedule, 'Its requirements were not complete by the defense date', Str::limit(implode(', ', $open), 250));
                     $cancelled++;
                 }
             });

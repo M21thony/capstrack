@@ -322,7 +322,7 @@ class DefenseBoard
             ->where('defense_type', $stage)
             ->filter(fn (DefenseSchedule $s) => $s !== $current && $s->schedule_date && (DefenseOutcome::requiresRedefense($s->outcome) || $s->outcome === DefenseOutcome::CANCELLED))
             ->map(fn (DefenseSchedule $s) => $s->outcome === DefenseOutcome::CANCELLED
-                ? ['kind' => 'cancelled', 'date' => $s->schedule_date->toDateString(), 'note' => $s->outcome_remarks, 'auto' => true]
+                ? ['kind' => 'cancelled', 'date' => $s->schedule_date->toDateString(), 'note' => $s->outcome_remarks, 'auto' => $s->outcome_recorded_by === null]
                 : ['kind' => 'redefense', 'date' => $s->schedule_date->toDateString(), 'note' => $s->outcomeLabel()]);
 
         return $tries->concat($earlier)->sortBy('date')->values()->all();

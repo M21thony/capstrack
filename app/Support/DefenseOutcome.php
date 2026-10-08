@@ -30,9 +30,10 @@ class DefenseOutcome
     public const REDEFENSE_NEW_TITLE = 'redefense_new_title';
 
     /**
-     * Not a panel's decision: set on the defense day by defenses:cancel-unready
-     * when the requirements are still open. The defense keeps its date, venue
-     * and panel, and the team's next try waits for a new date.
+     * Not a panel's decision: set when the CaPA says "Not ready", or on the
+     * defense day by defenses:cancel-unready when the requirements are still
+     * open. The defense keeps its date, venue and panel, and the team's next
+     * try waits for a new date.
      */
     public const CANCELLED = 'cancelled';
 
@@ -96,7 +97,7 @@ class DefenseOutcome
             self::PASSED_WITH_REVISION => 'The team moves on, but has corrections to make first.',
             self::REDEFENSE => 'The team defends this stage again with the same title.',
             self::REDEFENSE_NEW_TITLE => 'The team starts over with a new title, and submits fresh pre-proposals.',
-            self::CANCELLED => 'The requirements were not complete by the defense date. The team waits for a new date.',
+            self::CANCELLED => 'The defense was cancelled. The team waits for a new date.',
             default => '',
         };
     }
