@@ -9,7 +9,7 @@
  * filter; the stage tabs above them pick which defense. Drawn from the JSON
  * the page carries; a stage switch redraws in place, a save reloads.
  */
-import { esc, initials, fmtDay, fmtShort, slotLabel, addMinutes, isWeekend, api, toast, reloadWith, showFlash, clashWith } from './shared.js';
+import { esc, initials, fmtDay, fmtShort, slotLabel, addMinutes, isWeekend, byDayRoomTime, api, toast, reloadWith, showFlash, clashWith } from './shared.js';
 
 const root = document.getElementById('dp');
 const $ = id => document.getElementById(id);
@@ -201,7 +201,7 @@ function renderTools() {
   const hint = {
     panel: 'Panels start as drafts. Finalize one when it\'s set; it then sits every defense through Final Oral.',
     ready: 'Every team here can get a date. Missing requirements don\'t stop scheduling.',
-    scheduled: P.view === 'rooms' ? 'Every room, every section, one day at a time.' : 'Sorted by date. Turn on Other sections to see why a room or panelist is taken.',
+    scheduled: P.view === 'rooms' ? 'Every room, every section, one day at a time.' : 'Sorted by day, then room. Turn on Other sections to see why a room or panelist is taken.',
   }[P.step];
   const sections = [...new Set(TEAMS.map(t => t.section))].sort();
   let html = `<span class="hint">${hint}</span>`
@@ -267,18 +267,18 @@ const otherHere = () => (S.other || []).filter(o => o.stage === S.stage);
 
 function scheduledList(list) {
   const rows = list.map(t => ({
-    at: t.schedule.date + t.schedule.time,
+    ...t.schedule,
     html: `<tr><td>${teamCell(t)}</td>${titleCell(t)}<td>${panelHtml(t)}</td><td class="when"><b>${fmtDay(t.schedule.date)} · ${slotLabel(t.schedule.time, t.schedule.end)}</b><span>${esc(t.schedule.venue)}</span></td>`
       + `<td>${resultStatus(t)}</td>`
       + `<td><div class="acts">${needsAnswer(t) ? `<button type="button" class="btn ghost sm" data-act="capa" data-id="${t.id}">CaPA's answer</button>` : ''}${t.outcome ? '' : `<button type="button" class="btn ghost sm" data-act="move" data-id="${t.id}">${ICON.edit}Change</button>`}</div></td></tr>`,
   }));
   if (P.others && !P.q && !P.section) {
     otherHere().forEach(o => rows.push({
-      at: o.date + o.time,
+      date: o.date, time: o.time, venue: o.venue,
       html: `<tr class="other"><td><b>${esc(o.section)}</b><br><span class="muted" style="font-size:12px">Another section</span></td><td></td><td><div class="people">${o.panel.map(id => `<div><span>${esc(nameOf(id))}</span></div>`).join('')}</div></td><td class="when"><b>${fmtDay(o.date)} · ${slotLabel(o.time, o.end)}</b><span>${esc(o.venue)}</span></td><td></td><td></td></tr>`,
     }));
   }
-  rows.sort((a, b) => a.at.localeCompare(b.at));
+  rows.sort(byDayRoomTime);
   return table(['Team', 'Capstone title', 'Panel', 'When & where', 'Status', 'Actions'], rows.map(r => r.html), `Nothing scheduled for ${esc(S.stage)} yet.`);
 }
 

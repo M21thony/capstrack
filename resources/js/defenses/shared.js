@@ -30,6 +30,9 @@ export const slotLabel = (start, end) => end ? `${clock(start)} – ${clock(end)
 
 export const isWeekend = iso => [0, 6].includes(new Date(iso + 'T00:00').getDay());
 
+/** Earliest day first, then room, then time: one room's defenses on a day sit together. */
+export const byDayRoomTime = (a, b) => a.date.localeCompare(b.date) || (a.venue || '').localeCompare(b.venue || '') || a.time.localeCompare(b.time);
+
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
 /** JSON to and from the server. A refusal throws an Error carrying the status and the server's body. */
