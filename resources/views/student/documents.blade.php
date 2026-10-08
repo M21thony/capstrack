@@ -13,8 +13,11 @@
      is one group per line with every version under it - who sent it, when,
      where each reviewer is. A version opens on this page with its remarks
      beside it. The list is a table when there is room and one compact row
-     per version when there is not. */
-  .dc-card { max-width: 1160px; container: dc-list / inline-size; }
+     per version when there is not. The shared .sub-card caps at 980px and
+     loads later, so the page's own width needs the extra class to win;
+     the table needs ~930px, so below 1000px it turns into compact rows
+     rather than running past the card's edge and being cut off. */
+  .sub-card.dc-card { max-width: 1160px; container: dc-list / inline-size; }
   .dc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .dc-table { width: 100%; border-collapse: collapse; }
   .dc-table thead th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); background: var(--bg3); padding: 8px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -59,7 +62,7 @@
   .dc-card .sub-status.revise { background: rgba(180,83,9,.09); color: #b45309; }
   .dc-card .sub-status.ok { background: rgba(22,163,74,.09); color: #15803d; }
 
-  @container dc-list (max-width: 860px) {
+  @container dc-list (max-width: 1000px) {
     .dc-table thead { display: none; }
     .dc-table, .dc-table tbody, .dc-group, .dc-group th { display: block; }
     .dc-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 190px 96px; grid-template-areas: "v f w a" ". r r a"; gap: 4px 16px; align-items: center; padding: 8px 16px; }

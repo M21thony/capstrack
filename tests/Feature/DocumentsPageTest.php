@@ -181,4 +181,18 @@ class DocumentsPageTest extends TestCase
         $this->assertStringNotContainsString('data-tour-target="student.review"', $html);
         $this->assertMatchesRegularExpression('/href="'.preg_quote(route('student.documents'), '/').'"[^>]*class="nav-item active"/', $html);
     }
+
+    /**
+     * The shared .sub-card stops at 980px and loads after the page's style,
+     * which squeezed the table past the card's edge and cut off the Unsubmit
+     * button and the status pills. The card keeps its own width, and turns
+     * into compact rows while it is too narrow for the table.
+     */
+    public function test_the_table_is_never_wider_than_its_card(): void
+    {
+        $html = $this->actingAs($this->me, 'web')->get(route('student.documents'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('.sub-card.dc-card { max-width: 1160px;', $html);
+        $this->assertStringContainsString('@container dc-list (max-width: 1000px)', $html);
+    }
 }
