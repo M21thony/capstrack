@@ -118,8 +118,11 @@ class StudentProfilePanelTest extends TestCase
         $this->assertStringContainsString('21-04512', $panel);
     }
 
-    /** A student with no team is shown their account and nothing invented. */
-    public function test_a_student_with_no_team_gets_no_capstone_block(): void
+    /**
+     * A student with no team is shown their account and nothing invented -
+     * only that they have no team yet, and where to find one.
+     */
+    public function test_a_student_with_no_team_is_pointed_to_team_management(): void
     {
         $panel = $this->panel(
             $this->actingAs($this->student(), 'web')->get(route('student.team'))->assertOk()->getContent()
@@ -129,6 +132,8 @@ class StudentProfilePanelTest extends TestCase
         $this->assertStringContainsString('mark@my.cspc.edu.ph', $panel);
         $this->assertStringNotContainsString('Next defense', $panel);
         $this->assertStringNotContainsString('pm-members', $panel);
+        $this->assertStringContainsString('You are not on a team yet.', $panel);
+        $this->assertStringContainsString('href="'.route('student.team').'">Find a team in Team Management</a>', $panel);
     }
 
     /** The rest of where they stand: the team, the experts, the next defense. */

@@ -180,6 +180,13 @@
      included on every student page, and no build step to forget. */
   .pm-header { align-items: flex-start; }
 
+  /* Beside the sidebar it is as tall as what it holds. Held to the full
+     height of the screen, a student with no team yet got two lines and a
+     white column the rest of the way down. */
+  @media (min-width: 769px) {
+    .profile-overlay .profile-modal { height: auto; max-height: 100vh; max-height: 100dvh; border-bottom: 1px solid var(--border); border-bottom-right-radius: 14px; }
+  }
+
   /* On a phone the panel sat 250px from the left, beside a sidebar that is
      not there, so most of it ran off the screen. It rises from the bottom
      instead, the full width, over a dimmed page. */
@@ -245,6 +252,8 @@
   .pm-defense-type { font-size: 13px; font-weight: 700; color: var(--text); }
   .pm-defense-meta { font-size: 11.5px; color: var(--text3); margin-top: 2px; line-height: 1.45; }
   .pm-empty { font-size: 12.5px; color: var(--text3); }
+  .pm-find-team { display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--accent3); text-decoration: none; }
+  .pm-find-team:hover { text-decoration: underline; }
 </style>
 
 <div class="profile-overlay" id="profile-overlay" onclick="handleOverlayClick(event)">
@@ -349,6 +358,12 @@
           @else
             <div class="pm-empty">Nothing scheduled yet.</div>
           @endif
+        </div>
+      @else
+        <div class="pm-zone pm-zone-capstone">
+          <div class="pm-zone-head"><span class="pm-label">Capstone</span><span class="pm-rule"></span></div>
+          <div class="pm-empty">You are not on a team yet.</div>
+          <a class="pm-find-team" href="{{ route('student.team') }}">Find a team in Team Management</a>
         </div>
       @endif
 
