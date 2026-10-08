@@ -4,8 +4,12 @@ namespace App\Services;
 
 use App\Models\ArchivedDocument;
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
 use App\Models\Role;
+use App\Models\StudentSchoolYear;
+use App\Models\Term;
 use App\Support\ResearchAgenda;
+use App\Support\SectionScope;
 use Illuminate\Support\Facades\Log;
 use Smalot\PdfParser\Parser;
 
@@ -583,7 +587,10 @@ PROMPT;
     }
 
     // ── 3. TRUE RAG: embed query → cosine similarity → top N ──────────
-    public function findSimilarDocuments(array $concepts, int $topN = 10): array
+    /**
+     * @param  int|null  $excludeTeamId  The checking team, so its own recommended title is not a match.
+     */
+    public function findSimilarDocuments(array $concepts, int $topN = 10, ?int $excludeTeamId = null): array
     {
         // Build a rich text representation — strip stop words before embedding
         $rawQueryText = implode("\n", array_filter([
@@ -626,8 +633,10 @@ PROMPT;
 
         // ── Phase 3: Cosine similarity against every stored embedding ─
         $scored = [];
+        $candidates = $docs->map(fn (ArchivedDocument $doc) => [$doc, null])
+            ->concat($this->recommendedThisYear($excludeTeamId));
 
-        foreach ($docs as $doc) {
+        foreach ($candidates as [$doc, $recommended]) {
             $storedEmbedding = json_decode($doc->embedding, true);
 
             if (! is_array($storedEmbedding) || empty($storedEmbedding)) {
@@ -646,6 +655,7 @@ PROMPT;
 
             $scored[] = [
                 'document' => $doc,
+                'recommended' => $recommended,
                 'score' => $score,
                 'reason' => '',
                 'similarities' => '',
@@ -672,7 +682,64 @@ PROMPT;
         // ── Phase 4: Enrich top matches with AI-generated reasons ─────
         $enriched = $this->enrichWithReasons($concepts, $topCandidates);
 
+        // Judged on its text; shown by title only (see recommendedThisYear()).
+        foreach ($enriched as $item) {
+            if ($item['recommended']) {
+                $item['document']->abstract = null;
+            }
+        }
+
         return array_slice($enriched, 0, $topN);
+    }
+
+    /**
+     * This year's recommended titles from other teams, any section, shaped
+     * like archive documents so they are scored and judged the same way.
+     *
+     * The archive holds only finished capstones, so two sections could each
+     * be recommended the same idea in the same year without either seeing
+     * it. Each title is embedded once; the model clears it when the text
+     * changes. Only the title and its section reach the student - another
+     * team's work in progress is not theirs to read - so the text is used
+     * for the comparison and then dropped.
+     *
+     * @return array<int, array{0: ArchivedDocument, 1: string}>
+     */
+    private function recommendedThisYear(?int $excludeTeamId): array
+    {
+        $teamIds = StudentSchoolYear::acrossAllTerms()
+            ->where('school_year', Term::currentSchoolYear())
+            ->whereNotNull('team_id')->distinct()->pluck('team_id');
+
+        $proposals = CapstonePreProposal::with('team')
+            ->whereIn('team_id', $teamIds)
+            ->when($excludeTeamId, fn ($q) => $q->where('team_id', '!=', $excludeTeamId))
+            ->where('approved_status', true)
+            ->whereNull('retired_at')
+            ->get();
+
+        $sections = app(SectionScope::class);
+
+        return $proposals->map(function (CapstonePreProposal $proposal) use ($sections) {
+            $text = $proposal->title."\n".$proposal->problem_statement."\n".$proposal->proposed_solution;
+
+            if (! $proposal->embedding) {
+                try {
+                    $proposal->embedding = json_encode($this->ollama->embed($this->removeStopWords($text)));
+                    $proposal->save();
+                } catch (\Exception $e) {
+                    Log::warning('Could not embed a recommended title', ['pre_proposal_id' => $proposal->id, 'error' => $e->getMessage()]);
+
+                    return null;
+                }
+            }
+
+            $doc = new ArchivedDocument(['title' => $proposal->title, 'abstract' => $text]);
+            $doc->embedding = $proposal->embedding;
+            $section = $proposal->team ? $sections->sectionFor($proposal->team) : '';
+
+            return [$doc, 'Recommended this year'.($section ? ' — '.$section : '')];
+        })->filter()->values()->all();
     }
 
     // ── 4. Add human-readable reasons to top vector matches ───────────

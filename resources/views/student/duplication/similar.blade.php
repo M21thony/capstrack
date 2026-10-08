@@ -24,10 +24,13 @@
   $year = $match['academic_year'] ?? 'N/A';
   $program = $match['program'] ?? '';
 
+  // Another team's title recommended this year, not an archive study.
+  $recommended = $match['recommended'] ?? null;
+
   $headline = $score === null
       ? 'This one came back on keywords, but was never scored'
       : ($flagged ? 'Your title is highly similar to' : 'Your title overlaps')
-        .' a '.$year.' '.$program.' capstone';
+        .($recommended ? ' a title already recommended this year' : ' a '.$year.' '.$program.' capstone');
 
   // A match opened straight from the Pre-Proposal page has to go back there.
   // Sending them to the full report drops them on a page they never opened.
@@ -99,17 +102,23 @@
   </div>
 
   <div class="col">
-    <div class="who">Archived capstone &middot; {{ $year }}</div>
-    <h3>{!! $mark($match['title'] ?? '') !!}</h3>
-    <div class="sub">{{ $program ?: 'Program not recorded' }}</div>
-    <div class="field">
-      <div class="k">Written by</div>
-      <div class="v">{{ $match['authors'] ?: 'Authors not recorded yet' }}</div>
-    </div>
-    <div class="field">
-      <div class="k">Abstract</div>
-      <div class="v">{!! $match['abstract'] ? $mark($match['abstract']) : 'No abstract was recorded for this capstone.' !!}</div>
-    </div>
+    @if ($recommended)
+      <div class="who">{{ $recommended }}</div>
+      <h3>{!! $mark($match['title'] ?? '') !!}</h3>
+      <div class="sub">Another team's title. Only the title is shown: their pre-proposal is still their own work in progress.</div>
+    @else
+      <div class="who">Archived capstone &middot; {{ $year }}</div>
+      <h3>{!! $mark($match['title'] ?? '') !!}</h3>
+      <div class="sub">{{ $program ?: 'Program not recorded' }}</div>
+      <div class="field">
+        <div class="k">Written by</div>
+        <div class="v">{{ $match['authors'] ?: 'Authors not recorded yet' }}</div>
+      </div>
+      <div class="field">
+        <div class="k">Abstract</div>
+        <div class="v">{!! $match['abstract'] ? $mark($match['abstract']) : 'No abstract was recorded for this capstone.' !!}</div>
+      </div>
+    @endif
   </div>
 </div>
 

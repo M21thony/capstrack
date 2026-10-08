@@ -241,7 +241,7 @@ class StudentExpertController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sent to your CaPSA. '.$assignment->expert?->name.' stays with your team until they approve; then your application goes to '.$replacement['expert']->name.'.',
+                'message' => 'Sent to your CaPSA. '.$assignment->expert?->name.' stays with your team until they approve; then '.$replacement['expert']->name.' takes their place.',
             ]);
         }
 

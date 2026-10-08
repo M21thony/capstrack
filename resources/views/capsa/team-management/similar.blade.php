@@ -13,7 +13,7 @@
   $team = $row->team;
   $words = $title['duplication']['highlight_words'] ?? [];
   $link = fn ($k) => route('capsa.team_management.similar', [$team->team_id, $preProposal->id, $k]);
-  $meta = collect([$match['academic_year'], $match['program'], $match['authors'] ? 'By '.$match['authors'] : null])
+  $meta = collect([$match['recommended'], $match['academic_year'], $match['program'], $match['authors'] ? 'By '.$match['authors'] : null])
       ->filter()->implode(' · ');
 @endphp
 
@@ -48,6 +48,8 @@
       <div class="k">Words this title shares with it are highlighted.</div>
       {{-- Lit by the same words the check pulled out of the title. --}}
       <p>{!! \App\Services\SimilarityService::highlight($match['abstract'], $words) !!}</p>
+    @elseif ($match['recommended'])
+      <p class="none">Another team's recommended title. Only the title is kept with this report.</p>
     @else
       <p class="none">The archive has no abstract for this study.</p>
     @endif
