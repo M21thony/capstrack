@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\DefenseSchedule;
 use App\Models\ExpensePost;
@@ -67,6 +68,13 @@ class CapsaReports
     public const BANDS = ['progress' => 'grey', 'master' => 'gold', 'results' => 'blue', 'fees' => 'green'];
 
     public const DASH = '—';
+
+    /** Expert Load's slot suggestion: how far back it looks, and what counts as fast and slow, in days. */
+    private const SUGGEST_DAYS = 180;
+
+    private const FAST_DAYS = 3;
+
+    private const SLOW_DAYS = 7;
 
     /** The columns each one-row-per-team report has, key => heading. */
     public const TEAM_COLUMNS = [
@@ -650,16 +658,22 @@ class CapsaReports
             ->filter(fn (CapstoneExpert $e) => $now->has($e->expert_id) || $then->has($e->expert_id)
                 || $e->roles->contains(fn ($r) => array_key_exists(strtolower((string) $r->role_name), self::ROLES)));
 
-        $rows = $experts->map(function (CapstoneExpert $e) use ($now, $then) {
+        $reviews = CapstoneDocumentReview::where('created_at', '>=', now()->subDays(self::SUGGEST_DAYS))
+            ->get(['expert_id', 'review_status', 'created_at', 'reviewed_at'])
+            ->groupBy('expert_id');
+
+        $rows = $experts->map(function (CapstoneExpert $e) use ($now, $then, $reviews) {
             $mine = $now->get($e->expert_id, collect());
             $last = $then->get($e->expert_id, collect())->count();
             $total = $mine->count();
+            $used = $mine->pluck('team')->unique()->count();
 
             return ['id' => null, 'now' => $total, 'name' => $e->name, 'cells' => [
                 'expert' => ['b', $e->name],
             ] + collect(self::ROLES)->mapWithKeys(fn ($l, $key) => [$key => ['num', $mine->where('role', $key)->count()]])->all() + [
                 'now' => ['num', $total],
-                'slots' => ['slots', $mine->pluck('team')->unique()->count(), (int) ($e->max_teams ?? 0)],
+                'slots' => ['slots', $used, (int) ($e->max_teams ?? 0)],
+                'suggestion' => $this->slotSuggestion($used, (int) ($e->max_teams ?? 0), $reviews->get($e->expert_id, collect())),
                 'last' => ['num', $last],
                 'change' => $this->change($total, $last),
                 'teams' => $mine->isEmpty() ? self::DASH : $mine->pluck('team')->filter()->unique()->sort()->implode(', '),
@@ -670,12 +684,12 @@ class CapsaReports
         $lastTotal = $rows->sum(fn ($r) => $r['cells']['last'][1]);
 
         return [
-            'columns' => $this->cols(['expert' => 'Expert', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'now' => 'Teams now', 'slots' => 'Slots used', 'last' => 'S.Y. '.$ctx['compare'], 'change' => 'Change', 'teams' => 'Teams they handle'], ['adviser', 'consultant', 'grammarian', 'now', 'last']),
+            'columns' => $this->cols(['expert' => 'Expert', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'now' => 'Teams now', 'slots' => 'Slots used', 'suggestion' => 'Suggestion', 'last' => 'S.Y. '.$ctx['compare'], 'change' => 'Change', 'teams' => 'Teams they handle'], ['adviser', 'consultant', 'grammarian', 'now', 'last']),
             'rows' => $rows->map(fn ($r) => ['id' => null, 'cells' => $r['cells']])->all(),
             'total' => $rows->isEmpty() ? null : ['expert' => ['b', 'All experts']]
                 + collect(self::ROLES)->mapWithKeys(fn ($l, $key) => [$key => ['b', (string) $rows->sum(fn ($r) => $r['cells'][$key][1])]])->all()
-                + ['now' => ['b', (string) $nowTotal], 'slots' => '', 'last' => ['b', (string) $lastTotal], 'change' => $this->change($nowTotal, $lastTotal), 'teams' => ''],
-            'summary' => $this->count($rows->count(), 'expert').' · '.$nowTotal.' team roles in S.Y. '.$ctx['year'].', '.$lastTotal.' in S.Y. '.$ctx['compare'].'. A team counts once for each role the expert holds on it.',
+                + ['now' => ['b', (string) $nowTotal], 'slots' => '', 'suggestion' => '', 'last' => ['b', (string) $lastTotal], 'change' => $this->change($nowTotal, $lastTotal), 'teams' => ''],
+            'summary' => $this->count($rows->count(), 'expert').' · '.$nowTotal.' team roles in S.Y. '.$ctx['year'].', '.$lastTotal.' in S.Y. '.$ctx['compare'].'. A team counts once for each role the expert holds on it. Suggestion comes from the last '.self::SUGGEST_DAYS.' days of reviews: Increase slots when all slots are used and documents are reviewed within '.self::FAST_DAYS.' days, Reduce slots when reviews take or wait over '.self::SLOW_DAYS.' days.',
             'empty' => 'No experts to show yet.',
         ];
     }
@@ -730,6 +744,32 @@ class CapsaReports
             'summary' => $this->count($rows->count(), 'expert').' on the Expert Management page.',
             'empty' => 'No experts to show yet.',
         ];
+    }
+
+    /**
+     * Increase, Maintain or Reduce slots, from how quickly the expert reviews
+     * their teams' documents. Only a suggestion; slots never change by it.
+     * No slot limit or no finished review yet gives no suggestion.
+     *
+     * @param  Collection<int, CapstoneDocumentReview>  $reviews
+     */
+    private function slotSuggestion(int $used, int $max, Collection $reviews): string
+    {
+        $done = $reviews->where('review_status', CapstoneDocumentReview::REVIEWED)->whereNotNull('reviewed_at');
+        if ($max === 0 || $done->isEmpty()) {
+            return self::DASH;
+        }
+
+        $averageDays = $done->avg(fn ($r) => $r->created_at->diffInHours($r->reviewed_at) / 24);
+        $longestWait = $reviews->whereIn('review_status', [CapstoneDocumentReview::AWAITING, CapstoneDocumentReview::IN_PROGRESS])
+            ->map(fn ($r) => $r->created_at->diffInHours(now()) / 24)
+            ->max() ?? 0;
+
+        return match (true) {
+            $averageDays > self::SLOW_DAYS || $longestWait > self::SLOW_DAYS => 'Reduce slots',
+            $used >= $max && $averageDays <= self::FAST_DAYS && $longestWait <= self::FAST_DAYS => 'Increase slots',
+            default => 'Maintain slots',
+        };
     }
 
     private function change(int $now, int $last): array|string
