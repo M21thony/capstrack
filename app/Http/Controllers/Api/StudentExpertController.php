@@ -87,11 +87,6 @@ class StudentExpertController extends Controller
         $validated = $request->validate([
             'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
             'expert_role_id' => ['required', 'integer', 'exists:expert_roles,expert_role_id'],
-            // Optional when the team already has an approved pre-proposal:
-            // that PDF is the one the CaPSA read and approved, so making the
-            // team hunt down and re-upload the same file only invited them to
-            // attach a different, unapproved one.
-            'proposal_file' => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
             'message' => ['required', 'string', function ($attribute, $value, $fail) {
                 if (str_word_count($value) > 500) {
                     $fail('The message field must not be greater than 500 words.');
@@ -131,26 +126,21 @@ class StudentExpertController extends Controller
             return response()->json(['success' => false, 'message' => $refusal['message']], $refusal['status']);
         }
 
-        // The pre-proposal the CaPSA settled on, when there is one. It is
-        // what the team is actually being advised on, and an expert can trust
-        // it was approved rather than take the team's word for it.
+        // Only the pre-proposal the CaPSA recommended goes out: the expert can
+        // trust it was checked, and no other file can be sent in its place.
         $approvedProposal = $team->selected_pre_proposal_id
             ? CapstonePreProposal::find($team->selected_pre_proposal_id)
             : null;
 
-        if (! $request->hasFile('proposal_file') && ! $approvedProposal) {
+        if (! $approvedProposal) {
             return response()->json([
                 'success' => false,
-                'message' => 'Attach your proposal, or get a pre-proposal approved first and it will be sent for you.',
+                'message' => 'Your pre-proposal has to be recommended by your CaPSA before you can apply for an expert.',
             ], 422);
         }
 
         try {
-            $filePath = $request->hasFile('proposal_file')
-                ? $request->file('proposal_file')->store('proposals', 'public')
-                : null;
-
-            $assignment = $this->applications->send($team, $expert, (int) $validated['expert_role_id'], $validated['message'], $filePath, $approvedProposal?->id);
+            $assignment = $this->applications->send($team, $expert, (int) $validated['expert_role_id'], $validated['message'], null, $approvedProposal->id);
 
             return response()->json([
                 'success' => true,
