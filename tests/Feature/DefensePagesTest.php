@@ -105,6 +105,31 @@ class DefensePagesTest extends TestCase
         $this->assertSame('2027-03-15', $own->fresh()->schedule_date->toDateString());
     }
 
+    /** Generate schedule puts a panel's teams together, whichever sections they are in. */
+    public function test_a_panel_shared_with_another_section_defends_back_to_back_in_one_room(): void
+    {
+        DefenseWindow::create(['defense_type' => DefenseOutcome::PRE_PROPOSAL, 'start_date' => '2027-03-15', 'end_date' => '2027-03-16']);
+        $panel = CapstoneExpert::factory()->count(3)->create(['approved_status' => true]);
+        [$theirs] = $this->teamInSection('Theirs', yearSection: '3rd · B');
+        [$mine] = $this->teamInSection('Mine');
+        $this->staff($mine);
+
+        foreach ([$theirs, $mine] as $team) {
+            $schedule = DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => DefenseOutcome::PRE_PROPOSAL, 'attempt' => 1]);
+            foreach (['Panel Chair', 'Panel Member 1', 'Panel Member 2'] as $i => $role) {
+                DefensePanel::create(['defense_id' => $schedule->defense_id, 'expert_id' => $panel[$i]->expert_id, 'panel_role' => $role, 'created_at' => now()]);
+            }
+        }
+        DefenseSchedule::where('team_id', $theirs->team_id)->update(['schedule_date' => '2027-03-16 08:00:00', 'end_date' => '2027-03-16 10:00:00', 'venue' => 'Open Lab']);
+
+        $row = $this->actingAs($this->capsa, 'expert')
+            ->postJson(route('api.admin.panel_assignment.schedule-drafts.store'), ['defense_type' => DefenseOutcome::PRE_PROPOSAL])
+            ->assertOk()
+            ->json('data.draft.0');
+
+        $this->assertSame(['Mine', '2027-03-16', '10:00', 'Open Lab'], [$row['team_name'], $row['date'], $row['start_time'], $row['venue']]);
+    }
+
     public function test_a_capsa_cannot_move_a_defense_outside_her_sections(): void
     {
         [$theirs] = $this->teamInSection('Theirs', yearSection: '3rd · B');
