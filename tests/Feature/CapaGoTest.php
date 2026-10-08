@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Services\CapaGo;
 use App\Support\DefenseOutcome;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -89,7 +90,7 @@ class CapaGoTest extends TestCase
         $this->assertSame('go', $this->row()['capa']);
     }
 
-    public function test_not_ready_cancels_the_date_and_the_team_waits_for_a_new_one(): void
+    public function test_not_ready_cancels_the_defense_and_the_team_waits_for_a_new_date(): void
     {
         $defense = $this->defense();
         $was = $defense->schedule_date->copy();
@@ -99,14 +100,15 @@ class CapaGoTest extends TestCase
             ->assertRedirect();
 
         $defense->refresh();
-        $this->assertNull($defense->schedule_date);
-        $this->assertNull($defense->venue);
-        $this->assertDatabaseHas('defense_cancellations', ['defense_id' => $defense->defense_id, 'note' => 'Chapter 3 not done', 'cancelled_by' => $this->adviser->expert_id]);
-        $this->assertTrue(DefenseCancellation::first()->was_scheduled_at->equalTo($was));
+        $this->assertSame(DefenseOutcome::CANCELLED, $defense->outcome);
+        $this->assertTrue($defense->schedule_date->equalTo($was));
+        $this->assertSame('Mac Lab', $defense->venue);
+        $this->assertSame(0, DefenseCancellation::count());
 
         $row = $this->row();
         $this->assertSame('cancelled', $row['waiting']);
-        $this->assertSame('cancelled', $row['tries'][0]['kind']);
+        $this->assertSame(2, $row['attempt']);
+        $this->assertSame(['kind' => 'cancelled', 'date' => $was->toDateString(), 'note' => 'Chapter 3 not done', 'auto' => false], $row['tries'][0]);
         $this->assertTrue(Notification::where('student_id', $this->leader->student_id)->where('title', 'like', '%cancelled%')->exists());
     }
 
@@ -136,8 +138,8 @@ class CapaGoTest extends TestCase
             ->postJson(route('api.admin.panel_assignment.capa.store', $defense), ['answer' => 'not_ready'])
             ->assertOk();
 
-        $this->assertNull($defense->fresh()->schedule_date);
-        $this->assertSame(1, DefenseCancellation::count());
+        $this->assertSame(DefenseOutcome::CANCELLED, $defense->fresh()->outcome);
+        $this->assertNotNull($defense->fresh()->schedule_date);
     }
 
     public function test_a_redefense_waits_for_a_date_with_its_earlier_try_on_record(): void
@@ -149,6 +151,21 @@ class CapaGoTest extends TestCase
         $row = $this->row();
         $this->assertSame('redefense', $row['waiting']);
         $this->assertSame('redefense', $row['tries'][0]['kind']);
+    }
+
+    /** Cancelled on the day for open requirements: the date stays on record, and the team waits for a new one. */
+    public function test_a_defense_cancelled_on_the_day_waits_for_a_new_date(): void
+    {
+        $defense = $this->defense();
+        $defense->update(['schedule_date' => now()->setTime(8, 0), 'end_date' => now()->setTime(10, 0)]);
+
+        app(CapaGo::class)->cancel($defense->fresh(), 'Its requirements were not complete by the defense date', 'Signed Hearing Notice');
+
+        $row = $this->row();
+        $this->assertSame('cancelled', $row['waiting']);
+        $this->assertSame(['kind' => 'cancelled', 'date' => today()->toDateString(), 'note' => 'Signed Hearing Notice', 'auto' => true], $row['tries'][0]);
+        $this->assertSame(2, $row['attempt']);
+        $this->assertSame(0, DefenseCancellation::count());
     }
 
     public function test_scheduling_a_title_defense_asks_the_adviser_for_the_go(): void

@@ -315,7 +315,7 @@ class DefenseScheduleWorkbook
     private function footnote(Worksheet $sheet, int $row): void
     {
         $sheet->mergeCells("A$row:O$row");
-        $sheet->setCellValue("A$row", 'CANCELLED: the CaPA did not give the go, and the team waits for its CaPSA to set a new date. REDEFENSE: the team waits for a new date before the deadline shown. (Returnee): a student back from an earlier school year.');
+        $sheet->setCellValue("A$row", 'CANCELLED: the CaPA did not give the go, or the requirements were not complete on the defense day; RESCHED is the new date the CaPSA set. REDEFENSE: the team waits for a new date before the deadline shown. (Returnee): a student back from an earlier school year.');
         $sheet->getStyle("A$row")->getFont()->setSize(8)->setItalic(true)->setColor(new Color(self::INK3));
     }
 

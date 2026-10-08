@@ -3,21 +3,19 @@
 namespace App\Services;
 
 use App\Models\CapstoneExpert;
-use App\Models\DefenseCancellation;
 use App\Models\DefenseSchedule;
 use App\Models\StudentSchoolYear;
 use App\Support\DefenseBoard;
+use App\Support\DefenseOutcome;
 use Illuminate\Support\Facades\Log;
 
 /**
  * The CaPA's go for a Title, Pre Oral or Final Oral Defense.
  *
  * The team's adviser (CaPA) says whether the team is ready for the date it
- * was given. "Go" is kept on the defense. "Not ready" calls the date off: the
- * date it lost is kept in defense_cancellations, the slot is freed, and the
- * team waits under Ready to schedule for its CaPSA to give it a new one.
- * The CaPSA may record an answer the CaPA gave in person. The same cancel runs
- * on its own on the defense day when the requirements are still open.
+ * was given. "Go" is kept on the defense. "Not ready" cancels it (see
+ * cancel()). The CaPSA may record an answer the CaPA gave in person. On the
+ * defense day, a team whose requirements are still open is cancelled too.
  */
 class CapaGo
 {
@@ -53,29 +51,28 @@ class CapaGo
             return;
         }
 
-        $this->cancel($schedule, 'The CaPA said the team is not ready yet', $note, $by->expert_id);
+        $this->cancel($schedule, 'The CaPA said the team is not ready yet', $note ? trim($note) : null, $by->expert_id);
     }
 
     /**
-     * Call the date off and put the team back under Ready to schedule. Used
-     * for "Not ready", and by defenses:cancel-unready - with no one to name
-     * as $cancelledBy - when the requirements were still open on the day.
+     * Cancel the defense. It keeps its date, venue and panel with the status
+     * Cancelled, as the department's sheet does; the team's next try opens
+     * with no date, under Ready to schedule, for the CaPSA to give one.
+     * $by is whoever said "Not ready", or null when cancelled automatically.
      */
-    public function cancel(DefenseSchedule $schedule, string $reason, ?string $note, ?int $cancelledBy): void
+    public function cancel(DefenseSchedule $schedule, string $reason, ?string $note, ?int $by = null): void
     {
         $schedule->loadMissing('panels.expert', 'team');
-        $was = $schedule->schedule_date->copy();
+        $schedule->update(['outcome' => DefenseOutcome::CANCELLED, 'outcome_remarks' => $note, 'outcome_recorded_by' => $by, 'outcome_recorded_at' => now()]);
 
-        DefenseCancellation::create([
-            'defense_id' => $schedule->defense_id,
-            'team_id' => $schedule->team_id,
-            'defense_type' => $schedule->defense_type,
-            'was_scheduled_at' => $was,
-            'venue' => $schedule->venue,
-            'note' => $note ? trim($note) : null,
-            'cancelled_by' => $cancelledBy,
-        ]);
+        $this->freeCalendars($schedule);
+        app(DefenseOutcomeRecorder::class)->openNextAttempt($schedule);
+        $this->notifyCancelled($schedule, $reason, $note);
+    }
 
+    /** Take the defense off the panelists' Google Calendars. */
+    private function freeCalendars(DefenseSchedule $schedule): void
+    {
         foreach ($schedule->panels->filter(fn ($p) => $p->google_event_id) as $panel) {
             try {
                 $this->calendar->cancelBookingEvent($panel->expert_id, $panel->google_event_id);
@@ -84,13 +81,14 @@ class CapaGo
             }
             $panel->update(['google_event_id' => null]);
         }
+    }
 
-        $schedule->update(['schedule_date' => null, 'end_date' => null, 'venue' => null, 'capa_answer' => null, 'capa_answered_at' => null, 'capa_answered_by' => null]);
-
+    private function notifyCancelled(DefenseSchedule $schedule, string $reason, ?string $note): void
+    {
         $team = $schedule->team?->team_name ?? 'The team';
         $title = $schedule->defense_type.' cancelled: '.$team;
-        $message = $team.'\'s '.$schedule->defense_type.' on '.$was->format('M j, g:i A').' is cancelled. '.$reason
-            .($note ? ' ('.trim($note).')' : '').'. The CaPSA will set a new date.';
+        $message = $team.'\'s '.$schedule->defense_type.' on '.$schedule->schedule_date->format('M j, g:i A').' is cancelled. '.$reason
+            .($note ? ' ('.$note.')' : '').'. The CaPSA will set a new date.';
 
         Notifier::toStudents(
             StudentSchoolYear::where('team_id', $schedule->team_id)->whereNotNull('student_id')->pluck('student_id')->unique()->map(fn ($id) => (int) $id),

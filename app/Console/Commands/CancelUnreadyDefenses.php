@@ -8,9 +8,9 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 /**
- * On the defense day, calls off every defense whose team still has open
- * requirements above it on the checklist. The team goes back under Ready to
- * schedule, as with the CaPA's "Not ready", and the lost date stays on record.
+ * On the defense day, marks Cancelled every defense whose team still has
+ * open requirements above it on the checklist. The defense keeps its date,
+ * venue and panel; the team's next try waits under Ready to schedule.
  *
  * Only today's defenses: one already past with no outcome recorded was most
  * likely held, and its result just not entered yet.
@@ -33,7 +33,7 @@ class CancelUnreadyDefenses extends Command
                 $open = $schedule->team?->checklistBlockersFor($schedule->defense_type) ?? [];
 
                 if ($open) {
-                    $go->cancel($schedule, 'Its requirements were not complete by the defense date', Str::limit(implode(', ', $open), 250), null);
+                    $go->cancel($schedule, 'Its requirements were not complete by the defense date', Str::limit(implode(', ', $open), 250));
                     $cancelled++;
                 }
             });

@@ -11,8 +11,8 @@ use Illuminate\Validation\Rule;
 
 /**
  * An adviser (CaPA) saying whether their team is ready for its Title, Pre
- * Oral or Final Oral Defense date. Not ready cancels the date; the CaPSA
- * gives the team a new one.
+ * Oral or Final Oral Defense date. Not ready marks it Cancelled, keeping the
+ * date on record; the CaPSA gives the team a new one.
  */
 class DefenseGoController extends Controller
 {
