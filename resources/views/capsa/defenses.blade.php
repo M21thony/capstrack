@@ -52,8 +52,7 @@
     <main class="content">
       <div class="head">
         <div>
-          <h1>Defenses</h1>
-          <p>Give each team its panel, then schedule its defenses. Your sections: <b>{{ $state['sections'] ? implode(', ', $state['sections']) : 'All sections' }}</b>. Other sections' bookings are checked too, so no room or panelist is booked twice.</p>
+          <p>Give each team a panel, then a date. Your section(s): <b>{{ $state['sections'] ? implode(', ', $state['sections']) : 'All sections' }}</b>.</p>
         </div>
         <div class="head-acts">
           <button type="button" class="keys-btn" data-act="keys" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"><kbd>?</kbd></button>
