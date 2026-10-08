@@ -180,12 +180,6 @@
      included on every student page, and no build step to forget. */
   .pm-header { align-items: flex-start; }
 
-  /* Beside the sidebar it is as tall as what it holds. Held to the full
-     height of the screen, a student with no team yet got two lines and a
-     white column the rest of the way down. */
-  @media (min-width: 769px) {
-    .profile-overlay .profile-modal { height: auto; max-height: 100vh; max-height: 100dvh; border-bottom: 1px solid var(--border); border-bottom-right-radius: 14px; }
-  }
 
   /* On a phone the panel sat 250px from the left, beside a sidebar that is
      not there, so most of it ran off the screen. It rises from the bottom
