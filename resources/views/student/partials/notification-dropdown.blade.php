@@ -398,6 +398,14 @@ function openLeaveDecision(d, href) {
   note.classList.toggle('is-empty', !d.decisionNote);
   set('ld-by', '— ' + (d.decidedBy || 'Your CaPSA') + ', CaPSA');
 
+  // Nobody said no: the CaPSA let it run out, and the popup tells it that way.
+  if (d.auto) {
+    set('ld-status', 'Auto-declined');
+    set('ld-sub', (leave ? 'Your request to leave ' + (d.team || 'your team') : 'The request to remove ' + (d.member || 'the member'))
+      + ' was declined automatically: your CaPSA did not act on it within ' + d.autoDays + ' days. You can ask again.');
+    set('ld-by', '— No action from your CaPSA in ' + d.autoDays + ' days');
+  }
+
   set('ld-team', d.team);
   set('ld-kind', d.kind);
   document.getElementById('ld-member-row').hidden = leave;
