@@ -532,6 +532,65 @@ class ExpertEvaluationTest extends TestCase
             ->assertDontSee('Time to evaluate your experts');
     }
 
+    /**
+     * "Remind me later" quiets the popup, and the bell entry can be read or
+     * marked read - the evaluation still waits at the top of the bell, and in
+     * its count, until it is sent.
+     */
+    public function test_the_bell_keeps_an_owed_evaluation_at_the_top_until_it_is_sent(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+
+        $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))->assertOk();
+        Notification::where('student_id', $this->leader->student_id)->update(['is_read' => true]);
+
+        $this->actingAs($this->leader, 'web')->get(route('student.progress'))
+            ->assertOk()
+            ->assertSee('data-todo="evaluation"', false)
+            ->assertSee('To do · stays here until you send it')
+            ->assertSee('Evaluate your experts: Pre-proposal Defense')
+            ->assertSee('3 experts are waiting')
+            ->assertSee('<div class="notif-dot">1</div>', false)
+            ->assertSee('It stays at the top of your notifications until it is done.');
+
+        $this->answerAll($defense, $template);
+
+        $this->actingAs($this->leader, 'web')->get(route('student.progress'))
+            ->assertOk()
+            ->assertDontSee('data-todo="evaluation"', false)
+            ->assertDontSee('<div class="notif-dot">', false);
+    }
+
+    public function test_a_member_has_no_to_do_in_the_bell(): void
+    {
+        $this->template();
+        $this->decide();
+
+        $this->actingAs($this->member(), 'web')->get(route('student.progress'))
+            ->assertOk()
+            ->assertDontSee('data-todo="evaluation"', false);
+    }
+
+    /** The leader changes while an evaluation waits: the new leader is told too, once. */
+    public function test_a_new_leader_is_told_about_an_evaluation_already_owed(): void
+    {
+        $this->template();
+        $this->decide();
+        $this->artisan('evaluations:send-reminders')->assertSuccessful();
+
+        // A teammate in the same section takes over.
+        $newLeader = $this->member();
+        $newLeader->update(['course' => $this->leader->course, 'year_section' => $this->leader->year_section]);
+        $this->team->update(['leader_id' => $newLeader->student_id]);
+        $this->artisan('evaluations:send-reminders')->assertSuccessful();
+        $this->artisan('evaluations:send-reminders')->assertSuccessful();
+
+        $this->assertSame(1, Notification::where('student_id', $this->leader->student_id)->where('type', 'evaluation_due')->count());
+        $this->assertSame(1, Notification::where('student_id', $newLeader->student_id)->where('type', 'evaluation_due')->count());
+        $this->actingAs($newLeader, 'web')->get(route('student.progress'))->assertOk()->assertSee('data-todo="evaluation"', false);
+    }
+
     public function test_members_get_no_popup_and_no_reminder(): void
     {
         $this->template();

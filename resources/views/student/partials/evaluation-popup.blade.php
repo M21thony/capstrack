@@ -34,6 +34,7 @@
   #evp-actions a,#evp-actions button{flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:42px;border-radius:10px;font:inherit;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer}
   #evp-later{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
   #evp-later:hover{background:var(--bg4);color:var(--text)}
+  #evp-keep{margin:12px 0 0;font-size:11.5px;color:var(--text3);text-align:center;line-height:1.45}
   #evp-go{background:var(--accent,#c9a82c);color:#18191f;border:0}
   #evp-go:hover{filter:brightness(1.06)}
   @media (max-width:480px){#evp-overlay{align-items:flex-end;padding:0}#evp-card{border-radius:20px 20px 0 0;padding:20px 16px}}
@@ -60,6 +61,7 @@
       <button type="button" id="evp-later">Remind me later</button>
       <a id="evp-go" href="{{ route('student.experts', ['tab' => 'evaluations']) }}">Evaluate now</a>
     </div>
+    <p id="evp-keep">It stays at the top of your notifications until it is done.</p>
   </div>
 </div>
 <script nonce="{{ Vite::cspNonce() }}">

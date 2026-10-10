@@ -245,7 +245,9 @@ class ExpertEvaluations
         }
 
         $owedDefenses = ($due ?? $this->due($team))->groupBy('defense_id');
+        // Told once per leader: a new leader of the team hears about it too.
         $told = DB::table('expert_evaluation_reminders')->where('team_id', $team->team_id)
+            ->where('student_id', $leader->student_id)
             ->whereNotNull('defense_id')->pluck('defense_id')->map(fn ($id) => (int) $id)->all();
 
         $count = 0;
@@ -257,6 +259,7 @@ class ExpertEvaluations
             DB::table('expert_evaluation_reminders')->insertOrIgnore([
                 'team_id' => $team->team_id,
                 'defense_id' => $defenseId,
+                'student_id' => $leader->student_id,
                 'notified_at' => now(),
             ]);
 
