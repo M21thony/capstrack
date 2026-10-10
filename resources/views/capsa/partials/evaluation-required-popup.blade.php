@@ -9,7 +9,7 @@
 @endphp
 @if($missing->isNotEmpty() && ! $onEvaluations)
 @php $missingKey = md5($missing->pluck('stage')->implode('|')); @endphp
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   #erp-overlay{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(24,25,31,.5);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
   #erp-overlay.active{opacity:1;visibility:visible}
   #erp-card{position:relative;width:460px;max-width:100%;max-height:calc(100dvh - 32px);overflow:auto;background:#fff;color:var(--text);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.18),0 8px 24px rgba(0,0,0,.12);padding:24px;animation:erpIn .2s ease;font-family:'DM Sans','DM Sans Fallback',sans-serif}
@@ -61,7 +61,7 @@
     </div>
   </div>
 </div>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var overlay = document.getElementById('erp-overlay');
   if (!overlay) { return; }

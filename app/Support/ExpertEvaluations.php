@@ -28,6 +28,11 @@ use Illuminate\Support\Facades\DB;
  * Only a defense decided after its evaluation was set up counts: one a team
  * passed before the CaPSA had written any questions owes nothing, so adding
  * an evaluation never reaches back and locks teams that are long past it.
+ * What the leader is asked, though, is the evaluation last set for that
+ * defense - its questions and its roles - so a CaPSA's edit reaches every
+ * leader yet to answer, a role it drops included. Every CaPSA of the team's
+ * section counts, when a section has more than one; the one who edited last
+ * decides.
  *
  * What is owed is worked out here and nowhere else - the Progress Tracker's
  * gate, the popup, the Experts page and the reminder all ask owedForTeams(),
@@ -73,23 +78,19 @@ class ExpertEvaluations
             return $out;
         }
 
-        // Whose evaluation applies: the CaPSA of each team's section.
+        // Whose evaluations apply: every CaPSA of each team's section - a
+        // section can have more than one.
         $teams = Team::whereIn('team_id', $passed->keys())->get()->keyBy('team_id');
         $records = StudentSchoolYear::with('student')->whereIn('team_id', $passed->keys())->get()->groupBy('team_id');
         $scope = app(SectionScope::class);
-        $checklists = app(TeamChecklist::class);
-        $capsaBySection = [];
-        $capsaOf = [];
+        $capsasBySection = self::capsasBySection();
+        $capsasOf = [];
         foreach ($teams as $id => $team) {
-            $section = $scope->sectionFor($team, $records->get($id, collect()));
-            if (! array_key_exists($section, $capsaBySection)) {
-                $capsaBySection[$section] = $checklists->capsaFor($section)?->expert_id;
-            }
-            $capsaOf[$id] = $capsaBySection[$section];
+            $capsasOf[$id] = $capsasBySection[$scope->sectionFor($team, $records->get($id, collect()))] ?? [];
         }
 
         $templates = EvaluationTemplate::active()
-            ->whereIn('capsa_id', array_filter(array_unique($capsaOf)))
+            ->whereIn('capsa_id', collect($capsasOf)->flatten()->unique()->values())
             ->whereHas('questions')
             ->orderByDesc('id')
             ->get();
@@ -104,17 +105,33 @@ class ExpertEvaluations
             ->mapWithKeys(fn ($e) => [$e->defense_id.'|'.$e->expert_id.'|'.$e->role => true]);
 
         foreach ($passed as $teamId => $defenses) {
-            $capsaId = $capsaOf[$teamId] ?? null;
+            $capsaIds = $capsasOf[$teamId] ?? [];
 
             // The latest attempt of each stage is the one that passed.
             foreach ($defenses->unique(fn ($d) => mb_strtolower($d->defense_type)) as $defense) {
                 $decided = $defense->outcome_recorded_at ?? $defense->schedule_date ?? $defense->updated_at ?? Carbon::now();
 
+                // This defense's evaluations, by any CaPSA of the section.
+                $forStage = $templates->filter(fn (EvaluationTemplate $t) => in_array((int) $t->capsa_id, $capsaIds, true)
+                    && mb_strtolower($t->defense_type) === mb_strtolower($defense->defense_type));
+
+                if ($forStage->isEmpty()) {
+                    continue;
+                }
+
+                // The CaPSA who last set this defense's evaluation decides it
+                // whole - its questions and its roles - so an edit that drops
+                // a role drops it here too, not just the questions.
+                $newest = fn (Collection $set) => $set->sortByDesc(fn (EvaluationTemplate $t) => [$t->updated_at?->getTimestamp() ?? 0, $t->id])->first();
+                $current = $forStage->where('capsa_id', $newest($forStage)->capsa_id);
+
                 foreach ($experts->get($teamId, collect()) as $expert) {
-                    $template = $templates->first(fn (EvaluationTemplate $t) => (int) $t->capsa_id === (int) $capsaId
-                        && mb_strtolower($t->defense_type) === mb_strtolower($defense->defense_type)
-                        && $t->covers($expert->role)
-                        && $t->created_at <= $decided);
+                    $covering = $current->filter(fn (EvaluationTemplate $t) => $t->covers($expert->role));
+
+                    // Owed only if an evaluation for this role was there when
+                    // the defense was decided, so nothing reaches back.
+                    $wasSetUp = $forStage->contains(fn (EvaluationTemplate $t) => $t->covers($expert->role) && $t->created_at <= $decided);
+                    $template = $wasSetUp && $covering->isNotEmpty() ? $newest($covering) : null;
 
                     if (! $template || $done->has($defense->defense_id.'|'.$expert->expert_id.'|'.$expert->role)) {
                         continue;
@@ -176,6 +193,12 @@ class ExpertEvaluations
 
         $template = EvaluationTemplate::with('questions')->find($owed->template_id);
         $scored = [];
+
+        // Answers to none of these questions: the CaPSA changed them while the
+        // page was open.
+        if ($answers !== [] && $template->questions->pluck('id')->intersect(array_map('intval', array_keys($answers)))->isEmpty()) {
+            return 'Your CaPSA changed these questions while you were answering. Here they are again.';
+        }
 
         foreach ($template->questions as $question) {
             $score = (int) ($answers[$question->id] ?? 0);
@@ -270,14 +293,10 @@ class ExpertEvaluations
             return collect();
         }
 
-        $covered = EvaluationTemplate::active()->where('capsa_id', $capsa->expert_id)->whereHas('questions')
-            ->pluck('defense_type')->map(fn ($stage) => mb_strtolower($stage))->unique()->all();
-
         $upcoming = DefenseSchedule::whereNull('outcome')
             ->whereNotNull('schedule_date')
             ->where('schedule_date', '>=', now()->startOfDay())
-            ->get(['defense_id', 'team_id', 'defense_type', 'schedule_date'])
-            ->reject(fn ($d) => in_array(mb_strtolower((string) $d->defense_type), $covered, true));
+            ->get(['defense_id', 'team_id', 'defense_type', 'schedule_date']);
 
         if ($upcoming->isEmpty()) {
             return collect();
@@ -286,10 +305,21 @@ class ExpertEvaluations
         $teams = Team::whereIn('team_id', $upcoming->pluck('team_id')->unique())->get();
         $records = StudentSchoolYear::with('student')->whereIn('team_id', $teams->pluck('team_id'))->get()->groupBy('team_id');
         $scope = app(SectionScope::class);
-        $mine = $teams->filter(fn (Team $team) => in_array($scope->sectionFor($team, $records->get($team->team_id, collect())), $sections, true))
-            ->pluck('team_id')->all();
+        $sectionOf = $teams->mapWithKeys(fn (Team $team) => [$team->team_id => $scope->sectionFor($team, $records->get($team->team_id, collect()))]);
 
-        return $upcoming->whereIn('team_id', $mine)
+        // An evaluation by any CaPSA of the team's section covers it.
+        $capsasBySection = self::capsasBySection();
+        $stagesBy = EvaluationTemplate::active()->whereHas('questions')
+            ->whereIn('capsa_id', collect($sections)->flatMap(fn ($s) => $capsasBySection[$s] ?? [])->unique()->values())
+            ->get(['capsa_id', 'defense_type'])
+            ->groupBy('capsa_id')
+            ->map(fn (Collection $rows) => $rows->map(fn ($t) => mb_strtolower($t->defense_type))->unique()->all());
+        $covered = fn ($defense) => collect($capsasBySection[$sectionOf[$defense->team_id] ?? ''] ?? [])
+            ->contains(fn ($capsaId) => in_array(mb_strtolower((string) $defense->defense_type), $stagesBy->get($capsaId, []), true));
+
+        return $upcoming
+            ->filter(fn ($d) => in_array($sectionOf[$d->team_id] ?? '', $sections, true))
+            ->reject($covered)
             ->groupBy('defense_type')
             ->map(fn (Collection $rows, string $stage) => (object) [
                 'stage' => $stage,
@@ -298,6 +328,23 @@ class ExpertEvaluations
             ])
             ->sortBy(fn ($row) => self::stageOrder($row->stage))
             ->values();
+    }
+
+    /**
+     * Every CaPSA of each section, by section.
+     *
+     * @return array<string, array<int, int>>
+     */
+    private static function capsasBySection(): array
+    {
+        $out = [];
+        foreach (CapstoneExpert::whereNotNull('sections')->get(['expert_id', 'sections']) as $capsa) {
+            foreach ($capsa->sections ?? [] as $section) {
+                $out[$section][] = (int) $capsa->expert_id;
+            }
+        }
+
+        return $out;
     }
 
     /** Position of a stage in the capstone, for ordering. */

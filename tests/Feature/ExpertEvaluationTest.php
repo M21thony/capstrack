@@ -292,6 +292,142 @@ class ExpertEvaluationTest extends TestCase
         $this->assertSame(0, ExpertEvaluation::count());
     }
 
+    /** The CaPSA edits the questions after the defense: the leader yet to answer is asked the new ones. */
+    public function test_a_capsas_edit_reaches_the_leader_who_has_not_answered_yet(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+
+        $this->actingAs($this->capsa, 'expert')->put(route('capsa.evaluations.update', $template), [
+            'title' => 'Renamed',
+            'roles' => ['adviser', 'consultant', 'grammarian'],
+            'questions' => ['Did the expert reply within two days?', 'Would you work with this expert again?'],
+        ])->assertRedirect(route('capsa.evaluations'));
+
+        $this->actingAs($this->leader, 'web')->get(route('student.experts', ['tab' => 'evaluations']))
+            ->assertOk()
+            ->assertSee('Did the expert reply within two days?')
+            ->assertSee('Would you work with this expert again?')
+            ->assertDontSee(EvaluationTemplate::STANDARD_QUESTIONS[0]);
+
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $template->fresh('questions'), [5, 3])
+            ->assertSessionHas('evaluation_saved');
+        $this->assertSame(4.0, ExpertEvaluation::sole()->rating);
+        $this->assertSame('Did the expert reply within two days?', ExpertEvaluation::sole()->answers[0]['question']);
+    }
+
+    public function test_answers_to_questions_that_changed_meanwhile_are_asked_again(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+        $stale = $template->questions;
+
+        $this->actingAs($this->capsa, 'expert')->put(route('capsa.evaluations.update', $template), [
+            'title' => $template->title, 'roles' => $template->roles, 'questions' => ['A brand new question.'],
+        ]);
+
+        $this->actingAs($this->leader, 'web')->post(route('student.evaluations.store'), [
+            'defense_id' => $defense->defense_id, 'expert_id' => $this->experts['adviser']->expert_id, 'role' => 'adviser',
+            'answers' => $stale->mapWithKeys(fn ($q) => [$q->id => 5])->all(),
+        ])->assertSessionHas('evaluation_error', 'Your CaPSA changed these questions while you were answering. Here they are again.');
+
+        $this->assertSame(0, ExpertEvaluation::count());
+    }
+
+    /**
+     * A section can have two CaPSAs. The other one's evaluation counts for the
+     * team, and the newest of them is what the leader answers.
+     */
+    public function test_every_capsa_of_the_section_counts_and_the_newest_evaluation_is_asked(): void
+    {
+        $this->template(questions: ['An older question from the first CaPSA.']);
+        $defense = $this->decide();
+
+        // The second CaPSA of BSIT-3A writes theirs after the defense.
+        Carbon::setTestNow(now()->addHour());
+        $second = $this->capsaFor(['BSIT-3A']);
+        $this->actingAs($second, 'expert')->post(route('capsa.evaluations.store'), [
+            'title' => 'Second CaPSA evaluation', 'defense_type' => DefenseOutcome::PRE_PROPOSAL,
+            'roles' => ['adviser', 'consultant', 'grammarian'], 'questions' => ['A newer question from the second CaPSA.'],
+        ])->assertSessionHasNoErrors();
+        $newer = EvaluationTemplate::where('capsa_id', $second->expert_id)->sole();
+
+        $this->assertSame([$newer->id], $this->due()->pluck('template_id')->unique()->values()->all());
+        $this->actingAs($this->leader, 'web')->get(route('student.experts', ['tab' => 'evaluations']))
+            ->assertOk()
+            ->assertSee('A newer question from the second CaPSA.')
+            ->assertDontSee('An older question from the first CaPSA.');
+
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $newer->load('questions'))->assertSessionHas('evaluation_saved');
+        $this->actingAs($second, 'expert')->get(route('capsa.evaluations', ['tab' => 'results']))
+            ->assertOk()
+            ->assertSee($this->experts['adviser']->name);
+    }
+
+    /**
+     * What happened on BSIT-3B: the first CaPSA's evaluation covers every role,
+     * the second CaPSA edits theirs to cover only the adviser and consultant.
+     * The edit decides - the grammarian is no longer asked about.
+     */
+    public function test_the_evaluation_edited_last_decides_the_roles_too(): void
+    {
+        $this->template();
+        $this->decide();
+        $second = $this->capsaFor(['BSIT-3A']);
+        $theirs = $this->template(capsa: $second);
+        $this->assertSame(['adviser', 'consultant', 'grammarian'], $this->due()->pluck('role')->all());
+
+        Carbon::setTestNow(now()->addHour());
+        $this->actingAs($second, 'expert')->put(route('capsa.evaluations.update', $theirs), [
+            'title' => 'Pre-proposal', 'roles' => ['adviser', 'consultant'], 'questions' => EvaluationTemplate::STANDARD_QUESTIONS,
+        ])->assertRedirect(route('capsa.evaluations'));
+
+        $due = $this->due();
+        $this->assertSame(['adviser', 'consultant'], $due->pluck('role')->all());
+        $this->assertSame([$theirs->id], $due->pluck('template_id')->unique()->values()->all());
+
+        $this->actingAs($this->leader, 'web')->get(route('student.experts', ['tab' => 'evaluations']))
+            ->assertOk()
+            ->assertSee('2 to evaluate')
+            ->assertDontSee('3 to evaluate');
+        $this->assertTrue($this->chaptersGateOpensAfter(['adviser', 'consultant'], $theirs->fresh('questions')));
+    }
+
+    /** One CaPSA may split a defense's evaluation by role; both halves are asked. */
+    public function test_one_capsas_evaluations_for_different_roles_are_all_asked(): void
+    {
+        $this->template(roles: ['adviser', 'consultant'], questions: ['For the adviser and consultant.']);
+        Carbon::setTestNow(now()->addMinute());
+        $this->template(roles: ['grammarian'], questions: ['For the grammarian.']);
+        $this->decide();
+
+        $due = $this->due();
+        $this->assertSame(['adviser', 'consultant', 'grammarian'], $due->pluck('role')->all());
+        $this->assertCount(2, $due->pluck('template_id')->unique());
+    }
+
+    /** @param  array<int, string>  $roles */
+    private function chaptersGateOpensAfter(array $roles, EvaluationTemplate $template): bool
+    {
+        $defense = DefenseSchedule::where('team_id', $this->team->team_id)->sole();
+        foreach ($roles as $role) {
+            $this->answer($this->leader, $defense, $this->experts[$role], $role, $template)->assertSessionHas('evaluation_saved');
+        }
+
+        return ! $this->chaptersGate()->locked;
+    }
+
+    /** Still nothing reaches back: with no evaluation when it was decided, a newer one asks nothing. */
+    public function test_a_newer_evaluation_does_not_reach_a_defense_that_had_none(): void
+    {
+        $this->decide();
+        Carbon::setTestNow(now()->addHour());
+        $this->template();
+        $this->template(capsa: $this->capsaFor(['BSIT-3A']));
+
+        $this->assertCount(0, $this->due());
+    }
+
     public function test_each_defense_is_evaluated_on_its_own(): void
     {
         $proposal = $this->template();

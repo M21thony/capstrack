@@ -129,8 +129,11 @@
           <div class="ev-sub">What team leaders see</div>
           <div class="ev-pv-card">
             <div class="ev-pv-head">
-              <span class="ev-av anon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21a8.5 8.5 0 0 1 17 0z"/></svg></span>
-              <div><b>Your adviser</b><span id="ev-pv-stage">{{ $template?->defense_type ?? $pickedStage }} passed</span></div>
+              {{-- Stands in for whichever expert the leader is evaluating. --}}
+              <span class="ev-pv-av" aria-hidden="true">
+                <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" class="ev-pv-av-bg"/><circle cx="20" cy="15.2" r="6.6" class="ev-pv-av-fg"/><path d="M6.6 34.8C8.5 28.4 13.7 24.6 20 24.6s11.5 3.8 13.4 10.2A19.94 19.94 0 0 1 20 40a19.94 19.94 0 0 1-13.4-5.2z" class="ev-pv-av-fg"/></svg>
+              </span>
+              <div class="ev-pv-who"><b id="ev-pv-role">Your adviser</b><span id="ev-pv-stage">{{ $template?->defense_type ?? $pickedStage }} passed</span></div>
             </div>
             <ol class="ev-pv-qs" id="ev-pv-qs"></ol>
             <p class="ev-pv-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Anonymous to you and the expert.</p>
@@ -154,7 +157,7 @@
     </span>
   </li>
 </template>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var MAX = {{ $max }};
   var STANDARD = @json(\App\Models\EvaluationTemplate::STANDARD_QUESTIONS);
@@ -262,6 +265,13 @@
   if (stageSelect) {
     stageSelect.addEventListener('change', function () { document.getElementById('ev-pv-stage').textContent = stageSelect.value + ' passed'; });
   }
+  // The preview speaks of the first role picked: "Your consultant".
+  function syncRole() {
+    var picked = form.querySelector('input[name="roles[]"]:checked');
+    document.getElementById('ev-pv-role').textContent = 'Your ' + (picked ? picked.value : 'expert');
+  }
+  form.addEventListener('change', function (e) { if (e.target.name === 'roles[]') { syncRole(); } });
+  syncRole();
 
   // Said here, before the trip to the server.
   form.addEventListener('submit', function (e) {

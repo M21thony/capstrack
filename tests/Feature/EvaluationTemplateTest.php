@@ -310,6 +310,17 @@ class EvaluationTemplateTest extends TestCase
             ->assertDontSee('Expert evaluation required');
     }
 
+    /** Two CaPSAs on one section: either one's evaluation is enough, so neither is nagged. */
+    public function test_an_evaluation_by_the_other_capsa_of_the_section_covers_it(): void
+    {
+        $this->schedule();
+        $other = $this->capsaFor(['BSIT-3A']);
+        EvaluationTemplate::factory()->withQuestions()->create(['capsa_id' => $other->expert_id, 'defense_type' => DefenseOutcome::TITLE_DEFENSE]);
+
+        $this->assertCount(0, app(ExpertEvaluations::class)->upcomingWithoutEvaluation($this->capsa));
+        $this->assertCount(0, app(ExpertEvaluations::class)->upcomingWithoutEvaluation($other));
+    }
+
     public function test_only_upcoming_defenses_in_the_capsas_own_sections_ask(): void
     {
         $this->schedule(when: '2027-01-20 08:00:00');
@@ -381,5 +392,50 @@ class EvaluationTemplateTest extends TestCase
         $this->actingAs($adviser, 'expert')->post(route('capsa.evaluations.store'), ['standard' => 1, 'defense_type' => DefenseOutcome::TITLE_DEFENSE])->assertForbidden();
 
         $this->assertSame(0, EvaluationTemplate::count());
+    }
+
+    /**
+     * The browser refuses a <style> or <script> without the response's nonce,
+     * and these pages came out unstyled that way. Every page of the
+     * evaluations, the popup included, carries it.
+     */
+    public function test_every_evaluation_page_carries_the_content_security_nonce(): void
+    {
+        $adviser = $this->engage('adviser');
+        $template = EvaluationTemplate::factory()->withQuestions()->create(['capsa_id' => $this->capsa->expert_id, 'defense_type' => DefenseOutcome::PRE_PROPOSAL]);
+        $this->schedule();
+        Carbon::setTestNow(now()->addDay());
+        $defense = DefenseSchedule::create(['team_id' => $this->team->team_id, 'defense_type' => DefenseOutcome::PRE_PROPOSAL, 'attempt' => 1, 'schedule_date' => now(), 'outcome' => DefenseOutcome::PASSED, 'outcome_recorded_at' => now()]);
+        ExpertEvaluation::create([
+            'team_id' => $this->team->team_id, 'expert_id' => $adviser->expert_id, 'defense_id' => $defense->defense_id,
+            'evaluation_template_id' => $template->id, 'role' => 'adviser', 'student_id' => $this->leader->student_id,
+            'rating' => 4, 'answers' => [['question' => 'Was there for us.', 'score' => 4]],
+        ]);
+        $this->engage('consultant');
+
+        $pages = [
+            [$this->capsa, 'expert', route('capsa.evaluations'), 'ev-card2'],
+            [$this->capsa, 'expert', route('capsa.evaluations', ['tab' => 'results']), 'ev-resps'],
+            [$this->capsa, 'expert', route('capsa.evaluations.create'), 'ev-qlist'],
+            [$this->capsa, 'expert', route('capsa.evaluations.edit', $template), 'ev-qlist'],
+            [$this->capsa, 'expert', route('capsa.dashboard'), 'erp-overlay'],
+            [$adviser, 'expert', route('instructor.evaluations'), 'ev-resps'],
+            [$this->leader, 'web', route('student.experts', ['tab' => 'evaluations']), 'xh-ev-form'],
+        ];
+
+        foreach ($pages as [$user, $guard, $url, $marker]) {
+            $response = $this->actingAs($user, $guard)->get($url)->assertOk()->assertSee($marker, false);
+            preg_match("/'nonce-([^']+)'/", (string) $response->headers->get('Content-Security-Policy'), $nonce);
+            $this->assertNotEmpty($nonce[1] ?? null, $url.' has a nonce');
+
+            // A comment that only mentions a tag is not one.
+            preg_match_all('/<(script|style)\b([^>]*)>/', preg_replace('#/\*.*?\*/#s', '', $response->getContent()), $tags, PREG_SET_ORDER);
+            foreach ($tags as $tag) {
+                if (str_contains($tag[2], 'src=') || str_contains($tag[2], 'application/json')) {
+                    continue;
+                }
+                $this->assertStringContainsString('nonce="'.$nonce[1].'"', $tag[0], $url.': '.$tag[0]);
+            }
+        }
     }
 }

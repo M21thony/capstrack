@@ -88,6 +88,32 @@ class SecurityHeadersTest extends TestCase
         $this->assertStringContainsString('<form method="post" id="rej-form">@csrf', $title);
     }
 
+    /**
+     * A <style> or <script> written into a view without the nonce is refused
+     * by the browser, and the page loses its look or its behaviour - which is
+     * how the Expert Evaluations pages came out unstyled. Emails and PDFs are
+     * not shown in a browser, so they need none.
+     */
+    public function test_every_inline_block_in_every_view_asks_for_the_nonce(): void
+    {
+        $missing = collect(File::allFiles(resource_path('views')))
+            ->reject(fn ($file): bool => preg_match('#[\\\\/](emails|pdf)[\\\\/]|pdf\.blade\.php$#', $file->getPathname()) === 1)
+            ->flatMap(function ($file): array {
+                // Comments that only mention a tag are not one.
+                $view = preg_replace(['/\{\{--.*?--\}\}/s', '#/\*.*?\*/#s'], '', $file->getContents());
+                preg_match_all('/<(script|style)\b([^>]*)>/', $view, $tags, PREG_SET_ORDER);
+
+                return collect($tags)
+                    ->filter(fn (array $tag): bool => ! str_contains($tag[2], 'src=') && ! str_contains($tag[2], 'application/json') && ! str_contains($tag[2], 'nonce='))
+                    ->map(fn (array $tag): string => $file->getRelativePathname().': '.$tag[0])
+                    ->all();
+            })
+            ->values()
+            ->all();
+
+        $this->assertSame([], $missing);
+    }
+
     private function assertEveryInlineBlockCarriesTheNonce($response): void
     {
         $nonce = $this->nonceOf($response);

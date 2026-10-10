@@ -9,7 +9,7 @@
      Every form sends once: its submit button shows it is working until the
      next page loads, so a second click does not send it twice. --}}
 @once
-<style>
+<style nonce="{{ Vite::cspNonce() }}">
   dialog.cd{border:0;padding:0;margin:auto;width:min(420px,calc(100vw - 32px));border-radius:18px;background:var(--bg2,#fff);color:var(--text,#1e2128);box-shadow:0 30px 80px -20px rgba(15,18,30,.45),0 8px 24px rgba(0,0,0,.12);font-family:'DM Sans','DM Sans Fallback',system-ui,sans-serif;overflow:hidden}
   dialog.cd[open]{animation:cdIn .18s ease-out}
   dialog.cd::backdrop{background:rgba(15,18,30,.5);backdrop-filter:blur(3px)}
@@ -38,7 +38,7 @@
   @media (max-width:480px){dialog.cd{margin:auto auto 0;width:100%;max-width:none;border-radius:18px 18px 0 0}.cd-foot{flex-direction:column-reverse}.cd-btn{width:100%;min-height:44px}}
   @media (prefers-reduced-motion:reduce){dialog.cd[open]{animation:none}.is-sending::after{animation:none}}
 </style>
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var ICONS = {
     danger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>',

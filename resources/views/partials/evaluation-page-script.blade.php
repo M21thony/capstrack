@@ -1,6 +1,6 @@
 {{-- The evaluation pages' banners: closed with their X, and a success one
      fades on its own after a few seconds. --}}
-<script>
+<script nonce="{{ Vite::cspNonce() }}">
 (function () {
   function hide(flash) {
     flash.classList.add('is-leaving');
