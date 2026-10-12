@@ -213,15 +213,15 @@ test('capsa/team-management: the report folds away and the chosen title leads', 
   await expect(page.locator('.ppdup-panel.open').first()).toBeVisible();
 });
 
-test('capsa/team-management: the PDF opens in a panel big enough to read', async ({ page }) => {
-  await staff(page, 'capsa', 'team_management');
+test('the PDF window opens big enough to read, and empties when closed', async ({ page }) => {
+  await staff(page, 'capsa', 'archive');
   await page.waitForLoadState('networkidle');
 
-  // Over the verification panel, not in a new tab: a CaPSA reading a
-  // pre-proposal is half-way through verifying the team behind it.
-  await page.evaluate(() => window.openPdfPreview('/'));
+  // The app's one PDF window (resources/js/pdf-viewer.js), which every
+  // "View PDF" opens - drawn with pdf.js, never the browser viewer in a frame.
+  await page.evaluate(() => window.PdfViewer.open({ url: '/', title: 'Test' }));
 
-  const box = page.locator('#pdf-preview-modal .modal-box');
+  const box = page.locator('#previewDialog .pv-card');
   await expect(box).toBeVisible();
 
   const width = await box.evaluate((el) => el.getBoundingClientRect().width);
@@ -229,8 +229,10 @@ test('capsa/team-management: the PDF opens in a panel big enough to read', async
 
   expect(width, 'wide enough for a page of A4').toBeGreaterThan(700);
   expect(height).toBeGreaterThan(500);
+  await expect(page.locator('#previewDialog iframe')).toHaveCount(0);
 
-  // Emptied on close, so a hidden PDF is not still fetching.
-  await page.locator('.pdf-box-x').click();
-  await expect(page.locator('#pdf-preview-frame')).toHaveAttribute('src', 'about:blank');
+  // Emptied on close, so a hidden PDF is not still being drawn.
+  await page.locator('#previewDialog [aria-label="Close"]').first().click();
+  await expect(page.locator('#previewDialog')).toBeHidden();
+  await expect(page.locator('#previewDialog .pv-stage > *')).toHaveCount(0);
 });

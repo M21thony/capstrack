@@ -416,16 +416,10 @@
 @endphp
 <script type="application/json" id="upload-config">@json($uploadConfig)</script>
 
-{{-- One preview window and one message box for the whole student side. --}}
-<dialog class="preview-dialog" id="previewDialog">
-  <div class="preview-head">
-    <h2 id="previewTitle">Preview</h2>
-    <button class="x" type="button" onclick="document.getElementById('previewDialog').close()" aria-label="Close preview">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
-  </div>
-  <div class="preview-body" id="previewBody"></div>
-</dialog>
+{{-- One preview window and one message box for the whole student side. The
+     window is the app's PDF window (partials/pdf-viewer); submission-preview
+     brings its script with it. --}}
+<dialog class="pv" id="previewDialog" aria-label="Document preview"></dialog>
 
 <div id="submission-toast"></div>
 

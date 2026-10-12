@@ -165,14 +165,8 @@
 .ta-quick button[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--bg2); }
 
 /* Reading a pre-proposal: the document, what you need to decide, the decision. */
-.ta-viewer { width: 1180px; max-width: 100%; height: calc(100vh - 32px);height: calc(100dvh - 32px); }
-.ta-viewer-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--border); }
-.ta-viewer-head h3 { font-size: 16px; }
-.ta-viewer-main { flex: 1; min-height: 0; display: flex; }
-.ta-viewer-main iframe { flex: 1; min-width: 0; border: 0; background: #dcdee4; }
-.ta-viewer-side { width: 300px; flex-shrink: 0; border-left: 1px solid var(--border); overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; }
-.ta-viewer-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 18px; border-top: 1px solid var(--border); background: var(--bg3); }
-.ta-viewer-foot p { margin: 0; font-size: 12.5px; color: var(--text2); }
+/* What to decide, beside the document in the PDF window. */
+.ta-viewer-side { padding: 16px 18px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; font-family: 'DM Sans', 'DM Sans Fallback', sans-serif; }
 .ta-x { width: 36px; height: 36px; border: 0; border-radius: 8px; background: none; color: var(--text2); cursor: pointer; display: grid; place-items: center; }
 .ta-x:hover { background: var(--bg3); }
 .ta-x svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
@@ -206,7 +200,6 @@
   .ta-list { max-height: 60vh;max-height: 60dvh; }
   .ta-panel { overflow: visible; }
   .ta-panel-body { overflow: visible; }
-  .ta-viewer-side { display: none; }
 }
 @media (max-width: 640px) {
   .topbar{padding:0 12px!important}
@@ -626,34 +619,9 @@
 </div>
 
 {{-- Reading a pre-proposal or proposal: the document, what you need to
-     decide, and the decision, in one window. --}}
-<div class="modal-overlay" id="pdf-preview-modal">
-  <div class="ta-dialog ta-viewer" role="dialog" aria-modal="true" aria-labelledby="pv-title">
-    <div class="ta-viewer-head">
-      <div>
-        <h3 id="pv-title"></h3>
-        <p class="ta-dialog-sub" id="pv-sub"></p>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <a class="ta-btn ghost" id="pv-open" href="#" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>
-          Open in new tab
-        </a>
-        <button type="button" class="ta-x" onclick="closePdfPreview()" aria-label="Close">
-          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
-      </div>
-    </div>
-    <div class="ta-viewer-main">
-      <iframe id="pdf-preview-frame" src="about:blank" title="Proposal PDF preview"></iframe>
-      <aside class="ta-viewer-side" id="pv-side" aria-label="About this request"></aside>
-    </div>
-    <div class="ta-viewer-foot">
-      <p id="pv-note"></p>
-      <div style="display:flex;gap:8px;" id="pv-acts"></div>
-    </div>
-  </div>
-</div>
+     decide, and the decision, in one window - the app's PDF window, opened
+     in the page so Approve and Decline can open over it. --}}
+@include('partials.pdf-viewer')
 
 <!-- Approve: the decision the expert cannot take back -->
 <div class="modal-overlay" id="approve-modal">
@@ -1060,15 +1028,12 @@ function openPdfPreview(kind, id) {
   const url = isTitle ? d.document : d.proposal;
   if (!url) return;
 
-  document.getElementById('pv-title').textContent = d.team + (isTitle || d.approved_title ? ' · pre-proposal' : ' · proposal');
-  document.getElementById('pv-sub').textContent = isTitle
+  const heading = d.team + (isTitle || d.approved_title ? ' · pre-proposal' : ' · proposal');
+  const sub = isTitle
     ? 'New title for your team · Recommended by their CaPSA'
     : ((d.approved_title ? 'Recommended by their CaPSA · ' : '') + (d.role || 'Expert') + ' request');
-  document.getElementById('pv-open').href = url;
-  document.getElementById('pdf-preview-frame').src = url + '#toolbar=0&navpanes=0';
 
-  const side = document.getElementById('pv-side');
-  side.replaceChildren();
+  const side = el('div', { class: 'ta-viewer-side' });
   const block = (label, node) => {
     const s = el('div', { class: 'ta-sec' });
     s.appendChild(el('div', { class: 'ta-sec-h' }, label));
@@ -1095,30 +1060,34 @@ function openPdfPreview(kind, id) {
     block('Their message', el('p', { class: 'ta-quote' }, d.message || 'They did not write one.'));
   }
 
-  const acts = document.getElementById('pv-acts');
-  const note = document.getElementById('pv-note');
-  acts.replaceChildren();
-  note.textContent = '';
+  const acts = [];
+  let note = '';
   if (isTitle) {
-    note.textContent = 'Asking for another sends the team your note on what to change.';
-    acts.appendChild(button('Ask for another', '', () => openTitleDeclineModal(id)));
-    acts.appendChild(button('Approve', 'go', () => openTitleApproveModal(id), 'check'));
+    note = 'Asking for another sends the team your note on what to change.';
+    acts.push(button('Ask for another', '', () => openTitleDeclineModal(id)));
+    acts.push(button('Approve', 'go', () => openTitleApproveModal(id), 'check'));
   } else if (d.status === 'pending') {
-    note.textContent = SLOTS_FULL ? 'All your slots are used, so you can\'t approve right now.' : 'Approving can\'t be undone, so read it first.';
-    acts.appendChild(button('Decline', 'stop', () => openRejectModal(id)));
+    note = SLOTS_FULL ? 'All your slots are used, so you can\'t approve right now.' : 'Approving can\'t be undone, so read it first.';
+    acts.push(button('Decline', 'stop', () => openRejectModal(id)));
     const ok = button('Approve', 'go', () => openApproveModal(id), 'check');
     if (SLOTS_FULL) ok.disabled = true;
-    acts.appendChild(ok);
-  } else {
-    acts.appendChild(button('Close', '', closePdfPreview));
+    acts.push(ok);
   }
-  openModal('pdf-preview-modal');
+
+  window.PdfViewer.open({
+    url,
+    title: heading,
+    meta: sub,
+    side,
+    note,
+    actions: acts,
+    // In the page, so Approve and Decline open over the document.
+    inPage: true,
+  });
 }
 
 function closePdfPreview() {
-  closeModal('pdf-preview-modal');
-  // Stop the PDF from continuing to load/render in the background once closed.
-  document.getElementById('pdf-preview-frame').src = 'about:blank';
+  window.PdfViewer.close();
 }
 
 // ── after a decision: the next request opens, and the result is said ─────

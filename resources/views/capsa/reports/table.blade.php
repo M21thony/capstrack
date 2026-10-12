@@ -115,8 +115,6 @@
 .rp-mcard .opts label{display:flex;align-items:center;gap:7px;font-size:13.5px;cursor:pointer}
 .rp-mcard .opts input{accent-color:var(--text);width:15px;height:15px;margin:0}
 .rp-mcard .rp-select{width:auto;height:32px;margin-top:10px}
-.rp-preview{background:#dcdee4;flex:1;min-height:0;display:flex}
-.rp-preview iframe{flex:1;border:0;width:100%;min-height:60vh;min-height:60dvh;background:#dcdee4}
 
 .rp-dim.drawer{justify-content:flex-end;align-items:stretch;padding:0}
 .rp-drawer{width:420px;max-width:100%;background:var(--bg2);height:100%;display:flex;flex-direction:column;box-shadow:-12px 0 40px rgba(0,0,0,.2)}
@@ -444,19 +442,8 @@
 </div>
 @endif
 
-{{-- Preview PDF --}}
-<div class="rp-dim" id="preview-dialog" onclick="if (event.target === this) closeDim(this)">
-  <div class="rp-dialog" role="dialog" aria-modal="true" aria-labelledby="preview-title" style="max-width:1180px;height:calc(100vh - 48px)">
-    <header>
-      <div><h2 id="preview-title">Preview PDF · {{ $name }}</h2><p>Letter, landscape. This is exactly the file Download PDF gives you.</p></div>
-      <div style="display:flex;gap:8px">
-        <button type="button" class="rp-btn" data-close onclick="closeDim(this.closest('.rp-dim'))">Close</button>
-        <a href="#" class="rp-btn gold" data-dl="pdf">{!! $I['download'] !!}Download PDF</a>
-      </div>
-    </header>
-    <div class="rp-preview"><iframe id="preview-frame" title="PDF preview of {{ $name }}"></iframe></div>
-  </div>
-</div>
+{{-- Preview PDF: the app's PDF window, showing exactly the file Download PDF gives. --}}
+@include('partials.pdf-viewer')
 
 {{-- A team, opened from its row --}}
 <div class="rp-dim drawer" id="team-drawer" onclick="if (event.target === this) closeDim(this)">
@@ -587,8 +574,13 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
   });
   var REPORT_NAME = @json($name);
   document.getElementById('preview-btn').addEventListener('click', function () {
-    document.getElementById('preview-frame').src = urlWith({ download: 'pdf', inline: '1' });
-    openDim(document.getElementById('preview-dialog'));
+    window.PdfViewer.open({
+      url: urlWith({ download: 'pdf', inline: '1' }),
+      title: REPORT_NAME,
+      meta: 'Letter, landscape · exactly the file Download PDF gives you',
+      download: urlWith({ download: 'pdf' }),
+      fileName: REPORT_NAME + '.pdf',
+    });
   });
 
   if (!table) return;
