@@ -6,7 +6,7 @@
   settled lately, so an item does not just vanish.
 --}}
 @php
-  $icons = ['go' => 'cal', 'title_change' => 'file', 'title' => 'file', 'adviser_title' => 'file', 'verify' => 'shield', 'paper' => 'clip', 'signed' => 'star',
+  $icons = ['go' => 'cal', 'go_given' => 'check', 'title_change' => 'file', 'title' => 'file', 'adviser_title' => 'file', 'verify' => 'shield', 'paper' => 'clip', 'signed' => 'star',
             'review' => 'file', 'leave' => 'users', 'expert' => 'user', 'invite' => 'mail', 'grade' => 'trophy'];
   $hatName = fn ($hat) => $hat === 'capsa' ? 'CaPSA' : ucfirst($hat);
   $resultTone = fn ($r) => preg_match('/Approved|Verified|Accepted|Checked|Recommended|Reviewed|Submitted/', $r) ? 'ok'
@@ -72,11 +72,13 @@
                           data-note="{{ $decide['note'] }}" data-min="{{ $decide['min'] }}"
                           @if (! empty($decide['noteOptional'])) data-note-optional="1" @endif
                           @if (! empty($decide['declineEffect'])) data-effect="{{ $decide['declineEffect'] }}" @endif
-                          data-title="{{ $declineLabel }}: {{ $item->what }}" data-sub="Team {{ $item->teamName }}">{{ $declineLabel }}</button>
-                  <button type="button" data-decide="approve"
-                          data-url="{{ $decide['url'] }}" data-field="{{ $decide['field'] }}" data-value="{{ $decide['approve'] }}"
-                          data-note="{{ $decide['note'] }}" data-effect="{{ $decide['effect'] }}"
-                          data-title="{{ $item->what }}" data-sub="Team {{ $item->teamName }} · {{ $item->why }}" class="btn p">{{ $item->label }}</button>
+                          data-title="{{ $decide['declineTitle'] ?? $declineLabel.': '.$item->what }}" data-sub="Team {{ $item->teamName }}">{{ $declineLabel }}</button>
+                  @unless (! empty($decide['declineOnly']))
+                    <button type="button" data-decide="approve"
+                            data-url="{{ $decide['url'] }}" data-field="{{ $decide['field'] }}" data-value="{{ $decide['approve'] }}"
+                            data-note="{{ $decide['note'] }}" data-effect="{{ $decide['effect'] }}"
+                            data-title="{{ $item->what }}" data-sub="Team {{ $item->teamName }} · {{ $item->why }}" class="btn p">{{ $item->label }}</button>
+                  @endunless
                 @elseif ($item->kind === 'verify')
                   <a class="btn" href="{{ $item->teamUrl }}">Open team</a>
                   <a class="btn p" href="{{ $item->url }}">{{ $item->label }}</a>

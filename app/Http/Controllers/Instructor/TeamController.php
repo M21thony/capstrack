@@ -66,7 +66,7 @@ class TeamController extends Controller
             'applications' => $applications,
             'expert' => $expert,
             'totalTeams' => $rows->count(),
-            'counts' => ['todo' => $todo->count(), 'applications' => $applications['waiting']->count(), 'teams' => $rows->count()],
+            'counts' => ['todo' => TeamTodo::waiting($todo)->count(), 'applications' => $applications['waiting']->count(), 'teams' => $rows->count()],
         ]);
     }
 

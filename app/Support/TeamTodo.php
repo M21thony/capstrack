@@ -29,7 +29,7 @@ use Illuminate\Support\Str;
  * links to - or carries - the one action that clears it.
  *
  * An item is an object with:
- *   kind     go|title|verify|paper|signed|leave|expert|invite|adviser_title|title_change|review|grade
+ *   kind     go|go_given|title|verify|paper|signed|leave|expert|invite|adviser_title|title_change|review|grade
  *   group    the heading it is listed under
  *   hat      capsa, or the seat the person holds on the team as an expert
  *   teamId, teamName, section, teamUrl
@@ -38,11 +38,14 @@ use Illuminate\Support\Str;
  *   decide   null, or how the Approve/Decline buttons send the decision
  *   read     null, or [what, id]: the application or title the Read button
  *            opens in the PDF window
+ *   counts   false for what is listed but not waiting on them (a defense
+ *            they already gave the go for), so it is not counted as to do
  */
 class TeamTodo
 {
     public const GROUPS = [
         'go' => 'Defenses waiting for your go',
+        'go_given' => 'Good for defense',
         'title' => 'Titles',
         'adviser_title' => 'Titles',
         'title_change' => 'Titles',
@@ -358,13 +361,39 @@ class TeamTodo
         // CaPSA gives the team a new one.
         $defenses = DefenseSchedule::whereIn('defense_type', DefenseBoard::PAID_STAGES)
             ->whereNull('outcome')
-            ->whereNull('capa_answer')
             ->where('schedule_date', '>=', now())
             ->with('team')
             ->get()
             ->filter(fn ($d) => $d->team && $resolver->resolveTeamRoleExpert((int) $d->team_id, 'adviser') === $expertId);
 
         foreach ($defenses as $defense) {
+            // Given already: the team is good for its defense, and stays here
+            // until the day in case it is not ready after all.
+            if ($defense->capa_answer === DefenseSchedule::CAPA_GO) {
+                $items->push($this->item([
+                    'kind' => 'go_given', 'hat' => 'adviser', 'counts' => false,
+                    'teamId' => (int) $defense->team_id, 'teamName' => $defense->team->team_name,
+                    'section' => $byTeam->get((int) $defense->team_id)?->section ?? '',
+                    'teamUrl' => $teamUrl((int) $defense->team_id),
+                    'what' => 'Good for '.$defense->defense_type,
+                    'why' => 'You gave the go · '.$defense->schedule_date->format('D, M j, g:i A').($defense->venue ? ' · '.$defense->venue : ''),
+                    'at' => $defense->schedule_date,
+                    'label' => 'Not ready, cancel',
+                    'url' => route('instructor.teams', ['tab' => 'todo']),
+                    'decide' => [
+                        'url' => route('instructor.defense-go.update', $defense),
+                        'field' => 'answer', 'approve' => CapaGo::GO, 'decline' => CapaGo::NOT_READY,
+                        'declineLabel' => 'Not ready, cancel', 'declineOnly' => true,
+                        'declineTitle' => 'Cancel the '.$defense->defense_type.' of Team '.$defense->team->team_name.'?',
+                        'note' => 'note', 'min' => 0, 'noteOptional' => true,
+                        'declineEffect' => 'The '.$defense->defense_type.' is cancelled and the CaPSA gives the team a new date.',
+                        'effect' => '',
+                    ],
+                ]));
+
+                continue;
+            }
+
             $items->push($this->item([
                 'kind' => 'go', 'hat' => 'adviser',
                 'teamId' => (int) $defense->team_id, 'teamName' => $defense->team->team_name,
@@ -493,6 +522,17 @@ class TeamTodo
     }
 
     /**
+     * What is waiting on the person: the items the to-do count counts.
+     *
+     * @param  Collection<int, object>  $items
+     * @return Collection<int, object>
+     */
+    public static function waiting(Collection $items): Collection
+    {
+        return $items->where('counts', true)->values();
+    }
+
+    /**
      * Grouped as the list shows them: groups in the order their first item
      * comes, and inside each group the item that has waited longest first.
      *
@@ -524,6 +564,7 @@ class TeamTodo
         $at = $at ? Carbon::parse($at) : null;
 
         return (object) array_merge([
+            'counts' => true,
             'decide' => null,
             'read' => null,
             'titleChange' => null,

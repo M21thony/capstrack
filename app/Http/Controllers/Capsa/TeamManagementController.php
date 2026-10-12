@@ -115,7 +115,7 @@ class TeamManagementController extends Controller
                 ->filter(fn ($s) => in_array($s, $capsaSections, true))
                 ->values(),
             'counts' => [
-                'todo' => $todo->count(),
+                'todo' => TeamTodo::waiting($todo)->count(),
                 'applications' => $applications['waiting']->count(),
                 'teams' => $rows->count(),
                 'leave_requests' => MemberLeaveRequest::pendingCountFor($capsa)

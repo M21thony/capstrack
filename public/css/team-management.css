@@ -778,6 +778,7 @@
 .tm-hub .todo .tc-diff dd{margin:0;color:var(--ink2)}
 .tm-hub .todo .tc-diff dd.nw{color:var(--ink);font-weight:600}
 .tm-hub .todo .k-go{color:var(--info)}
+.tm-hub .todo .k-go_given{color:var(--ok)}
 .tm-hub .todo .k-title_change{color:var(--info)}
 
 .tm-hub .apps-tools{gap:10px}

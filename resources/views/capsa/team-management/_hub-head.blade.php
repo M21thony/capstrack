@@ -9,10 +9,12 @@
 @php
   $capsaPortal = $portal === 'capsa';
   $hubRoute = $capsaPortal ? 'capsa.team_management' : 'instructor.teams';
-  $late = $todo->filter(fn ($i) => $i->age >= \App\Support\TeamTodo::LATE_AFTER_DAYS)->count();
+  // A defense already given the go is listed in To do but not waiting on them.
+  $waitingTodo = \App\Support\TeamTodo::waiting($todo);
+  $late = $waitingTodo->filter(fn ($i) => $i->age >= \App\Support\TeamTodo::LATE_AFTER_DAYS)->count();
   $verified = $rows->filter(fn ($r) => $r->team->is_confirmed)->count();
   $tabs = array_filter([
-    'todo' => ['To do', $todo->count()],
+    'todo' => ['To do', $waitingTodo->count()],
     'applications' => $applications['open'] ? ['Team Applications', $applications['waiting']->count()] : null,
     'teams' => ['Teams', $rows->count()],
     'milestone_list' => $capsaPortal ? ['Milestones', null] : null,
@@ -22,8 +24,8 @@
 <div class="hub-head">
   <div class="grow">
     <p class="hub-sum">
-      @if ($todo->isNotEmpty())
-        <b class="w">{{ $todo->count() }} to do</b>@if ($late), <b class="late">{{ $late }} waiting 3+ days</b>@endif ·
+      @if ($waitingTodo->isNotEmpty())
+        <b class="w">{{ $waitingTodo->count() }} to do</b>@if ($late), <b class="late">{{ $late }} waiting 3+ days</b>@endif ·
       @endif
       {{ $rows->count() }} {{ \Illuminate\Support\Str::plural('team', $rows->count()) }} · {{ $verified }} verified
       @if ($capsaPortal)
