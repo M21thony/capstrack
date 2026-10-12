@@ -6,77 +6,8 @@
 <title>Student Accounts - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/table-kit.css') }}"/>
 <style nonce="{{ Vite::cspNonce() }}">
-  /* ── Compact rows ────────────────────────────────────────────────────
-     This list holds every student in the college, so the row height is the
-     thing that decides how much of it you can see at once. */
-  .table td{padding-top:8px;padding-bottom:8px;vertical-align:middle}
-  .table thead th{position:sticky;top:0;z-index:2;background:var(--bg3)}
-  .table tbody tr:hover{background:var(--accent-light)}
-  .std-who{display:flex;align-items:center;gap:9px;min-width:0}
-  .std-email{font-size:12px;color:var(--text3);max-width:230px;
-             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* Caps the column in the desktop table; on the phone card layout the same
-     max-width left this row short of the card's own width, the same gap
-     admin/experts' .cx-skills left behind before that got the same fix. */
-  @media (max-width:768px){
-    .table td.std-email{max-width:none}
-
-    /* A phone card per student that reads at a glance: the name as its
-       title, the email under it, and number, program, year and section as
-       one line of chips - rather than six labelled rows a screen tall. */
-    .std-table tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-    .std-table tbody td{width:auto;padding:0!important}
-    .std-table tbody td::before{display:none}
-    .std-table td[data-label="Name"]{order:1;flex:1 1 100%}
-    .std-table td[data-label="Name"] .std-av{width:36px;height:36px;border-radius:10px}
-    .std-table td[data-label="Name"] .std-name{font-size:14.5px;white-space:normal}
-    .std-table td[data-label="Email"]{order:2;flex:1 1 100%;padding-left:44px!important;margin-top:-10px;
-      font-size:12px;color:var(--text3)}
-    .std-table td[data-label="Student No."],
-    .std-table td[data-label="Program"],
-    .std-table td[data-label="Year"],
-    .std-table td[data-label="Section"]{order:3;margin-top:4px;font-size:11.5px;color:var(--text2);
-      background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:3px 9px!important}
-    .std-table td[data-label="Program"]{order:4;background:none;border:0;padding:0!important}
-    .std-table td[data-label="Year"]{order:5}
-    .std-table td[data-label="Section"]{order:6}
-    .std-table td[data-label="Year"]::before{display:inline;content:'Year ';font-size:11px;font-weight:400;
-      text-transform:none;letter-spacing:0;width:auto;color:var(--text3)}
-    .std-table td[data-label="Section"]::before{display:inline;content:'Sec ';font-size:11px;font-weight:400;
-      text-transform:none;letter-spacing:0;width:auto;color:var(--text3)}
-    .std-table td[data-label="Student No."]::before{display:inline;content:'#';font-size:11px;font-weight:400;
-      text-transform:none;letter-spacing:0;width:auto;color:var(--text3)}
-  }
-  /* Figures that line up down the column, which is all the old monospace
-     was ever doing here. */
-  .std-num{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2)}
-  .std-prog{display:inline-block;padding:2px 7px;border-radius:6px;background:var(--blue-bg);
-            color:var(--blue);font-size:11px;font-weight:600;white-space:nowrap}
-  .std-none{color:var(--text3);font-size:12px}
-  .std-ico{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);
-           display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);
-           transition:border-color .12s,background .12s,color .12s}
-  .std-ico svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2}
-  .std-ico:hover{border-color:var(--border2);background:var(--bg3);color:var(--text)}
-  .std-ico-danger{color:var(--red);border-color:rgba(220,38,38,0.2)}
-  .std-ico-danger:hover{background:var(--red);border-color:var(--red);color:#fff}
-  .std-actions{justify-content:flex-end}
-
-  .std-av{width:26px;height:26px;border-radius:7px;flex-shrink:0;object-fit:cover}
-  .std-actions{display:flex;gap:5px}
-  .std-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-  /* Pill icon-buttons, matching the same convention admin/experts.blade.php
-     uses for its row actions. */
-  .btn-pill{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;transition:transform 0.12s ease,box-shadow 0.12s ease,background 0.12s ease,border-color 0.12s ease,color 0.12s ease;user-select:none;border:1.5px solid transparent;white-space:nowrap;font-family:'DM Sans','DM Sans Fallback',sans-serif}
-  .btn-pill svg{width:12px;height:12px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2.2}
-  .btn-pill:active{transform:translateY(1px)}
-  .btn-edit{background:rgba(37,99,235,0.06);color:#2563eb;border-color:rgba(37,99,235,0.16)}
-  .btn-edit:hover{background:rgba(37,99,235,0.1);border-color:rgba(37,99,235,0.28)}
-  .btn-remove-pill{background:rgba(220,38,38,0.06);color:var(--red);border-color:rgba(220,38,38,0.16)}
-  .btn-remove-pill:hover{background:rgba(220,38,38,0.1);border-color:rgba(220,38,38,0.28)}
-
   /* ── Modal / Toast system (matches admin/experts.blade.php) ── */
   .ct-modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:9998;align-items:center;justify-content:center;animation:ctFadeIn 0.15s ease;padding:20px}
   .ct-modal-card{background:#fff;border-radius:14px;padding:28px;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ctPopUp 0.2s cubic-bezier(0.16,1,0.3,1)}
@@ -130,132 +61,169 @@
     </div>
   </div>
 
-  <div class="content list-page">
+  <div class="content list-page tk">
     {{-- Students belong to their CaPSA: they are enrolled from the section
          list and the roster import, both of which live on that side. An admin
          who could add or edit one here would be doing a job from a page with
          different powers behind it, so this is a register - search it, take a
-         copy of it. Nothing on it destroys anything. --}}
+         copy of it. The one change it makes is removing an account. --}}
+    @php
+      // Every tab link keeps the search and the dropdowns, and goes back to
+      // the first page - page 9 of "everyone" is not a page of "no team".
+      $tabUrl = fn (string $value) => route('admin.students', array_filter(
+          array_merge(request()->except(['page', 'team']), ['team' => $value]),
+          fn ($v) => $v !== '' && $v !== null
+      ));
+      $tabs = ['' => 'All', 'with' => 'In a team', 'without' => 'No team'];
+    @endphp
     <div class="page-head">
-      <div class="page-head-text">
-        <span class="page-count" id="studentCount">{{ $students->total() ?? $students->count() }}</span>
-        <span class="page-count-noun" id="studentCountNoun">{{ Str::plural('student', $students->total() ?? $students->count()) }}</span>
-        <span class="page-facts">
-          <span class="fact">added and edited by their CaPSA</span>
-        </span>
-      </div>
-    </div>
-
-    {{-- One form, so narrowing by program and then by section keeps whatever
-         was typed in the box instead of throwing it away. --}}
-    <div class="page-filters">
-      <form method="GET" id="studentFilters">
-        <div class="experts-search">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          {{-- Searches a moment after typing stops, the same way the
-               dropdowns apply as soon as they change. The page reloads to do
-               it, so the box takes the cursor back with the caret at the end. --}}
-          <input class="input" type="text" name="search" value="{{ $search }}" placeholder="Search by name, email, or student number..."
-                 @if ($search !== '') autofocus onfocus="this.setSelectionRange(this.value.length, this.value.length)" @endif
-                 oninput="clearTimeout(this._t); this._t = setTimeout(() => this.form.submit(), 500)">
+      <div class="tk-head-text">
+        <div class="page-head-text">
+          <span class="page-count" id="studentCount">{{ $teamCounts[''] }}</span>
+          <span class="page-count-noun" id="studentCountNoun">{{ Str::plural('student', $teamCounts['']) }}</span>
         </div>
-        <select class="input page-filter" name="program" onchange="this.form.submit()">
-          <option value="">All programs</option>
-          @foreach (\App\Models\Student::PROGRAM_COURSES as $code => $fullName)
-            <option value="{{ $code }}" @selected($program === $code)>{{ $code }}</option>
-          @endforeach
-        </select>
-        <select class="input page-filter" name="year" onchange="this.form.submit()">
-          <option value="">All years</option>
-          @foreach ($years as $y)
-            <option value="{{ $y }}" @selected($year === $y)>{{ $y }} year</option>
-          @endforeach
-        </select>
-        <select class="input page-filter" name="section" onchange="this.form.submit()">
-          <option value="">All sections</option>
-          @foreach ($sections as $letter)
-            <option value="{{ $letter }}" @selected($section === $letter)>Section {{ $letter }}</option>
-          @endforeach
-        </select>
-        @if ($search !== '' || $program || $year || $section)
-          <a class="btn btn-sm btn-ghost" href="{{ route('admin.students') }}">Clear filters</a>
-        @endif
-      </form>
+        <span class="tk-info"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>Added and edited by each section's CaPSA</span>
+      </div>
+      {{-- View Report and Download Excel, from partials/table-export. Taking a
+           copy of the list is what this page is for, so Download Excel is the
+           gold one here. --}}
+      <div class="tk-actions tk-actions-export" id="tkActions"></div>
     </div>
 
     <div class="card list-card">
-      <table class="table std-table" data-export="Student Accounts">
+      {{-- One form, so narrowing by program and then by section keeps whatever
+           was typed in the box instead of throwing it away. --}}
+      <form method="GET" id="studentFilters" class="tk-toolbar">
+        @if ($team !== '')<input type="hidden" name="team" value="{{ $team }}">@endif
+        <nav class="tk-tabs" aria-label="Team">
+          @foreach ($tabs as $value => $label)
+            <a class="tk-tab" href="{{ $tabUrl($value) }}" @if ($team === $value) aria-current="page" @endif>{{ $label }} <span class="n">{{ $teamCounts[$value] }}</span></a>
+          @endforeach
+        </nav>
+        <label class="experts-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="tk-vh">Search students</span>
+          {{-- Searches a moment after typing stops, the same way the
+               dropdowns apply as soon as they change. The page reloads to do
+               it, so the box takes the cursor back with the caret at the end. --}}
+          <input class="input" type="text" name="search" value="{{ $search }}" placeholder="Name, email or student number"
+                 @if ($search !== '') autofocus onfocus="this.setSelectionRange(this.value.length, this.value.length)" @endif
+                 oninput="clearTimeout(this._t); this._t = setTimeout(() => this.form.submit(), 500)">
+        </label>
+        <div class="tk-toolbar-end">
+          <label class="tk-vh" for="filterProgram">Program</label>
+          <select class="input tk-select" id="filterProgram" name="program" onchange="this.form.submit()">
+            <option value="">All programs</option>
+            @foreach (\App\Models\Student::PROGRAM_COURSES as $code => $fullName)
+              <option value="{{ $code }}" @selected($program === $code)>{{ $code }}</option>
+            @endforeach
+          </select>
+          <label class="tk-vh" for="filterYear">Year</label>
+          <select class="input tk-select" id="filterYear" name="year" onchange="this.form.submit()">
+            <option value="">All years</option>
+            @foreach ($years as $y)
+              <option value="{{ $y }}" @selected($year === $y)>{{ $y }} year</option>
+            @endforeach
+          </select>
+          <label class="tk-vh" for="filterSection">Section</label>
+          <select class="input tk-select" id="filterSection" name="section" onchange="this.form.submit()">
+            <option value="">All sections</option>
+            @foreach ($sections as $letter)
+              <option value="{{ $letter }}" @selected($section === $letter)>Section {{ $letter }}</option>
+            @endforeach
+          </select>
+          @if ($search !== '' || $program || $year || $section || $team !== '')
+            <a class="tk-btn tk-btn-ghost" href="{{ route('admin.students') }}">Clear filters</a>
+          @endif
+        </div>
+      </form>
+
+      <div class="tk-scroll">
+      <table class="table std-table" data-export="Student Accounts" data-export-into="#tkActions">
         <thead>
           <tr>
-            {{-- The unique key first: a student number names exactly one
-                 person, and a name does not. --}}
-            <th style="padding-left:20px">Student No.</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Program</th>
-            <th>Year</th>
-            <th>Section</th>
-            <th>Team</th>
-            <th aria-label="Actions"></th>
+            <th style="width:40%">Student</th>
+            <th class="tk-opt2" style="width:16%">Student no.</th>
+            <th style="width:16%">Section</th>
+            <th class="tk-opt" style="width:20%">Team</th>
+            <th style="width:64px"><span class="tk-vh">Actions</span></th>
           </tr>
         </thead>
         <tbody>
           @forelse ($students as $student)
             @php
-              $studentPayload = [
-                'id' => $student->student_id,
-                'f_name' => $student->f_name,
-                'm_name' => $student->m_name,
-                'l_name' => $student->l_name,
-                'suffix' => $student->suffix,
-                'email' => $student->email,
-                'student_number' => $student->student_number,
-                'course' => $student->course,
-                'year_section' => $student->year_section,
-              ];
+              $fullName = trim($student->f_name.' '.$student->l_name);
+              // Program and section the way every other screen writes them -
+              // BSIT and 3A - rather than the full course name and "3rd · A"
+              // across two columns.
+              $program = $student->course ? \App\Models\Student::mapCourseToProgram($student->course) : null;
+              $ys = array_map('trim', explode('·', (string) $student->year_section));
+              $year = count($ys) === 2 ? $ys[0] : '';
+              $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
+              $sectionShort = trim(preg_replace('/[^0-9]/', '', $year).$section);
+              $teamName = $student->studentSchoolYear->first()?->team?->team_name;
             @endphp
             <tr id="student-row-{{ $student->student_id }}">
-              <td class="std-num" style="padding-left:20px" data-label="Student No.">{{ $student->student_number ?? '—' }}</td>
-              <td data-label="Name">
-                <div class="std-who">
-                  <img src="{{ $student->avatarUrl() }}" alt="" loading="lazy" class="std-av"
-                       onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
-                  <span class="std-name">{{ trim($student->f_name.' '.$student->l_name) }}</span>
+              <td class="tk-lead" data-label="Student">
+                <div class="tk-who">
+                  @include('partials.table-kit.avatar', [
+                    'image' => $student->avatarUrl(),
+                    'initials' => $student->avatarInitials(),
+                    'seed' => $student->student_id,
+                  ])
+                  <span class="tk-who-text">
+                    <span class="tk-name">{{ $fullName ?: $student->email }}</span>
+                    <span class="tk-sub" title="{{ $student->email }}">{{ $student->email }}</span>
+                  </span>
                 </div>
               </td>
-              <td class="std-email" title="{{ $student->email }}" data-label="Email">{{ $student->email }}</td>
-              @php
-                // Program, year and section are three things read down a
-                // column. They were one string - the full course name and
-                // "4th · B" run together - which reads as neither.
-                $program = $student->course ? \App\Models\Student::mapCourseToProgram($student->course) : null;
-                $ys = array_map('trim', explode('·', (string) $student->year_section));
-                $year = count($ys) === 2 ? $ys[0] : '';
-                $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
-              @endphp
-              <td title="{{ $student->course }}" data-label="Program">
-                @if ($program)
-                  <span class="std-prog">{{ $program }}</span>
-                @else
-                  <span class="std-none">{{ $student->course ?: '—' }}</span>
-                @endif
+              <td class="tk-opt2" data-label="Student no."><span class="tk-num">{{ $student->student_number ?? '—' }}</span></td>
+              <td data-label="Section" title="{{ $student->course }}">
+                <span>
+                  @if ($program)
+                    <span class="tk-prog">{{ $program }}</span>
+                  @elseif ($student->course)
+                    <span class="tk-prog">{{ $student->course }}</span>
+                  @endif
+                  @if ($sectionShort !== '')
+                    <span class="tk-secsoft">{{ $sectionShort }}</span>
+                  @elseif (! $program && ! $student->course)
+                    <span class="tk-empty">&mdash;</span>
+                  @endif
+                </span>
               </td>
-              <td class="std-num" data-label="Year">{{ $year !== '' ? $year : '—' }}</td>
-              <td class="std-num" data-label="Section">{{ $section !== '' ? $section : '—' }}</td>
-              @php $teamName = $student->studentSchoolYear->first()?->team?->team_name; @endphp
-              <td data-label="Team">
+              <td class="tk-opt" data-label="Team">
                 @if ($teamName)
-                  <span style="font-size:12.5px;color:var(--text)">{{ $teamName }}</span>
+                  <span class="tk-team"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>{{ $teamName }}</span>
                 @else
-                  <span class="std-none">No team</span>
+                  <span class="tk-pill tk-p-neutral"><span class="tk-dot"></span>No team</span>
                 @endif
               </td>
-              <td style="text-align:right;padding-right:16px">
-                <button type="button" class="btn-pill btn-remove-pill std-remove"
-                        data-url="{{ route('admin.students.destroy', $student->student_id) }}"
-                        data-name="{{ trim($student->f_name.' '.$student->l_name) ?: $student->email }}"
-                        data-row="student-row-{{ $student->student_id }}"
-                        onclick="removeStudent(this)">Remove</button>
+              {{-- Remove is in the menu, under a line, not a red button on every
+                   row: thirty of them down the page made the one destructive
+                   thing here the loudest. --}}
+              <td class="tk-ac" data-label="Actions">
+                <div class="tk-acts">
+                  <div class="rowmenu">
+                    <button type="button" class="icon-btn rowmenu-btn" aria-expanded="false"
+                            aria-label="Actions for {{ $fullName ?: $student->email }}">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
+                    </button>
+                    <div class="rowmenu-pop" hidden>
+                      <button type="button" class="rowmenu-item" data-email="{{ $student->email }}" onclick="copyEmail(this)">
+                        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg> Copy email
+                      </button>
+                      <div class="rowmenu-sep"></div>
+                      <button type="button" class="rowmenu-item danger std-remove"
+                              data-url="{{ route('admin.students.destroy', $student->student_id) }}"
+                              data-name="{{ $fullName ?: $student->email }}"
+                              data-row="student-row-{{ $student->student_id }}"
+                              onclick="removeStudent(this)">
+                        <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg> Remove student&hellip;
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </td>
             </tr>
           @empty
@@ -267,9 +235,10 @@
                   $program ?: null,
                   $year ? $year.' year' : null,
                   $section ? 'Section '.$section : null,
+                  $team === 'with' ? 'in a team' : ($team === 'without' ? 'without a team' : null),
               ])->filter();
             @endphp
-            <tr><td colspan="8" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">
+            <tr class="tk-note"><td colspan="5" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">
               @if ($lookedFor->isEmpty())
                 No student accounts yet.
               @else
@@ -280,29 +249,45 @@
           @endforelse
         </tbody>
       </table>
-    </div>
-
-    @if ($students->hasPages())
-      {{-- Laravel's own pager is written for Tailwind, which this page does
-           not load, so its arrows render at full page height and push the
-           table off the screen. Same three controls, this page's buttons. --}}
-      <div class="list-foot">
-        <span>Showing {{ $students->firstItem() }}–{{ $students->lastItem() }} of {{ $students->total() }}</span>
-        <span class="list-foot-nav">
-          @if ($students->onFirstPage())
-            <span class="list-foot-off">Previous</span>
-          @else
-            <a class="btn btn-sm btn-ghost" href="{{ $students->previousPageUrl() }}">Previous</a>
-          @endif
-          <span>Page {{ $students->currentPage() }} of {{ $students->lastPage() }}</span>
-          @if ($students->hasMorePages())
-            <a class="btn btn-sm btn-ghost" href="{{ $students->nextPageUrl() }}">Next</a>
-          @else
-            <span class="list-foot-off">Next</span>
-          @endif
-        </span>
       </div>
-    @endif
+
+      {{-- Laravel's own pager is written for Tailwind, which this page does
+           not load. Where you are, how many to a page, and the pages either
+           side of this one. --}}
+      @php
+        $current = $students->currentPage();
+        $last = $students->lastPage();
+        $pageNumbers = collect([1, $last, $current - 1, $current, $current + 1])
+            ->filter(fn ($n) => $n >= 1 && $n <= $last)
+            ->unique()->sort()->values();
+      @endphp
+      <div class="tk-foot">
+        @if ($students->total() > 0)
+          <span>Showing <strong>{{ $students->firstItem() }}–{{ $students->lastItem() }}</strong> of <strong>{{ $students->total() }}</strong></span>
+        @else
+          <span>Showing <strong>0</strong></span>
+        @endif
+        <div class="tk-foot-end">
+          <label class="tk-rows">Rows per page
+            <select class="input tk-select" form="studentFilters" name="per_page" onchange="this.form.submit()">
+              @foreach ($perPageOptions as $size)
+                <option value="{{ $size }}" @selected($perPage === $size)>{{ $size }}</option>
+              @endforeach
+            </select>
+          </label>
+          @if ($students->hasPages())
+            <nav class="tk-pg" aria-label="Pages">
+              <a class="tk-pgn {{ $students->onFirstPage() ? 'off' : '' }}" href="{{ $students->previousPageUrl() ?? '#' }}" aria-label="Previous page" @if ($students->onFirstPage()) aria-disabled="true" tabindex="-1" @endif><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></a>
+              @foreach ($pageNumbers as $i => $n)
+                @if ($i > 0 && $n - $pageNumbers[$i - 1] > 1)<span class="tk-gap" aria-hidden="true">&hellip;</span>@endif
+                <a class="tk-pgn" href="{{ $students->url($n) }}" @if ($n === $current) aria-current="page" @endif>{{ $n }}</a>
+              @endforeach
+              <a class="tk-pgn {{ $students->hasMorePages() ? '' : 'off' }}" href="{{ $students->nextPageUrl() ?? '#' }}" aria-label="Next page" @unless ($students->hasMorePages()) aria-disabled="true" tabindex="-1" @endunless><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></a>
+            </nav>
+          @endif
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -339,6 +324,17 @@ function showToast(message, type = 'success') {
 }
 
 
+// ── COPY EMAIL ─────────────────────────────────────────
+async function copyEmail(button) {
+  try {
+    await navigator.clipboard.writeText(button.dataset.email);
+    showToast(button.dataset.email + ' copied.', 'success');
+  } catch (e) {
+    showToast('Could not copy the address.', 'error');
+  }
+}
+
+
 // ── REMOVE ─────────────────────────────────────────────
 // For good: the account, and their place on their team. Asked first, in the
 // app's own dialog, with Cancel as the reflex.
@@ -372,6 +368,7 @@ async function removeStudent(button) {
   }
 }
 </script>
+@include('partials.row-menu')
 @include('partials.app-dialog')
 @include('partials.escape-closes-modals')
 </body>

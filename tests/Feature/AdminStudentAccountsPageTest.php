@@ -32,12 +32,14 @@ class AdminStudentAccountsPageTest extends TestCase
     }
 
     /**
-     * Program, year and section read down three columns.
+     * The section is written the way every other screen writes it: the
+     * program's code and the year-and-letter, BSIT 4B.
      *
-     * They were one cell - the full course name and "4th · B" run together -
-     * which reads as neither of them.
+     * It was once one cell holding the full course name and "4th · B" run
+     * together, then three columns; one short label is what is read down a
+     * list of hundreds.
      */
-    public function test_program_year_and_section_are_their_own_columns(): void
+    public function test_the_section_reads_as_program_and_year_letter(): void
     {
         $this->actingAs($this->admin(), 'expert');
 
@@ -53,18 +55,16 @@ class AdminStudentAccountsPageTest extends TestCase
         $response = $this->get(route('admin.students'));
 
         $response->assertOk();
-        $response->assertSee('<th>Program</th>', false);
-        $response->assertSee('<th>Year</th>', false);
-        $response->assertSee('<th>Section</th>', false);
+        $response->assertSee('>Section</th>', false);
         $response->assertDontSee('<th>Course / Section</th>', false);
 
         // The code, not the whole course name, with the full one on hover.
-        $response->assertSee('std-prog">BSIT', false);
+        $response->assertSee('class="tk-prog">BSIT<', false);
         $response->assertSee('title="Bachelor of Science in Information Technology"', false);
 
-        // Year and section apart, from the one string they are stored in.
-        $response->assertSee('data-label="Year">4th', false);
-        $response->assertSee('data-label="Section">B', false);
+        // The year's number and the letter, from the one string they are
+        // stored in.
+        $response->assertSee('class="tk-secsoft">4B<', false);
     }
 
     /**
@@ -101,7 +101,7 @@ class AdminStudentAccountsPageTest extends TestCase
 
         $this->get(route('admin.students'))
             ->assertOk()
-            ->assertSee('<th>Team</th>', false)
+            ->assertSee('>Team</th>', false)
             ->assertSee('Team Alpha')
             ->assertSee('No team');
     }
