@@ -2,14 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\EndIdleSession;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Ten minutes without doing anything signs a student or an expert out, on
- * every portal, and the sign-in page says why.
+ * Without anyone using CapsTrack - thirty days by default, ten minutes here -
+ * a student or an expert is signed out on every portal, and the sign-in page
+ * says why.
  */
 class IdleSessionTimeoutTest extends TestCase
 {
@@ -190,10 +192,54 @@ class IdleSessionTimeoutTest extends TestCase
             ->assertSee('if (now - Math.max(last, shared()) >= LIMIT) { end(); return; }', false);
     }
 
-    /** Thirty minutes unless an install says otherwise - here and in the example env a server is set up from. */
-    public function test_the_idle_limit_is_thirty_minutes_by_default(): void
+    /**
+     * Thirty days unless an install says otherwise - here and in the example
+     * env a server is set up from - and the session cookie lasts as long, so
+     * it is not the cookie that signs anyone out first.
+     */
+    public function test_the_idle_limit_is_thirty_days_by_default(): void
     {
-        $this->assertMatchesRegularExpression("/'idle_timeout' => \\(int\\) env\\('SESSION_IDLE_TIMEOUT', 30\\)/", file_get_contents(config_path('session.php')));
-        $this->assertMatchesRegularExpression('/^SESSION_IDLE_TIMEOUT=30$/m', file_get_contents(base_path('.env.example')));
+        $config = file_get_contents(config_path('session.php'));
+        $env = file_get_contents(base_path('.env.example'));
+
+        $this->assertMatchesRegularExpression("/'idle_timeout' => \\(int\\) env\\('SESSION_IDLE_TIMEOUT', 43200\\)/", $config);
+        $this->assertMatchesRegularExpression("/'lifetime' => \\(int\\) env\\('SESSION_LIFETIME', 43200\\)/", $config);
+        $this->assertMatchesRegularExpression('/^SESSION_IDLE_TIMEOUT=43200\r?$/m', $env);
+        $this->assertMatchesRegularExpression('/^SESSION_LIFETIME=43200\r?$/m', $env);
+        $this->assertFalse((bool) config('session.expire_on_close'), 'closing the browser keeps the session');
+    }
+
+    /** Like Google: open it within thirty days and it stays signed in; leave it thirty days and it signs out. */
+    public function test_thirty_days_without_opening_capstrack_signs_out_every_portal(): void
+    {
+        config(['session.idle_timeout' => 43200, 'session.lifetime' => 43200]);
+        $student = $this->student();
+        $this->actingAs($student, 'web')->get(route('student.dashboard'))->assertOk();
+
+        // Back after 29 days: still signed in, and the thirty days start over.
+        $this->travel(29)->days();
+        $this->get(route('student.dashboard'))->assertOk();
+        $this->travel(29)->days();
+        $this->get(route('student.dashboard'))->assertOk();
+
+        $this->travel(30)->days();
+        $this->get(route('student.dashboard'))->assertRedirect(route('login'));
+        $this->assertGuest('web');
+        $this->get(route('login'))->assertSee('You were signed out after 30 days of inactivity.');
+
+        $expert = $this->expert();
+        $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk();
+        $this->travel(30)->days();
+        $this->get(route('instructor.dashboard'))->assertRedirect(route('login'));
+        $this->assertGuest('expert');
+    }
+
+    public function test_the_limit_reads_the_way_a_person_says_it(): void
+    {
+        $this->assertSame('30 days', EndIdleSession::limitForHumans(43200));
+        $this->assertSame('1 day', EndIdleSession::limitForHumans(1440));
+        $this->assertSame('2 hours', EndIdleSession::limitForHumans(120));
+        $this->assertSame('10 minutes', EndIdleSession::limitForHumans(10));
+        $this->assertSame('90 minutes', EndIdleSession::limitForHumans(90));
     }
 }

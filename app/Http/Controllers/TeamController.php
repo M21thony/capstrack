@@ -191,11 +191,25 @@ class TeamController extends Controller
         // Leaving always waits on the CaPSA; after Title Defense so does
         // removing a member.
         $teamLocked = $myTeam?->isTeamLocked() ?? false;
+        // What ran out of time is declined before it is shown as waiting.
+        if ($myTeam) {
+            MemberLeaveRequest::expireOverdue();
+        }
         $leaveRequests = $myTeam
             ? MemberLeaveRequest::with(['student', 'requester'])
                 ->pending()
                 ->where('team_id', $myTeam->team_id)
                 ->oldest()
+                ->get()
+            : collect();
+        // The last week's requests that declined themselves, so the team sees
+        // it was the clock and not the CaPSA - and that they can ask again.
+        $autoDeclinedRequests = $myTeam
+            ? MemberLeaveRequest::with(['student', 'requester'])
+                ->where('team_id', $myTeam->team_id)
+                ->where('auto_declined', true)
+                ->where('decided_at', '>=', now()->subDays(7))
+                ->latest('decided_at')
                 ->get()
             : collect();
 
@@ -298,6 +312,7 @@ class TeamController extends Controller
             'teamLocked' => $teamLocked,
             'teamLockedAt' => $teamLocked ? $myTeam->teamLockedAt() : null,
             'leaveRequests' => $leaveRequests,
+            'autoDeclinedRequests' => $autoDeclinedRequests,
             'leaderIds' => $leaderIds,
             'userRole' => $userRole,
             'expertRemovedNotifications' => $expertRemovedNotifications,

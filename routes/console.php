@@ -32,3 +32,7 @@ Schedule::command('milestones:send-due-reminders')->dailyAt('07:05');
 // When a team finishes a phase, its leader is told to evaluate the experts -
 // once per phase, so running it often only makes the email arrive sooner.
 Schedule::command('evaluations:send-reminders')->hourly();
+
+// A request to leave a team, or to remove a member, that the CaPSA has not
+// decided in three days is declined on its own and the team is told why.
+Schedule::command('leave-requests:expire')->hourly();

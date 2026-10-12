@@ -718,7 +718,17 @@
                   {{ $rr->type === 'leave' ? $rrMember.' asked to leave' : $rrBy.' asked to remove '.$rrMember }}
                 </div>
                 <div style="font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; overflow-wrap: anywhere;">“{{ $rr->reason }}”</div>
-                <div style="font-size: 10.5px; color: var(--text3); margin-top: 4px;">Sent {{ $rr->created_at->diffForHumans() }}</div>
+                @php
+                  $rrDeadline = $rr->autoDeclinesAt();
+                  $rrHoursLeft = max(0, (int) ceil(now()->diffInMinutes($rrDeadline, false) / 60));
+                @endphp
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 10.5px; color: var(--text3); margin-top: 6px;">
+                  <span>Sent {{ $rr->created_at->diffForHumans() }}</span>
+                  <span title="If your CaPSA has not decided by {{ $rrDeadline->format('M j, g:i A') }}, it is declined automatically" style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-weight: 700; {{ $rrHoursLeft <= 24 ? 'background: var(--red-bg); color: var(--red);' : 'background: var(--amber-bg); color: var(--amber);' }}">
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    Auto-declines {{ $rrHoursLeft <= 24 ? 'in '.max(1, $rrHoursLeft).' '.(max(1, $rrHoursLeft) === 1 ? 'hour' : 'hours') : $rrDeadline->format('M j') }} without a decision
+                  </span>
+                </div>
               </div>
               @if($rrMine)
               <form method="POST" action="{{ route('team.capsa-leave-requests.update', $rr->id) }}" style="flex-shrink: 0;">
@@ -728,6 +738,35 @@
                 <button type="submit" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font-size: 11px; font-weight: 700; cursor: pointer;">Withdraw</button>
               </form>
               @endif
+            </div>
+          @endforeach
+        </div>
+      </div>
+      @endif
+
+      {{-- Declined by the clock, not the CaPSA: said plainly, with the way to ask again. --}}
+      @if($autoDeclinedRequests->isNotEmpty())
+      <div style="margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3);">DECLINED AUTOMATICALLY</div>
+        <div style="font-size: 11px; color: var(--text3); margin: 3px 0 12px;">Your CaPSA did not act on these within {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days. You can send the request again.</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          @foreach($autoDeclinedRequests as $rr)
+            @php
+              $rrMember = trim(($rr->student->f_name ?? '').' '.($rr->student->l_name ?? '')) ?: 'A member';
+              $rrBy = trim(($rr->requester->f_name ?? '').' '.($rr->requester->l_name ?? '')) ?: 'The leader';
+            @endphp
+            <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text);">
+                  <span>{{ $rr->type === 'leave' ? $rrMember.' asked to leave' : $rrBy.' asked to remove '.$rrMember }}</span>
+                  <span style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; background: var(--bg3); color: var(--text2); border: 1px solid var(--border);">
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    Auto-declined · No action from CaPSA in {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days
+                  </span>
+                </div>
+                <div style="font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; overflow-wrap: anywhere;">“{{ $rr->reason }}”</div>
+                <div style="font-size: 10.5px; color: var(--text3); margin-top: 4px;">Sent {{ $rr->created_at->format('M j') }} · declined {{ $rr->decided_at?->format('M j, g:i A') }}</div>
+              </div>
             </div>
           @endforeach
         </div>

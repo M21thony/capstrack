@@ -197,8 +197,13 @@
 .ev-preview{position:sticky;top:0;display:flex;flex-direction:column;gap:2px}
 .ev-pv-card{padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--bg2);box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .ev-pv-head{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--border)}
-.ev-pv-head b{display:block;font-size:13.5px;color:var(--text)}
-.ev-pv-head span{display:block;font-size:11.5px;color:var(--green);font-weight:700}
+.ev-pv-who{min-width:0}
+.ev-pv-who b{display:block;font-size:13.5px;color:var(--text)}
+.ev-pv-who span{display:block;margin-top:1px;font-size:11.5px;color:var(--green);font-weight:700}
+.ev-pv-av{width:40px;height:40px;flex-shrink:0;display:block}
+.ev-pv-av svg{display:block;width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 1px rgba(201,168,44,.35)}
+.ev-pv-av-bg{fill:#faf3dc}
+.ev-pv-av-fg{fill:#d4b24a}
 .ev-pv-qs{list-style:none;display:flex;flex-direction:column;gap:10px;margin:12px 0 0;max-height:52vh;max-height:52dvh;overflow:auto;counter-reset:pv}
 .ev-pv-qs li{display:flex;flex-direction:column;gap:5px;font-size:12.5px;line-height:1.45;color:var(--text);counter-increment:pv}
 .ev-pv-qs li > span:first-child::before{content:counter(pv) ". ";font-weight:700;color:var(--text3)}
