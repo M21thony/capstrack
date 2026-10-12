@@ -16,6 +16,7 @@ use App\Support\ChecklistTracker;
 use App\Support\DefenseScores;
 use App\Support\PreProposalPayload;
 use App\Support\TeamChecklist;
+use App\Support\TeamApplications;
 use App\Support\TeamRows;
 use App\Support\TeamTodo;
 use Illuminate\Http\RedirectResponse;
@@ -30,16 +31,16 @@ use Illuminate\View\View;
  * (every team, with its progress as one strip) and Milestones (setting up
  * the checklist). A CaPSA who is also an adviser, consultant, grammarian or
  * panelist gets her expert work here too - one Teams page and one To do,
- * each item saying which hat it is for - rather than a second "My Teams".
+ * each item saying which hat it is for - rather than a second "Teams".
  */
 class TeamManagementController extends Controller
 {
     use ShowsTeamPage;
 
-    public const TABS = ['todo', 'teams', 'pre_proposals', 'verification', 'papers', 'milestones', 'milestone_list', 'leave_requests', 'rules'];
+    public const TABS = ['todo', 'applications', 'teams', 'pre_proposals', 'verification', 'papers', 'milestones', 'milestone_list', 'leave_requests', 'rules'];
 
     /** The tabs along the top of the list. The first is the default. */
-    public const HUB_TABS = ['todo', 'teams', 'milestone_list'];
+    public const HUB_TABS = ['todo', 'applications', 'teams', 'milestone_list'];
 
     /** How the milestones list can be ordered. The first is the default. */
     public const MILESTONE_SORTS = ['order' => 'Checklist order', 'due' => 'Due date', 'percent' => 'Most complete', 'name' => 'Name'];
@@ -55,6 +56,7 @@ class TeamManagementController extends Controller
     public function __construct(
         private TeamRows $teamRows,
         private TeamTodo $todo,
+        private TeamApplications $applications,
     ) {}
 
     public function index(Request $request): View|RedirectResponse
@@ -84,7 +86,7 @@ class TeamManagementController extends Controller
             'portal' => 'capsa',
             'rows' => $rows,
             'todo' => $todo,
-            'decided' => in_array($tab, ['todo', 'teams'], true)
+            'decided' => in_array($tab, ['todo', 'applications', 'teams'], true)
                 ? $this->todo->decidedByCapsa($capsa, $rows)->concat($this->todo->decidedByExpert($capsa))
                     ->sortByDesc(fn ($d) => $d->at->getTimestamp())->take(30)->values()
                 : collect(),
@@ -94,6 +96,9 @@ class TeamManagementController extends Controller
             // Each team's score at every defense, once its whole panel has graded.
             'defenseScores' => DefenseScores::forTeams($teamIds),
             'tracker' => $tracker,
+            // The teams asking her to be their adviser, consultant or
+            // grammarian, for the Team Applications tab and the To do.
+            'applications' => $applications = $this->applications->forExpert($capsa),
             // The tabs that are still pages of their own bring their own data,
             // built only when they are the one open.
             'tabData' => match ($tab) {
@@ -110,7 +115,8 @@ class TeamManagementController extends Controller
                 ->filter(fn ($s) => in_array($s, $capsaSections, true))
                 ->values(),
             'counts' => [
-                'todo' => $todo->count(),
+                'todo' => TeamTodo::waiting($todo)->count(),
+                'applications' => $applications['waiting']->count(),
                 'teams' => $rows->count(),
                 'leave_requests' => MemberLeaveRequest::pendingCountFor($capsa)
                     + ExpertRemovalRequest::pendingCountFor($capsa),
@@ -328,7 +334,7 @@ class TeamManagementController extends Controller
         return array_merge([
             $capsa
                 ? ['Team Management', route('capsa.team_management', ['tab' => 'teams'])]
-                : ['My Teams', route('instructor.teams', ['tab' => 'teams'])],
+                : ['Teams', route('instructor.teams', ['tab' => 'teams'])],
             [$row->team->team_name, $teamUrl],
         ], $below);
     }

@@ -119,7 +119,7 @@ class TitleChangeRequestTest extends TestCase
         $this->passed();
         $this->ask();
 
-        $this->decide(TitleChangeRequest::sole(), 'approve')->assertRedirect(route('instructor.assignments'));
+        $this->decide(TitleChangeRequest::sole(), 'approve')->assertRedirect(route('instructor.teams', ['tab' => 'todo']));
 
         $this->assertSame(self::CHANGED, $this->team->fresh()->project_title);
         $this->assertSame(TitleChangeRequest::APPROVED, TitleChangeRequest::sole()->status);
@@ -136,7 +136,7 @@ class TitleChangeRequestTest extends TestCase
         $this->decide($change, 'decline')->assertSessionHasErrors('note');
         $this->assertSame(TitleChangeRequest::PENDING, $change->fresh()->status);
 
-        $this->decide($change, 'decline', 'Keep it; the client is named in the scope.')->assertRedirect(route('instructor.assignments'));
+        $this->decide($change, 'decline', 'Keep it; the client is named in the scope.')->assertRedirect(route('instructor.teams', ['tab' => 'todo']));
         $this->assertSame(TitleChangeRequest::DECLINED, $change->fresh()->status);
         $this->assertSame(self::TITLE, $this->team->fresh()->project_title);
 
@@ -210,8 +210,10 @@ class TitleChangeRequestTest extends TestCase
         $this->actingAs($this->member, 'web')->get(route('student.duplication'))
             ->assertOk()->assertSee('Waiting for Ada Adviser to approve changing your title to', false);
 
-        $this->actingAs($this->adviser, 'expert')->get(route('instructor.assignments'))
-            ->assertOk()->assertSee('Title changes to approve')->assertSee(self::CHANGED)->assertSee('The panel asked us to name the client.');
+        // In the adviser's To do, with the title as it is and as it would be.
+        $this->actingAs($this->adviser, 'expert')->get(route('instructor.teams', ['tab' => 'todo']))
+            ->assertOk()->assertSee('Approve a title change')->assertSee(self::CHANGED)->assertSee('The panel asked us to name the client.')
+            ->assertSee('<dl class="tc-diff">', false);
     }
 
     private function capsaVerifiesFinalTitleForm(): void

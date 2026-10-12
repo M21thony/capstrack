@@ -243,7 +243,6 @@
   <div class="content rp fit">
     <div class="rp-top">
       <header class="rp-head">
-        <h1>{{ $name }}</h1>
         <p>{{ $ctx['section'] !== '' && $report === 'progress' ? $name.' for '.$ctx['section'].'.' : $about }}</p>
       </header>
 

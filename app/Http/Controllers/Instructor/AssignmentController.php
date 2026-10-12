@@ -14,6 +14,7 @@ use App\Support\DefenseBoard;
 use App\Support\ExpertApplications;
 use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,154 +22,13 @@ use Illuminate\Support\Facades\Storage;
 
 class AssignmentController extends Controller
 {
-    public function index()
+    /**
+     * Team Assignments is the Team Applications tab of Teams now. Its address
+     * still arrives from bookmarks and older notifications.
+     */
+    public function index(): RedirectResponse
     {
-        $expert = Auth::guard('expert')->user();
-
-        // A queue is worked from the front: whoever has waited longest first.
-        $pendingAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
-            ->where('status', 'pending')
-            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role', 'preProposal'])
-            ->oldest()
-            ->get();
-
-        $approvedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
-            ->where('status', 'approved')
-            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role', 'preProposal'])
-            ->latest()
-            ->get();
-
-        $rejectedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
-            ->where('status', 'rejected')
-            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role', 'preProposal'])
-            ->latest()
-            ->take(10)
-            ->get();
-
-        $currentSlots = $approvedAssignments->count();
-        $maxSlots = $expert->max_teams ?? 0;
-
-        $allAssignments = $pendingAssignments
-            ->merge($approvedAssignments)
-            ->merge($rejectedAssignments);
-
-        $assignmentData = $allAssignments->mapWithKeys(function ($a) {
-            $leaderName = $a->team && $a->team->leader
-                ? ($a->team->leader->displayFirstName() ?? $a->team->leader->f_name ?? 'N/A')
-                : 'N/A';
-            $leaderEmail = $a->team && $a->team->leader ? $a->team->leader->email : '';
-            $members = $a->team && $a->team->members
-                ? $a->team->members
-                    ->reject(fn ($m) => $m->student_id === ($a->team->leader_id ?? null))
-                    ->map(fn ($m) => [
-                        'name' => trim(($m->f_name ?? '').' '.($m->l_name ?? '')),
-                        'email' => $m->email ?? '',
-                    ])
-                    ->filter(fn ($m) => $m['name'] !== '')
-                    ->values()
-                : [];
-            // proposal_file is stored via ->store('proposals', 'public') in
-            // Api\StudentExpertController - must resolve through that same
-            // 'public' disk explicitly. The bare Storage::url() facade call
-            // resolves against the DEFAULT disk (config('filesystems.default'),
-            // 'local' here) instead, which only "worked" by coincidence of
-            // the local driver's fallback URL logic - it breaks the moment
-            // the default disk is ever reconfigured.
-            $proposalUrl = $a->proposal_file ? Storage::disk('public')->url($a->proposal_file) : null;
-            $message = $a->message ?? 'No message provided.';
-
-            return [$a->assignment_id => [
-                'team' => $a->team?->team_name ?? 'Unknown',
-                'project' => $a->team?->project_title ?? 'No project title',
-                // The role this team is asking for, not the list of every
-                // role this expert holds - which was the same string on every
-                // request and told the expert nothing about what they were
-                // being asked to do.
-                'role' => $a->engaged_role_name ? ucfirst($a->engaged_role_name) : 'Expert',
-                'leader' => $leaderName,
-                'leader_email' => $leaderEmail,
-                'members' => $members,
-                'message' => $message,
-                'proposal' => $proposalUrl
-                    ?? ($a->preProposal?->duplication_check_id
-                        ? route('instructor.assignments.pre_proposal', $a->assignment_id)
-                        : null),
-                // When the team applied with the pre-proposal their CaPSA
-                // approved, say so: the expert is looking at the document
-                // that got through, not a PDF the team chose to attach.
-                'approved_title' => $a->preProposal?->title,
-                'date' => $a->created_at ? $a->created_at->format('M d, Y g:i A') : 'N/A',
-                // How long a request has sat in the queue. Three days is when
-                // a team starts to wonder whether anyone has seen it.
-                'waiting' => $a->created_at ? $a->created_at->diffForHumans(null, true) : '',
-                'stale' => $a->created_at ? $a->created_at->lte(now()->subDays(3)) : false,
-                'decided' => $a->updated_at ? $a->updated_at->format('M d, Y g:i A') : '',
-                'rejection_reason' => $a->rejection_reason ?? null,
-                'status' => $a->status ?? 'pending',
-            ]];
-        })->toArray();
-
-        // New titles waiting for this expert to confirm as a team's adviser.
-        $resolver = app(RecipientResolver::class);
-        $titleConfirmations = CapstonePreProposal::where('adviser_status', TitleRevision::PENDING)
-            ->whereNull('retired_at')
-            ->with(['team', 'duplicationCheck'])
-            ->get()
-            ->filter(fn ($p) => $resolver->resolveTeamRoleExpert((int) $p->team_id, 'adviser') === (int) $expert->expert_id)
-            ->sortBy('created_at')
-            ->values();
-
-        $titleData = $titleConfirmations->mapWithKeys(function ($tc) {
-            $setAside = $tc->team
-                ? $tc->team->allPreProposals()->whereNotNull('retired_at')->pluck('title')->filter()->values()->all()
-                : [];
-
-            return [$tc->id => [
-                'team' => $tc->team?->team_name ?? 'Unknown',
-                'title' => $tc->title,
-                'replaces' => $setAside,
-                'verdict' => $tc->duplicationCheck?->verdict,
-                'top_score' => $tc->duplicationCheck?->top_score,
-                'document' => $tc->duplicationCheck?->document_path
-                    ? route('instructor.title-confirmations.document', $tc)
-                    : null,
-                'update_url' => route('instructor.title-confirmations.update', $tc),
-                'date' => $tc->created_at ? $tc->created_at->format('M d, Y g:i A') : '',
-                'waiting' => $tc->created_at ? $tc->created_at->diffForHumans(null, true) : '',
-                'stale' => $tc->created_at ? $tc->created_at->lte(now()->subDays(3)) : false,
-            ]];
-        })->toArray();
-
-        // Passed teams asking to change part of their title, for this adviser.
-        $titleChanges = TitleChangeRequest::where('status', TitleChangeRequest::PENDING)
-            ->with(['team', 'requester'])
-            ->oldest()
-            ->get()
-            ->filter(fn ($c) => $resolver->resolveTeamRoleExpert((int) $c->team_id, 'adviser') === (int) $expert->expert_id)
-            ->values();
-
-        // Title, Pre Oral and Final Oral dates of this adviser's teams, for their go.
-        $defenseGo = DefenseSchedule::whereIn('defense_type', DefenseBoard::PAID_STAGES)
-            ->whereNull('outcome')
-            ->where('schedule_date', '>=', now())
-            ->with('team')
-            ->orderBy('schedule_date')
-            ->get()
-            ->filter(fn ($d) => $resolver->resolveTeamRoleExpert((int) $d->team_id, 'adviser') === (int) $expert->expert_id)
-            ->values();
-
-        return view('instructor.assignments', [
-            'defenseGo' => $defenseGo,
-            'titleChanges' => $titleChanges,
-            'titleConfirmations' => $titleConfirmations,
-            'titleData' => $titleData,
-            'pendingAssignments' => $pendingAssignments,
-            'approvedAssignments' => $approvedAssignments,
-            'rejectedAssignments' => $rejectedAssignments,
-            'currentSlots' => $currentSlots,
-            'maxSlots' => $maxSlots,
-            'assignmentData' => $assignmentData,
-        ]);
+        return redirect()->route('instructor.teams', ['tab' => 'applications']);
     }
 
     /**

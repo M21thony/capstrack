@@ -213,7 +213,6 @@
 </div>
 @elseif (! $progress)
 <div class="card">
-  <div class="card-header"><span class="card-title">Our milestones</span></div>
   <div style="padding:22px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6">
     Your CaPSA has not set up a checklist for your team yet.
   </div>

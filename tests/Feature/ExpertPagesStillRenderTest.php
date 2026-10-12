@@ -39,7 +39,7 @@ class ExpertPagesStillRenderTest extends TestCase
             'dashboard' => ['/instructor/dashboard'],
             'teams' => ['/instructor/teams'],
             'document review' => ['/instructor/docreview'],
-            'assignments' => ['/instructor/assignments'],
+            'team applications' => ['/instructor/teams?tab=applications'],
             'schedule' => ['/instructor/schedule'],
         ];
     }

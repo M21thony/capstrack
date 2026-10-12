@@ -153,20 +153,22 @@ class StaffPagesOpenFinishedTest extends TestCase
     {
         $adviser = $this->adviser();
 
-        foreach (['instructor.teams', 'instructor.assignments', 'instructor.progress'] as $route) {
+        foreach (['instructor.teams', 'instructor.progress'] as $route) {
             $html = $this->actingAs($adviser, 'expert')->get(route($route))->assertOk()->getContent();
 
             $this->assertMatchesRegularExpression('#<a href="[^"]*/instructor/teams" class="mtab-item on"\s+aria-current="page"\s*>#', $html, $route);
         }
     }
 
-    public function test_a_phone_opens_team_assignments_at_the_queue(): void
+    public function test_team_assignments_opens_as_the_team_applications_tab(): void
     {
-        $html = $this->actingAs($this->adviser(), 'expert')->get(route('instructor.assignments'))->assertOk()->getContent();
+        $this->actingAs($this->adviser(), 'expert')->get(route('instructor.assignments'))
+            ->assertRedirect(route('instructor.teams', ['tab' => 'applications']));
 
-        // The first application is shown for the reader, but the page is not
-        // scrolled down to it: only a tap on a team does that.
-        $this->assertStringContainsString('selectTitle(Number(first.dataset.id), false); else selectAssignment(Number(first.dataset.id), false);', $html);
-        $this->assertSame(2, substr_count($html, 'if (reveal) revealPanelOnPhone();'));
+        // The tab shows on its own, the other two hidden until picked; on a
+        // phone each application is a card rather than a table to scroll.
+        $html = $this->actingAs($this->adviser(), 'expert')->get(route('instructor.teams', ['tab' => 'applications']))->assertOk()->getContent();
+        $this->assertStringContainsString('<section class="hub-pane" id="tm-apps-tab" role="tabpanel" >', $html);
+        $this->assertMatchesRegularExpression('#id="tm-todo" role="tabpanel"\s+hidden#', $html);
     }
 }

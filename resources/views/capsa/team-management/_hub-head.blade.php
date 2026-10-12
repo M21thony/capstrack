@@ -1,16 +1,21 @@
 {{--
-  The head of the Teams hub: the title, one line on what is waiting, Team
-  rules (CaPSA only) beside the title, and the tabs.
+  The head of the Teams hub: one line on what is waiting, Team rules (CaPSA
+  only) beside it, and the tabs. The page's name is already in the top bar,
+  so it is not said again here.
 
-  To do and Teams switch in place; Milestones is a page of its own.
+  To do, Team Applications and Teams switch in place; Milestones is a page of
+  its own.
 --}}
 @php
   $capsaPortal = $portal === 'capsa';
   $hubRoute = $capsaPortal ? 'capsa.team_management' : 'instructor.teams';
-  $late = $todo->filter(fn ($i) => $i->age >= \App\Support\TeamTodo::LATE_AFTER_DAYS)->count();
+  // A defense already given the go is listed in To do but not waiting on them.
+  $waitingTodo = \App\Support\TeamTodo::waiting($todo);
+  $late = $waitingTodo->filter(fn ($i) => $i->age >= \App\Support\TeamTodo::LATE_AFTER_DAYS)->count();
   $verified = $rows->filter(fn ($r) => $r->team->is_confirmed)->count();
   $tabs = array_filter([
-    'todo' => ['To do', $todo->count()],
+    'todo' => ['To do', $waitingTodo->count()],
+    'applications' => $applications['open'] ? ['Team Applications', $applications['waiting']->count()] : null,
     'teams' => ['Teams', $rows->count()],
     'milestone_list' => $capsaPortal ? ['Milestones', null] : null,
   ]);
@@ -18,10 +23,9 @@
 
 <div class="hub-head">
   <div class="grow">
-    <h1>{{ $capsaPortal ? 'Teams' : 'My Teams' }}</h1>
     <p class="hub-sum">
-      @if ($todo->isNotEmpty())
-        <b class="w">{{ $todo->count() }} to do</b>@if ($late), <b class="late">{{ $late }} waiting 3+ days</b>@endif ·
+      @if ($waitingTodo->isNotEmpty())
+        <b class="w">{{ $waitingTodo->count() }} to do</b>@if ($late), <b class="late">{{ $late }} waiting 3+ days</b>@endif ·
       @endif
       {{ $rows->count() }} {{ \Illuminate\Support\Str::plural('team', $rows->count()) }} · {{ $verified }} verified
       @if ($capsaPortal)
@@ -30,6 +34,12 @@
       @endif
     </p>
   </div>
+
+  {{-- How many more teams this person can take on, beside every tab: the
+       To do's applications and the Team Applications list both lean on it. --}}
+  @if ($applications['open'])
+    @include('capsa.team-management._slots')
+  @endif
 
   @if ($capsaPortal)
     {{-- The three team rules are three small answers, so they open in a
