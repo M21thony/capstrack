@@ -26,12 +26,29 @@ class StudentAccountsController extends Controller
      */
     public const YEARS = ['3rd', '4th'];
 
+    /**
+     * The page sizes on offer. A short list rather than a free number: a
+     * per_page of 100000 typed into the address bar would load the college.
+     *
+     * @var list<int>
+     */
+    public const PER_PAGE = [30, 50, 100];
+
+    /**
+     * The team tabs: everyone, those on a team this term, those not.
+     *
+     * @var list<string>
+     */
+    public const TEAM_FILTERS = ['with', 'without'];
+
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
         $program = (string) $request->query('program', '');
         $year = (string) $request->query('year', '');
         $section = strtoupper(trim((string) $request->query('section', '')));
+        $team = (string) $request->query('team', '');
+        $perPage = (int) $request->query('per_page', self::PER_PAGE[0]);
 
         // A letter, or nothing. Straight into a LIKE otherwise, and a student
         // typing % into the address bar would match the whole college.
@@ -39,7 +56,17 @@ class StudentAccountsController extends Controller
             $section = '';
         }
 
-        $students = Student::query()
+        if (! in_array($team, self::TEAM_FILTERS, true)) {
+            $team = '';
+        }
+
+        if (! in_array($perPage, self::PER_PAGE, true)) {
+            $perPage = self::PER_PAGE[0];
+        }
+
+        // Every filter but the team one, so each tab can say how many it
+        // holds before it is picked.
+        $filtered = Student::query()
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('f_name', 'like', "%{$search}%")
@@ -59,12 +86,23 @@ class StudentAccountsController extends Controller
             // year_section reads "4th · A" - the year is what it starts with,
             // the section is the letter it ends with.
             ->when(in_array($year, self::YEARS, true), fn ($q) => $q->where('year_section', 'like', $year.'%'))
-            ->when($section !== '', fn ($q) => $q->where('year_section', 'like', '% '.$section))
+            ->when($section !== '', fn ($q) => $q->where('year_section', 'like', '% '.$section));
+
+        // "On a team" is this term's row having one (StudentSchoolYear's own
+        // scope), the same thing the Team column shows.
+        $inTeam = fn ($query) => $query->whereHas('studentSchoolYear.team');
+
+        $allCount = (clone $filtered)->count();
+        $withTeamCount = $inTeam(clone $filtered)->count();
+
+        $students = (clone $filtered)
+            ->when($team === 'with', $inTeam)
+            ->when($team === 'without', fn ($q) => $q->whereDoesntHave('studentSchoolYear.team'))
             // This term's row only (StudentSchoolYear's own scope), so the Team
             // column shows the team they are on now, not one from a retake.
             ->with('studentSchoolYear.team')
             ->orderBy('l_name')
-            ->paginate(30)
+            ->paginate($perPage)
             ->withQueryString();
 
         // Only the letters somebody is actually enrolled in. The catalog runs
@@ -89,6 +127,14 @@ class StudentAccountsController extends Controller
             'section' => $section,
             'sections' => $sections,
             'years' => self::YEARS,
+            'team' => $team,
+            'teamCounts' => [
+                '' => $allCount,
+                'with' => $withTeamCount,
+                'without' => $allCount - $withTeamCount,
+            ],
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE,
         ]);
     }
 

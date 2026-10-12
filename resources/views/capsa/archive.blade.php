@@ -324,7 +324,7 @@
     <div class="abs-foot">
       <a class="btn abs-pdf" id="abs-pdf" href="#" target="_blank" rel="noopener" hidden>
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
-        Open PDF
+        View PDF
       </a>
       <button type="button" class="btn btn-primary" onclick="closeAbstract()">Close</button>
     </div>
@@ -368,9 +368,14 @@ function openAbstract(id) {
   keywords.hidden = !doc.keywords.length;
   keywords.querySelector('span').textContent = doc.keywords.join(', ');
 
+  // Opens in the app's PDF window (data-pdf-view); the href stays for a
+  // Ctrl-click into a new tab.
   const pdf = document.getElementById('abs-pdf');
   pdf.hidden = !doc.pdf;
   pdf.href = doc.pdf || '#';
+  pdf.dataset.pdfView = doc.pdf || '';
+  pdf.dataset.pdfTitle = doc.title;
+  pdf.dataset.pdfMeta = [doc.authors, doc.program, doc.schoolYear === 'Not recorded' ? '' : 'S.Y. ' + doc.schoolYear].filter(Boolean).join(' · ');
 
   const modal = document.getElementById('abstract-modal');
   modal.classList.add('show');
@@ -589,6 +594,7 @@ function closeSidebar() {
   document.body.style.overflow = '';
 }
 </script>
+@include('partials.pdf-viewer')
 @include('partials.app-dialog')
 @include('partials.escape-closes-modals')
 </body>

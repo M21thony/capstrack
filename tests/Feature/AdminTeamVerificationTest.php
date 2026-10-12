@@ -660,6 +660,9 @@ class AdminTeamVerificationTest extends TestCase
         $response->assertOk();
         $response->assertSee('View original PDF');
         $response->assertSee(route('capsa.verify_teams.pre_proposals.document', $proposal->id), false);
+        // Drawn by the app's PDF window, not the browser's viewer in a frame.
+        $response->assertSee('id="previewDialog"', false);
+        $response->assertDontSee('<iframe', false);
     }
 
     // -- The title is not settled until the review is over -----------------

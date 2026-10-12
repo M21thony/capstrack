@@ -6,76 +6,8 @@
 <title>CaPSA Management - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/table-kit.css') }}"/>
 <style nonce="{{ Vite::cspNonce() }}">
-  /* ── Compact table ───────────────────────────────────────────────────
-     One line per person. Status is a dot beside the name, which buys the
-     width back for the sections and the expertise - the two columns that
-     were being squeezed. */
-  .table td{padding-top:9px;padding-bottom:9px;vertical-align:middle}
-  .table thead th{position:sticky;top:0;z-index:2;background:var(--bg2)}
-  .cx-who{display:flex;align-items:center;gap:9px;cursor:pointer;min-width:0}
-  .cx-av{width:26px;height:26px;border-radius:7px;object-fit:cover;flex-shrink:0}
-  .cx-who .td-main{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* The dot is the only thing saying whether they are around, so it is not
-     decoration - it carries the status the column used to. */
-  .cx-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--text3)}
-  .cx-dot-active{background:var(--green)}
-  .cx-dot-full{background:var(--amber)}
-  .cx-dot-offline{background:var(--border2)}
-  /* Sections as ranges, a line per program: "BSIT 3A – 3H" rather than
-     eight names on one line pushing the table off the side of the screen. */
-  .cx-sections{font-size:12.5px;color:var(--text2)}
-  .cx-secs{display:flex;flex-direction:column;gap:6px}
-  .cx-sec{display:flex;align-items:center;gap:8px;white-space:nowrap}
-  .cx-sec-prog{width:38px;font-weight:700;color:var(--text)}
-  .cx-sec-run{display:inline-flex;align-items:center;height:26px;padding:0 9px;border-radius:7px;
-              background:var(--bg4);font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
-  .cx-sec-n{font-size:11.5px;color:var(--text3)}
-  /* Status in words beside the name: the dot alone said nothing to anyone
-     who had not been told what its colours mean. */
-  .cx-state{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--text3);white-space:nowrap}
-  .cx-state-active{color:var(--green)}
-  .cx-state-full{color:var(--amber)}
-  .cx-namerow{display:flex;align-items:center;gap:8px;min-width:0}
-  .cx-roles{font-size:11.5px;color:var(--text2);margin-top:3px;white-space:normal}
-  /* The page's count and its one action on one line. */
-  .cm-count-line{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-  .cm-count-line .page-count{font-size:26px}
-  .cm-covering{font-size:13.5px;color:var(--text3)}
-  .cm-covering.warn{color:var(--amber);font-weight:600}
-  /* Sections nobody holds: a notice you cannot read past, not a red line. */
-  .cm-notice{display:flex;align-items:center;gap:14px;padding:13px 16px;margin-bottom:14px;border-radius:12px;
-             background:#fdf3ea;border:1px solid rgba(180,83,9,.28);color:#7a3806}
-  .cm-notice-ic{width:36px;height:36px;flex-shrink:0;border-radius:10px;background:rgba(180,83,9,.12);
-                display:flex;align-items:center;justify-content:center}
-  .cm-notice-ic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-  .cm-notice-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13px}
-  .cm-notice-text b{font-size:14px}
-  .cm-notice-tags{display:flex;flex-wrap:wrap;gap:6px;max-width:50%}
-  .cm-notice-tags span{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:7px;background:#fff;
-                       border:1px solid rgba(180,83,9,.3);font-size:12.5px;font-weight:700}
-  /* All / Active / Deactivated as three buttons, not a dropdown to open. */
-  .cm-seg{display:inline-flex;padding:3px;gap:2px;border-radius:10px;background:var(--bg4);flex-shrink:0}
-  .cm-seg button{height:34px;padding:0 14px;border:none;border-radius:8px;background:transparent;color:var(--text3);
-                 font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
-  .cm-seg button[aria-pressed="true"]{background:var(--bg2);color:var(--text);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-  .cm-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-  .cm-edit{height:34px;padding:0 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);
-           font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
-  .cm-edit:hover{border-color:var(--border2);background:var(--bg3)}
-  @media (max-width:760px){
-    .cm-notice{flex-wrap:wrap;align-items:flex-start}
-    .cm-notice-text{flex:1 1 calc(100% - 50px)}
-    .cm-notice-tags{max-width:none;flex-basis:100%;padding-left:50px}
-  }
-  .cx-skills{max-width:240px}
-  .cx-chip{display:inline-block;max-width:150px;padding:2px 8px;margin:1px 3px 1px 0;border-radius:6px;
-           background:var(--bg4);color:var(--text2);font-size:11px;font-weight:500;
-           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
-  .cx-chip-n{background:transparent;border:1px dashed var(--border2);color:var(--text3);cursor:pointer;max-width:none}
-  .cx-chip-n:hover{border-color:var(--accent);color:var(--accent3);background:var(--accent-light)}
-  .table td[data-label="Action"]{text-align:right;padding-right:20px}
-  .expert-actions{justify-content:flex-end}
 
   /* Both classes in the selector, so this beats .ct-modal-card wherever that
      is defined - on this page it is defined further down, and a single-class
@@ -216,15 +148,6 @@
 
   {{-- .icon-btn lives in admin.css: both CaPSA pages use it too. --}}
 
-  /* Capacity column - merges what used to be separate Teams / Slots Left
-     columns. One row per program when an expert's slots are actually split
-     that way (see CapstoneExpert::parsedCapacity()), one "ALL" row when
-     they're not. */
-  .capacity-stack{display:flex;flex-direction:column;gap:5px}
-  .capacity-row{display:grid;grid-template-columns:38px 60px auto;align-items:center;gap:8px}
-  .capacity-row .pbar{width:60px}
-  .capacity-prog{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.3px}
-  .capacity-count{font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)}
 
 
   /* Personal info modal - opens on clicking an expert's name/avatar, and
@@ -495,140 +418,132 @@
            an editing page is editable, and two of these are not. --}}
       <p class="table-legend">
         <b>Sections</b> are yours to set.
-        <b>Accepts</b> and <b>Research Areas</b> belong to the expert &mdash; they choose which programs
-        to take teams from and how many, on their own profile.
+        <b>Research Areas</b> belong to the expert &mdash; they fill them in on their own profile.
       </p>
     </div>
   </div>
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content list-page">
+  <div class="content list-page tk">
     @php
       // What the page is of, in a sentence. A bare count in a pill said less
       // and took the same room.
       $sectionsCovered = $experts->flatMap(fn ($e) => $e->sections ?? [])->unique()->count();
+      $sectionsTotal = $sectionsCovered + $uncoveredSections->count();
+      $offCount = $experts->filter(fn ($e) => (bool) $e->deactivated_at)->count();
+
+      // The sections nobody holds, a line per program - nineteen loose chips
+      // in two rows was a wall to read, not a list to act on.
+      $uncoveredByProgram = $uncoveredSections
+          ->groupBy(fn ($s) => Str::before($s, '-'))
+          ->sortKeys()
+          ->map(fn ($list) => $list->map(fn ($s) => Str::after($s, '-'))->sort()->values());
+
+      // The programs the CaPSAs on this page cover, for the Program filter.
+      $programsHere = $experts->flatMap(fn ($e) => collect($e->sections ?? [])->map(fn ($s) => Str::before($s, '-')))
+          ->unique()->sort()->values();
     @endphp
 
     {{-- The title is already in the bar above; this line says what the page
-         holds, and the two things you can do to it sit opposite. --}}
+         holds, and what you can do to it sits opposite. --}}
     <div class="page-head">
-      <div class="page-head-text cm-count-line">
-        <span class="page-count">{{ $experts->count() }}</span>
-        <span class="page-count-noun">{{ Str::plural('CaPSA', $experts->count()) }}</span>
-        @if ($sectionsCovered)
-          <span class="cm-covering">covering {{ $sectionsCovered }} {{ Str::plural('section', $sectionsCovered) }}</span>
-        @else
-          <span class="cm-covering warn">no sections covered yet</span>
-        @endif
+      <div class="tk-head-text">
+        <div class="page-head-text">
+          <span class="page-count">{{ $experts->count() }}</span>
+          <span class="page-count-noun">{{ Str::plural('CaPSA', $experts->count()) }}</span>
+          @if ($sectionsCovered)
+            <span class="page-count-noun">&middot; covering <strong>{{ $sectionsCovered }} of {{ $sectionsTotal }}</strong> {{ Str::plural('section', $sectionsTotal) }}</span>
+          @else
+            <span class="page-count-noun" style="color:var(--amber);font-weight:600">&middot; no sections covered yet</span>
+          @endif
+        </div>
+        <p class="tk-lede">Capstone Subject Advisers and the sections they run this term.</p>
       </div>
       {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
            into the system is the CaPSA's, from their own copy of this page,
            so the list upload and the one-off Add Expert form are not offered
-           twice. --}}
-      <div class="page-head-actions">
-        <button type="button" class="btn btn-primary" onclick="addCapsa()"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add CaPSA</button>
+           twice. View Report and Download Excel are put in here by
+           partials/table-export (data-export-into on the table). --}}
+      <div class="tk-actions">
+        <span id="tkExport" style="display:contents"></span>
+        <button type="button" class="tk-btn tk-btn-pri" onclick="addCapsa()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add CaPSA</button>
       </div>
     </div>
 
     {{-- A section nobody holds has its checklist and its students' requests
          going nowhere, and nothing else on the page would say so. --}}
     @if ($uncoveredSections->isNotEmpty())
-      <div class="cm-notice" role="note">
-        <span class="cm-notice-ic"><svg viewBox="0 0 24 24"><path d="M12 3 2 21h20Z"/><path d="M12 10v4M12 17.5v.5"/></svg></span>
-        <span class="cm-notice-text">
-          <b>No CaPSA yet: {{ $uncoveredSections->count() }} {{ Str::plural('section', $uncoveredSections->count()) }}</b>
-          <span>Give {{ $uncoveredSections->count() === 1 ? 'it' : 'them' }} to a CaPSA with Edit sections or Add CaPSA.</span>
-        </span>
-        <span class="cm-notice-tags">
-          @foreach ($uncoveredSections as $uncovered)<span>{{ $uncovered }}</span>@endforeach
-        </span>
-      </div>
+      <section class="tk-alert" aria-labelledby="tkCovTitle">
+        <div class="tk-alert-top">
+          <span class="tk-alert-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+          <div class="tk-alert-text">
+            <h2 class="tk-alert-title" id="tkCovTitle">{{ $uncoveredSections->count() }} {{ Str::plural('section', $uncoveredSections->count()) }} {{ $uncoveredSections->count() === 1 ? 'has' : 'have' }} no CaPSA yet</h2>
+            <p class="tk-alert-sub">Their students can't be formed into teams until a CaPSA owns the section. Give {{ $uncoveredSections->count() === 1 ? 'it' : 'them' }} to one with Edit sections, or to a new CaPSA.</p>
+          </div>
+          <button type="button" class="tk-btn tk-btn-sm" id="tkCovToggle" aria-expanded="true" aria-controls="tkCovBody">Hide</button>
+          <button type="button" class="tk-btn tk-btn-sm tk-btn-pri" onclick="addCapsa()">Assign sections</button>
+        </div>
+        <div class="tk-alert-body tk-cov" id="tkCovBody">
+          @foreach ($uncoveredByProgram as $programCode => $letters)
+            <div class="tk-cov-row">
+              <span class="tk-prog">{{ $programCode }}</span>
+              <span class="tk-chips">
+                @foreach ($letters as $letter)<span class="tk-ghostsec" title="{{ $programCode }}-{{ $letter }}">{{ $letter }}</span>@endforeach
+              </span>
+              <span class="tk-cov-n">{{ $letters->count() }} {{ Str::plural('section', $letters->count()) }}</span>
+            </div>
+          @endforeach
+        </div>
+      </section>
     @endif
-
-    {{-- Filters on their own line. They were sharing a strip with the count
-         and the two buttons, which made "look for something" and "do
-         something" compete for the same row. --}}
-    {{-- One dropdown and one button - unlike CaPSA's own copy of this page,
-         which carries two of each - so on a phone these still fit the one
-         line they share on desktop instead of needing to stack. --}}
-    <div class="page-filters page-filters-inline">
-      <div class="experts-search">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="input" id="experts-search-input" placeholder="Search experts by name or research area..."/>
-      </div>
-      {{-- Signed in or not, and how many teams someone takes, are the
-           faculty's business; what this list is managed by is whether the
-           account is switched on. --}}
-      <div class="cm-seg" role="group" aria-label="Show" id="statusFilter" data-value="all">
-        <button type="button" data-v="all" aria-pressed="true">All</button>
-        <button type="button" data-v="on" aria-pressed="false">Active</button>
-        <button type="button" data-v="off" aria-pressed="false">Deactivated</button>
-      </div>
-    </div>
 
     @include('partials.row-select', [
       'table' => '.table',
-      'noun' => 'expert',
+      'noun' => 'CaPSA',
       'actions' => [
-        ['id' => 'bulkRemove', 'label' => 'Deactivate accounts', 'danger' => true],
+        ['id' => 'bulkRemove', 'label' => 'Deactivate accounts', 'danger' => true,
+         'icon' => '<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v10"/>'],
       ],
     ])
 
     <div class="card list-card">
-      <table class="table" data-export="CaPSA List">
+      {{-- Look for someone, narrow the list: inside the card, so the controls
+           belong to the table they change. --}}
+      <div class="tk-toolbar">
+        <div class="tk-tabs" role="tablist" aria-label="Account status" id="statusFilter" data-value="all">
+          <button type="button" class="tk-tab" role="tab" data-v="all" aria-selected="true">All <span class="n">{{ $experts->count() }}</span></button>
+          <button type="button" class="tk-tab" role="tab" data-v="on" aria-selected="false">Active <span class="n">{{ $experts->count() - $offCount }}</span></button>
+          <button type="button" class="tk-tab" role="tab" data-v="off" aria-selected="false">Deactivated <span class="n">{{ $offCount }}</span></button>
+        </div>
+        <label class="experts-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="tk-vh">Search CaPSAs</span>
+          <input class="input" id="experts-search-input" placeholder="Search by name, email or research area"/>
+        </label>
+        @if ($programsHere->count() > 1)
+          <div class="tk-toolbar-end">
+            <label class="tk-vh" for="tkProgramFilter">Program</label>
+            <select class="input tk-select" id="tkProgramFilter">
+              <option value="">All programs</option>
+              @foreach ($programsHere as $programCode)
+                <option value="{{ $programCode }}">{{ $programCode }}</option>
+              @endforeach
+            </select>
+          </div>
+        @endif
+      </div>
+
+      <div class="tk-scroll">
+      <table class="table" data-export="CaPSA List" data-export-into="#tkExport">
         <thead>
           <tr>
-            {{-- Status is a dot beside the name rather than a column of its
-                 own: it carries one bit, and a whole column to say "Offline"
-                 is width the sections and the expertise need more. --}}
-            <th style="padding-left:20px">CaPSA</th>
-            <th>Sections</th>
-            <th>Research Areas</th>
-            <th>Accepts <span class="th-owner">expert sets</span></th>
-            <th style="text-align:right;padding-right:20px">Action</th>
+            <th style="width:38%">CaPSA</th>
+            <th style="width:24%">Sections handled</th>
+            <th class="tk-opt" style="width:28%">Research Areas</th>
+            <th style="width:172px;text-align:right"><span class="tk-vh">Action</span></th>
           </tr>
         </thead>
         <tbody>
-          @php
-            // "BSIT-3A".."BSIT-3H" as one line per program: BSIT 3A – 3H.
-            // A gap starts a new run, so BSIT-3D missing reads 3A – 3C, 3E – 3H.
-            $sectionRuns = function (array $sections): array {
-                $byProgram = [];
-                foreach ($sections as $label) {
-                    if (preg_match('/^([A-Z]+)-(\d+)([A-Z]?)$/', $label, $m)) {
-                        $byProgram[$m[1]][] = [$m[2], $m[3]];
-                    } else {
-                        $byProgram[$label][] = null;
-                    }
-                }
-                ksort($byProgram);
-
-                $lines = [];
-                foreach ($byProgram as $program => $items) {
-                    $items = array_filter($items);
-                    usort($items, fn ($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
-                    $runs = [];
-                    foreach ($items as [$year, $letter]) {
-                        $i = count($runs) - 1;
-                        if ($i >= 0 && $runs[$i]['year'] === $year && $letter !== '' && $runs[$i]['to'] !== ''
-                            && ord($letter) === ord($runs[$i]['to']) + 1) {
-                            $runs[$i]['to'] = $letter;
-                        } else {
-                            $runs[] = ['year' => $year, 'from' => $letter, 'to' => $letter];
-                        }
-                    }
-                    $lines[] = [
-                        'program' => $program,
-                        'runs' => collect($runs)->map(fn ($r) => $r['from'] === $r['to']
-                            ? $r['year'].$r['from']
-                            : $r['year'].$r['from'].' – '.$r['year'].$r['to'])->implode(', '),
-                        'count' => count($items),
-                    ];
-                }
-
-                return $lines;
-            };
-          @endphp
           @foreach($experts as $expert)
           @php
               // Whatever a dialog should call this person. An account added by
@@ -639,25 +554,17 @@
               // Every side together here; the detail window shows them apart.
               $expertiseList = $expert->allExpertise();
               $expertiseFull = $expertiseList->join(', ') ?: 'None specified';
-              $expertiseShown = $expertiseList->take(2)->join(', ');
               $expertiseExtra = $expertiseList->count() - 2;
 
               $maxTeams = $expert->max_teams ?? 0;
               $teamCount = $expert->team_assignments_count ?? 0;
-              $slotsLeft = max(0, $maxTeams - $teamCount);
 
               // Team slots belong to the roles that take teams. A CaPSA is
-              // not one of them - the job is running the subject, not
-              // advising groups - so a plain CaPSA has no slots to show and
-              // reading "0/0 - Full" against their name says they are
-              // overloaded when they were never carrying anything.
+              // not one of them, so a plain CaPSA has no slots to show.
               $takesTeams = $expert->roles
                   ->pluck('role_name')
                   ->intersect(\App\Models\CapstoneExpert::STUDENT_FACING_ROLES)
                   ->isNotEmpty();
-
-              // Nobody has said how many they take yet, which is not the
-              // same as having said none.
               $slotsSet = $expert->max_teams !== null || filled($expert->program_slots);
 
               $isFull = $takesTeams && $slotsSet && $teamCount >= $maxTeams;
@@ -666,22 +573,19 @@
               // "offline" about it would be true and useless.
               $isOff = (bool) $expert->deactivated_at;
               $computedStatus = $isOff ? 'off' : ($isFull ? 'full' : ($isOnline ? 'active' : 'offline'));
+              // Never signed in: the address is all there is until Google
+              // hands over the name they go by.
+              $awaiting = $expert->first_login_at === null && $expert->last_seen_at === null;
               // Asked up front, so the menu can say why instead of letting
               // someone fill in the dialog only to be refused at the end.
               $deactivationBlocker = $isOff ? null : $expert->deactivationBlocker();
               $capacityRows = $expert->parsedCapacity();
 
-              // Filled counts per program, for the split-cap rows in the
-              // Accepts cell. One grouped query, and only when the cap is
-              // actually split - a single "ALL" cap draws its bar from the
-              // overall count instead.
-              $programCounts = count($capacityRows) > 1
-                  ? $expert->approvedTeamCountsByProgram()
-                  : [];
-
               // One mapping, on the model, so the pills here and the ones on
               // the expert's own profile panel cannot drift apart.
               $roleLabel = fn (string $roleName) => \App\Models\Role::labelFor($roleName);
+
+              $mySections = collect($expert->sections ?? [])->sort()->values();
 
               $detailPayload = [
                 'avatar' => $expert->avatarUrl(),
@@ -711,38 +615,39 @@
           <tr data-status="{{ $computedStatus }}"
               @class(['cx-off' => $isOff])
               data-id="{{ $expert->expert_id }}"
+              data-programs="{{ $mySections->map(fn ($s) => Str::before($s, '-'))->unique()->implode(' ') }}"
               {{-- You cannot put yourself in a batch: bulk-removing your own
                    account is not a thing to be one careless drag away from. --}}
               @if ($expert->expert_id === Auth::guard('expert')->id() || $deactivationBlocker) data-no-select="1" @endif
               data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
-            <td style="padding-left:20px" data-label="Expert">
-              <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
-                <img src="{{ $expert->avatarUrl() }}" alt="" loading="lazy" class="cx-av"
-                     onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
-                @if ($isOff)<span class="cx-off-tag">Deactivated</span>@endif
+            <td class="tk-lead" data-label="Expert">
+              <div class="expert-name-trigger tk-who tk-click" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
+                @include('partials.table-kit.avatar', [
+                  'image' => $expert->hasAvatarImage() ? $expert->avatarUrl() : null,
+                  'initials' => $expert->avatarInitials(),
+                  'seed' => $expert->expert_id,
+                  'awaiting' => $awaiting,
+                  'presence' => $isOff ? null : ($isOnline ? 'on' : 'off'),
+                ])
                 {{-- The address under the name rather than hidden in a tooltip:
                      two people share a surname often enough, and the email is
                      what tells them apart. --}}
-                <span class="cx-text">
-                  {{-- Add CaPSA only asks for an address, so a row can exist
-                       before anybody knows whose it is. The address stands in
-                       as the name until they sign in, when Google hands over
-                       the one they actually go by. --}}
-                  <span class="cx-namerow">
-                    <span class="td-main">{{ $expert->name === '' ? $expert->email : $expert->name }}</span>
-                    @unless ($isOff)
-                      <span class="cx-state cx-state-{{ $computedStatus }}"><span class="cx-dot cx-dot-{{ $computedStatus }}"></span>{{ ['active' => 'Online', 'full' => 'Full', 'offline' => 'Offline'][$computedStatus] }}</span>
-                    @endunless
+                <span class="tk-who-text">
+                  <span class="tk-namerow">
+                    <span class="tk-name td-main">{{ $displayName }}</span>
+                    @if ($isOff)
+                      <span class="tk-pill tk-p-off">Deactivated</span>
+                    @elseif ($awaiting)
+                      <span class="tk-pill tk-p-amber" title="Name fills in when they first sign in">Awaiting first sign-in</span>
+                    @endif
                   </span>
-                  @if ($expert->name === '')
-                    <span class="cx-await">Name fills in when they first sign in</span>
-                  @else
-                    <span class="cx-mail">{{ $expert->email }}</span>
+                  @if ($expert->name !== '')
+                    <span class="tk-sub">{{ $expert->email }}</span>
                   @endif
                   {{-- No separate "CAPSA" label - toggleCapsa() keeps the
                        capstone_adviser role in sync with is_capsa, so
                        "Capstone Subject Adviser" already says it. --}}
-                  <span class="cx-roles">
+                  <span class="tk-sub cx-roles">
                     @if ($expert->roles->isNotEmpty())
                       {{ $expert->roles->map(fn ($role) => $roleLabel($role->role_name))->implode(' · ') }}
                     @elseif (! $expert->is_capsa)
@@ -752,88 +657,50 @@
                 </span>
               </div>
             </td>
-            <td data-label="Sections" class="cx-sections">
-              @if ($expert->is_capsa)
-                @if (! empty($expert->sections))
-                  <div class="cx-secs">
-                    @foreach ($sectionRuns($expert->sections) as $line)
-                      <span class="cx-sec">
-                        <span class="cx-sec-prog">{{ $line['program'] }}</span>
-                        @if ($line['runs'] !== '')<span class="cx-sec-run">{{ $line['runs'] }}</span>@endif
-                        <span class="cx-sec-n">{{ $line['count'] }} {{ Str::plural('section', $line['count']) }}</span>
-                      </span>
-                    @endforeach
-                  </div>
-                @else
-                  none set
-                @endif
+            {{-- Each section by its own name - BSIT-3A, the way the Section
+                 List and every other screen writes it. --}}
+            <td data-label="Sections">
+              @if ($expert->is_capsa && $mySections->isNotEmpty())
+                <span class="tk-chips">
+                  @foreach ($mySections as $sectionName)<span class="tk-sec">{{ $sectionName }}</span>@endforeach
+                </span>
+              @elseif ($expert->is_capsa)
+                <span class="tk-empty">None set</span>
               @else
-                <span style="color:var(--text3)">&mdash;</span>
+                <span class="tk-empty">&mdash;</span>
               @endif
             </td>
 
             {{-- A chip each, so a long name truncates on its own instead of
                  being joined to the next one and cut mid-word. The counter
                  opens the detail panel, where the full list already is. --}}
-            <td data-label="Research Areas" class="cx-skills" title="{{ $expertiseFull }}">
+            <td data-label="Research Areas" @class(['tk-opt', 'tk-block', 'tk-blank' => $expertiseList->isEmpty()]) title="{{ $expertiseFull }}">
               @if ($expertiseList->isEmpty())
-                <span style="color:var(--text3)">None specified</span>
+                <span class="tk-empty">&mdash;</span>
               @else
-                @foreach ($expertiseList->take(2) as $skill)
-                  <span class="cx-chip">{{ $skill }}</span>
-                @endforeach
-                @if ($expertiseExtra > 0)
-                  <span class="cx-chip cx-chip-n" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">+{{ $expertiseExtra }}</span>
-                @endif
-              @endif
-            </td>
-            <td data-label="Team Slot">
-              @if (! $takesTeams)
-                <span style="font-size:11px;color:var(--text3)">&mdash;</span>
-              @elseif (! $slotsSet)
-                <span style="font-size:11px;color:var(--text3)">Not set</span>
-              @elseif (count($capacityRows) === 1)
-                <div style="display:flex;align-items:center;gap:8px">
-                  <div class="pbar" style="width:60px">
-                    <div class="pbar-fill pf-green" style="width:{{ $maxTeams > 0 ? round(($teamCount / $maxTeams) * 100) : 0 }}%"></div>
-                  </div>
-                  <span style="font-size:11px;color:var(--text3)">{{ $teamCount }}/{{ $maxTeams }} · {{ $slotsLeft }} left</span>
-                </div>
-              @else
-                {{-- One row per program, in the same shape as the single-cap
-                     row above: bar plus n/max. A stack of bare "max" numbers
-                     with the program floating far left of them read as two
-                     unrelated columns, and said nothing about how full each
-                     program already was. --}}
-                <div class="capacity-stack">
-                  @foreach ($capacityRows as [$program, $max])
-                    @php $filled = $programCounts[$program] ?? 0; @endphp
-                    <div class="capacity-row">
-                      <span class="capacity-prog">{{ $program }}</span>
-                      <div class="pbar">
-                        <div class="pbar-fill pf-green" style="width:{{ $max > 0 ? round(($filled / $max) * 100) : 0 }}%"></div>
-                      </div>
-                      <span class="capacity-count">{{ $filled }}/{{ $max }}</span>
-                    </div>
+                <span class="tk-chips tk-1line">
+                  @foreach ($expertiseList->take(2) as $skill)
+                    <span class="tk-chip cx-chip">{{ $skill }}</span>
                   @endforeach
-                </div>
+                  @if ($expertiseExtra > 0)
+                    <button type="button" class="tk-more" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})" aria-label="{{ $expertiseExtra }} more research areas">+{{ $expertiseExtra }}</button>
+                  @endif
+                </span>
               @endif
             </td>
 
-            <td data-label="Action">
-              <div class="expert-actions">
+            <td class="tk-ac" data-label="Action">
+              <div class="tk-acts expert-actions">
                 @if ($expert->is_capsa)
-                  <button type="button" class="cm-edit"
-                          onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">Edit sections</button>
+                  <button type="button" class="tk-btn tk-btn-sm" title="Edit sections"
+                          onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span class="tk-lbl">Edit sections</span></button>
                 @endif
-                {{-- Three actions, and two of them used to be a person with a
-                     plus and a person with a minus - the shape of an add-friend
-                     button, saying nothing about capstone. They carry their
-                     names in here, and the colours keep them apart: amber takes
-                     a role away, red deletes the account behind it. --}}
+                {{-- Taking a role away and switching an account off live in
+                     here, each with its name, and the colours keep them
+                     apart: amber takes a role away, red switches it off. --}}
                 <div class="rowmenu">
                   <button type="button" class="icon-btn rowmenu-btn" aria-expanded="false"
-                          aria-label="Actions for {{ $expert->name }}">
+                          aria-label="Actions for {{ $displayName }}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
                   </button>
                   <div class="rowmenu-pop" hidden>
@@ -867,18 +734,30 @@
             </td>
           </tr>
           @endforeach
+        </tbody>
+      </table>
+      </div>
+      <div class="tk-foot">
+        <span id="tkShowing">Showing all <strong>{{ $experts->count() }}</strong> {{ Str::plural('CaPSA', $experts->count()) }}</span>
+        <span class="tk-tip" style="color:var(--text3)">Tick rows to deactivate several at once</span>
+      </div>
+    </div>
 
 <script nonce="{{ Vite::cspNonce() }}">
-  // Client-side filtering: search, role, and status.
+  // Client-side filtering: status tab, search and program.
   (function() {
     var searchInput = document.getElementById('experts-search-input');
     var statusFilter = document.getElementById('statusFilter');
+    var programFilter = document.getElementById('tkProgramFilter');
+    var showing = document.getElementById('tkShowing');
     var rows = document.querySelectorAll('table.table tbody tr');
+    var total = rows.length;
 
     function filterRows() {
       var q = searchInput ? searchInput.value.toLowerCase().trim() : '';
       var status = statusFilter ? statusFilter.dataset.value : 'all';
-      visible = 0;
+      var program = programFilter ? programFilter.value : '';
+      var visible = 0;
 
       rows.forEach(function(row) {
         // Read off the row rather than out of the cells. Counting columns to
@@ -886,43 +765,63 @@
         // truncated on screen - the attribute holds all of it.
         var searchText = (row.dataset.search || '');
         var statusText = (row.dataset.status || '');
+        var programs = ' ' + (row.dataset.programs || '') + ' ';
 
         var matchSearch = !q || searchText.includes(q);
         var matchStatus = status === 'all'
           || (status === 'off' ? statusText === 'off' : statusText !== 'off');
+        var matchProgram = !program || programs.includes(' ' + program + ' ');
 
-        var shown = matchSearch && matchStatus;
+        var shown = matchSearch && matchStatus && matchProgram;
         row.style.display = shown ? '' : 'none';
         if (shown) visible++;
       });
 
       // A table that just goes blank reads as broken, not as "nobody matched".
       noMatch.hidden = visible > 0;
+      showing.innerHTML = visible === total
+        ? 'Showing all <strong>' + total + '</strong> ' + (total === 1 ? 'CaPSA' : 'CaPSAs')
+        : 'Showing <strong>' + visible + '</strong> of <strong>' + total + '</strong>';
     }
 
-    var visible = 0;
     var noMatch = document.createElement('tr');
+    noMatch.className = 'tk-note';
     noMatch.hidden = true;
-    noMatch.innerHTML = '<td colspan="5" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No CaPSA matches that search.</td>';
+    noMatch.innerHTML = '<td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No CaPSA matches that search.</td>';
     rows[0]?.parentNode.appendChild(noMatch);
 
     if (searchInput) searchInput.addEventListener('input', filterRows);
+    if (programFilter) programFilter.addEventListener('change', filterRows);
     if (statusFilter) {
       statusFilter.querySelectorAll('button').forEach(function (button) {
         button.addEventListener('click', function () {
           statusFilter.dataset.value = button.dataset.v;
           statusFilter.querySelectorAll('button').forEach(function (b) {
-            b.setAttribute('aria-pressed', b === button ? 'true' : 'false');
+            b.setAttribute('aria-selected', b === button ? 'true' : 'false');
           });
           filterRows();
         });
       });
     }
+
+    // The uncovered-sections list folds away once read, and stays folded.
+    var covToggle = document.getElementById('tkCovToggle');
+    var covBody = document.getElementById('tkCovBody');
+    if (covToggle && covBody) {
+      var setCov = function (open) {
+        covBody.hidden = !open;
+        covToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        covToggle.textContent = open ? 'Hide' : 'Show sections';
+      };
+      try { if (localStorage.getItem('tk.capsaCoverage') === 'hidden') { setCov(false); } } catch (e) {}
+      covToggle.addEventListener('click', function () {
+        var open = covBody.hidden;
+        setCov(open);
+        try { localStorage.setItem('tk.capsaCoverage', open ? 'shown' : 'hidden'); } catch (e) {}
+      });
+    }
   })();
 </script>
-        </tbody>
-      </table>
-    </div>
   </div>
   </div><!-- /real-content -->
 </div>

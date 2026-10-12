@@ -283,19 +283,6 @@
 .tmx .ans{grid-template-columns:1fr}
 .tmx .ans dd{margin-bottom:4px}
 }
-/* the original PDF opens full-size over the page, sized to the window, so it never runs past the screen */
-.tmx dialog.pdfd{max-width:1000px;height:90vh;height:90dvh;overflow:hidden}
-.tmx dialog.pdfd[open]{display:flex;flex-direction:column}
-.tmx .pdfd .x{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);
-  border-radius:8px;background:var(--card);color:var(--ink2);cursor:pointer}
-.tmx .pdfd .x:hover{background:var(--tint)}
-.tmx .doc-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
-.tmx .doc-h .di{display:flex;color:var(--accent2)}
-.tmx .doc-h .fn{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
-.tmx .doc-h .fn small{display:block;font-size:11.5px;font-weight:500;color:var(--mut)}
-.tmx .doc-h a{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);
-  font-size:12.5px;font-weight:600;color:var(--accent3);text-decoration:none}
-.tmx .doc-h a:hover{background:var(--tint)}
 /* the similarity report: the closest score, then every matched capstone in full */
 .tmx .rep .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .tmx .rep .top b{font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
