@@ -52,7 +52,8 @@ class InvitationController extends Controller
             // Asking to join is joining. With it closed on Team Rules the
             // request is refused now, rather than sent to a leader who could
             // only accept it into a rule that forbids it.
-            $closed = ! Team::joiningAllowed() ? Team::JOINING_CLOSED
+            $askedTeam = Team::find($validated['team_id'] ?? null);
+            $closed = ! Team::joiningAllowed($askedTeam?->section() ?: $student->sectionLabel()) ? Team::JOINING_CLOSED
                 : ($student->capstoneStage() !== 1 ? Team::MEMBERS_SETTLED : null);
 
             if ($closed) {

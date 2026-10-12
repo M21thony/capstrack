@@ -14,7 +14,11 @@
 
   $capsaPortal = $portal === 'capsa';
   $showRoute = $capsaPortal ? 'capsa.team_management.show' : 'instructor.teams.show';
-  $maxMembers = \App\Models\Team::maxMembers();
+  // Each section is under its own CaPSA's Team Rules; looked up once per section.
+  $limits = [];
+  $maxMembers = function (string $section) use (&$limits): int {
+      return $limits[$section] ??= \App\Models\Team::maxMembers($section);
+  };
   $toneOf = fn ($word) => ['Completed' => 'd', 'Closed' => 'd', 'Overdue' => 'o', 'Past due' => 'o', 'In progress' => 'p', 'Locked' => 'k'][$word] ?? 'n';
   $waitsBy = $todo->groupBy('teamId');
 
@@ -127,7 +131,7 @@
             <div style="min-width:0">
               <a class="tn" href="{{ $href }}">{{ $team->team_name }}</a>
               <span class="tt" title="{{ $team->project_title ?: $untitled }}">@if ($team->project_title){{ $team->project_title }}@else<i>{{ $untitled }}</i>@endif</span>
-              <small>@if ($row->myRole && ($twoHats || ! $capsaPortal))<b class="hat">{{ ucfirst($row->myRole) }}</b> · @endif{{ $row->section }} · {{ $row->members->count() }} of {{ $maxMembers }} members</small>
+              <small>@if ($row->myRole && ($twoHats || ! $capsaPortal))<b class="hat">{{ ucfirst($row->myRole) }}</b> · @endif{{ $row->section }} · {{ $row->members->count() }} of {{ $maxMembers($row->section) }} members</small>
               @if ($waits->isNotEmpty())
                 <span class="w tm-what">To do: {{ $waits->pluck('what')->implode(' · ') }}</span>
               @endif

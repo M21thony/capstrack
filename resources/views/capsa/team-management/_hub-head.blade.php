@@ -43,17 +43,21 @@
       <div class="set-scrim" id="setScrim" hidden></div>
       <div class="menu" id="setMenu" hidden>
         <h3>Team rules</h3>
-        <label class="opt" for="tsize">
-          <span><b>Max members per team</b><small>Any number from {{ \App\Models\Team::MIN_MEMBERS }} to {{ \App\Models\Team::MAX_MEMBERS }}</small></span>
-          <input type="number" id="tsize" min="{{ \App\Models\Team::MIN_MEMBERS }}" max="{{ \App\Models\Team::MAX_MEMBERS }}" step="1" inputmode="numeric">
-        </label>
-        <p class="opt-w" id="tsw" hidden></p>
+        {{-- One max per program she handles; these rules reach only her own
+             sections, other CaPSAs set theirs. --}}
+        @foreach ($rules['programs'] as $p)
+          <label class="opt" for="tsize-{{ $p['program'] }}">
+            <span><b>Max members per team · {{ $p['program'] }}</b><small>{{ implode(', ', $p['sections']) }} · {{ \App\Models\Team::MIN_MEMBERS }} to {{ \App\Models\Team::MAX_MEMBERS }}</small></span>
+            <input type="number" class="tsize" id="tsize-{{ $p['program'] }}" data-program="{{ $p['program'] }}" min="{{ \App\Models\Team::MIN_MEMBERS }}" max="{{ \App\Models\Team::MAX_MEMBERS }}" step="1" inputmode="numeric">
+          </label>
+          <p class="opt-w" id="tsw-{{ $p['program'] }}" hidden></p>
+        @endforeach
         <label class="opt" for="acreate">
-          <span><b>Allow students to create teams</b><small>Students can start a new team</small></span>
+          <span><b>Allow students to create teams</b><small>Students in your sections can start a new team</small></span>
           <input type="checkbox" class="tg" role="switch" id="acreate">
         </label>
         <label class="opt" for="ajoin">
-          <span><b>Allow students to join teams</b><small>Students can ask to join an existing team</small></span>
+          <span><b>Allow students to join teams</b><small>Students in your sections can ask to join a team</small></span>
           <input type="checkbox" class="tg" role="switch" id="ajoin">
         </label>
         <div class="mact">

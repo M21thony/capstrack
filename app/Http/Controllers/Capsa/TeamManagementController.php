@@ -103,7 +103,7 @@ class TeamManagementController extends Controller
             },
             // Team rules is a small menu under its own button on the list,
             // not a page, so the list always carries what it shows.
-            'rules' => TeamRulesController::pageData(),
+            'rules' => TeamRulesController::pageData($capsa),
             'selectedSection' => $selectedSection,
             'allSections' => $capsaSections,
             'sectionOptions' => collect(AdminProfileController::getAllAvailableSections())

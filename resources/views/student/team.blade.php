@@ -469,7 +469,7 @@
       <div class="team-dashboard-grid" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px;">
         <!-- Team Members -->
         <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max {{ \App\Models\Team::maxMembers() }}</span></div>
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max {{ $memberCount }}</span></div>
           @if($teamLocked)
           <div role="status" style="display:flex;gap:10px;align-items:flex-start;margin:-4px 0 14px;padding:10px 12px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -484,7 +484,7 @@
             // Spelled out as 5, this page went on showing five rows however
             // many a team was allowed - so setting three changed the labels
             // and left two slots nobody could ever fill.
-            $memberSlots = \App\Models\Team::maxMembers();
+            $memberSlots = $memberCount;
             // Invitations already sent and unanswered. They hold a slot, so
             // the leader can see the team is fuller than the member count.
             $pendingInvites = collect($outgoingInvitations ?? []);
@@ -647,7 +647,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Members</span>
-                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / {{ \App\Models\Team::maxMembers() }}</span>
+                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / {{ $memberCount }}</span>
               </div>
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Your Role</span>
@@ -1244,7 +1244,7 @@
         <option value="individual">Find a Team (Join Others)</option>
       </select>
       <div class="modal-tutorial" id="modal-note-box">
-        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to {{ \App\Models\Team::maxMembers() }} members including you (the leader). Slots are filled automatically as members join.</p>
+        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.</p>
       </div>
       <div id="leader-fields">
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
@@ -1281,7 +1281,7 @@
           {{-- Posted when a team is created. It is the CaPSA's number, not a
                fixed 5 - the column is only a record, since the cap itself is
                read from the setting. --}}
-          <input type="hidden" name="member_count" id="member-count-input" value="{{ \App\Models\Team::maxMembers() }}">
+          <input type="hidden" name="member_count" id="member-count-input" value="{{ $memberCount }}">
           <input type="hidden" name="tags" id="tags-hidden-input" value="">
           <button type="submit" class="btn-primary" style="width: 100%; background: var(--blue-bg); color: var(--blue); border: 1.5px solid rgba(29,78,216,0.25); box-shadow: none;" id="form-submit-btn">Publish Post</button>
         </form>
@@ -3017,7 +3017,7 @@ function updateModalUI() {
     const isLeader = (goal === 'leader');
     document.getElementById('modal-title').textContent = isLeader ? 'Build a Team' : 'Find a Team';
     document.getElementById('modal-note-text').innerHTML = isLeader 
-        ? '<strong>CapsTip:</strong> Your team can have up to {{ \App\Models\Team::maxMembers() }} members including you (the leader). Slots are filled automatically as members join.' 
+        ? '<strong>CapsTip:</strong> Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.' 
         : '<strong>CapsTip:</strong> Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
     
     // A closed goal says so at once, and hides its fields so nothing gets typed for nothing.
@@ -3195,13 +3195,13 @@ function publishPost(event) {
             return;
         }
     }
-    document.getElementById('member-count-input').value = {{ \App\Models\Team::maxMembers() }};
+    document.getElementById('member-count-input').value = {{ $memberCount }};
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
 
     if (isEditing) {
         event.preventDefault();
         document.getElementById('recruitment-goal-input').value = goal === 'leader' ? 'build_a_team' : 'find_a_team';
-        document.getElementById('member-count-input').value = {{ \App\Models\Team::maxMembers() }};
+        document.getElementById('member-count-input').value = {{ $memberCount }};
         if (goal === 'leader') {
             document.getElementById('team-name-hidden').value = document.getElementById('team-name').value;
             document.getElementById('looking-for-input').value = document.getElementById('leader-looking-for').value;

@@ -244,6 +244,7 @@ class TeamRows
         return DB::table('capstone_document_review as r')
             ->join('capstone_documents as d', 'd.file_id', '=', 'r.file_id')
             ->join('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
+            ->leftJoin('deliverables as dl', 'dl.id', '=', 'd.deliverable_id')
             ->where('r.expert_id', $viewerId)
             ->whereIn('sy.team_id', $teamIds)
             ->orderByDesc('d.created_at')
@@ -254,6 +255,7 @@ class TeamRows
                 'r.role',
                 'd.file_name',
                 'd.chapter',
+                'dl.chapter as line_chapter',
                 'd.file_version',
                 'd.created_at as submitted_at',
                 'sy.team_id',

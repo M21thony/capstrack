@@ -99,10 +99,10 @@ class TeamTodo
             foreach ($row->formatChecks->where('review_status', '!=', 'Reviewed') as $paper) {
                 $items->push($item([
                     'kind' => 'paper', 'hat' => 'capsa',
-                    'what' => 'Check paper format',
-                    'why' => $paper->file_name.($paper->chapter ? ' · '.$paper->chapter : ''),
+                    'what' => self::paperTitle($paper),
+                    'why' => self::manuscriptRange($paper).$paper->file_name,
                     'at' => $paper->submitted_at,
-                    'label' => 'Check format',
+                    'label' => 'Review',
                     'url' => route('instructor.docreview.annotate', $paper->review_id),
                 ]));
             }
@@ -132,8 +132,8 @@ class TeamTodo
             foreach ($row->reviews->where('review_status', '!=', 'Reviewed') as $paper) {
                 $items->push($item([
                     'kind' => 'review', 'hat' => $row->myRole,
-                    'what' => 'Review '.($paper->chapter ?: 'a paper'),
-                    'why' => $paper->file_name.' · version '.$paper->file_version,
+                    'what' => self::paperTitle($paper),
+                    'why' => self::manuscriptRange($paper).$paper->file_name.' · version '.$paper->file_version,
                     'at' => $paper->submitted_at,
                     'label' => 'Review',
                     'url' => route('instructor.docreview.annotate', $paper->review_id),
@@ -142,6 +142,36 @@ class TeamTodo
         }
 
         return $items;
+    }
+
+    /**
+     * What a paper is, so the row says it before the button: one chapter, a
+     * manuscript (Chapters 1-3 or 1-5 together), or the diagrams.
+     */
+    private static function paperTitle(object $paper): string
+    {
+        if (preg_match('/\.(drawio|vsdx)$/i', (string) $paper->file_name)) {
+            return 'Review Diagrams';
+        }
+
+        if (self::manuscriptRange($paper) !== '') {
+            return 'Review Manuscript';
+        }
+
+        return $paper->chapter ? 'Review '.$paper->chapter : 'Review paper';
+    }
+
+    /** "Chapters 1–3 · " for the revised proposal, "Chapters 1–5 · " for the final one, else "". */
+    private static function manuscriptRange(object $paper): string
+    {
+        $last = match (true) {
+            ($paper->line_chapter ?? null) === 'revised' => 3,
+            ($paper->line_chapter ?? null) === 'final' => 5,
+            (bool) preg_match('/chapters?[\s_-]*1\s*(?:-|–|to)\s*([35])\b/i', (string) $paper->file_name, $m) => (int) $m[1],
+            default => null,
+        };
+
+        return $last ? 'Chapters 1–'.$last.' · ' : '';
     }
 
     /**

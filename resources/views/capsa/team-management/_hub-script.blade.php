@@ -254,40 +254,46 @@
     @if ($portal === 'capsa')
     /* Team rules: opens under its button. Cancel, Escape or clicking away
        drops the changes, so nothing is saved by accident. */
-    const RULES = @json(['max' => $rules['maxMembers'], 'create' => $rules['allowCreation'], 'join' => $rules['allowJoining']]),
-          SIZES = @json((object) $rules['teamSizes']),
+    /* One max per program; SIZES[program] is how many of her teams have each headcount. */
+    const RULES = @json(['max' => collect($rules['programs'])->mapWithKeys(fn ($p) => [$p['program'] => $p['max']]), 'create' => $rules['allowCreation'], 'join' => $rules['allowJoining']]),
+          SIZES = @json(collect($rules['programs'])->mapWithKeys(fn ($p) => [$p['program'] => (object) $p['sizes']])),
           MIN = {{ \App\Models\Team::MIN_MEMBERS }}, MAX = {{ \App\Models\Team::MAX_MEMBERS }};
     const setBtn = document.getElementById('setBtn'), setMenu = document.getElementById('setMenu'),
-          tsize = document.getElementById('tsize'), tsw = document.getElementById('tsw'),
+          tsizes = [...setMenu.querySelectorAll('.tsize')],
           acreate = document.getElementById('acreate'), ajoin = document.getElementById('ajoin'),
           setOk = document.getElementById('setOk');
 
     const checkSize = () => {
-      const v = Number(tsize.value), fine = Number.isInteger(v) && v >= MIN && v <= MAX;
-      /* How many teams a lower limit would reach, said before she commits. */
-      const over = fine ? Object.keys(SIZES).reduce((n, k) => n + (Number(k) > v ? SIZES[k] : 0), 0) : 0;
-      tsize.setAttribute('aria-invalid', !fine);
-      tsw.className = 'opt-w' + (fine ? ' soft' : '');
-      tsw.textContent = !fine
-        ? 'Type a number from ' + MIN + ' to ' + MAX + '.'
-        : over + ' team' + (over > 1 ? 's' : '') + ' already ' + (over > 1 ? 'have' : 'has')
-          + ' more than ' + v + '. They keep their members but cannot add anyone.';
-      tsw.hidden = fine && !over;
-      setOk.disabled = !fine;
+      let allFine = true;
+      tsizes.forEach(tsize => {
+        const p = tsize.dataset.program, tsw = document.getElementById('tsw-' + p), sizes = SIZES[p] || {};
+        const v = Number(tsize.value), fine = Number.isInteger(v) && v >= MIN && v <= MAX;
+        /* How many teams a lower limit would reach, said before she commits. */
+        const over = fine ? Object.keys(sizes).reduce((n, k) => n + (Number(k) > v ? sizes[k] : 0), 0) : 0;
+        tsize.setAttribute('aria-invalid', !fine);
+        tsw.className = 'opt-w' + (fine ? ' soft' : '');
+        tsw.textContent = !fine
+          ? 'Type a number from ' + MIN + ' to ' + MAX + '.'
+          : over + ' ' + p + ' team' + (over > 1 ? 's' : '') + ' already ' + (over > 1 ? 'have' : 'has')
+            + ' more than ' + v + '. They keep their members but cannot add anyone.';
+        tsw.hidden = fine && !over;
+        allFine = allFine && fine;
+      });
+      setOk.disabled = !allFine;
     };
 
     const setOpen = on => {
-      if (on) { tsize.value = RULES.max; acreate.checked = RULES.create; ajoin.checked = RULES.join; checkSize(); }
+      if (on) { tsizes.forEach(t => { t.value = RULES.max[t.dataset.program]; }); acreate.checked = RULES.create; ajoin.checked = RULES.join; checkSize(); }
       setMenu.hidden = !on;
       document.getElementById('setScrim').hidden = !on;
       setBtn.setAttribute('aria-expanded', on);
-      if (on) { tsize.focus(); }
+      if (on) { (tsizes[0] || acreate).focus(); }
     };
 
     setBtn.onclick = () => setOpen(setMenu.hidden);
     // Inside .setw, so the click-away rule below does not see it: it cancels itself.
     document.getElementById('setScrim').onclick = () => { setOpen(false); setBtn.focus(); };
-    tsize.oninput = checkSize;
+    tsizes.forEach(t => { t.oninput = checkSize; });
     document.getElementById('setX').onclick = () => { setOpen(false); setBtn.focus(); };
     document.addEventListener('click', e => { if (!setMenu.hidden && !e.target.closest('.setw')) { setOpen(false); } });
     setMenu.addEventListener('keydown', e => { if (e.key === 'Escape') { setOpen(false); setBtn.focus(); } });
@@ -297,7 +303,10 @@
       fetch(@json(route('capsa.team_rules.update'), JSON_UNESCAPED_SLASHES), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-        body: JSON.stringify({ max_members: Number(tsize.value), allow_creation: acreate.checked, allow_joining: ajoin.checked }),
+        body: JSON.stringify({
+          max_members: Object.fromEntries(tsizes.map(t => [t.dataset.program, Number(t.value)])),
+          allow_creation: acreate.checked, allow_joining: ajoin.checked,
+        }),
       })
         .then(r => r.json().then(data => ({ ok: r.ok, data })))
         .then(({ ok: fine, data }) => {

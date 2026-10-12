@@ -94,9 +94,11 @@ class StudentRole extends Model
      * limit and the CaPSA sets it, so it is asked of the same place the
      * invite and join checks ask.
      */
-    public static function teamSize(): int
+    public static function teamSize(?int $teamId = null): int
     {
-        return Team::maxMembers();
+        $team = $teamId ? Team::find($teamId) : null;
+
+        return $team ? $team->memberLimit() : Team::maxMembers();
     }
 
     /**
@@ -120,7 +122,7 @@ class StudentRole extends Model
      */
     public static function seatingFor(int $teamId): array
     {
-        $size = self::teamSize();
+        $size = self::teamSize($teamId);
 
         $holders = StudentSchoolYear::where('team_id', $teamId)
             ->whereNotNull('s_role_id')
@@ -157,7 +159,7 @@ class StudentRole extends Model
 
         return StudentSchoolYear::where('team_id', $teamId)
             ->where('s_role_id', $roleId)
-            ->count() < self::seatsFor($role->s_role_name, self::teamSize());
+            ->count() < self::seatsFor($role->s_role_name, self::teamSize($teamId));
     }
 
     public function studentSchoolYears(): HasMany
