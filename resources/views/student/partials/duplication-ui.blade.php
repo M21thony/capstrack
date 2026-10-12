@@ -83,6 +83,13 @@
    the AI. */
 .vs mark,.field mark{background:rgba(201,168,44,.34);color:var(--text);font-weight:600;border-radius:3px;padding:0 2px}
 
+/* Titles other sections had recommended this year. */
+.ty-tag{display:inline-block;padding:1px 7px;border-radius:999px;background:var(--red,#c62828);color:#fff;font-size:10px;font-weight:600;margin-right:4px;letter-spacing:0;text-transform:none}
+.vs .who .ty-tag{vertical-align:1px}
+.ty-note{display:flex;gap:7px;align-items:flex-start;margin-top:5px;font-size:12px;line-height:1.45;color:var(--red,#c62828)}
+.ty-note svg{width:14px;height:14px;flex-shrink:0;margin-top:2px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.ty-note b{font-weight:600}
+
 /* ── similarities · differences · what to do ────────────────────── */
 .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin-top:14px}
 .box{border:1px solid var(--border);border-radius:9px;padding:10px 12px;background:var(--bg2)}
@@ -199,10 +206,13 @@
 .rp-cap{font-size:10.5px;color:var(--text3);margin-top:3px}
 .rp-doc{flex:1;min-width:240px}
 .rp-title{margin:0;font-size:15.5px;font-weight:600;line-height:1.35;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.rp-meta{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:12px;color:var(--text3);min-width:0}
-.rp-meta>span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.rp-counts{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
-.rp-counts .band{font-size:11px}
+.rp-meta{display:flex;align-items:center;flex-wrap:wrap;gap:2px 8px;margin-top:4px;font-size:12px;color:var(--text3);min-width:0}
+.rp-band{font-size:12px;font-weight:600;white-space:nowrap}
+.rp-meta>.rp-band+span::before{content:"·";margin-right:8px;color:var(--text3)}
+.rp-counts{display:flex;gap:4px 14px;flex-wrap:wrap;flex-shrink:0}
+.rp-n{font-size:12px;color:var(--text2);white-space:nowrap}
+.rp-n b{font-size:14px;font-weight:700;margin-right:2px;font-variant-numeric:tabular-nums}
+.rp-n.ty,.rp-n.ty b{color:var(--red,#c62828)}
 
 .rp-grid{display:grid;grid-template-columns:440px minmax(0,1fr);gap:14px;align-items:stretch}
 @media (max-width:1100px){.rp-grid{grid-template-columns:minmax(0,1fr)}}
@@ -216,7 +226,7 @@
 .rp-body{padding:10px 18px;display:flex;flex-direction:column;gap:8px}
 .rp-field .k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
 .rp-v-title{font-size:14px;font-weight:600;line-height:1.4;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.rp-v{font-size:12.5px;line-height:1.55;color:var(--text);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rp-v{font-size:12.5px;line-height:1.55;color:var(--text);display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
 .rp-sdgs{display:flex;flex-wrap:wrap;gap:4px}
 .rp-sdgs span,.rp-more{padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:500;background:#eef1fb;color:#33449a}
 .rp-more{border:1px solid #c9d2f0;background:#fff;font-family:inherit;cursor:pointer}
@@ -225,16 +235,24 @@
 .rp-read svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2}
 
 .rp-list .rp-card-h{border-bottom:1px solid var(--border)}
-.rp-row{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center;min-height:46px;padding:4px 18px;box-sizing:border-box;border-top:1px solid var(--border);text-decoration:none;color:inherit;transition:background .15s}
+.rp-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:center;min-height:46px;padding:4px 18px;box-sizing:border-box;border-top:1px solid var(--border);text-decoration:none;color:inherit;transition:background .15s}
 .rp-row:first-of-type{border-top:none}
 .rp-row:hover{background:var(--bg3)}
 .rp-rank b{display:block;font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
-.rp-rank small{font-size:10.5px;color:var(--text3)}
 .rp-what{min-width:0}
 .rp-what b,.rp-what small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rp-what b{font-size:13px;font-weight:600;color:var(--text)}
 .rp-what small{font-size:11.5px;color:var(--text2);margin-top:2px}
 .rp-what small span{color:var(--text3)}
+
+/* The two lists beside the team's own words: this year's recommended titles over the archive. */
+.rp-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.rp-col>.card{padding:0;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.rp-ty{box-shadow:inset 3px 0 0 var(--red,#c62828)}
+.rp-ty .rp-card-h h2{display:inline-flex;align-items:center;gap:7px;color:var(--red,#c62828)}
+.rp-ty .rp-card-h h2 svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.rp-ty .rp-row:hover{background:var(--red-bg,#fdecec)}
+.rp-what small .rp-sec{color:var(--red,#c62828);font-weight:600}
 
 .card.rp-experts{margin-top:10px;padding:10px 14px 12px}
 .rp-experts-h{display:flex;align-items:baseline;gap:14px;margin:0 4px 8px;min-width:0}
@@ -262,6 +280,24 @@
 .rp-expert-who .x{font-size:11.5px;color:var(--primary,#3f55b5);margin-top:2px;line-height:1.45}
 .rp-expert-who .r{font-size:11.5px;color:var(--text3);margin-top:3px;line-height:1.45}
 
+/* One screen on a laptop: the page stops growing, and long lists scroll inside their own card. */
+@media (min-width:1101px) and (min-height:680px){
+  .content:has(> .rp-grid){display:flex;flex-direction:column;overflow:hidden}
+  .content:has(> .rp-grid)>*{flex-shrink:0}
+  /* One screen has no end to put the credits at; they would take the lists' room. */
+  .content:has(> .rp-grid)>.sys-credits{display:none}
+  .content>.rp-grid{flex:1 1 0;min-height:0;grid-template-rows:minmax(0,1fr)}
+  .rp-mine .rp-body{flex:1;min-height:0;overflow-y:auto}
+  .rp-col{min-height:0}
+  .rp-col>.rp-ty{flex-shrink:0}
+  .rp-col>.card:last-child{flex:1;min-height:0;overflow-y:auto}
+  .rp-col>.card:last-child .rp-card-h{position:sticky;top:0;z-index:1;background:var(--card,#fff)}
+  .card.rp-head{padding:8px 16px;margin-bottom:8px}
+  .card.rp-experts{margin-top:8px;padding:8px 14px 10px}
+  .rp-expert{padding:8px 12px}
+  .rp-expert-who .x,.rp-expert-who .r{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+}
+
 .rp-dialog{border:0;border-radius:16px;padding:0;width:min(720px,calc(100vw - 32px));max-height:min(86vh,900px);max-height:min(86dvh,900px);box-shadow:0 24px 60px rgba(0,0,0,.28)}
 .rp-dialog::backdrop{background:rgba(15,16,22,.55)}
 .rp-dialog-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 22px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff}
@@ -283,7 +319,27 @@
 .sc-score .bigscore{font-size:38px}
 .sc-cap{font-size:10.5px;color:var(--text3);margin-top:4px}
 .sc-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
-.sc-counts{display:inline-flex;gap:6px;flex-wrap:wrap}
-.sc-counts .band{font-size:11px}
+.sc-counts{display:inline-flex;gap:4px 12px;flex-wrap:wrap}
+
+/* The pre-proposal page's middle column: this year's recommended titles over the archive. */
+.dup-midcol{display:flex;flex-direction:column;gap:14px;min-height:0;min-width:0}
+.dup-midcol>.dup-mid{flex:1;min-height:0}
+.ty-card{flex-shrink:0;box-shadow:inset 3px 0 0 var(--red,#c62828)}
+.ty-card[hidden]{display:none}
+.ty-card .card-title{display:inline-flex;align-items:center;gap:7px;color:var(--red,#c62828)}
+.ty-card .card-title svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.ty-card .mrow:hover{background:var(--red-bg,#fdecec)}
+.ty-note[hidden]{display:none}
+/* The check's verdict kept to a few short lines, so the note above fits without pushing the lists down. */
+.card.verdict.scan-card{padding:10px 16px;gap:14px}
+.scan-card .sc-result{gap:14px}
+.scan-card .sc-score .bigscore{font-size:30px}
+.scan-card .sc-cap{margin-top:2px}
+.scan-card .sc-line{margin-bottom:2px;gap:5px}
+.scan-card .doc .t{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scan-card .doc .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scan-card .ty-note{margin-top:3px;font-size:11.5px}
+.scan-card .sc-line .band{font-size:10.5px;padding:2px 7px}
+@media (max-width:900px){.scan-card .doc .t,.scan-card .doc .m{white-space:normal}}
 .scan-card .doc .m b{font-weight:600;color:var(--text)}
 </style>
