@@ -69,6 +69,10 @@ final class NotificationTypes
             'label' => 'A CaPSA posts an important or urgent announcement for experts',
             'email' => true,
         ],
+        'expert_slots_short' => [
+            'label' => 'My programs have more teams needing an expert than free expert slots (CaPSA)',
+            'email' => true,
+        ],
     ];
 
     public const STUDENT = [
