@@ -108,6 +108,26 @@ test('the page controls move through the paper', async ({ page }) => {
   await expect(next).toBeDisabled();
 });
 
+test('a paper opens on page 1 with its arrows and thumbnail set, even after another paper', async ({ page }) => {
+  await host(page);
+  const prev = win(page).locator('.pv-pager [data-pv="prev"]');
+  const next = win(page).locator('.pv-pager [data-pv="next"]');
+
+  // The first paper ends on page 1, the second on the last page.
+  for (const endOn of [1, PAGES]) {
+    await openSample(page);
+    await expect(win(page).locator('.pv-page')).toHaveCount(PAGES);
+    await expect(current(page)).toHaveValue('1');
+    await expect(prev).toBeDisabled();
+    await expect(next).toBeEnabled();
+    await expect(win(page).locator('.pv-thumb[data-n="1"]')).toHaveAttribute('aria-current', 'page');
+
+    await current(page).fill(String(endOn));
+    await current(page).press('Enter');
+    await page.keyboard.press('Escape');
+  }
+});
+
 test('arrow keys, Home and End turn pages; + and - zoom', async ({ page }) => {
   await host(page);
   await openSample(page);

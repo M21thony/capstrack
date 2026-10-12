@@ -244,6 +244,9 @@ function open(opts) {
   ui.file.textContent = fileNameOf(opts);
 
   ui.thumbs.replaceChildren();
+  // Forget the last paper's page, so setCurrent(1) does not skip the first
+  // page as "unchanged" and leaves its arrows and thumbnail as they were.
+  ui.pgin.value = '';
   setPaging(false);
   setTotal(1);
 
@@ -315,9 +318,6 @@ function setPaging(on) {
 function setTotal(n) {
   ui.totals.forEach((t) => { t.textContent = n; });
   ui.pgin.max = n;
-  // setCurrent() skips the first page as "unchanged", so set the arrows here too.
-  ui.dialog.querySelectorAll('[data-pv="prev"]').forEach((b) => { b.disabled = session.current <= 1; });
-  ui.dialog.querySelectorAll('[data-pv="next"]').forEach((b) => { b.disabled = session.current >= n; });
 }
 
 async function layout(s) {
