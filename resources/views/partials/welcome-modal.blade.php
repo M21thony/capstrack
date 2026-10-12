@@ -38,7 +38,7 @@
                         <div style="width:28px;height:28px;border-radius:8px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0">
                             <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#b45309;fill:none;stroke-width:2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         </div>
-                        <span><strong>My Teams</strong> — Browse and manage the capstone teams assigned to you.</span>
+                        <span><strong>Teams</strong> — What is waiting on you, the teams applying to you, and the teams you work with.</span>
                     </div>
                     <div style="display:flex;align-items:flex-start;gap:10px;background:var(--bg3);padding:11px 13px;border-radius:10px;font-size:12.5px;color:var(--text2);line-height:1.4">
                         <div style="width:28px;height:28px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0">

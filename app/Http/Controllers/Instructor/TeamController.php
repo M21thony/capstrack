@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\Team;
 use App\Support\DefenseScores;
+use App\Support\TeamApplications;
 use App\Support\TeamRows;
 use App\Support\TeamTodo;
 use Illuminate\Http\RedirectResponse;
@@ -14,18 +15,25 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * My Teams: an expert's one hub, the same To do and Teams a CaPSA has.
+ * Teams: an expert's one hub, the same To do, Team Applications and Teams a
+ * CaPSA has.
  *
- * Invitations (Team Assignments), papers sent to them (Document Review),
- * titles to approve and score sheets due all land in To do; the teams they
- * advise, consult for, check the grammar of or sit on a panel for are the
- * Teams list, each opening the same team page a CaPSA sees.
+ * To do is the shortcut to everything waiting on them: team applications,
+ * papers sent to them (Document Review), titles to confirm, defenses waiting
+ * for their go and score sheets due. Team Applications is the whole list of
+ * teams asking for them; Teams is every team they advise, consult for, check
+ * the grammar of or sit on a panel for, each opening the same team page a
+ * CaPSA sees.
  */
 class TeamController extends Controller
 {
+    /** The tabs along the top. The first is the default. */
+    public const TABS = ['todo', 'applications', 'teams'];
+
     public function __construct(
         private TeamRows $teamRows,
         private TeamTodo $todo,
+        private TeamApplications $applications,
     ) {}
 
     public function index(Request $request): View|RedirectResponse
@@ -33,14 +41,19 @@ class TeamController extends Controller
         /** @var CapstoneExpert $expert */
         $expert = auth('expert')->user();
 
-        // A CaPSA who is also an expert has one Teams page, not two.
+        $tab = in_array($request->query('tab'), self::TABS, true) ? $request->query('tab') : 'todo';
+
+        // A CaPSA who is also an expert has one Teams page, not two: the tab
+        // asked for, or her teams.
         if ($expert->is_capsa) {
-            return redirect()->route('capsa.team_management', ['tab' => $request->query('tab') === 'todo' ? 'todo' : 'teams']);
+            return redirect()->route('capsa.team_management', [
+                'tab' => in_array($request->query('tab'), self::TABS, true) ? $request->query('tab') : 'teams',
+            ]);
         }
 
-        $tab = $request->query('tab') === 'teams' ? 'teams' : 'todo';
         $rows = $this->teamRows->forViewer($expert, null, false, true);
         $todo = $this->todo->forExpert($expert, $rows, 'expert');
+        $applications = $this->applications->forExpert($expert);
 
         return view('instructor.teams', [
             'tab' => $tab,
@@ -50,9 +63,10 @@ class TeamController extends Controller
             'decided' => $this->todo->decidedByExpert($expert),
             'twoHats' => false,
             'defenseScores' => DefenseScores::forTeams($rows->map(fn ($row) => $row->team->team_id)),
+            'applications' => $applications,
             'expert' => $expert,
             'totalTeams' => $rows->count(),
-            'counts' => ['todo' => $todo->count(), 'teams' => $rows->count()],
+            'counts' => ['todo' => $todo->count(), 'applications' => $applications['waiting']->count(), 'teams' => $rows->count()],
         ]);
     }
 

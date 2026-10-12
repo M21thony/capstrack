@@ -12,7 +12,6 @@
 <form class="ml-form" id="ml-setup" novalidate>
   <div class="ml-head">
     <div>
-      <h1 class="ml-title">Set up {{ $program }} milestones</h1>
       <div class="ml-sub">Every {{ $program }} section you handle will follow these. You can change anything later.</div>
     </div>
   </div>

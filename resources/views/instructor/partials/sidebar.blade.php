@@ -25,7 +25,8 @@
     $seenAssignmentIds = session('instructor_seen_assignment_ids', []);
     $unseenAssignmentCount = count(array_diff($pendingAssignmentIds, $seenAssignmentIds));
 
-    if ($currentRouteName === 'instructor.assignments') {
+    // Seen once Teams is opened: its To do and Team Applications list them all.
+    if ($currentRouteName === 'instructor.teams') {
       session()->put('instructor_seen_assignment_ids', array_unique(array_merge($seenAssignmentIds, $pendingAssignmentIds)));
     }
 
@@ -76,7 +77,7 @@
 @include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => $expert ? ['url' => $expert->hasAvatarImage() ? $expert->avatarUrl() : null, 'initials' => $expert->avatarInitials()] : null, 'tabs' => [
     ['label' => 'Home', 'href' => route('instructor.dashboard'), 'active' => request()->routeIs('instructor.dashboard'),
         'icon' => App\Support\PortalIcons::paths('home')],
-    ['label' => 'Teams', 'href' => route('instructor.teams'), 'active' => request()->routeIs('instructor.teams', 'instructor.progress', 'instructor.assignments', 'instructor.assignments.*'),
+    ['label' => 'Teams', 'href' => route('instructor.teams'), 'active' => request()->routeIs('instructor.teams', 'instructor.progress', 'instructor.assignments', 'instructor.assignments.*'), 'badge' => $unseenAssignmentCount ?? 0,
         'icon' => App\Support\PortalIcons::paths('team')],
     ['label' => 'Reviews', 'href' => route('instructor.docreview'), 'active' => request()->routeIs('instructor.docreview'), 'badge' => $unseenDocReviewCount ?? 0,
         'icon' => App\Support\PortalIcons::paths('file-review')],

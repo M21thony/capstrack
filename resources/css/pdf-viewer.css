@@ -92,10 +92,18 @@ dialog.pv.pv::backdrop{background:transparent}
 /* The phone's page controls, floating over the pages. */
 .pv-pill{display:none}
 
+/* Details: only where the side panel has no room of its own. */
+.pv .pv-info{display:none}
+
 @media (max-width:900px){
   .pv-thumbs{display:none}
-  .pv-side{display:none}
   .pv-keys{display:none}
+  /* The side panel becomes a sheet over the pages, opened from Details. */
+  .pv .pv-info:not([hidden]){display:inline-flex}
+  .pv-main{position:relative}
+  .pv-side{display:none;position:absolute;left:0;right:0;bottom:0;width:auto;max-height:72%;border-left:0;border-radius:16px 16px 0 0;
+    box-shadow:0 -12px 40px rgba(0,0,0,.35);z-index:4}
+  dialog.pv.pv-side-open .pv-side:not([hidden]){display:block}
 }
 
 @media (max-width:640px){
@@ -109,10 +117,11 @@ dialog.pv.pv::backdrop{background:transparent}
   .pv-tools{flex:0 0 auto;gap:2px}
   .pv-b{min-width:44px;height:44px;padding:0;border-radius:10px}
   .pv-b.pv-x,.pv-b.pv-line{background:transparent;border-color:transparent}
-  .pv-dl .pv-lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .pv-dl .pv-lbl,.pv-info .pv-lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .pv-stage{padding:16px 12px 96px;gap:14px}
   .pv-foot{display:none}
   .pv-foot.pv-has-acts{display:flex;flex-wrap:wrap;padding:10px 12px 12px;position:relative;z-index:2}
+  .pv-foot.pv-has-acts .pv-file,.pv-foot.pv-has-acts .pv-note{display:none}
   .pv-foot.pv-has-acts .pv-acts{width:100%}
   .pv-foot.pv-has-acts .pv-acts > *{flex:1}
   .pv-pill{display:flex;position:absolute;left:50%;bottom:20px;transform:translateX(-50%);align-items:center;gap:2px;
@@ -123,3 +132,12 @@ dialog.pv.pv::backdrop{background:transparent}
   .pv-pill-n span{color:var(--pv-mute);font-weight:500}
   .pv-pill .pv-sep{height:22px;margin:0 2px}
 }
+
+/* A decision under the document (Team Applications, a new title). */
+.pv .pv-act{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 16px;border-radius:9px;
+  border:1px solid #3a3e4c;background:#272a36;color:#fff;font:600 13.5px 'DM Sans','DM Sans Fallback',system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.pv .pv-act:hover{background:#2e3240}
+.pv .pv-act:focus-visible{outline:2px solid var(--pv-gold);outline-offset:1px}
+.pv .pv-act.go{background:var(--pv-gold);border-color:var(--pv-gold);color:#18191f}
+.pv .pv-act.go:hover{filter:brightness(1.06)}
+.pv .pv-act.no{color:#fca5a5}

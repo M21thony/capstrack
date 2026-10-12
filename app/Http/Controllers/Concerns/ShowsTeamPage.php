@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 /**
  * What a team page shows besides its row: the panel, the activity feed and
  * the three expert seats. Shared by the CaPSA's Team Management and an
- * expert's My Teams, which show the same page.
+ * expert's Teams, which show the same page.
  */
 trait ShowsTeamPage
 {

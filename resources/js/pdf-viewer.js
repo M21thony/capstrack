@@ -73,6 +73,7 @@ function build() {
           </div>
           <button type="button" class="pv-b pv-line pv-fit" data-pv="fit">${svg('fit')}Fit width</button>
           <span class="pv-sep"></span>
+          <button type="button" class="pv-b pv-line pv-info" data-pv="details" aria-expanded="false" hidden>${svg('file')}<span class="pv-lbl">Details</span></button>
           <a class="pv-b pv-line pv-dl" download>${svg('down')}<span class="pv-lbl">Download</span></a>
           <button type="button" class="pv-b pv-x" data-pv="close" aria-label="Close">${svg('close')}</button>
         </div>
@@ -120,6 +121,7 @@ function build() {
     note: q('.pv-note'),
     acts: q('.pv-acts'),
     pill: q('.pv-pill'),
+    info: q('.pv-info'),
   };
 
   dialog.addEventListener('click', (e) => {
@@ -133,6 +135,12 @@ function build() {
       out: () => zoomBy(0.8),
       fit: () => setFit(),
       close: () => close(),
+      // On a phone the side panel is a sheet over the pages, opened here.
+      details: () => {
+        const open = !ui.dialog.classList.contains('pv-side-open');
+        ui.dialog.classList.toggle('pv-side-open', open);
+        ui.info.setAttribute('aria-expanded', String(open));
+      },
     })[b.dataset.pv]?.();
   });
 
@@ -165,7 +173,9 @@ function build() {
   });
 
   // A top-layer dialog closes itself on Esc; tidy up after it.
-  dialog.addEventListener('close', () => { if (session) teardown(); });
+  // The close event comes a moment after the window shuts. A paper opened
+  // in between has the window open again, and is not the one to put away.
+  dialog.addEventListener('close', () => { if (session && !dialog.open) teardown(); });
 
   ui.stage.addEventListener('scroll', () => {
     if (session && !session.scrollQueued) {
@@ -238,6 +248,9 @@ function open(opts) {
 
   ui.side.hidden = !opts.side;
   ui.side.replaceChildren(...(opts.side ? [opts.side] : []));
+  ui.info.hidden = !opts.side;
+  ui.info.setAttribute('aria-expanded', 'false');
+  ui.dialog.classList.remove('pv-side-open');
   ui.note.textContent = opts.note || '';
   ui.acts.replaceChildren(...(opts.actions || []));
   ui.foot.classList.toggle('pv-has-acts', !!(opts.actions && opts.actions.length));
@@ -263,6 +276,12 @@ function open(opts) {
 
 async function load(s) {
   const opts = s.opts;
+  // Nothing attached (a team that applied without a document): the window
+  // still opens for what sits beside it.
+  if (!opts.file && !opts.url) {
+    message(opts.empty || 'No document was attached.');
+    return;
+  }
   message('Loading…', true);
   try {
     let data;

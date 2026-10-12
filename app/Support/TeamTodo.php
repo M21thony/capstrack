@@ -6,12 +6,15 @@ use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DefensePanel;
+use App\Models\DefenseSchedule;
 use App\Models\Deliverable;
 use App\Models\ExpertRemovalRequest;
 use App\Models\MemberLeaveRequest;
 use App\Models\PanelGrade;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Models\TitleChangeRequest;
+use App\Services\CapaGo;
 use App\Services\RecipientResolver;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -26,26 +29,30 @@ use Illuminate\Support\Str;
  * links to - or carries - the one action that clears it.
  *
  * An item is an object with:
- *   kind     title|verify|paper|signed|leave|expert|invite|adviser_title|review|grade
+ *   kind     go|title|verify|paper|signed|leave|expert|invite|adviser_title|title_change|review|grade
  *   group    the heading it is listed under
  *   hat      capsa, or the seat the person holds on the team as an expert
  *   teamId, teamName, section, teamUrl
  *   what, why, at (when it arrived), url (the place it is done)
  *   label    the main button's words
  *   decide   null, or how the Approve/Decline buttons send the decision
+ *   read     null, or [what, id]: the application or title the Read button
+ *            opens in the PDF window
  */
 class TeamTodo
 {
     public const GROUPS = [
+        'go' => 'Defenses waiting for your go',
         'title' => 'Titles',
         'adviser_title' => 'Titles',
+        'title_change' => 'Titles',
         'verify' => 'Teams to verify',
         'paper' => 'Papers',
         'signed' => 'Papers',
         'review' => 'Papers',
         'leave' => 'Requests from teams',
         'expert' => 'Requests from teams',
-        'invite' => 'Invitations',
+        'invite' => 'Team applications',
         'grade' => 'Grading',
     ];
 
@@ -276,12 +283,13 @@ class TeamTodo
                 'why' => $assignment->team->project_title ?: 'They asked you to take them on',
                 'at' => $assignment->created_at,
                 'label' => 'Accept',
-                'url' => route('instructor.assignments'),
+                'url' => route('instructor.teams', ['tab' => 'applications']),
+                'read' => ['application', $assignment->assignment_id],
                 'decide' => [
                     'url' => route('instructor.assignments.update', $assignment->assignment_id),
                     'field' => 'status', 'approve' => 'approved', 'decline' => 'rejected',
                     'note' => 'reason', 'min' => 20,
-                    'effect' => 'You become Team '.$assignment->team->team_name.'\'s '.$role.'. The team is told.',
+                    'effect' => 'You become the '.$role.' of Team '.$assignment->team->team_name.'. The team is told.',
                 ],
             ]));
         }
@@ -299,11 +307,83 @@ class TeamTodo
                 'teamId' => (int) $proposal->team_id, 'teamName' => $proposal->team->team_name,
                 'section' => $byTeam->get((int) $proposal->team_id)?->section ?? '',
                 'teamUrl' => $teamUrl((int) $proposal->team_id),
-                'what' => 'Approve their title',
+                'what' => 'Confirm their new title',
                 'why' => Str::limit((string) $proposal->title, 90).' · you are their adviser',
                 'at' => $proposal->submitted_at ?? $proposal->updated_at,
-                'label' => 'Open title',
-                'url' => route('instructor.assignments'),
+                'label' => 'Confirm title',
+                'url' => route('instructor.teams', ['tab' => 'todo']),
+                'read' => ['title', $proposal->id],
+                'decide' => [
+                    'url' => route('instructor.title-confirmations.update', $proposal),
+                    'field' => 'decision', 'approve' => 'approve', 'decline' => 'decline',
+                    'declineLabel' => 'Ask for another',
+                    'note' => 'note', 'min' => 10,
+                    'effect' => 'It becomes the title of Team '.$proposal->team->team_name.'. The team is told.',
+                ],
+            ]));
+        }
+
+        // A passed team asking to change part of its title. Only an approval
+        // changes it.
+        $changes = TitleChangeRequest::where('status', TitleChangeRequest::PENDING)
+            ->with(['team', 'requester'])
+            ->get()
+            ->filter(fn ($c) => $c->team && $resolver->resolveTeamRoleExpert((int) $c->team_id, 'adviser') === $expertId);
+
+        foreach ($changes as $change) {
+            $items->push($this->item([
+                'kind' => 'title_change', 'hat' => 'adviser',
+                'teamId' => (int) $change->team_id, 'teamName' => $change->team->team_name,
+                'section' => $byTeam->get((int) $change->team_id)?->section ?? '',
+                'teamUrl' => $teamUrl((int) $change->team_id),
+                'what' => 'Approve a title change',
+                'why' => ($change->requester ? 'asked by '.trim($change->requester->f_name.' '.$change->requester->l_name) : 'asked by the team')
+                    .($change->reason ? ' · '.Str::limit((string) $change->reason, 80) : ''),
+                'titleChange' => ['now' => $change->current_title, 'next' => $change->new_title],
+                'at' => $change->created_at,
+                'label' => 'Approve change',
+                'url' => route('instructor.teams', ['tab' => 'todo']),
+                'decide' => [
+                    'url' => route('instructor.title-changes.update', $change),
+                    'field' => 'decision', 'approve' => 'approve', 'decline' => 'decline',
+                    'declineLabel' => 'Keep the title',
+                    'note' => 'note', 'min' => 10,
+                    'effect' => 'The title of Team '.$change->team->team_name.' changes. The team is told.',
+                ],
+            ]));
+        }
+
+        // The CaPA's go: a team defends Title, Pre Oral or Final Oral only once
+        // its adviser says it is ready. Not ready cancels the date, and the
+        // CaPSA gives the team a new one.
+        $defenses = DefenseSchedule::whereIn('defense_type', DefenseBoard::PAID_STAGES)
+            ->whereNull('outcome')
+            ->whereNull('capa_answer')
+            ->where('schedule_date', '>=', now())
+            ->with('team')
+            ->get()
+            ->filter(fn ($d) => $d->team && $resolver->resolveTeamRoleExpert((int) $d->team_id, 'adviser') === $expertId);
+
+        foreach ($defenses as $defense) {
+            $items->push($this->item([
+                'kind' => 'go', 'hat' => 'adviser',
+                'teamId' => (int) $defense->team_id, 'teamName' => $defense->team->team_name,
+                'section' => $byTeam->get((int) $defense->team_id)?->section ?? '',
+                'teamUrl' => $teamUrl((int) $defense->team_id),
+                'what' => 'Give your go: '.$defense->defense_type,
+                'why' => $defense->schedule_date->format('D, M j, g:i A').($defense->venue ? ' · '.$defense->venue : ''),
+                // Waiting on the adviser since the date was set.
+                'at' => $defense->created_at,
+                'label' => 'Go',
+                'url' => route('instructor.teams', ['tab' => 'todo']),
+                'decide' => [
+                    'url' => route('instructor.defense-go.update', $defense),
+                    'field' => 'answer', 'approve' => CapaGo::GO, 'decline' => CapaGo::NOT_READY,
+                    'declineLabel' => 'Not ready',
+                    'note' => 'note', 'min' => 0, 'noteOptional' => true,
+                    'declineEffect' => 'The '.$defense->defense_type.' is cancelled and the CaPSA gives the team a new date.',
+                    'effect' => 'Team '.$defense->team->team_name.' defends on '.$defense->schedule_date->format('M j').'.',
+                ],
             ]));
         }
 
@@ -445,6 +525,8 @@ class TeamTodo
 
         return (object) array_merge([
             'decide' => null,
+            'read' => null,
+            'titleChange' => null,
             'teamUrl' => null,
             'section' => '',
         ], $fields, [

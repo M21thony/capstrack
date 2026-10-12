@@ -595,7 +595,7 @@ function openCapa(id) {
 
 function drawCapa() {
   const t = CP.team;
-  let html = `<p class="muted" style="margin:0;font-size:12.5px">${t.adviser ? esc(t.adviser.name) : 'The CaPA'} answers on their Team Assignments page. Record it here only if they told you directly.</p>`
+  let html = `<p class="muted" style="margin:0;font-size:12.5px">${t.adviser ? esc(t.adviser.name) : 'The CaPA'} answers from the To do on their Teams page. Record it here only if they told you directly.</p>`
     + `<div class="capa-opts"><button type="button" class="rp-mode" data-act="cp-ans" data-a="go" aria-pressed="${CP.answer === 'go'}"><b>Go</b><span>The team defends on this date.</span></button><button type="button" class="rp-mode" data-act="cp-ans" data-a="not_ready" aria-pressed="${CP.answer === 'not_ready'}"><b>Not ready</b><span>The defense is cancelled.</span></button></div>`;
   if (CP.answer === 'not_ready') {
     html += `<div><label class="lbl" for="cpNote">What the CaPA said (optional)</label><input class="field" id="cpNote" type="text" maxlength="255" style="width:100%" placeholder="For example, system not working yet" value="${esc(CP.note)}"></div>`

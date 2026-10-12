@@ -391,7 +391,8 @@ class CapsaTeamManagementTest extends TestCase
         $html = $this->get(route('capsa.team_management'))->assertOk()->getContent();
 
         $this->assertStringContainsString('setInterval(refresh, 15000);', $html);
-        $this->assertStringContainsString("const parts = ['#tm-todo-waiting', '#tm-todo-decided', '#tm-teams tbody',", $html);
+        $this->assertStringContainsString("const parts = ['#tm-todo-waiting', '#tm-todo-decided', '#tm-apps-waiting', '#tm-apps-declined', '#tm-apps-data',", $html);
+        $this->assertStringContainsString("'#tm-apps-nw', '#tm-apps-nd', '#tm-teams tbody',", $html);
         // Signed out meanwhile: nothing is swapped in.
         $this->assertStringContainsString('if (!res.ok || res.redirected) { return; }', $html);
         $this->assertStringNotContainsString('location.reload', $html);

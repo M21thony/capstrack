@@ -19,7 +19,8 @@ class PdfViewerTest extends TestCase
     public static function pagesThatShowAPdf(): array
     {
         return [
-            'Team Assignments' => ['instructor/assignments.blade.php'],
+            'Teams' => ['instructor/teams.blade.php'],
+            'Team Management' => ['capsa/team_management.blade.php'],
             'Team Management title' => ['capsa/team-management/title.blade.php'],
             'Reports' => ['capsa/reports/table.blade.php'],
             'Archive' => ['capsa/archive.blade.php'],

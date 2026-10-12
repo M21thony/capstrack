@@ -79,12 +79,15 @@ class CapaGoTest extends TestCase
     {
         $defense = $this->defense();
 
-        $this->actingAs($this->adviser, 'expert')->get(route('instructor.assignments'))
-            ->assertOk()->assertSee('Defenses waiting for your go')->assertSee('Alpha');
+        // In the adviser's To do, decided from the To do's own dialog.
+        $this->actingAs($this->adviser, 'expert')->get(route('instructor.teams', ['tab' => 'todo']))
+            ->assertOk()->assertSee('Defenses waiting for your go')->assertSee('Alpha')
+            ->assertSee('data-url="'.route('instructor.defense-go.update', $defense).'"', false)
+            ->assertSee('data-note-optional="1"', false);
 
         $this->actingAs($this->adviser, 'expert')
-            ->patch(route('instructor.defense-go.update', $defense), ['answer' => 'go'])
-            ->assertRedirect(route('instructor.assignments'));
+            ->patchJson(route('instructor.defense-go.update', $defense), ['answer' => 'go'])
+            ->assertOk()->assertJson(['success' => true]);
 
         $this->assertSame(DefenseSchedule::CAPA_GO, $defense->fresh()->capa_answer);
         $this->assertSame('go', $this->row()['capa']);

@@ -5,6 +5,7 @@
 .ev-page{display:flex;flex-direction:column;gap:18px;max-width:1180px}
 .ev-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .ev-head h1{font-size:22px;font-weight:700;letter-spacing:-.3px;color:var(--text)}
+.ev-head p:first-child{margin-top:0}
 .ev-head p{margin-top:6px;max-width:720px;font-size:13.5px;line-height:1.55;color:var(--text2)}
 .ev-head p b{color:var(--text)}
 .ev-flash{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;font-size:13.5px;font-weight:600;background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,.2)}

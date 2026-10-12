@@ -180,7 +180,7 @@ class PreProposalController extends Controller
             'title_change_requested',
             'Title change to approve',
             '<strong>'.e($team->team_name).'</strong> asked to change their title to <strong>'.e($change->new_title).'</strong>.',
-            route('instructor.assignments'),
+            route('instructor.teams', ['tab' => 'todo']),
             ['team_id' => $team->team_id, 'title_change_id' => $change->id],
         );
 

@@ -6,7 +6,7 @@
   settled lately, so an item does not just vanish.
 --}}
 @php
-  $icons = ['title' => 'file', 'adviser_title' => 'file', 'verify' => 'shield', 'paper' => 'clip', 'signed' => 'star',
+  $icons = ['go' => 'cal', 'title_change' => 'file', 'title' => 'file', 'adviser_title' => 'file', 'verify' => 'shield', 'paper' => 'clip', 'signed' => 'star',
             'review' => 'file', 'leave' => 'users', 'expert' => 'user', 'invite' => 'mail', 'grade' => 'trophy'];
   $hatName = fn ($hat) => $hat === 'capsa' ? 'CaPSA' : ucfirst($hat);
   $resultTone = fn ($r) => preg_match('/Approved|Verified|Accepted|Checked|Recommended|Reviewed|Submitted/', $r) ? 'ok'
@@ -25,7 +25,16 @@
   <div>
     <div id="tm-todo-waiting">
       @forelse (\App\Support\TeamTodo::grouped($todo) as $group => $items)
-        <div class="group-h">{{ $group }}</div>
+        @if ($group === \App\Support\TeamTodo::GROUPS['invite'])
+          {{-- A shortcut: the whole list, with what was declined, is the
+               Team Applications tab. --}}
+          <div class="group-h group-apps">
+            <span>{{ $group }}</span>
+            <a class="see-all" href="{{ route($hubRoute, ['tab' => 'applications']) }}" data-hub-tab="applications">See all</a>
+          </div>
+        @else
+          <div class="group-h">{{ $group }}</div>
+        @endif
         <ul class="todo">
           @foreach ($items as $item)
             <li data-item>
@@ -43,14 +52,27 @@
                     <time datetime="{{ $item->at->toIso8601String() }}">{{ $item->at->isFuture() ? $item->at->format('M j') : $item->at->diffForHumans() }}</time>
                   @endif
                 </span>
+                @if ($item->titleChange)
+                  <dl class="tc-diff">
+                    <dt>Now</dt><dd>{{ $item->titleChange['now'] }}</dd>
+                    <dt>Change to</dt><dd class="nw">{{ $item->titleChange['next'] }}</dd>
+                  </dl>
+                @endif
               </div>
               <div class="acts">
+                @if ($item->read)
+                  <button type="button" class="btn rd" data-read="{{ $item->read[0] }}" data-read-id="{{ $item->read[1] }}">
+                    <x-tm-icon n="file" s="15" />{{ $item->read[0] === 'title' ? 'Read title' : 'Read application' }}
+                  </button>
+                @endif
                 @if ($item->decide)
-                  @php $decide = $item->decide; @endphp
+                  @php $decide = $item->decide; $declineLabel = $decide['declineLabel'] ?? 'Decline'; @endphp
                   <button type="button" class="btn" data-decide="decline"
                           data-url="{{ $decide['url'] }}" data-field="{{ $decide['field'] }}" data-value="{{ $decide['decline'] }}"
                           data-note="{{ $decide['note'] }}" data-min="{{ $decide['min'] }}"
-                          data-title="Decline: {{ $item->what }}" data-sub="Team {{ $item->teamName }}">Decline</button>
+                          @if (! empty($decide['noteOptional'])) data-note-optional="1" @endif
+                          @if (! empty($decide['declineEffect'])) data-effect="{{ $decide['declineEffect'] }}" @endif
+                          data-title="{{ $declineLabel }}: {{ $item->what }}" data-sub="Team {{ $item->teamName }}">{{ $declineLabel }}</button>
                   <button type="button" data-decide="approve"
                           data-url="{{ $decide['url'] }}" data-field="{{ $decide['field'] }}" data-value="{{ $decide['approve'] }}"
                           data-note="{{ $decide['note'] }}" data-effect="{{ $decide['effect'] }}"
