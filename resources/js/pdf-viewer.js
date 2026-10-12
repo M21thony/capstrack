@@ -315,6 +315,9 @@ function setPaging(on) {
 function setTotal(n) {
   ui.totals.forEach((t) => { t.textContent = n; });
   ui.pgin.max = n;
+  // setCurrent() skips the first page as "unchanged", so set the arrows here too.
+  ui.dialog.querySelectorAll('[data-pv="prev"]').forEach((b) => { b.disabled = session.current <= 1; });
+  ui.dialog.querySelectorAll('[data-pv="next"]').forEach((b) => { b.disabled = session.current >= n; });
 }
 
 async function layout(s) {
