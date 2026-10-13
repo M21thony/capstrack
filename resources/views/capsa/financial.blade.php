@@ -109,5 +109,6 @@ function closeSidebar() { if (!sidebarEl || !sidebarOverlay) return; sidebarEl.c
 </script>
 @include('partials.app-dialog')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

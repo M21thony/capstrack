@@ -876,5 +876,6 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
 })();
 </script>
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

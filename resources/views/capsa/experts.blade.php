@@ -1744,5 +1744,6 @@ onBulk('bulkRemove', function (ids, rows) {
 @include('partials.email-lookup', ['input' => 'addExpertEmail', 'kind' => 'expert', 'nameInput' => 'addExpertName'])
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

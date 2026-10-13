@@ -289,5 +289,6 @@ function closeSidebar() { sidebarEl.classList.remove('mobile-open'); sidebarOver
 </script>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

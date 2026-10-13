@@ -1720,5 +1720,6 @@ onBulk('bulkRemove', function (ids, rows) {
 @include('partials.email-lookup', ['input' => 'capsaEmail', 'kind' => 'expert', 'nameInput' => 'capsaName'])
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

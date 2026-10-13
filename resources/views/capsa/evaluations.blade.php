@@ -213,5 +213,6 @@ function closeSidebar() { if (!sidebarEl || !sidebarOverlay) return; sidebarEl.c
 </script>
 @include('partials.evaluation-page-script')
 @include('partials.confirm-dialog')
+@include('partials.app-scrollbar')
 </body>
 </html>

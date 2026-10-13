@@ -771,5 +771,6 @@ function closeSidebar() {
 }
 </script>
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

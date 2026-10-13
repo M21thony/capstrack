@@ -597,5 +597,6 @@ function closeSidebar() {
 @include('partials.pdf-viewer')
 @include('partials.app-dialog')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

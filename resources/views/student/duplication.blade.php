@@ -63,9 +63,6 @@
   padding-right: 4px;
 }
 
-.matches-scroll::-webkit-scrollbar { width: 4px; }
-.matches-scroll::-webkit-scrollbar-track { background: transparent; }
-.matches-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 .upload-zone.has-file { border-color: var(--primary, #5b5bd6); background: var(--bg3); }
 
@@ -2095,5 +2092,6 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
 </script>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

@@ -114,11 +114,7 @@
 .hilite>.card-header{background:var(--accent-light);border-bottom-color:rgba(201,168,44,.45);border-radius:13px 13px 0 0}
 .hilite>.card-header .card-title{color:var(--accent3)}
 
-.scrolls{overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;overscroll-behavior:contain}
-.scrolls::-webkit-scrollbar{width:11px}
-.scrolls::-webkit-scrollbar-track{background:transparent}
-.scrolls::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px;border:3px solid var(--bg2);background-clip:padding-box}
-.scrolls::-webkit-scrollbar-thumb:hover{background:var(--text3);border-color:var(--bg2);background-clip:padding-box}
+.scrolls{overflow-y:auto;flex:1;min-height:0;overscroll-behavior:contain}
 
 .dup-none{font-size:12.5px;color:var(--text3);text-align:center;padding:28px 16px}
 

@@ -347,5 +347,6 @@ if (expertRemovedModal && expertRemovedOkBtn) {
 </script>
 @include('partials.form-notice')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>
