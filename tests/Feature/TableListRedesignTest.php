@@ -111,24 +111,18 @@ class TableListRedesignTest extends TestCase
             ->assertSee('In a team <span class="n">0</span>', false);
     }
 
-    public function test_student_accounts_rows_per_page_takes_only_the_listed_sizes(): void
+    public function test_student_accounts_lists_everyone_on_one_page(): void
     {
         foreach (range(1, 35) as $n) {
             $this->student('student'.$n.'@my.cspc.edu.ph');
         }
 
-        $this->actingAs($this->admin(), 'expert');
-
-        $this->get(route('admin.students', ['per_page' => 50]))
+        $this->actingAs($this->admin(), 'expert')
+            ->get(route('admin.students'))
             ->assertOk()
-            ->assertSee('<option value="50" selected>50</option>', false)
-            ->assertSee('1–35</strong> of <strong>35', false);
-
-        // Anything else falls back to 30, rather than loading the college.
-        $this->get(route('admin.students', ['per_page' => 100000]))
-            ->assertOk()
-            ->assertSee('<option value="30" selected>30</option>', false)
-            ->assertSee('1–30</strong> of <strong>35', false);
+            ->assertSee('student35@my.cspc.edu.ph')
+            ->assertSee('Showing <strong>35</strong> students', false)
+            ->assertDontSee('Rows per page');
     }
 
     public function test_student_accounts_keeps_remove_in_the_row_menu(): void

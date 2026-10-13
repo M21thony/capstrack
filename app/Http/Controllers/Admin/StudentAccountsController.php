@@ -27,14 +27,6 @@ class StudentAccountsController extends Controller
     public const YEARS = ['3rd', '4th'];
 
     /**
-     * The page sizes on offer. A short list rather than a free number: a
-     * per_page of 100000 typed into the address bar would load the college.
-     *
-     * @var list<int>
-     */
-    public const PER_PAGE = [30, 50, 100];
-
-    /**
      * The team tabs: everyone, those on a team this term, those not.
      *
      * @var list<string>
@@ -48,7 +40,6 @@ class StudentAccountsController extends Controller
         $year = (string) $request->query('year', '');
         $section = strtoupper(trim((string) $request->query('section', '')));
         $team = (string) $request->query('team', '');
-        $perPage = (int) $request->query('per_page', self::PER_PAGE[0]);
 
         // A letter, or nothing. Straight into a LIKE otherwise, and a student
         // typing % into the address bar would match the whole college.
@@ -58,10 +49,6 @@ class StudentAccountsController extends Controller
 
         if (! in_array($team, self::TEAM_FILTERS, true)) {
             $team = '';
-        }
-
-        if (! in_array($perPage, self::PER_PAGE, true)) {
-            $perPage = self::PER_PAGE[0];
         }
 
         // Every filter but the team one, so each tab can say how many it
@@ -101,9 +88,9 @@ class StudentAccountsController extends Controller
             // This term's row only (StudentSchoolYear's own scope), so the Team
             // column shows the team they are on now, not one from a retake.
             ->with('studentSchoolYear.team')
+            // One list, no pages: the table scrolls inside its own box.
             ->orderBy('l_name')
-            ->paginate($perPage)
-            ->withQueryString();
+            ->get();
 
         // Only the letters somebody is actually enrolled in. The catalog runs
         // A to Z, and a filter listing twenty-six sections when the college
@@ -133,8 +120,6 @@ class StudentAccountsController extends Controller
                 'with' => $withTeamCount,
                 'without' => $allCount - $withTeamCount,
             ],
-            'perPage' => $perPage,
-            'perPageOptions' => self::PER_PAGE,
         ]);
     }
 

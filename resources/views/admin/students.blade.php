@@ -251,41 +251,8 @@
       </table>
       </div>
 
-      {{-- Laravel's own pager is written for Tailwind, which this page does
-           not load. Where you are, how many to a page, and the pages either
-           side of this one. --}}
-      @php
-        $current = $students->currentPage();
-        $last = $students->lastPage();
-        $pageNumbers = collect([1, $last, $current - 1, $current, $current + 1])
-            ->filter(fn ($n) => $n >= 1 && $n <= $last)
-            ->unique()->sort()->values();
-      @endphp
       <div class="tk-foot">
-        @if ($students->total() > 0)
-          <span>Showing <strong>{{ $students->firstItem() }}–{{ $students->lastItem() }}</strong> of <strong>{{ $students->total() }}</strong></span>
-        @else
-          <span>Showing <strong>0</strong></span>
-        @endif
-        <div class="tk-foot-end">
-          <label class="tk-rows">Rows per page
-            <select class="input tk-select" form="studentFilters" name="per_page" onchange="this.form.submit()">
-              @foreach ($perPageOptions as $size)
-                <option value="{{ $size }}" @selected($perPage === $size)>{{ $size }}</option>
-              @endforeach
-            </select>
-          </label>
-          @if ($students->hasPages())
-            <nav class="tk-pg" aria-label="Pages">
-              <a class="tk-pgn {{ $students->onFirstPage() ? 'off' : '' }}" href="{{ $students->previousPageUrl() ?? '#' }}" aria-label="Previous page" @if ($students->onFirstPage()) aria-disabled="true" tabindex="-1" @endif><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></a>
-              @foreach ($pageNumbers as $i => $n)
-                @if ($i > 0 && $n - $pageNumbers[$i - 1] > 1)<span class="tk-gap" aria-hidden="true">&hellip;</span>@endif
-                <a class="tk-pgn" href="{{ $students->url($n) }}" @if ($n === $current) aria-current="page" @endif>{{ $n }}</a>
-              @endforeach
-              <a class="tk-pgn {{ $students->hasMorePages() ? '' : 'off' }}" href="{{ $students->nextPageUrl() ?? '#' }}" aria-label="Next page" @unless ($students->hasMorePages()) aria-disabled="true" tabindex="-1" @endunless><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></a>
-            </nav>
-          @endif
-        </div>
+        <span>Showing <strong>{{ $students->count() }}</strong> {{ Str::plural('student', $students->count()) }}</span>
       </div>
     </div>
   </div>
@@ -371,5 +338,6 @@ async function removeStudent(button) {
 @include('partials.row-menu')
 @include('partials.app-dialog')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>
