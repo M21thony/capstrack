@@ -59,7 +59,7 @@
       e.preventDefault(); bar.handle.setPointerCapture(e.pointerId); bar.handle.classList.add('dragging');
       var y0 = e.clientY, top0 = el.scrollTop;
       bar.handle.onpointermove = function (m) {
-        var room = el.clientHeight - 16 - bar.handle.offsetHeight;
+        var room = el.clientHeight - bar.head - 16 - bar.handle.offsetHeight;
         el.scrollTop = top0 + (m.clientY - y0) * (el.scrollHeight - el.clientHeight) / room;
       };
     });
@@ -84,21 +84,29 @@
     }
   }
 
+  // A table header that stays put while the rows scroll: the bar starts under it.
+  function headOf(el) {
+    var th = el !== root && el.querySelector('thead th');
+    return th && getComputedStyle(th).position === 'sticky' ? th.parentElement.offsetHeight : 0;
+  }
+
   function update(bar) {
     var el = bar.el, sb = bar.sb, max = el.scrollHeight - el.clientHeight;
     if (!el.isConnected) { sb.remove(); bars.splice(bars.indexOf(bar), 1); return; }
+    var head = bar.head = headOf(el), h = el.clientHeight - head;
     var r = el === root ? {top: 0, left: 0, bottom: el.clientHeight} : el.getBoundingClientRect();
-    var top = r.top, bottom = r.top + el.clientHeight;
+    r = {top: r.top + el.clientTop + head, left: r.left + el.clientLeft};
+    var top = r.top, bottom = r.top + h;
     bar.clips.forEach(function (p) {
       var pr = p === root ? {top: 0, bottom: innerHeight} : p.getBoundingClientRect();
       top = Math.max(top, pr.top); bottom = Math.min(bottom, pr.bottom);
     });
     if (max <= 1 || bottom - top < 24) { sb.style.display = 'none'; return; }
     sb.style.display = '';
-    sb.style.left = (r.left + el.clientLeft) + 'px'; sb.style.top = (r.top + el.clientTop) + 'px';
-    sb.style.width = el.clientWidth + 'px'; sb.style.height = el.clientHeight + 'px';
-    sb.style.clipPath = 'inset(' + Math.max(0, top - r.top) + 'px 0 ' + Math.max(0, r.top + el.clientHeight - bottom) + 'px 0)';
-    var y = 8 + el.scrollTop / max * (el.clientHeight - 16 - bar.handle.offsetHeight);
+    sb.style.left = r.left + 'px'; sb.style.top = r.top + 'px';
+    sb.style.width = el.clientWidth + 'px'; sb.style.height = h + 'px';
+    sb.style.clipPath = 'inset(' + Math.max(0, top - r.top) + 'px 0 ' + Math.max(0, r.top + h - bottom) + 'px 0)';
+    var y = 8 + el.scrollTop / max * (h - 16 - bar.handle.offsetHeight);
     bar.handle.style.transform = 'translateY(' + y + 'px)';
   }
 
