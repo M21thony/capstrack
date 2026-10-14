@@ -50,6 +50,7 @@
   .gj-decided{margin:20px 0 0;font-size:13px;color:var(--text2)}
   .gj :focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
 </style>
+  @include('partials.render-whole')
 </head>
 <body>
 
