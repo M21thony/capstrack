@@ -348,6 +348,8 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
     Route::post('/grading/{defense}/abstain', [GradingController::class, 'abstain'])->name('grading.abstain');
     Route::delete('/grading/{defense}/abstain', [GradingController::class, 'withdrawAbstention'])->name('grading.abstain.withdraw');
+    Route::put('/grading/{defense}/grader', [GradingController::class, 'setGrader'])->name('grading.grader');
+    Route::delete('/grading/{defense}/join', [GradingController::class, 'leaveShared'])->name('grading.join.leave');
     // What team leaders answered about this expert, anonymously.
     Route::get('/evaluations', [InstructorEvaluationController::class, 'index'])->name('evaluations');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
