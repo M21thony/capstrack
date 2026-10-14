@@ -35,38 +35,7 @@ class GradingSheet
     public function for(DefenseSchedule $defense, GradingRubric $rubric, CapstoneExpert $panelist, DefensePanel $panel): array
     {
         $defense->loadMissing(['team', 'panels.expert']);
-        $rubric->loadMissing(['criteria' => fn ($q) => $q->orderBy('sort_order')]);
-
-        $sections = $rubric->criteria
-            ->groupBy(fn ($c) => $c->category ?: 'General')
-            ->map(function ($criteria, $name) {
-                $items = $criteria->map(fn ($c) => [
-                    'name' => (string) $c->criterion_name,
-                    'description' => $c->description,
-                    'max' => (float) $c->max_points,
-                    // Best first, the way the form reads left to right.
-                    'levels' => collect($c->decodedScoreLevels())
-                        ->map(fn ($l) => [
-                            'score' => (float) ($l['score'] ?? 0),
-                            'label' => (string) ($l['label'] ?? ''),
-                            'desc' => (string) ($l['desc'] ?? ''),
-                        ])
-                        ->sortByDesc('score')->values()->all(),
-                ])->values();
-
-                $width = (int) $items->max(fn ($i) => count($i['levels']));
-
-                return [
-                    'name' => (string) $name,
-                    'max' => (float) ($criteria->first()->category_max_points ?? $criteria->sum('max_points')),
-                    // The points each level is worth for the category as a whole:
-                    // the column headings of the form (20, 15, 10, 5).
-                    'levelTotals' => collect(range(0, max(0, $width - 1)))
-                        ->map(fn ($k) => (float) $items->sum(fn ($i) => $i['levels'][$k]['score'] ?? 0))
-                        ->all(),
-                    'items' => $items->all(),
-                ];
-            })->values()->all();
+        $sections = $this->sections($rubric);
 
         $members = $defense->team
             ? $defense->team->members()->orderBy('l_name')->get()
@@ -104,6 +73,83 @@ class GradingSheet
             'reference' => 'Defense #'.$defense->defense_id,
             'printed' => now()->format('M j, Y g:i A'),
         ];
+    }
+
+    /**
+     * The same form with nothing filled in, for a student to read before
+     * their defense: the rubric, its levels and the verdicts, with the title,
+     * team, scores and signatures left blank.
+     *
+     * @return array<string, mixed> The shape for() returns.
+     */
+    public function blank(GradingRubric $rubric, string $stage): array
+    {
+        $sections = $this->sections($rubric);
+
+        return [
+            'team' => '',
+            'title' => '',
+            'stage' => $stage,
+            'attempt' => 1,
+            'date' => null,
+            'when' => null,
+            'venue' => null,
+            'members' => [],
+            'panelist' => '',
+            'role' => '',
+            'rubric' => (string) $rubric->rubric_name,
+            'description' => $rubric->description ?: null,
+            'total' => (float) $rubric->total_points,
+            'levelCount' => max(1, (int) collect($sections)->max(fn ($s) => count($s['levelTotals']))),
+            'sections' => $sections,
+            'outcomes' => array_map(fn ($o) => DefenseOutcome::label($o, $stage), DefenseOutcome::forStage($stage)),
+            'signatures' => array_fill_keys(self::SEATS, null),
+            'reference' => '',
+            'printed' => now()->format('M j, Y g:i A'),
+            'note' => 'The rubric your panel grades the '.$stage.' with · from CapsTrack, printed '.now()->format('M j, Y'),
+        ];
+    }
+
+    /**
+     * The rubric's criteria grouped by category, each with its levels best
+     * first and the points each level is worth for the category as a whole.
+     *
+     * @return list<array{name: string, max: float, levelTotals: list<float>, items: list<array{name: string, description: ?string, max: float, levels: list<array{score: float, label: string, desc: string}>}>}>
+     */
+    private function sections(GradingRubric $rubric): array
+    {
+        $rubric->loadMissing(['criteria' => fn ($q) => $q->orderBy('sort_order')]);
+
+        return $rubric->criteria
+            ->groupBy(fn ($c) => $c->category ?: 'General')
+            ->map(function ($criteria, $name) {
+                $items = $criteria->map(fn ($c) => [
+                    'name' => (string) $c->criterion_name,
+                    'description' => $c->description,
+                    'max' => (float) $c->max_points,
+                    // Best first, the way the form reads left to right.
+                    'levels' => collect($c->decodedScoreLevels())
+                        ->map(fn ($l) => [
+                            'score' => (float) ($l['score'] ?? 0),
+                            'label' => (string) ($l['label'] ?? ''),
+                            'desc' => (string) ($l['desc'] ?? ''),
+                        ])
+                        ->sortByDesc('score')->values()->all(),
+                ])->values();
+
+                $width = (int) $items->max(fn ($i) => count($i['levels']));
+
+                return [
+                    'name' => (string) $name,
+                    'max' => (float) ($criteria->first()->category_max_points ?? $criteria->sum('max_points')),
+                    // The points each level is worth for the category as a whole:
+                    // the column headings of the form (20, 15, 10, 5).
+                    'levelTotals' => collect(range(0, max(0, $width - 1)))
+                        ->map(fn ($k) => (float) $items->sum(fn ($i) => $i['levels'][$k]['score'] ?? 0))
+                        ->all(),
+                    'items' => $items->all(),
+                ];
+            })->values()->all();
     }
 
     /** "Team1 - Title Defense - Rating Sheet", safe as a file name. */
