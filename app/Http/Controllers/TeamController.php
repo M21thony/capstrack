@@ -319,8 +319,9 @@ class TeamController extends Controller
             'userRole' => $userRole,
             'expertRemovedNotifications' => $expertRemovedNotifications,
             'pendingLeadershipTransfer' => $pendingLeadershipTransfer,
-            // Financial Records is the page's second tab; ?tab=financial opens on it.
-            'tab' => $request->query('tab') === 'financial' ? 'financial' : 'team',
+            // Financial Records and Team Rating are the page's other tabs; ?tab= opens on one.
+            'tab' => in_array($request->query('tab'), ['financial', 'rating'], true) ? $request->query('tab') : 'team',
+            'rating' => TeamRatingController::panel($student, $myTeam, $teamMembers),
             'financialState' => app(FeeBoard::class)->forStudent($student),
         ]);
     }

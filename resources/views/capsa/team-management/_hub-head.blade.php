@@ -18,7 +18,10 @@
     'applications' => $applications['open'] ? ['Team Applications', $applications['waiting']->count()] : null,
     'teams' => ['Teams', $rows->count()],
     'milestone_list' => $capsaPortal ? ['Milestones', null] : null,
+    // How many are open for students right now; none open shows no number.
+    'team_ratings' => $capsaPortal ? ['Team Ratings', ($counts['team_ratings'] ?? 0) ?: null] : null,
   ]);
+  $pageTabs = ['milestone_list', 'team_ratings'];
 @endphp
 
 <div class="hub-head">
@@ -82,9 +85,9 @@
 <div class="hub-tabs" role="tablist">
   @foreach ($tabs as $key => [$label, $n])
     <a role="tab" href="{{ route($hubRoute, array_filter(['tab' => $key, 'section' => $capsaPortal ? ($selectedSection ?? null) : null])) }}"
-       @if ($key !== 'milestone_list') data-hub-tab="{{ $key }}" @endif
+       @if (! in_array($key, $pageTabs, true)) data-hub-tab="{{ $key }}" @endif
        aria-selected="{{ $tab === $key ? 'true' : 'false' }}">
-      {{ $label }}@if ($n !== null)<span @class(['n', 'hot' => $key === 'todo' && $n > 0])>{{ $n }}</span>@endif
+      {{ $label }}@if ($n !== null)<span @class(['n', 'hot' => $key === 'todo' && $n > 0]) @if ($key === 'team_ratings') title="{{ $n }} open" aria-label="{{ $n }} open" @endif>{{ $n }}</span>@endif
     </a>
   @endforeach
 </div>

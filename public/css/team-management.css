@@ -616,8 +616,9 @@
   text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap}
 .tm-hub .hub-tabs a:hover{color:var(--ink)}
 .tm-hub .hub-tabs a[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--gold)}
-.tm-hub .hub-tabs .n{font-family:var(--f-num);font-size:11px;color:var(--mut)}
-.tm-hub .hub-tabs .n.hot{color:var(--bad);font-weight:700}
+.tm-hub .hub-tabs .n{display:inline-block;min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:6px;background:#5b5b66;color:#fff;
+  font-family:var(--f-num);font-size:11.5px;font-weight:700;line-height:20px;text-align:center;font-variant-numeric:tabular-nums}
+.tm-hub .hub-tabs .n.hot{background:#dc2626}
 .tm-hub .hub-pane{display:flex;flex-direction:column;gap:16px;min-width:0}
 
 /* buttons, segmented switches, search and selects */

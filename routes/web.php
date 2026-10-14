@@ -76,6 +76,7 @@ use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TableExportController;
 use App\Http\Controllers\TableReportController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TeamRatingController;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -214,6 +215,12 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // route names so nothing that links to them breaks, but its page
         // redirects here - it was only ever half of this.
         Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
+        // Team ratings live on Team Management's Team Ratings tab; these are its actions.
+        Route::post('/team-ratings', [App\Http\Controllers\Capsa\TeamRatingController::class, 'store'])->name('team_ratings.store');
+        Route::get('/team-ratings/spreadsheet', [App\Http\Controllers\Capsa\TeamRatingController::class, 'export'])->name('team_ratings.export');
+        Route::post('/team-ratings/{form}/items', [App\Http\Controllers\Capsa\TeamRatingController::class, 'addItems'])->name('team_ratings.items');
+        Route::patch('/team-ratings/{form}', [App\Http\Controllers\Capsa\TeamRatingController::class, 'update'])->name('team_ratings.update');
+        Route::post('/team-ratings/{form}/reminders', [App\Http\Controllers\Capsa\TeamRatingController::class, 'remind'])->name('team_ratings.remind');
         // Manage milestones: a page per milestone and a page per form. Before
         // the {team} pages, so "milestones" is never read as a team.
         Route::get('/team-management/milestones/setup/{program}', [MilestonePageController::class, 'setup'])->name('team_management.milestones.setup');
@@ -498,6 +505,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::redirect('/', '/student/dashboard');
             Route::get('/dashboard', [DashboardController::class, 'index'])->name('student.dashboard');
             Route::get('/team', [TeamController::class, 'index'])->name('student.team');
+            Route::get('/team/rating/{form}/rate/{ratee}', [TeamRatingController::class, 'rate'])->whereNumber('ratee')->name('student.team_rating.rate');
+            Route::patch('/team/rating/{form}/rate/{ratee}', [TeamRatingController::class, 'draft'])->whereNumber('ratee')->name('student.team_rating.draft');
+            Route::post('/team/rating/{form}/submission', [TeamRatingController::class, 'submit'])->name('student.team_rating.submit');
             Route::get('/experts', [StudentExpertController::class, 'index'])->name('student.experts');
             Route::post('/experts/evaluations', [ExpertEvaluationController::class, 'store'])->name('student.evaluations.store');
             // Document Submission and Review Viewer in one: the team's files, each opening with its remarks.
@@ -644,7 +654,8 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
 // now - one who is in a team, since every page worth looking at needs one.
 if (app()->environment('local')) {
     Route::get('/__dev-login-student/{page?}', function (?string $page = null) {
-        $studentId = StudentSchoolYear::whereNotNull('team_id')->value('student_id')
+        // ?as=<student id> when the page under test needs a particular student.
+        $studentId = request()->integer('as') ?: StudentSchoolYear::whereNotNull('team_id')->value('student_id')
             ?? Student::query()->value('student_id');
 
         abort_unless($studentId && Auth::guard('web')->loginUsingId($studentId), 404, 'No student to sign in as.');

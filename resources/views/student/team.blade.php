@@ -214,6 +214,8 @@
   .tm-seg button:hover { color: var(--text); }
   .tm-seg button[aria-selected="true"] { background: var(--bg2); color: var(--text); box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
   .tm-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tm-seg .n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; font-size: 11.5px; font-weight: 700; background: var(--bg3); color: var(--text2); }
+  .tm-seg .n.hot { background: var(--red, #dc2626); color: #fff; }
   body.tm-on-fin #contentWrapper,
   body.tm-on-fin .pagination-container,
   body.tm-on-fin .tutorial-note { display: none !important; }
@@ -225,7 +227,7 @@
     .tm-seg button { flex: 1; justify-content: center; padding: 0 10px; }
   }
 </style>
-<body class="{{ $tab === 'financial' ? 'tm-on-fin' : '' }}">
+<body class="{{ ['financial' => 'tm-on-fin', 'rating' => 'tm-on-rating'][$tab] ?? '' }}">
 @include('student.partials.sidebar')
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 <!-- MAIN -->
@@ -251,32 +253,40 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 1 .7V2l-1 .7-3-2-3 2-3-2-3 2-3-2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
         Financial Records
       </button>
+      <button type="button" role="tab" id="tm-tab-rating" data-tm-tab="rating" aria-controls="tm-panel-rating" aria-selected="{{ $tab === 'rating' ? 'true' : 'false' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+        Team Rating
+        @if ($rating['due'] > 0)<span class="n hot" title="{{ $rating['due'] }} due" aria-label="{{ $rating['due'] }} due">{{ $rating['due'] }}</span>@endif
+      </button>
     </div>
 
     <section class="tm-fin" id="tm-panel-financial" role="tabpanel" aria-labelledby="tm-tab-financial" @if ($tab !== 'financial') hidden @endif>
       @include('student.partials.financial-panel', ['state' => $financialState])
     </section>
+    <section id="tm-panel-rating" role="tabpanel" aria-labelledby="tm-tab-rating" @if ($tab !== 'rating') hidden @endif>
+      @include('student.team-rating._panel')
+    </section>
     <script nonce="{{ Vite::cspNonce() }}">
     (function () {
       var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-tm-tab]'));
-      var panel = document.getElementById('tm-panel-financial');
+      var panels = { financial: document.getElementById('tm-panel-financial'), rating: document.getElementById('tm-panel-rating') };
 
       // Switches in place, and keeps the address in step so a refresh or a
       // shared link opens the same tab.
       function show(which) {
-        var fin = which === 'financial';
-        document.body.classList.toggle('tm-on-fin', fin);
-        panel.hidden = !fin;
+        document.body.classList.toggle('tm-on-fin', which === 'financial');
+        document.body.classList.toggle('tm-on-rating', which === 'rating');
+        Object.keys(panels).forEach(function (k) { panels[k].hidden = k !== which; });
         tabs.forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tm-tab') === which ? 'true' : 'false'); });
         var url = new URL(location.href);
-        if (fin) { url.searchParams.set('tab', 'financial'); } else { url.searchParams.delete('tab'); }
+        if (panels[which]) { url.searchParams.set('tab', which); } else { url.searchParams.delete('tab'); }
         history.replaceState(null, '', url.pathname + url.search + url.hash);
         // The first time a tab is opened since signing in, it comes up as
         // its skeleton (student/partials/content-skeleton), like a page.
         if (window.contentSkeleton) { window.contentSkeleton.show(which); }
       }
 
-      if (window.contentSkeleton) { window.contentSkeleton.seen('{{ $tab === 'financial' ? 'financial' : 'team' }}'); }
+      if (window.contentSkeleton) { window.contentSkeleton.seen('{{ $tab }}'); }
 
       tabs.forEach(function (b, i) {
         b.addEventListener('click', function () { show(b.getAttribute('data-tm-tab')); });

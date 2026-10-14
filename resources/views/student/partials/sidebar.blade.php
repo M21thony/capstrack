@@ -99,7 +99,7 @@
       <x-portal-icon name="dashboard" />
       Dashboard
     </a>
-    <a href="{{ route('student.team') }}" data-tour-target="student.team" class="nav-item {{ request()->routeIs('student.team') ? 'active' : '' }}">
+    <a href="{{ route('student.team') }}" data-tour-target="student.team" class="nav-item {{ request()->routeIs('student.team', 'student.team_rating.*') ? 'active' : '' }}">
       <x-portal-icon name="team" />
       Team Management
       @if ($newPostCount > 0)
@@ -157,7 +157,7 @@
 @include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => ['url' => $student->avatarUrl(), 'initials' => $student->avatarInitials()], 'tabs' => array_values(array_filter([
     ['label' => 'Home', 'href' => route('student.dashboard'), 'active' => request()->routeIs('student.dashboard'),
         'icon' => App\Support\PortalIcons::paths('home')],
-    ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team'), 'badge' => $newPostCount,
+    ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team', 'student.team_rating.*'), 'badge' => $newPostCount,
         'icon' => App\Support\PortalIcons::paths('team')],
     // Handing in a document is what a student comes here to do most - but
     // not on Financial Records (Team Management's second tab). There the page
