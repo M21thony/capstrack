@@ -90,7 +90,9 @@ class TeamController extends Controller
             $skills = $myRecruitment->roles;
         }
 
-        $memberCount = 5;
+        // Whose Team Rules this student is under: their team's section, or their own before they have one.
+        $rulesSection = $myTeam?->section() ?: $student?->sectionLabel();
+        $memberCount = Team::maxMembers($rulesSection);
         $isLeader = $myTeam && (int) $myTeam->leader_id === (int) $studentId;
         $teamFull = $myTeam && ! $myTeam->is_confirmed && $isLeader && $teamMembers->count() >= $memberCount;
         $isTeamFull = $myTeam && $teamMembers->count() >= $memberCount;
@@ -191,11 +193,25 @@ class TeamController extends Controller
         // Leaving always waits on the CaPSA; after Title Defense so does
         // removing a member.
         $teamLocked = $myTeam?->isTeamLocked() ?? false;
+        // What ran out of time is declined before it is shown as waiting.
+        if ($myTeam) {
+            MemberLeaveRequest::expireOverdue();
+        }
         $leaveRequests = $myTeam
             ? MemberLeaveRequest::with(['student', 'requester'])
                 ->pending()
                 ->where('team_id', $myTeam->team_id)
                 ->oldest()
+                ->get()
+            : collect();
+        // The last week's requests that declined themselves, so the team sees
+        // it was the clock and not the CaPSA - and that they can ask again.
+        $autoDeclinedRequests = $myTeam
+            ? MemberLeaveRequest::with(['student', 'requester'])
+                ->where('team_id', $myTeam->team_id)
+                ->where('auto_declined', true)
+                ->where('decided_at', '>=', now()->subDays(7))
+                ->latest('decided_at')
                 ->get()
             : collect();
 
@@ -272,8 +288,8 @@ class TeamController extends Controller
             'panel' => $panel,
             'panelDefenseType' => $panelDefenseType,
             // The CaPSA's Team Rules, so a closed door is said before anyone fills in a form.
-            'creationAllowed' => Team::creationAllowed(),
-            'joiningAllowed' => Team::joiningAllowed(),
+            'creationAllowed' => Team::creationAllowed($rulesSection),
+            'joiningAllowed' => Team::joiningAllowed($rulesSection),
             // What a recruitment post may advertise for. Project Head is left
             // out: that seat belongs to whoever leads the team.
             'memberRoleNames' => StudentRole::memberRoles()->pluck('s_role_name')->all(),
@@ -298,6 +314,7 @@ class TeamController extends Controller
             'teamLocked' => $teamLocked,
             'teamLockedAt' => $teamLocked ? $myTeam->teamLockedAt() : null,
             'leaveRequests' => $leaveRequests,
+            'autoDeclinedRequests' => $autoDeclinedRequests,
             'leaderIds' => $leaderIds,
             'userRole' => $userRole,
             'expertRemovedNotifications' => $expertRemovedNotifications,
@@ -417,7 +434,7 @@ class TeamController extends Controller
         // Before validation, so a closed rule is the answer a student gets -
         // not a complaint about the team name they typed into it.
         $closed = $request->user()->capstoneStage() !== 1 ? Team::NO_NEW_TEAMS
-            : (Team::creationAllowed() ? null : Team::CREATION_CLOSED);
+            : (Team::creationAllowed($request->user()->sectionLabel()) ? null : Team::CREATION_CLOSED);
 
         if ($closed) {
             if ($request->expectsJson()) {

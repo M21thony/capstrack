@@ -35,24 +35,26 @@ class TeamRulesTest extends TestCase
         (new StudentRoleSeeder)->run();
     }
 
-    private function capsa(): CapstoneExpert
+    /** @param  array<int, string>  $sections */
+    private function capsa(array $sections = ['BSIT-3A']): CapstoneExpert
     {
         $capsa = CapstoneExpert::factory()->create([
-            'approved_status' => true, 'is_admin' => false, 'sections' => ['BSIT-4A'],
+            'approved_status' => true, 'is_admin' => false, 'sections' => $sections,
         ]);
         $capsa->roles()->attach(Role::firstOrCreate(['role_name' => CapstoneExpert::CAPSA_ROLE])->role_id);
 
         return $capsa;
     }
 
-    private function student(string $email): Student
+    /** A BSIT 3rd-year student, in section BSIT-3{letter}. */
+    private function student(string $email, string $letter = 'A'): Student
     {
         $s = Student::create([
             'email' => $email, 'f_name' => 'A', 'l_name' => 'B',
-            'course' => 'BSIT', 'year_section' => '3rd · A',
+            'course' => 'BSIT', 'year_section' => '3rd · '.$letter,
         ]);
         StudentRoster::create([
-            'email' => $email, 'name' => 'A B', 'section' => '3rd · A',
+            'email' => $email, 'name' => 'A B', 'section' => '3rd · '.$letter,
             'program' => 'BSIT', 'school_year' => Term::currentSchoolYear(),
         ]);
 
@@ -103,28 +105,69 @@ class TeamRulesTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert')
             ->putJson(route('capsa.team_rules.update'), [
-                'max_members' => 4, 'allow_creation' => false, 'allow_joining' => false,
+                'max_members' => ['BSIT' => 4], 'allow_creation' => false, 'allow_joining' => false,
             ])
             ->assertOk()
             ->assertJson([
-                'success' => true, 'max_members' => 4,
+                'success' => true, 'max_members' => ['BSIT' => 4],
                 'allow_creation' => false, 'allow_joining' => false,
             ]);
 
-        $this->assertSame(4, Team::maxMembers());
-        $this->assertFalse(Team::creationAllowed());
-        $this->assertFalse(Team::joiningAllowed());
+        $this->assertSame(4, Team::maxMembers('BSIT-3A'));
+        $this->assertFalse(Team::creationAllowed('BSIT-3A'));
+        $this->assertFalse(Team::joiningAllowed('BSIT-3A'));
+    }
+
+    /** Team rules reach only the CaPSA's own sections; another CaPSA's section keeps its own. */
+    public function test_a_save_changes_only_the_capsas_own_sections(): void
+    {
+        $this->actingAs($this->capsa(['BSIT-3A']), 'expert')
+            ->putJson(route('capsa.team_rules.update'), [
+                'max_members' => ['BSIT' => 3], 'allow_creation' => false, 'allow_joining' => false,
+            ])
+            ->assertOk();
+
+        $this->assertSame(3, Team::maxMembers('BSIT-3A'));
+        $this->assertSame(5, Team::maxMembers('BSIT-3B'));
+        $this->assertTrue(Team::creationAllowed('BSIT-3B'));
+        $this->assertTrue(Team::joiningAllowed('BSIT-3B'));
+        $this->assertSame(5, Team::maxMembers());
+    }
+
+    /** A CaPSA with BSIT and BSIS sections may give each program its own size. */
+    public function test_each_program_gets_its_own_max(): void
+    {
+        $this->actingAs($this->capsa(['BSIT-3A', 'BSIT-3B', 'BSIS-3A']), 'expert')
+            ->putJson(route('capsa.team_rules.update'), [
+                'max_members' => ['BSIT' => 5, 'BSIS' => 4], 'allow_creation' => true, 'allow_joining' => true,
+            ])
+            ->assertOk();
+
+        $this->assertSame(5, Team::maxMembers('BSIT-3A'));
+        $this->assertSame(5, Team::maxMembers('BSIT-3B'));
+        $this->assertSame(4, Team::maxMembers('BSIS-3A'));
     }
 
     /** One resource, replaced whole: a save that leaves a rule out is refused, not half-applied. */
     public function test_a_save_that_leaves_a_rule_out_changes_nothing(): void
     {
         $this->actingAs($this->capsa(), 'expert')
-            ->putJson(route('capsa.team_rules.update'), ['max_members' => 3])
+            ->putJson(route('capsa.team_rules.update'), ['max_members' => ['BSIT' => 3]])
             ->assertStatus(422);
 
-        $this->assertSame(5, Team::maxMembers());
-        $this->assertTrue(Team::creationAllowed());
+        $this->assertSame(5, Team::maxMembers('BSIT-3A'));
+        $this->assertTrue(Team::creationAllowed('BSIT-3A'));
+    }
+
+    public function test_a_save_that_leaves_a_program_out_changes_nothing(): void
+    {
+        $this->actingAs($this->capsa(['BSIT-3A', 'BSIS-3A']), 'expert')
+            ->putJson(route('capsa.team_rules.update'), [
+                'max_members' => ['BSIT' => 3], 'allow_creation' => true, 'allow_joining' => true,
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(5, Team::maxMembers('BSIT-3A'));
     }
 
     /**
@@ -161,7 +204,18 @@ class TeamRulesTest extends TestCase
         $this->actingAs($this->capsa(), 'expert')
             ->get(route('capsa.team_management'))
             ->assertOk()
-            ->assertViewHas('rules', fn ($data) => ($data['teamSizes'][4] ?? 0) === 1);
+            ->assertViewHas('rules', fn ($data) => ($data['programs'][0]['sizes'][4] ?? 0) === 1);
+    }
+
+    /** Teams in another CaPSA's section are not hers to count. */
+    public function test_the_menu_counts_only_teams_in_her_sections(): void
+    {
+        $this->teamLedBy($this->student('elsewhere@my.cspc.edu.ph', 'B'), [$this->student('e1@my.cspc.edu.ph', 'B')]);
+
+        $this->actingAs($this->capsa(['BSIT-3A']), 'expert')
+            ->get(route('capsa.team_management'))
+            ->assertOk()
+            ->assertViewHas('rules', fn ($data) => $data['programs'][0]['sizes'] === []);
     }
 
     // ── creation ──────────────────────────────────────────────────────────
@@ -249,6 +303,44 @@ class TeamRulesTest extends TestCase
             ->assertJson(['message' => Team::JOINING_CLOSED]);
 
         $this->assertSame(0, TeamInvitation::count());
+    }
+
+    /** Joining closed in one section leaves a team in another section open. */
+    public function test_joining_closed_in_one_section_leaves_another_open(): void
+    {
+        Setting::set(Team::RULES_KEY.'BSIT-3A', json_encode(['max' => 5, 'create' => true, 'join' => false]));
+
+        $closedLeader = $this->student('closed@my.cspc.edu.ph', 'A');
+        $closedTeam = $this->teamLedBy($closedLeader);
+        $openLeader = $this->student('open@my.cspc.edu.ph', 'B');
+        $openTeam = $this->teamLedBy($openLeader);
+
+        $this->actingAs($closedLeader, 'web')
+            ->postJson(route('invitations.store'), [
+                'receiver_id' => $this->student('to-a@my.cspc.edu.ph', 'A')->student_id,
+                'team_id' => $closedTeam->team_id, 'type' => 'invite',
+            ])
+            ->assertStatus(422)
+            ->assertJson(['message' => Team::JOINING_CLOSED]);
+
+        $this->actingAs($openLeader, 'web')
+            ->postJson(route('invitations.store'), [
+                'receiver_id' => $this->student('to-b@my.cspc.edu.ph', 'B')->student_id,
+                'team_id' => $openTeam->team_id, 'type' => 'invite',
+            ])
+            ->assertSuccessful();
+    }
+
+    /** A team's limit is its own section's, not the one other sections are under. */
+    public function test_a_team_is_held_to_its_own_sections_limit(): void
+    {
+        Setting::set(Team::RULES_KEY.'BSIT-3A', json_encode(['max' => 3, 'create' => true, 'join' => true]));
+
+        $small = $this->teamLedBy($this->student('small@my.cspc.edu.ph', 'A'));
+        $large = $this->teamLedBy($this->student('large@my.cspc.edu.ph', 'B'));
+
+        $this->assertSame(3, $small->memberLimit());
+        $this->assertSame(5, $large->memberLimit());
     }
 
     /** Sent while joining was open, it cannot be accepted once joining has closed. */

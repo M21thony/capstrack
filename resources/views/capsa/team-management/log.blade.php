@@ -19,7 +19,6 @@
 <div class="th">
   <span class="tile" style="background:linear-gradient(135deg,{{ $row->gradient }})">{{ $row->initials }}</span>
   <div class="grow">
-    <h1>{{ $log === 'papers' ? 'Papers' : 'Activity' }}</h1>
     <p>{{ $team->team_name }} · {{ $subtitle }}</p>
   </div>
   <a class="btn btn-o" href="{{ route($portal === 'capsa' ? 'capsa.team_management.show' : 'instructor.teams.show', $team->team_id) }}">Back to {{ $team->team_name }}</a>

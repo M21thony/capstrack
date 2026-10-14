@@ -26,6 +26,7 @@
 
   // Another team's title recommended this year, not an archive study.
   $recommended = $match['recommended'] ?? null;
+  $section = $recommended && str_contains($recommended, ' — ') ? Str::after($recommended, ' — ') : null;
 
   $headline = $score === null
       ? 'This one came back on keywords, but was never scored'
@@ -46,7 +47,7 @@
   <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
   <a href="{{ route('student.duplication.report', $check->id) }}">{{ Str::limit($mineTitle, 38) }}</a>
   <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-  <span class="here">Match {{ $rank }} of {{ $total }} &middot; {{ $reads($score) }}</span>
+  <span class="here">{{ $groupLabel }} {{ $groupPos }} of {{ $groupTotal }} &middot; {{ $reads($score) }}</span>
 </nav>
 
 <div class="pager">
@@ -75,6 +76,12 @@
   <div class="doc">
     <div class="t">{{ $headline }}</div>
     <div class="m">Gold marks below are words that appear in both documents. They are matched literally, not by the AI.</div>
+    @if ($recommended)
+      <div class="ty-note">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span><b>Recommended this year:</b> two teams can't have the same title in one school year. Change your title or its focus before you turn it in.</span>
+      </div>
+    @endif
   </div>
   @if ($flagged)
     <span class="stateline s-red">
@@ -90,7 +97,6 @@
   <div class="col mine">
     <div class="who">Your pre-proposal</div>
     <h3>{!! $mark($mineTitle) !!}</h3>
-    <div class="sub">What your team wrote</div>
     @forelse ($mineFields as $label => $value)
       <div class="field">
         <div class="k">{{ $label }}</div>
@@ -103,9 +109,17 @@
 
   <div class="col">
     @if ($recommended)
-      <div class="who">{{ $recommended }}</div>
+      <div class="who">@if ($section)<span class="ty-tag">{{ $section }}</span> @endif Recommended this year</div>
       <h3>{!! $mark($match['title'] ?? '') !!}</h3>
-      <div class="sub">Another team's title. Only the title is shown: their pre-proposal is still their own work in progress.</div>
+      <div class="sub">Recommended pre-proposal{{ $theirYear ? ' · '.$theirYear : '' }}</div>
+      @forelse ($theirFields as $label => $value)
+        <div class="field">
+          <div class="k">{{ $label }}</div>
+          <div class="v">{!! $mark($value) !!}</div>
+        </div>
+      @empty
+        <div class="dup-none">Only the title was kept with this check. Run a new check to see their problem, solution and scope.</div>
+      @endforelse
     @else
       <div class="who">Archived capstone &middot; {{ $year }}</div>
       <h3>{!! $mark($match['title'] ?? '') !!}</h3>

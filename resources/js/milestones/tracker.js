@@ -108,14 +108,19 @@ function start(root) {
 
   function draw() {
     const d = S.data;
-    const top = el('div', 'ms-top');
-    top.append(el('h2', 'ms-h', CAPSA ? 'Milestones' : 'Milestone progress'), el('span', 'ms-spacer'));
-    if (CAPSA && URLS.manage) {
-      const manage = el('a', 'ms-btn', 'Manage milestones');
-      manage.href = URLS.manage;
-      top.append(manage);
+    // An expert's top bar already says Milestone progress; a CaPSA's says
+    // Team Management, so hers names the tracker and links to its set-up.
+    if (CAPSA) {
+      const top = el('div', 'ms-top');
+      top.append(el('h2', 'ms-h', 'Milestones'), el('span', 'ms-spacer'));
+      if (URLS.manage) {
+        const manage = el('a', 'ms-btn', 'Manage milestones');
+        manage.href = URLS.manage;
+        top.append(manage);
+      }
+      root.append(top);
     }
-    root.append(top, sectionTabs());
+    root.append(sectionTabs());
 
     if (!d) {
       root.append(el('div', 'ms-panel ms-empty', CAPSA

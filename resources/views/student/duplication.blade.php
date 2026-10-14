@@ -24,6 +24,12 @@
   min-height: 480px;
 }
 
+/* A small laptop: the check and the two lists side by side, your pre-proposals underneath. */
+@media (max-width: 1280px) and (min-width: 901px) {
+  .dup-layout { grid-template-columns: 280px minmax(0, 1fr); grid-template-rows: minmax(480px, calc(100dvh - 248px)) auto; height: auto; }
+  .dup-portrait { grid-column: 1 / -1; }
+}
+
 /* A phone has room for one column: the check, then the matches, then the
    expert, one under the other, each as tall as it needs. */
 @media (max-width: 900px) {
@@ -57,9 +63,6 @@
   padding-right: 4px;
 }
 
-.matches-scroll::-webkit-scrollbar { width: 4px; }
-.matches-scroll::-webkit-scrollbar-track { background: transparent; }
-.matches-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 .upload-zone.has-file { border-color: var(--primary, #5b5bd6); background: var(--bg3); }
 
@@ -453,6 +456,7 @@
           </div>
           <div class="t" id="doc-title"></div>
           <div class="m" id="doc-meta"></div>
+          <div class="ty-note" id="ty-note" hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span></span></div>
         </div>
         <a class="pbtn" id="full-report-btn" style="display:none;flex-shrink:0" href="#">
           See what is similar
@@ -517,14 +521,24 @@
         </div>
       </div>
 
+      <div class="dup-midcol">
+      {{-- Titles other sections recommended this year: two teams can't share one. --}}
+      <div class="card ty-card" id="ty-card" hidden>
+        <div class="card-header" style="flex-shrink:0">
+          <span class="card-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Recommended This Year <span id="ty-count">(0)</span></span></span>
+          <span style="font-size:11px;color:var(--text3)">recommended to other teams</span>
+        </div>
+        <div class="dup-rows" id="ty-list"></div>
+      </div>
       <div class="card dup-mid" id="matches-panel">
         <div class="card-header" style="flex-shrink:0">
-          <span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Matched Capstone Projects</span>
+          <span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Top 10 from the Archive</span>
           <span style="font-size:11px;color:var(--text3)" id="match-count"></span>
         </div>
         <div class="matches-scroll dup-rows" id="matches-list">
           <div style="font-size:12px;color:var(--text3);text-align:center;padding:40px 0">No matches yet</div>
         </div>
+      </div>
       </div>
 
       <div class="card dup-portrait pp-card">
@@ -1797,11 +1811,31 @@ function renderResult(data, fileName, onLoad) {
   bandEl.className = 'band band-' + band;
   bandEl.textContent = SIM_BANDS[band];
 
-  const scored = (data.matches || []).map(m => m.assessed === false ? null : m.score);
+  // Two lists, each match keeping its place in the stored list so its link
+  // still opens the right one.
+  const indexed = (data.matches || []).map((m, i) => [m, i]);
+  const thisYear = indexed.filter(([m]) => m.recommended);
+  const archive = indexed.filter(([m]) => !m.recommended);
+
+  const scored = archive.map(([m]) => m.assessed === false ? null : m.score);
   const count = key => scored.filter(s => simBand(s) === key).length;
-  document.getElementById('sc-counts').innerHTML = ['close', 'some', 'little']
-    .map(k => '<span class="band band-' + k + '">' + count(k) + ' ' + { close: 'close', some: 'some overlap', little: 'little overlap' }[k] + '</span>')
-    .join('');
+  document.getElementById('sc-counts').innerHTML =
+    (thisYear.length ? '<span class="rp-n ty"><b>' + thisYear.length + '</b> recommended this year</span>' : '')
+    + ['close', 'some', 'little']
+      .map(k => '<span class="rp-n"><b class="sim-' + k + '">' + count(k) + '</b> ' + { close: 'close', some: 'some overlap', little: 'little overlap' }[k] + '</span>')
+      .join('');
+
+  const tyNote = document.getElementById('ty-note');
+  tyNote.hidden = !thisYear.length;
+  if (thisYear.length) {
+    const top = thisYear[0][0];
+    const section = (top.recommended || '').split(' — ')[1];
+    tyNote.querySelector('span').innerHTML = '<b>Recommended this year:</b> ' + escapeHtml(top.title)
+      + (section ? ' (' + escapeHtml(section) + ')' : '') + ' is ' + Number(top.score) + '% close to yours.';
+  }
+  document.getElementById('ty-card').hidden = !thisYear.length;
+  document.getElementById('ty-count').textContent = '(' + thisYear.length + ')';
+  document.getElementById('ty-list').innerHTML = thisYear.map(([m, i], n) => renderMatchItem(m, i, data.duplication_check_id, n)).join('');
 
   document.getElementById('doc-title').textContent = data.concepts.title || fileName;
 
@@ -1824,10 +1858,10 @@ function renderResult(data, fileName, onLoad) {
     meta.textContent = 'Nothing in the archive is close to it. Your CaPSA still reviews every title.';
   }
 
-  document.getElementById('match-count').textContent = data.matches?.length ? data.matches.length + ' match' + (data.matches.length > 1 ? 'es' : '') + ' found' : '';
+  document.getElementById('match-count').textContent = archive.length ? 'past capstones' : '';
 
   const matchList = document.getElementById('matches-list');
-  if (!data.matches || data.matches.length === 0) {
+  if (!archive.length) {
     matchList.innerHTML = `
       <div style="text-align:center;padding:40px 0">
         <div style="font-size:28px;margin-bottom:8px">✓</div>
@@ -1835,7 +1869,7 @@ function renderResult(data, fileName, onLoad) {
         <div style="font-size:11px;color:var(--text3);max-width:280px;margin:0 auto">This pre-proposal appears to be original based on our archived database.</div>
       </div>`;
   } else {
-    matchList.innerHTML = data.matches.map((m, i) => renderMatchItem(m, i, data.duplication_check_id)).join('');
+    matchList.innerHTML = archive.map(([m, i], n) => renderMatchItem(m, i, data.duplication_check_id, n)).join('');
   }
 
   const instrList = document.getElementById('instructor-list');
@@ -1940,7 +1974,8 @@ function simBand(score) {
   return score >= {{ \App\Support\SimilarityBand::CLOSE }} ? 'close' : (score >= {{ \App\Support\SimilarityBand::SOME }} ? 'some' : 'little');
 }
 
-function renderMatchItem(m, i, checkId) {
+// i is the match's place in the stored list (its link), n its place in this card.
+function renderMatchItem(m, i, checkId, n) {
   const s = m.assessed === false ? null : (m.score === undefined ? null : m.score);
   const why = m.similarities || m.reason || '';
 
@@ -1950,11 +1985,11 @@ function renderMatchItem(m, i, checkId) {
     <a class="mrow" href="${DUP_MATCH_URL.replace('__C__', checkId).replace('__R__', i + 1)}?from=pp">
       <div>
         <div class="pc sim-${simBand(s)}">${s === null ? '—' : s + '%'}</div>
-        <div class="rk">#${i + 1}</div>
+        <div class="rk">#${n + 1}</div>
       </div>
       <div>
         <div class="t">${escapeHtml(m.title)}</div>
-        <div class="mt">${m.recommended ? escapeHtml(m.recommended) : `${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}`}</div>
+        <div class="mt">${m.recommended ? `<span class="ty-tag">${escapeHtml((m.recommended.split(' — ')[1]) || 'This year')}</span> Recommended pre-proposal` : `${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}`}</div>
         ${why ? `<div class="wy">${escapeHtml(why)}</div>` : ''}
       </div>
     </a>`;
@@ -2057,5 +2092,6 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
 </script>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

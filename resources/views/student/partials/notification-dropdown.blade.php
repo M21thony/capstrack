@@ -2,6 +2,10 @@
   $allUnreadIds = collect($unreadNotifications ?? [])->pluck('id')->toArray();
   $seenNotifIds = session('student_seen_notification_ids', []);
   $unseenNotifCount = count(array_diff($allUnreadIds, $seenNotifIds));
+  // An owed expert evaluation stays at the top of the bell, and in its count,
+  // until it is sent - whatever "Remind me later" or "Mark all read" did.
+  $evaluationTodos = collect($evaluationsOwed ?? [])->groupBy('defense_id');
+  $bellCount = $unseenNotifCount + $evaluationTodos->count();
 @endphp
 {{-- Before the markup, not after it: a style further down arrives after
      the browser may already have painted the panel and its popups,
@@ -86,6 +90,11 @@
 /* Not yet read keeps a tint, so read and unread sit in one list and still
    read apart at a glance - the same as the expert bell. */
 .notif-item.is-unread{background:rgba(37,99,235,0.05)}
+.notif-item--todo{background:rgba(201,168,44,0.09);border-left:3px solid #c9a82c;padding-left:13px}
+.notif-item--todo:hover{background:rgba(201,168,44,0.15)}
+.notif-item--todo .notif-item-title{font-weight:700}
+.notif-todo-tag{display:inline-block;margin-bottom:4px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#c9a82c;color:#18191f}
+.notif-todo-go{margin-top:6px;font-size:11.5px;font-weight:700;color:#a8891a}
 .notif-item.is-unread .notif-item-title{font-weight:700}
 
 .notif-item-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
@@ -118,8 +127,8 @@
       data-csrf="{{ csrf_token() }}"></span>
 <button class="notif-btn" id="notif-btn" type="button" aria-label="Notifications">
   <svg viewBox="0 0 24 24" style="pointer-events:none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-  @if ($unseenNotifCount > 0)
-    <div class="notif-dot">{{ $unseenNotifCount > 9 ? '9+' : $unseenNotifCount }}</div>
+  @if ($bellCount > 0)
+    <div class="notif-dot">{{ $bellCount > 9 ? '9+' : $bellCount }}</div>
   @endif
 </button>
 <!-- Notification Dropdown -->
@@ -140,6 +149,21 @@
     <button type="button" class="notif-ask-btn" id="notif-ask-btn">Turn on</button>
   </div>
   <div class="notif-list">
+    @foreach($evaluationTodos as $todoRows)
+      @php
+        $todoStage = $todoRows->first()->stage;
+        $todoNames = $todoRows->map(fn ($r) => $r->expert.' ('.$r->role_label.')')->unique()->values();
+      @endphp
+      <a href="{{ route('student.experts', ['tab' => 'evaluations']) }}" class="notif-item notif-item--todo" data-todo="evaluation">
+        <div class="notif-item-icon" style="background:rgba(201,168,44,0.18);color:#b8961c"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+        <div class="notif-item-body">
+          <div class="notif-todo-tag">To do · stays here until you send it</div>
+          <div class="notif-item-title">Evaluate your experts: {{ $todoStage }}</div>
+          <div class="notif-item-msg">{{ $todoNames->count() }} {{ $todoNames->count() === 1 ? 'expert is' : 'experts are' }} waiting: {{ $todoNames->implode(', ') }}. It is anonymous, and the next phase stays locked until you do.</div>
+          <div class="notif-todo-go">Evaluate now →</div>
+        </div>
+      </a>
+    @endforeach
     @forelse($bellNotifications ?? $unreadNotifications ?? [] as $notif)
       @php
         $notifIcon = match ($notif->type) {
@@ -196,10 +220,12 @@
       </a>
       @endif
     @empty
+      @if($evaluationTodos->isEmpty())
       <div class="notif-empty">
         <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.3;margin-bottom:8px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         <div>No notifications yet</div>
       </div>
+      @endif
     @endforelse
   </div>
 </div>
@@ -348,6 +374,8 @@ document.addEventListener('click', function(e) {
   var item = e.target.closest('.notif-item');
   if (item) {
     e.preventDefault();
+    // A to-do is not a notification to mark read: it goes when it is done.
+    if (item.dataset.todo) { window.location.href = item.getAttribute('href'); return; }
     var id = item.getAttribute('data-id');
     var href = item.getAttribute('href');
 
@@ -397,6 +425,14 @@ function openLeaveDecision(d, href) {
   note.textContent = d.decisionNote || 'No reason was written with this decision.';
   note.classList.toggle('is-empty', !d.decisionNote);
   set('ld-by', '— ' + (d.decidedBy || 'Your CaPSA') + ', CaPSA');
+
+  // Nobody said no: the CaPSA let it run out, and the popup tells it that way.
+  if (d.auto) {
+    set('ld-status', 'Auto-declined');
+    set('ld-sub', (leave ? 'Your request to leave ' + (d.team || 'your team') : 'The request to remove ' + (d.member || 'the member'))
+      + ' was declined automatically: your CaPSA did not act on it within ' + d.autoDays + ' days. You can ask again.');
+    set('ld-by', '— No action from your CaPSA in ' + d.autoDays + ' days');
+  }
 
   set('ld-team', d.team);
   set('ld-kind', d.kind);

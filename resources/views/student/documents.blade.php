@@ -279,6 +279,7 @@
 </div>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 @include('partials.app-dialog')
 <script nonce="{{ Vite::cspNonce() }}">
 document.querySelectorAll('form.dc-undo').forEach(form => form.addEventListener('submit', async event => {

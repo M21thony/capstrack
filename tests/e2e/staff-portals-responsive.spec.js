@@ -43,34 +43,31 @@ for (const [role, at] of [['capsa', 'financial'], ['capsa', 'resources'], ['caps
   });
 }
 
-test('Team Assignments on a phone opens at the queue, and a tapped team shows its buttons', async ({ browser }) => {
+test('Team Applications on a phone: each team is a card with its buttons, and Read shows the details too', async ({ browser }) => {
   const { context, page } = await phone(browser);
-  await signIn(page, 'adviser', 'assignments');
+  await signIn(page, 'adviser', 'teams');
   await page.waitForTimeout(1200);
   await noTour(page);
+  await page.locator('.hub-tabs [data-hub-tab="applications"]').click();
 
-  // One scrolling area, and it is at the top: the application picked for the
-  // reader is not scrolled to.
-  const scrolled = await page.evaluate(() => [...document.querySelectorAll('.main *')]
-    .filter((el) => /(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight + 4 && el.clientHeight > innerHeight * 0.4)
-    .map((el) => ({ top: el.scrollTop })));
-  expect(scrolled.length, 'no scrolling area inside the page\'s own').toBeLessThanOrEqual(1);
-  for (const s of scrolled) expect(s.top).toBe(0);
-
-  const row = page.locator('.ta-row').first();
+  const row = page.locator('#tm-apps-waiting tr[data-q]').first();
   test.skip(!(await row.count()), 'no team has asked this adviser');
-  const name = await row.locator('.ta-team').first().evaluate((el) => ({ shown: el.clientWidth, whole: el.scrollWidth }));
+  const name = await row.locator('.nm').evaluate((el) => ({ shown: el.clientWidth }));
   expect(name.shown, 'the team name is not cut to a few letters').toBeGreaterThan(90);
-
-  await row.locator('.ta-row-btn').click();
-  await page.waitForTimeout(900);
-  const acts = page.locator('#asg-acts .ta-btn').last();
-  if (await acts.count()) {
-    await acts.scrollIntoViewIfNeeded();
-    const box = await acts.boundingBox();
-    expect(box.y + box.height).toBeLessThanOrEqual(844);
-    expect(box.y).toBeGreaterThanOrEqual(0);
+  for (const b of await row.locator('.acts .btn').all()) {
+    const box = await b.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
   }
+
+  // Read: the document, Accept under it, and the details a tap away.
+  await row.locator('[data-read]').click();
+  const accept = page.locator('#previewDialog .pv-act.go');
+  await expect(accept).toBeVisible();
+  const box = await accept.boundingBox();
+  expect(box.y + box.height).toBeLessThanOrEqual(844);
+  await page.locator('#previewDialog .pv-info').click();
+  await expect(page.locator('#previewDialog .pv-side .tma')).toBeVisible();
   await context.close();
 });
 

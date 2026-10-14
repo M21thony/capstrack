@@ -85,11 +85,11 @@ class RecruitmentController extends Controller
         ]);
 
         if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])
-            && ! Team::creationAllowed()) {
+            && ! Team::creationAllowed($request->user()->sectionLabel())) {
             return response()->json(['message' => Team::CREATION_CLOSED], 422);
         }
 
-        if ($validated['recruitment_goal'] === 'find_a_team' && ! Team::joiningAllowed()) {
+        if ($validated['recruitment_goal'] === 'find_a_team' && ! Team::joiningAllowed($request->user()->sectionLabel())) {
             return response()->json(['message' => Team::JOINING_CLOSED], 422);
         }
 
@@ -132,7 +132,7 @@ class RecruitmentController extends Controller
                 'roles' => $roles,
                 'looking_for' => $validated['looking_for'] ?? null,
                 'introduction' => $validated['introduction'] ?? null,
-                'member_count' => Team::maxMembers(),
+                'member_count' => Team::maxMembers($request->user()->sectionLabel()),
             ]);
         });
 
@@ -180,7 +180,7 @@ class RecruitmentController extends Controller
             'roles' => $validated['roles'],
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,
-            'member_count' => Team::maxMembers(),
+            'member_count' => Team::maxMembers($request->user()->sectionLabel()),
         ]);
 
         $this->logActivity(

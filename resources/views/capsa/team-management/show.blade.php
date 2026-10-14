@@ -161,7 +161,7 @@
   $showRoute = $portal === 'capsa' ? 'capsa.team_management.show' : 'instructor.teams.show';
   $logRoute = $portal === 'capsa' ? 'capsa.team_management.log' : 'instructor.teams.log';
   $hubRoute = $portal === 'capsa' ? 'capsa.team_management' : 'instructor.teams';
-  $maxMembers = \App\Models\Team::maxMembers();
+  $maxMembers = $team->memberLimit();
   $palette = ['#8a6e10', '#0e7490', '#4338ca', '#1d7a3e', '#9f1239'];
   $avatar = fn ($seed) => $palette[abs((int) $seed) % count($palette)];
   $initialsOf = fn ($name) => collect(preg_split('/\s+/', trim((string) $name)))

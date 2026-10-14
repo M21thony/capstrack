@@ -62,7 +62,6 @@
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content rp">
     <header class="rp-head">
-      <h1>Reports</h1>
       <p>Pick the period once. Open a report as a table to sort, search and merge it with another report, then download it as a PDF ready to submit, or as an Excel sheet.</p>
     </header>
 
@@ -167,5 +166,6 @@
 })();
 </script>
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

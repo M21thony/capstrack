@@ -160,6 +160,8 @@
 .tmx .th .grow{flex:1;min-width:220px}
 .tmx .th h1{margin:0;font-size:21px;font-weight:800;letter-spacing:-.4px;line-height:1.2}
 .tmx .th p{margin:2px 0 0;font-size:13px;color:var(--mut)}
+/* The page's name is in the top bar: the line under it leads. */
+.tmx .th .grow > p:first-child{margin:0;font-size:15px;font-weight:600;color:var(--ink)}
 .tmx .chip-o{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);
   background:var(--card);color:var(--ink);font-size:13px;font-weight:600}
 .tmx .tcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
@@ -283,19 +285,6 @@
 .tmx .ans{grid-template-columns:1fr}
 .tmx .ans dd{margin-bottom:4px}
 }
-/* the original PDF opens full-size over the page, sized to the window, so it never runs past the screen */
-.tmx dialog.pdfd{max-width:1000px;height:90vh;height:90dvh;overflow:hidden}
-.tmx dialog.pdfd[open]{display:flex;flex-direction:column}
-.tmx .pdfd .x{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);
-  border-radius:8px;background:var(--card);color:var(--ink2);cursor:pointer}
-.tmx .pdfd .x:hover{background:var(--tint)}
-.tmx .doc-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
-.tmx .doc-h .di{display:flex;color:var(--accent2)}
-.tmx .doc-h .fn{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
-.tmx .doc-h .fn small{display:block;font-size:11.5px;font-weight:500;color:var(--mut)}
-.tmx .doc-h a{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);
-  font-size:12.5px;font-weight:600;color:var(--accent3);text-decoration:none}
-.tmx .doc-h a:hover{background:var(--tint)}
 /* the similarity report: the closest score, then every matched capstone in full */
 .tmx .rep .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .tmx .rep .top b{font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -676,7 +665,7 @@
 .tm-hub .st-ok{color:var(--ok)} .tm-hub .st-warn{color:var(--warn)} .tm-hub .st-bad{color:var(--bad)} .tm-hub .st-idle{color:var(--mut)}
 
 /* the Teams table */
-.tm-hub .tscroll{overflow:auto;max-height:max(320px,calc(100dvh - 385px));overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.tm-hub .tscroll{overflow:auto;max-height:max(320px,calc(100dvh - 385px));overscroll-behavior:contain}
 .tm-hub table{width:100%;min-width:0;border-collapse:collapse}
 .tm-hub th{position:sticky;top:0;z-index:1;text-align:left;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);
   padding:10px 14px;background:var(--surface2);border-bottom:0;box-shadow:inset 0 -1px 0 var(--line);white-space:nowrap}
@@ -721,6 +710,8 @@
 .tm-dialog{border:1px solid var(--border);border-radius:14px;padding:0;background:var(--bg2);color:var(--text);width:min(480px,calc(100% - 32px));
   box-shadow:0 12px 40px rgba(24,25,31,.18);font-size:14px}
 .tm-dialog::backdrop{background:rgba(10,11,15,.45)}
+/* The expert portal's reset takes away the margin that centres a native dialog. */
+.tm-dialog{margin:auto}
 .tm-dialog .dh{padding:16px 20px 4px}
 .tm-dialog .dh h2{margin:0;font-size:17px}
 .tm-dialog .dh p{margin:4px 0 0;color:var(--text3);font-size:13px}
@@ -766,3 +757,87 @@
 /* Every page below the hub is as wide as the hub: 1180px of content,
    centred, as the redesign has it - not stretched across a wide screen. */
 .content > .tmx.tm-page{width:100%;max-width:1228px;margin-inline:auto;box-sizing:border-box}
+
+/* ══ Team Applications ══
+   The teams asking this person to be their adviser, consultant or
+   grammarian: a tab of the hub, and a shortcut group in its To do. */
+.tm-hub .slots{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink2);white-space:nowrap}
+.tm-hub .slots b{color:var(--ink)}
+.tm-hub .slots .slots-l{color:var(--mut)}
+.tm-hub .slots .pills{display:inline-flex;gap:3px}
+.tm-hub .slots .pills i{width:20px;height:6px;border-radius:99px;background:var(--idle)}
+.tm-hub .slots .pills i.used{background:var(--gold)}
+.tm-hub .slots .open{color:var(--ok);font-weight:600}
+.tm-hub .slots .full{color:var(--bad);font-weight:700}
+.tm-hub .group-h.group-apps{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.tm-hub .group-apps .see-all{margin-left:auto;text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;color:var(--gold-ink);text-decoration:none}
+.tm-hub .group-apps .see-all:hover{text-decoration:underline}
+.tm-hub .btn.rd{border-color:#d9c27a;background:var(--gold-bg);color:#5c4a0a;display:inline-flex;align-items:center;gap:6px}
+.tm-hub .todo .tc-diff{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;margin:6px 0 0;font-size:12.5px;line-height:1.45}
+.tm-hub .todo .tc-diff dt{color:var(--mut);font-weight:600}
+.tm-hub .todo .tc-diff dd{margin:0;color:var(--ink2)}
+.tm-hub .todo .tc-diff dd.nw{color:var(--ink);font-weight:600}
+.tm-hub .todo .k-go{color:var(--info)}
+.tm-hub .todo .k-go_given{color:var(--ok)}
+.tm-hub .todo .k-title_change{color:var(--info)}
+
+.tm-hub .apps-tools{gap:10px}
+.tm-hub .apps-tools .search{max-width:320px}
+.tm-hub .apps-tools .sel{height:38px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:0 10px;font-size:13px}
+.tm-hub .apps-exp{display:inline-flex;gap:8px;flex-wrap:wrap}
+.tm-hub .apps-exp:empty{display:none}
+.tm-hub .hub-head > .slots{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 12px}
+.tm-hub .apps-exp{margin-left:auto}
+.tm-hub .apps-scroll{overflow-x:auto}
+.tm-hub .apps-t{width:100%;min-width:720px;table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:13.5px}
+.tm-hub .apps-t th{position:sticky;top:0;background:#18191f;color:#d4d6de;text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:11px 16px;white-space:nowrap}
+.tm-hub .apps-t td{padding:12px 16px;border-top:1px solid var(--line);vertical-align:middle;color:var(--ink2);overflow:hidden}
+.tm-hub .apps-t tbody tr:first-child td{border-top:0}
+.tm-hub .apps-t tbody tr:hover td{background:var(--gold-bg)}
+.tm-hub .apps-t .ar{text-align:right}
+/* The hub's own tables keep their last column narrow; this one sizes by its columns. */
+.tm-hub .apps-t th:last-child,.tm-hub .apps-t td:last-child{width:auto}
+.tm-hub .apps-t td.ar{overflow:visible}
+.tm-hub .apps-t .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
+.tm-hub .apps-t .nm{font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-hub .apps-t .pj{font-size:12px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-hub .apps-t .late{color:var(--bad);font-weight:700}
+.tm-hub .apps-t .apps-none td{text-align:center;color:var(--mut);padding:24px 16px}
+.tm-hub .role-p{display:inline-flex;padding:2px 9px;border-radius:999px;background:var(--gold-bg);color:var(--gold-ink);font-size:11.5px;font-weight:700}
+.tm-hub .apps-foot{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--line);background:var(--surface2);font-size:12.5px;color:var(--mut)}
+.tm-hub .apps-foot a{color:var(--ink);font-weight:600}
+.tm-hub .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:1000px){.tm-hub .apps-t .apps-opt{display:none}}
+@media (max-width:700px){
+  .tm-hub .apps-tools .search{max-width:none;flex:1 1 100%}
+  .tm-hub .apps-exp{margin-left:0}
+  .tm-hub .apps-t{min-width:0}
+  .tm-hub .apps-t,.tm-hub .apps-t tbody,.tm-hub .apps-t tr,.tm-hub .apps-t td{display:block;width:auto}
+  .tm-hub .apps-t colgroup,.tm-hub .apps-t thead{display:none}
+  .tm-hub .apps-t tbody tr{padding:12px 14px;border-top:1px solid var(--line)}
+  .tm-hub .apps-t tbody tr:first-child{border-top:0}
+  .tm-hub .apps-t td{border:0;padding:2px 0}
+  .tm-hub .apps-t td.apps-opt{display:block}
+  .tm-hub .apps-t td[data-label="Role"],.tm-hub .apps-t td[data-label="Leader"],.tm-hub .apps-t td[data-label="Applied"],.tm-hub .apps-t td[data-label="Declined"]{display:inline-block;margin-right:10px;font-size:12.5px}
+  .tm-hub .apps-t .acts{justify-content:stretch;margin-top:10px;flex-wrap:wrap}
+  .tm-hub .apps-t .acts .btn{flex:1;justify-content:center;min-height:40px}
+  .tm-hub .apps-t .acts .btn.rd{flex-basis:100%}
+}
+
+/* What sits beside an application in the PDF window. */
+.pv-side .tma{display:flex;flex-direction:column;font-family:'DM Sans','DM Sans Fallback',system-ui,sans-serif;color:#1e2128}
+.pv-side .tma-sec{padding:15px 20px;border-bottom:1px solid #eceef2}
+.pv-side .tma-sec:last-child{border-bottom:0}
+.pv-side .tma-h{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#656b7a}
+.pv-side .tma-who{display:flex;align-items:center;gap:12px}
+.pv-side .tma-tile{width:40px;height:40px;border-radius:10px;background:#f2f3f5;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.pv-side .tma-team{font-size:16px;font-weight:700}
+.pv-side .tma-sub{font-size:12.5px;color:#4a5060}
+.pv-side .tma-state{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:#656b7a}
+.pv-side .tma-pill{display:inline-flex;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600}
+.pv-side .tma-pill.wait{background:#fdf3d0;color:#7a610e}
+.pv-side .tma-pill.no{background:#fde8e8;color:#b91c1c}
+.pv-side .tma-title{margin:0;font-size:14px;font-weight:600;line-height:1.4}
+.pv-side .tma-text{margin:0 0 3px;font-size:13px;color:#4a5060;line-height:1.45}
+.pv-side .tma-mail{margin:0 0 6px;font-size:12.5px;color:#656b7a;user-select:all;word-break:break-all}
+.pv-side .tma-quote{margin:0;padding:10px 12px;border-radius:8px;background:#f7f8fa;font-size:13px;line-height:1.5;white-space:pre-wrap}

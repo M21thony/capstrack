@@ -14,6 +14,7 @@ export default defineConfig({
                 'resources/js/student-review.jsx',
                 'resources/js/milestones/tracker.js',
                 'resources/js/submission-preview.js',
+                'resources/js/pdf-viewer.js',
                 'resources/js/submission-drawer.js',
                 'resources/css/defenses-page.css',
                 'resources/js/defenses/defenses.js',

@@ -68,7 +68,7 @@ class TableExportTest extends TestCase
         $adviser = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
         $adviser->roles()->attach(Role::firstOrCreate(['role_name' => 'adviser'])->role_id);
 
-        foreach (['instructor.grading', 'instructor.docreview', 'instructor.assignments'] as $route) {
+        foreach (['instructor.grading', 'instructor.docreview', 'instructor.teams'] as $route) {
             $this->actingAs($adviser, 'expert')->get(route($route))->assertOk()
                 ->assertSee('id="tx-dialog"', false)
                 ->assertSee('table-export', false);

@@ -12,7 +12,6 @@
 <form class="ml-form" id="ml-requirement" novalidate>
   <div class="ml-head">
     <div>
-      <h1 class="ml-title">{{ $deliverable ? 'Edit requirement' : 'Add requirement' }}</h1>
       <div class="ml-sub">In {{ $milestone->name }}</div>
     </div>
   </div>

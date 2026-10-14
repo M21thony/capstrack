@@ -148,7 +148,7 @@ class TitleChangesTest extends TestCase
         $this->assertSame('pending', $new->adviser_status);
         $this->assertNotNull($old->fresh()->retired_at);
 
-        $this->actingAs($adviser, 'expert')->get(route('instructor.assignments'))->assertOk()->assertSee(self::REVISED);
+        $this->actingAs($adviser, 'expert')->get(route('instructor.teams', ['tab' => 'todo']))->assertOk()->assertSee('Confirm their new title')->assertSee(self::REVISED);
 
         // Someone who is not the team's adviser cannot confirm it.
         $this->actingAs(CapstoneExpert::factory()->create(['approved_status' => true]), 'expert')
@@ -157,7 +157,7 @@ class TitleChangesTest extends TestCase
 
         $this->actingAs($adviser, 'expert')
             ->patch(route('instructor.title-confirmations.update', $new), ['decision' => 'approve'])
-            ->assertRedirect(route('instructor.assignments'));
+            ->assertRedirect(route('instructor.teams', ['tab' => 'todo']));
 
         $team->refresh();
         $this->assertSame($new->id, $team->selected_pre_proposal_id);
@@ -170,7 +170,7 @@ class TitleChangesTest extends TestCase
 
         $this->actingAs($adviser, 'expert')
             ->patch(route('instructor.title-confirmations.update', $new), ['decision' => 'decline', 'note' => 'Talk to your consultant about the scope first.'])
-            ->assertRedirect(route('instructor.assignments'));
+            ->assertRedirect(route('instructor.teams', ['tab' => 'todo']));
 
         $new->refresh();
         $this->assertSame('declined', $new->adviser_status);

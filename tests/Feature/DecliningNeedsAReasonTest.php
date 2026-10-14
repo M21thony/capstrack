@@ -89,10 +89,12 @@ class DecliningNeedsAReasonTest extends TestCase
     /** The dialog will not send one either. */
     public function test_the_dialog_holds_the_button_until_something_is_written(): void
     {
-        $source = file_get_contents(resource_path('views/instructor/assignments.blade.php'));
+        $applications = file_get_contents(resource_path('views/capsa/team-management/_applications.blade.php'));
+        $script = file_get_contents(resource_path('views/capsa/team-management/_hub-script.blade.php'));
 
-        $this->assertStringNotContainsString('Reason for Rejection <span style="color: var(--text3); font-weight: 400;">(optional)</span>', $source);
-        $this->assertStringContainsString('function validateReject()', $source);
-        $this->assertStringContainsString('btn.disabled = reason.length < 20;', $source);
+        // Declining from Team Applications asks for the reason, 20 characters at least.
+        $this->assertStringContainsString('data-value="rejected" data-note="reason" data-min="20"', $applications);
+        $this->assertStringContainsString("note: 'reason', min: '20'", $script);
+        $this->assertStringContainsString("if (needsNote(b) && note.value.trim().length < Math.max(1, Number(b.dataset.min || 1))) {", $script);
     }
 }

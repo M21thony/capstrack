@@ -73,7 +73,7 @@ class AdminExpertsPageTest extends TestCase
         $response->assertOk();
         $response->assertSee('CaPSA Management', false);
         // Roles sit under the name now rather than in a column of their own.
-        $response->assertSee('class="cx-roles"', false);
+        $response->assertSee('cx-roles"', false);
         $response->assertSee('Capstone Subject Adviser', false);
         $response->assertSee('Action', false);
 
@@ -154,8 +154,14 @@ class AdminExpertsPageTest extends TestCase
         $response->assertDontSee('badge-amber">Full', false);
     }
 
-    /** A CaPSA who also advises does have slots, once they are set. */
-    public function test_a_capsa_who_also_advises_shows_their_slots(): void
+    /**
+     * Team slots are not shown here even for a CaPSA who also advises.
+     *
+     * How many teams someone takes is the expert's own answer, and it is
+     * already on Expert Management. On this page the column took the room the
+     * sections a CaPSA handles - the thing Admin actually sets - needed.
+     */
+    public function test_team_slots_are_left_to_expert_management(): void
     {
         $admin = CapstoneExpert::create([
             'email' => 'admin.slots2@test.com',
@@ -180,7 +186,10 @@ class AdminExpertsPageTest extends TestCase
 
         $this->actingAs($admin, 'expert');
 
-        $this->get(route('admin.experts'))->assertOk()->assertSee('0/3', false);
+        $this->get(route('admin.experts'))
+            ->assertOk()
+            ->assertDontSee('0/3', false)
+            ->assertDontSee('expert sets</span></th>', false);
     }
 
     /**
@@ -214,23 +223,28 @@ class AdminExpertsPageTest extends TestCase
             ExpertExpertise::create(['expert_id' => $capsa->expert_id, 'expertise_field' => $skill]);
         }
 
+        // Signed in before, so the row shows them rather than an invite.
+        $capsa->forceFill(['first_login_at' => now()->subDay()])->save();
+
         $this->actingAs($admin, 'expert');
 
         $response = $this->get(route('admin.experts'));
 
         $response->assertOk();
 
-        // Sections earn their own column; Status gives its up to a dot.
-        $response->assertSee('<th>Sections</th>', false);
+        // Each section a CaPSA handles by its own name; status is a dot on
+        // the avatar rather than a column.
+        $response->assertSee('>Sections handled</th>', false);
+        $response->assertSee('class="tk-sec">BSIT-4B<', false);
         $response->assertDontSee('<th>Status</th>', false);
-        $response->assertSee('cx-dot cx-dot-', false);
+        $response->assertSee('tk-pres tk-pres-', false);
 
-        // The profile picture stays.
-        $response->assertSee('class="cx-av"', false);
+        // No photo, so their initials on a tint rather than a grey silhouette.
+        $response->assertSee('tk-av tk-tone-', false);
 
         // Two skills as chips, the rest behind a counter that opens the panel.
         $response->assertSee('cx-chip">Research Methodology', false);
-        $response->assertSee('cx-chip cx-chip-n', false);
+        $response->assertSee('class="tk-more"', false);
         $response->assertSee('+2', false);
 
         // What the filter reads, so it no longer counts columns. Roles are
