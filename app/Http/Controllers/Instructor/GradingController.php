@@ -215,7 +215,13 @@ class GradingController extends Controller
 
         $defense->load('team');
 
-        $defense->load('panels', 'outcomeRecordedBy');
+        $defense->load('panels.expert', 'outcomeRecordedBy');
+
+        $inIds = $defense->grades()
+            ->whereIn('status', [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED])
+            ->pluck('expert_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
         return view('instructor.grading-show', [
             'defense' => $defense,
@@ -229,6 +235,12 @@ class GradingController extends Controller
             'outcomeOptions' => DefenseOutcome::forStage($defense->defense_type),
             'gradesIn' => $defense->gradesInCount(),
             'panelSize' => $defense->panelSize(),
+            // Who the decision is still waiting on, by name, for the chair.
+            'waitingOn' => $defense->panels
+                ->reject(fn (DefensePanel $p) => in_array((int) $p->expert_id, $inIds, true))
+                ->map(fn (DefensePanel $p) => (int) $p->expert_id === (int) $expert->expert_id ? 'you' : ($p->expert?->name ?? $p->panel_role))
+                ->values()
+                ->all(),
         ]);
     }
 
