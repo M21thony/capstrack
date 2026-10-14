@@ -44,6 +44,44 @@ class SharedGrading
     }
 
     /**
+     * What the "Who grades?" dialog needs for this defense: the panel, chair
+     * first, and who grades for whom now.
+     *
+     * @return array<string, mixed>
+     */
+    public function dialog(DefenseSchedule $defense, int $meId): array
+    {
+        $grades = PanelGrade::where('defense_id', $defense->defense_id)->get()->keyBy(fn (PanelGrade $g) => (int) $g->expert_id);
+        $arrangement = $this->arrangement($defense);
+
+        return [
+            'url' => route('instructor.grading.grader', $defense->defense_id),
+            'sheet' => route('instructor.grading.show', $defense->defense_id),
+            'team' => $defense->team?->team_name ?? 'this team',
+            'type' => $defense->defense_type,
+            'me' => $meId,
+            'grader' => $arrangement['grader'],
+            'joined' => $arrangement['joined'],
+            'panel' => $this->panel($defense)
+                ->sortBy(fn (DefensePanel $p) => ($p->panel_role === 'Panel Chair' ? '0' : '1').$p->panel_role)
+                ->map(function (DefensePanel $p) use ($grades) {
+                    $own = $grades->get((int) $p->expert_id);
+
+                    return [
+                        'id' => (int) $p->expert_id,
+                        'name' => $p->expert?->name ?? $p->panel_role,
+                        'role' => $p->panel_role,
+                        'initials' => $p->expert?->avatarInitials() ?? '?',
+                        // A grade of their own already turned in: they cannot be joined.
+                        'turnedIn' => $own && ! $own->isJoined() && in_array($own->status, [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED], true),
+                    ];
+                })
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
      * Set who grades: one panelist for those in $joinIds, or - with no grader -
      * everyone on their own again. Anyone on the panel may set it.
      *

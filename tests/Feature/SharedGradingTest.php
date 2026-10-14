@@ -8,6 +8,8 @@ use App\Models\DefenseSchedule;
 use App\Models\GradingRubric;
 use App\Models\Notification;
 use App\Models\PanelGrade;
+use App\Models\Student;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -304,5 +306,58 @@ class SharedGradingTest extends TestCase
             'grader_id' => $this->id('one'),
             'joined' => [$outsider->expert_id],
         ])->assertStatus(422);
+    }
+
+    public function test_the_list_shows_who_grades_and_who_is_graded_for(): void
+    {
+        $this->setGrader('chair', 'one', ['chair', 'two'])->assertOk();
+
+        $this->actingAs($this->panel['two'], 'expert')->get('/instructor/grading')
+            ->assertOk()
+            ->assertSee('Who grades')
+            ->assertSee('One Panelist')
+            ->assertSee('Grading for you');
+    }
+
+    public function test_a_joined_panelist_sees_who_grades_for_them(): void
+    {
+        $this->setGrader('chair', 'one', ['two'])->assertOk();
+
+        $this->actingAs($this->panel['two'], 'expert')->get($this->url())
+            ->assertOk()
+            ->assertSee('One Panelist is grading for you')
+            ->assertSee('Grade on my own instead')
+            ->assertDontSee('id="gs-submit"', false);
+    }
+
+    public function test_the_grader_sees_who_they_grade_for(): void
+    {
+        $this->setGrader('chair', 'one', ['chair', 'two'])->assertOk();
+
+        $this->actingAs($this->panel['one'], 'expert')->get($this->url())
+            ->assertOk()
+            ->assertSee('Grading for the panel')
+            ->assertSee('Submit for all 3')
+            ->assertSee('Panel remarks')
+            ->assertSee('Opens when you submit');
+    }
+
+    public function test_the_team_sees_a_shared_grade_once(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create();
+        $this->defense->team->update(['leader_id' => $student->student_id]);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $this->defense->team_id]);
+
+        $this->setGrader('chair', 'one', ['chair'])->assertOk();
+        $this->grade('one', 80)->assertOk();
+        $this->grade('two', 70)->assertOk();
+        $this->actingAs($this->panel['one'], 'expert')
+            ->postJson($this->url('/outcome'), ['outcome' => 'passed'])
+            ->assertOk();
+
+        $page = $this->actingAs($student, 'web')->get(route('student.defense-scores'))->assertOk();
+        $page->assertSee('Shared grade · 2 panelists')
+            ->assertSee('Chair Panelist and One Panelist')
+            ->assertSee('76.67');
     }
 }

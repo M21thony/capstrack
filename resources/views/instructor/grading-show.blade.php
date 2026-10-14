@@ -31,6 +31,9 @@
         default => 'Not saved yet',
     };
     $outcomeTone = \App\Support\DefenseOutcome::tone($defense->outcome);
+    // Grading for the panel: this grade counts for the panelists joined to it too.
+    $sharedCount = count($gradingFor) + 1;
+    $isGrader = count($gradingFor) > 0;
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -200,6 +203,16 @@
   .gs-sum-total span b{color:var(--text)}
   .gs-sum-total strong{font-size:15px}
   .gs-sum-total em{font-style:normal;color:var(--text3)}
+  .gs-shared{background:#faf3d9 !important;border-color:#ecd98f !important}
+  .gs-shared-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .gs-shared-head h3{margin:0}
+  .gs-link{font:inherit;font-size:12.5px;font-weight:700;color:#4a3a06;background:none;border:none;padding:0;min-height:28px;cursor:pointer;text-decoration:underline}
+  .gs-shared-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .gs-shared-chip{font:inherit;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:5px;padding:0 10px;min-height:30px;border-radius:999px;cursor:pointer;background:#fff;color:var(--text2);border:1px dashed #b5941f}
+  .gs-shared-chip.on{background:#18191f;color:#fff;border:1px solid #18191f}
+  span.gs-shared-chip{cursor:default}
+  .gs-shared-chip:disabled{cursor:not-allowed;opacity:.6}
+  .gs-shared-chip svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
   .gs-todo{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column}
   .gs-todo h3{margin-bottom:4px}
   .gs-todo ul{list-style:none;margin:0 -8px;padding:0}
@@ -407,6 +420,27 @@
     <div class="gs-body" id="gs-sheet-body">
       <section class="gs-card gs-main" id="gs-sheet-area" aria-live="polite"></section>
       <aside class="gs-aside" aria-label="Summary">
+        @if ($isGrader)
+          <section class="gs-card gs-shared">
+            <div class="gs-shared-head">
+              <h3>Grading for the panel</h3>
+              @unless ($defense->hasOutcome())
+                <button type="button" class="gs-link" id="gs-who-change">Change</button>
+              @endunless
+            </div>
+            <div class="gs-shared-chips" id="gs-shared-chips">
+              <span class="gs-shared-chip on">You</span>
+              @foreach ($who['panel'] as $p)
+                @continue($p['id'] === $who['me'])
+                @php $on = in_array($p['id'], $who['joined'], true); @endphp
+                <button type="button" class="gs-shared-chip {{ $on ? 'on' : '' }}" data-id="{{ $p['id'] }}" aria-pressed="{{ $on ? 'true' : 'false' }}" @disabled($p['turnedIn'] || $defense->hasOutcome()) title="{{ $p['turnedIn'] ? 'Already turned in a grade of their own' : ($on ? 'Take '.$p['name'].' out' : 'Grade for '.$p['name'].' too') }}">
+                  @if ($on)<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>@endif
+                  {{ $p['name'] }}
+                </button>
+              @endforeach
+            </div>
+          </section>
+        @endif
         <section class="gs-card">
           <h3>Score summary</h3>
           <div class="gs-sum-rows" id="gs-sum-rows"></div>
@@ -423,8 +457,8 @@
     <div class="gs-body" id="gs-review-body" hidden>
       <section class="gs-card gs-review-main">
         <div class="gs-main-head">
-          <h2>Your scores</h2>
-          <span class="meta">Select a criterion to change it</span>
+          <h2>{{ $isGrader ? 'Shared grade' : 'Your scores' }}</h2>
+          <span class="meta">{{ $isGrader ? 'For '.$sharedCount.' panelists' : 'Select a criterion to change it' }}</span>
         </div>
         <div class="gs-review-list" id="gs-review-list"></div>
       </section>
@@ -435,7 +469,7 @@
                confers and gives the team one result, recorded once by the
                chair beside this. An abstention's remarks are its reason, not
                comments for the team. --}}
-          <label for="gs-remarks-field">Your remarks</label>
+          <label for="gs-remarks-field">{{ $isGrader ? 'Panel remarks' : 'Your remarks' }}</label>
           <textarea id="gs-remarks-field" name="remarks" placeholder="What should the team fix, and what worked?">{{ $isAbstained ? '' : $grade?->remarks }}</textarea>
         </form>
 
@@ -457,11 +491,15 @@
               @endif
               <small>Recorded by {{ $defense->outcomeRecordedBy?->name ?? 'the Panel Chair' }}@if ($defense->outcome_recorded_at) · {{ $defense->outcome_recorded_at->format('M j, g:i A') }}@endif</small>
             </div>
-          @elseif (! $isChair)
+          @elseif (! $canRecord)
             <p class="note">Your Panel Chair records the decision.</p>
           @else
             @if ($gradesIn < $panelSize)
-              <p class="note">Waiting on {{ collect($waitingOn)->join(', ', ' and ') }}</p>
+              @php
+                // Those joined to this grade come in with it: they are not waited on.
+                $waiting = collect($waitingOn)->diff(collect($gradingFor)->pluck('name'))->values();
+              @endphp
+              <p class="note">{{ $isGrader && $waiting->all() === ['you'] ? 'Opens when you submit' : 'Waiting on '.$waiting->join(', ', ' and ') }}</p>
             @endif
             <fieldset class="gs-outcomes" @disabled($gradesIn < $panelSize)>
               <legend class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">What the panel agreed</legend>
@@ -499,7 +537,7 @@
         @endunless
         <button type="button" class="gs-btn" onclick="saveDraft()">Save draft</button>
         <button type="button" class="gs-btn gs-btn-dark" id="gs-to-review">Review and submit</button>
-        <button type="button" class="gs-btn gs-btn-dark" id="gs-submit" onclick="submitGrade()" hidden disabled>Submit grade</button>
+        <button type="button" class="gs-btn gs-btn-dark" id="gs-submit" onclick="submitGrade()" hidden disabled>{{ $isGrader ? 'Submit for all '.$sharedCount : 'Submit grade' }}</button>
       @endif
     </footer>
 
@@ -527,6 +565,7 @@
 </div>
 
 @include('instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
+@include('instructor.partials.who-grades-dialog')
 
 <script nonce="{{ Vite::cspNonce() }}">
 const SECTIONS = {{ Js::from($sections) }};
@@ -1144,6 +1183,35 @@ function withdrawAbstention() {
 }
 
 if ($('abstain-reason')) $('abstain-reason').addEventListener('input', updateAbstainCount);
+
+/* ── Grading for the panel ───────────────────────────────────── */
+const WHO = {{ Js::from($who) }};
+
+if ($('gs-who-change')) $('gs-who-change').onclick = () => openWhoGrades(WHO);
+
+// A chip takes a panelist out of the shared grade, or puts them back.
+document.querySelectorAll('#gs-shared-chips button[data-id]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const id = +chip.dataset.id;
+    const joined = WHO.joined.filter(x => x !== id);
+    if (chip.getAttribute('aria-pressed') !== 'true') joined.push(id);
+    if (dirty) { showFormError('Save your draft first, then change who you grade for.'); return; }
+    chip.disabled = true;
+    fetch(WHO.url, {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ grader_id: joined.length ? WHO.me : null, joined: joined }),
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (!res.success) { showFormError(res.message || 'Could not change who you grade for.'); chip.disabled = false; return; }
+        dirty = false;
+        window.location.reload();
+      })
+      .catch(() => { showFormError('Could not reach the server.'); chip.disabled = false; });
+  });
+});
 
 // The paper copy menu closes when anything else is clicked.
 document.addEventListener('click', e => {

@@ -104,6 +104,9 @@ class GradingController extends Controller
                 'venue' => $current->venue,
                 'status' => $grade?->status ?? 'not_started',
                 'total_score' => $grade?->total_score,
+                // Who grades for whom - the "Who grades?" dialog's data.
+                'who' => $this->shared->dialog($current, (int) $expert->expert_id),
+                'decided' => $current->hasOutcome(),
             ];
         })->values();
 
@@ -120,6 +123,7 @@ class GradingController extends Controller
             return (object) array_merge((array) $row, [
                 'status' => $grade?->status ?? $row->status,
                 'total_score' => $grade?->total_score ?? $row->total_score,
+                'joined' => (bool) $grade?->isJoined(),
             ]);
         })
             // Still to grade first, then by date.
@@ -220,6 +224,20 @@ class GradingController extends Controller
 
         $defense->load('panels.expert', 'outcomeRecordedBy');
 
+        // Someone else grades for this panelist: they see that grade, not a sheet.
+        if ($grade?->isJoined()) {
+            $grade->load('gradedBy');
+
+            return view('instructor.grading-joined', [
+                'defense' => $defense,
+                'rubric' => $rubric,
+                'grade' => $grade,
+                'panelRole' => $panel->panel_role,
+            ]);
+        }
+
+        $who = $this->shared->dialog($defense, (int) $expert->expert_id);
+
         $inIds = $defense->grades()
             ->whereIn('status', [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED])
             ->pluck('expert_id')
@@ -235,6 +253,13 @@ class GradingController extends Controller
             // verdict is recorded once, by the chair - not collected from
             // each panelist and tallied. Everyone else just scores.
             'isChair' => $panel->panel_role === 'Panel Chair',
+            // The chair records the decision - or whoever grades for the chair.
+            'canRecord' => $this->shared->canRecordOutcome($defense, (int) $expert->expert_id),
+            'who' => $who,
+            // Who this panelist grades for, when they grade for the panel.
+            'gradingFor' => $who['grader'] === (int) $expert->expert_id
+                ? collect($who['panel'])->whereIn('id', $who['joined'])->values()->all()
+                : [],
             'outcomeOptions' => DefenseOutcome::forStage($defense->defense_type),
             'gradesIn' => $defense->gradesInCount(),
             'panelSize' => $defense->panelSize(),
