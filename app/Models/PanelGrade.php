@@ -24,6 +24,9 @@ class PanelGrade extends Model
     protected $fillable = [
         'defense_id',
         'expert_id',
+        'graded_by_expert_id',
+        'joined_at',
+        'joined_set_by',
         'rubric_id',
         'scores',
         'total_score',
@@ -39,12 +42,24 @@ class PanelGrade extends Model
             'scores' => 'array',
             'total_score' => 'decimal:2',
             'submitted_at' => 'datetime',
+            'joined_at' => 'datetime',
         ];
     }
 
     public function isAbstained(): bool
     {
         return $this->status === self::ABSTAINED;
+    }
+
+    /** Another panelist grades for this one: the row is a copy of theirs. */
+    public function isJoined(): bool
+    {
+        return $this->graded_by_expert_id !== null;
+    }
+
+    public function gradedBy()
+    {
+        return $this->belongsTo(CapstoneExpert::class, 'graded_by_expert_id', 'expert_id');
     }
 
     public function schedule()

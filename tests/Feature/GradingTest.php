@@ -408,4 +408,56 @@ class GradingTest extends TestCase
         $response->assertOk();
         $response->assertSee('Submitted');
     }
+
+    /** The sheet ends in a review step, not a remarks tab. */
+    public function test_the_sheet_offers_a_review_and_submit_step(): void
+    {
+        $expert = $this->makeExpert();
+        $defense = $this->makeAssignedDefense($expert);
+        $this->makeRubric();
+
+        $this->actingAs($expert, 'expert')->get('/instructor/grading/'.$defense->defense_id.'?step=review')
+            ->assertOk()
+            ->assertSee('Review and submit')
+            ->assertSee('Your remarks')
+            ->assertSee('Score summary')
+            ->assertSee('Still to score')
+            ->assertSee('id="gs-submit"', false);
+    }
+
+    /** Before everyone is in, the chair sees the options locked and who is missing. */
+    public function test_the_chair_sees_the_stages_outcomes_and_who_the_decision_waits_on(): void
+    {
+        $chair = $this->makeExpert();
+        $member = CapstoneExpert::create([
+            'email' => 'thrall.goel@gmail.com', 'first_name' => 'Thrall', 'last_name' => 'Goel', 'approved_status' => true,
+        ]);
+        $defense = $this->makeAssignedDefense($chair);
+        DefensePanel::create([
+            'defense_id' => $defense->defense_id, 'expert_id' => $member->expert_id,
+            'panel_role' => 'Panel Member 1', 'created_at' => now(),
+        ]);
+        $this->makeRubric();
+
+        $this->actingAs($chair, 'expert')->get('/instructor/grading/'.$defense->defense_id)
+            ->assertOk()
+            ->assertSee('Passed')
+            ->assertSee('Passed with revision')
+            ->assertSee('Redefense with major revision')
+            ->assertSee('Redefense with a new title')
+            ->assertSee('Waiting on you and Thrall Goel')
+            ->assertSee('id="record-outcome-btn" onclick="recordOutcome()" disabled', false);
+    }
+
+    public function test_a_member_is_told_the_chair_records_the_decision(): void
+    {
+        $expert = $this->makeExpert();
+        $defense = $this->makeAssignedDefense($expert, 'Pre-proposal Defense', 'Panel Member 1');
+        $this->makeRubric();
+
+        $this->actingAs($expert, 'expert')->get('/instructor/grading/'.$defense->defense_id)
+            ->assertOk()
+            ->assertSee('Your Panel Chair records the decision.')
+            ->assertDontSee('id="record-outcome-btn"', false);
+    }
 }

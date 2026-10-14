@@ -222,7 +222,7 @@ class NotificationEmailTest extends TestCase
 
         $this->actingAs($expert, 'expert')->get(route('instructor.profile'))
             ->assertOk()
-            ->assertSee('data-types="email.expert_application email.leave_request_received"', false)
+            ->assertSee('data-types="email.expert_application email.leave_request_received email.expert_slots_short"', false)
             ->assertSee('data-types="email.document_submitted email.paper_to_check email.review_reminder"', false);
     }
 

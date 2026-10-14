@@ -42,6 +42,11 @@
   .gl-paper a:hover{background:var(--bg3);color:var(--text)}
   .gl-paper-hint{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);margin-left:auto}
   .gl-empty{padding:40px 16px;text-align:center;color:var(--text3);font-size:13px}
+  .gl-who{font:inherit;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:0 10px;min-height:34px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;white-space:nowrap;max-width:100%}
+  .gl-who:hover{border-color:var(--border2)}
+  .gl-who.static{border-color:transparent;background:none;cursor:default;padding:0}
+  .gl-who svg{width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+  .gl-who-av{width:20px;height:20px;border-radius:50%;background:#18191f;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 
   /* A phone gets one card per defense instead of a six-column row: the team
      on top, what and when under it, and the button across the bottom. */
@@ -64,9 +69,10 @@
     .gl td:nth-child(1){grid-column:1 / -1}
     .gl td:nth-child(2){grid-column:1}
     .gl td:nth-child(3){grid-column:2;text-align:right;color:var(--text3);font-size:12px}
-    .gl td:nth-child(4){grid-column:1 / -1;color:var(--text2)}
-    .gl td:nth-child(5){grid-column:1}
-    .gl td:nth-child(6){grid-column:1 / -1;text-align:left!important}
+    .gl td:nth-child(4){grid-column:1 / -1}
+    .gl td:nth-child(5){grid-column:1 / -1;color:var(--text2)}
+    .gl td:nth-child(6){grid-column:1}
+    .gl td:nth-child(7){grid-column:1 / -1;text-align:left!important}
     .gl-team small{max-width:none;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
     .gl-go{display:block;text-align:center;padding:10px 12px;font-size:13px}
     .gl-none td{grid-column:1 / -1}
@@ -76,13 +82,14 @@
   /* The team on the left; what and when, your seat and grade beside it; the
      button at the end. */
   @media (min-width:701px) and (max-width:1024px){
-    .gl tbody tr{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto auto;align-items:center;gap:6px 18px;padding:14px 16px}
+    .gl tbody tr{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto auto auto;align-items:center;gap:6px 18px;padding:14px 16px}
     .gl td:nth-child(1){grid-column:1;grid-row:1 / span 2}
     .gl td:nth-child(2){grid-column:2;grid-row:1}
-    .gl td:nth-child(4){grid-column:2;grid-row:2;font-size:12px}
+    .gl td:nth-child(5){grid-column:2;grid-row:2;font-size:12px}
     .gl td:nth-child(3){grid-column:3;grid-row:1}
-    .gl td:nth-child(5){grid-column:3;grid-row:2;text-align:right}
-    .gl td:nth-child(6){grid-column:4;grid-row:1 / span 2;text-align:right!important}
+    .gl td:nth-child(6){grid-column:3;grid-row:2;text-align:right}
+    .gl td:nth-child(4){grid-column:4;grid-row:1 / span 2}
+    .gl td:nth-child(7){grid-column:5;grid-row:1 / span 2;text-align:right!important}
     .gl-go{display:inline-block}
   }
 </style>
@@ -144,7 +151,7 @@
         </div>
         <div class="gl-scroll">
           <table data-export="Grading">
-            <thead><tr><th>Team</th><th>Defense</th><th>Your seat</th><th>When</th><th>Your grade</th><th></th></tr></thead>
+            <thead><tr><th>Team</th><th>Defense</th><th>Your seat</th><th>Who grades</th><th>When</th><th>Your grade</th><th></th></tr></thead>
             <tbody id="grading-tbody">
               @foreach($rows as $row)
                 @php
@@ -173,6 +180,22 @@
                     </div>
                   </td>
                   <td>{{ $row->panel_role }}</td>
+                  <td>
+                    @php
+                      $who = $row->who;
+                      $graderRow = collect($who['panel'])->firstWhere('id', $who['grader']);
+                      $whoLabel = $graderRow ? ($graderRow['id'] === $who['me'] ? 'You' : $graderRow['name']) : 'Everyone';
+                    @endphp
+                    @if ($row->decided)
+                      <span class="gl-who static">@if ($graderRow)<span class="gl-who-av">{{ $graderRow['initials'] }}</span>@endif{{ $whoLabel }}</span>
+                    @else
+                      <button type="button" class="gl-who" data-who='@json($who)' aria-label="Who grades {{ $row->team_name }}: {{ $whoLabel }}. Change">
+                        @if ($graderRow)<span class="gl-who-av">{{ $graderRow['initials'] }}</span>@endif
+                        {{ $whoLabel }}
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+                    @endif
+                  </td>
                   <td class="gl-num">
                     {{ $row->schedule_date->format('M j, Y') }}
                     <div class="gl-muted">
@@ -183,7 +206,9 @@
                     </div>
                   </td>
                   <td>
-                    @if($row->status === 'abstained')
+                    @if($row->joined && ! $done)
+                      <span class="badge badge-amber" style="font-size:10px">Grading for you</span>
+                    @elseif($row->status === 'abstained')
                       <span class="badge badge-gray" style="font-size:10px">Abstained</span>
                     @elseif($done)
                       <span class="badge badge-green" style="font-size:10px">Submitted{{ $row->total_score !== null ? ' · '.rtrim(rtrim(number_format((float) $row->total_score, 2), '0'), '.') : '' }}</span>
@@ -200,12 +225,12 @@
                         <a href="{{ route('instructor.grading.sheet', [$row->defense_id, 'pdf']) }}" title="Rating sheet as a PDF, ready to print"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> PDF</a>
                         <a href="{{ route('instructor.grading.sheet', [$row->defense_id, 'xlsx']) }}" title="Rating sheet as an Excel file">Excel</a>
                       </span>
-                      <a class="gl-go {{ $done ? '' : 'primary' }}" href="{{ $url }}">{{ $done ? 'Open' : ($row->status === 'draft' ? 'Continue' : 'Grade') }}</a>
+                      <a class="gl-go {{ $done || $row->joined ? '' : 'primary' }}" href="{{ $url }}">{{ $done ? 'Open' : ($row->joined ? 'View' : ($row->status === 'draft' ? 'Continue' : 'Grade')) }}</a>
                     </span>
                   </td>
                 </tr>
               @endforeach
-              <tr class="gl-none" hidden><td colspan="6" class="gl-empty">Nothing here.</td></tr>
+              <tr class="gl-none" hidden><td colspan="7" class="gl-empty">Nothing here.</td></tr>
             </tbody>
           </table>
         </div>
@@ -217,8 +242,13 @@
 </div>
 
 @include('instructor.partials.skeleton-toggle')
+@include('instructor.partials.who-grades-dialog')
 
 <script nonce="{{ Vite::cspNonce() }}">
+document.querySelectorAll('.gl-who[data-who]').forEach(function (b) {
+  b.addEventListener('click', function () { openWhoGrades(JSON.parse(b.dataset.who)); });
+});
+
 document.querySelectorAll('.gl-filter button').forEach(function (b) {
   b.addEventListener('click', function () {
     document.querySelectorAll('.gl-filter button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });

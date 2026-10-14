@@ -21,6 +21,19 @@
     ])->values();
 
     $savedScores = collect($existingScores)->mapWithKeys(fn ($v, $k) => [(string) $k => (float) $v]);
+
+    $isAbstained = (bool) $grade?->isAbstained();
+    $savedAt = $grade?->updated_at?->format('g:i A');
+    $saveText = match (true) {
+        $isAbstained => 'Abstained',
+        $grade?->status === 'submitted' => 'Submitted'.($savedAt ? ' '.$savedAt : ''),
+        $grade !== null => 'Saved'.($savedAt ? ' '.$savedAt : ''),
+        default => 'Not saved yet',
+    };
+    $outcomeTone = \App\Support\DefenseOutcome::tone($defense->outcome);
+    // Grading for the panel: this grade counts for the panelists joined to it too.
+    $sharedCount = count($gradingFor) + 1;
+    $isGrader = count($gradingFor) > 0;
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -31,270 +44,503 @@
 <title>Grading {{ $defense->team?->team_name }} — CapsTRACK</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
-@include('partials.skeleton-head', ['skReveal' => 'block'])
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 <style nonce="{{ Vite::cspNonce() }}">
   /* The grading sheet fills the screen and never scrolls: a section that is
      too long for the window is split into pages that fit it. */
-  #real-content{flex:1;min-height:0}
-  .gs-content{height:100%;padding:0;overflow:hidden;display:flex;flex-direction:column}
-  .gs{flex:1;min-height:0;display:grid;grid-template-rows:auto auto auto 1fr auto}
-  .gs .num{font-variant-numeric:tabular-nums}
+  .main{min-width:0}
+  #real-content{flex:1;min-height:0;flex-direction:column;overflow:hidden}
+  .gs{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--bg);font-variant-numeric:tabular-nums;color:var(--text)}
   .gs :focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
+  .gs button{font-family:inherit}
+  .gs kbd{font:inherit;font-size:10.5px;padding:0 5px;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;background:var(--bg3);color:var(--text2)}
 
-  .gs-alert{margin:10px 20px 0;padding:9px 14px;border-radius:6px;font-size:13px}
-  .gs-alert.ok{border:1px solid var(--green);background:var(--green-bg);color:var(--green)}
-  .gs-alert.err{border:1px solid var(--red);background:var(--red-bg);color:var(--red)}
-
-  .gs-top{display:flex;align-items:center;gap:18px;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border)}
+  /* ── Header ── */
+  .gs-top{flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:10px 24px;background:var(--bg2);border-bottom:1px solid var(--border)}
+  .gs-iconbtn{flex:0 0 40px;width:40px;height:40px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:center;color:var(--text2);text-decoration:none;cursor:pointer}
+  .gs-iconbtn:hover{border-color:var(--border2);color:var(--text)}
+  .gs-iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .gs-burger{display:none}
   .gs-who{flex:1;min-width:0}
-  .gs-who b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .gs-who small{font-size:12px;color:var(--text3)}
-  .gs-stat{text-align:right;white-space:nowrap}
-  .gs-stat b{font-size:22px;line-height:1}
-  .gs-stat small{display:block;font-size:11.5px;color:var(--text3)}
-  .gs-btn{font:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;color:var(--text2);white-space:nowrap}
+  .gs-who h1{margin:0;font-size:17px;line-height:1.3;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gs-who h1 span{font-weight:500;color:var(--text2)}
+  .gs-meta{display:flex;align-items:center;gap:8px;margin-top:3px;font-size:12.5px;color:var(--text3);white-space:nowrap;overflow:hidden}
+  .gs-chip{font-weight:700;padding:1px 8px;border-radius:999px;background:var(--bg4);color:var(--text2)}
+  .gs-chip.gold{background:#faf3d9;color:#6b5409}
+  .gs-progress{flex:0 0 210px;display:flex;flex-direction:column;gap:5px}
+  .gs-progress-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .gs-progress-top b{font-size:22px;line-height:1}
+  .gs-progress-top .of{font-size:13px;color:var(--text3)}
+  .gs-progress-top .cnt{font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap}
+  .gs-segs{display:flex;gap:3px}
+  .gs-segs span{flex:1;height:6px;border-radius:2px;background:var(--border)}
+  .gs-segs span.on{background:var(--accent)}
+  .gs-divider{width:1px;height:36px;background:var(--border)}
+  .gs-saved{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2);white-space:nowrap}
+  .gs-saved i{width:8px;height:8px;border-radius:50%;background:var(--green)}
+  .gs-saved.dirty i{background:var(--amber)}
+  .gs-paper{position:relative}
+  .gs-paper summary{list-style:none}
+  .gs-paper summary::-webkit-details-marker{display:none}
+  .gs-paper-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:200px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.12);padding:6px}
+  .gs-paper-menu p{margin:4px 8px 6px;font-size:12px;color:var(--text3);white-space:normal}
+  .gs-paper-menu a{display:flex;align-items:center;gap:8px;padding:0 10px;min-height:38px;border-radius:7px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none}
+  .gs-paper-menu a:hover{background:var(--bg3)}
+
+  /* ── Buttons ── */
+  .gs-btn{font:inherit;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;padding:0 14px;min-height:40px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;white-space:nowrap;text-decoration:none}
   .gs-btn:hover:not(:disabled){border-color:var(--border2);color:var(--text)}
-  .gs-btn-primary{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
-  .gs-btn-primary:hover:not(:disabled){color:#fff}
-  .gs-btn:disabled{opacity:.4;cursor:default}
-  .gs-btn-abstain{color:var(--text3);border-style:dashed}
-  .gs-btn-abstain:hover:not(:disabled){color:var(--red);border-color:var(--red)}
+  .gs-btn:disabled{color:#a2a6b2;cursor:default}
+  .gs-btn[hidden]{display:none}
+  .gs-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .gs-btn-dark{background:#18191f;border-color:#18191f;color:#fff;font-weight:700}
+  .gs-btn-dark:hover:not(:disabled){color:#fff;border-color:#18191f;filter:brightness(1.15)}
+  .gs-btn-dark:disabled{background:var(--border2);border-color:var(--border2);color:var(--text2);cursor:not-allowed}
+  .gs-btn-outline{border-color:#18191f;color:#18191f}
+  .gs-btn-dashed{border-style:dashed;border-color:var(--border2);color:var(--text3)}
+  .gs-btn-dashed:hover:not(:disabled){color:var(--red);border-color:var(--red)}
+  .gs-btn-sm{min-height:36px;padding:0 12px;font-size:12.5px}
   .gs-btn-danger{background:var(--red);border-color:var(--red);color:#fff}
   .gs-btn-danger:hover:not(:disabled){color:#fff;filter:brightness(.95)}
-  .gs-alert.abstained{border:1px solid var(--border2);background:var(--bg3);color:var(--text2)}
-  .gs-alert.abstained b{color:var(--text)}
-  .gs-alert.abstained .why{display:block;margin-top:3px;font-style:italic;color:var(--text3)}
+
+  /* ── Alerts ── */
+  .gs-alerts{flex:0 0 auto;display:flex;flex-direction:column;gap:8px;padding:10px 24px 0}
+  .gs-alerts:empty{display:none}
+  .gs-alert{margin:0;display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:10px;font-size:13px}
+  .gs-alert[hidden]{display:none}
+  .gs-alert span{flex:1}
+  .gs-alert.err{border:1px solid var(--red);background:var(--red-bg);color:var(--red)}
+  .gs-alert.ok{border:1px solid #86efac;background:rgba(22,163,74,.08);color:#14532d}
+  .gs-alert.warn{border:1px solid #fed7aa;background:#fff7ed;color:#7c2d12}
+  .gs-alert.muted{border:1px solid var(--border2);background:var(--bg3);color:var(--text2)}
+  .gs-alert.muted .why{display:block;margin-top:2px;font-style:italic;color:var(--text3)}
+  .gs-alert button.link{font:inherit;font-size:13px;font-weight:700;color:inherit;background:none;border:none;text-decoration:underline;cursor:pointer;min-height:32px;padding:0}
+
+  /* ── Section steps ── */
+  .gs-steps{flex:0 0 auto;display:flex;gap:8px;padding:10px 24px 0}
+  .gs-step{font:inherit;flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;cursor:pointer;text-align:left;color:var(--text);min-height:48px;background:var(--bg2);border:1px solid var(--border)}
+  .gs-step.on{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,.14)}
+  .gs-step .dot{width:24px;height:24px;border-radius:50%;flex:0 0 24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--bg4);color:var(--text2)}
+  .gs-step.on .dot{background:#18191f;color:#fff}
+  .gs-step.done .dot{background:var(--green);color:#fff}
+  .gs-step .dot svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+  .gs-step .txt{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+  .gs-step .nm{font-size:13px;font-weight:700;line-height:1.25}
+  .gs-step .st{font-size:12px;color:var(--text3)}
+  .gs-step .bar{height:4px;border-radius:2px;background:var(--bg4);overflow:hidden;display:block}
+  .gs-step .bar i{display:block;height:100%;border-radius:2px;background:var(--accent)}
+  .gs-step.done .bar i{background:var(--green)}
+  .gs-step.review{flex:0 0 210px;border-style:dashed;border-color:var(--border2);background:transparent;color:var(--text2)}
+  .gs-step.review.on{border-style:solid;border-color:var(--accent);background:var(--bg2)}
+  .gs-step.review .dot{background:none;border:1.5px solid var(--border2);color:var(--text2)}
+  .gs-step.review.on .dot{background:#18191f;border-color:#18191f;color:#fff}
+  .gs-step.review .dot svg{width:12px;height:12px;stroke-width:2.2}
+  .gs-step.review .nm{color:var(--text)}
+
+  /* ── Body ── */
+  .gs-body{flex:1;min-height:0;display:flex;gap:16px;padding:10px 24px 12px}
+  .gs-body[hidden]{display:none}
+  .gs-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px}
+  .gs-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;align-self:flex-start;max-height:100%}
+  .gs-main-head{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border)}
+  .gs-main-head h2{margin:0;font-size:16px;font-weight:700}
+  .gs-main-head .meta{font-size:12.5px;color:var(--text3)}
+  .gs-main-head .grow{flex:1}
+  .gs-rows{flex:1 1 auto;min-height:0;overflow:hidden}
+  .gs-table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .gs-table thead tr{background:var(--bg3);height:34px}
+  .gs-table th[scope=col]{text-align:left;padding:0 12px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border)}
+  .gs-table th[scope=col] + th[scope=col]{border-left:1px solid var(--border)}
+  .gs-table th.crit-col{width:19%;padding-left:14px}
+  .gs-table th.score-col{width:72px;text-align:right;padding-right:14px}
+  .gs-table th[scope=col] kbd{margin-right:7px;background:var(--bg2);letter-spacing:0}
+  .gs-table tbody tr{border-bottom:1px solid var(--border);background:var(--bg2)}
+  .gs-table tbody tr.cur{background:#fffdf6}
+  .gs-table tbody th{text-align:left;vertical-align:top;padding:12px 14px;font-weight:400}
+  .gs-table tbody tr.cur th{box-shadow:inset 4px 0 0 var(--accent)}
+  .gs-crit{font:inherit;text-align:left;background:none;border:none;padding:0;cursor:pointer;color:inherit;display:block;width:100%}
+  .gs-crit b{display:block;font-size:13.5px;line-height:1.3}
+  .gs-crit b .no{font-weight:600;color:var(--text3)}
+  .gs-crit:hover b .nm{text-decoration:underline}
+  .gs-crit span.d{display:block;font-size:12px;line-height:1.4;color:var(--text3);margin-top:3px}
+  .gs-table td{padding:0;border-left:1px solid var(--border);vertical-align:top;height:1px}
+  .gs-cell{font:inherit;text-align:left;width:100%;height:100%;display:flex;flex-direction:column;gap:4px;padding:8px 10px;border:none;cursor:pointer;color:inherit;background:transparent;box-sizing:border-box}
+  .gs-cell:hover{background:#fcf8ea}
+  .gs-cell .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .gs-cell .pts{font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;background:var(--bg3);color:#6b5409;box-shadow:inset 0 0 0 1px var(--border)}
+  .gs-cell .lb{font-size:11px;font-weight:600;color:var(--text3)}
+  .gs-cell .ds{font-size:12px;line-height:1.4;color:var(--text2)}
+  .gs-cell .tick{display:none;width:18px;height:18px;border-radius:50%;background:var(--accent3);color:#fff;align-items:center;justify-content:center}
+  .gs-cell .tick svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+  .gs-table tr.scored .gs-cell .ds{color:#8a8f9c}
+  .gs-cell[aria-pressed="true"]{background:#faf3d9;box-shadow:inset 0 0 0 2px var(--accent)}
+  .gs-cell[aria-pressed="true"] .pts{background:#18191f;color:#fff;box-shadow:none}
+  .gs-cell[aria-pressed="true"] .ds{color:var(--text2) !important}
+  .gs-cell[aria-pressed="true"] .tick{display:flex}
+  .gs-score{padding:12px 14px !important;text-align:right}
+  .gs-score b{display:block;font-size:16px}
+  .gs-score small{display:block;font-size:11.5px;color:var(--text3);margin-top:2px}
+  .gs-score .empty{display:inline-block;width:38px;height:24px;border:1.5px dashed var(--border2);border-radius:6px}
+  .gs-main-foot{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg3);border-top:1px solid var(--border)}
+  .gs-main-foot .sum{flex:1;font-size:13px;color:var(--text2)}
+  .gs-main-foot .sum b{color:var(--text)}
+  .gs-main-foot .gs-btn{min-height:38px}
+
+  /* ── Side column ── */
+  .gs-aside{flex:0 0 272px;min-height:0;display:flex;flex-direction:column;gap:12px}
+  .gs-aside .gs-card{padding:12px 16px}
+  .gs-aside h3{margin:0 0 10px;font-size:13.5px;font-weight:700}
+  .gs-aside h3 span{font-weight:600;color:var(--text3)}
+  .gs-sum-rows{display:flex;flex-direction:column;gap:9px}
+  .gs-sum-row .line{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}
+  .gs-sum-row .line span{color:var(--text2);min-width:0}
+  .gs-sum-row .line b{white-space:nowrap}
+  .gs-sum-row .bar{margin-top:4px;height:5px;border-radius:3px;background:var(--bg4);overflow:hidden;display:block}
+  .gs-sum-row .bar i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+  .gs-sum-row.done .bar i{background:var(--green)}
+  .gs-sum-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:9px;border-top:1px solid var(--border);font-size:12.5px}
+  .gs-sum-total span{color:var(--text2)}
+  .gs-sum-total span b{color:var(--text)}
+  .gs-sum-total strong{font-size:15px}
+  .gs-sum-total em{font-style:normal;color:var(--text3)}
+  .gs-shared{background:#faf3d9 !important;border-color:#ecd98f !important}
+  .gs-shared-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .gs-shared-head h3{margin:0}
+  .gs-link{font:inherit;font-size:12.5px;font-weight:700;color:#4a3a06;background:none;border:none;padding:0;min-height:28px;cursor:pointer;text-decoration:underline}
+  .gs-shared-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .gs-shared-chip{font:inherit;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:5px;padding:0 10px;min-height:30px;border-radius:999px;cursor:pointer;background:#fff;color:var(--text2);border:1px dashed #b5941f}
+  .gs-shared-chip.on{background:#18191f;color:#fff;border:1px solid #18191f}
+  span.gs-shared-chip{cursor:default}
+  .gs-shared-chip:disabled{cursor:not-allowed;opacity:.6}
+  .gs-shared-chip svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+  .gs-todo{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  .gs-todo h3{margin-bottom:4px}
+  .gs-todo ul{list-style:none;margin:0 -8px;padding:0}
+  .gs-todo li button{font:inherit;width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:6px 8px;min-height:44px;border:none;border-radius:8px;background:none;cursor:pointer;color:var(--text)}
+  .gs-todo li button:hover{background:var(--bg3)}
+  .gs-todo li .t{display:flex;flex-direction:column;min-width:0}
+  .gs-todo li .t b{font-size:13px;font-weight:600;line-height:1.3}
+  .gs-todo li .t small{font-size:11.5px;color:var(--text3)}
+  .gs-todo li svg{width:14px;height:14px;flex-shrink:0;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .gs-todo .more{margin:2px 0 4px;font-size:12px;color:var(--text3)}
+  .gs-todo .all{margin:0 0 6px;font-size:13px;color:#15803d;font-weight:600}
+
+  /* ── Review step ── */
+  .gs-review-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .gs-review-main .gs-main-head{justify-content:space-between}
+  .gs-review-list{flex:1;min-height:0;overflow:auto}
+  .gs-review-sec{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 16px;background:var(--bg3);border-bottom:1px solid var(--bg4)}
+  .gs-review-sec h3{margin:0;font-size:13px;font-weight:700}
+  .gs-review-sec span{font-size:12.5px;color:var(--text2)}
+  .gs-review-sec span b{color:var(--text)}
+  .gs-review-row{font:inherit;display:grid;grid-template-columns:minmax(0,1fr) 132px 56px;align-items:center;gap:12px;padding:0 16px;height:34px;width:100%;border:none;border-bottom:1px solid var(--bg4);background:none;text-align:left;cursor:pointer;color:var(--text)}
+  .gs-review-row:hover{background:var(--bg3)}
+  .gs-review-row .n{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gs-review-row .lv{justify-self:start;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--bg4);color:var(--text2);white-space:nowrap}
+  .gs-review-row .sc{text-align:right;font-size:13.5px;font-weight:700}
+  .gs-review-row.missing .lv{background:#fff7ed;color:#9a3412;box-shadow:inset 0 0 0 1px #fed7aa}
+  .gs-review-row.missing .sc{color:#9a3412}
+  .gs-review-aside{flex:0 0 400px;min-height:0;display:flex;flex-direction:column;gap:12px}
+  .gs-review-aside .gs-card{padding:12px 16px}
+  .gs-remarks{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .gs-remarks label{display:block;font-size:13.5px;font-weight:700;margin-bottom:8px}
+  .gs-remarks textarea{flex:1;min-height:60px;width:100%;box-sizing:border-box;font:inherit;font-size:13px;line-height:1.45;padding:8px 10px;border:1px solid var(--border2);border-radius:10px;resize:none;color:var(--text)}
+  .gs-remarks textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .gs-decision{flex:0 0 auto}
+  .gs-decision-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .gs-decision-head h3{margin:0;font-size:13.5px;font-weight:700}
+  .gs-decision-head span{font-size:12px;color:var(--text2)}
+  .gs-decision-head span b{color:var(--text)}
+  .gs-panel-segs{display:flex;gap:4px;margin:8px 0 6px}
+  .gs-panel-segs i{flex:1;height:5px;border-radius:3px;background:var(--border)}
+  .gs-panel-segs i.on{background:var(--green)}
+  .gs-decision .note{margin:0 0 10px;font-size:12px;color:var(--text3)}
+  .gs-outcomes{border:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .gs-outcome{display:flex;gap:10px;align-items:flex-start;padding:7px 12px;border-radius:10px;min-height:44px;box-sizing:border-box;cursor:pointer;border:1px solid var(--border);background:var(--bg2)}
+  .gs-outcome input{margin:2px 0 0;accent-color:#18191f;width:16px;height:16px;flex-shrink:0}
+  .gs-outcome .t{display:flex;flex-direction:column;gap:1px}
+  .gs-outcome .t b{font-size:13px}
+  .gs-outcome .t small{font-size:12px;color:var(--text3);line-height:1.35}
+  .gs-outcome:focus-within{outline:2px solid var(--accent3);outline-offset:2px}
+  .gs-outcomes:disabled .gs-outcome{opacity:.55;cursor:not-allowed}
+  .gs-outcome.is-pass:has(input:checked){border-color:var(--green);background:rgba(22,163,74,.07)}
+  .gs-outcome.is-pass:has(input:checked) b{color:#15803d}
+  .gs-outcome.is-major:has(input:checked){border-color:#ea580c;background:#fff7ed}
+  .gs-outcome.is-major:has(input:checked) b{color:#c2410c}
+  .gs-outcome.is-fail:has(input:checked){border-color:var(--red);background:rgba(220,38,38,.06)}
+  .gs-outcome.is-fail:has(input:checked) b{color:#b91c1c}
+  .gs-record{width:100%;justify-content:center;margin-top:8px}
+  .gs-recorded{padding:12px;border-radius:10px;border:1px solid #86efac;background:rgba(22,163,74,.07)}
+  .gs-recorded b{display:block;font-size:14px;color:#15803d}
+  .gs-recorded.is-major{border-color:#fed7aa;background:#fff7ed}
+  .gs-recorded.is-major b{color:#c2410c}
+  .gs-recorded.is-fail{border-color:#fecaca;background:rgba(220,38,38,.06)}
+  .gs-recorded.is-fail b{color:#b91c1c}
+  .gs-recorded p{margin:2px 0 0;font-size:12.5px;color:var(--text2)}
+  .gs-recorded small{display:block;font-size:12px;color:var(--text3);margin-top:8px}
+
+  /* ── Footer ── */
+  .gs-foot{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:10px 24px;background:var(--bg2);border-top:1px solid var(--border)}
+  .gs-keys{flex:1;display:flex;gap:14px;font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden}
+  .gs-foot .hint{font-size:13px;color:var(--text2);white-space:nowrap}
+
+  /* ── Abstain dialog ── */
   .abstain-box{width:min(460px,calc(100vw - 32px))}
   .abstain-label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px}
   #abstain-reason{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;line-height:1.5;resize:vertical}
   #abstain-reason:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
   .abstain-count{margin-top:4px;font-size:11.5px;color:var(--text3)}
 
-  .gs-steps{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--bg2);border-bottom:1px solid var(--border)}
-  .gs-step{font:inherit;border:none;background:none;border-bottom:2px solid transparent;padding:8px 10px;text-align:left;cursor:pointer;min-width:0;display:grid;gap:1px}
-  .gs-step + .gs-step{border-left:1px solid var(--border)}
-  .gs-step .nm{font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .gs-step .st{font-size:11.5px;color:var(--text3);display:flex;justify-content:space-between;gap:6px}
-  .gs-step.on{border-bottom-color:var(--accent);background:var(--bg3)}
-  .gs-step.on .nm{color:var(--text)}
-  .gs-step.done .mark{color:var(--green);font-weight:600}
-  .gs-step.part .mark{color:var(--amber)}
-
-  .gs-area{min-height:0;display:flex;flex-direction:column;padding:12px 20px 0}
-  .gs-area[hidden]{display:none}
-  .gs-head{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
-  .gs-head h2{margin:0;font-size:16px}
-  .gs-head .meta{font-size:12px;color:var(--text3)}
-  .gs-head .pg{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3)}
-  .gs-head .pg .gs-btn{padding:4px 10px;font-size:12px}
-
-  .gs-sheet{flex:1;min-height:0;background:var(--bg2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;margin-bottom:12px}
-  .gs-rows{flex:1;min-height:0;overflow:hidden}
-  .gs table{width:100%;border-collapse:collapse;table-layout:fixed}
-  .gs th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);text-align:left;padding:7px 12px;background:var(--bg3);border-bottom:1px solid var(--border)}
-  .gs th:first-child{width:23%}
-  .gs th.sc{width:84px;text-align:right}
-  .gs th .key{display:inline-block;margin-right:6px;font-size:10px;padding:0 5px;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;letter-spacing:0}
-  .gs td{border-bottom:1px solid var(--border);padding:0;vertical-align:top}
-  .gs tr.cur td{background:var(--bg3)}
-  .gs tr.cur td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
-  .gs-crit{padding:9px 12px;cursor:pointer}
-  .gs-crit b{display:block;font-size:13px}
-  .gs-crit small{color:var(--text3);font-size:11.5px}
-  .gs-cell{font:inherit;display:flex;flex-direction:column;gap:2px;width:100%;height:100%;min-height:62px;text-align:left;border:none;border-left:1px solid var(--border);background:none;padding:8px 12px;cursor:pointer;position:relative;color:var(--text)}
-  .gs-cell b{font-size:13px;color:var(--accent3)}
-  .gs-cell .lb{font-size:11px;font-weight:600;color:var(--text3)}
-  .gs-cell span.ds{font-size:11.5px;color:var(--text2);line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-  .gs-cell:hover{background:var(--accent-light)}
-  .gs tr.scored .gs-cell{opacity:.55}
-  .gs tr.scored .gs-cell:hover{opacity:1}
-  .gs-cell[aria-pressed="true"]{opacity:1!important;background:var(--accent-light);box-shadow:inset 0 0 0 2px var(--accent)}
-  .gs-cell[aria-pressed="true"]::after{content:"✓";position:absolute;top:7px;right:9px;font-size:12px;color:var(--accent3);font-weight:700}
-  .gs-score{padding:9px 12px;text-align:right;font-weight:600}
-  .gs-score.empty{color:var(--border2);font-weight:400}
-  .gs-subtotal{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--border);background:var(--bg3);font-size:12.5px;color:var(--text2)}
-  .gs-subtotal b{color:var(--text)}
-
-  .gs-remarks{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-bottom:12px}
-  .gs-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto}
-  .gs-panel h3{margin:0;font-size:13px}
-  .gs-panel .remarks-field{flex:1;min-height:90px;resize:none}
-  .gs-overview{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:12.5px;color:var(--text2);margin-bottom:6px}
-  .gs-overview b{color:var(--text)}
-
-  /* A decision is coloured by how serious it is: pass green, redefense
-     orange, a new title red - never all green. */
-  .outcome-recorded.is-major{background:#fff7ed;border-color:#fed7aa}
-  .outcome-recorded.is-major .outcome-recorded-label{color:#c2410c}
-  .outcome-recorded.is-major .outcome-recorded-remarks{border-top-color:#fed7aa}
-  .outcome-recorded.is-fail{background:var(--red-bg,#fef2f2);border-color:#fecaca}
-  .outcome-recorded.is-fail .outcome-recorded-label{color:var(--red,#dc2626)}
-  .outcome-recorded.is-fail .outcome-recorded-remarks{border-top-color:#fecaca}
-  .outcome-option.is-pass input:checked+.outcome-option-body{border-color:var(--green);background:var(--green-bg);box-shadow:0 0 0 3px rgba(22,163,74,.1)}
-  .outcome-option.is-pass input:checked+.outcome-option-body .outcome-option-label{color:var(--green)}
-  .outcome-option.is-major input:checked+.outcome-option-body{border-color:#ea580c;background:#fff7ed;box-shadow:0 0 0 3px rgba(234,88,12,.1)}
-  .outcome-option.is-major input:checked+.outcome-option-body .outcome-option-label{color:#c2410c}
-  .outcome-option.is-fail input:checked+.outcome-option-body{border-color:var(--red);background:var(--red-bg);box-shadow:0 0 0 3px rgba(220,38,38,.1)}
-  .outcome-option.is-fail input:checked+.outcome-option-body .outcome-option-label{color:var(--red)}
-
-  .gs-paper{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--bg2)}
-  .gs-paper .lb{padding:0 9px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text3)}
-  .gs-paper a{display:inline-flex;align-items:center;gap:5px;padding:7px 10px;font-size:12.5px;font-weight:600;color:var(--text2);text-decoration:none;border-left:1px solid var(--border)}
-  .gs-paper a:hover{background:var(--bg3);color:var(--text)}
-  .gs-foot{display:flex;align-items:center;gap:10px;padding:9px 20px;background:var(--bg2);border-top:1px solid var(--border)}
-  .gs-foot .hint{flex:1;font-size:12px;color:var(--text3)}
-  .gs-foot kbd{font:inherit;font-size:10.5px;padding:0 5px;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;background:var(--bg3)}
-  .gs-saved{font-size:12px;color:var(--text3)}
-
-  /* A phone cannot fit a rubric sheet; there it scrolls instead of paging. */
+  /* ── A phone: one criterion at a time ── */
+  .gs-one{display:none}
+  @media (min-width: 769px) and (max-width: 1024px){
+    .gs-burger{display:flex}
+  }
+  @media (max-width: 1100px){
+    .gs-keys{display:none}
+    .gs-progress{flex-basis:170px}
+    .gs-aside{flex-basis:240px}
+  }
   @media (max-width: 900px){
-    .gs-content{overflow:auto}
-    .gs{display:block}
-    .gs-steps{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr))}
-    .gs-sheet,.gs-rows{overflow:auto}
-    .gs table{min-width:720px}
-    .gs-remarks{grid-template-columns:1fr}
+    .gs-top{flex-wrap:wrap;gap:10px 12px;padding:10px 16px;background:#18191f;border-bottom:none;color:#fff}
+    .gs-top .gs-iconbtn{background:transparent;border-color:rgba(255,255,255,.18);color:#fff}
+    .gs-who h1,.gs-who h1 span{color:#fff;white-space:normal}
+    .gs-meta{color:rgba(255,255,255,.7);flex-wrap:wrap;white-space:normal}
+    .gs-meta .gs-chip{background:rgba(255,255,255,.12);color:#fff}
+    .gs-divider,.gs-saved,.gs-paper{display:none}
+    .gs-progress{order:5;flex:1 1 100%}
+    .gs-progress-top b{color:#e3c75a}
+    .gs-progress-top .of,.gs-progress-top .cnt{color:rgba(255,255,255,.7)}
+    .gs-segs span{background:rgba(255,255,255,.18)}
+    .gs-alerts{padding:10px 16px 0}
+    .gs-meta .rubric{display:none}
+    .gs-steps,.gs-aside,.gs-main-head,.gs-table-wrap,.gs-main-foot .sum{display:none}
+    .gs-body{flex-direction:column;padding:12px 16px;overflow:auto}
+    .gs-review-aside{flex:0 0 auto}
+    .gs-review-main{flex:0 0 auto;overflow:visible}
+    .gs-review-list{overflow:visible}
+    .gs-one{display:block;padding:16px}
+    .gs-main{flex:0 0 auto;align-self:stretch;max-height:none}
+    .gs-main-foot{background:var(--bg2)}
+    .gs-main-foot .gs-btn{min-height:48px}
+    .gs-main-foot .gs-btn-outline{flex:1;justify-content:center;background:#18191f;border-color:#18191f;color:#fff}
+    .gs-main-foot .gs-btn:first-of-type{width:48px;padding:0;justify-content:center}
+    .gs-review-row{grid-template-columns:minmax(0,1fr) auto 48px}
+    .gs-foot{padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));flex-wrap:wrap}
     .gs-foot .hint{display:none}
   }
-  @media (prefers-reduced-motion: reduce){.gs *{transition:none!important}}
+  .gs-one-eyebrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+  .gs-one-eyebrow b{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent3)}
+  .gs-one-eyebrow span{font-size:12.5px;color:var(--text3);white-space:nowrap}
+  .gs-one h2{margin:0;font-size:18px;line-height:1.3}
+  .gs-one > p{margin:4px 0 14px;font-size:13px;line-height:1.45;color:var(--text3)}
+  .gs-one-levels{display:flex;flex-direction:column;gap:8px}
+  .gs-one-level{font:inherit;text-align:left;display:flex;flex-direction:column;gap:6px;padding:12px 14px;min-height:56px;border-radius:12px;cursor:pointer;color:var(--text);background:var(--bg2);border:1px solid var(--border)}
+  .gs-one-level .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .gs-one-level .top b{font-size:14px}
+  .gs-one-level .pts{font-size:12.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--bg3);color:#6b5409;box-shadow:inset 0 0 0 1px var(--border)}
+  .gs-one-level .ds{font-size:13px;line-height:1.45;color:var(--text2)}
+  .gs-one-level[aria-checked="true"]{background:#faf3d9;border:2px solid var(--accent)}
+  .gs-one-level[aria-checked="true"] .pts{background:#18191f;color:#fff;box-shadow:none}
+  @media (prefers-reduced-motion: reduce){.gs *{transition:none !important}}
 </style>
   @include('partials.render-whole')
 </head>
 <body>
 
-@include('instructor.partials.sidebar', ['currentPage' => 'grading'])
+@include('instructor.partials.sidebar', ['currentPage' => 'grading', 'sidebarRail' => true])
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <div class="main">
-  <div class="topbar">
-    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
-      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="page-title">Team Grading</div>
-    <div class="topbar-actions">
-      <a href="{{ route('instructor.grading') }}" class="btn btn-ghost" style="text-decoration:none;font-size:12px;padding:8px 14px">← Back to Teams</a>
-    </div>
-  </div>
-
   <div id="skeleton-content" class="sk-overlay">
     <div class="sk" style="height:60px;border-radius:12px;margin-bottom:12px"></div>
-    <div class="sk" style="height:44px;border-radius:12px;margin-bottom:12px"></div>
+    <div class="sk" style="height:48px;border-radius:12px;margin-bottom:12px"></div>
     <div class="sk" style="height:320px;border-radius:12px"></div>
   </div>
 
   <div id="real-content" style="display:none">
-  <div class="content gs-content">
   <div class="gs">
 
-    <div>
-      <p class="gs-alert err" id="formError" role="alert" hidden></p>
-      @if($grade?->isAbstained())
-        <div class="gs-alert abstained">
-          <b>You abstained from grading this team.</b> Your scores are left out of the team's average.
-          <span class="why">Your reason: &ldquo;{{ $grade->remarks }}&rdquo;</span>
+    <header class="gs-top">
+      <button type="button" class="gs-iconbtn gs-burger" onclick="toggleSidebar()" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <a href="{{ route('instructor.grading') }}" class="gs-iconbtn" aria-label="Back to Team Grading">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </a>
+      <div class="gs-who">
+        <h1>{{ $defense->team?->team_name ?? 'Unknown Team' }} <span>— {{ $defense->team?->project_title ?? 'No title' }}</span></h1>
+        <div class="gs-meta">
+          <span>{{ $defense->defense_type }}</span>
+          <span aria-hidden="true">·</span>
+          <span class="gs-chip {{ $isChair ? 'gold' : '' }}">{{ $panelRole }}</span>
+          <span class="rubric" aria-hidden="true">·</span>
+          <span class="rubric">{{ $rubric->rubric_name }}</span>
         </div>
-      @elseif($grade?->status === 'submitted')
-        <div class="gs-alert ok">You already submitted a grade for this team. You can still change it - submitting again replaces your previous grade.</div>
+      </div>
+      <div class="gs-progress">
+        <div class="gs-progress-top">
+          <span><b id="gs-total">0</b><span class="of"> / {{ $fmt($rubric->total_points) }}</span></span>
+          <span class="cnt"><span id="gs-done">0</span> of {{ $rubric->criteria->count() }} criteria</span>
+        </div>
+        <div class="gs-segs" id="gs-segs" role="progressbar" aria-label="Criteria scored" aria-valuemin="0" aria-valuemax="{{ $rubric->criteria->count() }}"></div>
+      </div>
+      <span class="gs-divider" aria-hidden="true"></span>
+      <span class="gs-saved" id="saveStatus" role="status"><i aria-hidden="true"></i><span>{{ $saveText }}</span></span>
+      {{-- Paper copy, for a defense held without signal or power: grade by hand, enter it here later. --}}
+      <details class="gs-paper">
+        <summary class="gs-btn" title="If CapsTrack cannot be reached during the defense, grade on this and enter the scores here afterwards.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Paper copy
+          <svg viewBox="0 0 24 24" aria-hidden="true" style="width:13px;height:13px"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <div class="gs-paper-menu">
+          <p>Grade on paper if CapsTrack cannot be reached, then enter the scores here.</p>
+          <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'pdf']) }}">PDF</a>
+          <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'xlsx']) }}">Excel</a>
+        </div>
+      </details>
+    </header>
+
+    <div class="gs-alerts">
+      <p class="gs-alert err" id="formError" role="alert" hidden></p>
+      @if ($isAbstained)
+        <div class="gs-alert muted">
+          <span><b>You abstained from grading this team.</b> Your scores are left out of the team's average.
+            <span class="why">Your reason: &ldquo;{{ $grade->remarks }}&rdquo;</span></span>
+        </div>
+      @elseif ($grade?->status === 'submitted' && ! $defense->hasOutcome())
+        <div class="gs-alert ok"><span>Submitted. You can still change it — submitting again replaces it.</span></div>
       @endif
     </div>
-
-    <header class="gs-top">
-      <div class="gs-who">
-        <b>{{ $defense->team?->team_name ?? 'Unknown Team' }} — {{ $defense->team?->project_title ?? 'No title' }}</b>
-        <small>{{ $defense->defense_type }} · You are {{ $panelRole }} · {{ $rubric->rubric_name }}</small>
-      </div>
-      <div class="gs-stat"><b class="num" id="gs-left">0</b><small>criteria left</small></div>
-      <div class="gs-stat"><b class="num"><span id="gs-total">0</span><small style="display:inline;font-size:12px"> / {{ $fmt($rubric->total_points) }}</small></b><small>points</small></div>
-      {{-- Paper copy, for a defense held without signal or power: grade by hand, enter it here later. --}}
-      <span class="gs-paper" title="If CapsTrack cannot be reached during the defense, grade on this and enter the scores here afterwards.">
-        <span class="lb">Paper copy</span>
-        <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'pdf']) }}"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> PDF</a>
-        <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'xlsx']) }}">Excel</a>
-      </span>
-      <button type="button" class="gs-btn" id="gs-jump">Next unscored</button>
-    </header>
 
     <nav class="gs-steps" id="gs-steps" aria-label="Rubric sections"></nav>
 
-    <div style="min-height:0;display:grid">
-      <section class="gs-area" id="gs-sheet-area" aria-live="polite"></section>
-
-      <section class="gs-area" id="gs-remarks-area" hidden>
-        <div class="gs-head"><h2>Remarks and decision</h2></div>
-        <div class="gs-remarks">
-          
-          <form id="gradingForm" class="gs-panel" onsubmit="return false">
-            @csrf
-            <h3>Your remarks</h3>
-            {{-- Remarks are this panelist's own. The verdict is not: the panel
-                 confers and gives the team one result, recorded once by the
-                 chair beside this. --}}
-            {{-- An abstention's remarks are its reason, not comments for the team. --}}
-            <textarea name="remarks" class="remarks-field" placeholder="Your comments for the team - what you want them to fix, or what worked.">{{ $grade?->isAbstained() ? '' : $grade?->remarks }}</textarea>
-          </form>
-
-          <div class="gs-panel">
-            <h3>Before you submit</h3>
-            <div class="gs-overview" id="gs-overview"></div>
-
-            <h3 style="display:flex;align-items:center;gap:8px">Panel decision
-              @if ($defense->hasOutcome())<span class="badge {{ ['pass' => 'badge-green', 'major' => 'badge-amber', 'fail' => 'badge-red'][\App\Support\DefenseOutcome::tone($defense->outcome)] ?? 'badge-gray' }}">Recorded</span>@endif
-            </h3>
-
-            @if ($defense->hasOutcome())
-              <div class="outcome-recorded is-{{ \App\Support\DefenseOutcome::tone($defense->outcome) }}">
-                <div class="outcome-recorded-label">{{ $defense->outcomeLabel() }}</div>
-                <div class="outcome-recorded-sub">{{ \App\Support\DefenseOutcome::description($defense->outcome, $defense->defense_type) }}</div>
-                @if ($defense->outcome_remarks)
-                  <div class="outcome-recorded-remarks">{{ $defense->outcome_remarks }}</div>
-                @endif
-                <div class="outcome-recorded-meta">
-                  Recorded by {{ $defense->outcomeRecordedBy?->name ?? 'the Panel Chair' }}
-                  @if ($defense->outcome_recorded_at) on {{ $defense->outcome_recorded_at->format('M j, Y \a\t g:i A') }} @endif
-                </div>
-              </div>
-            @elseif (! $isChair)
-              <p class="outcome-note">Your Panel Chair records the panel&rsquo;s decision after the briefing. Score the rubric and leave your remarks.</p>
-            @elseif ($gradesIn < $panelSize)
-              <p class="outcome-note">{{ $gradesIn }} of {{ $panelSize }} panelists have submitted their scores or abstained. The decision can be recorded once everyone has.</p>
-            @else
-              <p class="outcome-note">All {{ $panelSize }} panelists are in. Record what the panel agreed &mdash; the team is told this, and it is what happens next.</p>
-              <div class="outcome-options">
-                @foreach ($outcomeOptions as $option)
-                  <label class="outcome-option is-{{ \App\Support\DefenseOutcome::tone($option) }}">
-                    <input type="radio" name="panel_outcome" value="{{ $option }}"/>
-                    <div class="outcome-option-body">
-                      <div class="outcome-option-label">{{ \App\Support\DefenseOutcome::label($option, $defense->defense_type) }}</div>
-                      <div class="outcome-option-desc">{{ \App\Support\DefenseOutcome::description($option, $defense->defense_type) }}</div>
-                    </div>
-                  </label>
-                @endforeach
-              </div>
-              <button type="button" class="gs-btn gs-btn-primary" id="record-outcome-btn" onclick="recordOutcome()">Record panel decision</button>
-            @endif
+    {{-- The rubric, one section at a time. --}}
+    <div class="gs-body" id="gs-sheet-body">
+      <section class="gs-card gs-main" id="gs-sheet-area" aria-live="polite"></section>
+      <aside class="gs-aside" aria-label="Summary">
+        @if ($isGrader)
+          <section class="gs-card gs-shared">
+            <div class="gs-shared-head">
+              <h3>Grading for the panel</h3>
+              @unless ($defense->hasOutcome())
+                <button type="button" class="gs-link" id="gs-who-change">Change</button>
+              @endunless
+            </div>
+            <div class="gs-shared-chips" id="gs-shared-chips">
+              <span class="gs-shared-chip on">You</span>
+              @foreach ($who['panel'] as $p)
+                @continue($p['id'] === $who['me'])
+                @php $on = in_array($p['id'], $who['joined'], true); @endphp
+                <button type="button" class="gs-shared-chip {{ $on ? 'on' : '' }}" data-id="{{ $p['id'] }}" aria-pressed="{{ $on ? 'true' : 'false' }}" @disabled($p['turnedIn'] || $defense->hasOutcome()) title="{{ $p['turnedIn'] ? 'Already turned in a grade of their own' : ($on ? 'Take '.$p['name'].' out' : 'Grade for '.$p['name'].' too') }}">
+                  @if ($on)<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>@endif
+                  {{ $p['name'] }}
+                </button>
+              @endforeach
+            </div>
+          </section>
+        @endif
+        <section class="gs-card">
+          <h3>Score summary</h3>
+          <div class="gs-sum-rows" id="gs-sum-rows"></div>
+          <div class="gs-sum-total">
+            <span>Panel: <b>{{ $gradesIn }} of {{ $panelSize }}</b> in</span>
+            <span><strong id="gs-sum-total">0</strong><em> / {{ $fmt($rubric->total_points) }}</em></span>
           </div>
+        </section>
+        <section class="gs-card gs-todo" id="gs-todo"></section>
+      </aside>
+    </div>
+
+    {{-- Review and submit: every score, the remarks and the panel's decision. --}}
+    <div class="gs-body" id="gs-review-body" hidden>
+      <section class="gs-card gs-review-main">
+        <div class="gs-main-head">
+          <h2>{{ $isGrader ? 'Shared grade' : 'Your scores' }}</h2>
+          <span class="meta">{{ $isGrader ? 'For '.$sharedCount.' panelists' : 'Select a criterion to change it' }}</span>
         </div>
+        <div class="gs-review-list" id="gs-review-list"></div>
       </section>
+      <aside class="gs-review-aside">
+        <form id="gradingForm" class="gs-card gs-remarks" onsubmit="return false">
+          @csrf
+          {{-- Remarks are this panelist's own. The verdict is not: the panel
+               confers and gives the team one result, recorded once by the
+               chair beside this. An abstention's remarks are its reason, not
+               comments for the team. --}}
+          <label for="gs-remarks-field">{{ $isGrader ? 'Panel remarks' : 'Your remarks' }}</label>
+          <textarea id="gs-remarks-field" name="remarks" placeholder="What should the team fix, and what worked?">{{ $isAbstained ? '' : $grade?->remarks }}</textarea>
+        </form>
+
+        <section class="gs-card gs-decision">
+          <div class="gs-decision-head">
+            <h3>Panel decision</h3>
+            <span>Panelists in <b>{{ $gradesIn }} of {{ $panelSize }}</b></span>
+          </div>
+          <div class="gs-panel-segs" aria-hidden="true">
+            @for ($i = 0; $i < $panelSize; $i++)<i class="{{ $i < $gradesIn ? 'on' : '' }}"></i>@endfor
+          </div>
+
+          @if ($defense->hasOutcome())
+            <div class="gs-recorded is-{{ $outcomeTone }}">
+              <b>{{ $defense->outcomeLabel() }}</b>
+              <p>{{ \App\Support\DefenseOutcome::description($defense->outcome, $defense->defense_type) }}</p>
+              @if ($defense->outcome_remarks)
+                <p>{{ $defense->outcome_remarks }}</p>
+              @endif
+              <small>Recorded by {{ $defense->outcomeRecordedBy?->name ?? 'the Panel Chair' }}@if ($defense->outcome_recorded_at) · {{ $defense->outcome_recorded_at->format('M j, g:i A') }}@endif</small>
+            </div>
+          @elseif (! $canRecord)
+            <p class="note">Your Panel Chair records the decision.</p>
+          @else
+            @if ($gradesIn < $panelSize)
+              @php
+                // Those joined to this grade come in with it: they are not waited on.
+                $waiting = collect($waitingOn)->diff(collect($gradingFor)->pluck('name'))->values();
+              @endphp
+              <p class="note">{{ $isGrader && $waiting->all() === ['you'] ? 'Opens when you submit' : 'Waiting on '.$waiting->join(', ', ' and ') }}</p>
+            @endif
+            <fieldset class="gs-outcomes" @disabled($gradesIn < $panelSize)>
+              <legend class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">What the panel agreed</legend>
+              @foreach ($outcomeOptions as $option)
+                <label class="gs-outcome is-{{ \App\Support\DefenseOutcome::tone($option) }}">
+                  <input type="radio" name="panel_outcome" value="{{ $option }}"/>
+                  <span class="t">
+                    <b>{{ \App\Support\DefenseOutcome::label($option, $defense->defense_type) }}</b>
+                    <small>{{ \App\Support\DefenseOutcome::description($option, $defense->defense_type) }}</small>
+                  </span>
+                </label>
+              @endforeach
+            </fieldset>
+            <button type="button" class="gs-btn gs-btn-dark gs-record" id="record-outcome-btn" onclick="recordOutcome()" @disabled($gradesIn < $panelSize)>Record panel decision</button>
+          @endif
+        </section>
+      </aside>
     </div>
 
     <footer class="gs-foot">
-      <div class="hint"><kbd>←</kbd><kbd>→</kbd> sections · <kbd>↑</kbd><kbd>↓</kbd> rows · <kbd>1</kbd>–<kbd>4</kbd> score and move on</div>
-      @if ($grade?->isAbstained())
-        <span class="gs-saved" id="saveStatus">Abstained</span>
+      <div class="gs-keys">
+        <span><kbd>1</kbd>–<kbd>4</kbd> score</span>
+        <span><kbd>↑</kbd><kbd>↓</kbd> criterion</span>
+        <span><kbd>←</kbd><kbd>→</kbd> section</span>
+        <span><kbd>N</kbd> next unscored</span>
+      </div>
+      <span class="hint" id="gs-hint"></span>
+      @if ($isAbstained)
         @unless ($defense->hasOutcome())
-          <button type="button" class="gs-btn gs-btn-primary" id="gs-withdraw" onclick="withdrawAbstention()">Withdraw abstention and grade</button>
+          <button type="button" class="gs-btn gs-btn-dark" id="gs-withdraw" onclick="withdrawAbstention()">Withdraw abstention and grade</button>
         @endunless
       @else
-        <span class="gs-saved" id="saveStatus">{{ $grade ? ($grade->status === 'submitted' ? 'Submitted' : 'Draft saved') : '' }}</span>
         @unless ($defense->hasOutcome())
-          <button type="button" class="gs-btn gs-btn-abstain" onclick="openAbstain()" title="Decline to score this team, with a reason">Abstain</button>
+          <button type="button" class="gs-btn gs-btn-dashed" onclick="openAbstain()" title="Decline to score this team, with a reason">Abstain</button>
         @endunless
         <button type="button" class="gs-btn" onclick="saveDraft()">Save draft</button>
-        <button type="button" class="gs-btn gs-btn-primary" id="gs-submit" onclick="submitGrade()" disabled>Submit grade</button>
+        <button type="button" class="gs-btn gs-btn-dark" id="gs-to-review">Review and submit</button>
+        <button type="button" class="gs-btn gs-btn-dark" id="gs-submit" onclick="submitGrade()" hidden disabled>{{ $isGrader ? 'Submit for all '.$sharedCount : 'Submit grade' }}</button>
       @endif
     </footer>
 
-  </div>
   </div>
   </div>
 </div>
@@ -304,8 +550,7 @@
   <div class="modal-box abstain-box" role="dialog" aria-modal="true" aria-labelledby="abstain-title">
     <div class="modal-title" id="abstain-title">Abstain from grading {{ $defense->team?->team_name ?? 'this team' }}?</div>
     <div class="modal-sub">
-      You will not score this team. Your abstention counts as turned in, so the panel is not held up,
-      and the team's average is taken from the panelists who scored.
+      You will not score this team. It still counts as turned in, and the team's average comes from the panelists who scored.
       The team sees that you abstained, not your reason.
     </div>
     <label for="abstain-reason" class="abstain-label">Reason</label>
@@ -319,50 +564,88 @@
   </div>
 </div>
 
-@include('instructor.partials.skeleton-toggle')
+@include('instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
+@include('instructor.partials.who-grades-dialog')
 
 <script nonce="{{ Vite::cspNonce() }}">
 const SECTIONS = {{ Js::from($sections) }};
 const scores = {{ Js::from((object) $savedScores->all()) }};
 const RUBRIC_TOTAL = {{ (float) $rubric->total_points }};
+const ROUTES = {
+  save: '{{ route('instructor.grading.save', $defense->defense_id) }}',
+  submit: '{{ route('instructor.grading.submit', $defense->defense_id) }}',
+  outcome: '{{ route('instructor.grading.outcome', $defense->defense_id) }}',
+  abstain: '{{ route('instructor.grading.abstain', $defense->defense_id) }}',
+  list: '{{ route('instructor.grading') }}',
+};
 
-const ALL = SECTIONS.flatMap((s, si) => s.items.map(c => Object.assign(c, { sec: si })));
-const REMARKS = SECTIONS.length;
+const ALL = SECTIONS.flatMap((s, si) => s.items.map((c, ci) => Object.assign(c, { sec: si, no: (si + 1) + '.' + (ci + 1) })));
+const REVIEW = SECTIONS.length;
 const $ = id => document.getElementById(id);
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const svg = d => '<svg viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>';
+const ICON = {
+  check: svg('<path d="M20 6 9 17l-5-5"/>'),
+  next: svg('<path d="m9 18 6-6-6-6"/>'),
+  prev: svg('<path d="m15 18-6-6 6-6"/>'),
+  pen: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>'),
+};
 const fmt = n => +(+n).toFixed(2);
 const same = (a, b) => a !== undefined && Math.abs(a - b) < 0.001;
+const has = c => c.id in scores;
 const secScore = s => fmt(s.items.reduce((a, c) => a + (scores[c.id] ?? 0), 0));
-const secDone = s => s.items.filter(c => c.id in scores).length;
+const secDone = s => s.items.filter(has).length;
+const total = () => fmt(ALL.reduce((a, c) => a + (scores[c.id] ?? 0), 0));
+const unscored = () => ALL.filter(c => !has(c));
 const narrow = () => window.matchMedia('(max-width: 900px)').matches;
+const levelName = (c, k) => c.levels[k]?.label || 'Level ' + (k + 1);
+const pickedLevel = c => c.levels.findIndex(l => same(scores[c.id], l.s));
 
 let sec = 0, page = 0, pages = [[]], cur = 0;
 let dirty = false;
 
-// Open on the first criterion still to score.
+// Open on the first criterion still to score - or on the review, when asked
+// for or when there is nothing left to score.
 (function start() {
-  const first = ALL.find(c => !(c.id in scores));
-  if (first) { cur = ALL.indexOf(first); sec = first.sec; } else { sec = REMARKS; }
+  const first = ALL.find(c => !has(c));
+  if (first) { cur = ALL.indexOf(first); sec = first.sec; } else { sec = REVIEW; }
+  if (new URLSearchParams(location.search).get('step') === 'review') sec = REVIEW;
 })();
 
-/* ── Section strip ───────────────────────────────────────────── */
+/* ── Header ──────────────────────────────────────────────────── */
+function drawHeader() {
+  const done = ALL.length - unscored().length;
+  $('gs-total').textContent = total();
+  $('gs-done').textContent = done;
+  const segs = $('gs-segs'); segs.innerHTML = '';
+  segs.setAttribute('aria-valuenow', done);
+  ALL.forEach((c, i) => segs.append(el('span', i < done ? 'on' : '')));
+}
+
+/* ── Section steps ───────────────────────────────────────────── */
 function drawSteps() {
   const nav = $('gs-steps'); nav.innerHTML = '';
   SECTIONS.forEach((s, i) => {
-    const done = secDone(s);
-    const b = el('button', 'gs-step' + (i === sec ? ' on' : '') + (done === s.items.length ? ' done' : done ? ' part' : ''));
-    b.type = 'button'; b.title = s.name; b.setAttribute('aria-current', i === sec ? 'step' : 'false');
-    const st = el('span', 'st');
-    st.append(el('span', 'num', fmt(secScore(s)) + '/' + fmt(s.max)), el('span', 'mark num', done === s.items.length ? '✓ done' : done + '/' + s.items.length));
-    b.append(el('span', 'nm', s.name), st);
+    const done = secDone(s), n = s.items.length;
+    const b = el('button', 'gs-step' + (i === sec ? ' on' : '') + (done === n ? ' done' : ''));
+    b.type = 'button';
+    b.setAttribute('aria-current', i === sec ? 'step' : 'false');
+    const dot = el('span', 'dot');
+    if (done === n) dot.innerHTML = ICON.check; else dot.textContent = i + 1;
+    const txt = el('span', 'txt');
+    const bar = el('span', 'bar'); const fill = el('i'); fill.style.width = Math.round(done / n * 100) + '%'; bar.append(fill);
+    txt.append(el('span', 'nm', s.name), el('span', 'st', fmt(secScore(s)) + ' / ' + fmt(s.max) + ' pts · ' + done + ' of ' + n + ' scored'), bar);
+    b.append(dot, txt);
     b.onclick = () => go(i, 0);
     nav.append(b);
   });
-  const r = el('button', 'gs-step' + (sec === REMARKS ? ' on' : ''));
+  const r = el('button', 'gs-step review' + (sec === REVIEW ? ' on' : ''));
   r.type = 'button';
-  const st = el('span', 'st'); st.append(el('span', '', 'and decision'));
-  r.append(el('span', 'nm', 'Remarks'), st);
-  r.onclick = () => go(REMARKS, 0);
+  r.setAttribute('aria-current', sec === REVIEW ? 'step' : 'false');
+  const dot = el('span', 'dot'); dot.innerHTML = ICON.pen;
+  const txt = el('span', 'txt'); txt.append(el('span', 'nm', 'Review and submit'), el('span', 'st', 'Scores · decision'));
+  r.append(dot, txt);
+  r.onclick = () => go(REVIEW, 0);
   nav.append(r);
 }
 
@@ -377,33 +660,38 @@ function sharedLabels(s) {
 function shell(box, s) {
   const labels = sharedLabels(s);
   const cols = Math.max(...s.items.map(c => c.levels.length));
-  const t = el('table'); const h = el('tr');
-  h.append(el('th', '', 'Criterion'));
+  const t = el('table', 'gs-table'); const h = el('tr');
+  const th0 = el('th', 'crit-col', 'Criterion'); th0.scope = 'col'; h.append(th0);
   for (let k = 0; k < cols; k++) {
-    const th = el('th');
-    if (k < 9) th.append(el('span', 'key', k + 1));
-    th.append(labels ? labels[k] : 'Level ' + (k + 1));
+    const th = el('th'); th.scope = 'col';
+    if (k < 9) th.append(el('kbd', '', k + 1));
+    th.append(labels ? (labels[k] || 'Level ' + (k + 1)) : 'Level ' + (k + 1));
     h.append(th);
   }
-  h.append(el('th', 'sc', 'Score'));
+  const ths = el('th', 'score-col', 'Score'); ths.scope = 'col'; h.append(ths);
   const thead = el('thead'); thead.append(h);
   const tb = el('tbody'); t.append(thead, tb); box.append(t);
   return { tb, labels, cols };
 }
 
 function row(c, shared, cols) {
-  const tr = el('tr', (c.id in scores ? 'scored' : '') + (ALL.indexOf(c) === cur ? ' cur' : ''));
-  const first = el('td'); const d = el('div', 'gs-crit');
-  d.append(el('b', '', c.n)); if (c.d) d.append(el('small', '', c.d));
-  d.onclick = () => { cur = ALL.indexOf(c); draw(); };
-  first.append(d); tr.append(first);
+  const tr = el('tr', (has(c) ? 'scored' : '') + (ALL.indexOf(c) === cur ? ' cur' : ''));
+  const th = el('th'); th.scope = 'row';
+  const btn = el('button', 'gs-crit'); btn.type = 'button';
+  const name = el('b'); name.append(el('span', 'no', c.no), ' ', el('span', 'nm', c.n));
+  btn.append(name); if (c.d) btn.append(el('span', 'd', c.d));
+  btn.onclick = () => { cur = ALL.indexOf(c); draw(); };
+  th.append(btn); tr.append(th);
   for (let k = 0; k < cols; k++) {
     const td = el('td'); const l = c.levels[k];
     if (l) {
       const b = el('button', 'gs-cell'); b.type = 'button';
       b.setAttribute('aria-pressed', same(scores[c.id], l.s));
-      b.setAttribute('aria-label', c.n + ': ' + (l.label || 'level ' + (k + 1)) + ', ' + fmt(l.s) + ' points. ' + (l.desc || ''));
-      b.append(el('b', 'num', fmt(l.s)));
+      b.setAttribute('aria-label', c.n + ': ' + levelName(c, k) + ', ' + fmt(l.s) + ' points. ' + (l.desc || ''));
+      const top = el('span', 'top');
+      top.append(el('span', 'pts', fmt(l.s) + ' pts'));
+      const tick = el('span', 'tick'); tick.innerHTML = ICON.check; top.append(tick);
+      b.append(top);
       if (!shared && l.label) b.append(el('span', 'lb', l.label));
       if (l.desc) b.append(el('span', 'ds', l.desc));
       b.onclick = () => score(c, l.s);
@@ -411,26 +699,62 @@ function row(c, shared, cols) {
     }
     tr.append(td);
   }
-  tr.append(el('td', 'gs-score num' + (c.id in scores ? '' : ' empty'), c.id in scores ? fmt(scores[c.id]) : '—'));
+  const sc = el('td', 'gs-score');
+  if (has(c)) {
+    const k = pickedLevel(c);
+    sc.append(el('b', '', fmt(scores[c.id])), el('small', '', k >= 0 ? levelName(c, k) : ''));
+  } else {
+    sc.append(el('span', 'empty'), el('small', '', 'Not scored'));
+  }
+  tr.append(sc);
   return tr;
+}
+
+// A phone shows one criterion at a time, its levels stacked.
+function drawOne(box, s) {
+  const items = s.items;
+  let c = ALL[cur];
+  if (!c || c.sec !== sec) { c = items.find(x => !has(x)) || items[0]; cur = ALL.indexOf(c); }
+  const i = items.indexOf(c);
+  const eyebrow = el('div', 'gs-one-eyebrow');
+  eyebrow.append(el('b', '', s.name), el('span', '', 'Criterion ' + (i + 1) + ' of ' + items.length + ' · ' + fmt(secScore(s)) + ' / ' + fmt(s.max)));
+  box.append(eyebrow, el('h2', '', c.n));
+  if (c.d) box.append(el('p', '', c.d));
+  const group = el('div', 'gs-one-levels');
+  group.setAttribute('role', 'radiogroup'); group.setAttribute('aria-label', c.n);
+  c.levels.forEach((l, k) => {
+    const b = el('button', 'gs-one-level'); b.type = 'button';
+    b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', same(scores[c.id], l.s));
+    const top = el('span', 'top'); top.append(el('b', '', levelName(c, k)), el('span', 'pts', fmt(l.s) + ' pts'));
+    b.append(top); if (l.desc) b.append(el('span', 'ds', l.desc));
+    b.onclick = () => score(c, l.s);
+    group.append(b);
+  });
+  box.append(group);
 }
 
 function drawSheet() {
   const s = SECTIONS[sec];
   const area = $('gs-sheet-area'); area.innerHTML = '';
-  const head = el('div', 'gs-head');
-  head.append(el('h2', '', s.name), el('span', 'meta num', s.items.length + ' criteria · max ' + fmt(s.max) + ' pts'));
-  const pg = el('div', 'pg'); const label = el('span', 'num');
-  const prev = el('button', 'gs-btn', 'Previous'); const next = el('button', 'gs-btn', 'Next');
-  prev.type = next.type = 'button';
-  pg.append(label, prev, next); head.append(pg);
-  const sheet = el('div', 'gs-sheet'); const rows = el('div', 'gs-rows'); const sub = el('div', 'gs-subtotal');
-  sheet.append(rows, sub); area.append(head, sheet);
+
+  const head = el('div', 'gs-main-head');
+  const pageLabel = el('span', 'meta');
+  const jump = el('button', 'gs-btn gs-btn-sm'); jump.type = 'button'; jump.id = 'gs-jump';
+  jump.append('Next unscored ', el('kbd', '', 'N'));
+  jump.disabled = !unscored().length;
+  jump.onclick = jumpNext;
+  head.append(el('h2', '', s.name), el('span', 'meta', 'Max ' + fmt(s.max) + ' pts'), el('span', 'grow'), pageLabel, jump);
+
+  const rows = el('div', 'gs-rows gs-table-wrap');
+  const one = el('div', 'gs-one');
+  const foot = el('div', 'gs-main-foot');
+  area.append(head, rows, one, foot);
 
   // Fill a page until the next row would overflow, then start another.
   pages = [[]];
   if (narrow()) {
     pages = [s.items.slice()];
+    drawOne(one, s);
   } else {
     let sh = shell(rows, s);
     s.items.forEach(c => {
@@ -440,42 +764,141 @@ function drawSheet() {
       }
       pages[pages.length - 1].push(c);
     });
+    page = Math.max(0, Math.min(page, pages.length - 1));
+    rows.innerHTML = '';
+    const sh2 = shell(rows, s);
+    pages[page].forEach(c => sh2.tb.append(row(c, sh2.labels, sh2.cols)));
+    if (pages.length > 1) {
+      const first = s.items.indexOf(pages[page][0]) + 1, last = first + pages[page].length - 1;
+      pageLabel.textContent = 'Criteria ' + first + '–' + last + ' of ' + s.items.length;
+    }
   }
-  page = Math.max(0, Math.min(page, pages.length - 1));
-  rows.innerHTML = '';
-  const sh = shell(rows, s);
-  pages[page].forEach(c => sh.tb.append(row(c, sh.labels, sh.cols)));
 
-  const first = s.items.indexOf(pages[page][0]) + 1, last = first + pages[page].length - 1;
-  label.textContent = pages.length > 1 ? 'Criteria ' + first + '–' + last + ' of ' + s.items.length : '';
-  prev.disabled = sec === 0 && page === 0;
-  next.textContent = page < pages.length - 1 ? 'Next page' : (sec < SECTIONS.length - 1 ? 'Next section' : 'Remarks');
-  prev.onclick = () => page > 0 ? go(sec, page - 1) : go(sec - 1, 99);
-  next.onclick = () => page < pages.length - 1 ? go(sec, page + 1) : go(sec + 1, 0);
+  const sum = el('div', 'sum');
+  const doneB = el('b', '', secDone(s) + ' of ' + s.items.length);
+  const subB = el('b', '', fmt(secScore(s)) + ' / ' + fmt(s.max));
+  sum.append(doneB, ' scored · subtotal ', subB);
 
-  sub.append(el('span', 'num', secDone(s) + ' of ' + s.items.length + ' scored in this section'), el('b', 'num', fmt(secScore(s)) + ' / ' + fmt(s.max)));
+  const prev = el('button', 'gs-btn'); prev.type = 'button';
+  const next = el('button', 'gs-btn gs-btn-outline'); next.type = 'button';
+  if (narrow()) {
+    const i = s.items.indexOf(ALL[cur]);
+    prev.innerHTML = ICON.prev; prev.setAttribute('aria-label', 'Previous criterion');
+    prev.disabled = sec === 0 && i <= 0;
+    prev.onclick = () => step(-1);
+    next.append('Next criterion '); next.insertAdjacentHTML('beforeend', ICON.next);
+    next.onclick = () => step(1);
+  } else {
+    prev.textContent = page > 0 ? 'Previous page' : 'Previous section';
+    prev.disabled = sec === 0 && page === 0;
+    prev.onclick = () => page > 0 ? go(sec, page - 1) : go(sec - 1, 99);
+    const label = page < pages.length - 1 ? 'Next page' : (sec < SECTIONS.length - 1 ? 'Next section' : 'Review and submit');
+    next.append(label + ' '); next.insertAdjacentHTML('beforeend', ICON.next);
+    next.onclick = () => page < pages.length - 1 ? go(sec, page + 1) : go(sec + 1, 0);
+  }
+  foot.append(sum, prev, next);
 }
 
-function drawOverview() {
-  const ov = $('gs-overview'); ov.innerHTML = '';
-  SECTIONS.forEach(s => { ov.append(el('span', '', s.name)); ov.append(el('b', 'num', fmt(secScore(s)) + ' / ' + fmt(s.max))); });
-  const left = ALL.filter(c => !(c.id in scores)).length;
-  ov.append(el('span', '', left ? left + ' criteria still to score' : 'Every criterion is scored'));
-  ov.append(el('b', 'num', fmt(ALL.reduce((a, c) => a + (scores[c.id] ?? 0), 0)) + ' / ' + fmt(RUBRIC_TOTAL)));
+// The phone's previous and next: criterion by criterion, across sections.
+function step(d) {
+  const j = ALL.indexOf(ALL[cur]) + d;
+  if (j < 0) return;
+  if (j >= ALL.length) { go(REVIEW, 0); return; }
+  cur = j; sec = ALL[j].sec; draw();
 }
 
+/* ── Side column ─────────────────────────────────────────────── */
+function drawAside() {
+  const box = $('gs-sum-rows'); box.innerHTML = '';
+  SECTIONS.forEach(s => {
+    const done = secDone(s), n = s.items.length;
+    const r = el('div', 'gs-sum-row' + (done === n ? ' done' : ''));
+    const line = el('div', 'line'); line.append(el('span', '', s.name), el('b', '', fmt(secScore(s)) + ' / ' + fmt(s.max)));
+    const bar = el('span', 'bar'); const fill = el('i'); fill.style.width = Math.round(done / n * 100) + '%'; bar.append(fill);
+    r.append(line, bar);
+    box.append(r);
+  });
+  $('gs-sum-total').textContent = total();
+
+  const todo = $('gs-todo'); todo.innerHTML = '';
+  const left = unscored();
+  const h = el('h3', '', 'Still to score '); h.append(el('span', '', '(' + left.length + ')'));
+  todo.append(h);
+  if (!left.length) { todo.append(el('p', 'all', 'Every criterion is scored.')); return; }
+  const ul = el('ul'); todo.append(ul);
+  const more = el('p', 'more');
+  left.forEach(c => {
+    const li = el('li'); const b = el('button'); b.type = 'button';
+    const t = el('span', 't'); t.append(el('b', '', c.n), el('small', '', SECTIONS[c.sec].name));
+    b.append(t); b.insertAdjacentHTML('beforeend', ICON.next);
+    b.onclick = () => jumpTo(c);
+    li.append(b); ul.append(li);
+  });
+  // As many as the card has room for, then a count of the rest.
+  todo.append(more);
+  let hidden = 0;
+  while (ul.children.length > 1 && todo.scrollHeight > todo.clientHeight + 1) {
+    ul.lastElementChild.remove(); hidden++;
+    more.textContent = 'and ' + hidden + ' more';
+  }
+  if (!hidden) more.remove();
+}
+
+/* ── Review and submit ───────────────────────────────────────── */
+function drawReview() {
+  const list = $('gs-review-list'); list.innerHTML = '';
+  SECTIONS.forEach(s => {
+    const head = el('div', 'gs-review-sec');
+    const sub = el('span'); sub.append(el('b', '', fmt(secScore(s))), ' / ' + fmt(s.max));
+    head.append(el('h3', '', s.name), sub);
+    list.append(head);
+    s.items.forEach(c => {
+      const b = el('button', 'gs-review-row' + (has(c) ? '' : ' missing')); b.type = 'button';
+      const k = pickedLevel(c);
+      b.append(el('span', 'n', c.n), el('span', 'lv', has(c) ? (k >= 0 ? levelName(c, k) : 'Scored') : 'Not scored'), el('span', 'sc', has(c) ? fmt(scores[c.id]) : '—'));
+      b.setAttribute('aria-label', c.n + ': ' + (has(c) ? fmt(scores[c.id]) + ' points. Change it' : 'not scored. Score it'));
+      b.onclick = () => jumpTo(c);
+      list.append(b);
+    });
+  });
+}
+
+function drawMissing() {
+  let box = $('gs-missing');
+  const left = unscored();
+  if (sec !== REVIEW || !left.length || {{ $isAbstained ? 'true' : 'false' }}) { if (box) box.remove(); return; }
+  if (!box) { box = el('div', 'gs-alert warn'); box.id = 'gs-missing'; box.setAttribute('role', 'alert'); $('formError').after(box); }
+  box.innerHTML = '';
+  const names = left.slice(0, 2).map(c => c.n).join(', ') + (left.length > 2 ? ' and ' + (left.length - 2) + ' more' : '');
+  const t = el('span'); t.append(el('b', '', 'Not scored: '), names);
+  const go = el('button', 'link', 'Score it'); go.type = 'button'; go.onclick = () => jumpTo(left[0]);
+  box.append(t, go);
+}
+
+/* ── Drawing it all ──────────────────────────────────────────── */
 function go(s, p) {
-  if (s < 0 || s > REMARKS) return;
+  if (s < 0 || s > REVIEW) return;
   sec = s; page = p;
   draw();
-  if (sec < REMARKS && !pages[page].some(c => ALL.indexOf(c) === cur)) { cur = ALL.indexOf(pages[page][0]); draw(); }
+  if (sec < REVIEW && !narrow() && !pages[page].some(c => ALL.indexOf(c) === cur)) { cur = ALL.indexOf(pages[page][0]); draw(); }
+}
+
+function jumpTo(c) {
+  cur = ALL.indexOf(c); sec = c.sec; page = 0; draw();
+  const p = pages.findIndex(pg => pg.includes(c)); if (p > 0) { page = p; draw(); }
+}
+
+function jumpNext() {
+  const left = unscored(); if (!left.length) return;
+  const after = left.find(c => ALL.indexOf(c) > cur) || left[0];
+  jumpTo(after);
 }
 
 function score(c, s) {
   scores[c.id] = s;
   dirty = true;
-  $('saveStatus').textContent = 'Unsaved changes';
-  const next = SECTIONS[c.sec].items.find(x => !(x.id in scores));
+  setStatus('Unsaved changes', true);
+  const next = SECTIONS[c.sec].items.find(x => !has(x));
   if (next) {
     cur = ALL.indexOf(next);
     const p = pages.findIndex(pg => pg.includes(next));
@@ -485,48 +908,49 @@ function score(c, s) {
 }
 
 function draw() {
-  const onRemarks = sec === REMARKS;
-  $('gs-sheet-area').hidden = onRemarks;
-  $('gs-remarks-area').hidden = !onRemarks;
+  const onReview = sec === REVIEW;
+  $('gs-sheet-body').hidden = onReview;
+  $('gs-review-body').hidden = !onReview;
+  drawHeader();
   drawSteps();
-  if (onRemarks) drawOverview(); else drawSheet();
-  const n = Object.keys(scores).length;
-  const total = fmt(ALL.reduce((a, c) => a + (scores[c.id] ?? 0), 0));
-  $('gs-total').textContent = total;
-  $('gs-left').textContent = ALL.length - n;
-  $('gs-jump').disabled = n === ALL.length;
+  if (onReview) drawReview(); else { drawSheet(); drawAside(); }
+  drawMissing();
+
+  const left = unscored().length;
+  $('gs-hint').textContent = left ? left + ' left to score' : '';
   // The server refuses a submission with any criterion unscored. There is no
   // Submit button while abstaining.
-  const submit = $('gs-submit');
+  const submit = $('gs-submit'), toReview = $('gs-to-review');
   if (submit) {
-    submit.disabled = n < ALL.length;
-    submit.title = n < ALL.length ? 'Score every criterion first' : '';
+    submit.hidden = !onReview;
+    submit.disabled = left > 0;
+    submit.title = left ? 'Score every criterion first' : '';
+  }
+  if (toReview) {
+    toReview.hidden = onReview;
+    toReview.onclick = () => go(REVIEW, 0);
   }
 }
 
-$('gs-jump').onclick = () => {
-  const c = ALL.find(x => !(x.id in scores)); if (!c) return;
-  cur = ALL.indexOf(c); sec = c.sec; page = 0; draw();
-  const p = pages.findIndex(pg => pg.includes(c)); if (p > 0) { page = p; draw(); }
-};
-
 document.addEventListener('keydown', e => {
-  if (e.target.closest && e.target.closest('textarea, input, select')) return;
+  if (e.target.closest && e.target.closest('textarea, input, select, [contenteditable]')) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
     e.preventDefault();
     const forward = e.key === 'ArrowRight';
-    if (sec < REMARKS && forward && page < pages.length - 1) go(sec, page + 1);
-    else if (sec < REMARKS && !forward && page > 0) go(sec, page - 1);
+    if (sec < REVIEW && forward && page < pages.length - 1) go(sec, page + 1);
+    else if (sec < REVIEW && !forward && page > 0) go(sec, page - 1);
     else go(sec + (forward ? 1 : -1), forward ? 0 : 99);
     return;
   }
-  if (sec === REMARKS) return;
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); jumpNext(); return; }
+  if (sec === REVIEW) return;
   const items = SECTIONS[sec].items, i = items.indexOf(ALL[cur]);
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
     const j = Math.max(0, Math.min(items.length - 1, (i < 0 ? 0 : i) + (e.key === 'ArrowDown' ? 1 : -1)));
     cur = ALL.indexOf(items[j]);
-    const p = pages.findIndex(pg => pg.includes(items[j])); if (p !== page) page = p;
+    const p = pages.findIndex(pg => pg.includes(items[j])); if (p >= 0 && p !== page) page = p;
     draw();
   } else if (/^[1-9]$/.test(e.key) && i >= 0) {
     const level = items[i].levels[+e.key - 1];
@@ -538,13 +962,12 @@ document.addEventListener('keydown', e => {
 // drawn against a height that is real. Being visible is not enough: the moment
 // the skeleton hands over, the area is on screen with no height yet, and
 // measuring then puts a single criterion on every page.
-let sheetHeight = 0;
+let bodyHeight = 0;
 let waited = 0;
 
 (function whenVisible() {
-  const area = $('gs-sheet-area');
-  const remarks = $('gs-remarks-area');
-  const ready = area.offsetParent !== null ? area.clientHeight > 0 : remarks.offsetParent !== null;
+  const page = document.querySelector('.gs');
+  const ready = page.offsetParent !== null && page.clientHeight > 0;
 
   // Waiting for a height is worth a couple of seconds, never the whole page:
   // if one never arrives, a badly paginated sheet still beats a blank one.
@@ -554,30 +977,41 @@ let waited = 0;
     return;
   }
 
-  sheetHeight = area.clientHeight;
   draw();
   // Rows are measured to fill the page; measure again once the font has loaded.
   document.fonts.ready.then(draw);
 
   // The height can still change under it - the font swapping, the sidebar
-  // collapsing, a zoom. The rows are flex-sized and clipped, so redrawing them
-  // cannot change this height back; only the page around them can.
+  // folding, a zoom. Only the page around the sheet can change it.
   if (window.ResizeObserver) {
+    const sheetBody = $('gs-sheet-body');
+    bodyHeight = sheetBody.clientHeight;
     new ResizeObserver(() => {
-      const h = area.clientHeight;
+      const h = sheetBody.clientHeight;
 
-      if (h > 0 && Math.abs(h - sheetHeight) > 4) {
-        sheetHeight = h;
+      if (h > 0 && Math.abs(h - bodyHeight) > 4) {
+        bodyHeight = h;
         draw();
       }
-    }).observe(area);
+    }).observe(sheetBody);
   }
 })();
 let resizeTimer;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 120); });
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+$('gs-remarks-field').addEventListener('input', () => { dirty = true; setStatus('Unsaved changes', true); });
 
 /* ── Saving ──────────────────────────────────────────────────── */
+function setStatus(text, unsaved) {
+  const box = $('saveStatus');
+  box.classList.toggle('dirty', !!unsaved);
+  box.querySelector('span').textContent = text;
+}
+
+function clock() {
+  return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
 function showFormError(msg) {
   const box = $('formError');
   box.hidden = !msg;
@@ -585,8 +1019,7 @@ function showFormError(msg) {
 }
 
 function collectPayload() {
-  const remarksField = document.querySelector('#gradingForm textarea[name="remarks"]');
-  return { scores: scores, remarks: remarksField ? remarksField.value : null };
+  return { scores: scores, remarks: $('gs-remarks-field').value };
 }
 
 // The panel's one decision, recorded by the chair after the briefing.
@@ -596,9 +1029,9 @@ function recordOutcome() {
 
   const btn = $('record-outcome-btn');
   btn.disabled = true;
-  btn.textContent = 'Recording...';
+  btn.textContent = 'Recording…';
 
-  fetch('{{ route('instructor.grading.outcome', $defense->defense_id) }}', {
+  fetch(ROUTES.outcome, {
     method: 'POST',
     headers: {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -615,7 +1048,7 @@ function recordOutcome() {
         return;
       }
       dirty = false;
-      window.location.reload();
+      reloadOnReview();
     })
     .catch(() => {
       showFormError('Could not reach the server.');
@@ -623,10 +1056,15 @@ function recordOutcome() {
     });
 }
 
-function postGrade(url, statusMsg, method) {
+function reloadOnReview() {
+  const url = new URL(location.href);
+  url.searchParams.set('step', 'review');
+  location.href = url.toString();
+}
+
+function postGrade(url, method) {
   showFormError('');
-  const saveStatus = $('saveStatus');
-  saveStatus.textContent = 'Saving…';
+  setStatus('Saving…', true);
 
   fetch(url, {
     method: method,
@@ -641,38 +1079,35 @@ function postGrade(url, statusMsg, method) {
     .then(res => res.json().then(data => ({ ok: res.ok, data })))
     .then(({ ok, data }) => {
       if (!ok || !data.success) {
-        saveStatus.textContent = 'Not saved';
+        setStatus('Not saved', true);
         showFormError(data.message || 'Something went wrong. Please try again.');
         return;
       }
       dirty = false;
-      saveStatus.textContent = statusMsg;
       if (data.data && data.data.status === 'submitted') {
-        // If they can record outcome (Panel Chair, all grades in, no outcome yet),
-        // navigate to the Remarks & Decision tab instead of redirecting
-        if (data.data.can_record_outcome) {
-          saveStatus.textContent = 'Submitted - everyone has scored, record the decision below';
-          // Navigate to Remarks tab
-          go({{ $sections->count() }}, 0);
-          draw();
-          return;
-        }
-
-        // For non-chair or when outcome already recorded, return to team list
-        setTimeout(() => { window.location.href = '{{ route('instructor.grading') }}'; }, 900);
+        setStatus('Submitted ' + clock());
+        // The chair whose submission completes the panel stays to record
+        // the decision; everyone else goes back to their teams.
+        if (data.data.can_record_outcome) { reloadOnReview(); return; }
+        setTimeout(() => { window.location.href = ROUTES.list; }, 900);
+        return;
       }
+      setStatus('Saved ' + clock());
     })
     .catch(() => {
-      saveStatus.textContent = 'Not saved';
+      setStatus('Not saved', true);
       showFormError('Network error. Nothing was saved.');
     });
 }
+
+function saveDraft() { postGrade(ROUTES.save, 'PUT'); }
+function submitGrade() { postGrade(ROUTES.submit, 'PATCH'); }
 
 /* ── Abstaining ──────────────────────────────────────────────── */
 const ABSTAIN_MIN = 10;
 
 function abstainFetch(method, body) {
-  return fetch('{{ route('instructor.grading.abstain', $defense->defense_id) }}', {
+  return fetch(ROUTES.abstain, {
     method: method,
     credentials: 'same-origin',
     headers: {
@@ -749,8 +1184,40 @@ function withdrawAbstention() {
 
 if ($('abstain-reason')) $('abstain-reason').addEventListener('input', updateAbstainCount);
 
-function saveDraft() { postGrade('{{ route('instructor.grading.save', $defense->defense_id) }}', 'Draft saved', 'PUT'); }
-function submitGrade() { postGrade('{{ route('instructor.grading.submit', $defense->defense_id) }}', 'Submitted - returning to your teams…', 'PATCH'); }
+/* ── Grading for the panel ───────────────────────────────────── */
+const WHO = {{ Js::from($who) }};
+
+if ($('gs-who-change')) $('gs-who-change').onclick = () => openWhoGrades(WHO);
+
+// A chip takes a panelist out of the shared grade, or puts them back.
+document.querySelectorAll('#gs-shared-chips button[data-id]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const id = +chip.dataset.id;
+    const joined = WHO.joined.filter(x => x !== id);
+    if (chip.getAttribute('aria-pressed') !== 'true') joined.push(id);
+    if (dirty) { showFormError('Save your draft first, then change who you grade for.'); return; }
+    chip.disabled = true;
+    fetch(WHO.url, {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ grader_id: joined.length ? WHO.me : null, joined: joined }),
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (!res.success) { showFormError(res.message || 'Could not change who you grade for.'); chip.disabled = false; return; }
+        dirty = false;
+        window.location.reload();
+      })
+      .catch(() => { showFormError('Could not reach the server.'); chip.disabled = false; });
+  });
+});
+
+// The paper copy menu closes when anything else is clicked.
+document.addEventListener('click', e => {
+  const menu = document.querySelector('.gs-paper[open]');
+  if (menu && !menu.contains(e.target)) menu.removeAttribute('open');
+});
 
 /* Mobile sidebar toggle */
 var sidebarEl = document.querySelector('.sidebar');
@@ -762,11 +1229,13 @@ function toggleSidebar() {
 function openSidebar() {
   if (!sidebarEl || !sidebarOverlay) return;
   sidebarEl.classList.add('mobile-open'); sidebarOverlay.classList.add('open');
+  document.body.classList.add('sidebar-open');
   document.body.style.overflow = 'hidden';
 }
 function closeSidebar() {
   if (!sidebarEl || !sidebarOverlay) return;
   sidebarEl.classList.remove('mobile-open'); sidebarOverlay.classList.remove('open');
+  document.body.classList.remove('sidebar-open');
   document.body.style.overflow = '';
 }
 </script>

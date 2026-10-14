@@ -3,69 +3,188 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdminDriveFolder;
-use App\Models\CapstoneExpert;
 use App\Models\Resource;
 use App\Models\Student;
-use App\Models\StudentSchoolYear;
+use App\Support\GradingSheet;
+use App\Support\StudentResources;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\View\View;
 
 class ResourceController extends Controller
 {
-    public function index()
+    /** The categories a CaPSA files under, as the page names them. */
+    public const CATEGORIES = [
+        'pre-proposal' => 'Pre-proposal',
+        'ch1-3' => 'Chapters 1–3',
+        'ch4-5' => 'Chapters 4–5',
+        'final' => 'Final manuscript',
+        'presentation' => 'Presentation',
+        'lesson' => 'Lessons',
+        'forms' => 'Forms',
+        'other' => 'Other',
+    ];
+
+    public function __construct(private StudentResources $resources) {}
+
+    public function index(): View
+    {
+        /** @var Student $student */
+        $student = auth()->user();
+        $program = $this->resources->program($student);
+        $section = $this->resources->section($student);
+
+        $files = $this->resources->files($student)->get()->map(fn (Resource $r) => [
+            'key' => 'f'.$r->resource_id,
+            'kind' => 'file',
+            'title' => $r->title ?: ($r->file_name ?: 'Untitled'),
+            'category' => self::categoryKey($r->category),
+            'categoryLabel' => self::categoryLabel($r->category),
+            'type' => self::typeLabel($r),
+            'size' => self::size($r->file_size),
+            'date' => $r->uploaded_at?->format('M j'),
+            'sort' => $r->uploaded_at?->timestamp ?? 0,
+            'isNew' => $r->uploaded_at !== null && $r->uploaded_at->gt(now()->subWeek()),
+            'description' => $r->description,
+            'downloadUrl' => $r->is_downloadable !== false && ($r->drive_file_id || $r->external_url)
+                ? route('student.resources.download', $r)
+                : null,
+            'previewUrl' => $r->drive_file_id ? 'https://drive.google.com/file/d/'.$r->drive_file_id.'/preview' : null,
+            'openUrl' => $r->drive_web_view_link ?: $r->external_url,
+        ]);
+
+        $rubrics = $this->resources->rubrics($program)->map(fn (array $row) => [
+            'key' => 'r'.$row['rubric']->rubric_id,
+            'kind' => 'rubric',
+            'title' => $row['stage'].' Rubric',
+            'category' => 'rubrics',
+            'categoryLabel' => 'Rubrics',
+            'type' => 'PDF',
+            'size' => null,
+            'date' => $row['rubric']->updated_at?->format('M j'),
+            'sort' => $row['rubric']->updated_at?->timestamp ?? 0,
+            'isNew' => false,
+            'description' => 'The same sheet your panel scores you with at the '.$row['stage'].'. Read it before you defend.',
+            'forProgram' => $row['rubric']->program ? $row['rubric']->program.' version' : 'For all programs',
+            'forWho' => $row['rubric']->program ?: 'All programs',
+            'points' => GradingSheet::points((float) $row['rubric']->total_points),
+            'downloadUrl' => route('student.resources.rubric', $row['slug']),
+            'previewUrl' => route('student.resources.rubric', ['stage' => $row['slug'], 'view' => 1]),
+            'openUrl' => null,
+        ]);
+
+        $items = $files->concat($rubrics)->sortByDesc('sort')->values();
+
+        // Only the categories something is filed under, in the page's order.
+        $present = $items->pluck('category')->unique();
+        $categories = collect(self::CATEGORIES + ['rubrics' => 'Rubrics'])
+            ->filter(fn ($label, $key) => $present->contains($key))
+            ->merge($items->whereNotIn('category', array_keys(self::CATEGORIES + ['rubrics' => '']))->pluck('categoryLabel', 'category'));
+
+        return view('student.resources', [
+            'items' => $items,
+            'categories' => $categories,
+            'program' => $program,
+            'section' => $section,
+        ]);
+    }
+
+    /**
+     * Hand over a file the student may see, and count it.
+     *
+     * The file lives in the CaPSA's Google Drive; this sends the browser to
+     * Drive's own download. A file the student cannot see is not found, the
+     * same answer a file that does not exist gets.
+     */
+    public function download(Resource $resource): RedirectResponse
     {
         /** @var Student $student */
         $student = auth()->user();
 
-        // The enrolment row carries a program, but it is null on every row
-        // in practice, and the filter below used to be skipped entirely when
-        // it was - which showed every student every program's resources. The
-        // student's own course answers the same question, so it is the
-        // fallback, and a student we cannot place sees only the resources
-        // meant for every program rather than all of them.
-        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
-        $program = $studentSy?->program ?: Student::mapCourseToProgram($student->course ?? '');
+        abort_unless($this->resources->files($student)->whereKey($resource->getKey())->exists(), 404);
+        abort_if($resource->is_downloadable === false, 404);
 
-        // Their own CaPSA's uploads, for their own program. The page used to
-        // show every resource in the system: the program filter was skipped
-        // whenever the program could not be read - which is every row in
-        // practice - and there was no filter on the uploader at all.
-        //
-        // The section is computed rather than stored, so the CaPSAs covering
-        // it are matched in PHP. There are a handful of them.
-        $section = Student::computeSectionLabel($student->course, $student->year_section);
+        $url = $resource->drive_file_id
+            ? 'https://drive.google.com/uc?export=download&id='.urlencode($resource->drive_file_id)
+            : $resource->external_url;
 
-        $capsaIds = $section
-            ? CapstoneExpert::whereHas('roles', fn ($q) => $q->where('role_name', 'capstone_adviser'))
-                ->get(['expert_id', 'sections'])
-                ->filter(fn ($capsa) => in_array($section, $capsa->sections ?? [], true))
-                ->pluck('expert_id')
-                ->all()
-            : [];
+        abort_unless($url, 404);
 
-        // No CaPSA covering this student means no resources - deliberately,
-        // not everything. An empty list read as "no filter" is how this page
-        // came to show every program's material to everybody.
-        $resources = Resource::orderByDesc('uploaded_at')
-            ->with('sections')
-            ->whereIn('uploaded_by', $capsaIds)
-            ->where(function ($q) use ($program, $section) {
-                // Aimed at named sections: theirs has to be one of them.
-                $q->whereHas('sections', fn ($w) => $w->where('section', $section ?: '__none__'));
+        $resource->increment('downloads');
 
-                // Or aimed at no section, in which case the program decides.
-                $q->orWhere(fn ($w) => $w
-                    ->whereDoesntHave('sections')
-                    ->where(fn ($p) => $p
-                        ->when($program, fn ($x) => $x->where('resource_for', $program))
-                        ->orWhereNull('resource_for')));
-            })
-            ->get();
+        return redirect()->away($url);
+    }
 
-        $folders = AdminDriveFolder::orderBy('name')->get();
+    /**
+     * The blank rubric for a defense stage, as the department's own form.
+     *
+     * The one for the student's program, else the stage's rubric for every
+     * program - whichever their panel grades with. ?view=1 shows it in the
+     * page instead of saving it.
+     */
+    public function rubric(Request $request, string $stage, GradingSheet $sheets): Response
+    {
+        /** @var Student $student */
+        $student = auth()->user();
+        $row = $this->resources->rubric($stage, $this->resources->program($student));
 
-        return view('student.resources', [
-            'resources' => $resources,
-            'folders' => $folders,
+        abort_unless($row, 404);
+
+        $dompdf = Pdf::loadView('instructor.pdf.grading-sheet', ['sheet' => $sheets->blank($row['rubric'], $row['stage'])])
+            ->setPaper('letter', 'landscape')
+            ->getDomPDF();
+        $dompdf->render();
+
+        $canvas = $dompdf->getCanvas();
+        $canvas->page_text($canvas->get_width() / 2 - 24, $canvas->get_height() - 36, 'Page {PAGE_NUM} of {PAGE_COUNT}', $dompdf->getFontMetrics()->getFont('Times-Roman'), 10);
+
+        $disposition = $request->boolean('view') ? 'inline' : 'attachment';
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => $disposition.'; filename="'.$row['stage'].' Rubric.pdf"',
         ]);
+    }
+
+    /** The category's key: the CaPSA's choice, or an older free-text one made into one. */
+    private static function categoryKey(?string $category): string
+    {
+        $key = strtolower(trim((string) $category));
+
+        return $key === '' ? 'other' : $key;
+    }
+
+    private static function categoryLabel(?string $category): string
+    {
+        $key = self::categoryKey($category);
+
+        return self::CATEGORIES[$key] ?? ucwords(str_replace(['-', '_'], ' ', $key));
+    }
+
+    /** "PDF", "DOCX" - from the extension, or the file name when there is none. */
+    private static function typeLabel(Resource $resource): string
+    {
+        $ext = $resource->file_type ?: pathinfo((string) $resource->file_name, PATHINFO_EXTENSION);
+
+        return match (strtolower((string) $ext)) {
+            'doc', 'docx', 'gdoc' => 'DOCX',
+            'ppt', 'pptx', 'gslides' => 'PPTX',
+            'pdf' => 'PDF',
+            '' => $resource->external_url ? 'LINK' : 'FILE',
+            default => strtoupper((string) $ext),
+        };
+    }
+
+    private static function size(?int $bytes): ?string
+    {
+        if (! $bytes) {
+            return null;
+        }
+
+        return $bytes >= 1048576
+            ? round($bytes / 1048576, 1).' MB'
+            : max(1, round($bytes / 1024)).' KB';
     }
 }

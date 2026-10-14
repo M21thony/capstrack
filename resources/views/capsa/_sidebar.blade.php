@@ -115,6 +115,7 @@
 @endphp
 
 
+@include('partials.sidebar-rail')
 @include('partials.portal-nav-icons')
 <div class="sidebar">
   <div class="sidebar-brand">

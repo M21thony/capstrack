@@ -355,6 +355,8 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
     Route::post('/grading/{defense}/abstain', [GradingController::class, 'abstain'])->name('grading.abstain');
     Route::delete('/grading/{defense}/abstain', [GradingController::class, 'withdrawAbstention'])->name('grading.abstain.withdraw');
+    Route::put('/grading/{defense}/grader', [GradingController::class, 'setGrader'])->name('grading.grader');
+    Route::delete('/grading/{defense}/join', [GradingController::class, 'leaveShared'])->name('grading.join.leave');
     // What team leaders answered about this expert, anonymously.
     Route::get('/evaluations', [InstructorEvaluationController::class, 'index'])->name('evaluations');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
@@ -540,6 +542,10 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
             Route::post('/financial/receipts', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
             Route::get('/resources', [StudentResourceController::class, 'index'])->name('student.resources');
+            // The file itself: a redirect to Drive's download, counted.
+            Route::get('/resources/{resource}/file', [StudentResourceController::class, 'download'])->name('student.resources.download');
+            // The blank rubric a stage is graded with, for the student's own program.
+            Route::get('/resources/rubrics/{stage}.pdf', [StudentResourceController::class, 'rubric'])->where('stage', '[a-z-]+')->name('student.resources.rubric');
             Route::get('/archive', [StudentArchiveController::class, 'index'])->name('student.archive');
             // The manuscript a finished team hands in, from the archive page.
             Route::post('/archive/manuscript', [StudentArchiveController::class, 'submit'])->name('student.archive.manuscript.submit');
