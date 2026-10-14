@@ -60,6 +60,7 @@
 @endphp
 <!-- SIDEBAR -->
 @include('partials.portal-nav-icons')
+@include('partials.sidebar-rail')
 <div class="sidebar">
   <div class="sidebar-brand">
     <div class="brand-badge">

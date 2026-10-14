@@ -162,7 +162,7 @@
 </head>
 <body>
 
-@include('instructor.partials.sidebar', ['currentPage' => 'grading'])
+@include('instructor.partials.sidebar', ['currentPage' => 'grading', 'sidebarRail' => true])
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <div class="main">

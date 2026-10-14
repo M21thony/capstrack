@@ -5,6 +5,7 @@
        admin/_sidebar for where that section is built. --}}
   @include('capsa._sidebar')
 @else
+@include('partials.sidebar-rail')
 @include('partials.portal-nav-icons')
 <div class="sidebar">
   @if(!isset($showBrand) || $showBrand)
