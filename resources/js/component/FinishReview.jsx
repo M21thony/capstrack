@@ -30,7 +30,7 @@ export default function FinishReview({ open, onClose, onConfirm, remarks, genera
           onConfirm(verdict);
         }}
       >
-        <h2 id="finish-title">Finish your review{ctx.title ? ` of ${ctx.title}` : ""}</h2>
+        <h2 id="finish-title">Apply changes{ctx.title ? ` to ${ctx.title}` : ""}</h2>
         <div className="rr-sum">
           <span><b>{remarks.length}</b> {remarks.length === 1 ? "remark" : "remarks"} on {pages} {pages === 1 ? "page" : "pages"}</span>
           <span><b>{mustFix}</b> must fix</span>

@@ -77,8 +77,10 @@ textarea.rr-input{min-height:64px;resize:none}
 
 /* The remark box, beside the words it is about */
 .rr-pop{position:absolute;z-index:30;width:300px;background:#fff;border:1px solid #e0e2e8;border-radius:12px;box-shadow:0 12px 32px rgba(24,25,31,.2);padding:10px;display:grid;gap:8px;cursor:auto}
+.rr-selbtn{position:absolute;z-index:30;transform:translateX(-100%);box-shadow:0 4px 12px rgba(24,25,31,.2)}
 .rr-pop::before{content:"";position:absolute;left:-7px;top:calc(var(--ay,24px) - 7px);width:12px;height:12px;background:#fff;border-left:1px solid #e0e2e8;border-bottom:1px solid #e0e2e8;transform:rotate(45deg)}
 .rr-pop.flip::before{left:auto;right:-7px;transform:rotate(-135deg)}
+.rr-pop.under::before{display:none}
 .rr-pop-quote{font-family:"Times New Roman",Georgia,serif;font-style:italic;font-size:13px;color:#4a5060;border-left:3px solid #c8cad4;padding-left:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .rr-kinds{display:flex;flex-wrap:wrap;gap:4px}
 .rr-kind{display:inline-flex;align-items:center;gap:5px;border:1px solid #e0e2e8;background:#fff;border-radius:999px;padding:2px 9px 2px 6px;font-size:12px;font-weight:600;color:#4a5060;cursor:pointer;min-height:28px}

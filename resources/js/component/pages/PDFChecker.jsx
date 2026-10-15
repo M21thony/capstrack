@@ -276,6 +276,7 @@ function PDFChecker({
   const drawing = useRef(null);
   const [popPos, setPopPos] = useState(null);
   const [selecting, setSelecting] = useState(false);
+  const [selBtn, setSelBtn] = useState(null);
   const popRef = useRef(null);
   const textRef = useRef(null);
 
@@ -298,6 +299,7 @@ function PDFChecker({
       const node = sel?.anchorNode;
       const el = node && (node.nodeType === 1 ? node : node.parentElement);
       setSelecting(Boolean(sel && !sel.isCollapsed && el?.closest?.(".rr-page") && !composingRef.current));
+      if (!sel || sel.isCollapsed) setSelBtn(null);
     };
     document.addEventListener("selectionchange", onChange);
     return () => document.removeEventListener("selectionchange", onChange);
@@ -308,6 +310,13 @@ function PDFChecker({
     setEditingId(null);
     setAdding(false);
     setPopPos(null);
+  };
+
+  // A click away closes the box, but never drops words the reviewer typed: those need Add or Cancel.
+  const clickAway = () => {
+    if (text.trim() === (editing?.text || "").trim()) return closeBox();
+    textRef.current?.focus({ preventScroll: true });
+    notify("Your remark is not saved yet. Add it, or press Cancel to drop it.", { type: "info" });
   };
 
   // A new remark on a mark: empty fields, and the figure guessed from the caption under it.
@@ -376,7 +385,7 @@ function PDFChecker({
       setDraft((d) => ({ ...d, highlightRects, shape_ref: { ...d.shape_ref, cells } }));
       return;
     }
-    if (composingRef.current) { closeBox(); return; }
+    if (composingRef.current) { clickAway(); return; }
     setSelectedId(null);
     beginRemark({ type: "shape", pageNumber: n, highlightRects: hit.rects, shape_ref: { file: hit.page.file, page: hit.page.name, cells: [cell] } });
   };
@@ -386,7 +395,7 @@ function PDFChecker({
     if (mode === "shape") { e.preventDefault(); pickShape(e, n); return; }
     if (adding) {
       if (n !== draft.pageNumber) { notify(`Boxes on one remark stay on one page. Draw on page ${draft.pageNumber}.`, { type: "error" }); return; }
-    } else if (composingRef.current) { closeBox(); return; }
+    } else if (composingRef.current) { clickAway(); return; }
     e.preventDefault();
     const { x, y, b } = pointOn(e, e.currentTarget);
     if (mode === "pin") {
@@ -577,30 +586,58 @@ function PDFChecker({
       left = Math.max(canvas.scrollLeft + 12, aLeft - w - gap);
       flip = true;
     }
+    // With no room beside them, the box goes under (or over) the words instead of on top of them.
+    const aTop = p.top - c.top + canvas.scrollTop + anchor.top_position * p.height;
+    const aBottom = aTop + anchor.highlight_height * p.height;
+    const viewTop = canvas.scrollTop + 8;
+    const viewBottom = canvas.scrollTop + canvas.clientHeight - 8;
+    if (left < aRight + 4 && left + w > aLeft - 4) {
+      const under = aBottom + gap + h <= viewBottom ? aBottom + gap : aTop - gap - h >= viewTop ? aTop - gap - h : null;
+      if (under != null) {
+        setPopPos({ left: Math.min(Math.max(aLeft, canvas.scrollLeft + 8), canvas.scrollLeft + canvas.clientWidth - w - 8), top: under, under: true });
+        return;
+      }
+    }
     // Kept inside the visible part of the page, so it never opens below the screen.
-    const top = Math.max(canvas.scrollTop + 8, Math.min(ay - 28, canvas.scrollTop + canvas.clientHeight - h - 8));
+    const top = Math.max(viewTop, Math.min(ay - 28, viewBottom - h));
     setPopPos({ left, top, ay: Math.min(Math.max(14, ay - top), h - 14), flip });
   });
 
   useEffect(() => { if (popPos) textRef.current?.focus({ preventScroll: true }); }, [popPos]);
-  useEffect(() => { if (composingRef.current) setPopPos(null); }, [col.pageWidth]);
+  useEffect(() => { if (composingRef.current) setPopPos(null); setSelBtn(null); }, [col.pageWidth]);
 
   // The page is editable for keyboard users, and a drag left to the browser there jumps to
   // the end of the page once it passes the words. So a drag picks its two ends itself.
   const steerDrag = (e) => {
     const layer = e.currentTarget.querySelector(".textLayer");
     if (mode !== "text" || e.button !== 0 || e.detail > 1 || e.defaultPrevented || !layer?.contains(e.target)) return;
-    const anchor = spotNear(layer, e.clientX, e.clientY);
-    if (!anchor) return;
+    const at = spotNear(layer, e.clientX, e.clientY);
+    if (!at) return;
     e.preventDefault();
     const sel = window.getSelection();
-    sel.collapse(...anchor);
+    // Shift+click moves the far end of words already selected, so a selection can be fixed.
+    const anchor = e.shiftKey && !sel.isCollapsed && layer.contains(sel.anchorNode) ? [sel.anchorNode, sel.anchorOffset] : at;
+    sel.setBaseAndExtent(...anchor, ...at);
+    setSelBtn(null);
     const follow = (m) => {
       const focus = spotNear(layer, m.clientX, m.clientY);
       if (focus) sel.setBaseAndExtent(...anchor, ...focus);
     };
     window.addEventListener("mousemove", follow);
-    window.addEventListener("mouseup", () => window.removeEventListener("mousemove", follow), { once: true });
+    window.addEventListener("mouseup", () => { window.removeEventListener("mousemove", follow); placeSelBtn(); }, { once: true });
+  };
+
+  // Letting go of the mouse leaves the words selected; the remark starts from this button (or Enter).
+  const placeSelBtn = () => {
+    const sel = window.getSelection();
+    const canvas = col.canvasRef.current;
+    const node = sel?.anchorNode;
+    const el = node && (node.nodeType === 1 ? node : node.parentElement);
+    const rects = sel && !sel.isCollapsed && sel.rangeCount ? [...sel.getRangeAt(0).getClientRects()].filter((r) => r.width > 1 && r.height > 1) : [];
+    const last = rects[rects.length - 1];
+    if (mode !== "text" || composingRef.current || !canvas || !last || !el?.closest(".rr-page")) return setSelBtn(null);
+    const c = canvas.getBoundingClientRect();
+    setSelBtn({ left: last.right - c.left + canvas.scrollLeft, top: last.bottom - c.top + canvas.scrollTop + 6 });
   };
 
   const onPageKey = (e) => {
@@ -616,7 +653,7 @@ function PDFChecker({
   const where = draft ? (draft.type === "shape" ? `${shapeLabel(draft.shape_ref)} · page ${draft.pageNumber}` : draft.type === "pin" ? `Pin on page ${draft.pageNumber}` : `${draft.highlightRects.length > 1 ? `${draft.highlightRects.length} boxes` : "Box"} on page ${draft.pageNumber}`) : "";
   const zoomRemark = zoomId != null ? comments.find((c) => c.id === zoomId) : null;
   const hint = mode === "text"
-    ? (selecting ? "Press Enter to add a remark on the selected words" : "Select text to add a remark")
+    ? (selecting ? "Click Add remark or press Enter · Shift+click changes where it ends" : "Select text to add a remark")
     : adding ? `Draw another box on page ${draft?.pageNumber} · Esc when done` : HINTS[mode];
 
   return (
@@ -630,7 +667,7 @@ function PDFChecker({
           ref={col.canvasRef}
           onScroll={col.onScroll}
           onMouseDown={(e) => {
-            if (composingRef.current && !e.target.closest(".rr-pop") && !e.target.closest(".rr-page")) closeBox();
+            if (composingRef.current && !e.target.closest(".rr-pop") && !e.target.closest(".rr-page")) clickAway();
           }}
         >
           {error && <div className="rr-error">Could not load the document: {error}</div>}
@@ -676,7 +713,8 @@ function PDFChecker({
                     onCut={block}
                     onDrop={block}
                     onMouseDown={steerDrag}
-                    onMouseUp={() => setTimeout(startFromSelection, 0)}
+                    onMouseUp={() => setTimeout(placeSelBtn, 0)}
+                    onKeyUp={placeSelBtn}
                   >
                     {drawing && <DiagramPage page={drawing} showChanges={showChanges} before={beforeView} />}
                     {!drawing && col.visible.has(n) && (
@@ -734,10 +772,22 @@ function PDFChecker({
             </Holder>
           )}
 
+          {selBtn && !composing && (
+            <button
+              type="button"
+              className="rr-btn gold sm rr-selbtn"
+              style={{ left: selBtn.left, top: selBtn.top }}
+              onMouseDown={block}
+              onClick={startFromSelection}
+            >
+              Add remark
+            </button>
+          )}
+
           {composing && (
             <div
               ref={popRef}
-              className={`rr-pop${popPos?.flip ? " flip" : ""}${onFigure ? " fig" : ""}`}
+              className={`rr-pop${popPos?.flip ? " flip" : ""}${popPos?.under ? " under" : ""}${onFigure ? " fig" : ""}`}
               role="dialog"
               aria-label={editing ? "Edit remark" : "Add a remark"}
               style={{ left: popPos?.left ?? 0, top: popPos?.top ?? 0, visibility: popPos ? "visible" : "hidden", "--ay": `${popPos?.ay ?? 24}px` }}
