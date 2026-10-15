@@ -7,8 +7,10 @@
   <div class="nav-section">Teams</div>
   <a href="{{ route('instructor.teams') }}" class="nav-item {{ (isset($currentPage) && $currentPage === 'teams') ? 'active' : '' }}">
     <x-portal-icon name="team" />
-    My Teams
-    @if (($totalTeams ?? 0) > 0)
+    Teams
+    @if (($unseenAssignmentCount ?? 0) > 0)
+      <span class="nav-badge red">{{ $unseenAssignmentCount > 99 ? '99+' : $unseenAssignmentCount }}</span>
+    @elseif (($totalTeams ?? 0) > 0)
       <span class="nav-badge">{{ $totalTeams > 99 ? '99+' : $totalTeams }}</span>
     @endif
   </a>
@@ -17,13 +19,6 @@
     Team Grading
     @if (($totalTeams ?? 0) > 0)
       <span class="nav-badge">{{ $totalTeams > 99 ? '99+' : $totalTeams }}</span>
-    @endif
-  </a>
-  <a href="{{ route('instructor.assignments') }}" class="nav-item {{ (isset($currentPage) && $currentPage === 'assignments') ? 'active' : '' }}">
-    <x-portal-icon name="inbox" />
-    Team Assignments
-    @if (isset($unseenAssignmentCount) && $unseenAssignmentCount > 0)
-      <span class="nav-badge red">{{ $unseenAssignmentCount > 99 ? '99+' : $unseenAssignmentCount }}</span>
     @endif
   </a>
   <div class="nav-section">Schedule</div>

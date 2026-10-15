@@ -60,6 +60,7 @@
 @endphp
 <!-- SIDEBAR -->
 @include('partials.portal-nav-icons')
+@include('partials.sidebar-rail')
 <div class="sidebar">
   <div class="sidebar-brand">
     <div class="brand-badge">
@@ -99,7 +100,7 @@
       <x-portal-icon name="dashboard" />
       Dashboard
     </a>
-    <a href="{{ route('student.team') }}" data-tour-target="student.team" class="nav-item {{ request()->routeIs('student.team') ? 'active' : '' }}">
+    <a href="{{ route('student.team') }}" data-tour-target="student.team" class="nav-item {{ request()->routeIs('student.team', 'student.team_rating.*') ? 'active' : '' }}">
       <x-portal-icon name="team" />
       Team Management
       @if ($newPostCount > 0)
@@ -157,7 +158,7 @@
 @include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => ['url' => $student->avatarUrl(), 'initials' => $student->avatarInitials()], 'tabs' => array_values(array_filter([
     ['label' => 'Home', 'href' => route('student.dashboard'), 'active' => request()->routeIs('student.dashboard'),
         'icon' => App\Support\PortalIcons::paths('home')],
-    ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team'), 'badge' => $newPostCount,
+    ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team', 'student.team_rating.*'), 'badge' => $newPostCount,
         'icon' => App\Support\PortalIcons::paths('team')],
     // Handing in a document is what a student comes here to do most - but
     // not on Financial Records (Team Management's second tab). There the page
@@ -416,16 +417,10 @@
 @endphp
 <script type="application/json" id="upload-config">@json($uploadConfig)</script>
 
-{{-- One preview window and one message box for the whole student side. --}}
-<dialog class="preview-dialog" id="previewDialog">
-  <div class="preview-head">
-    <h2 id="previewTitle">Preview</h2>
-    <button class="x" type="button" onclick="document.getElementById('previewDialog').close()" aria-label="Close preview">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
-  </div>
-  <div class="preview-body" id="previewBody"></div>
-</dialog>
+{{-- One preview window and one message box for the whole student side. The
+     window is the app's PDF window (partials/pdf-viewer); submission-preview
+     brings its script with it. --}}
+<dialog class="pv" id="previewDialog" aria-label="Document preview"></dialog>
 
 <div id="submission-toast"></div>
 

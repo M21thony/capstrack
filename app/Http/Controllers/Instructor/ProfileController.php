@@ -77,7 +77,7 @@ class ProfileController extends Controller
         $all = ($saved['all'] ?? true) !== false;
 
         $byGroup = [
-            'teams' => ['Teams', 'A team applies to you, or a student asks to leave or be removed', ['expert_application', 'leave_request_received']],
+            'teams' => ['Teams', 'A team applies to you, a student asks to leave or be removed, or (CaPSA) teams outnumber the free expert slots', ['expert_application', 'leave_request_received', 'expert_slots_short']],
             'consultations' => ['Consultations', 'Bookings, cancellations, and a reminder on the day', ['consultation_booked', 'consultation_cancelled', 'consultation_reminder']],
             'documents' => ['Documents', 'Documents and signed papers to review, and a reminder when they wait', ['document_submitted', 'paper_to_check', 'review_reminder']],
             'announcements' => ['Announcements', 'Important or urgent announcements from a CaPSA', ['announcement']],

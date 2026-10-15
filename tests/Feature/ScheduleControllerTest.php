@@ -53,6 +53,9 @@ class ScheduleControllerTest extends TestCase
 
     public function test_a_one_time_slot_can_still_be_added_today_or_later(): void
     {
+        // Early in the day, so today's 9:00 slot has not started yet - run
+        // after nine, the clock alone made this fail.
+        $this->travelTo(today()->setTime(7, 0));
         $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
 
         foreach ([today(), today()->addDays(3)] as $day) {

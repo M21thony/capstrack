@@ -1267,7 +1267,7 @@ function openApp(id) {
   if (!a) { return; }
   var status = a.status === 'pending' ? '<span class="xh-pill xh-amber">Pending · waiting for the expert</span>' : '<span class="xh-pill xh-red">Declined</span>';
   var proposal = a.proposalTitle ? esc(a.proposalTitle) + ' <span class="xh-note">(recommended pre-proposal)</span>'
-    : (a.proposalFile ? '<a href="' + esc(a.proposalFile) + '" target="_blank" rel="noopener">View proposal</a>' : 'None attached');
+    : (a.proposalFile ? '<a href="' + esc(a.proposalFile) + '" target="_blank" rel="noopener" data-pdf-view="' + esc(a.proposalFile) + '" data-pdf-title="Proposal">View proposal</a>' : 'None attached');
   var withdraw = '';
   if (D.isLeader) {
     withdraw = a.status === 'pending'
@@ -1757,5 +1757,6 @@ document.querySelectorAll('.nav-item').forEach(function (el) {
 });
 </script>
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

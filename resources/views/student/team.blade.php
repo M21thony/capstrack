@@ -214,6 +214,8 @@
   .tm-seg button:hover { color: var(--text); }
   .tm-seg button[aria-selected="true"] { background: var(--bg2); color: var(--text); box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
   .tm-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tm-seg .n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; font-size: 11.5px; font-weight: 700; background: var(--bg3); color: var(--text2); }
+  .tm-seg .n.hot { background: var(--red, #dc2626); color: #fff; }
   body.tm-on-fin #contentWrapper,
   body.tm-on-fin .pagination-container,
   body.tm-on-fin .tutorial-note { display: none !important; }
@@ -225,7 +227,7 @@
     .tm-seg button { flex: 1; justify-content: center; padding: 0 10px; }
   }
 </style>
-<body class="{{ $tab === 'financial' ? 'tm-on-fin' : '' }}">
+<body class="{{ ['financial' => 'tm-on-fin', 'rating' => 'tm-on-rating'][$tab] ?? '' }}">
 @include('student.partials.sidebar')
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 <!-- MAIN -->
@@ -251,32 +253,40 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 1 .7V2l-1 .7-3-2-3 2-3-2-3 2-3-2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
         Financial Records
       </button>
+      <button type="button" role="tab" id="tm-tab-rating" data-tm-tab="rating" aria-controls="tm-panel-rating" aria-selected="{{ $tab === 'rating' ? 'true' : 'false' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+        Team Rating
+        @if ($rating['due'] > 0)<span class="n hot" title="{{ $rating['due'] }} due" aria-label="{{ $rating['due'] }} due">{{ $rating['due'] }}</span>@endif
+      </button>
     </div>
 
     <section class="tm-fin" id="tm-panel-financial" role="tabpanel" aria-labelledby="tm-tab-financial" @if ($tab !== 'financial') hidden @endif>
       @include('student.partials.financial-panel', ['state' => $financialState])
     </section>
+    <section id="tm-panel-rating" role="tabpanel" aria-labelledby="tm-tab-rating" @if ($tab !== 'rating') hidden @endif>
+      @include('student.team-rating._panel')
+    </section>
     <script nonce="{{ Vite::cspNonce() }}">
     (function () {
       var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-tm-tab]'));
-      var panel = document.getElementById('tm-panel-financial');
+      var panels = { financial: document.getElementById('tm-panel-financial'), rating: document.getElementById('tm-panel-rating') };
 
       // Switches in place, and keeps the address in step so a refresh or a
       // shared link opens the same tab.
       function show(which) {
-        var fin = which === 'financial';
-        document.body.classList.toggle('tm-on-fin', fin);
-        panel.hidden = !fin;
+        document.body.classList.toggle('tm-on-fin', which === 'financial');
+        document.body.classList.toggle('tm-on-rating', which === 'rating');
+        Object.keys(panels).forEach(function (k) { panels[k].hidden = k !== which; });
         tabs.forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tm-tab') === which ? 'true' : 'false'); });
         var url = new URL(location.href);
-        if (fin) { url.searchParams.set('tab', 'financial'); } else { url.searchParams.delete('tab'); }
+        if (panels[which]) { url.searchParams.set('tab', which); } else { url.searchParams.delete('tab'); }
         history.replaceState(null, '', url.pathname + url.search + url.hash);
         // The first time a tab is opened since signing in, it comes up as
         // its skeleton (student/partials/content-skeleton), like a page.
         if (window.contentSkeleton) { window.contentSkeleton.show(which); }
       }
 
-      if (window.contentSkeleton) { window.contentSkeleton.seen('{{ $tab === 'financial' ? 'financial' : 'team' }}'); }
+      if (window.contentSkeleton) { window.contentSkeleton.seen('{{ $tab }}'); }
 
       tabs.forEach(function (b, i) {
         b.addEventListener('click', function () { show(b.getAttribute('data-tm-tab')); });
@@ -469,7 +479,7 @@
       <div class="team-dashboard-grid" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px;">
         <!-- Team Members -->
         <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max {{ \App\Models\Team::maxMembers() }}</span></div>
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max {{ $memberCount }}</span></div>
           @if($teamLocked)
           <div role="status" style="display:flex;gap:10px;align-items:flex-start;margin:-4px 0 14px;padding:10px 12px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -484,7 +494,7 @@
             // Spelled out as 5, this page went on showing five rows however
             // many a team was allowed - so setting three changed the labels
             // and left two slots nobody could ever fill.
-            $memberSlots = \App\Models\Team::maxMembers();
+            $memberSlots = $memberCount;
             // Invitations already sent and unanswered. They hold a slot, so
             // the leader can see the team is fuller than the member count.
             $pendingInvites = collect($outgoingInvitations ?? []);
@@ -647,7 +657,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Members</span>
-                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / {{ \App\Models\Team::maxMembers() }}</span>
+                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / {{ $memberCount }}</span>
               </div>
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Your Role</span>
@@ -718,7 +728,17 @@
                   {{ $rr->type === 'leave' ? $rrMember.' asked to leave' : $rrBy.' asked to remove '.$rrMember }}
                 </div>
                 <div style="font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; overflow-wrap: anywhere;">“{{ $rr->reason }}”</div>
-                <div style="font-size: 10.5px; color: var(--text3); margin-top: 4px;">Sent {{ $rr->created_at->diffForHumans() }}</div>
+                @php
+                  $rrDeadline = $rr->autoDeclinesAt();
+                  $rrHoursLeft = max(0, (int) ceil(now()->diffInMinutes($rrDeadline, false) / 60));
+                @endphp
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 10.5px; color: var(--text3); margin-top: 6px;">
+                  <span>Sent {{ $rr->created_at->diffForHumans() }}</span>
+                  <span title="If your CaPSA has not decided by {{ $rrDeadline->format('M j, g:i A') }}, it is declined automatically" style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-weight: 700; {{ $rrHoursLeft <= 24 ? 'background: var(--red-bg); color: var(--red);' : 'background: var(--amber-bg); color: var(--amber);' }}">
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    Auto-declines {{ $rrHoursLeft <= 24 ? 'in '.max(1, $rrHoursLeft).' '.(max(1, $rrHoursLeft) === 1 ? 'hour' : 'hours') : $rrDeadline->format('M j') }} without a decision
+                  </span>
+                </div>
               </div>
               @if($rrMine)
               <form method="POST" action="{{ route('team.capsa-leave-requests.update', $rr->id) }}" style="flex-shrink: 0;">
@@ -728,6 +748,35 @@
                 <button type="submit" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font-size: 11px; font-weight: 700; cursor: pointer;">Withdraw</button>
               </form>
               @endif
+            </div>
+          @endforeach
+        </div>
+      </div>
+      @endif
+
+      {{-- Declined by the clock, not the CaPSA: said plainly, with the way to ask again. --}}
+      @if($autoDeclinedRequests->isNotEmpty())
+      <div style="margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3);">DECLINED AUTOMATICALLY</div>
+        <div style="font-size: 11px; color: var(--text3); margin: 3px 0 12px;">Your CaPSA did not act on these within {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days. You can send the request again.</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          @foreach($autoDeclinedRequests as $rr)
+            @php
+              $rrMember = trim(($rr->student->f_name ?? '').' '.($rr->student->l_name ?? '')) ?: 'A member';
+              $rrBy = trim(($rr->requester->f_name ?? '').' '.($rr->requester->l_name ?? '')) ?: 'The leader';
+            @endphp
+            <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text);">
+                  <span>{{ $rr->type === 'leave' ? $rrMember.' asked to leave' : $rrBy.' asked to remove '.$rrMember }}</span>
+                  <span style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; background: var(--bg3); color: var(--text2); border: 1px solid var(--border);">
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    Auto-declined · No action from CaPSA in {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days
+                  </span>
+                </div>
+                <div style="font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; overflow-wrap: anywhere;">“{{ $rr->reason }}”</div>
+                <div style="font-size: 10.5px; color: var(--text3); margin-top: 4px;">Sent {{ $rr->created_at->format('M j') }} · declined {{ $rr->decided_at?->format('M j, g:i A') }}</div>
+              </div>
             </div>
           @endforeach
         </div>
@@ -1205,7 +1254,7 @@
         <option value="individual">Find a Team (Join Others)</option>
       </select>
       <div class="modal-tutorial" id="modal-note-box">
-        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to {{ \App\Models\Team::maxMembers() }} members including you (the leader). Slots are filled automatically as members join.</p>
+        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.</p>
       </div>
       <div id="leader-fields">
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
@@ -1242,7 +1291,7 @@
           {{-- Posted when a team is created. It is the CaPSA's number, not a
                fixed 5 - the column is only a record, since the cap itself is
                read from the setting. --}}
-          <input type="hidden" name="member_count" id="member-count-input" value="{{ \App\Models\Team::maxMembers() }}">
+          <input type="hidden" name="member_count" id="member-count-input" value="{{ $memberCount }}">
           <input type="hidden" name="tags" id="tags-hidden-input" value="">
           <button type="submit" class="btn-primary" style="width: 100%; background: var(--blue-bg); color: var(--blue); border: 1.5px solid rgba(29,78,216,0.25); box-shadow: none;" id="form-submit-btn">Publish Post</button>
         </form>
@@ -2978,7 +3027,7 @@ function updateModalUI() {
     const isLeader = (goal === 'leader');
     document.getElementById('modal-title').textContent = isLeader ? 'Build a Team' : 'Find a Team';
     document.getElementById('modal-note-text').innerHTML = isLeader 
-        ? '<strong>CapsTip:</strong> Your team can have up to {{ \App\Models\Team::maxMembers() }} members including you (the leader). Slots are filled automatically as members join.' 
+        ? '<strong>CapsTip:</strong> Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.' 
         : '<strong>CapsTip:</strong> Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
     
     // A closed goal says so at once, and hides its fields so nothing gets typed for nothing.
@@ -3156,13 +3205,13 @@ function publishPost(event) {
             return;
         }
     }
-    document.getElementById('member-count-input').value = {{ \App\Models\Team::maxMembers() }};
+    document.getElementById('member-count-input').value = {{ $memberCount }};
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
 
     if (isEditing) {
         event.preventDefault();
         document.getElementById('recruitment-goal-input').value = goal === 'leader' ? 'build_a_team' : 'find_a_team';
-        document.getElementById('member-count-input').value = {{ \App\Models\Team::maxMembers() }};
+        document.getElementById('member-count-input').value = {{ $memberCount }};
         if (goal === 'leader') {
             document.getElementById('team-name-hidden').value = document.getElementById('team-name').value;
             document.getElementById('looking-for-input').value = document.getElementById('leader-looking-for').value;
@@ -3270,5 +3319,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

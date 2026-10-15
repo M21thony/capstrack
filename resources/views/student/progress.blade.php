@@ -213,7 +213,6 @@
 </div>
 @elseif (! $progress)
 <div class="card">
-  <div class="card-header"><span class="card-title">Our milestones</span></div>
   <div style="padding:22px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6">
     Your CaPSA has not set up a checklist for your team yet.
   </div>
@@ -523,6 +522,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 <script nonce="{{ Vite::cspNonce() }}">
 {{-- The hamburger button and the overlay both called these and nothing
      defined them, so the menu would not open on a phone. Same two lines as

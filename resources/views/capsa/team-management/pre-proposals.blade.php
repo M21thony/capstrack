@@ -22,7 +22,6 @@
 <div class="th">
   <div class="tile"><x-tm-icon n="file" s="22" /></div>
   <div class="grow">
-    <h1>Pre-proposals</h1>
     <p>{{ $pending ? "{$pending} of ".count($titles).' titles need your decision' : 'Every title has a decision' }}</p>
   </div>
 </div>

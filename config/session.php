@@ -32,17 +32,17 @@ return [
     |
     */
 
-    // A week, not two hours. Being logged out mid-work - mid-demo, worse -
-    // is the thing this number does, and nothing here is sensitive enough to
-    // be worth that: an expired session loses whatever was on screen and
-    // sends the person back to the sign-in page with no explanation.
-    'lifetime' => (int) env('SESSION_LIFETIME', 10080),
+    // Thirty days, the way Google keeps an account signed in: the session
+    // survives closing the browser, and every visit starts the thirty days
+    // over. It must not be shorter than idle_timeout below, or the cookie
+    // would end the session first.
+    'lifetime' => (int) env('SESSION_LIFETIME', 43200),
 
-    // Signed out after this many minutes without anyone using the page -
-    // clicking, typing, scrolling. Background checks (the bell, consultation
-    // slots) do not count. A warning with a way to stay comes a minute
-    // before, and the sign-in page then says why. 0 turns it off.
-    'idle_timeout' => (int) env('SESSION_IDLE_TIMEOUT', 30),
+    // Signed out after this many minutes without anyone using CapsTrack -
+    // thirty days of not opening it, on every portal. Clicking, typing and
+    // scrolling count; background checks (the bell, consultation slots) do
+    // not. The sign-in page then says why. 0 turns it off.
+    'idle_timeout' => (int) env('SESSION_IDLE_TIMEOUT', 43200),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

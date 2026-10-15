@@ -4,10 +4,15 @@ namespace App\Models;
 
 use App\Support\SectionScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
  * A member leaving a team whose members are locked, waiting on a CaPSA.
+ *
+ * The CaPSA has DECIDE_WITHIN_DAYS to decide. A request left that long is
+ * declined on its own (auto_declined) and the team is told it ran out of
+ * time - not that the CaPSA said no.
  *
  * See Team::isTeamLocked() for when that is, and TeamLock for what
  * approving one does.
@@ -32,6 +37,12 @@ class MemberLeaveRequest extends Model
 
     public const ASK_CAPSA = "Leaving a team needs your CaPSA's approval. Use Ask CaPSA to Leave on the Team page.";
 
+    /** A CaPSA has this many days to decide; after that the request is declined on its own. */
+    public const DECIDE_WITHIN_DAYS = 3;
+
+    /** The reason an auto-decline carries, where a CaPSA's own would be. */
+    public const AUTO_DECLINE_NOTE = 'Declined automatically: your CaPSA did not act on it within '.self::DECIDE_WITHIN_DAYS.' days.';
+
     protected $fillable = [
         'team_id',
         'student_id',
@@ -42,10 +53,12 @@ class MemberLeaveRequest extends Model
         'decided_by',
         'decision_note',
         'decided_at',
+        'auto_declined',
     ];
 
     protected $casts = [
         'decided_at' => 'datetime',
+        'auto_declined' => 'boolean',
     ];
 
     public function team()
@@ -77,6 +90,102 @@ class MemberLeaveRequest extends Model
     public function isPending(): bool
     {
         return $this->status === self::PENDING;
+    }
+
+    /** When a pending request declines itself if the CaPSA has not decided. */
+    public function autoDeclinesAt(): Carbon
+    {
+        return $this->created_at->copy()->addDays(self::DECIDE_WITHIN_DAYS);
+    }
+
+    /**
+     * Declines every request the CaPSA left waiting DECIDE_WITHIN_DAYS or
+     * longer, and tells the team. Run on a schedule and before any page or
+     * decision reads the requests, so a CaPSA can never approve one that has
+     * already run out, whether or not the scheduler is running.
+     *
+     * @return int how many were declined
+     */
+    public static function expireOverdue(): int
+    {
+        $overdue = static::pending()
+            ->where('created_at', '<=', now()->subDays(self::DECIDE_WITHIN_DAYS))
+            ->with('team')
+            ->get();
+
+        foreach ($overdue as $request) {
+            // Only if it is still pending: two runs at once decline it once.
+            $declined = static::whereKey($request->getKey())->pending()->update([
+                'status' => self::DECLINED,
+                'decided_by' => null,
+                'decision_note' => self::AUTO_DECLINE_NOTE,
+                'decided_at' => $request->autoDeclinesAt(),
+                'auto_declined' => true,
+                'updated_at' => now(),
+            ]);
+
+            if ($declined && $request->team) {
+                $request->refresh()->tellDeclined();
+            }
+        }
+
+        return $overdue->count();
+    }
+
+    /**
+     * Tells the one who asked - and, for a removal, the member it was about -
+     * that the request was declined, by the CaPSA or by running out of time.
+     */
+    public function tellDeclined(): void
+    {
+        $team = $this->team;
+        $teamName = '<strong>'.e($team->team_name).'</strong>';
+        $isLeave = $this->type === self::LEAVE;
+
+        if ($this->auto_declined) {
+            $why = ' Your CaPSA did not act on it within '.self::DECIDE_WITHIN_DAYS.' days, so it was declined automatically. You can ask again.';
+            $requester = [
+                'title' => 'Request declined automatically',
+                'message' => ($isLeave
+                    ? 'Your request to leave '.$teamName.' was declined automatically. You are still on the team.'
+                    : 'Your request to remove a member from '.$teamName.' was declined automatically.').$why,
+            ];
+            $member = [
+                'title' => 'You stay on the team',
+                'message' => 'The request to remove you from '.$teamName.' was declined automatically: your CaPSA did not act on it within '.self::DECIDE_WITHIN_DAYS.' days.',
+            ];
+        } else {
+            $why = ' Their reason: "'.e((string) $this->decision_note).'"';
+            $requester = [
+                'title' => 'Request declined',
+                'message' => ($isLeave
+                    ? 'Your CaPSA declined your request to leave '.$teamName.'. You are still on the team.'
+                    : 'Your CaPSA declined your request to remove a member from '.$teamName.'.').$why,
+            ];
+            $member = [
+                'title' => 'You stay on the team',
+                'message' => 'Your CaPSA declined the request to remove you from '.$teamName.'.'.$why,
+            ];
+        }
+
+        Notification::create($requester + [
+            'student_id' => $this->requested_by,
+            'type' => 'leave_request_declined',
+            'link' => route('student.team'),
+            // Which request, so tapping it can show the whole decision.
+            'data' => ['leave_request_id' => $this->id],
+        ]);
+
+        // The member a removal was about was told it was asked; they are told
+        // how it ended too.
+        if (! $isLeave) {
+            Notification::create($member + [
+                'student_id' => $this->student_id,
+                'type' => 'leave_request_declined',
+                'link' => route('student.team'),
+                'data' => ['leave_request_id' => $this->id],
+            ]);
+        }
     }
 
     /**

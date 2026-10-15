@@ -80,7 +80,7 @@ class RecruitmentController extends Controller
         // A build-a-team post with a name creates the team as it posts - team
         // creation by a second door - so it closes with the first.
         if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])
-            && ! Team::creationAllowed()) {
+            && ! Team::creationAllowed($student?->sectionLabel())) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => Team::CREATION_CLOSED], 422);
             }
@@ -89,7 +89,7 @@ class RecruitmentController extends Controller
         }
 
         // Looking for a team is the way in to joining one, so it closes with joining.
-        if ($validated['recruitment_goal'] === 'find_a_team' && ! Team::joiningAllowed()) {
+        if ($validated['recruitment_goal'] === 'find_a_team' && ! Team::joiningAllowed($student?->sectionLabel())) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => Team::JOINING_CLOSED], 422);
             }

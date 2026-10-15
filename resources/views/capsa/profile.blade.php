@@ -137,7 +137,7 @@
   }
   .profile-page .pf-search input:focus { outline: none; border-color: var(--pf-ink); background: #fff; }
   .profile-page .pf-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--pf-text3); }
-  .profile-page .pf-sections-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
+  .profile-page .pf-sections-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding-right: 2px; }
   .profile-page .pf-section-opt {
     display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--pf-border); border-radius: 10px;
     cursor: pointer; background: #fff; transition: border-color .15s, background .15s;
@@ -824,5 +824,6 @@ if (folderListContainer) {
 @include('partials.form-notice')
 @include('partials.app-dialog')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

@@ -36,7 +36,7 @@
   #jrp-count{flex-shrink:0;min-width:24px;height:24px;border-radius:12px;background:var(--text3);color:#fff;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 8px}
 
   #jrp-body{padding:18px 24px 24px}
-  #jrp-list{display:none;flex-direction:column;gap:10px;max-height:calc(100vh - 260px);max-height:calc(100dvh - 260px);overflow-y:auto;scrollbar-width:thin}
+  #jrp-list{display:none;flex-direction:column;gap:10px;max-height:calc(100vh - 260px);max-height:calc(100dvh - 260px);overflow-y:auto}
   #jrp-list::-webkit-scrollbar{width:5px}
   #jrp-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:6px}
   #jrp-list::-webkit-scrollbar-track{background:transparent}

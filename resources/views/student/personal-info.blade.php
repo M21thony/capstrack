@@ -106,6 +106,7 @@
     });
     </script>
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 @include('partials.keyboard-aware')
 </body>
 </html>

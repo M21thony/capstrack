@@ -587,6 +587,7 @@ function showToast(message, type) {
 </script>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 <div id="archive-toast"></div>
 </body>
 </html>

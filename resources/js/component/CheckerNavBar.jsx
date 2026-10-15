@@ -100,7 +100,7 @@ function CheckerNavbar({ ctx, status, verdict, saveState, driveSyncState, driveS
         <Icon name="download" />Export PDF
       </button>
       <button type="button" className="rr-btn gold" onClick={onFinish}>
-        {status === "Reviewed" ? "Change decision" : "Finish review"}
+        Apply Changes
       </button>
     </header>
   );

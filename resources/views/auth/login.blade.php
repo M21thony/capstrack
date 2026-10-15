@@ -193,7 +193,7 @@
       {{-- Signed out by the idle timer (EndIdleSession / partials/idle-logout). --}}
       <div class="order-4 mb-3.5 flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3 text-[12.5px] leading-normal text-amber-800 md:text-[13px]" role="status">
         <svg class="mt-px h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
-        <span><strong class="font-semibold">Session expired.</strong> You were signed out after {{ config('session.idle_timeout') }} minutes of inactivity. Sign in again to continue.</span>
+        <span><strong class="font-semibold">Session expired.</strong> You were signed out after {{ \App\Http\Middleware\EndIdleSession::limitForHumans() }} of inactivity. Sign in again to continue.</span>
       </div>
     @endif
 
@@ -347,5 +347,6 @@ if (expertRemovedModal && expertRemovedOkBtn) {
 </script>
 @include('partials.form-notice')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

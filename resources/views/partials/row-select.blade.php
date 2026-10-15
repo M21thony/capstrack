@@ -28,8 +28,10 @@
   <span class="selbar-count" id="selbarCount">0 selected</span>
   <span class="selbar-sep"></span>
   @foreach ($actions as $action)
+    {{-- 'icon' is the inside of a 24x24 stroke <svg>, written in the page's
+         own source - never anything a user typed. --}}
     <button type="button" class="btn btn-ghost selbar-act{{ ($action['danger'] ?? false) ? ' selbar-danger' : '' }}"
-            id="{{ $action['id'] }}">{{ $action['label'] }}</button>
+            id="{{ $action['id'] }}">@isset($action['icon'])<svg viewBox="0 0 24 24" aria-hidden="true">{!! $action['icon'] !!}</svg>@endisset{{ $action['label'] }}</button>
   @endforeach
   <button type="button" class="selbar-clear" id="selbarClear">Clear</button>
 </div>

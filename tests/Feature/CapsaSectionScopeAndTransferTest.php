@@ -43,7 +43,7 @@ class CapsaSectionScopeAndTransferTest extends TestCase
 
     // ── the filter ────────────────────────────────────────────────────────
 
-    /** The dropdown is the sections they handle, not the college's. */
+    /** The section pills are the sections they handle, not the college's. */
     public function test_the_filter_lists_only_their_own_sections(): void
     {
         $this->student('mine@my.cspc.edu.ph', '4th · A');
@@ -54,9 +54,9 @@ class CapsaSectionScopeAndTransferTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('value="BSIT-4A"', $html);
-        $this->assertStringContainsString('value="BSIT-4B"', $html);
-        $this->assertStringNotContainsString('value="BSIT-4C"', $html);
+        $this->assertStringContainsString('section=BSIT-4A"', $html);
+        $this->assertStringContainsString('section=BSIT-4B"', $html);
+        $this->assertStringNotContainsString('section=BSIT-4C"', $html);
     }
 
     /**

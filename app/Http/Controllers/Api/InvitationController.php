@@ -61,7 +61,7 @@ class InvitationController extends Controller
         }
 
         if ($validated['type'] === 'request') {
-            if (! Team::joiningAllowed()) {
+            if (! Team::joiningAllowed(Team::find($teamId)?->section() ?: $student->sectionLabel())) {
                 return response()->json(['message' => Team::JOINING_CLOSED], 422);
             }
 

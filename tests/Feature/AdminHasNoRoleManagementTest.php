@@ -50,7 +50,7 @@ class AdminHasNoRoleManagementTest extends TestCase
 
         // The roles are still shown, under each name: a CaPSA who also
         // advises says so there, and it is read-only either way.
-        $this->assertStringContainsString('class="cx-roles"', $html);
+        $this->assertStringContainsString('cx-roles"', $html);
     }
 
     public function test_there_is_no_admin_address_for_it(): void

@@ -40,9 +40,7 @@
 <nav class="dup-crumb" aria-label="Breadcrumb">
   <a href="{{ route('student.duplication') }}">Pre-Proposal</a>
   <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-  <a href="{{ route('student.duplication') }}">Duplication check</a>
-  <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-  <span class="here" aria-current="page">{{ Str::limit($title, 46) }} &middot; Similarity Report</span>
+  <span class="here" aria-current="page">Similarity Report</span>
 </nav>
 
 <section class="card rp-head" aria-label="Result">
@@ -56,14 +54,23 @@
   <div class="rp-doc">
     <h1 class="rp-title" title="{{ $title }}">{{ $title }}</h1>
     <div class="rp-meta">
-      <span class="band band-{{ $band }}">{{ SimilarityBand::BANDS[$band] }}</span>
-      <span>{{ count($matches) }} of {{ number_format($archiveTotal) }} archived capstones came back &middot; {{ $when }} &middot; {{ $standing }}</span>
+      <b class="rp-band sim-{{ $band }}">{{ SimilarityBand::BANDS[$band] }}</b>
+      <span>{{ $when }} &middot; {{ $standing }}</span>
     </div>
+    @if ($top = reset($thisYear))
+      <div class="ty-note">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span><b>Recommended this year:</b> {{ $top['title'] ?? '' }}@if (str_contains($top['recommended'], ' — ')) ({{ Str::after($top['recommended'], ' — ') }})@endif is {{ SimilarityBand::scoreOf($top) }}% close to yours.</span>
+      </div>
+    @endif
   </div>
   <div class="rp-counts" aria-label="How close the matches are">
-    <span class="band band-close">{{ $bands['close'] }} close</span>
-    <span class="band band-some">{{ $bands['some'] }} some overlap</span>
-    <span class="band band-little">{{ $bands['little'] }} little overlap</span>
+    @if ($thisYear)
+      <span class="rp-n ty"><b>{{ count($thisYear) }}</b> recommended this year</span>
+    @endif
+    <span class="rp-n"><b class="sim-close">{{ $bands['close'] }}</b> close</span>
+    <span class="rp-n"><b class="sim-some">{{ $bands['some'] }}</b> some overlap</span>
+    <span class="rp-n"><b class="sim-little">{{ $bands['little'] }}</b> little overlap</span>
   </div>
   @if ($proposal && $check->document_path)
     <a class="pbtn" href="{{ route('student.pre-proposal.document', $proposal->id) }}" target="_blank" rel="noopener">
@@ -77,7 +84,6 @@
   <section class="card rp-mine" aria-labelledby="rp-mine-h">
     <div class="rp-card-h">
       <h2 id="rp-mine-h">Pre-proposal content</h2>
-      <span>saved with the title</span>
     </div>
     <div class="rp-body">
       <div class="rp-field">
@@ -118,31 +124,28 @@
     @endif
   </section>
 
-  <section class="card rp-list" aria-labelledby="rp-list-h">
-    <div class="rp-card-h">
-      <h2 id="rp-list-h">{{ count($matches) }} archived {{ Str::plural('capstone', count($matches)) }} came back</h2>
-      <span>highest first &middot; click one to read it</span>
-    </div>
-    @forelse ($matches as $i => $m)
-      @php
-        $mScore = SimilarityBand::scoreOf($m);
-        $why = $m['similarities'] ?? ($m['reason'] ?? null);
-        $from = $m['recommended'] ?? (($m['academic_year'] ?? 'N/A').(! empty($m['program']) ? ' · '.$m['program'] : ''));
-      @endphp
-      <a class="rp-row" href="{{ route('student.duplication.similar', [$check->id, $i + 1]) }}" title="{{ $m['title'] ?? '' }}">
-        <span class="rp-rank">
-          <b class="sim-{{ SimilarityBand::of($mScore) }}">{{ $mScore === null ? '—' : $mScore.'%' }}</b>
-          <small>#{{ $i + 1 }}</small>
-        </span>
-        <span class="rp-what">
-          <b>{{ $m['title'] ?? '' }}</b>
-          <small><span>{{ $from }}</span>@if ($why) &middot; {{ $why }}@endif</small>
-        </span>
-      </a>
-    @empty
-      <div class="dup-none">Nothing in the archive came back for this title.</div>
-    @endforelse
-  </section>
+  <div class="rp-col">
+    @if ($thisYear)
+      <section class="card rp-list rp-ty" aria-labelledby="rp-ty-h">
+        <div class="rp-card-h">
+          <h2 id="rp-ty-h"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Recommended This Year ({{ count($thisYear) }})</h2>
+        </div>
+        @foreach ($thisYear as $i => $m)
+          @include('student.duplication._report-row', ['sub' => Str::after($m['recommended'], ' — '), 'subClass' => 'rp-sec'])
+        @endforeach
+      </section>
+    @endif
+    <section class="card rp-list" aria-labelledby="rp-list-h">
+      <div class="rp-card-h">
+        <h2 id="rp-list-h">Top 10 from the Archive</h2>
+      </div>
+      @forelse ($archive as $i => $m)
+        @include('student.duplication._report-row', ['sub' => ($m['academic_year'] ?? 'N/A').(! empty($m['program']) ? ' · '.$m['program'] : ''), 'subClass' => null])
+      @empty
+        <div class="dup-none">Nothing in the archive came back for this title.</div>
+      @endforelse
+    </section>
+  </div>
 </div>
 
 @if (count($check->instructors_suggested ?? []))

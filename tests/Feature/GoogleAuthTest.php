@@ -181,6 +181,10 @@ class GoogleAuthTest extends TestCase
 
     public function test_initiate_google_login_returns_auth_url_on_success(): void
     {
+        // Configured here, not read from whatever .env the test runs beside:
+        // a checkout without Google credentials answered 500.
+        config(['services.google.client_id' => 'test-client-id']);
+
         Http::fake([
             'https://www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
         ]);

@@ -9,6 +9,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\TitleChangeRequest;
 use App\Services\RecipientResolver;
 use App\Support\TitleRevision;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,7 +26,7 @@ class TitleConfirmationController extends Controller
     public function __construct(private RecipientResolver $resolver) {}
 
     /** PATCH /instructor/title-confirmations/{preProposal} */
-    public function update(Request $request, CapstonePreProposal $preProposal): RedirectResponse
+    public function update(Request $request, CapstonePreProposal $preProposal): JsonResponse|RedirectResponse
     {
         $this->authorizeAdviser($preProposal);
         abort_unless($preProposal->adviser_status === TitleRevision::PENDING && ! $preProposal->retired_at, 404);
@@ -44,7 +45,7 @@ class TitleConfirmationController extends Controller
             $team->update(['selected_pre_proposal_id' => $preProposal->id, 'project_title' => $preProposal->title]);
             $this->notifyTeam($team->team_id, 'New title confirmed', 'Your adviser confirmed <strong>'.e($preProposal->title).'</strong> as your new title.');
 
-            return redirect()->route('instructor.assignments')->with('status', 'Confirmed '.$team->team_name.'\'s new title.');
+            return $this->answered($request, 'Confirmed '.$team->team_name.'\'s new title.');
         }
 
         // Declined: this round's titles are set aside with the note, and the
@@ -54,7 +55,7 @@ class TitleConfirmationController extends Controller
         $team->preProposals()->update(['retired_at' => now()]);
         $this->notifyTeam($team->team_id, 'Adviser asked for another title', 'Your adviser asked for another title: “'.e($validated['note']).'”');
 
-        return redirect()->route('instructor.assignments')->with('status', 'Sent '.$team->team_name.' back for another title.');
+        return $this->answered($request, 'Sent '.$team->team_name.' back for another title.');
     }
 
     /**
@@ -63,7 +64,7 @@ class TitleConfirmationController extends Controller
      * an approval changes the team's title; the pre-proposal keeps the title
      * the panel passed, as a record.
      */
-    public function decideChange(Request $request, TitleChangeRequest $titleChangeRequest): RedirectResponse
+    public function decideChange(Request $request, TitleChangeRequest $titleChangeRequest): JsonResponse|RedirectResponse
     {
         abort_unless(
             $titleChangeRequest->isPending()
@@ -85,8 +86,13 @@ class TitleConfirmationController extends Controller
         // The CaPSA verified the Signed Final Project Title Form while this
         // waited: the title is final now.
         if ($approve && TitleRevision::finalTitleVerified($team)) {
-            return redirect()->route('instructor.assignments')
-                ->withErrors(['note' => 'The CaPSA has already verified '.$team->team_name.'\'s Signed Final Project Title Form, so the title is final. Keep the title and tell the team why.']);
+            $final = 'The CaPSA has already verified '.$team->team_name.'\'s Signed Final Project Title Form, so the title is final. Keep the title and tell the team why.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $final, 'errors' => ['note' => [$final]]], 422);
+            }
+
+            return redirect()->route('instructor.teams', ['tab' => 'todo'])->withErrors(['note' => $final]);
         }
 
         $titleChangeRequest->update([
@@ -100,12 +106,22 @@ class TitleConfirmationController extends Controller
             $team->update(['project_title' => $titleChangeRequest->new_title]);
             $this->notifyTeam($team->team_id, 'Title change approved', 'Your adviser approved your new title: <strong>'.e($titleChangeRequest->new_title).'</strong>.');
 
-            return redirect()->route('instructor.assignments')->with('status', 'Changed '.$team->team_name.'\'s title.');
+            return $this->answered($request, 'Changed '.$team->team_name.'\'s title.');
         }
 
         $this->notifyTeam($team->team_id, 'Title change declined', 'Your adviser kept your title as it is: “'.e($validated['note']).'”');
 
-        return redirect()->route('instructor.assignments')->with('status', 'Kept '.$team->team_name.'\'s title as it is.');
+        return $this->answered($request, 'Kept '.$team->team_name.'\'s title as it is.');
+    }
+
+    /** Back to the To do it was decided from, or the answer itself for the To do's dialog. */
+    private function answered(Request $request, string $message): JsonResponse|RedirectResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return redirect()->route('instructor.teams', ['tab' => 'todo'])->with('status', $message);
     }
 
     /** GET /instructor/title-confirmations/{preProposal}/document - the new pre-proposal's PDF. */

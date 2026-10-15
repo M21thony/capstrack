@@ -1,0 +1,358 @@
+/* ══ Table kit ══════════════════════════════════════════════════════════
+   The four people lists - CaPSA Management, Student Accounts, Expert
+   Management and Student Section List - are one kind of page: a count, the
+   ways in, and a table you filter and act on. They had grown four different
+   toolbars, three header colours and a red Remove on every row.
+
+   Everything here is scoped under .tk (on the page's .content.list-page), so
+   no other page that uses admin.css's .table moves. Loaded after admin.css,
+   which is why a rule here can tie on weight with one there and still win.
+
+   Layout, widest to narrowest:
+     > 1100px   every column
+     <= 1100px  .tk-opt columns hide (the ones a row can do without)
+     <= 860px   .tk-opt2 columns hide too
+     <= 640px   each row is a card: name on top, the rest as labelled lines,
+                and the hidden columns come back because a card has the room */
+
+/* ── page head ── */
+.tk .page-head{align-items:flex-end;margin-bottom:16px;gap:16px}
+.tk-head-text{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tk .page-head-text{align-items:baseline;gap:8px}
+.tk .page-count{font-size:30px;line-height:1}
+.tk .page-count-noun{font-size:15px;color:var(--text2)}
+.tk-lede{margin:0;font-size:13px;color:var(--text3);line-height:1.45}
+.tk-info{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text2);
+  background:var(--bg2);border:1px solid var(--border);border-radius:999px;padding:3px 10px 3px 8px}
+.tk-info svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.tk-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+
+/* ── buttons ── */
+.tk-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;
+  border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);
+  font:600 13px 'DM Sans','DM Sans Fallback',sans-serif;cursor:pointer;white-space:nowrap;text-decoration:none;
+  transition:background .12s,border-color .12s,color .12s}
+.tk-btn svg{width:15px;height:15px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.tk-btn:hover{border-color:var(--border2);background:var(--bg3);color:var(--text)}
+.tk-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tk-btn:disabled{opacity:.55;cursor:not-allowed}
+.tk-btn-pri{background:var(--accent);border-color:var(--accent);color:#18191f}
+.tk-btn-pri:hover{background:var(--accent2);border-color:var(--accent2);color:#18191f}
+.tk-btn-ghost{background:transparent;border-color:transparent;color:var(--text2)}
+.tk-btn-ghost:hover{background:var(--bg4);border-color:transparent}
+.tk-btn-sm{height:32px;padding:0 11px;font-size:12.5px}
+.tk-ib{width:36px;padding:0}
+.tk-btn-sm.tk-ib{width:32px}
+
+/* View Report and Download Excel come from partials/table-export, put into
+   the head with data-export-into. Given the quiet look the page's other
+   secondary buttons have, so the gold Add button is the only loud one. */
+.tk-actions .tx-btn{height:36px;padding:0 14px;border-radius:8px;border-color:transparent;background:transparent;
+  color:var(--text2);font-size:13px;font-weight:600;line-height:1}
+.tk-actions .tx-btn:hover:not(:disabled){background:var(--bg4);border-color:transparent;color:var(--text)}
+.tk-actions .tx-btn svg{width:15px;height:15px}
+/* A page whose one job is taking a copy (Student Accounts) has no Add
+   button, so Download Excel is the gold one there. */
+.tk-actions-export .tx-btn:last-child{background:var(--accent);border-color:var(--accent);color:#18191f}
+.tk-actions-export .tx-btn:last-child:hover:not(:disabled){background:var(--accent2);border-color:var(--accent2);color:#18191f}
+
+/* ── notices above the table ── */
+.tk-alert{border:1px solid #f0d9b5;background:#fffaf2;border-radius:12px;padding:16px 18px;margin-bottom:16px;
+  display:flex;flex-direction:column;gap:14px}
+.tk-alert-top{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.tk-alert-ic{width:36px;height:36px;border-radius:9px;background:#fdf1e3;color:#a14a07;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center}
+.tk-alert-ic svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tk-alert-text{flex:1 1 320px;min-width:0}
+.tk-alert-title{margin:0;font-size:14.5px;font-weight:700;color:#7c2d12}
+.tk-alert-sub{margin:2px 0 0;font-size:13px;color:#8a4a0a}
+.tk-alert-body[hidden]{display:none}
+.tk-cov{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.tk-cov-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #f0e4cf}
+.tk-cov-row .tk-prog{width:42px;margin:0;flex-shrink:0}
+.tk-cov-n{margin-left:auto;font-size:12px;color:#8a4a0a;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tk-ghostsec{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;
+  border:1px dashed #d9b98a;color:#8a4a0a;font-size:12px;font-weight:600;background:#fff}
+
+.tk-banner{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 16px;margin-bottom:16px;
+  border-radius:12px;background:var(--bg2);border:1px solid var(--border)}
+.tk-banner[hidden]{display:none}
+.tk-banner-ic{width:32px;height:32px;border-radius:8px;background:var(--bg4);color:var(--text2);flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center}
+.tk-banner-ic svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tk-banner p{flex:1 1 360px;margin:0;font-size:13px;color:var(--text2);line-height:1.45}
+.tk-banner p strong{color:var(--text)}
+
+/* Section filter pills (Student Section List). */
+.tk-secf-row{display:flex;flex-wrap:wrap;gap:6px}
+.tk-secf{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;
+  border:1px solid var(--border);background:var(--bg2);font:600 12.5px 'DM Sans','DM Sans Fallback',sans-serif;
+  color:var(--text);text-decoration:none;white-space:nowrap}
+.tk-secf .n{color:var(--text3);font-weight:500;font-variant-numeric:tabular-nums}
+.tk-secf:hover{border-color:var(--border2);color:var(--text)}
+.tk-secf[aria-current="page"]{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
+.tk-secf[aria-current="page"] .n{color:var(--accent)}
+
+/* ── the card: toolbar, rows, footer ── */
+.content.list-page.tk > .list-card{display:flex;flex-direction:column;overflow:hidden;border-radius:12px}
+.tk-toolbar{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 16px;
+  border-bottom:1px solid var(--border)}
+.tk-toolbar-end{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+.tk-scroll{flex:1;min-height:0;overflow:auto}
+
+.tk-tabs{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;background:var(--bg4);border-radius:10px;max-width:100%}
+.tk-tab{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border:0;border-radius:7px;
+  background:transparent;font:600 13px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text2);cursor:pointer;
+  white-space:nowrap;text-decoration:none}
+.tk-tab .n{font-size:11.5px;font-weight:600;color:var(--text3);font-variant-numeric:tabular-nums}
+.tk-tab:hover{color:var(--text)}
+.tk-tab:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tk-tab[aria-selected="true"],.tk-tab[aria-current="page"]{background:var(--bg2);color:var(--text);
+  box-shadow:0 1px 2px rgba(24,25,31,.1)}
+.tk-tab[aria-selected="true"] .n,.tk-tab[aria-current="page"] .n{color:var(--accent3)}
+
+.tk-toolbar .experts-search{flex:1 1 260px;max-width:400px;min-width:0;margin:0}
+.tk-toolbar .experts-search input{height:38px;max-width:none;width:100%;font-size:13.5px;border-radius:8px;
+  border-width:1px;padding:0 12px 0 34px!important}
+.tk-select{width:auto;height:38px;min-width:0;padding:0 30px 0 12px;border:1px solid var(--border);border-radius:8px;
+  font-size:13px;font-weight:500;background-color:var(--bg2);cursor:pointer}
+
+/* ── the table ── */
+.tk .table{width:100%;min-width:640px;table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:13.5px}
+/* The sidebar's navy, so the heading row reads as part of the app's frame
+   rather than as one more pale row. */
+.tk .list-card .table thead th{position:sticky;top:0;z-index:2;background:var(--navy-dark);color:#d4d6de;
+  font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:11px 16px;
+  border-bottom:0;box-shadow:none;white-space:nowrap;text-align:left}
+.tk .table thead th .th-owner{color:#b9bcc7;border-color:rgba(255,255,255,.22);font-size:9px}
+.tk .table thead tr:not(.rs-bar) .rs-tick{border-color:rgba(255,255,255,.5);background:transparent}
+.tk .table td{padding:10px 16px;border-bottom:1px solid var(--bg4);font-size:13.5px;color:var(--text2);
+  vertical-align:middle;overflow:hidden}
+.tk .table td.tk-ac{overflow:visible}
+.tk .table tbody tr:last-child td{border-bottom:0}
+.tk .table tbody tr:hover td{background:var(--accent-light)}
+.tk .table tbody tr.rs-on td{background:#fbf5df}
+.tk .table tbody tr.rs-on td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.tk .table .rs-cell{width:44px}
+/* Your own row, pinned first on Expert Management. */
+.tk .table tbody tr.tk-me td{background:#fdfaf0}
+.tk .table tbody tr.tk-me td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+
+/* The selection bar takes the heading row's place. Gold, not a second navy,
+   so it is plain the table is in a different state. */
+.tk .table thead tr.rs-bar[hidden]{display:none}
+/* With the selection bar showing, the heading row stays in the layout, just
+   unseen - the columns take their widths from it, and dropping it let them
+   re-share the width while rows were ticked. */
+@media (min-width:641px){
+  .tk .table thead tr[hidden]:not(.rs-bar){display:table-row;visibility:collapse}
+}
+.tk .list-card .table thead tr.rs-bar th{background:#faf3d9;color:var(--text);border-bottom:1px solid #ecdca2;
+  text-transform:none;letter-spacing:0;font-size:13px;padding:7px 12px}
+.tk .rs-bar .selbar-count{color:var(--accent3)}
+.tk .rs-bar .selbar-sep{background:#e3cf8e}
+.tk .rs-bar .selbar .btn:not(.btn-primary){background:transparent;border:1px solid transparent;color:var(--text);
+  display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.tk .rs-bar .selbar .btn:not(.btn-primary):hover{background:#f3e7bb;border-color:transparent;color:var(--text)}
+.tk .rs-bar .selbar .btn.selbar-danger{color:#b91c1c}
+.tk .rs-bar .selbar .btn.selbar-danger:hover{background:var(--red-bg);color:#b91c1c}
+.tk .rs-bar .selbar .btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.tk .rs-bar .selbar-clear{color:var(--text2)}
+.tk .rs-bar .selbar-clear:hover{color:var(--text)}
+.tk .rs-bar .rs-tick{border-color:var(--border2);background:var(--bg2)}
+.tk .rs-bar .rs-box input:checked ~ .rs-tick,
+.tk .rs-bar .rs-box input:indeterminate ~ .rs-tick{background:var(--accent);border-color:var(--accent2)}
+
+/* ── what goes in a cell ── */
+.tk-who{display:flex;align-items:center;gap:12px;min-width:0}
+.tk-who-text{display:flex;flex-direction:column;min-width:0;flex:1 1 auto}
+.tk-namerow{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;row-gap:3px;min-width:0}
+.tk-name{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tk-name-plain{font-weight:500}
+.tk-sub{font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tk-sub-warn{color:#a14a07}
+.tk-click{cursor:pointer}
+
+.tk-av{position:relative;width:34px;height:34px;border-radius:50%;flex-shrink:0;display:inline-flex;
+  align-items:center;justify-content:center;font-size:12px;font-weight:700;letter-spacing:.02em}
+.tk-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.tk-av-inv{border:1.5px dashed var(--border2);color:var(--text3);background:var(--bg3)}
+.tk-av-inv svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tk-pres{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;border:2px solid #fff;
+  background:var(--border2)}
+.tk-pres-on{background:var(--green)}
+.tk-pres-full{background:var(--amber)}
+.tk-tone-0{background:#f6efd5;color:#7a610e}
+.tk-tone-1{background:#e6ecfb;color:#1d4ed8}
+.tk-tone-2{background:#e3f3e8;color:#15803d}
+.tk-tone-3{background:#efe8fd;color:#6d28d9}
+.tk-tone-4{background:#e0f2f6;color:#0e7490}
+.tk-tone-5{background:#fbe7ea;color:#be123c}
+.tk-tone-navy{background:var(--navy-dark);color:var(--accent)}
+
+.tk-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:11.5px;
+  font-weight:600;white-space:nowrap;line-height:18px}
+.tk-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.tk-p-amber{background:#fdf1e3;color:#a14a07}
+.tk-p-green{background:#e7f5ec;color:#15803d}
+.tk-p-neutral{background:var(--bg4);color:var(--text2)}
+.tk-p-neutral .tk-dot{background:#a3a8b4}
+.tk-p-off{background:var(--bg4);color:var(--text2);border:1px solid var(--border2);text-transform:uppercase;
+  font-size:10px;letter-spacing:.03em}
+.tk-p-you{background:var(--navy-dark);color:var(--accent);font-size:10.5px;letter-spacing:.04em;padding:1px 7px}
+.tk-p-leave{background:rgba(180,83,9,.09);color:#b45309;border:1px solid rgba(180,83,9,.18)}
+
+.tk-chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-width:0}
+.tk-chip{display:inline-block;max-width:100%;height:24px;line-height:24px;padding:0 9px;border-radius:6px;
+  background:var(--bg4);color:var(--text2);font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Research areas stay on one line on a wide screen - the chips shorten
+   rather than pushing the counter onto a second line of its own. */
+.tk-1line{flex-wrap:nowrap}
+.tk-1line .tk-chip{flex:0 1 auto;min-width:0}
+.tk-1line .tk-more{flex:none}
+.tk-more{display:inline-flex;align-items:center;height:24px;padding:0 7px;border-radius:6px;border:1px solid var(--border);
+  color:var(--text3);font:600 12px 'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg2);cursor:pointer}
+.tk-more:hover{border-color:var(--accent);color:var(--accent3);background:var(--accent-light)}
+.tk-role{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:6px;font-size:12px;
+  font-weight:600;white-space:nowrap}
+.tk-role-capstone_adviser{background:#faf3d9;color:#7a610e;box-shadow:inset 0 0 0 1px #ecdca2}
+.tk-role-adviser{background:#e8eefc;color:#1e40af}
+.tk-role-consultant{background:#f1ebfd;color:#5b21b6}
+.tk-role-grammarian{background:#e0f2f6;color:#0e6378}
+.tk-role-none{background:var(--bg4);color:var(--text3)}
+
+.tk-prog{font-weight:700;color:var(--text);font-size:12.5px;letter-spacing:.02em;margin-right:6px}
+.tk-sec{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;background:var(--navy-dark);
+  color:#fff;font-size:12px;font-weight:600;white-space:nowrap}
+.tk-secsoft{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:6px;background:var(--bg4);
+  color:var(--text);font-size:12px;font-weight:600;white-space:nowrap}
+.tk-num{font-variant-numeric:tabular-nums;font-size:13px;color:var(--text2);letter-spacing:.01em}
+.tk-empty{color:var(--text3);font-size:13px}
+.tk-team{display:inline-flex;align-items:center;gap:7px;color:var(--text);font-weight:500;min-width:0}
+.tk-team svg{width:14px;height:14px;flex-shrink:0;stroke:var(--accent3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.tk-cap{display:grid;grid-template-columns:38px minmax(32px,80px) auto;align-items:center;column-gap:8px;row-gap:5px;font-size:12px}
+.tk-cap-p{font-weight:700;color:var(--text2);font-size:11px;letter-spacing:.03em}
+.tk-meter{height:6px;border-radius:99px;background:var(--bg4);overflow:hidden}
+.tk-meter i{display:block;height:100%;border-radius:99px;background:var(--green)}
+.tk-meter i.full{background:var(--amber)}
+.tk-cap-v{color:var(--text2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tk-hint{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:11.5px;font-weight:600;color:#7a610e}
+
+.tk-acts{display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.tk-acts .icon-btn{width:32px;height:32px;border:1px solid transparent;background:transparent;color:var(--text2)}
+.tk-acts .icon-btn:hover,.tk-acts .rowmenu-btn[aria-expanded="true"]{background:var(--bg4);border-color:transparent}
+
+/* ── footer and paging ── */
+.tk-foot{flex:none;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+  padding:10px 16px;border-top:1px solid var(--border);background:var(--bg3);font-size:13px;color:var(--text2)}
+.tk-foot strong{color:var(--text);font-variant-numeric:tabular-nums}
+.tk-foot-end{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.tk-rows{display:inline-flex;align-items:center;gap:8px}
+.tk-rows .tk-select{height:32px;font-size:12.5px}
+.tk-pg{display:flex;align-items:center;gap:4px}
+.tk-pgn{min-width:32px;height:32px;padding:0 6px;border-radius:7px;border:1px solid transparent;
+  display:inline-flex;align-items:center;justify-content:center;font:600 12.5px 'DM Sans','DM Sans Fallback',sans-serif;
+  color:var(--text2);text-decoration:none;font-variant-numeric:tabular-nums}
+.tk-pgn:hover{background:var(--bg4);color:var(--text)}
+.tk-pgn[aria-current="page"]{background:var(--bg2);border-color:var(--border);color:var(--text);box-shadow:0 1px 2px rgba(24,25,31,.08)}
+.tk-pgn.off{opacity:.4;pointer-events:none}
+.tk-pgn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tk-gap{padding:0 4px;color:var(--text3)}
+
+.tk-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ── narrower screens ── */
+@media (max-width:1100px){
+  .tk .table .tk-opt{display:none}
+}
+@media (max-width:860px){
+  .tk .table .tk-opt2{display:none}
+}
+
+@media (max-width:640px){
+  /* On a phone the head, the notices and the toolbar would leave the list a
+     sliver to scroll inside, so the page scrolls as a whole instead. */
+  .content.list-page.tk{display:block;overflow-y:auto}
+  .content.list-page.tk > .list-card{overflow:visible}
+  .tk-scroll{overflow:visible}
+  .tk .list-card .table thead th{position:static}
+  .tk .page-head{align-items:stretch}
+  .tk .page-count{font-size:26px}
+  /* Every secondary button keeps only its icon; the gold one takes the rest
+     of the row. The label stays readable to a screen reader. */
+  .tk-actions{width:100%;flex-wrap:nowrap}
+  .tk-actions .tk-btn:not(.tk-btn-pri),.tk-actions .tx-btn{width:38px;flex:0 0 38px;padding:0;justify-content:center;
+    border:1px solid var(--border);background:var(--bg2)}
+  .tk-actions .tk-btn:not(.tk-btn-pri) .tk-lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .tk-actions .tx-btn{font-size:0;gap:0}
+  .tk-actions .tk-btn-pri{flex:1 1 auto}
+  .tk-actions-export .tx-btn:last-child{flex:1 1 auto;width:auto;font-size:13px;gap:7px;
+    border-color:var(--accent);background:var(--accent)}
+
+  .tk-toolbar{padding:12px}
+  .tk-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .tk-tabs::-webkit-scrollbar{display:none}
+  .tk-tab{flex-shrink:0}
+  .tk-toolbar .experts-search{flex:1 1 100%;max-width:none}
+  .tk .tk-toolbar .experts-search input{width:100%!important;max-width:none!important;height:40px;border-radius:8px;
+    padding:0 12px 0 34px!important;font-size:14px}
+  .tk-toolbar-end{width:100%;margin-left:0}
+  .tk-toolbar .tk-select{flex:1 1 140px}
+  .tk-alert .tk-btn{flex:1 1 auto}
+  .tk-banner .tk-btn{flex:1 1 0}
+
+  /* The row becomes a card: tick box, who it is, and its menu across the
+     top; everything else underneath as "label ... value" lines. */
+  .tk .list-card.card{border:1px solid var(--border);background:var(--bg2);border-radius:12px;padding:0}
+  .tk .table{min-width:0;table-layout:auto}
+  .tk .table,.tk .table tbody{display:block;width:100%}
+  .tk .table thead tr:not(.rs-bar){display:none}
+  .tk .table thead tr.rs-bar:not([hidden]){display:flex;flex-wrap:nowrap;overflow-x:auto;border-radius:0;margin:0;background:#faf3d9;
+    position:sticky;top:0;z-index:3}
+  .tk .table thead tr.rs-bar th{padding:8px 10px}
+  .tk .rs-bar .selbar{flex-wrap:nowrap}
+  .tk .rs-bar .selbar .btn,.tk .rs-bar .selbar-count{flex-shrink:0}
+  .tk .table tbody tr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:12px;row-gap:8px;
+    padding:14px 12px;margin:0;border:0;border-bottom:1px solid var(--bg4);border-radius:0;box-shadow:none;
+    background:var(--bg2);position:relative}
+  .tk .table tbody tr:last-child{border-bottom:0}
+  .tk .table tbody tr:hover{background:var(--accent-light)}
+  .tk .table tbody tr.rs-on{background:#fbf5df;box-shadow:inset 3px 0 0 var(--accent)}
+  .tk .table tbody tr.tk-me{background:#fdfaf0;box-shadow:inset 3px 0 0 var(--accent)}
+  .tk .table tbody tr td,
+  .tk .table tbody tr.rs-on td,
+  .tk .table tbody tr:hover td{background:transparent;box-shadow:none}
+  .tk .table tbody td{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0;border:0;
+    font-size:13px;overflow:visible;grid-column:2 / 4;min-width:0}
+  .tk .table tbody td::before{content:attr(data-label);width:auto;font-size:12px;font-weight:500;letter-spacing:0;
+    text-transform:none;color:var(--text3);flex-shrink:0}
+  .tk .table tbody td.tk-opt,.tk .table tbody td.tk-opt2{display:flex}
+  .tk .table tbody td.rs-cell{position:static;grid-column:1;grid-row:1;width:auto;padding:9px 0 0!important;
+    align-items:flex-start;justify-content:flex-start}
+  .tk .table tbody td.rs-cell::before,.tk .table tbody td.tk-lead::before,.tk .table tbody td.tk-ac::before{content:none}
+  .tk .table tbody td.tk-lead{grid-column:2;grid-row:1;padding:0;overflow:hidden;display:block}
+  .tk .table tbody td.tk-ac{grid-column:3;grid-row:1;padding:0;margin:0;border:0;display:block;flex-direction:row}
+  .tk .table tbody td.tk-ac .tk-acts{flex-direction:row}
+  .tk .table tbody td.tk-ac button,.tk .table tbody td.tk-ac .tk-btn{width:32px!important;padding:0!important;
+    border-radius:8px!important;font-size:12.5px!important;margin:0!important}
+  .tk .table tbody td.tk-ac .tk-lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .tk .table tbody td.tk-block{display:block}
+  .tk .table tbody td.tk-block::before{display:block;margin-bottom:6px}
+  .tk .table tbody td > .tk-chips{justify-content:flex-end}
+  .tk-1line{flex-wrap:wrap}
+  .tk .table tbody td.tk-block > .tk-chips{justify-content:flex-start}
+  /* A row with nothing to say in a column says nothing on the card either. */
+  .tk .table tbody td.tk-blank{display:none}
+  /* The "nobody matched" row and an empty list stay a plain line. */
+  .tk .table tbody tr.tk-note:not([hidden]){display:block;padding:24px 12px}
+  .tk .table tbody tr.tk-note[hidden]{display:none}
+  .tk .table tbody tr.tk-note td{display:block;text-align:center}
+  .tk .table tbody tr.tk-note td::before{content:none}
+
+  .tk-foot{flex-direction:column;align-items:center;text-align:center}
+  .tk-foot-end{justify-content:center}
+  .tk-foot .tk-tip{display:none}
+}

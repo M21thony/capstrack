@@ -88,18 +88,19 @@ class StudentContentSkeletonTest extends TestCase
     }
 
     /**
-     * The whole page is drawn, down to its end: what is on screen gives way
-     * first, down to the very edge of the screen, and what lies below stays
-     * a skeleton, still loading, until it is scrolled to.
+     * The whole page is drawn, down to its end, and gives way all at once:
+     * rows further down a list are not left loading on their own when they
+     * are scrolled to. It can be scrolled while it loads.
      */
-    public function test_the_whole_page_is_drawn_and_can_be_scrolled_while_it_loads(): void
+    public function test_the_whole_page_is_drawn_and_gives_way_together(): void
     {
         $html = $this->studentPage();
 
         $this->assertStringNotContainsString('var reach', $html);
-        $this->assertStringContainsString('if (sheet.top < region.top) sheet = cut(sheet, region.top);', $html);
-        $this->assertStringContainsString('if (sheet.bottom > region.bottom) cut(sheet, region.bottom);', $html);
-        $this->assertStringContainsString('function onScroll() { follow(); schedule(); }', $html);
+        $this->assertStringNotContainsString('function cut(sheet, at)', $html);
+        $this->assertStringNotContainsString('function schedule()', $html);
+        $this->assertMatchesRegularExpression('/function reveal\(\) \{\s+revealed = true;\s+if \(watching\) watching.disconnect\(\);\s+finish\(\);/', $html);
+        $this->assertStringContainsString('function onScroll() { follow(); }', $html);
         $this->assertStringContainsString("cover.addEventListener('wheel', function (event) {", $html);
         $this->assertStringContainsString("cover.addEventListener('touchmove', function (event) {", $html);
     }
@@ -163,7 +164,7 @@ class StudentContentSkeletonTest extends TestCase
 
         $this->assertStringContainsString('animation: csk-wave 1s ease-in-out var(--csk-phase, -.25s) infinite;', $html);
         $this->assertStringContainsString('#csk .csk-bone::after {', $html);
-        $this->assertStringContainsString('waiting = { top: top, bottom: bottom, due: Math.max(performance.now(), shown) + 900 };', $html);
+        $this->assertStringContainsString('var due = Math.max(performance.now(), shown) + 900;', $html);
         $this->assertStringContainsString('#csk .csk-bone { animation: csk-breathe 1.2s ease-in-out infinite; }', $html);
     }
 
