@@ -637,9 +637,6 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     // its own category before anything is taken on.
     Route::get('/folders/{folder}/files', [GoogleDriveController::class, 'folderFiles'])->name('folders.files.index');
     Route::post('/folders', [GoogleDriveController::class, 'createFolder'])->name('folders.store');
-    Route::get('/submission-folders', [GoogleDriveController::class, 'listSubmissionFolders'])->name('submission-folders.index');
-    Route::post('/submission-folders', [GoogleDriveController::class, 'storeSubmissionFolder'])->name('submission-folders.store');
-    Route::delete('/submission-folders/{id}', [GoogleDriveController::class, 'destroySubmissionFolder'])->name('submission-folders.destroy');
     Route::post('/resources', [GoogleDriveController::class, 'upload'])->name('resources.store');
     // Taking on files that already exist in the CaPSA's Drive. An import
     // is the thing being made here - the files are not touched beyond

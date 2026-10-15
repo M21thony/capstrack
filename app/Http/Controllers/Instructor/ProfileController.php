@@ -52,12 +52,10 @@ class ProfileController extends Controller
             // A CaPSA or Admin who also advises keeps their name and sections
             // on their own portal's profile page.
             // A CaPSA or Admin who also advises keeps everything here: their
-            // name, and for a CaPSA the sections the Admin gave them and,
-            // as Subject Adviser, the folders students submit into.
+            // name, and for a CaPSA the sections the Admin gave them.
             'canEditName' => $expert->is_staff,
             'capsaSections' => $expert->is_capsa ? ($expert->sections ?? []) : null,
             'schoolYear' => Setting::get('current_school_year'),
-            'isSubjectAdviser' => in_array(CapstoneExpert::CAPSA_ROLE, $heldRoles, true),
             'emailGroups' => $emailGroups,
             'bellTypes' => $bellTypes,
         ]);

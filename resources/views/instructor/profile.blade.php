@@ -51,20 +51,6 @@
   .pp-id-secs{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:5px;font-size:12px;color:var(--text3)}
   .pp-id-secs b{padding:2px 8px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:11.5px}
 
-  .pp-tag{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:2px 8px}
-  .pp-fold-add{display:flex;gap:8px}
-  .pp-fold-add input{flex:1;min-width:0;height:38px;border:1px solid var(--border2);border-radius:9px;padding:0 12px;font:inherit;font-size:13px;color:var(--text);background:var(--bg2)}
-  .pp-fold-add input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
-  .pp-fold-add .btn{flex-shrink:0;justify-content:center}
-  .pp-folds{display:flex;flex-direction:column;margin-top:8px}
-  .pp-fold{display:flex;align-items:center;gap:10px;padding:8px 2px;font-size:13px;color:var(--text);border-bottom:1px solid var(--bg4)}
-  .pp-fold:last-child{border-bottom:0}
-  .pp-fold span{flex:1;min-width:0;overflow-wrap:anywhere}
-  .pp-fold button{border:0;background:transparent;color:var(--text3);font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:4px 6px;border-radius:6px}
-  .pp-fold button:hover{background:var(--bg3);color:var(--red)}
-  .pp-fold-note{font-size:12.5px;color:var(--text3);padding:8px 2px}
-  .pp-fold-note.err{color:var(--red)}
-
   .pp-sheet,.pp-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px}
   .pp-sec{padding:18px 22px}
   .pp-sec + .pp-sec{border-top:1px solid var(--bg4)}
@@ -309,19 +295,6 @@
               </div>
             </div>
           </section>
-
-          @if ($isSubjectAdviser)
-            <section class="pp-sec" aria-labelledby="pp-folders-h">
-              <div class="pp-sec-h"><h2 id="pp-folders-h">Submission folders</h2><span class="pp-tag">Subject Adviser</span></div>
-              <p class="pp-help">Students pick one of these when they submit to you. Without any, each team gets a folder of its own in your Google Drive.</p>
-              <div class="pp-fold-add">
-                <label for="pp-fold-name" class="pp-sr">Folder name</label>
-                <input id="pp-fold-name" maxlength="150" placeholder="e.g. Batch 2026 - Section A">
-                <button type="button" class="btn btn-primary" id="pp-fold-add">Add folder</button>
-              </div>
-              <div class="pp-folds" id="pp-folds"><div class="pp-fold-note">Loading folders…</div></div>
-            </section>
-          @endif
 
         </div>
 
@@ -664,59 +637,6 @@ function closeSidebar() {
       btn.disabled = false;
     }
   });
-
-  // Submission folders live in the Subject Adviser's Google Drive, so each
-  // one is made or removed at once rather than with the save bar.
-  var folds = el('pp-folds');
-  if (folds) {
-    var foldInput = el('pp-fold-name'), foldBtn = el('pp-fold-add');
-    var foldUrl = @json(route('gdrive.submission-folders.index'));
-    var foldNote = function (text, err) { folds.innerHTML = ''; folds.appendChild(make('div', 'pp-fold-note' + (err ? ' err' : ''), text)); };
-    var drawFolders = function (list) {
-      folds.innerHTML = '';
-      if (!list.length) { foldNote('No folders yet. Each team gets a folder of its own.'); return; }
-      list.forEach(function (f) {
-        var row = make('div', 'pp-fold'), del = make('button', null, 'Remove');
-        row.appendChild(make('span', null, f.name));
-        del.type = 'button';
-        del.setAttribute('aria-label', 'Remove ' + f.name);
-        del.addEventListener('click', function () {
-          del.disabled = true;
-          fetch(foldUrl + '/' + f.id, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': @json(csrf_token()), 'Accept': 'application/json' } })
-            .then(function (r) { return r.json(); })
-            .then(function (d) { if (d.success === false) throw new Error(d.message); loadFolders(); toast('\u201c' + f.name + '\u201d was removed.', 'success'); })
-            .catch(function (e) { del.disabled = false; toast((e && e.message) || 'Could not remove the folder. Try again.', 'error'); });
-        });
-        row.appendChild(del);
-        folds.appendChild(row);
-      });
-    };
-    var loadFolders = function () {
-      fetch(foldUrl, { headers: { 'Accept': 'application/json' } })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { drawFolders(d.folders || []); })
-        .catch(function () { foldNote('Could not load your folders. Reload the page to try again.', true); });
-    };
-    var addFolder = function () {
-      var name = foldInput.value.trim();
-      if (!name) { foldInput.focus(); return; }
-      foldBtn.disabled = true;
-      foldBtn.textContent = 'Adding\u2026';
-      fetch(foldUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': @json(csrf_token()), 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (d.success === false) throw new Error(d.message);
-          foldInput.value = '';
-          loadFolders();
-          toast('\u201c' + name + '\u201d was added.', 'success');
-        })
-        .catch(function (e) { toast('\u201c' + name + '\u201d was not created. ' + ((e && e.message) || 'Connect Google Drive in Resources first.'), 'error'); })
-        .then(function () { foldBtn.disabled = false; foldBtn.textContent = 'Add folder'; });
-    };
-    foldBtn.addEventListener('click', addFolder);
-    foldInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addFolder(); } });
-    loadFolders();
-  }
 
   window.addEventListener('beforeunload', function (e) { if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
 
