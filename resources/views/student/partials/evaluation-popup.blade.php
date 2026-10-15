@@ -5,6 +5,8 @@
 @php
   $evaluationsOwed = $evaluationsOwed ?? collect();
   $onEvaluationsTab = request()->routeIs('student.experts', 'student.consultation') && request('tab') === 'evaluations';
+  // Still to see the portal tour: it goes first, and this waits for it.
+  $tourFirst = (bool) auth('web')->user()?->needsPortalTour();
 @endphp
 @if($evaluationsOwed->isNotEmpty() && ! $onEvaluationsTab)
 @php
@@ -85,13 +87,16 @@
   // before, so every page came up bright and then dimmed under it - a flash
   // on each click while it was owed. Shown at once, the screen stays dim from
   // one page to the next.
+  // Except for an account still to see the portal tour: the tour comes first,
+  // and this not even for a frame - only once the tour is closed
+  // (partials/portal-tour).
+  if (@json($tourFirst)) {
+    document.addEventListener('DOMContentLoaded', function () {
+      (window.afterPortalTour || function (fn) { fn(); })(function () { overlay.classList.add('active'); }, function () { return overlay.classList.contains('active'); });
+    });
+    return;
+  }
   overlay.classList.add('evp-now', 'active');
-  // Not on top of the portal tour: a new account sees the tour first and this
-  // on the next page.
-  document.addEventListener('DOMContentLoaded', function () {
-    var tour = document.getElementById('portal-tour');
-    if (tour && tour.dataset.autoOpen === '1') { overlay.classList.remove('active'); }
-  });
 })();
 </script>
 @endif

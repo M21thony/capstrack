@@ -1791,8 +1791,12 @@ function pickRole(roleId, btn) {
 
 {{-- Expert Removed Popup Modal --}}
 @if(($expertRemovedNotifications ?? collect())->isNotEmpty())
-@php $expertRemovedIds = $expertRemovedNotifications->pluck('id')->implode(','); @endphp
-<div id="expertRemovedModal" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,16,22,0.75);backdrop-filter:blur(6px);padding:20px;" data-ids="{{ $expertRemovedIds }}">
+@php
+  $expertRemovedIds = $expertRemovedNotifications->pluck('id')->implode(',');
+  // Still to see the portal tour: hidden from the first frame, shown once the tour closes.
+  $expertRemovedAfterTour = (bool) auth('web')->user()?->needsPortalTour();
+@endphp
+<div id="expertRemovedModal" style="position:fixed;inset:0;z-index:99999;display:{{ $expertRemovedAfterTour ? 'none' : 'flex' }};align-items:center;justify-content:center;background:rgba(15,16,22,0.75);backdrop-filter:blur(6px);padding:20px;" data-ids="{{ $expertRemovedIds }}">
   <div style="background:#fff;border-radius:18px;padding:32px 28px 24px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,0.25);text-align:center;position:relative;animation:expertPopIn 0.25s cubic-bezier(0.16,1,0.3,1);">
     <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.08);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
       <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -3284,7 +3288,10 @@ document.addEventListener('DOMContentLoaded', function() {
     @if(isset($pendingLeadershipTransfer) && $pendingLeadershipTransfer)
     var leadershipPopup = document.getElementById('leadershipPopup');
     if (leadershipPopup) {
-        setTimeout(function() { leadershipPopup.classList.add('active'); }, 550);
+        // After the portal tour, never on top of it (partials/portal-tour).
+        setTimeout(function() {
+            (window.afterPortalTour || function (fn) { fn(); })(function () { leadershipPopup.classList.add('active'); }, function () { return leadershipPopup.classList.contains('active'); });
+        }, 550);
     }
     @endif
 
@@ -3292,6 +3299,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var expertModal = document.getElementById('expertRemovedModal');
     var expertOkBtn = document.getElementById('expertRemovedOkBtn');
     if (expertModal && expertOkBtn) {
+        // Held behind the portal tour, then shown (partials/portal-tour).
+        if (expertModal.style.display === 'none') {
+            (window.afterPortalTour || function (fn) { fn(); })(function () { expertModal.style.display = 'flex'; }, function () { return expertModal.style.display !== 'none'; });
+        }
         var ids = (expertModal.getAttribute('data-ids') || '').split(',').filter(Boolean);
         expertOkBtn.addEventListener('click', function() {
             var token = document.querySelector('meta[name=csrf-token]').content;

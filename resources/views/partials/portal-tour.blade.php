@@ -378,7 +378,44 @@
     document.body.classList.remove('tour-open');
     setSidebar(false);
     if (returnFocus && returnFocus.focus) returnFocus.focus({ preventScroll: true });
+    release();
   }
+
+  // The tour goes first. A new account can have an invitation, unread
+  // notifications or an evaluation waiting on its very first page, and each
+  // of those opens a pop-up of its own; on top of the tour they covered its
+  // outline and note. They wait here instead, and come once it is closed.
+  var pending = tour.getAttribute('data-auto-open') === '1' && !markedDone();
+  var waiting = [];
+  function run(fn) { try { fn(); } catch (e) { console.error(e); } }
+  // A moment after the tour fades: the corner pop-ups at once, and the
+  // pop-ups that cover the page one at a time - the next only when the one
+  // before it has been closed.
+  function release() {
+    pending = false;
+    var queued = waiting;
+    waiting = [];
+    var covering = queued.filter(function (q) { return q.isOpen; });
+    queued.filter(function (q) { return !q.isOpen; }).forEach(function (q, i) {
+      setTimeout(function () { run(q.fn); }, 250 + i * 150);
+    });
+    (function nextCovering() {
+      var q = covering.shift();
+      if (!q) return;
+      setTimeout(function () {
+        run(q.fn);
+        var watch = setInterval(function () {
+          if (!q.isOpen()) { clearInterval(watch); nextCovering(); }
+        }, 300);
+      }, 250);
+    })();
+  }
+  // fn opens the pop-up; isOpen, for one that covers the page, says whether
+  // it is still open, so the next waits for it.
+  window.afterPortalTour = function (fn, isOpen) {
+    if (pending || !tour.hidden) waiting.push({ fn: fn, isOpen: isOpen || null });
+    else fn();
+  };
 
   function next() { direction = 1; current === last ? close() : show(current + 1); }
   function back() { direction = -1; show(current - 1); }
@@ -431,7 +468,23 @@
     open();
   };
 
-  if (tour.getAttribute('data-auto-open') === '1' && !markedDone()) open();
+  // The staff welcome ("Welcome to CapsTRACK!") is said first, and the tour
+  // follows once it is dismissed. Looked for once the page is read, since the
+  // welcome comes after the sidebar in the page.
+  function autoOpen() {
+    var welcome = document.getElementById('welcome-modal');
+    var dismiss = document.getElementById('welcome-dismiss');
+    if (welcome && dismiss && welcome.classList.contains('show')) {
+      dismiss.addEventListener('click', function () { setTimeout(open, 250); }, { once: true });
+      return;
+    }
+    open();
+  }
+
+  if (pending) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', autoOpen, { once: true });
+    else autoOpen();
+  }
 })();
 </script>
 @endif

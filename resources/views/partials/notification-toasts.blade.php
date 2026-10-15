@@ -232,6 +232,13 @@
   // are counted in one that opens the bell.
   function popAll(list) {
     if (!list.length) return;
+    // Held while the portal tour is showing, and popped once it closes
+    // (partials/portal-tour); straight away when there is no tour.
+    if (window.afterPortalTour && !list.held) {
+      list.held = true;
+      window.afterPortalTour(function () { popAll(list); });
+      return;
+    }
     remember(list.map(function (n) { return n.id; }));
     list.slice(0, MAX).reverse().forEach(function (n, i) {
       setTimeout(function () { pop(n); }, i * 180);

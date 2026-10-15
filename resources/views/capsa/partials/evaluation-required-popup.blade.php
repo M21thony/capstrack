@@ -78,12 +78,14 @@
   document.getElementById('erp-later').addEventListener('click', later);
   overlay.addEventListener('click', function (e) { if (e.target === overlay) { later(); } });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlay.classList.contains('active')) { later(); } });
-  // After the page settles, and not on top of the portal tour.
-  setTimeout(function () {
-    var tour = document.getElementById('portal-tour');
-    if (tour && tour.dataset.autoOpen === '1') { return; }
-    overlay.classList.add('active');
-  }, 700);
+  // After the page settles, and after the portal tour if it is showing.
+  var show = function () {
+    setTimeout(function () {
+      (window.afterPortalTour || function (fn) { fn(); })(function () { overlay.classList.add('active'); }, function () { return overlay.classList.contains('active'); });
+    }, 700);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show, { once: true });
+  else show();
 })();
 </script>
 @endif

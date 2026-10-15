@@ -312,7 +312,13 @@
     .then(function (r) { return r.json(); })
     .then(function (data) {
       var items = (data && data.items) || [];
-      if (items.length) jrpOpen(items);
+      if (!items.length) return;
+      // After the portal tour, never on top of it (partials/portal-tour).
+      // The answer can arrive before the page - and the tour - is read, so
+      // decide only once it has been.
+      var go = function () { (window.afterPortalTour || function (fn) { fn(); })(function () { jrpOpen(items); }, function () { return overlay.classList.contains('active'); }); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true });
+      else go();
     })
     .catch(function () {});
 })();
