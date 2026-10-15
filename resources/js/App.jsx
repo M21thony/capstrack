@@ -410,9 +410,10 @@ function App() {
 
       const boxX = width + CARD_MARGIN;
       const boxWidth = SIDEBAR_WIDTH - 2 * CARD_MARGIN;
+      const cardHeight = (lineCount) => Math.max(40, 22 + lineCount * 9 + 12);
       const cards = pageComments.map((comment, idx) => {
         const lines = wrapText(write(`${comment.figure_label ? `${comment.figure_label}: ` : ""}${comment.text || ""}`), helveticaFont, 7, boxWidth - 30);
-        return { comment, idx, lines, height: Math.max(40, 22 + lines.length * 9 + 12) };
+        return { comment, idx, lines, height: cardHeight(lines.length) };
       });
       const drawCard = (onPage, { idx, lines, height: h }, top) => {
         try {
@@ -449,10 +450,20 @@ function App() {
           drawCard(page, card, top);
         });
 
+      // A remark taller than a whole page carries on over as many cards as it needs.
+      const maxLines = Math.floor((height - 45 - CARD_MARGIN - 34) / 9);
+      const pieces = overflow.flatMap((card) => {
+        const parts = [];
+        for (let i = 0; i === 0 || i < card.lines.length; i += maxLines) {
+          const lines = card.lines.slice(i, i + maxLines);
+          parts.push({ ...card, lines, height: cardHeight(lines.length) });
+        }
+        return parts;
+      });
       let at = pdfDoc.getPages().indexOf(page);
       let more = null;
       let top = 0;
-      overflow.forEach((card) => {
+      pieces.forEach((card) => {
         if (!more || top - card.height < CARD_MARGIN) {
           more = pdfDoc.insertPage(++at, [width + SIDEBAR_WIDTH, height]);
           more.drawText(`Remarks on page ${pageIndex + 1}, continued`, { x: boxX, y: height - 30, size: 10, font: helveticaBoldFont, color: rgb(0.2, 0.2, 0.2) });
@@ -469,19 +480,26 @@ function App() {
       const textWidth = w - 2 * 50;
       let page = null;
       let y = 0;
+      const newPage = () => {
+        page = pdfDoc.addPage([w, h]);
+        page.drawText("General remarks", { x: 50, y: h - 60, size: 16, font: helveticaBoldFont, color: rgb(0.1, 0.1, 0.1) });
+        page.drawText(`- ${reviewerName}`, { x: 50, y: h - 78, size: 9, font: helveticaFont, color: rgb(0.45, 0.45, 0.45) });
+        y = h - 108;
+      };
       generalComments.forEach((g, i) => {
         const head = write(`${i + 1}.${g.section ? ` ${g.section}` : ""}`);
         const lines = wrapText(write(g.text || ""), helveticaFont, 10, textWidth);
         const need = 16 + lines.length * 13 + 12;
-        if (!page || y - need < 50) {
-          page = pdfDoc.addPage([w, h]);
-          page.drawText("General remarks", { x: 50, y: h - 60, size: 16, font: helveticaBoldFont, color: rgb(0.1, 0.1, 0.1) });
-          page.drawText(`- ${reviewerName}`, { x: 50, y: h - 78, size: 9, font: helveticaFont, color: rgb(0.45, 0.45, 0.45) });
-          y = h - 108;
-        }
+        // A remark that fits on a page is kept whole; one longer than a page runs on to the next.
+        if (!page || (y - need < 50 && need <= h - 158) || y - 29 < 50) newPage();
         page.drawText(head, { x: 50, y, size: 10, font: helveticaBoldFont, color: rgb(0.231, 0.51, 0.965) });
-        lines.forEach((line, n) => page.drawText(line, { x: 50, y: y - 16 - n * 13, size: 10, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) }));
-        y -= need;
+        y -= 16;
+        lines.forEach((line) => {
+          if (y < 50) newPage();
+          page.drawText(line, { x: 50, y, size: 10, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
+          y -= 13;
+        });
+        y -= 12;
       });
     }
 
