@@ -96,6 +96,8 @@ class DocReviewController extends Controller
                     ? ($document->team_id ? Team::find($document->team_id) : StudentTeam::for($document->student_id))?->team_name
                     : null,
                 'role' => $review->role,
+                // Signs the remark cards of an exported PDF.
+                'reviewer' => $review->expert?->name,
                 'round' => $document?->roundLabel(),
                 'nextRound' => $document?->nextRoundLabel(),
                 'requirement' => $item?->title,
