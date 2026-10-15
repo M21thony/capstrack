@@ -63,10 +63,6 @@ function App() {
   // "approved", "needs_revision", or null when not turned in yet.
   const [reviewVerdict, setReviewVerdict] = useState(null);
   const [saveState, setSaveState] = useState("saved");
-  // Background Google Drive upload: "idle" | "syncing" | "synced" | "error".
-  const [driveSyncState, setDriveSyncState] = useState("idle");
-  const [driveSyncError, setDriveSyncError] = useState(null);
-  const driveSyncRef = useRef({ inFlight: false, pending: false });
   // The consultant is the one who checks the diagrams, so their review opens ready for figures.
   const checksDiagrams = ctx.role === "consultant";
   // Figures the reviewer looked at and had nothing to say about.
@@ -437,54 +433,16 @@ function App() {
     return pdfDoc.save();
   };
 
-  // Uploads the annotated PDF bytes to the review's Google Drive file.
-  const syncDrive = async (pdfBytes) => {
-    const response = await request(`/reviews/${reviewId}/drive-file`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/pdf" },
-      body: pdfBytes,
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      throw new Error(body?.message || `Drive sync failed: ${response.status}`);
-    }
-    return response.json();
-  };
-
-  // Safe to call repeatedly: a sync already running just flags that another
-  // is needed once it finishes, instead of running two heavy renders at once.
-  const syncAnnotatedPdfToDrive = async () => {
-    // Its Drive copy is the team's own diagram file, left as it is.
-    if (ctx.diagramOnly) return;
-    if (driveSyncRef.current.inFlight) { driveSyncRef.current.pending = true; return; }
-    driveSyncRef.current.inFlight = true;
-    setDriveSyncState("syncing");
-    setDriveSyncError(null);
-    try {
-      await syncDrive(await renderAnnotatedPdf());
-      setDriveSyncState("synced");
-    } catch (e) {
-      setDriveSyncState("error");
-      setDriveSyncError(e.message);
-    } finally {
-      driveSyncRef.current.inFlight = false;
-      if (driveSyncRef.current.pending) {
-        driveSyncRef.current.pending = false;
-        syncAnnotatedPdfToDrive();
-      }
-    }
-  };
-
-  // Leaving while remarks save or the Drive upload runs would drop them.
+  // Leaving while remarks save would drop them.
   useEffect(() => {
     const onBeforeUnload = (e) => {
-      if (saveState !== "saving" && driveSyncState !== "syncing") return;
+      if (saveState !== "saving") return;
       e.preventDefault();
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [saveState, driveSyncState]);
+  }, [saveState]);
 
   // Turning in is the moment the reviewer decides, so it carries the verdict.
   const handleTurnIn = async (verdict) => {
@@ -497,7 +455,6 @@ function App() {
       setSaveState("saved");
       setFinishing(false);
       showToast(verdict === "approved" ? "Turned in — approved." : "Turned in — sent back for revision.");
-      syncAnnotatedPdfToDrive();
     } catch (error) {
       console.error("Turn in error:", error);
       showToast("Could not turn this in. Please try again.", { type: "error" });
@@ -531,8 +488,6 @@ function App() {
         status={reviewStatus}
         verdict={reviewVerdict}
         saveState={saveState}
-        driveSyncState={driveSyncState}
-        driveSyncError={driveSyncError}
         onExport={handleExport}
         onFinish={() => setFinishing(true)}
         versions={versions}

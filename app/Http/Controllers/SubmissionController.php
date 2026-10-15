@@ -6,10 +6,8 @@ use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Deliverable;
-use App\Models\GoogleDriveToken;
 use App\Models\PdfRemark;
 use App\Models\Team;
-use App\Services\GoogleDriveService;
 use App\Services\Notifier;
 use App\Services\RecipientResolver;
 use App\Support\MilestoneProgress;
@@ -26,7 +24,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -36,7 +33,6 @@ class SubmissionController extends Controller
     private const DIAGRAM_TYPES = ['drawio', 'vsdx'];
 
     public function __construct(
-        private GoogleDriveService $drive,
         private RecipientResolver $resolver,
         private SubmissionRecipients $recipients,
     ) {}
@@ -49,7 +45,6 @@ class SubmissionController extends Controller
             'file' => 'required|file|max:25600', // 25 MB
             'recipients' => 'nullable|array',
             'recipients.*' => 'in:'.implode(',', SubmissionRecipients::ROLES),
-            'subject_adviser_folder_id' => 'nullable|string',
             'deliverable_id' => 'nullable|integer',
             // The draw.io or Visio files of its diagrams, so a reviewer can be shown exactly what changed in them.
             'diagrams' => 'nullable|array|max:20',
@@ -226,7 +221,6 @@ class SubmissionController extends Controller
                     'role' => $role,
                     'review_status' => 'To Review',
                     'version' => (string) $document->file_version,
-                    'drive_status' => 'pending',
                 ]);
 
                 // No email has ever gone out for a submission - the expert found
@@ -242,14 +236,10 @@ class SubmissionController extends Controller
                     ['team_id' => $studentYear->team_id, 'review_id' => $review->review_id],
                 );
 
-                $explicitFolderId = $role === 'subject_adviser' ? $request->input('subject_adviser_folder_id') : null;
-                $this->deliverToDrive($review, $expertId, $studentYear->team_id, $team->team_name ?? 'Unknown Team', $file, $originalExt, $explicitFolderId);
-
                 $results[] = [
                     'role' => $role,
                     'label' => SubmissionRecipients::LABELS[$role],
                     'name' => $review->expert?->name,
-                    'status' => $review->fresh()->drive_status,
                 ];
             }
         }
@@ -494,32 +484,6 @@ class SubmissionController extends Controller
         return 'Chapter '.(int) $matches[1];
     }
 
-    // GET /api/student/submission/subject-adviser-folders — named folders
-    // the resolved Subject Adviser has set up for students to pick from.
-    public function subjectAdviserFolders()
-    {
-        $studentId = Auth::id();
-
-        $studentYear = DB::table('student_s_y')
-            ->where('student_id', $studentId)
-            ->orderByDesc('school_year')
-            ->first();
-
-        if (! $studentYear || ! $studentYear->team_id) {
-            return response()->json(['folders' => []]);
-        }
-
-        $expertId = $this->resolver->resolveSubjectAdviserAdmin($studentYear->team_id);
-
-        if (! $expertId) {
-            return response()->json(['folders' => []]);
-        }
-
-        return response()->json([
-            'folders' => $this->drive->listNamedFolders($expertId),
-        ]);
-    }
-
     /**
      * Document Submission is part of Documents now. Opened with ?item=, the
      * pop-up still opens on that line straight away.
@@ -617,68 +581,5 @@ class SubmissionController extends Controller
         $suffix = in_array($n % 100, [11, 12, 13], true) ? 'th' : ([1 => 'st', 2 => 'nd', 3 => 'rd'][$n % 10] ?? 'th');
 
         return $n.$suffix;
-    }
-
-    private function deliverToDrive(
-        CapstoneDocumentReview $review,
-        int $expertId,
-        int $teamId,
-        string $teamName,
-        $file,
-        string $ext,
-        ?string $explicitFolderId = null
-    ): void {
-        $hasToken = GoogleDriveToken::where('user_id', $expertId)->exists();
-
-        if (! $hasToken) {
-            $review->update([
-                'drive_status' => 'not_connected',
-                'drive_error' => 'This recipient has not connected Google Drive yet.',
-            ]);
-
-            return;
-        }
-
-        $extensionMimeMap = [
-            'pdf' => 'application/pdf',
-            'doc' => 'application/msword',
-            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'ppt' => 'application/vnd.ms-powerpoint',
-            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        ];
-        $mimeType = $extensionMimeMap[$ext] ?? $file->getMimeType();
-
-        try {
-            // A student-chosen folder (currently only offered for the Subject
-            // Adviser recipient) takes priority over the default per-team
-            // auto-created one.
-            $folderId = $explicitFolderId ?? $this->drive->getOrCreateSubmissionFolder($expertId, $teamId, $teamName);
-
-            $uploaded = $this->drive->uploadFile(
-                $expertId,
-                $file->getRealPath(),
-                $file->getClientOriginalName(),
-                $mimeType,
-                $folderId
-            );
-
-            $review->update([
-                'drive_file_id' => $uploaded['id'],
-                'drive_web_view_link' => $uploaded['web_view_link'],
-                'drive_status' => 'uploaded',
-                'drive_error' => null,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Submission Drive delivery failed', [
-                'review_id' => $review->review_id,
-                'expert_id' => $expertId,
-                'message' => $e->getMessage(),
-            ]);
-
-            $review->update([
-                'drive_status' => 'failed',
-                'drive_error' => $e->getMessage(),
-            ]);
-        }
     }
 }

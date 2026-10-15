@@ -102,7 +102,7 @@ class PdfAnnotationTest extends TestCase
 
     // The annotator must always be handed the clean local PDF, never the
     // Google Drive copy - that copy is a flattened export produced by
-    // syncDrive() for viewing elsewhere, and reading it back would burn the
+    // the old Drive sync for viewing elsewhere, and reading it back would burn the
     // annotations into the page pixels and then draw the overlay on top of
     // them again on every save. This test used to assert the opposite (that
     // an uploaded Drive copy is streamed), which is the behaviour the
@@ -557,64 +557,6 @@ class PdfAnnotationTest extends TestCase
         $response = $this->get("/reviews/{$reviewId}/status");
 
         $response->assertStatus(403);
-    }
-
-    public function test_syncs_annotated_pdf_to_drive(): void
-    {
-        $expert = $this->loginAsApprovedExpert();
-        $syncFileId = \DB::table('capstone_documents')->insertGetId([
-            'file_id' => 24,
-            'student_id' => $this->documentOwnerId(),
-            'file_path' => 'submissions/sync-24.pdf',
-            'file_name' => 'doc.pdf',
-        ]);
-
-        $reviewId = \DB::table('capstone_document_review')->insertGetId([
-            'review_id' => 24,
-            'file_id' => $syncFileId,
-            'expert_id' => $expert->expert_id,
-            'role' => 'adviser',
-            'review_status' => 'To Review',
-            'drive_status' => 'uploaded',
-            'drive_file_id' => 'DRIVE_SYNC_1',
-        ]);
-
-        $mock = $this->createMock(GoogleDriveService::class);
-        $mock->expects($this->once())
-            ->method('updateFile')
-            ->with($expert->expert_id, 'DRIVE_SYNC_1', $this->isType('string'), 'application/pdf');
-        $this->instance(GoogleDriveService::class, $mock);
-
-        $response = $this->call(
-            'PUT',
-            "/reviews/{$reviewId}/drive-file",
-            [],
-            [],
-            [],
-            ['CONTENT_TYPE' => 'application/pdf'],
-            '%PDF-1.4 annotated-bytes'
-        );
-
-        $response->assertStatus(200);
-        $response->assertJson(['success' => true]);
-    }
-
-    public function test_sync_drive_requires_a_linked_drive_file(): void
-    {
-        $expert = $this->loginAsApprovedExpert();
-        $reviewId = $this->makeReview(25, $expert->expert_id, 'To Review');
-
-        $response = $this->call(
-            'PUT',
-            "/reviews/{$reviewId}/drive-file",
-            [],
-            [],
-            [],
-            ['CONTENT_TYPE' => 'application/pdf'],
-            '%PDF-1.4 bytes'
-        );
-
-        $response->assertStatus(422);
     }
 
     public function test_stores_a_box_remark_with_every_box_and_its_figure(): void

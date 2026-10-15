@@ -385,7 +385,6 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
     Route::get('/{review}/status', [PdfAnnotationController::class, 'showStatus'])->name('status.show');
     Route::post('/{review}/status', [PdfAnnotationController::class, 'updateStatus'])->name('status.update');
     Route::post('/{review}/figures-checked', [PdfAnnotationController::class, 'updateFiguresChecked'])->name('figures-checked.update');
-    Route::put('/{review}/drive-file', [PdfAnnotationController::class, 'syncDrive'])->name('sync-drive');
     // The team's earlier uploads of the same requirement, to compare against.
     Route::get('/{review}/versions/{document}/file', [PdfAnnotationController::class, 'versionFile'])->name('versions.file');
     Route::get('/{review}/versions/{document}/remarks', [PdfAnnotationController::class, 'versionRemarks'])->name('versions.remarks');
@@ -519,7 +518,6 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/submission', [SubmissionController::class, 'create'])->name('student.submission');
             // Handles the actual file upload + multi-recipient Drive delivery
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
-            Route::get('/submission/subject-adviser-folders', [SubmissionController::class, 'subjectAdviserFolders'])->name('student.submission.subject-adviser-folders');
             Route::get('/submission/next-version', [SubmissionController::class, 'nextVersionForTitle'])->name('student.submission.next-version');
             // Asked before a draft goes up: is this the file they mean to send?
             Route::post('/submission/warnings', [SubmissionController::class, 'warnings'])->name('student.submission.warnings');

@@ -110,8 +110,6 @@ function freshState(itemId, from, revises) {
     diagrams: [],
     diagramProblem: null,
     picked: new Set(),
-    folders: [],
-    folder: '',
     progress: 0,
     failure: null,
     result: null,
@@ -187,23 +185,11 @@ async function loadPlan() {
     if (!res.ok) throw new Error(data.message || 'This could not be opened.');
     S.plan = data;
     S.picked = new Set(data.people.filter((p) => p.on).map((p) => p.role));
-    if (S.picked.has('subject_adviser') || data.people.some((p) => p.role === 'subject_adviser')) loadFolders();
   } catch (e) {
     S.loadError = e.message || 'This could not be opened. Reload the page and try again.';
   }
   render();
   focusFirst();
-}
-
-async function loadFolders() {
-  if (!CONFIG.folders || S.plan?.item?.paper) return;
-  try {
-    const data = await fetch(CONFIG.folders, { headers: { Accept: 'application/json' } }).then((r) => r.json());
-    S.folders = data.folders || [];
-    render();
-  } catch {
-    S.folders = [];
-  }
 }
 
 function closeNow() {
@@ -330,7 +316,6 @@ async function send() {
   body.append('file', await fileToSend());
   if (S.plan.item) body.append('deliverable_id', S.plan.item.id);
   if (!S.plan.item?.paper) S.picked.forEach((role) => body.append('recipients[]', role));
-  if (S.folder && S.picked.has('subject_adviser')) body.append('subject_adviser_folder_id', S.folder);
   if (ext(S.file.name) === 'pdf') S.diagrams.forEach((d) => body.append('diagrams[]', d));
 
   S.step = 'sending';
@@ -516,15 +501,8 @@ function goesToHtml() {
   else if (people.some((p) => p.role === 'subject_adviser' && p.note === 'format check')) hint = 'Your CaPSA only checks this chapter when they ask to check the format.';
   if (!paper && !people.some((p) => p.available)) hint = 'Nobody is assigned to your team yet, so there is no one to send it to.';
 
-  let folder = '';
-  if (!paper && S.folders.length && S.picked.has('subject_adviser')) {
-    folder = `<div class="up-field"><label class="up-label" for="up-folder">CaPSA’s folder</label>
-      <select id="up-folder" class="up-select"><option value="">Their team folder</option>${S.folders.map((f) =>
-        `<option value="${esc(f.drive_folder_id)}"${S.folder === f.drive_folder_id ? ' selected' : ''}>${esc(f.name)}</option>`).join('')}</select></div>`;
-  }
-
   return `<div class="up-goes"><div class="up-goes-h"><span class="up-label">${plan.locked && !paper ? 'Goes back to' : 'Send to'}</span>${right}</div>
-    <div class="up-pills">${pills}</div>${hint ? `<p class="up-hint">${hint}</p>` : ''}${folder}</div>`;
+    <div class="up-pills">${pills}</div>${hint ? `<p class="up-hint">${hint}</p>` : ''}</div>`;
 }
 
 function checksHtml() {
@@ -745,8 +723,6 @@ function onChange(e) {
       return;
     }
     loadPlan();
-  } else if (e.target.id === 'up-folder') {
-    S.folder = e.target.value;
   }
 }
 

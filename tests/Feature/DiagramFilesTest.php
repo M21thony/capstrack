@@ -316,16 +316,6 @@ class DiagramFilesTest extends TestCase
             ->assertSee('data-diagrams-url="'.route('student.review.diagrams', $review->review_id).'"', false);
     }
 
-    public function test_a_diagrams_drive_copy_is_never_written_over_with_a_pdf(): void
-    {
-        $review = $this->version(1, [['name' => 'dfd.drawio', 'path' => 'submissions/ch3-v1.pdf']], $expert = $this->adviser());
-        $review->update(['drive_file_id' => 'drive-file-1']);
-
-        $this->actingAs($expert, 'expert')
-            ->call('PUT', route('reviews.sync-drive', $review->review_id), [], [], [], ['CONTENT_TYPE' => 'application/pdf', 'HTTP_ACCEPT' => 'application/json'], '%PDF-1.4')
-            ->assertStatus(422)->assertJson(['message' => 'A diagram\'s Google Drive copy is the team\'s own file and is left as it is.']);
-    }
-
     public function test_taking_an_upload_back_removes_its_diagrams_too(): void
     {
         $review = $this->version(1, [['name' => 'dfd.drawio', 'path' => 'submissions/diagrams/v1.drawio']], $this->adviser());
