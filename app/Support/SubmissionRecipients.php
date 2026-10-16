@@ -92,9 +92,16 @@ class SubmissionRecipients
      *   people: array<int, array{role: string, label: string, name: ?string, note: ?string, expert_ids: array<int, int>, on: bool, available: bool}>
      * }
      */
-    public function plan(?Deliverable $item, int $teamId): array
+    public function plan(?Deliverable $item, int $teamId, ?CapstoneDocument $revises = null): array
     {
-        $previous = $item ? $this->previousReviewers($item, $teamId) : collect();
+        // A revision goes back to whoever had the last version: of its line,
+        // or - for a file for no line - of the upload it revises, so a revised
+        // diagram can't be sent to someone who never had it.
+        $previous = match (true) {
+            $item !== null => $this->previousReviewers($item, $teamId),
+            $revises !== null => $this->reviewersOf($revises),
+            default => collect(),
+        };
 
         if ($previous->isNotEmpty()) {
             return [
@@ -125,9 +132,9 @@ class SubmissionRecipients
      * @param  array<int, string>  $asked
      * @return array<string, array<int, int>>
      */
-    public function resolve(?Deliverable $item, int $teamId, array $asked): array
+    public function resolve(?Deliverable $item, int $teamId, array $asked, ?CapstoneDocument $revises = null): array
     {
-        $plan = $this->plan($item, $teamId);
+        $plan = $this->plan($item, $teamId, $revises);
         $chosen = [];
 
         foreach ($plan['people'] as $person) {
@@ -155,11 +162,17 @@ class SubmissionRecipients
             ->orderByDesc('file_version')
             ->first();
 
-        if (! $last) {
-            return collect();
-        }
+        return $last ? $this->reviewersOf($last) : collect();
+    }
 
-        return CapstoneDocumentReview::where('file_id', $last->file_id)
+    /**
+     * The reviews on one upload, by role.
+     *
+     * @return Collection<string, Collection<int, CapstoneDocumentReview>>
+     */
+    private function reviewersOf(CapstoneDocument $document): Collection
+    {
+        return CapstoneDocumentReview::where('file_id', $document->file_id)
             ->whereNotNull('expert_id')
             ->whereIn('role', self::ROLES)
             ->get()

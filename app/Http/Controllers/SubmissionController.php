@@ -46,6 +46,8 @@ class SubmissionController extends Controller
             'recipients' => 'nullable|array',
             'recipients.*' => 'in:'.implode(',', SubmissionRecipients::ROLES),
             'deliverable_id' => 'nullable|integer',
+            // The upload a revision of a file for no line is the next version of.
+            'revises' => 'nullable|integer',
             // The draw.io or Visio files of its diagrams, so a reviewer can be shown exactly what changed in them.
             'diagrams' => 'nullable|array|max:20',
             'diagrams.*' => ['file', 'max:5120', function (string $attribute, mixed $value, Closure $fail) {
@@ -131,7 +133,10 @@ class SubmissionController extends Controller
 
         // Who it goes to is the line's rule, not whatever boxes were ticked: a
         // revision goes back to exactly the people who had the last version.
-        $targets = $isPaper ? [] : $this->recipients->resolve($item, (int) $studentYear->team_id, (array) $request->input('recipients', []));
+        $revises = ! $item && $request->filled('revises')
+            ? CapstoneDocument::ofTeam((int) $studentYear->team_id)->find($request->integer('revises'))
+            : null;
+        $targets = $isPaper ? [] : $this->recipients->resolve($item, (int) $studentYear->team_id, (array) $request->input('recipients', []), $revises);
 
         if (! $isPaper && $targets === []) {
             return response()->json([
@@ -343,7 +348,11 @@ class SubmissionController extends Controller
         $isPaper = $item && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
         $last = $item ? CapstoneDocument::ofTeam($teamId)->where('deliverable_id', $item->id)->orderByDesc('file_version')->first() : null;
         $version = ($last?->file_version ?? 0) + 1;
-        $plan = $isPaper ? ['locked' => true, 'people' => []] : $this->recipients->plan($item, $teamId);
+        // A revision of a file for no line: the upload it revises.
+        $revises = ! $item && $request->filled('revises')
+            ? CapstoneDocument::ofTeam($teamId)->find($request->integer('revises'))
+            : null;
+        $plan = $isPaper ? ['locked' => true, 'people' => []] : $this->recipients->plan($item, $teamId, $revises);
 
         if ($isPaper) {
             $capsaId = $this->resolver->resolveSubjectAdviserAdmin($teamId);
@@ -368,8 +377,8 @@ class SubmissionController extends Controller
             'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', ...self::DIAGRAM_TYPES],
             'locked' => $plan['locked'],
             'people' => array_map(fn ($p) => array_diff_key($p, ['expert_ids' => true]), $plan['people']),
-            'remark' => $last && ! $isPaper ? $this->remarkOn($last) : null,
-            'lines' => $item ? [] : $lines->reject(fn ($l) => $l->locked)->values()->map(fn ($l) => [
+            'remark' => ($last ?? $revises) && ! $isPaper ? $this->remarkOn($last ?? $revises) : null,
+            'lines' => $item || $revises ? [] : $lines->reject(fn ($l) => $l->locked)->values()->map(fn ($l) => [
                 'id' => $l->id, 'title' => $l->title, 'phase' => $l->phase, 'note' => $l->note,
             ]),
         ]);

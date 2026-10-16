@@ -181,7 +181,10 @@ async function loadPlan() {
   S.loadError = null;
   render();
   try {
-    const url = CONFIG.plan + (S.itemId ? '?item=' + encodeURIComponent(S.itemId) : '');
+    const query = new URLSearchParams();
+    if (S.itemId) query.set('item', S.itemId);
+    if (S.revises) query.set('revises', S.revises);
+    const url = CONFIG.plan + (query.toString() ? '?' + query : '');
     const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'This could not be opened.');
@@ -317,6 +320,7 @@ async function send() {
   const body = new FormData();
   body.append('file', await fileToSend());
   if (S.plan.item) body.append('deliverable_id', S.plan.item.id);
+  else if (S.revises) body.append('revises', S.revises);
   if (!S.plan.item?.paper) S.picked.forEach((role) => body.append('recipients[]', role));
   if (ext(S.file.name) === 'pdf') S.diagrams.forEach((d) => body.append('diagrams[]', d));
 

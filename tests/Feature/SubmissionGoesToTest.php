@@ -234,6 +234,31 @@ class SubmissionGoesToTest extends TestCase
         $this->assertSame([1, 2], CapstoneDocument::orderBy('file_id')->pluck('file_version')->map(fn ($v) => (int) $v)->all());
     }
 
+    /** A file for no line, revised: back to whoever had it, not to whoever is ticked. */
+    public function test_a_revision_of_a_file_for_no_line_goes_back_to_the_same_experts(): void
+    {
+        $this->actingAs($this->student)->postJson(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->createWithContent('diagram-notes.pdf', 'version one'),
+            'recipients' => ['consultant'],
+        ])->assertOk();
+        $first = CapstoneDocument::orderByDesc('file_id')->first();
+
+        $this->actingAs($this->student)->getJson(route('student.submission.plan', ['item' => 'none', 'revises' => $first->file_id]))
+            ->assertOk()
+            ->assertJson(['locked' => true, 'lines' => []])
+            ->assertJsonCount(1, 'people')
+            ->assertJsonPath('people.0.role', 'consultant');
+
+        // Asking for the CaPSA as well changes nothing: the consultant had it.
+        $this->actingAs($this->student)->postJson(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->createWithContent('diagram-notes.pdf', 'version two'),
+            'revises' => $first->file_id,
+            'recipients' => ['subject_adviser', 'adviser'],
+        ])->assertOk();
+
+        $this->assertSame(['consultant:'.$this->experts['consultant']->expert_id], $this->reviewsOfLatest());
+    }
+
     public function test_the_same_file_as_last_time_is_refused(): void
     {
         $line = $this->chapter('1');
