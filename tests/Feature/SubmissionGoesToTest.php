@@ -121,7 +121,7 @@ class SubmissionGoesToTest extends TestCase
         $this->assertTrue($plan['consultant']['on']);
         $this->assertFalse($plan['subject_adviser']['on']);
         $this->assertTrue($plan['subject_adviser']['available']);
-        $this->assertSame('format check', $plan['subject_adviser']['note']);
+        $this->assertSame('review if asked', $plan['subject_adviser']['note']);
     }
 
     public function test_chapter_4_sends_the_consultant_the_diagrams(): void

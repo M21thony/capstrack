@@ -498,7 +498,7 @@ function goesToHtml() {
   let hint = '';
   if (paper) hint = 'A signed paper always goes to your CaPSA to check.';
   else if (plan.locked) hint = 'A revision goes back to the people who read the last version.';
-  else if (people.some((p) => p.role === 'subject_adviser' && p.note === 'format check')) hint = 'Your CaPSA only checks this chapter when they ask to check the format.';
+  else if (people.some((p) => p.role === 'subject_adviser' && p.note === 'review if asked')) hint = 'Your CaPSA only reviews this chapter when they ask for it.';
   if (!paper && !people.some((p) => p.available)) hint = 'Nobody is assigned to your team yet, so there is no one to send it to.';
 
   return `<div class="up-goes"><div class="up-goes-h"><span class="up-label">${plan.locked && !paper ? 'Goes back to' : 'Send to'}</span>${right}</div>

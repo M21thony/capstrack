@@ -56,7 +56,7 @@ class SubmissionRecipients
      */
     public static function rulesFor(?Deliverable $item): array
     {
-        $formatOnly = [self::OPTIONAL, 'format check'];
+        $formatOnly = [self::OPTIONAL, 'review if asked'];
 
         return match (self::chapterKey($item)) {
             '1', '2' => ['adviser' => [self::ON, null], 'subject_adviser' => [self::ON, null]],
