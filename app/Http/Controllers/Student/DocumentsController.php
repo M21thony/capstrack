@@ -112,7 +112,7 @@ class DocumentsController extends Controller
             'status' => self::status($latest),
             // A revision asked of the newest version is the next thing to do.
             'revise' => $latest->reviews->contains('verdict', CapstoneDocumentReview::NEEDS_REVISION)
-                ? ['itemId' => $latest->deliverable_id ?: '', 'fileId' => $latest->file_id, 'next' => $latest->nextRoundLabel()]
+                ? ['itemId' => $latest->deliverable_id ?: 'none', 'fileId' => $latest->file_id, 'next' => $latest->nextRoundLabel()]
                 : null,
             'versions' => $versions->map(fn (CapstoneDocument $document) => (object) [
                 'document' => $document,
@@ -242,7 +242,8 @@ class DocumentsController extends Controller
             'next' => $document->nextRoundLabel(),
             'due' => $item?->due_date?->format('M j'),
             'requirement' => $item?->title,
-            'itemId' => $item?->id,
+            // An upload for no line is revised as one for no line, not by picking a line.
+            'itemId' => $item?->id ?? 'none',
             'fileId' => $document->file_id,
         ];
     }

@@ -136,6 +136,23 @@ class DocumentsPageTest extends TestCase
     }
 
     /** A diagram is kept on disk under another extension; the list says what was sent. */
+    /** A revision of an upload for no line opens on the file box, not on "What is this for?". */
+    public function test_a_revision_of_an_upload_for_no_line_opens_straight_on_the_file(): void
+    {
+        $document = $this->upload($this->me, 'Ch3_Methodology_v1', 1);
+        $review = $this->reviewOf($document, 'adviser', CapstoneDocumentReview::REVIEWED, CapstoneDocumentReview::NEEDS_REVISION);
+        $opens = "window.openSubmission('none', this, {$document->file_id})";
+
+        $this->actingAs($this->me, 'web')->get(route('student.documents'))
+            ->assertOk()
+            ->assertSee($opens, false);
+
+        $this->actingAs($this->me, 'web')
+            ->get(route('student.documents', ['file' => $document->file_id, 'review' => $review->review_id]))
+            ->assertOk()
+            ->assertSee($opens, false);
+    }
+
     public function test_a_diagram_is_shown_as_the_kind_of_file_it_was_sent_as(): void
     {
         Storage::disk('local')->put('documents/dfd.txt', '<mxfile></mxfile>');

@@ -89,11 +89,13 @@ let dialog = null;
 
 function freshState(itemId, from, revises) {
   return {
-    itemId: itemId || '',
+    // A revision of an upload that was never for a checklist line is still
+    // for no line: it must not open on "What is this for?" with no file box.
+    itemId: itemId || (revises ? 'none' : ''),
     // The upload a "Submit revision" is the next version of.
     revises: revises || null,
     from,
-    fixedLine: !!itemId,
+    fixedLine: !!itemId || !!revises,
     plan: null,
     loadError: null,
     step: 'pick', // pick | check | sending | sent | failed
@@ -409,7 +411,7 @@ function sentLine(forToast) {
 function titleText() {
   if (!S.plan) return 'Submit a file';
   const item = S.plan.item;
-  if (!item) return 'Submit a file';
+  if (!item) return S.revises ? 'Submit a revision' : 'Submit a file';
   return S.plan.round ? `${item.title} · ${S.plan.round}` : item.title;
 }
 
