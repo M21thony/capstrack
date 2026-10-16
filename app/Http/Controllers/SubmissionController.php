@@ -6,12 +6,12 @@ use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Deliverable;
-use App\Models\PdfRemark;
 use App\Models\Team;
 use App\Services\Notifier;
 use App\Services\RecipientResolver;
 use App\Support\MilestoneProgress;
 use App\Support\RevisionCheck;
+use App\Support\RevisionRemark;
 use App\Support\SectionScope;
 use App\Support\StudentTeam;
 use App\Support\SubmissionRecipients;
@@ -25,7 +25,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class SubmissionController extends Controller
 {
@@ -385,43 +384,11 @@ class SubmissionController extends Controller
             'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', ...self::DIAGRAM_TYPES],
             'locked' => $plan['locked'],
             'people' => array_map(fn ($p) => array_diff_key($p, ['expert_ids' => true]), $plan['people']),
-            'remark' => ($last ?? $revises) && ! $isPaper ? $this->remarkOn($last ?? $revises) : null,
+            'remark' => ($last ?? $revises) && ! $isPaper ? RevisionRemark::on($last ?? $revises) : null,
             'lines' => $item || $revises ? [] : $lines->reject(fn ($l) => $l->locked)->values()->map(fn ($l) => [
                 'id' => $l->id, 'title' => $l->title, 'phase' => $l->phase, 'note' => $l->note,
             ]),
         ]);
-    }
-
-    /**
-     * What the reviewer asked for on the version sent back: whose it is, how
-     * many remarks, and the first of them.
-     *
-     * @return array{who: string, count: int, first: ?string, url: string}|null
-     */
-    private function remarkOn(CapstoneDocument $document): ?array
-    {
-        $review = CapstoneDocumentReview::where('file_id', $document->file_id)
-            ->where('verdict', CapstoneDocumentReview::NEEDS_REVISION)
-            ->orderByDesc('verdict_at')
-            ->first();
-
-        if (! $review) {
-            return null;
-        }
-
-        $remarks = PdfRemark::where('review_id', $review->review_id)
-            ->whereNotNull('comment')
-            ->orderByDesc('is_general')
-            ->orderBy('created_at')
-            ->pluck('comment')
-            ->filter(fn ($c) => trim($c) !== '');
-
-        return [
-            'who' => 'Your '.(SubmissionRecipients::LABELS[$review->role] ?? 'reviewer'),
-            'count' => $remarks->count(),
-            'first' => $remarks->first() ? Str::limit(trim($remarks->first()), 90) : null,
-            'url' => route('student.documents', ['file' => $review->file_id, 'review' => $review->review_id]),
-        ];
     }
 
     /**

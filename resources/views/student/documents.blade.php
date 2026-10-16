@@ -9,86 +9,95 @@
 @vite($reader ? ['resources/student-ui/styles.css', 'resources/js/student-review.jsx'] : ['resources/student-ui/styles.css'])
 <x-dashboard.styles />
 <style nonce="{{ Vite::cspNonce() }}">
-  /* Documents: Document Submission and Review Viewer as one page. The list
-     is one group per line with every version under it - who sent it, when,
-     where each reviewer is. A version opens on this page with its remarks
-     beside it. The list is a table when there is room and one compact row
-     per version when there is not. The shared .sub-card caps at 980px and
-     loads later, so the page's own width needs the extra class to win;
-     the table needs ~930px, so below 1000px it turns into compact rows
-     rather than running past the card's edge and being cut off. */
-  .sub-card.dc-card { max-width: 1160px; container: dc-list / inline-size; }
-  .dc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .dc-table { width: 100%; border-collapse: collapse; }
-  .dc-table thead th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); background: var(--bg3); padding: 8px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  .dc-table thead th:first-child { padding-left: 66px; }
-  .dc-table tbody + tbody .dc-group th { border-top: 1px solid var(--border); }
-  .dc-group th { text-align: left; font-weight: 400; padding: 14px 16px 4px; }
-  .dc-group-row { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; }
-  .dc-title { flex: 1 1 240px; min-width: 0; display: flex; align-items: center; gap: 16px; }
-  .dc-title b { display: block; font-size: 14px; color: var(--text); }
-  .dc-title small { display: block; font-size: 12px; color: var(--text3); }
-  .dc-acts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .dc-acts .up-btn { height: 34px; font-size: 13px; }
-  .dc-ic { width: 34px; height: 40px; flex-shrink: 0; border-radius: 6px; border: 1px solid var(--border2); background: var(--bg2); display: grid; place-items: end center; padding-bottom: 5px; font: 700 8px/1 ui-monospace, Menlo, Consolas, monospace; color: #c42424; }
-  .dc-ic.drawio { color: #c2410c; font-size: 6.5px; }
-  .dc-ic.vsdx { color: #1d4ed8; font-size: 7px; }
-  .dc-row td { padding: 8px 14px; font-size: 13px; vertical-align: middle; }
-  .dc-row:last-child td { padding-bottom: 14px; }
-  .dc-row:hover td { background: var(--bg3); }
-  .dc-v { padding-left: 66px !important; white-space: nowrap; width: 1%; }
-  .dc-v b { font: 600 12.5px/1 ui-monospace, Menlo, Consolas, monospace; color: var(--text); margin-right: 6px; }
-  .dc-v small { font-size: 12px; color: var(--text3); }
-  .dc-file { display: block; font: 12.5px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--text2); overflow-wrap: break-word; }
-  .dc-f small { display: block; font-size: 11.5px; color: var(--text3); }
-  .dc-row.old .dc-file, .dc-row.old .dc-v b { color: var(--text3); }
-  .dc-who { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
-  .dc-av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; background: var(--bg4); color: var(--text2); font-size: 10px; font-weight: 700; }
-  .dc-av.me { background: var(--accent, #c9a82c); color: #1b1e26; }
-  .dc-nm { display: block; color: var(--text); }
-  .dc-nm small { color: var(--text3); font-size: 12px; }
-  .dc-date { display: block; font-size: 12px; color: var(--text3); font-variant-numeric: tabular-nums; }
-  .dc-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  /* Documents: the team's papers for its experts, one card per paper - the
+     newest version, where each reviewer is, and what to do next - with the
+     earlier versions folded under it. A paper sent back comes first and says
+     what was asked. A version opens on this page with its remarks beside it.
+     Signed papers are not here: they are handed in on Progress Tracker. */
+  .dl { max-width: 1100px; container: dl / inline-size; }
+  .dl [hidden] { display: none !important; }
+  .dl-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .dl-head { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .dl-head h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; color: var(--text); }
+  .dl-head p { margin: 4px 0 0; font-size: 14px; color: var(--text2); }
+  .dl-head .up-btn { height: 44px; padding: 0 20px; font-size: 14.5px; }
+  .dl-flash { margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; font-size: 13.5px; color: #15803d; background: rgba(22,163,74,.08); }
+  .dl-flash.bad { color: #b45309; background: rgba(180,83,9,.08); }
+  .dl-tools { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 10px 12px; flex-wrap: wrap; margin-top: -12px; padding: 12px 0; background: var(--bg); border-bottom: 1px solid var(--border); }
+  /* Stuck under the top bar, it also covers the page's top padding, or the cards would show through above it. */
+  .dl-tools.stuck { box-shadow: 0 calc(-1 * var(--dl-pad, 0px)) 0 var(--bg); }
+  .dl-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dl-tab { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font: 500 14px/1 inherit; font-family: inherit; cursor: pointer; }
+  .dl-tab:hover { border-color: var(--border2); color: var(--text); }
+  .dl-tab b { min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; display: inline-grid; place-items: center; background: var(--bg4); color: var(--text2); font-size: 12px; }
+  .dl-tab[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: #fff; }
+  .dl-tab[aria-pressed="true"] b { background: rgba(255,255,255,.18); color: #fff; }
+  .dl-search { flex: 0 1 260px; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 9px; background: var(--bg2); color: var(--text3); }
+  .dl-search input { flex: 1; min-width: 0; height: 38px; padding: 0; border: 0; outline: 0; background: none; -webkit-appearance: none; appearance: none; font: inherit; font-size: 14px; color: var(--text); }
+  .dl-list { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; }
+  .dl-doc { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; }
+  .dl-doc:hover { border-color: var(--border2); }
+  .dl-doc.attn { border-color: #ecd9b8; }
+  .dl-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; column-gap: 16px; align-items: start; padding: 18px 22px; }
+  .dl-body { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+  .dl-title { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; }
+  .dl-title h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--text); }
+  .dl-meta { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--text2); overflow-wrap: anywhere; }
+  .dl-file { font: 12.5px ui-monospace, Menlo, Consolas, monospace; color: var(--text); }
+  .dl-pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; background: var(--bg4); color: var(--text2); }
+  .dl-pill.ok { background: rgba(22,163,74,.09); color: #15803d; }
+  .dl-pill.revise { background: rgba(180,83,9,.09); color: #b45309; }
+  .dl-pill.now { background: rgba(29,78,216,.08); color: #1d4ed8; }
+  .dl-st { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  .dl-st li { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--text2); white-space: nowrap; }
+  .dl-st li b { font-weight: 600; color: var(--text); }
+  .dl-st svg, .dl-more svg, .dl-search svg { width: 15px; height: 15px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .dl-st .ok svg { color: #15803d; stroke-width: 2.6; } .dl-st .now svg { color: #1d4ed8; } .dl-st .wait svg { color: var(--text3); }
+  .dl-st .revise, .dl-st .revise b { color: #b45309; }
+  .dl-remark { padding: 12px 14px; border-radius: 10px; background: #fdf8f1; border: 1px solid #f0dcc4; }
+  .dl-remark q { display: block; font-size: 14.5px; line-height: 1.55; color: var(--text); quotes: "\201C" "\201D"; }
+  .dl-remark p { margin: 6px 0 0; font-size: 13px; color: var(--text2); }
+  .dl-remark p b { font-weight: 600; color: #b45309; }
+  .dl-remark a { color: var(--accent3); font-weight: 600; }
+  .dl-more { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin: -4px 0 -6px -8px; padding: 0 8px; border: 0; border-radius: 7px; background: none; color: var(--text2); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .dl-more:hover { background: var(--bg4); color: var(--text); }
+  .dl-more svg { transition: transform .15s; }
+  .dl-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .dl-acts { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; align-self: center; }
+  .dl-acts .up-btn, .dl-hrow .up-btn { height: 40px; text-decoration: none; }
+  .dl-acts .up-btn.danger, .dl-hrow .up-btn.danger { color: #b45309; }
+  .dl-hist { border-top: 1px solid var(--bg4); padding: 4px 22px 8px 80px; }
+  .dl-hrow { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; column-gap: 14px; row-gap: 6px; align-items: center; padding: 12px 0; }
+  .dl-hrow + .dl-hrow { border-top: 1px solid var(--bg4); }
+  .dl-ver { padding: 6px 0; border-radius: 6px; background: var(--bg4); text-align: center; font: 600 12.5px/1 ui-monospace, Menlo, Consolas, monospace; color: var(--text2); }
+  .dl-hrow .dl-meta { margin: 0 0 6px; }
+  .dl-none, .dl-empty { margin: 16px 0 0; padding: 36px 20px; border: 1px dashed var(--border2); border-radius: 14px; text-align: center; font-size: 14px; color: var(--text2); }
+  .dl-tab:focus-visible, .dl-more:focus-visible, .dl-search:focus-within, .dl-remark a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .dc-ic { width: 42px; height: 50px; flex-shrink: 0; box-sizing: border-box; border-radius: 7px; border: 1px solid var(--border2); background: var(--bg2); display: grid; place-items: end center; padding-bottom: 7px; font: 700 9px/1 ui-monospace, Menlo, Consolas, monospace; color: #c42424; }
+  .dc-ic.drawio { color: #c2410c; font-size: 7.5px; }
+  .dc-ic.vsdx { color: #1d4ed8; font-size: 8px; }
+  @container dl (max-width: 720px) {
+    .dl-row { grid-template-columns: 42px minmax(0, 1fr); padding: 16px; }
+    .dl-acts { grid-column: 2; justify-content: flex-start; margin-top: 14px; }
+    .dl-hist { padding: 4px 16px 8px; }
+    .dl-hrow { grid-template-columns: 44px minmax(0, 1fr); }
+    .dl-hrow .dl-acts { grid-column: 2; margin-top: 0; }
+    .dl-search { flex: 1 1 100%; }
+    /* On a phone the tabs stay one row that scrolls, and the bar scrolls away with the page. */
+    .dl-tools { position: static; margin-top: 0; padding-top: 0; }
+    .dl-tabs { flex-wrap: nowrap; overflow-x: auto; margin: 0 -12px; padding: 2px 12px; scrollbar-width: none; }
+    .dl-tab { flex-shrink: 0; }
+  }
+  @container dl (max-width: 420px) {
+    .dl-row { grid-template-columns: minmax(0, 1fr); }
+    .dl-row > .dc-ic { display: none; }
+    .dl-acts { grid-column: 1; }
+    .dl-acts .up-btn { flex: 1; }
+  }
   .dc-chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; background: var(--bg4); color: var(--text2); white-space: nowrap; text-decoration: none; }
   .dc-chip.ok { background: rgba(22,163,74,.09); color: #15803d; }
   .dc-chip.revise { background: rgba(180,83,9,.09); color: #b45309; }
   .dc-chip.now { background: rgba(29,78,216,.08); color: #1d4ed8; }
-  .dc-a { text-align: right; white-space: nowrap; width: 1%; }
-  .dc-a > * { display: inline-flex; vertical-align: middle; margin: 0 0 0 6px; }
-  .dc-a .up-btn { height: 32px; font-size: 12.5px; text-decoration: none; }
-  .dc-a .up-btn.danger { color: #b45309; }
-  .sub-status.now { background: rgba(29,78,216,.08); color: #1d4ed8; }
-  .dc-card .sub-status { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--bg4); color: var(--text2); white-space: nowrap; }
-  .dc-card .sub-status.revise { background: rgba(180,83,9,.09); color: #b45309; }
-  .dc-card .sub-status.ok { background: rgba(22,163,74,.09); color: #15803d; }
-
-  @container dc-list (max-width: 1000px) {
-    .dc-table thead { display: none; }
-    .dc-table, .dc-table tbody, .dc-group, .dc-group th { display: block; }
-    .dc-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 190px 96px; grid-template-areas: "v f w a" ". r r a"; gap: 4px 16px; align-items: center; padding: 8px 16px; }
-    .dc-row:last-child { padding-bottom: 14px; }
-    .dc-row td, .dc-row:last-child td { padding: 0 !important; background: none !important; }
-    .dc-v { grid-area: v; } .dc-f { grid-area: f; min-width: 0; } .dc-w { grid-area: w; min-width: 0; } .dc-r { grid-area: r; } .dc-a { grid-area: a; }
-    .dc-v small { display: none; }
-    .dc-file { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .dc-who { min-width: 0; } .dc-who > span { min-width: 0; overflow: hidden; }
-    .dc-nm, .dc-date { overflow: hidden; text-overflow: ellipsis; }
-    .dc-v, .dc-a { width: auto; }
-    .dc-a { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
-    .dc-a > * { margin: 0; }
-  }
-  @container dc-list (max-width: 560px) {
-    /* View and Unsubmit get a line of their own, under the reviewers: beside the name they covered the date. */
-    .dc-row { grid-template-columns: 34px minmax(0, 1fr); grid-template-areas: "v f" ". w" ". r" ". a"; }
-    .dc-a { flex-direction: row; justify-content: flex-start; align-items: center; gap: 8px; }
-    .dc-a > a, .dc-a > form { flex: 1; max-width: 160px; }
-    .dc-a .up-btn { width: 100%; }
-    .dc-who > span { white-space: nowrap; text-overflow: ellipsis; }
-    .dc-nm, .dc-date { display: inline; }
-    .dc-date { margin-left: 4px; } .dc-date::before { content: "· "; }
-    .dc-av { width: 22px; height: 22px; font-size: 9px; }
-    .dc-acts .up-btn, .dc-a .up-btn { height: 40px; }
-  }
 
   /* One version open: what it is and who reviewed it, then the file and its remarks. */
   .content:has(.rv-shell) { padding: 0; overflow: hidden; }
@@ -210,68 +219,129 @@
 </div>
 @else
     @include('student.partials.page-tutorial', ['page' => 'documents'])
-    <section class="sub-card dc-card" aria-labelledby="dc-h">
-      <div class="sub-card-h">
+    @php
+        $icons = [
+            'ok' => '<polyline points="20 6 9 17 4 12"/>',
+            'revise' => '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+            'now' => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+            'wait' => '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>',
+        ];
+        $whoSent = fn ($v) => ($v->uploader ? trim($v->uploader->f_name.' '.$v->uploader->l_name) : 'A teammate').($v->isMine ? ' (you)' : '');
+    @endphp
+    <section class="dl" aria-labelledby="dl-h">
+      <div class="dl-head">
         <div>
-          <h2 id="dc-h">Your team's documents</h2>
-          <p>{{ $groups->count() }} {{ Str::plural('file', $groups->count()) }} · newest first · press View to read a reviewer's remarks</p>
+          <h2 id="dl-h">Your team's documents</h2>
+          <p>{{ $counts['all'] }} {{ Str::plural('paper', $counts['all']) }}@if ($counts['revise']) · {{ $counts['revise'] }} {{ $counts['revise'] === 1 ? 'needs' : 'need' }} your revision @else · newest first @endif</p>
         </div>
         <button type="button" class="up-btn primary" onclick="window.openSubmission && window.openSubmission('none', this)"
                 @if ($selectedItemId) data-open-upload="{{ $selectedItemId }}" @endif>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Submit a file
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Submit a paper
         </button>
       </div>
       @if (session('status') || session('error'))
-        <p class="sub-flash {{ session('error') ? 'bad' : '' }}" role="status">{{ session('error') ?? session('status') }}</p>
+        <p class="dl-flash {{ session('error') ? 'bad' : '' }}" role="status">{{ session('error') ?? session('status') }}</p>
       @endif
       @if ($groups->isEmpty())
-        <p class="sub-empty">Nothing sent yet. What your team submits shows up here, with your reviewers' remarks.</p>
+        <p class="dl-empty">Nothing sent yet. The papers your team sends show up here, with your reviewers' remarks.</p>
       @else
-        <table class="dc-table">
-          <thead><tr><th scope="col">Version</th><th scope="col">File</th><th scope="col">Submitted</th><th scope="col">Review</th><th scope="col"><span class="dc-sr">Actions</span></th></tr></thead>
+        <div class="dl-tools">
+          <div class="dl-tabs" role="group" aria-label="Show">
+            @foreach (['all' => 'All', 'revise' => 'Needs revision', 'review' => 'In review', 'ok' => 'Approved'] as $key => $label)
+              <button type="button" class="dl-tab" data-filter="{{ $key }}" aria-pressed="{{ $key === 'all' ? 'true' : 'false' }}">{{ $label }} <b>{{ $counts[$key] }}</b></button>
+            @endforeach
+          </div>
+          <label class="dl-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span class="dl-sr">Search papers</span>
+            <input type="search" id="dl-search" placeholder="Search papers" autocomplete="off">
+          </label>
+        </div>
+        <div class="dl-list" data-dl-list>
           @foreach ($groups as $group)
-            @php $ext = \App\Http\Controllers\Student\DocumentsController::fileKind($group->latest); @endphp
-            <tbody>
-              <tr class="dc-group">
-                <th colspan="5" scope="rowgroup">
-                  <div class="dc-group-row">
-                    <span class="dc-title"><span class="dc-ic {{ $ext }}" aria-hidden="true">{{ strtoupper($ext) }}</span><span><b>{{ $group->title }}</b><small>{{ $group->versions->count() }} {{ Str::plural('submission', $group->versions->count()) }}</small></span></span>
-                    <span class="dc-acts">
-                      <span class="sub-status {{ $group->status[1] }}">{{ $group->status[0] }}</span>
-                      @if ($group->revise)
-                        <button type="button" class="up-btn primary" onclick="window.openSubmission && window.openSubmission('{{ $group->revise['itemId'] }}', this, {{ (int) $group->revise['fileId'] }})">Submit {{ $group->revise['next'] }}</button>
-                      @endif
-                    </span>
+            @php
+                $ext = \App\Http\Controllers\Student\DocumentsController::fileKind($group->latest);
+                $latest = $group->versions->first();
+                $d = $latest->document;
+                $diagramCount = $d->isDiagram() ? 0 : count($d->diagram_files ?? []);
+                $older = $group->versions->slice(1);
+                $search = Str::lower($group->title.' '.$group->versions->map(fn ($v) => $v->document->file_name)->implode(' '));
+            @endphp
+            <article class="dl-doc{{ $group->revise ? ' attn' : '' }}" data-filter="{{ $group->filter }}" data-search="{{ $search }}">
+              <div class="dl-row">
+                <span class="dc-ic {{ $ext }}" aria-hidden="true">{{ strtoupper($ext) }}</span>
+                <div class="dl-body">
+                  <div>
+                    <div class="dl-title"><h3>{{ $group->title }}</h3><span class="dl-pill {{ $group->status[1] }}">{{ $group->status[0] }}</span></div>
+                    <p class="dl-meta"><span class="dl-file">{{ $d->file_name }}</span> · v{{ (int) $d->file_version }} · {{ $d->roundLabel() }} · {{ $whoSent($latest) }} · {{ $d->created_at?->format('M j, Y g:i A') }}@if ($diagramCount) · + {{ $diagramCount }} {{ Str::plural('diagram file', $diagramCount) }}@endif</p>
                   </div>
-                </th>
-              </tr>
-              @foreach ($group->versions as $v)
-                @php
-                    $d = $v->document;
-                    $who = $v->uploader ? trim($v->uploader->f_name.' '.$v->uploader->l_name) : 'A teammate';
-                    $diagramCount = $d->isDiagram() ? 0 : count($d->diagram_files ?? []);
-                @endphp
-                <tr class="dc-row{{ $v->isLatest ? '' : ' old' }}">
-                  <td class="dc-v"><b>v{{ (int) $d->file_version }}</b><small>{{ $d->roundLabel() }}</small></td>
-                  <td class="dc-f"><span class="dc-file" title="{{ $d->file_name }}">{{ $d->file_name }}</span>@if ($diagramCount)<small>+ {{ $diagramCount }} {{ Str::plural('diagram file', $diagramCount) }}</small>@endif</td>
-                  <td class="dc-w"><span class="dc-who"><span class="dc-av{{ $v->isMine ? ' me' : '' }}" aria-hidden="true">{{ $v->uploader?->avatarInitials() ?? '?' }}</span><span><span class="dc-nm">{{ $who }}@if ($v->isMine) <small>(you)</small>@endif</span><span class="dc-date">{{ $d->created_at?->format('M j, Y g:i A') }}</span></span></span></td>
-                  <td class="dc-r"><span class="dc-chips">@forelse ($v->reviews as $r)<span class="dc-chip {{ $r['tone'] }}" title="{{ $r['name'] }}">{{ $r['role'] }} · {{ $r['text'] }}</span>@empty<span class="dc-chip">Sent to nobody</span>@endforelse</span></td>
-                  <td class="dc-a">
-                    <a class="up-btn" href="{{ route('student.documents', ['file' => $d->file_id]) }}" aria-label="View {{ $d->file_name }}, version {{ (int) $d->file_version }}">View</a>
-                    @if ($v->canUnsubmit)
-                      <form class="dc-undo" method="POST" action="{{ route('student.submission.unsubmit', $d->file_id) }}" data-name="{{ $d->file_name }}">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="up-btn danger">Unsubmit</button>
-                      </form>
-                    @endif
-                  </td>
-                </tr>
-              @endforeach
-            </tbody>
+                  <ul class="dl-st" aria-label="Reviewers">
+                    @forelse ($latest->reviews as $r)
+                      <li class="{{ $r['tone'] ?: 'wait' }}" title="{{ $r['name'] }}"><svg viewBox="0 0 24 24" aria-hidden="true">{!! $icons[$r['tone'] ?: 'wait'] !!}</svg><span><b>{{ $r['role'] }}</b> · {{ $r['text'] }}</span></li>
+                    @empty
+                      <li class="wait"><span>Sent to nobody</span></li>
+                    @endforelse
+                  </ul>
+                  @if ($group->remark)
+                    <div class="dl-remark">
+                      @if ($group->remark['first'])<q>{{ $group->remark['first'] }}</q>@endif
+                      <p>{{ $group->remark['reviewer'] ? $group->remark['reviewer'].', ' : '' }}{{ $group->remark['role'] }}{{ $group->remark['date'] ? ' · '.$group->remark['date'] : '' }}@if ($group->due) · <b>Due {{ $group->due }}</b>@endif · <a href="{{ $group->remark['url'] }}">Read {{ $group->remark['count'] > 1 ? 'all '.$group->remark['count'].' remarks' : 'the remark' }}</a></p>
+                    </div>
+                  @endif
+                  @if ($older->isNotEmpty())
+                    @php $earlier = $older->count().' earlier '.Str::plural('version', $older->count()); @endphp
+                    <button type="button" class="dl-more" data-dl-more data-label="{{ $earlier }}" aria-expanded="false" aria-controls="dl-h-{{ $d->file_id }}"><span>Show {{ $earlier }}</span><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button>
+                  @endif
+                </div>
+                <div class="dl-acts">
+                  @if ($group->revise)
+                    <button type="button" class="up-btn primary" onclick="window.openSubmission && window.openSubmission('{{ $group->revise['itemId'] }}', this, {{ (int) $group->revise['fileId'] }})">Submit {{ $group->revise['next'] }}</button>
+                  @endif
+                  <a class="up-btn" href="{{ route('student.documents', ['file' => $d->file_id]) }}" aria-label="View {{ $d->file_name }}, version {{ (int) $d->file_version }}">View</a>
+                  @if ($latest->canUnsubmit)
+                    <form class="dc-undo" method="POST" action="{{ route('student.submission.unsubmit', $d->file_id) }}" data-name="{{ $d->file_name }}">
+                      @csrf
+                      @method('DELETE')
+                      <button type="submit" class="up-btn danger">Unsubmit</button>
+                    </form>
+                  @endif
+                </div>
+              </div>
+              @if ($older->isNotEmpty())
+                <div class="dl-hist" id="dl-h-{{ $d->file_id }}" hidden>
+                  @foreach ($older as $v)
+                    @php $o = $v->document; @endphp
+                    <div class="dl-hrow">
+                      <span class="dl-ver">v{{ (int) $o->file_version }}</span>
+                      <div style="min-width: 0">
+                        <p class="dl-meta"><span class="dl-file">{{ $o->file_name }}</span> · {{ $o->roundLabel() }} · {{ $whoSent($v) }} · {{ $o->created_at?->format('M j, Y g:i A') }}</p>
+                        <ul class="dl-st">
+                          @forelse ($v->reviews as $r)
+                            <li class="{{ $r['tone'] ?: 'wait' }}" title="{{ $r['name'] }}"><span><b>{{ $r['role'] }}</b> · {{ $r['text'] }}</span></li>
+                          @empty
+                            <li class="wait"><span>Sent to nobody</span></li>
+                          @endforelse
+                        </ul>
+                      </div>
+                      <div class="dl-acts">
+                        <a class="up-btn" href="{{ route('student.documents', ['file' => $o->file_id]) }}" aria-label="View {{ $o->file_name }}, version {{ (int) $o->file_version }}">View</a>
+                        @if ($v->canUnsubmit)
+                          <form class="dc-undo" method="POST" action="{{ route('student.submission.unsubmit', $o->file_id) }}" data-name="{{ $o->file_name }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="up-btn danger">Unsubmit</button>
+                          </form>
+                        @endif
+                      </div>
+                    </div>
+                  @endforeach
+                </div>
+              @endif
+            </article>
           @endforeach
-        </table>
+        </div>
+        <p class="dl-none" id="dl-none" role="status" hidden>No papers match.</p>
       @endif
     </section>
 @endif
@@ -293,6 +363,50 @@ document.querySelectorAll('form.dc-undo').forEach(form => form.addEventListener(
   });
   if (agreed) form.submit();
 }));
+// Which papers show: a tab, and what is typed in the search.
+(() => {
+  const list = document.querySelector('[data-dl-list]');
+  if (!list) return;
+  const cards = [...list.querySelectorAll('.dl-doc')];
+  const tabs = [...document.querySelectorAll('.dl-tab')];
+  const search = document.getElementById('dl-search');
+  const none = document.getElementById('dl-none');
+  let filter = 'all';
+  const apply = () => {
+    const words = search.value.trim().toLowerCase();
+    let shown = 0;
+    cards.forEach(card => {
+      const fits = (filter === 'all' || card.dataset.filter === filter) && (!words || card.dataset.search.includes(words));
+      card.hidden = !fits;
+      shown += fits ? 1 : 0;
+    });
+    none.hidden = shown > 0;
+  };
+  tabs.forEach(tab => tab.addEventListener('click', () => {
+    filter = tab.dataset.filter;
+    tabs.forEach(other => other.setAttribute('aria-pressed', String(other === tab)));
+    apply();
+  }));
+  search.addEventListener('input', apply);
+  const tools = document.querySelector('.dl-tools');
+  const page = tools.closest('.content');
+  if (page) {
+    const pad = parseFloat(getComputedStyle(page).paddingTop) || 0;
+    tools.style.setProperty('--dl-pad', pad + 'px');
+    const stick = () => tools.classList.toggle('stuck', page.scrollTop > 0 && tools.getBoundingClientRect().top <= page.getBoundingClientRect().top + pad + 1);
+    page.addEventListener('scroll', stick, { passive: true });
+    stick();
+  }
+  // The earlier versions of a paper fold away under it.
+  list.addEventListener('click', event => {
+    const button = event.target.closest('[data-dl-more]');
+    if (!button) return;
+    const open = button.getAttribute('aria-expanded') !== 'true';
+    button.setAttribute('aria-expanded', String(open));
+    document.getElementById(button.getAttribute('aria-controls')).hidden = !open;
+    button.querySelector('span').textContent = (open ? 'Hide ' : 'Show ') + button.dataset.label;
+  });
+})();
 function toggleSidebar() { document.body.classList.toggle('sidebar-open'); }
 function closeSidebar() { document.body.classList.remove('sidebar-open'); }
 </script>

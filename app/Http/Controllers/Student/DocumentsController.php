@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\StudentReviewController;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
+use App\Models\Deliverable;
 use App\Models\PdfRemark;
 use App\Models\Student;
+use App\Support\RevisionRemark;
 use App\Support\SubmissionRecipients;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -31,7 +33,11 @@ class DocumentsController extends Controller
     {
         $studentId = Auth::id();
 
+        // A signed paper is handed in on Progress Tracker and checked there by
+        // the CaPSA. Documents is the team's papers for its experts to review.
         $uploads = CapstoneDocument::forTeamOf($studentId)
+            ->where(fn ($query) => $query->whereNull('deliverable_id')
+                ->orWhereHas('deliverable', fn ($line) => $line->whereNotIn('kind', Deliverable::CHECKED_BY_CAPSA)))
             ->with(['deliverable', 'reviews' => fn ($q) => $q->with('expert')->orderByDesc('reviewed_at')])
             ->latest('created_at')
             ->take(self::LIMIT)
@@ -42,6 +48,8 @@ class DocumentsController extends Controller
         $groups = $uploads
             ->groupBy(fn (CapstoneDocument $document) => self::lineKey($document))
             ->map(fn (Collection $versions) => $this->group($versions->sortByDesc('file_version')->values(), $uploaders, $studentId))
+            // What the team has to do comes first; the rest stays newest first.
+            ->sortBy(fn (object $group) => $group->revise ? 0 : 1)
             ->values();
 
         $opened = $request->filled('file')
@@ -50,12 +58,18 @@ class DocumentsController extends Controller
 
         return view('student.documents', [
             'groups' => $groups,
+            'counts' => [
+                'all' => $groups->count(),
+                'revise' => $groups->where('filter', 'revise')->count(),
+                'review' => $groups->where('filter', 'review')->count(),
+                'ok' => $groups->where('filter', 'ok')->count(),
+            ],
             'reader' => $opened ? $this->reader($opened, $groups, $request->integer('review')) : null,
             'selectedItemId' => (int) $request->query('item') ?: null,
         ]);
     }
 
-    /** The clean file of an upload nobody has reviewed yet, for the reader. */
+    /** The clean file of an upload nobody has reviewed yet, for the reader - or a signed paper, from Progress. */
     public function file(CapstoneDocument $document)
     {
         $this->authorizeDocument($document);
@@ -63,7 +77,10 @@ class DocumentsController extends Controller
         abort_unless($document->file_path && ! $document->isDiagram(), 404);
         abort_unless(Storage::disk('local')->exists($document->file_path), 404);
 
-        return Storage::disk('local')->response($document->file_path, null, [
+        // A signed paper may be a phone photo; everything else here is a PDF.
+        $isPhoto = in_array(strtolower(pathinfo($document->file_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png'], true);
+
+        return Storage::disk('local')->response($document->file_path, null, $isPhoto ? [] : [
             'Content-Type' => 'application/pdf',
         ]);
     }
@@ -105,15 +122,26 @@ class DocumentsController extends Controller
     private function group(Collection $versions, Collection $uploaders, int $studentId): object
     {
         $latest = $versions->first();
+        $status = self::status($latest);
+        $revise = $latest->reviews->contains('verdict', CapstoneDocumentReview::NEEDS_REVISION);
 
         return (object) [
             'title' => $latest->deliverable?->title ?? ($latest->chapter ?: $latest->file_name),
             'latest' => $latest,
-            'status' => self::status($latest),
-            // A revision asked of the newest version is the next thing to do.
-            'revise' => $latest->reviews->contains('verdict', CapstoneDocumentReview::NEEDS_REVISION)
+            'status' => $status,
+            // Which tab of the list it is under: to revise, with a reviewer, or approved.
+            'filter' => match ($status[1]) {
+                'revise' => 'revise',
+                'ok' => 'ok',
+                default => 'review',
+            },
+            // A revision asked of the newest version is the next thing to do,
+            // with what was asked for and by when, so the card says it.
+            'revise' => $revise
                 ? ['itemId' => $latest->deliverable_id ?: 'none', 'fileId' => $latest->file_id, 'next' => $latest->nextRoundLabel()]
                 : null,
+            'remark' => $revise ? RevisionRemark::on($latest, 160) : null,
+            'due' => $latest->deliverable?->due_date?->format('M j'),
             'versions' => $versions->map(fn (CapstoneDocument $document) => (object) [
                 'document' => $document,
                 'isLatest' => $document->is($latest),
