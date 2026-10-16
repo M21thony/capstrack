@@ -107,8 +107,9 @@
   .dc-back:hover { color: var(--text); border-color: var(--border2); }
   .dc-back svg, .rv-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .dc-rid { flex: 1 1 260px; min-width: 0; }
-  .dc-rid b { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; color: var(--text); }
-  .dc-rid small { display: block; font-size: 12.5px; color: var(--text3); overflow-wrap: anywhere; }
+  .dc-rid b { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 17px; color: var(--text); }
+  .dc-rid b .dc-chip { height: 24px; padding: 0 10px; font-size: 12.5px; font-weight: 600; }
+  .dc-rid small { display: block; margin-top: 2px; font-size: 13px; color: var(--text2); overflow-wrap: anywhere; }
   .dc-vers { display: inline-flex; gap: 2px; background: var(--bg4); border-radius: 8px; padding: 3px; }
   .dc-vers a { min-width: 34px; height: 28px; padding: 0 8px; border-radius: 6px; display: grid; place-items: center; font: 600 12px/1 ui-monospace, Menlo, Consolas, monospace; color: var(--text2); text-decoration: none; }
   .dc-vers a[aria-current="true"] { background: var(--bg2); color: var(--text); box-shadow: 0 1px 2px rgba(15,18,26,.12); }
@@ -118,11 +119,15 @@
   .rv-btn.gold:hover { background: var(--accent2); }
   .rv-btn.danger { color: #b45309; }
   .rv-btn:focus-visible, .dc-back:focus-visible, .dc-vers a:focus-visible, .dc-revs a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .dc-revs { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
-  .dc-revs > span:first-child { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); }
-  .dc-revs .dc-chip { height: 30px; padding: 0 12px; font-size: 12.5px; border: 1px solid transparent; }
+  .dc-revs { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; padding: 10px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+  .dc-revs > span:first-child { margin-right: 2px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text2); }
+  .dc-revs .dc-chip { gap: 6px; height: 36px; padding: 0 14px; font-size: 13px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); }
+  .dc-revs .dc-chip b { color: var(--text); }
+  .dc-revs .dc-chip svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .dc-revs .dc-chip.ok svg { color: #15803d; stroke-width: 2.6; } .dc-revs .dc-chip.now svg { color: #1d4ed8; }
+  .dc-revs .dc-chip.revise, .dc-revs .dc-chip.revise b { color: #b45309; }
   .dc-revs a.dc-chip:hover { border-color: var(--border2); }
-  .dc-revs .dc-chip[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(201,168,44,.15); }
+  .dc-revs .dc-chip[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(201,168,44,.18); }
   .dc-revs .dc-chip b { font-weight: 600; }
   .rv-work { min-height: 0; }
   .dc-undo { margin: 0; display: inline-flex; }
@@ -185,20 +190,29 @@
         <button type="submit" class="rv-btn danger">Unsubmit</button>
       </form>
     @endif
-    @if ($version->isLatest && $rev?->verdict === \App\Models\CapstoneDocumentReview::NEEDS_REVISION)
-      <button type="button" class="rv-btn gold" onclick="window.openSubmission && window.openSubmission('{{ $reader->decision['itemId'] }}', this, {{ (int) $reader->decision['fileId'] }})">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Submit {{ $reader->decision['next'] }}
+    {{-- Whichever reviewer is open: any one asking for changes means a revision is due. --}}
+    @if ($version->isLatest && $group->revise)
+      <button type="button" class="rv-btn gold" onclick="window.openSubmission && window.openSubmission('{{ $group->revise['itemId'] }}', this, {{ (int) $group->revise['fileId'] }})">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Submit {{ $group->revise['next'] }}
       </button>
     @endif
   </div>
 
   <div class="dc-revs" aria-label="Reviewers">
-    <span>Review</span>
+    @php
+        $chipIcons = [
+            'ok' => '<polyline points="20 6 9 17 4 12"/>',
+            'revise' => '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+            'now' => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+            '' => '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>',
+        ];
+    @endphp
+    <span>Remarks from</span>
     @forelse ($version->reviews as $r)
       @if ($r['done'])
-        <a class="dc-chip {{ $r['tone'] }}" href="{{ route('student.documents', ['file' => $doc->file_id, 'review' => $r['id']]) }}" @if ($rev?->review_id === $r['id']) aria-current="true" @endif title="Read {{ $r['name'] ?? $r['role'] }}’s remarks"><b>{{ $r['role'] }}</b> · {{ $r['text'] }}</a>
+        <a class="dc-chip {{ $r['tone'] }}" href="{{ route('student.documents', ['file' => $doc->file_id, 'review' => $r['id']]) }}" @if ($rev?->review_id === $r['id']) aria-current="true" @endif title="Read {{ $r['name'] ?? $r['role'] }}’s remarks"><svg viewBox="0 0 24 24" aria-hidden="true">{!! $chipIcons[$r['tone']] ?? $chipIcons[''] !!}</svg><b>{{ $r['role'] }}</b> · {{ $r['text'] }}</a>
       @else
-        <span class="dc-chip {{ $r['tone'] }}" title="{{ $r['name'] }}"><b>{{ $r['role'] }}</b> · {{ $r['tone'] === 'now' ? 'still reviewing' : 'not opened yet' }}</span>
+        <span class="dc-chip {{ $r['tone'] }}" title="{{ $r['name'] }}"><svg viewBox="0 0 24 24" aria-hidden="true">{!! $chipIcons[$r['tone']] ?? $chipIcons[''] !!}</svg><b>{{ $r['role'] }}</b> · {{ $r['tone'] === 'now' ? 'still reviewing' : 'not opened yet' }}</span>
       @endif
     @empty
       <span class="dc-chip">Sent to nobody</span>

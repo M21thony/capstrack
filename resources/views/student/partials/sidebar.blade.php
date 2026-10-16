@@ -50,6 +50,9 @@
         session()->put('seen_post_ids', array_unique(array_merge($seenPostIds, $allPostIds)));
     }
 
+    // Papers a reviewer sent back: a to-do, so it stays until the revision goes in.
+    $papersToRevise = $studentTeamId ? \App\Support\PapersToRevise::count($studentTeamId) : 0;
+
     $consultationIds = DB::table('consultation_schedule')->where('specific_date', '>=', now()->toDateString())->where('is_available', 1)->pluck('schedule_id')->toArray();
     $seenConsultationIds = session('seen_consultation_ids', []);
     $unseenConsultationCount = count(array_diff($consultationIds, $seenConsultationIds));
@@ -125,6 +128,9 @@
     <a href="{{ route('student.documents') }}" data-tour-target="student.documents" class="nav-item {{ request()->routeIs('student.documents', 'student.submission', 'student.review') ? 'active' : '' }}">
       <x-portal-icon name="file-up" />
       Documents
+      @if ($papersToRevise > 0)
+        <span class="nav-badge" title="{{ $papersToRevise }} {{ Str::plural('paper', $papersToRevise) }} to revise">{{ $papersToRevise > 99 ? '99+' : $papersToRevise }}</span>
+      @endif
     </a>
     <a href="{{ route('student.duplication') }}" data-tour-target="student.duplication" class="nav-item {{ request()->routeIs('student.duplication') ? 'active' : '' }}">
       <x-portal-icon name="similarity" />

@@ -143,6 +143,42 @@ class DocumentsPageTest extends TestCase
         $response->assertSeeText('Add five studies from 2022 onward.');
     }
 
+    /** Opened without a reviewer picked, a paper sent back opens on the one who asked for changes. */
+    public function test_a_paper_sent_back_opens_on_the_reviewer_who_asked_for_changes(): void
+    {
+        $document = $this->upload($this->me, 'Ch2_RRL_v1', 1, 'Chapter 2');
+        $adviser = $this->reviewOf($document, 'adviser', CapstoneDocumentReview::REVIEWED, CapstoneDocumentReview::APPROVED);
+        $consultant = $this->reviewOf($document, 'consultant', CapstoneDocumentReview::REVIEWED, CapstoneDocumentReview::NEEDS_REVISION);
+        $adviser->update(['reviewed_at' => now()->addMinute()]);
+
+        $response = $this->actingAs($this->me, 'web')->get(route('student.documents', ['file' => $document->file_id]))->assertOk();
+        $this->assertSame($consultant->review_id, $response->viewData('reader')->review->review_id);
+
+        // The approving reviewer's remarks still offer the revision the other one asked for.
+        $this->actingAs($this->me, 'web')
+            ->get(route('student.documents', ['file' => $document->file_id, 'review' => $adviser->review_id]))
+            ->assertOk()
+            ->assertSee('Submit 1st revision');
+    }
+
+    /** The menu counts the papers waiting on a revision, on every page, until it is sent. */
+    public function test_the_menu_counts_the_papers_to_revise(): void
+    {
+        $sentBack = $this->upload($this->teammate, 'Ch2_RRL_v1', 1, 'Chapter 2');
+        $this->reviewOf($sentBack, 'consultant', CapstoneDocumentReview::REVIEWED, CapstoneDocumentReview::NEEDS_REVISION);
+        $this->reviewOf($this->upload($this->me, 'Ch1_Intro_v1', 1, 'Chapter 1'), 'adviser', CapstoneDocumentReview::REVIEWED, CapstoneDocumentReview::APPROVED);
+
+        $this->actingAs($this->me, 'web')->get(route('student.documents'))
+            ->assertOk()
+            ->assertSee('title="1 paper to revise"', false);
+
+        // The revision is in: nothing left to revise.
+        $this->upload($this->me, 'Ch2_RRL_v2', 2, 'Chapter 2');
+        $this->actingAs($this->me, 'web')->get(route('student.documents'))
+            ->assertOk()
+            ->assertDontSee('paper to revise', false);
+    }
+
     public function test_the_page_needs_a_sign_in(): void
     {
         $this->get(route('student.documents'))->assertRedirect(route('login'));

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\StudentReviewController;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
-use App\Models\Deliverable;
 use App\Models\PdfRemark;
 use App\Models\Student;
 use App\Support\RevisionRemark;
@@ -36,8 +35,7 @@ class DocumentsController extends Controller
         // A signed paper is handed in on Progress Tracker and checked there by
         // the CaPSA. Documents is the team's papers for its experts to review.
         $uploads = CapstoneDocument::forTeamOf($studentId)
-            ->where(fn ($query) => $query->whereNull('deliverable_id')
-                ->orWhereHas('deliverable', fn ($line) => $line->whereNotIn('kind', Deliverable::CHECKED_BY_CAPSA)))
+            ->exceptSignedPapers()
             ->with(['deliverable', 'reviews' => fn ($q) => $q->with('expert')->orderByDesc('reviewed_at')])
             ->latest('created_at')
             ->take(self::LIMIT)
@@ -46,7 +44,7 @@ class DocumentsController extends Controller
         $uploaders = Student::whereIn('student_id', $uploads->pluck('student_id')->unique())->get()->keyBy('student_id');
 
         $groups = $uploads
-            ->groupBy(fn (CapstoneDocument $document) => self::lineKey($document))
+            ->groupBy(fn (CapstoneDocument $document) => $document->paperKey())
             ->map(fn (Collection $versions) => $this->group($versions->sortByDesc('file_version')->values(), $uploaders, $studentId))
             // What the team has to do comes first; the rest stays newest first.
             ->sortBy(fn (object $group) => $group->revise ? 0 : 1)
@@ -101,16 +99,6 @@ class DocumentsController extends Controller
     private function authorizeDocument(CapstoneDocument $document): void
     {
         abort_unless(CapstoneDocument::forTeamOf(Auth::id())->whereKey($document->file_id)->exists(), 404);
-    }
-
-    /** Which line an upload is a version of, the way versions are counted. */
-    private static function lineKey(CapstoneDocument $document): string
-    {
-        return match (true) {
-            (bool) $document->deliverable_id => 'line:'.$document->deliverable_id,
-            filled($document->chapter) => 'chapter:'.$document->chapter,
-            default => 'file:'.$document->file_name,
-        };
     }
 
     /**
@@ -222,7 +210,11 @@ class DocumentsController extends Controller
         $version = $group->versions->first(fn ($v) => $v->document->is($document));
 
         $turnedIn = $document->reviews->where('review_status', CapstoneDocumentReview::REVIEWED);
-        $review = $turnedIn->firstWhere('review_id', $reviewId) ?? $turnedIn->first();
+        // Opened without a reviewer picked, it opens on the one who asked for
+        // changes: that is what the team has to act on.
+        $review = $turnedIn->firstWhere('review_id', $reviewId)
+            ?? $turnedIn->firstWhere('verdict', CapstoneDocumentReview::NEEDS_REVISION)
+            ?? $turnedIn->first();
 
         return (object) [
             'group' => $group,
