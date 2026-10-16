@@ -247,7 +247,11 @@ class SubmissionGoesToTest extends TestCase
             ->assertOk()
             ->assertJson(['locked' => true, 'lines' => []])
             ->assertJsonCount(1, 'people')
-            ->assertJsonPath('people.0.role', 'consultant');
+            ->assertJsonPath('people.0.role', 'consultant')
+            // The pop-up says which paper it is and the version it goes up as.
+            ->assertJsonPath('paper', $first->file_name)
+            ->assertJsonPath('version', 2)
+            ->assertJsonPath('round', '1st revision');
 
         // Asking for the CaPSA as well changes nothing: the consultant had it.
         // Nor does a new file name: it is still the next version of that file.

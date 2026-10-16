@@ -52,6 +52,9 @@
         session()->put('seen_post_ids', array_unique(array_merge($seenPostIds, $allPostIds)));
     }
 
+    // Papers a reviewer sent back: a to-do, so it stays until the revision goes in.
+    $papersToRevise = $studentTeamId ? \App\Support\PapersToRevise::count($studentTeamId) : 0;
+
     $consultationIds = DB::table('consultation_schedule')->where('specific_date', '>=', now()->toDateString())->where('is_available', 1)->pluck('schedule_id')->toArray();
     $seenConsultationIds = session('seen_consultation_ids', []);
     $unseenConsultationCount = count(array_diff($consultationIds, $seenConsultationIds));
@@ -139,6 +142,9 @@ html.sb-rail .sidebar .nav-lock{display:none}
       <x-portal-icon name="file-up" />
       Documents
       @unless ($studentHasTeam)<span class="nav-lock" role="img" aria-label="Needs a team" title="Needs a team"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>@endunless
+      @if ($papersToRevise > 0)
+        <span class="nav-badge" title="{{ $papersToRevise }} {{ Str::plural('paper', $papersToRevise) }} to revise">{{ $papersToRevise > 99 ? '99+' : $papersToRevise }}</span>
+      @endif
     </a>
     <a href="{{ route('student.duplication') }}" data-tour-target="student.duplication" class="nav-item {{ request()->routeIs('student.duplication') ? 'active' : '' }}">
       <x-portal-icon name="similarity" />
@@ -423,6 +429,8 @@ html.sb-rail .sidebar .nav-lock{display:none}
   $uploadConfig = [
       'plan' => route('student.submission.plan'),
       'check' => route('student.submission.warnings'),
+      // Which paper, and which version of it, a file for no line goes up as - read from its name.
+      'nextVersion' => route('student.submission.next-version'),
       'store' => route('student.submission.store'),
       'documents' => route('student.documents'),
       // Undo on the notice after a send takes the file back, as Unsubmit does.
