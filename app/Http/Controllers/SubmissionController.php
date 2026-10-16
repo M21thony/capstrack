@@ -160,6 +160,14 @@ class SubmissionController extends Controller
         $title = $request->input('title') ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $chapter = $request->input('chapter') ?: $this->detectChapter($title);
 
+        // A revision of a file for no line is the next version of that file
+        // whatever the new copy is called: it takes the file's chapter, or
+        // its name when it has none, which is what versions are grouped by.
+        if ($revises) {
+            $chapter = $revises->chapter ?: null;
+            $title = $chapter ? $title : $revises->file_name;
+        }
+
         // Version only increments for resubmissions of the *same* document.
         // A student who names files "Thesis_2026-08-12.pdf" then
         // "Thesis_2026-08-13.pdf" still wants those to count as the same

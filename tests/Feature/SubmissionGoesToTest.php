@@ -250,13 +250,18 @@ class SubmissionGoesToTest extends TestCase
             ->assertJsonPath('people.0.role', 'consultant');
 
         // Asking for the CaPSA as well changes nothing: the consultant had it.
+        // Nor does a new file name: it is still the next version of that file.
         $this->actingAs($this->student)->postJson(route('student.submission.store'), [
-            'file' => UploadedFile::fake()->createWithContent('diagram-notes.pdf', 'version two'),
+            'file' => UploadedFile::fake()->createWithContent('diagram-notes-fixed-labels.pdf', 'version two'),
             'revises' => $first->file_id,
             'recipients' => ['subject_adviser', 'adviser'],
         ])->assertOk();
 
         $this->assertSame(['consultant:'.$this->experts['consultant']->expert_id], $this->reviewsOfLatest());
+        $revision = CapstoneDocument::orderByDesc('file_id')->first();
+        $this->assertSame(2, (int) $revision->file_version);
+        $this->assertSame($first->file_name, $revision->file_name);
+        $this->assertNull($revision->deliverable_id);
     }
 
     public function test_the_same_file_as_last_time_is_refused(): void
