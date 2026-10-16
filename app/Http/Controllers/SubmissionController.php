@@ -359,6 +359,19 @@ class SubmissionController extends Controller
         $revises = ! $item && $request->filled('revises')
             ? CapstoneDocument::ofTeam($teamId)->find($request->integer('revises'))
             : null;
+
+        // A revision of it goes up as the next version of that paper: counted
+        // the way store() counts it, by its chapter, else its name.
+        if ($revises) {
+            $version = (CapstoneDocument::ofTeam($teamId)
+                ->when(
+                    $revises->chapter,
+                    fn ($query) => $query->where('chapter', $revises->chapter),
+                    fn ($query) => $query->where('file_name', $revises->file_name)
+                )
+                ->max('file_version') ?? 0) + 1;
+        }
+
         $plan = $isPaper ? ['locked' => true, 'people' => []] : $this->recipients->plan($item, $teamId, $revises);
 
         if ($isPaper) {
@@ -379,12 +392,14 @@ class SubmissionController extends Controller
                 'due' => $item->due_date?->format('M j, Y'),
                 'paper' => $isPaper,
             ] : null,
-            'version' => $item ? $version : null,
+            'version' => $item || $revises ? $version : null,
+            // The paper a revision of a file for no line is the next version of.
+            'paper' => $revises ? ($revises->chapter ?: $revises->file_name) : null,
             'round' => $version > 1 ? self::ordinal($version - 1).' revision' : null,
             'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', ...self::DIAGRAM_TYPES],
             'locked' => $plan['locked'],
             'people' => array_map(fn ($p) => array_diff_key($p, ['expert_ids' => true]), $plan['people']),
-            'remark' => ($last ?? $revises) && ! $isPaper ? RevisionRemark::on($last ?? $revises) : null,
+            'remark' => ($last ?? $revises) && ! $isPaper ? RevisionRemark::on($last ?? $revises, 160) : null,
             'lines' => $item || $revises ? [] : $lines->reject(fn ($l) => $l->locked)->values()->map(fn ($l) => [
                 'id' => $l->id, 'title' => $l->title, 'phase' => $l->phase, 'note' => $l->note,
             ]),

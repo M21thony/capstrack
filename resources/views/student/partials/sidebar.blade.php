@@ -407,6 +407,8 @@
   $uploadConfig = [
       'plan' => route('student.submission.plan'),
       'check' => route('student.submission.warnings'),
+      // Which paper, and which version of it, a file for no line goes up as - read from its name.
+      'nextVersion' => route('student.submission.next-version'),
       'store' => route('student.submission.store'),
       'documents' => route('student.documents'),
       // Undo on the notice after a send takes the file back, as Unsubmit does.
