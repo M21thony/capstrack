@@ -8,6 +8,7 @@ use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\PdfRemark;
 use App\Models\Student;
+use App\Support\StudentTeam;
 use App\Support\SubmissionRecipients;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -52,6 +53,8 @@ class DocumentsController extends Controller
             'groups' => $groups,
             'reader' => $opened ? $this->reader($opened, $groups, $request->integer('review')) : null,
             'selectedItemId' => (int) $request->query('item') ?: null,
+            // Uploads belong to a team, so without one the page says why it is empty.
+            'hasTeam' => (bool) StudentTeam::idFor($studentId),
         ]);
     }
 

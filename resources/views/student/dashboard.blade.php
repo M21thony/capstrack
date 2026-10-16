@@ -74,6 +74,27 @@
 .now-row.bad b{color:var(--red,#dc2626)}
 .now-row.ok b{color:var(--green,#16a34a)}
 @media (max-width:760px){.now-grid{grid-template-columns:1fr}.now-row{flex-direction:column;gap:2px}.now-row b{min-width:0}}
+/* Your next step: the one setup step left, until the team has an adviser. */
+.ns-card{border:1px solid rgba(201,168,44,.35);border-left:5px solid var(--accent,#c9a82c);background:rgba(245,193,0,.06);border-radius:14px;padding:16px 18px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px}
+.ns-card.wait{border-color:rgba(22,163,74,.3);border-left-color:var(--green,#16a34a);background:rgba(22,163,74,.05)}
+.ns-lab{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent3,#8a6e10)}
+.ns-card.wait .ns-lab{color:var(--green,#16a34a)}
+.ns-card h3{margin:0;font-size:19px;color:var(--text)}
+.ns-why{margin:0;font-size:14px;color:var(--text2);max-width:60ch}
+.ns-how{margin:0;padding:0;list-style:none;counter-reset:h;display:flex;flex-direction:column;gap:6px}
+.ns-how li{counter-increment:h;display:flex;gap:10px;font-size:13.5px;color:var(--text)}
+.ns-how li::before{content:counter(h);flex:none;width:20px;height:20px;border-radius:50%;background:rgba(245,193,0,.22);color:var(--accent3,#8a6e10);font-weight:700;font-size:11.5px;display:grid;place-items:center;margin-top:1px}
+.ns-go{align-self:flex-start;text-decoration:none}
+.ns-rows{list-style:none;margin:0;padding:12px 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.ns-rows li{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--text)}
+.ns-rows li>span:last-child{min-width:0}
+.ns-rows svg{width:18px;height:18px;flex:none;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ns-rows .k{width:64px;flex:none;color:var(--text2)}
+.ns-rows .ok svg{stroke:var(--green,#16a34a)}
+.ns-rows .todo svg{stroke:var(--accent3,#8a6e10)}
+.ns-rows .wait svg{stroke:#d97706}
+.ns-rows .lock{color:var(--text3)}
+.ns-rows .lock svg{stroke:var(--text3)}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
   @include('partials.render-whole')
@@ -159,9 +180,41 @@
 
     {{-- Content --}}
     <div id="real-content" style="opacity:0">
+    {{-- Until the team has an adviser: the one setup step left, and why.
+         See App\Support\NextStep. --}}
+    @if ($nextStep)
+      <section class="ns-card {{ $nextStep->waiting ? 'wait' : '' }}" id="next-step-card">
+        <div class="ns-lab">{{ $nextStep->waiting ? 'Nothing to do right now' : 'Your next step' }}</div>
+        <h3>{{ $nextStep->title }}</h3>
+        <p class="ns-why">{{ $nextStep->why }}</p>
+        @if ($nextStep->how)
+          <ol class="ns-how">
+            @foreach ($nextStep->how as $line)<li><span>{{ $line }}</span></li>@endforeach
+          </ol>
+        @endif
+        <a class="btn {{ $nextStep->waiting ? 'btn-ghost' : 'btn-primary' }} ns-go" href="{{ $nextStep->url }}">{{ $nextStep->button }}</a>
+        <ul class="ns-rows" aria-label="Where your team stands">
+          @foreach ($nextStep->rows as [$label, $state, $text])
+            <li class="{{ $state }}">
+              @switch($state)
+                @case('ok')<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16 9.5"/></svg>@break
+                @case('wait')<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 7 12 12 15 14"/></svg>@break
+                @case('lock')<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>@break
+                @default<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
+              @endswitch
+              <span class="k">{{ $label }}</span>
+              <span>{{ $text }}</span>
+            </li>
+          @endforeach
+        </ul>
+      </section>
+    @endif
+
     {{-- What the team has to do next, from its section's checklist: the
          one card worth reading first. Everything else on this page is
-         something that happened, not something to do. --}}
+         something that happened, not something to do. Without a team the
+         next-step card above already says so. --}}
+    @if ($myTeam)
     <div class="card now-card" id="now-card" style="margin-bottom:16px">
       <div class="card-header">
         <span class="card-title">Where your team is</span>
@@ -169,9 +222,7 @@
           <a class="now-link" href="{{ route('student.progress') }}">Open Progress Tracker →</a>
         @endif
       </div>
-      @if (! $myTeam)
-        <p class="now-empty">You are not in a team yet. <a href="{{ route('student.team') }}">Form or join a team</a> to start your capstone.</p>
-      @elseif (! $progress)
+      @if (! $progress)
         <p class="now-empty">Your section's checklist is not set up yet. Your CaPSA adds it; it shows here once they do.</p>
       @else
         <div class="now-grid">
@@ -205,6 +256,7 @@
         </div>
       @endif
     </div>
+    @endif
 
     <x-dashboard.info-card
       id="announcements-card"

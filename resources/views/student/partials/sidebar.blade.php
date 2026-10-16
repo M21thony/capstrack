@@ -11,6 +11,8 @@
     $sidebarYearNum = preg_replace('/[^0-9]/', '', $sidebarYear);
     $sidebarYearSection = $courseAbbr ? $courseAbbr . ' - ' . $sidebarYearNum . $sidebarSection : $student->year_section ?? '';
     $studentHasTeam = \App\Models\StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
+    // The page the dashboard's "Your next step" card points at gets a dot.
+    $nextStepRoute = \App\Support\NextStep::for($student)?->route;
 
     $currentRouteName = request()->route()?->getName();
     // Experts and Consultation are one page: either address is that page.
@@ -58,6 +60,15 @@
         session()->put('seen_consultation_ids', array_unique(array_merge($seenConsultationIds, $consultationIds)));
     }
 @endphp
+{{-- The next-step dot, and the lock on pages that need a team. --}}
+<style nonce="{{ Vite::cspNonce() }}">
+.nav-next{margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--accent,#c9a82c);box-shadow:0 0 0 3px rgba(245,193,0,.22);flex:none}
+.nav-next + .nav-badge{margin-left:8px}
+.nav-lock{margin-left:auto;display:flex;flex:none}
+.sidebar .nav-lock svg{width:14px;height:14px;opacity:.55}
+html.sb-rail .sidebar .nav-next{position:absolute;top:6px;right:12px;margin:0}
+html.sb-rail .sidebar .nav-lock{display:none}
+</style>
 <!-- SIDEBAR -->
 @include('partials.portal-nav-icons')
 @include('partials.sidebar-rail')
@@ -103,6 +114,7 @@
     <a href="{{ route('student.team') }}" data-tour-target="student.team" class="nav-item {{ request()->routeIs('student.team', 'student.team_rating.*') ? 'active' : '' }}">
       <x-portal-icon name="team" />
       Team Management
+      @if ($nextStepRoute === 'student.team')<span class="nav-next" role="img" aria-label="Your next step" title="Your next step"></span>@endif
       @if ($newPostCount > 0)
         <span class="nav-badge">{{ $newPostCount > 99 ? '99+' : $newPostCount }}</span>
       @endif
@@ -113,6 +125,7 @@
     <a href="{{ route('student.experts') }}" data-tour-target="student.experts" class="nav-item {{ $onExpertsPage ? 'active' : '' }}">
       <x-portal-icon name="expert" />
       Experts &amp; Consultations
+      @if ($nextStepRoute === 'student.experts')<span class="nav-next" role="img" aria-label="Your next step" title="Your next step"></span>@endif
       @if ($unseenExpertCount > 0)
         <span class="nav-badge warn">{{ $unseenExpertCount > 99 ? '99+' : $unseenExpertCount }}</span>
       @elseif ($unseenConsultationCount > 0)
@@ -125,15 +138,18 @@
     <a href="{{ route('student.documents') }}" data-tour-target="student.documents" class="nav-item {{ request()->routeIs('student.documents', 'student.submission', 'student.review') ? 'active' : '' }}">
       <x-portal-icon name="file-up" />
       Documents
+      @unless ($studentHasTeam)<span class="nav-lock" role="img" aria-label="Needs a team" title="Needs a team"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>@endunless
     </a>
     <a href="{{ route('student.duplication') }}" data-tour-target="student.duplication" class="nav-item {{ request()->routeIs('student.duplication') ? 'active' : '' }}">
       <x-portal-icon name="similarity" />
       Pre-Proposal Submission
+      @if ($nextStepRoute === 'student.duplication')<span class="nav-next" role="img" aria-label="Your next step" title="Your next step"></span>@endif
     </a>
     <div class="nav-section">Tracking</div>
     <a href="{{ route('student.progress') }}" data-tour-target="student.progress" class="nav-item {{ request()->routeIs('student.progress') ? 'active' : '' }}">
       <x-portal-icon name="progress" />
       Progress Tracker
+      @unless ($studentHasTeam)<span class="nav-lock" role="img" aria-label="Needs a team" title="Needs a team"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>@endunless
     </a>
     {{-- Financial Records is a tab of Team Management now, not a page of its own. --}}
     <div class="nav-section">Reference</div>

@@ -216,16 +216,20 @@
           <h2 id="dc-h">Your team's documents</h2>
           <p>{{ $groups->count() }} {{ Str::plural('file', $groups->count()) }} · newest first · press View to read a reviewer's remarks</p>
         </div>
+        @if ($hasTeam)
         <button type="button" class="up-btn primary" onclick="window.openSubmission && window.openSubmission('none', this)"
                 @if ($selectedItemId) data-open-upload="{{ $selectedItemId }}" @endif>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           Submit a file
         </button>
+        @endif
       </div>
       @if (session('status') || session('error'))
         <p class="sub-flash {{ session('error') ? 'bad' : '' }}" role="status">{{ session('error') ?? session('status') }}</p>
       @endif
-      @if ($groups->isEmpty())
+      @if (! $hasTeam)
+        <p class="sub-empty">Documents opens once you are in a team. Chapters are uploaded by a team, so there is nowhere to put them yet. <a href="{{ route('student.team') }}">Go to Team Management →</a></p>
+      @elseif ($groups->isEmpty())
         <p class="sub-empty">Nothing sent yet. What your team submits shows up here, with your reviewers' remarks.</p>
       @else
         <table class="dc-table">

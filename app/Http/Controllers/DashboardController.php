@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Support\MilestoneProgress;
+use App\Support\NextStep;
 use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -48,6 +49,7 @@ class DashboardController extends Controller
 
         return view('student.dashboard', [
             'myTeam' => $myTeam,
+            'nextStep' => NextStep::for($student),
             'leaderStudentId' => $leaderStudentId,
             'teamMembers' => $teamMembers,
             'overallProgress' => $progress->percent ?? 0,

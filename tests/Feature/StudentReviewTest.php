@@ -107,7 +107,8 @@ class StudentReviewTest extends TestCase
         $response = $this->actingAs($student, 'web')->get(route('student.documents'));
 
         $response->assertOk();
-        $response->assertSee('Nothing sent yet');
+        // No team either, so the empty page says why.
+        $response->assertSee('Documents opens once you are in a team');
         $response->assertDontSee('Reply to Expert');
     }
 
