@@ -85,6 +85,20 @@ class ReaderScreensTest extends TestCase
             ->assertSee('Oct 17');
     }
 
+    public function test_back_returns_where_the_reviewer_came_from_else_the_to_do(): void
+    {
+        $annotator = route('instructor.docreview.annotate', $this->reviewId);
+        $backUrl = fn ($from) => $this->actingAs($this->adviser, 'expert')
+            ->from($from)->get($annotator)->assertOk()->viewData('context')['backUrl'];
+        $todo = route('instructor.teams', ['tab' => 'todo']);
+
+        $team = url('/capsa/team-management/1');
+        $this->assertSame($team, $backUrl($team));
+        // Another site, or the annotator itself after a reload, goes to the To do.
+        $this->assertSame($todo, $backUrl('https://evil.example/x'));
+        $this->assertSame($todo, $backUrl($annotator));
+    }
+
     public function test_the_team_sees_the_decision_and_is_sent_to_submit_the_next_revision(): void
     {
         $fileId = DB::table('capstone_documents')->value('file_id');

@@ -68,11 +68,15 @@ class TableExportTest extends TestCase
         $adviser = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
         $adviser->roles()->attach(Role::firstOrCreate(['role_name' => 'adviser'])->role_id);
 
-        foreach (['instructor.grading', 'instructor.docreview', 'instructor.teams'] as $route) {
+        foreach (['instructor.grading', 'instructor.teams'] as $route) {
             $this->actingAs($adviser, 'expert')->get(route($route))->assertOk()
                 ->assertSee('id="tx-dialog"', false)
                 ->assertSee('table-export', false);
         }
+
+        // Papers are not something anyone reports on: Document Review has none.
+        $this->actingAs($adviser, 'expert')->get(route('instructor.docreview'))->assertOk()
+            ->assertDontSee('data-export=', false);
     }
 
     public function test_the_excel_file_has_the_title_the_chosen_columns_and_the_rows(): void
