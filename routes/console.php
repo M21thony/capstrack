@@ -29,6 +29,10 @@ Schedule::command('checklists:purge-removed')->dailyAt('02:00');
 // about it once. Web only - there was never an email for this.
 Schedule::command('milestones:send-due-reminders')->dailyAt('07:05');
 
+// A team rating tells its students the day it opens, and reminds whoever has
+// not submitted the day before it closes. Each notice goes once per rating.
+Schedule::command('team-ratings:notify')->dailyAt('07:10');
+
 // When a team finishes a phase, its leader is told to evaluate the experts -
 // once per phase, so running it often only makes the email arrive sooner.
 Schedule::command('evaluations:send-reminders')->hourly();
@@ -36,3 +40,8 @@ Schedule::command('evaluations:send-reminders')->hourly();
 // A request to leave a team, or to remove a member, that the CaPSA has not
 // decided in three days is declined on its own and the team is told why.
 Schedule::command('leave-requests:expire')->hourly();
+
+// Each CaPSA is told when their programs have more teams needing an adviser,
+// consultant or grammarian than there are free expert slots. Only a changed
+// shortage is sent, so running it hourly does not repeat the same notice.
+Schedule::command('experts:check-capacity')->hourly();

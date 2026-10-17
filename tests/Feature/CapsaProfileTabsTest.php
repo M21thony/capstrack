@@ -8,9 +8,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * My Profile is split into tabs - Details, Research areas, Submission folders
- * and Notifications - so nothing is a long scroll away. ?tab= picks one, and
- * a save comes back to the tab it was made from.
+ * My Profile is split into tabs - Details, Research areas and Notifications -
+ * so nothing is a long scroll away. ?tab= picks one, and a save comes back
+ * to the tab it was made from.
  */
 class CapsaProfileTabsTest extends TestCase
 {
@@ -54,12 +54,12 @@ class CapsaProfileTabsTest extends TestCase
         $this->assertMatchesRegularExpression('/data-pf-panel="details" role="tabpanel"\s*>/', $html);
     }
 
-    /** A CaPSA is the Subject Adviser, so their folders get a tab of their own. */
-    public function test_a_subject_adviser_has_a_folders_tab(): void
+    /** Submissions no longer go to Drive, so there are no submission folders to pick. */
+    public function test_there_is_no_submission_folders_tab(): void
     {
         $this->actingAs($this->capsa(), 'expert')->get(route('capsa.profile', ['tab' => 'folders']))->assertOk()
-            ->assertSee('data-pf-tab="folders"', false)
-            ->assertSee('id="folderListContainer"', false);
+            ->assertDontSee('data-pf-tab="folders"', false)
+            ->assertDontSee('id="folderListContainer"', false);
     }
 
     public function test_a_save_comes_back_to_the_tab_it_was_made_from(): void

@@ -105,7 +105,7 @@ class DashboardController extends Controller
             ->values();
 
         // New titles waiting for this expert to confirm as a team's adviser:
-        // the same list Team Assignments shows, counted.
+        // the same list Team Applications shows, counted.
         $resolver = app(RecipientResolver::class);
         $titlesToApprove = CapstonePreProposal::where('adviser_status', TitleRevision::PENDING)
             ->whereNull('retired_at')

@@ -12,6 +12,7 @@
     <div id="pdf-annotator-root" data-context="{{ json_encode($context, JSON_UNESCAPED_UNICODE) }}"></div>
 @include('partials.app-dialog')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 @include('partials.action-toast')
 </body>
 </html>

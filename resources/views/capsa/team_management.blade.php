@@ -77,10 +77,12 @@
 @include('partials.app-dialog')
 <div id="tm-toast" class="toast"></div>
 
-@if (in_array($tab, ['todo', 'teams'], true) && ($allSections !== [] || $rows->isNotEmpty()))
+@if (in_array($tab, ['todo', 'applications', 'teams'], true) && ($allSections !== [] || $rows->isNotEmpty()))
+  @include('partials.pdf-viewer')
   @include('capsa.team-management._hub-script')
 @endif
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

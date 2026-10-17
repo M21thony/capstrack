@@ -96,7 +96,9 @@
         $seenExpertAssignmentIds = session('instructor_seen_assignment_ids', []);
         $unseenExpertAssignmentCount = count(array_diff($expertPendingAssignmentIds, $seenExpertAssignmentIds));
 
-        if ($currentRoute === 'instructor.assignments') {
+        // Seen once the Teams page is opened: its To do and Team Applications
+        // list every one of them.
+        if (in_array($currentRoute, ['capsa.team_management', 'instructor.teams'], true)) {
             session()->put('instructor_seen_assignment_ids', array_unique(array_merge($seenExpertAssignmentIds, $expertPendingAssignmentIds)));
         }
 
@@ -113,6 +115,7 @@
 @endphp
 
 
+@include('partials.sidebar-rail')
 @include('partials.portal-nav-icons')
 <div class="sidebar">
   <div class="sidebar-brand">
@@ -170,7 +173,7 @@
       // Waiting on this CaPSA inside Team Management: teams to verify, and
       // members asking to leave a team that passed Title Defense.
       $pendingLeaveRequests = $isCapsa ? App\Models\MemberLeaveRequest::pendingCountFor($admin) : 0;
-      $teamManagementBadge = $unseenPendingVerifyTeamCount + $pendingLeaveRequests;
+      $teamManagementBadge = $unseenPendingVerifyTeamCount + $pendingLeaveRequests + ($adminHasExpertRole ? $unseenExpertAssignmentCount : 0);
       $badge = fn (int $n) => $n > 99 ? '99+' : $n;
       // Defense stages coming up in this CaPSA's sections with no expert
       // evaluation yet - the badge here and the popup below.
@@ -227,16 +230,12 @@
     @unless ($isCapsa)
     <a href="{{ route('instructor.teams') }}" class="nav-item {{ str_starts_with($currentRoute ?? '', 'instructor.teams') ? 'active' : '' }}">
       <x-portal-icon name="team" />
-      My Teams
-    </a>
-    @endunless
-    <a href="{{ route('instructor.assignments') }}" class="nav-item {{ $currentRoute === 'instructor.assignments' ? 'active' : '' }}">
-      <x-portal-icon name="inbox" />
-      Team Assignments
+      Teams
       @if ($unseenExpertAssignmentCount > 0)
         <span class="nav-badge red">{{ $badge($unseenExpertAssignmentCount) }}</span>
       @endif
     </a>
+    @endunless
     @endif
 
     @if ($isCapsa || $isExpert)

@@ -180,7 +180,7 @@ class PreProposalController extends Controller
             'title_change_requested',
             'Title change to approve',
             '<strong>'.e($team->team_name).'</strong> asked to change their title to <strong>'.e($change->new_title).'</strong>.',
-            route('instructor.assignments'),
+            route('instructor.teams', ['tab' => 'todo']),
             ['team_id' => $team->team_id, 'title_change_id' => $change->id],
         );
 
@@ -276,6 +276,7 @@ class PreProposalController extends Controller
                 'program' => $m['document']->program,
                 // Set when the match is another team's title recommended this year, not an archive study.
                 'recommended' => $m['recommended'] ?? null,
+                'pre_proposal_id' => $m['pre_proposal_id'] ?? null,
                 'score' => $m['score'],
                 'reason' => $m['reason'],
                 'similarities' => $m['similarities'] ?? '',
@@ -520,8 +521,10 @@ class PreProposalController extends Controller
             // The three parts the page shows a few lines of; the rest is one click away.
             'lead' => array_filter(array_intersect_key($fields, array_flip(['Problem statement', 'Proposed solution', 'Scope'])), fn ($v) => filled($v)),
             'matches' => $matches = $check->matchesWithAuthors(),
-            'bands' => SimilarityBand::counts($matches),
-            'archiveTotal' => ArchivedDocument::count(),
+            // Two lists, keys kept: a key + 1 is the rank the match's own page is addressed by.
+            'thisYear' => array_filter($matches, fn ($m) => filled($m['recommended'] ?? null)),
+            'archive' => $archive = array_slice(array_filter($matches, fn ($m) => blank($m['recommended'] ?? null)), 0, 10, true),
+            'bands' => SimilarityBand::counts($archive),
             'applyOpen' => $proposal?->status === 'approved' && $isLeader && ! $setAside,
             'applyLockShort' => match (true) {
                 ! $proposal => 'Not saved yet',
@@ -560,11 +563,30 @@ class PreProposalController extends Controller
         $concepts = $check->concepts ?? [];
         $proposal = CapstonePreProposal::where('duplication_check_id', $check->id)->first();
 
+        // Which list the match is in, and where in it, by its rank.
+        $recommended = filled($match['recommended'] ?? null);
+        $group = array_keys(array_filter($matches, fn ($m) => filled($m['recommended'] ?? null) === $recommended));
+
+        // A title recommended this year is read again by its id, so what is
+        // shown is what that team has now. One revised away from being
+        // recommended, or set aside, shows its title only. Older checks
+        // stored no id and show the title only too.
+        $theirs = $recommended && ! empty($match['pre_proposal_id'])
+            ? CapstonePreProposal::where('id', $match['pre_proposal_id'])
+                ->where('approved_status', true)->whereNull('retired_at')->first()
+            : null;
+        $theirFields = array_filter([
+            'Problem' => $theirs?->problem_statement,
+            'Proposed solution' => $theirs?->proposed_solution,
+            'Scope' => $theirs?->scope,
+        ], fn ($v) => filled($v));
+
         // Only words that are in both documents are marked. The check's
         // keyword list is everything the team wrote about; marking one in
         // their problem statement that never appears in the abstract would
         // claim the two share it when they do not.
-        $abstract = (string) ($match['abstract'] ?? '');
+        $abstract = $recommended ? implode('
+', $theirFields) : (string) ($match['abstract'] ?? '');
         $shared = array_values(array_filter(
             $this->service->extractHighlightWords($concepts),
             fn ($w) => stripos($abstract, $w) !== false
@@ -576,6 +598,11 @@ class PreProposalController extends Controller
             'match' => $match,
             'rank' => $rank,
             'total' => count($matches),
+            'groupLabel' => $recommended ? 'Recommended this year' : 'Archive',
+            'groupPos' => array_search($rank - 1, $group, true) + 1,
+            'groupTotal' => count($group),
+            'theirFields' => $theirFields,
+            'theirYear' => $theirs ? StudentSchoolYear::acrossAllTerms()->where('team_id', $theirs->team_id)->value('school_year') : null,
             'prevScore' => $rank > 1 ? ($matches[$rank - 2]['score'] ?? null) : null,
             'nextScore' => $rank < count($matches) ? ($matches[$rank]['score'] ?? null) : null,
             'mineTitle' => $proposal?->title ?? ($concepts['title'] ?? 'Your pre-proposal'),

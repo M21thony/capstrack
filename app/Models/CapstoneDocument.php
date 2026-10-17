@@ -76,6 +76,29 @@ class CapstoneDocument extends Model
                 ->where('capstone_documents.created_at', '>=', Team::where('team_id', $teamId)->select('created_at'))));
     }
 
+    /**
+     * The team's papers for its experts: everything but a signed paper, which
+     * is handed in on Progress Tracker and checked there by the CaPSA.
+     */
+    public function scopeExceptSignedPapers(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q->whereNull('capstone_documents.deliverable_id')
+            ->orWhereHas('deliverable', fn (Builder $line) => $line->whereNotIn('kind', Deliverable::CHECKED_BY_CAPSA)));
+    }
+
+    /**
+     * Which paper this upload is a version of, the way versions are counted:
+     * its checklist line, else its chapter, else its name.
+     */
+    public function paperKey(): string
+    {
+        return match (true) {
+            (bool) $this->deliverable_id => 'line:'.$this->deliverable_id,
+            filled($this->chapter) => 'chapter:'.$this->chapter,
+            default => 'file:'.$this->file_name,
+        };
+    }
+
     /** The uploads of a student's team, or their own while they have none. */
     public static function forTeamOf(int $studentId): Builder
     {

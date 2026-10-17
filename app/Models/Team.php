@@ -8,6 +8,7 @@ use App\Services\Notifier;
 use App\Support\DefenseOutcome;
 use App\Support\MilestoneProgress;
 use App\Support\ProjectTags;
+use App\Support\SectionScope;
 use App\Support\TeamChecklist;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -223,15 +224,49 @@ class Team extends Model
      * Open unless switched off. An unset rule is what every existing team was
      * formed under, and a fresh install must not start with teams closed.
      */
-    public static function creationAllowed(): bool
+    public static function creationAllowed(?string $section = null): bool
     {
-        return Setting::get('allow_team_creation', '1') !== '0';
+        return static::rulesFor($section)['create'];
     }
 
     /** Whether students may join a team - by request, by invitation, or by accepting one. */
-    public static function joiningAllowed(): bool
+    public static function joiningAllowed(?string $section = null): bool
     {
-        return Setting::get('allow_team_joining', '1') !== '0';
+        return static::rulesFor($section)['join'];
+    }
+
+    /** Each section's Team Rules are stored under this prefix plus the section, e.g. "team_rules:BSIT-3A". */
+    public const RULES_KEY = 'team_rules:';
+
+    /**
+     * The Team Rules a section is under, as its CaPSA set them.
+     *
+     * Each CaPSA sets them for their own sections only. A section nobody has
+     * set yet falls back to the old single school-wide rules, and failing
+     * those to five members with creating and joining open - what every
+     * existing team was formed under.
+     *
+     * @return array{max: int, create: bool, join: bool}
+     */
+    public static function rulesFor(?string $section): array
+    {
+        $own = $section ? json_decode((string) Setting::get(self::RULES_KEY.$section), true) : null;
+        $own = is_array($own) ? $own : [];
+        $max = (int) ($own['max'] ?? Setting::get('max_team_members', self::MAX_MEMBERS));
+
+        return [
+            'max' => max(self::MIN_MEMBERS, min(self::MAX_MEMBERS, $max ?: self::MAX_MEMBERS)),
+            'create' => (bool) ($own['create'] ?? Setting::get('allow_team_creation', '1') !== '0'),
+            'join' => (bool) ($own['join'] ?? Setting::get('allow_team_joining', '1') !== '0'),
+        ];
+    }
+
+    private ?string $sectionLabel = null;
+
+    /** This team's section - its leader's - which decides whose Team Rules it is under. */
+    public function section(): string
+    {
+        return $this->sectionLabel ??= app(SectionScope::class)->sectionFor($this);
     }
 
     /**
@@ -248,7 +283,7 @@ class Team extends Model
      */
     public function joinBlockReason(?Student $joiner = null): ?string
     {
-        if (! static::joiningAllowed()) {
+        if (! static::joiningAllowed($this->section())) {
             return self::JOINING_CLOSED;
         }
 
@@ -282,7 +317,7 @@ class Team extends Model
      */
     public function inviteBlockReason(int $adding = 1, ?Student $invitee = null): ?string
     {
-        if (! static::joiningAllowed()) {
+        if (! static::joiningAllowed($this->section())) {
             return self::JOINING_CLOSED;
         }
 
@@ -349,11 +384,9 @@ class Team extends Model
      * finding them all, and they had already drifted. This is the one
      * answer; a team may still carry its own member_count to override it.
      */
-    public static function maxMembers(): int
+    public static function maxMembers(?string $section = null): int
     {
-        $set = (int) Setting::get('max_team_members', self::MAX_MEMBERS);
-
-        return max(self::MIN_MEMBERS, min(self::MAX_MEMBERS, $set ?: self::MAX_MEMBERS));
+        return static::rulesFor($section)['max'];
     }
 
     /**
@@ -367,7 +400,7 @@ class Team extends Model
      */
     public function memberLimit(): int
     {
-        return static::maxMembers();
+        return static::maxMembers($this->section());
     }
 
     /**

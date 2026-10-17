@@ -10,6 +10,7 @@ use App\Models\GradingRubric;
 use App\Models\PanelGrade;
 use App\Models\Team;
 use App\Services\DefenseOutcomeRecorder;
+use App\Services\SharedGrading;
 use App\Support\DefenseOutcome;
 use App\Support\GradingSheet;
 use App\Support\GradingSheetWorkbook;
@@ -25,6 +26,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GradingController extends Controller
 {
+    public function __construct(private SharedGrading $shared) {}
+
     private const VERDICTS = ['approved', 'revision', 'rejected'];
 
     /** An abstention needs a reason the panel and CaPSA can read. */
@@ -101,6 +104,9 @@ class GradingController extends Controller
                 'venue' => $current->venue,
                 'status' => $grade?->status ?? 'not_started',
                 'total_score' => $grade?->total_score,
+                // Who grades for whom - the "Who grades?" dialog's data.
+                'who' => $this->shared->dialog($current, (int) $expert->expert_id),
+                'decided' => $current->hasOutcome(),
             ];
         })->values();
 
@@ -117,6 +123,7 @@ class GradingController extends Controller
             return (object) array_merge((array) $row, [
                 'status' => $grade?->status ?? $row->status,
                 'total_score' => $grade?->total_score ?? $row->total_score,
+                'joined' => (bool) $grade?->isJoined(),
             ]);
         })
             // Still to grade first, then by date.
@@ -215,7 +222,27 @@ class GradingController extends Controller
 
         $defense->load('team');
 
-        $defense->load('panels', 'outcomeRecordedBy');
+        $defense->load('panels.expert', 'outcomeRecordedBy');
+
+        // Someone else grades for this panelist: they see that grade, not a sheet.
+        if ($grade?->isJoined()) {
+            $grade->load('gradedBy');
+
+            return view('instructor.grading-joined', [
+                'defense' => $defense,
+                'rubric' => $rubric,
+                'grade' => $grade,
+                'panelRole' => $panel->panel_role,
+            ]);
+        }
+
+        $who = $this->shared->dialog($defense, (int) $expert->expert_id);
+
+        $inIds = $defense->grades()
+            ->whereIn('status', [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED])
+            ->pluck('expert_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
         return view('instructor.grading-show', [
             'defense' => $defense,
@@ -226,9 +253,22 @@ class GradingController extends Controller
             // verdict is recorded once, by the chair - not collected from
             // each panelist and tallied. Everyone else just scores.
             'isChair' => $panel->panel_role === 'Panel Chair',
+            // The chair records the decision - or whoever grades for the chair.
+            'canRecord' => $this->shared->canRecordOutcome($defense, (int) $expert->expert_id),
+            'who' => $who,
+            // Who this panelist grades for, when they grade for the panel.
+            'gradingFor' => $who['grader'] === (int) $expert->expert_id
+                ? collect($who['panel'])->whereIn('id', $who['joined'])->values()->all()
+                : [],
             'outcomeOptions' => DefenseOutcome::forStage($defense->defense_type),
             'gradesIn' => $defense->gradesInCount(),
             'panelSize' => $defense->panelSize(),
+            // Who the decision is still waiting on, by name, for the chair.
+            'waitingOn' => $defense->panels
+                ->reject(fn (DefensePanel $p) => in_array((int) $p->expert_id, $inIds, true))
+                ->map(fn (DefensePanel $p) => (int) $p->expert_id === (int) $expert->expert_id ? 'you' : ($p->expert?->name ?? $p->panel_role))
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -318,7 +358,13 @@ class GradingController extends Controller
         /** @var CapstoneExpert $expert */
         $expert = auth()->guard('expert')->user();
 
-        PanelGrade::updateOrCreate(
+        if ($joined = $this->joinedResponse($defense, $expert)) {
+            return $joined;
+        }
+
+        // A grader who abstains abstains for everyone joined to them - a
+        // redefense, say, where the panel gives no grade at all.
+        $grade = PanelGrade::updateOrCreate(
             ['defense_id' => $defense->defense_id, 'expert_id' => $expert->expert_id],
             [
                 'rubric_id' => $rubric->rubric_id,
@@ -330,6 +376,7 @@ class GradingController extends Controller
                 'submitted_at' => now(),
             ]
         );
+        $this->shared->sync($grade);
 
         $defense->unsetRelation('grades');
 
@@ -355,6 +402,10 @@ class GradingController extends Controller
         /** @var CapstoneExpert $expert */
         $expert = auth()->guard('expert')->user();
 
+        if ($joined = $this->joinedResponse($defense, $expert)) {
+            return $joined;
+        }
+
         $grade = PanelGrade::where('defense_id', $defense->defense_id)
             ->where('expert_id', $expert->expert_id)
             ->where('status', PanelGrade::ABSTAINED)
@@ -365,6 +416,7 @@ class GradingController extends Controller
         }
 
         $grade->update(['status' => PanelGrade::DRAFT, 'remarks' => null, 'submitted_at' => null]);
+        $this->shared->sync($grade);
 
         return response()->json(['success' => true, 'message' => 'Abstention withdrawn. You can score this team now.']);
     }
@@ -381,7 +433,14 @@ class GradingController extends Controller
 
     private function persist(Request $request, DefenseSchedule $defense, string $status): JsonResponse
     {
-        $panel = $this->panelFor($defense);
+        $this->panelFor($defense);
+
+        /** @var CapstoneExpert $expert */
+        $expert = auth()->guard('expert')->user();
+
+        if ($joined = $this->joinedResponse($defense, $expert)) {
+            return $joined;
+        }
 
         $rubric = $this->rubricFor($defense);
 
@@ -452,9 +511,6 @@ class GradingController extends Controller
             ], 422);
         }
 
-        /** @var CapstoneExpert $expert */
-        $expert = auth()->guard('expert')->user();
-
         $grade = PanelGrade::updateOrCreate(
             ['defense_id' => $defense->defense_id, 'expert_id' => $expert->expert_id],
             [
@@ -468,6 +524,8 @@ class GradingController extends Controller
             ]
         );
 
+        $this->shared->sync($grade);
+
         return response()->json([
             'success' => true,
             'message' => $status === 'submitted' ? 'Grade submitted successfully.' : 'Draft saved.',
@@ -479,7 +537,7 @@ class GradingController extends Controller
                 // page keeps them here to record the decision instead of
                 // sending them back to the team list to reopen this defense.
                 'can_record_outcome' => $status === 'submitted'
-                    && $panel->panel_role === 'Panel Chair'
+                    && $this->shared->canRecordOutcome($defense, (int) $expert->expert_id)
                     && ! $defense->hasOutcome()
                     && $defense->allGradesIn(),
             ],
@@ -489,15 +547,20 @@ class GradingController extends Controller
     /**
      * Record what the panel decided.
      *
-     * Chair only, and only once every panelist has scored: the outcome is
+     * The chair - or the panelist grading for the chair - and only once every
+     * panelist has scored: the outcome is
      * the conclusion of the briefing, and a briefing cannot have happened
      * while someone still has not marked the rubric.
      */
     public function recordOutcome(Request $request, DefenseSchedule $defense, DefenseOutcomeRecorder $recorder): JsonResponse
     {
-        $panel = $this->panelFor($defense);
+        $this->panelFor($defense);
 
-        if ($panel->panel_role !== 'Panel Chair') {
+        /** @var CapstoneExpert $by */
+        $by = auth()->guard('expert')->user();
+
+        // The chair, or whoever is grading for the chair.
+        if (! $this->shared->canRecordOutcome($defense, (int) $by->expert_id)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Only the Panel Chair records the panel\'s decision.',
@@ -562,6 +625,84 @@ class GradingController extends Controller
                 'redefense_attempt' => $result['redefense']?->attempt,
             ],
         ]);
+    }
+
+    /**
+     * PUT /grading/{defense}/grader - who grades: one panelist for the others
+     * named, or (no grader) everyone on their own. Anyone on the panel sets it.
+     */
+    public function setGrader(Request $request, DefenseSchedule $defense): JsonResponse
+    {
+        $this->panelFor($defense);
+
+        $validator = Validator::make($request->all(), [
+            'grader_id' => ['nullable', 'integer'],
+            'joined' => ['nullable', 'array'],
+            'joined.*' => ['integer'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $rubric = $this->rubricFor($defense);
+
+        if (! $rubric) {
+            return response()->json(['success' => false, 'message' => 'No active rubric is configured for this defense stage.'], 422);
+        }
+
+        /** @var CapstoneExpert $expert */
+        $expert = auth()->guard('expert')->user();
+        $validated = $validator->validated();
+        $graderId = isset($validated['grader_id']) ? (int) $validated['grader_id'] : null;
+
+        $refused = $this->shared->assign($defense, $expert, $graderId, $validated['joined'] ?? [], $rubric);
+
+        if ($refused) {
+            return response()->json(['success' => false, 'message' => $refused], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $graderId === null ? 'Everyone grades on their own.' : 'Saved who grades.',
+            'data' => $this->shared->arrangement($defense),
+        ]);
+    }
+
+    /** DELETE /grading/{defense}/join - leave a shared grade, to grade on one's own. */
+    public function leaveShared(DefenseSchedule $defense): JsonResponse
+    {
+        $this->panelFor($defense);
+
+        /** @var CapstoneExpert $expert */
+        $expert = auth()->guard('expert')->user();
+
+        $refused = $this->shared->leave($defense, $expert);
+
+        if ($refused) {
+            return response()->json(['success' => false, 'message' => $refused], 422);
+        }
+
+        return response()->json(['success' => true, 'message' => 'You can grade this team on your own now.']);
+    }
+
+    /** A joined panelist's grade is the grader's: they leave before grading on their own. */
+    private function joinedResponse(DefenseSchedule $defense, CapstoneExpert $expert): ?JsonResponse
+    {
+        $grade = PanelGrade::where('defense_id', $defense->defense_id)
+            ->where('expert_id', $expert->expert_id)
+            ->whereNotNull('graded_by_expert_id')
+            ->with('gradedBy')
+            ->first();
+
+        if (! $grade) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => ($grade->gradedBy?->name ?? 'Another panelist').' is grading this team for you. Leave their grade first to grade on your own.',
+        ], 422);
     }
 
     private function panelFor(DefenseSchedule $defense): DefensePanel

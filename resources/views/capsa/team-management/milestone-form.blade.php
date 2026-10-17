@@ -10,10 +10,6 @@
 
 @section('tm-content')
 <form class="ml-form" id="ml-milestone" novalidate>
-  <div class="ml-head">
-    <h1 class="ml-title">{{ $milestone ? 'Edit milestone' : 'New milestone' }}</h1>
-  </div>
-
   <label class="ml-f">Name
     <input name="name" maxlength="255" required value="{{ $milestone?->name }}" autocomplete="off" @unless ($milestone) autofocus @endunless>
   </label>

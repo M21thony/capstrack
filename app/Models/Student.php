@@ -298,6 +298,12 @@ class Student extends Authenticatable
         return ($this->yearNumber() ?? 3) >= 4 ? 2 : 1;
     }
 
+    /** This student's section, e.g. "BSIT-3A" - whose Team Rules they are under before they have a team. */
+    public function sectionLabel(): ?string
+    {
+        return self::computeSectionLabel($this->course, $this->year_section);
+    }
+
     public static function computeSectionLabel(?string $course, ?string $yearSection): ?string
     {
         if (! $course || ! $yearSection) {

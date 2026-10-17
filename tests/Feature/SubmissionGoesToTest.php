@@ -121,7 +121,7 @@ class SubmissionGoesToTest extends TestCase
         $this->assertTrue($plan['consultant']['on']);
         $this->assertFalse($plan['subject_adviser']['on']);
         $this->assertTrue($plan['subject_adviser']['available']);
-        $this->assertSame('format check', $plan['subject_adviser']['note']);
+        $this->assertSame('review if asked', $plan['subject_adviser']['note']);
     }
 
     public function test_chapter_4_sends_the_consultant_the_diagrams(): void
@@ -232,6 +232,40 @@ class SubmissionGoesToTest extends TestCase
 
         $this->assertSame($first, $this->reviewsOfLatest());
         $this->assertSame([1, 2], CapstoneDocument::orderBy('file_id')->pluck('file_version')->map(fn ($v) => (int) $v)->all());
+    }
+
+    /** A file for no line, revised: back to whoever had it, not to whoever is ticked. */
+    public function test_a_revision_of_a_file_for_no_line_goes_back_to_the_same_experts(): void
+    {
+        $this->actingAs($this->student)->postJson(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->createWithContent('diagram-notes.pdf', 'version one'),
+            'recipients' => ['consultant'],
+        ])->assertOk();
+        $first = CapstoneDocument::orderByDesc('file_id')->first();
+
+        $this->actingAs($this->student)->getJson(route('student.submission.plan', ['item' => 'none', 'revises' => $first->file_id]))
+            ->assertOk()
+            ->assertJson(['locked' => true, 'lines' => []])
+            ->assertJsonCount(1, 'people')
+            ->assertJsonPath('people.0.role', 'consultant')
+            // The pop-up says which paper it is and the version it goes up as.
+            ->assertJsonPath('paper', $first->file_name)
+            ->assertJsonPath('version', 2)
+            ->assertJsonPath('round', '1st revision');
+
+        // Asking for the CaPSA as well changes nothing: the consultant had it.
+        // Nor does a new file name: it is still the next version of that file.
+        $this->actingAs($this->student)->postJson(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->createWithContent('diagram-notes-fixed-labels.pdf', 'version two'),
+            'revises' => $first->file_id,
+            'recipients' => ['subject_adviser', 'adviser'],
+        ])->assertOk();
+
+        $this->assertSame(['consultant:'.$this->experts['consultant']->expert_id], $this->reviewsOfLatest());
+        $revision = CapstoneDocument::orderByDesc('file_id')->first();
+        $this->assertSame(2, (int) $revision->file_version);
+        $this->assertSame($first->file_name, $revision->file_name);
+        $this->assertNull($revision->deliverable_id);
     }
 
     public function test_the_same_file_as_last_time_is_refused(): void

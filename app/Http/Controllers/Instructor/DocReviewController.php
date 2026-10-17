@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Team;
-use App\Services\GoogleDriveService;
 use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,8 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class DocReviewController extends Controller
 {
-    public function __construct(private GoogleDriveService $drive) {}
-
     public function index()
     {
         $expertId = Auth::guard('expert')->id();
@@ -34,8 +31,6 @@ class DocReviewController extends Controller
                 'r.review_status',
                 'r.reviewed_at',
                 'r.version',
-                'r.drive_status',
-                'r.drive_web_view_link',
                 'd.file_name',
                 'd.file_version',
                 'd.document_status',
@@ -77,7 +72,6 @@ class DocReviewController extends Controller
             'reviews' => $reviews->flatten(1),
             'reviewsByTeam' => $reviews,
             'teams' => $reviews->keys()->filter()->sort()->values(),
-            'driveConnected' => $this->drive->isConnected($expertId),
         ]);
     }
 
@@ -102,6 +96,8 @@ class DocReviewController extends Controller
                     ? ($document->team_id ? Team::find($document->team_id) : StudentTeam::for($document->student_id))?->team_name
                     : null,
                 'role' => $review->role,
+                // Signs the remark cards of an exported PDF.
+                'reviewer' => $review->expert?->name,
                 'round' => $document?->roundLabel(),
                 'nextRound' => $document?->nextRoundLabel(),
                 'requirement' => $item?->title,

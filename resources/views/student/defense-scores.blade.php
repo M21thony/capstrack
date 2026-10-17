@@ -86,6 +86,14 @@
       $gradeOf = $d->grades->keyBy('expert_id');
       $abstained = fn ($seat) => (bool) $gradeOf->get($seat->expert_id)?->isAbstained();
       $scoreOf = fn ($seat, $c) => $gradeOf->get($seat->expert_id)?->scores[(string) $c->criterion_id] ?? null;
+      // One column per grading sheet: panelists who shared one grade - one of
+      // them grading for the others - read as that one sheet, named for all.
+      $sheets = $seats->groupBy(fn ($seat) => (int) ($gradeOf->get($seat->expert_id)?->graded_by_expert_id ?: $seat->expert_id))
+          ->map(fn ($group, $owner) => (object) [
+              'seat' => $seats->first(fn ($s) => (int) $s->expert_id === (int) $owner) ?? $group->first(),
+              'names' => $group->map(fn ($s) => trim($s->expert?->first_name.' '.$s->expert?->last_name))->join(', ', ' and '),
+              'roles' => $group->count() > 1 ? 'Shared grade · '.$group->count().' panelists' : $group->first()->panel_role,
+          ])->values();
     @endphp
     <section id="ds-{{ $d->defense_id }}" class="ds-panel" role="tabpanel" @unless ($loop->last) hidden @endunless>
       <div class="ds-band is-{{ \App\Support\DefenseOutcome::tone($d->outcome) }}">
@@ -110,8 +118,8 @@
                 <tr>
                   <th scope="col">Criterion</th>
                   <th scope="col">Max</th>
-                  @foreach ($seats as $seat)
-                    <th scope="col">{{ $seat->expert?->first_name }} {{ $seat->expert?->last_name }}<small>{{ $seat->panel_role }}</small></th>
+                  @foreach ($sheets as $sheet)
+                    <th scope="col">{{ $sheet->names }}<small>{{ $sheet->roles }}</small></th>
                   @endforeach
                 </tr>
               </thead>
@@ -120,16 +128,16 @@
                   <tr class="ds-cat">
                     <td>{{ $category }}</td>
                     <td class="ds-max">{{ $fmt($items->first()->category_max_points ?? $items->sum('max_points')) }}</td>
-                    @foreach ($seats as $seat)
-                      <td>{{ $abstained($seat) ? '—' : $fmt($items->sum(fn ($c) => (float) $scoreOf($seat, $c))) }}</td>
+                    @foreach ($sheets as $sheet)
+                      <td>{{ $abstained($sheet->seat) ? '—' : $fmt($items->sum(fn ($c) => (float) $scoreOf($sheet->seat, $c))) }}</td>
                     @endforeach
                   </tr>
                   @foreach ($items as $c)
                     <tr>
                       <td>{{ $c->criterion_name }}</td>
                       <td class="ds-max">{{ $fmt($c->max_points) }}</td>
-                      @foreach ($seats as $seat)
-                        <td>{{ $fmt($scoreOf($seat, $c)) }}</td>
+                      @foreach ($sheets as $sheet)
+                        <td>{{ $fmt($scoreOf($sheet->seat, $c)) }}</td>
                       @endforeach
                     </tr>
                   @endforeach
@@ -137,8 +145,8 @@
                 <tr class="ds-total">
                   <td>Total</td>
                   <td>{{ $fmt($rubric->total_points) }}</td>
-                  @foreach ($seats as $seat)
-                    <td>@if ($abstained($seat))<span class="ds-abstained">Abstained</span>@else{{ $fmt($gradeOf->get($seat->expert_id)?->total_score) }}@endif</td>
+                  @foreach ($sheets as $sheet)
+                    <td>@if ($abstained($sheet->seat))<span class="ds-abstained">Abstained</span>@else{{ $fmt($gradeOf->get($sheet->seat->expert_id)?->total_score) }}@endif</td>
                   @endforeach
                 </tr>
               </tbody>
@@ -147,15 +155,15 @@
         </div>
 
         <div class="ds-remarks" aria-label="Panelists' remarks">
-          @foreach ($seats as $seat)
+          @foreach ($sheets as $sheet)
             <div class="ds-card">
-              <b>{{ $seat->expert?->first_name }} {{ $seat->expert?->last_name }}</b>
-              <small>{{ $seat->panel_role }}</small>
+              <b>{{ $sheet->names }}</b>
+              <small>{{ $sheet->roles }}</small>
               {{-- An abstention's reason stays with the panel. --}}
-              @if ($abstained($seat))
+              @if ($abstained($sheet->seat))
                 <p class="ds-abstained">Abstained from grading this defense. Not counted in the panel average.</p>
               @else
-                <p>{{ $gradeOf->get($seat->expert_id)?->remarks ?: 'No remarks.' }}</p>
+                <p>{{ $gradeOf->get($sheet->seat->expert_id)?->remarks ?: 'No remarks.' }}</p>
               @endif
             </div>
           @endforeach
@@ -174,6 +182,7 @@ function dsShow(id, tab) {
 }
 </script>
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 <script nonce="{{ Vite::cspNonce() }}">
 {{-- The hamburger button and the overlay both called these and nothing
      defined them, so the menu would not open on a phone. Same two lines as

@@ -69,9 +69,11 @@ class MilestonePagesTest extends TestCase
             ->assertSee('Teams can start this only after they finish Chapter 1-3 Submission')
             ->assertSee('It goes at the end of the list.');
 
+        // Named once, in the top bar: the milestone, then Edit.
         $this->get(route('capsa.team_management.milestones.edit', $this->milestone))
             ->assertOk()
-            ->assertSee('Edit milestone')
+            ->assertSeeInOrder(['tm-topcrumb', 'Chapter 1-3 Submission', 'Edit'], false)
+            ->assertDontSee('<h1 class="ml-title">', false)
             ->assertSee('value="Chapter 1-3 Submission"', false)
             ->assertSee('Hide from teams')
             ->assertDontSee('Teams can start this only after');

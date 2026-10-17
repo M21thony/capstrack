@@ -141,6 +141,9 @@
 .pt-item-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35}
 .pt-item-who{font-size:11.5px;color:var(--text3)}
 .pt-kept{font-size:12px;color:var(--text2);margin-top:4px}
+.pt-file{display:inline-flex;align-items:center;gap:5px;margin-top:4px;font-size:12px;font-weight:600;color:var(--accent3);text-decoration:underline;text-underline-offset:2px}
+.pt-file:hover{color:var(--text)}
+.pt-file svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .pt-note{font-size:12px;font-style:italic;color:var(--text2);padding:6px 10px;border-radius:8px;background:var(--bg3)}
 .pt-status{justify-self:start;margin-top:3px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--bg3);color:var(--text2)}
 .pt-item.st-done .pt-status{background:var(--green-bg);color:var(--green)}
@@ -213,7 +216,6 @@
 </div>
 @elseif (! $progress)
 <div class="card">
-  <div class="card-header"><span class="card-title">Our milestones</span></div>
   <div style="padding:22px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6">
     Your CaPSA has not set up a checklist for your team yet.
   </div>
@@ -459,6 +461,14 @@
                 @endif
               </div>
               <div class="pt-item-who">{{ $closer }}</div>
+              @if ($row->file_id)
+                {{-- A signed paper opens as the file itself; a draft opens on Documents with its remarks. --}}
+                @if (in_array($item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
+                  <a class="pt-file" href="{{ route('student.documents.file', $row->file_id) }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>View the file you sent</a>
+                @else
+                  <a class="pt-file" href="{{ route('student.documents', ['file' => $row->file_id]) }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>Open it in Documents</a>
+                @endif
+              @endif
               @if ($row->note)
                 <div class="pt-note">“{{ $row->note }}”</div>
                 @if ($row->waiting_on === 'team')
@@ -523,6 +533,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 <script nonce="{{ Vite::cspNonce() }}">
 {{-- The hamburger button and the overlay both called these and nothing
      defined them, so the menu would not open on a phone. Same two lines as

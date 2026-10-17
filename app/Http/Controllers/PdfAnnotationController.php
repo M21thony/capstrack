@@ -5,12 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\PdfRemark;
-use App\Services\GoogleDriveService;
 use App\Services\Notifier;
 use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -30,12 +28,7 @@ class PdfAnnotationController extends Controller
 
         $document = $review->document;
 
-        // Always serve the clean, unmodified local copy here. The Google Drive
-        // copy is a baked (flattened) export produced by syncDrive() for
-        // viewing outside the annotator — it must never be read back into the
-        // editor, or annotations get permanently drawn onto the PDF pixels
-        // and then re-drawn again as an overlay on top of themselves every
-        // time the page is saved and reloaded.
+        // Always the clean local copy: remarks are drawn over it, never into it.
         abort_unless($document && $document->file_path, 404);
         abort_unless(Storage::disk('local')->exists($document->file_path), 404);
 
@@ -383,46 +376,5 @@ class PdfAnnotationController extends Controller
             'review_status' => $review->review_status,
             'verdict' => $review->verdict,
         ]);
-    }
-
-    /**
-     * Replace the Google Drive copy of the PDF with the annotated version.
-     *
-     * This is a one-way export for viewing outside the annotator (e.g. a
-     * student or committee member opening the file directly in Drive). The
-     * annotator itself must never read this file back in — see file() above.
-     */
-    public function syncDrive(Request $request, CapstoneDocumentReview $review, GoogleDriveService $drive)
-    {
-        $this->authorizeReview($review);
-
-        $contents = $request->getContent();
-
-        if (! $contents) {
-            return response()->json(['message' => 'No PDF content received.'], 422);
-        }
-
-        if (! $review->drive_file_id) {
-            return response()->json(['message' => 'This review has no Google Drive file to update.'], 422);
-        }
-
-        // The Drive copy of a diagram is the team's own draw.io or Visio file; a PDF written over it would break it.
-        if ($review->document?->isDiagram()) {
-            return response()->json(['message' => 'A diagram\'s Google Drive copy is the team\'s own file and is left as it is.'], 422);
-        }
-
-        try {
-            $drive->updateFile($review->expert_id, $review->drive_file_id, $contents, 'application/pdf');
-        } catch (\Exception $e) {
-            Log::error('Drive sync failed', [
-                'review_id' => $review->review_id,
-                'expert_id' => $review->expert_id,
-                'message' => $e->getMessage(),
-            ]);
-
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json(['success' => true]);
     }
 }

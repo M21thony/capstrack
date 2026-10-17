@@ -32,7 +32,7 @@ final class DashboardStats
     /** Palette for the parts of a bar, used by the views: good, open, warning, bad, neutral. */
     public const TONES = ['ok' => '#1baf7a', 'info' => '#2a78d6', 'warn' => '#eda100', 'bad' => '#dc2626', 'none' => '#a5a9b4'];
 
-    public function __construct(private CapsaReports $reports, private DefenseAnalytics $defenses) {}
+    public function __construct(private CapsaReports $reports, private DefenseAnalytics $defenses, private ExpertCapacity $capacity) {}
 
     /**
      * A CaPSA's sections, the running term.
@@ -84,6 +84,7 @@ final class DashboardStats
             'defenses' => $this->defenseSummary($capsa),
             'fees' => $this->feeSummary($ctx),
             'coverage' => $coverage,
+            'capacity' => $this->capacity->forPrograms($capsa->handledPrograms()),
             'bySection' => $bySection->map(fn ($n, $label) => ['label' => $label, 'value' => $n])->values()->all(),
         ];
     }

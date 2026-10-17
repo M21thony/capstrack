@@ -163,7 +163,9 @@ class TeamHubTest extends TestCase
         $this->actingAs($expert, 'expert')->get(route('instructor.teams'))
             ->assertOk()
             ->assertSee('<div class="tmx tm-hub" data-portal="expert">', false)
-            ->assertSeeInOrder(['class="group-h">Invitations', 'Invited as consultant', 'Team Habi'], false)
+            // A shortcut to the Team Applications tab, with the application to read.
+            ->assertSeeInOrder(['class="group-h group-apps"', 'Team applications', 'See all', 'Invited as consultant', 'Team Habi', 'Read application'], false)
+            ->assertSee('data-read="application" data-read-id="'.$invite->assignment_id.'"', false)
             ->assertSee('data-url="'.route('instructor.assignments.update', $invite->assignment_id).'"', false)
             ->assertSee('data-note="reason" data-min="20"', false)
             // Teams: the one they advise, with their seat; not the others.
@@ -186,7 +188,8 @@ class TeamHubTest extends TestCase
 
         $this->actingAs($expert, 'expert')->get(route('instructor.teams.show', $team->team_id))
             ->assertOk()
-            ->assertSee('My Teams')
+            ->assertSee('Teams')
+            ->assertDontSee('My Teams')
             ->assertSee($proposal->title)
             ->assertSee('once the CaPSA recommends')
             // Reviewing titles and verifying are the CaPSA's.

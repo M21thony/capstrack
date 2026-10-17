@@ -76,5 +76,6 @@
 <div id="tm-toast" class="toast"></div>
 @stack('scripts')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

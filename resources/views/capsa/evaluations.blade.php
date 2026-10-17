@@ -32,7 +32,6 @@
     <div class="ev-page">
       <div class="ev-head">
         <div>
-          <h1>Expert Evaluations</h1>
           <p>After a team passes a defense, its leader answers your questions about the team's experts, <b>1 to 5 stars</b> per question. The expert's rating is the average. Answers are <b>anonymous</b>: you and the expert see what was said, never who said it.</p>
         </div>
         <a class="ev-btn gold" href="{{ route('capsa.evaluations.create') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Create new evaluation</a>
@@ -214,5 +213,6 @@ function closeSidebar() { if (!sidebarEl || !sidebarOverlay) return; sidebarEl.c
 </script>
 @include('partials.evaluation-page-script')
 @include('partials.confirm-dialog')
+@include('partials.app-scrollbar')
 </body>
 </html>

@@ -391,7 +391,8 @@ class CapsaTeamManagementTest extends TestCase
         $html = $this->get(route('capsa.team_management'))->assertOk()->getContent();
 
         $this->assertStringContainsString('setInterval(refresh, 15000);', $html);
-        $this->assertStringContainsString("const parts = ['#tm-todo-waiting', '#tm-todo-decided', '#tm-teams tbody',", $html);
+        $this->assertStringContainsString("const parts = ['#tm-todo-waiting', '#tm-todo-decided', '#tm-apps-waiting', '#tm-apps-declined', '#tm-apps-data',", $html);
+        $this->assertStringContainsString("'#tm-apps-nw', '#tm-apps-nd', '#tm-teams tbody',", $html);
         // Signed out meanwhile: nothing is swapped in.
         $this->assertStringContainsString('if (!res.ok || res.redirected) { return; }', $html);
         $this->assertStringNotContainsString('location.reload', $html);
@@ -472,6 +473,52 @@ class CapsaTeamManagementTest extends TestCase
         $response->assertSee('Chapter 1 Format.pdf');
         $response->assertDontSee('Chapter 2 Content.pdf');
         $this->assertNotSame($formatCheck, $adviserWork);
+    }
+
+    /** A paper sent for the format check opens with Review, like every other paper. */
+    public function test_a_format_check_paper_opens_with_review(): void
+    {
+        $capsa = $this->makeCapsaWithSections();
+        [$team, $leader] = $this->makeTeamInSection('Team Format');
+        $reviewId = $this->makeDocumentReview($capsa, $leader, 'Chapter 1 Format.pdf', 'subject_adviser');
+        $link = 'href="'.route('instructor.docreview.annotate', $reviewId).'">Review</a>';
+
+        $this->get(route('capsa.team_management.show', $team->team_id))
+            ->assertOk()
+            ->assertSee($link, false)
+            ->assertDontSee('Check format');
+
+        $this->get(route('capsa.team_management'))
+            ->assertOk()
+            ->assertSee('Chapter 1 Format.pdf')
+            ->assertDontSee('Check format');
+    }
+
+    /** Each paper's to-do row says what it is: a chapter, a manuscript, the diagrams, or just a paper. */
+    public function test_a_paper_row_is_named_by_what_the_paper_is(): void
+    {
+        $capsa = $this->makeCapsaWithSections();
+        [, $leader] = $this->makeTeamInSection('Team Named');
+        $revised = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist'])
+            ->milestones()->create(['name' => 'Title Defense', 'position' => 0])
+            ->deliverables()->create(['title' => 'Revised Proposal Manuscript', 'kind' => Deliverable::DOCUMENT, 'chapter' => 'revised', 'position' => 0])
+            ->id;
+
+        $this->makeDocumentReview($capsa, $leader, 'Ch4_Draft.pdf', 'subject_adviser', 'Chapter 4');
+        $this->makeDocumentReview($capsa, $leader, 'Revised_Proposal.pdf', 'subject_adviser', null, $revised);
+        $this->makeDocumentReview($capsa, $leader, 'Final Chapter 1-5.pdf', 'subject_adviser', 'Chapter 1');
+        $this->makeDocumentReview($capsa, $leader, 'use_case.drawio', 'subject_adviser', null);
+        $this->makeDocumentReview($capsa, $leader, 'Proposal.pdf', 'subject_adviser', null);
+
+        $this->get(route('capsa.team_management', ['tab' => 'todo']))
+            ->assertOk()
+            ->assertSee('Review Chapter 4')
+            ->assertSee('Chapters 1–3 · Revised_Proposal.pdf')
+            ->assertSee('Chapters 1–5 · Final Chapter 1-5.pdf')
+            ->assertSee('Review Manuscript')
+            ->assertSee('Review Diagrams')
+            ->assertSee('Review paper')
+            ->assertDontSee('Review Chapter 1<', false);
     }
 
     /** The panel sits under Experts, and her own seat on it reads "You". */
@@ -627,7 +674,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->get(route('capsa.team_management.log', [$team->team_id, 'activity']))->assertNotFound();
     }
 
-    private function makeDocumentReview(CapstoneExpert $expert, Student $student, string $fileName, string $role): int
+    private function makeDocumentReview(CapstoneExpert $expert, Student $student, string $fileName, string $role, ?string $chapter = 'Chapter 1', ?int $deliverableId = null): int
     {
         $fileId = DB::table('capstone_documents')->insertGetId([
             'student_id' => $student->student_id,
@@ -635,7 +682,8 @@ class CapsaTeamManagementTest extends TestCase
             'file_path' => 'submissions/'.$fileName,
             'file_version' => 1,
             'document_status' => 'Pending',
-            'chapter' => 'Chapter 1',
+            'chapter' => $chapter,
+            'deliverable_id' => $deliverableId,
             'created_at' => now(),
         ]);
 

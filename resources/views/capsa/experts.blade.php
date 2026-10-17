@@ -6,6 +6,7 @@
 <title>Expert Management - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/table-kit.css') }}"/>
 <style nonce="{{ Vite::cspNonce() }}">
   .ae-field{margin-bottom:14px}
   .ae-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
@@ -27,28 +28,6 @@
   .ae-leave-hint{display:block;margin-top:3px;font-size:11.5px;color:#94a3b8;line-height:1.45}
   .cx-leave-tag{display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.2px;vertical-align:1px;background:rgba(180,83,9,.09);color:#b45309;border:1px solid rgba(180,83,9,.18)}
 
-  /* ── Compact table ───────────────────────────────────────────────────
-     One line per person. Status is a dot beside the name, which buys the
-     width back for the expertise, the column that was being squeezed. */
-  .table td{padding-top:9px;padding-bottom:9px;vertical-align:middle}
-  .table thead th{position:sticky;top:0;z-index:2;background:var(--bg2)}
-  .cx-who{display:flex;align-items:center;gap:9px;cursor:pointer;min-width:0}
-  .cx-av{width:26px;height:26px;border-radius:7px;object-fit:cover;flex-shrink:0}
-  .cx-who .td-main{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* The dot is the only thing saying whether they are around, so it is not
-     decoration - it carries the status the column used to. */
-  .cx-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--text3)}
-  .cx-dot-active{background:var(--green)}
-  .cx-dot-full{background:var(--amber)}
-  .cx-dot-offline{background:var(--border2)}
-  .cx-skills{max-width:240px}
-  .cx-chip{display:inline-block;max-width:150px;padding:2px 8px;margin:1px 3px 1px 0;border-radius:6px;
-           background:var(--bg4);color:var(--text2);font-size:11px;font-weight:500;
-           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
-  .cx-chip-n{background:transparent;border:1px dashed var(--border2);color:var(--text3);cursor:pointer;max-width:none}
-  .cx-chip-n:hover{border-color:var(--accent);color:var(--accent3);background:var(--accent-light)}
-  .table td[data-label="Action"]{text-align:right;padding-right:20px}
-  .expert-actions{justify-content:flex-end}
 
   /* Both classes in the selector, so this beats .ct-modal-card wherever that
      is defined - on this page it is defined further down, and a single-class
@@ -136,28 +115,6 @@
      (this plus Edit/Remove/Make CAPSA/Add Expert) - these two used to be
      one file switching on viewer role, which made neither version easy to
      read on its own. */
-  .expert-role-badges{
-    display:flex;
-    flex-wrap:wrap;
-    gap:6px;
-    align-items:center;
-  }
-  .expert-role-stack{
-    display:inline-flex;
-    flex-direction:column;
-    gap:5px;
-    width:fit-content;
-    max-width:100%;
-  }
-  .expert-role-badge{
-    font-size:10px;
-    font-weight:600;
-    padding:5px 10px;
-    letter-spacing:0;
-    text-transform:none;
-    border-radius:999px;
-    box-shadow:none;
-  }
   .expert-role-meta{
     display:inline-flex;
     align-items:center;
@@ -187,15 +144,6 @@
     gap:5px;
   }
 
-  /* Capacity column - merges what used to be separate Teams / Slots Left
-     columns. One row per program when an expert's slots are actually split
-     that way (see CapstoneExpert::parsedCapacity()), one "ALL" row when
-     they're not. Read-only here - editing capacity is Admin's job. */
-  .capacity-stack{display:flex;flex-direction:column;gap:5px}
-  .capacity-row{display:grid;grid-template-columns:38px 60px auto;align-items:center;gap:8px}
-  .capacity-row .pbar{width:60px}
-  .capacity-prog{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.3px}
-  .capacity-count{font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)}
 
   /* Manage Roles - the one action this page has. */
   .roles-btn{
@@ -227,13 +175,6 @@
   .xp-quick{display:flex;gap:14px;margin:0 0 18px}
   .xp-quick button{background:none;border:0;padding:0;font-size:12px;font-weight:600;color:#2563eb;cursor:pointer}
   @media (max-width:520px){.xp-cols{grid-template-columns:1fr}}
-  /* View Report is a link, so it gets the look the other buttons here take from the browser. */
-  .page-filters-actions a.btn{background:ButtonFace;color:ButtonText}
-  /* Four buttons do not fit on one line on a phone: two by two instead. */
-  @media (max-width:600px){
-    .page-filters-actions{flex-wrap:wrap}
-    .page-filters-actions .btn{flex:1 1 calc(50% - 4px)}
-  }
   .expert-detail-head{
     display:flex;align-items:flex-start;gap:12px;text-align:left;
     padding-bottom:16px;border-bottom:1px solid #f1f5f9;margin-bottom:18px;
@@ -430,82 +371,95 @@
   </div>
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content list-page">
+  <div class="content list-page tk">
     @php
+      $viewerId = (int) auth('expert')->id();
       // The mix, not just the total: how many of each role you have is the
       // thing a CaPSA is actually deciding about when they open this page.
-      $byRole = $experts->flatMap(fn ($e) => $e->roles->pluck('role_name'))
-        ->countBy()
-        ->map(fn ($n, $role) => $n.' '.Str::plural(Str::lower(\App\Models\Role::labelFor($role)), $n))
-        ->values();
+      // A tab per role, each saying how many it holds.
+      $roleCounts = $experts->flatMap(fn ($e) => $e->roles->pluck('role_name'))->countBy();
+      $roleTabs = collect([\App\Models\CapstoneExpert::CAPSA_ROLE, ...\App\Models\CapstoneExpert::STUDENT_FACING_ROLES])
+          ->mapWithKeys(fn ($role) => [$role => \App\Models\Role::labelFor($role)]);
+
+      // Accounts nobody has signed in to yet. They cannot be matched to a
+      // team until they do, so the page says how many there are.
+      $awaitingCount = $experts->filter(fn ($e) => ! $e->deactivated_at && $e->first_login_at === null && $e->last_seen_at === null)->count();
     @endphp
 
     <div class="page-head">
-      <div class="page-head-text">
-        <span class="page-count">{{ $experts->count() }}</span>
-        <span class="page-count-noun">{{ Str::plural('expert', $experts->count()) }}</span>
-        <span class="page-facts">
-          @foreach ($byRole as $line)
-            <span class="fact">{{ $line }}</span>
-          @endforeach
-        </span>
+      <div class="tk-head-text">
+        <div class="page-head-text">
+          <span class="page-count">{{ $experts->count() }}</span>
+          <span class="page-count-noun">{{ Str::plural('expert', $experts->count()) }} on your panel</span>
+        </div>
+        <p class="tk-lede">Advisers, consultants and grammarians your teams can be matched with.</p>
+      </div>
+      {{-- The list is for a whole faculty at once. Add Expert is for the one
+           it missed, so admitting a late arrival is not a spreadsheet. The same
+           table as a report: View Report opens it with the column picker,
+           Download Excel asks which columns first. --}}
+      <div class="tk-actions">
+        <a class="tk-btn tk-btn-ghost" href="{{ route('capsa.reports.show', 'expert_list') }}" title="View Report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg><span class="tk-lbl">View Report</span></a>
+        <button type="button" class="tk-btn tk-btn-ghost" onclick="openExpertExportModal()" title="Download Excel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span class="tk-lbl">Download Excel</span></button>
+        <button type="button" class="tk-btn" onclick="openExpertRosterModal()" title="Upload List"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg><span class="tk-lbl">Upload List</span></button>
+        <button type="button" class="tk-btn tk-btn-pri" onclick="openAddExpertModal()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add Expert</button>
       </div>
     </div>
 
-    {{-- Everything you do to the list on one line: look for someone, narrow
-         it down, or add to it. --}}
-    <div class="page-filters">
-      <div class="experts-search">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="input" id="experts-search-input" placeholder="Search experts by name or research area..."/>
+    @if ($awaitingCount > 0)
+      <div class="tk-banner" role="status">
+        <span class="tk-banner-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+        <p><strong>{{ $awaitingCount }} {{ Str::plural('expert', $awaitingCount) }} {{ $awaitingCount === 1 ? "hasn't" : "haven't" }} signed in yet.</strong> Names, research areas and slots fill in on their first sign-in &mdash; until then they can't be matched to teams.</p>
+        <button type="button" class="tk-btn tk-btn-sm" id="tkShowAwaiting">Show them</button>
       </div>
-      <select class="input page-filter" id="experts-role-filter">
-        <option>All Roles</option>
-        <option>Adviser</option>
-        <option>Consultant</option>
-        <option>Grammarian</option>
-      </select>
-      <select class="input page-filter" id="statusFilter">
-        <option value="all">All Status</option>
-        <option value="active">Active</option>
-        <option value="full">Full</option>
-        <option value="offline">Offline</option>
-        <option value="off">Deactivated</option>
-      </select>
-      <span class="page-filters-actions">
-        {{-- The list is for a whole faculty at once. The other is for the one
-             it missed, so admitting a late arrival is not a spreadsheet. --}}
-        {{-- The same table as a report: View Report opens it with the column
-             picker, Download Excel asks which columns first. --}}
-        <a class="btn" href="{{ route('capsa.reports.show', 'expert_list') }}">View Report</a>
-        <button type="button" class="btn" onclick="openExpertExportModal()">Download Excel</button>
-        <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
-        <button type="button" class="btn btn-primary" onclick="openAddExpertModal()"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Expert</button>
-      </span>
-    </div>
-
+    @endif
 
     @include('partials.row-select', [
       'table' => '.table',
       'noun' => 'expert',
       'actions' => [
-        ['id' => 'bulkRoles', 'label' => 'Set roles'],
-        ['id' => 'bulkRemove', 'label' => 'Deactivate', 'danger' => true],
+        ['id' => 'bulkRoles', 'label' => 'Set roles',
+         'icon' => '<path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/>'],
+        ['id' => 'bulkRemove', 'label' => 'Deactivate', 'danger' => true,
+         'icon' => '<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v10"/>'],
       ],
     ])
 
     <div class="card list-card">
+      <div class="tk-toolbar">
+        <div class="tk-tabs" role="tablist" aria-label="Role" id="experts-role-filter" data-value="">
+          <button type="button" class="tk-tab" role="tab" data-v="" aria-selected="true">All <span class="n">{{ $experts->count() }}</span></button>
+          @foreach ($roleTabs as $roleName => $roleText)
+            <button type="button" class="tk-tab" role="tab" data-v="{{ $roleName }}" aria-selected="false">{{ $roleText }} <span class="n">{{ $roleCounts[$roleName] ?? 0 }}</span></button>
+          @endforeach
+        </div>
+        <label class="experts-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="tk-vh">Search experts</span>
+          <input class="input" id="experts-search-input" placeholder="Name, email or research area"/>
+        </label>
+        <div class="tk-toolbar-end">
+          <label class="tk-vh" for="statusFilter">Status</label>
+          <select class="input tk-select" id="statusFilter">
+            <option value="all">Any status</option>
+            <option value="active">Online</option>
+            <option value="full">Full</option>
+            <option value="offline">Offline</option>
+            <option value="awaiting">Awaiting first sign-in</option>
+            <option value="off">Deactivated</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tk-scroll">
       <table class="table">
         <thead>
           <tr>
-            {{-- Status is a dot beside the name rather than a column of its
-                 own: it carries one bit, and a whole column to say "Offline"
-                 is width the expertise needs more. --}}
-            <th style="padding-left:20px">Expert</th>
-            <th>Role(s)</th>
-            <th>Research Areas</th>
-            <th>Accepts <span class="th-owner">expert sets</span></th>
-            <th style="text-align:right;padding-right:20px">Action</th>
+            <th style="width:28%">Expert</th>
+            <th style="width:22%">Role(s)</th>
+            <th class="tk-opt" style="width:24%">Research Areas</th>
+            <th class="tk-opt2" style="width:18%">Accepts <span class="th-owner">expert sets</span></th>
+            <th style="width:64px"><span class="tk-vh">Action</span></th>
           </tr>
         </thead>
         <tbody>
@@ -514,7 +468,6 @@
               // Every side together here; the detail window shows them apart.
               $expertiseList = $expert->allExpertise();
               $expertiseFull = $expertiseList->join(', ') ?: 'None specified';
-              $expertiseShown = $expertiseList->take(2)->join(', ');
               $expertiseExtra = $expertiseList->count() - 2;
 
               $maxTeams = $expert->max_teams ?? 0;
@@ -541,6 +494,9 @@
               // "offline" about it would be true and useless.
               $isOff = (bool) $expert->deactivated_at;
               $computedStatus = $isOff ? 'off' : ($isFull ? 'full' : ($isOnline ? 'active' : 'offline'));
+              $awaiting = ! $isOff && $expert->first_login_at === null && $expert->last_seen_at === null;
+              $isMe = (int) $expert->expert_id === $viewerId;
+              $displayName = $expert->name !== '' ? $expert->name : $expert->email;
               $capacityRows = $expert->parsedCapacity();
 
               // Filled counts per program, for the split-cap rows in the
@@ -583,107 +539,109 @@
                it used to find the status by counting columns, which is a
                thing that breaks the moment a column moves. --}}
           <tr data-status="{{ $computedStatus }}"
-              @class(['cx-off' => $isOff])
+              @class(['cx-off' => $isOff, 'tk-me' => $isMe])
               data-id="{{ $expert->expert_id }}"
               {{-- Removing your own account, or stripping your own roles, is
                    not a thing to be one careless drag away from. --}}
-              @if ($expert->expert_id === Auth::guard('expert')->id()) data-no-select="1" @endif
-              data-roles="{{ $expert->roles->pluck('role_name')->map($roleLabel)->implode(' ') }}"
+              @if ($isMe) data-no-select="1" @endif
+              data-awaiting="{{ $awaiting ? '1' : '0' }}"
+              data-roles="{{ $expert->roles->pluck('role_name')->implode(' ') }}"
               data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
-            <td style="padding-left:20px" data-label="Expert">
-              <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
-                <span class="cx-dot cx-dot-{{ $computedStatus }}" title="{{ $isOff ? 'Deactivated' : ucfirst($computedStatus) }}"></span>
-                <img src="{{ $expert->avatarUrl() }}" alt="" loading="lazy" class="cx-av"
-                     onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
+            <td class="tk-lead" data-label="Expert">
+              <div class="expert-name-trigger tk-who tk-click" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
+                @include('partials.table-kit.avatar', [
+                  'image' => $expert->hasAvatarImage() ? $expert->avatarUrl() : null,
+                  'initials' => $expert->avatarInitials(),
+                  'seed' => $expert->expert_id,
+                  'awaiting' => $awaiting,
+                  'presence' => $isOff ? null : ($isOnline ? 'on' : 'off'),
+                ])
                 {{-- The address under the name rather than hidden in a tooltip:
                      two people share a surname often enough, and the email is
                      what tells them apart. --}}
-                @if ($isOff)<span class="cx-off-tag">Deactivated</span>@endif
-                <span class="cx-text">
-                  <span class="td-main">{{ $expert->name }}@if ($expert->on_study_leave)<span class="cx-leave-tag" title="On study leave: may be slow to reply and hard to book.">Study leave</span>@endif</span>
-                  <span class="cx-mail">{{ $expert->email }}</span>
+                <span class="tk-who-text">
+                  <span class="tk-namerow">
+                    <span @class(['tk-name', 'td-main', 'tk-name-plain' => $awaiting])>{{ $displayName }}</span>
+                    @if ($isMe)<span class="tk-pill tk-p-you">YOU</span>@endif
+                    @if ($isOff)<span class="tk-pill tk-p-off">Deactivated</span>@endif
+                    @if ($expert->on_study_leave)<span class="cx-leave-tag" title="On study leave: may be slow to reply and hard to book.">Study leave</span>@endif
+                  </span>
+                  @if ($awaiting)
+                    <span class="tk-sub tk-sub-warn">Awaiting first sign-in</span>
+                  @elseif ($expert->name !== '')
+                    <span class="tk-sub">{{ $expert->email }}</span>
+                  @endif
                 </span>
               </div>
             </td>
-            <td data-label="Role">
-              <div class="expert-role-stack">
-                <div class="expert-role-badges">
-                  {{-- No separate "CAPSA" badge here - toggleCapsa() keeps the
-                       capstone_adviser role in sync with is_capsa, so the
-                       "Capstone Subject Adviser" badge below already says it;
-                       a second blue badge just repeated the same fact. --}}
-                  @forelse ($expert->roles as $role)
-                    <span class="badge badge-gold expert-role-badge">{{ $roleLabel($role->role_name) }}</span>
-                  @empty
-                    @if (! $expert->is_capsa)
-                      <span class="badge badge-gray expert-role-badge">No Role</span>
-                    @endif
-                  @endforelse
-                </div>
-              </div>
+            <td class="tk-block" data-label="Roles">
+              {{-- No separate "CAPSA" badge - toggleCapsa() keeps the
+                   capstone_adviser role in sync with is_capsa, so the
+                   "Capstone Subject Adviser" one already says it. --}}
+              <span class="tk-chips">
+                @forelse ($expert->roles as $role)
+                  <span class="tk-role tk-role-{{ $role->role_name }}">{{ $roleLabel($role->role_name) }}</span>
+                @empty
+                  <span class="tk-role tk-role-none">No Role</span>
+                @endforelse
+              </span>
             </td>
 
             {{-- A chip each, so a long name truncates on its own instead of
                  being joined to the next one and cut mid-word. The counter
                  opens the detail panel, where the full list already is. --}}
-            <td data-label="Research Areas" class="cx-skills" title="{{ $expertiseFull }}">
+            <td data-label="Research Areas" @class(['tk-opt', 'tk-block', 'tk-blank' => $expertiseList->isEmpty()]) title="{{ $expertiseFull }}">
               @if ($expertiseList->isEmpty())
-                <span style="color:var(--text3)">None specified</span>
+                <span class="tk-empty">&mdash;</span>
               @else
-                @foreach ($expertiseList->take(2) as $skill)
-                  <span class="cx-chip">{{ $skill }}</span>
-                @endforeach
-                @if ($expertiseExtra > 0)
-                  <span class="cx-chip cx-chip-n" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">+{{ $expertiseExtra }}</span>
-                @endif
+                <span class="tk-chips tk-1line">
+                  @foreach ($expertiseList->take(2) as $skill)
+                    <span class="tk-chip">{{ $skill }}</span>
+                  @endforeach
+                  @if ($expertiseExtra > 0)
+                    <button type="button" class="tk-more" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})" aria-label="{{ $expertiseExtra }} more research areas">+{{ $expertiseExtra }}</button>
+                  @endif
+                </span>
               @endif
             </td>
-            <td data-label="Team Slot">
+            <td data-label="Accepts" @class(['tk-opt2', 'tk-block', 'tk-blank' => ! ($takesTeams && $slotsSet)])>
               @if (! $takesTeams)
-                <span style="font-size:11px;color:var(--text3)">&mdash;</span>
+                <span class="tk-empty">&mdash;</span>
               @elseif (! $slotsSet)
-                <span style="font-size:11px;color:var(--text3)">Not set</span>
+                <span class="tk-empty">Not set</span>
               @elseif (count($capacityRows) === 1)
-                <div style="display:flex;align-items:center;gap:8px">
-                  <div class="pbar" style="width:60px">
-                    <div class="pbar-fill pf-green" style="width:{{ $maxTeams > 0 ? round(($teamCount / $maxTeams) * 100) : 0 }}%"></div>
-                  </div>
-                  <span style="font-size:11px;color:var(--text3)">{{ $teamCount }}/{{ $maxTeams }} · {{ $slotsLeft }} left</span>
+                <div class="tk-cap">
+                  <span class="tk-cap-p">{{ $capacityRows[0][0] === 'ALL' ? 'All' : $capacityRows[0][0] }}</span>
+                  <span class="tk-meter"><i @class(['full' => $isFull]) style="width:{{ $maxTeams > 0 ? round(($teamCount / $maxTeams) * 100) : 0 }}%"></i></span>
+                  <span class="tk-cap-v">{{ $teamCount }}/{{ $maxTeams }} · {{ $slotsLeft }} left</span>
                 </div>
               @else
-                {{-- One row per program, in the same shape as the single-cap
-                     row above: bar plus n/max. A stack of bare "max" numbers
-                     with the program floating far left of them read as two
-                     unrelated columns, and said nothing about how full each
-                     program already was. --}}
-                <div class="capacity-stack">
+                {{-- One row per program: bar plus n/max, so how full each
+                     program already is reads at a glance. --}}
+                <div class="tk-cap">
                   @foreach ($capacityRows as [$program, $max])
                     @php $filled = $programCounts[$program] ?? 0; @endphp
-                    <div class="capacity-row">
-                      <span class="capacity-prog">{{ $program }}</span>
-                      <div class="pbar">
-                        <div class="pbar-fill pf-green" style="width:{{ $max > 0 ? round(($filled / $max) * 100) : 0 }}%"></div>
-                      </div>
-                      <span class="capacity-count">{{ $filled }}/{{ $max }}</span>
-                    </div>
+                    <span class="tk-cap-p">{{ $program }}</span>
+                    <span class="tk-meter"><i @class(['full' => $max > 0 && $filled >= $max]) style="width:{{ $max > 0 ? round(($filled / $max) * 100) : 0 }}%"></i></span>
+                    <span class="tk-cap-v"><span class="capacity-count">{{ $filled }}/{{ $max }}</span></span>
                   @endforeach
                 </div>
               @endif
               @if ($takesTeams && $slotsSet && ($suggestion = $expert->slotSuggestion($teamCount)))
-                <div style="font-size:11px;color:var(--text3);margin-top:4px">Suggestion: <b style="color:var(--text2)">{{ $suggestion }}</b></div>
+                <div class="tk-hint"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"/></svg>Suggestion: {{ $suggestion }}</div>
               @endif
             </td>
 
-            <td data-label="Action">
-              <div class="expert-actions">
+            <td class="tk-ac" data-label="Action">
+              <div class="tk-acts expert-actions">
                 <div class="rowmenu">
                   <button type="button" class="icon-btn rowmenu-btn" aria-expanded="false"
-                          aria-label="Actions for {{ $expert->name }}">
+                          aria-label="Actions for {{ $displayName }}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
                   </button>
                   <div class="rowmenu-pop" hidden>
                     <button type="button" class="rowmenu-item"
-                            onclick="openRoles({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->roles->pluck('role_name')) }})">
+                            onclick="openRoles({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }}, {{ Illuminate\Support\Js::from($expert->roles->pluck('role_name')) }})">
                       <svg viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/></svg> Set roles
                     </button>
                     {{-- On and off from here too: a leave ends, and the tag should go with it. --}}
@@ -691,16 +649,23 @@
                             onclick="setStudyLeave({{ $expert->expert_id }}, {{ $expert->on_study_leave ? 'false' : 'true' }}, true)">
                       <svg viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg> {{ $expert->on_study_leave ? 'End study leave' : 'Mark study leave' }}
                     </button>
-                    <div class="rowmenu-sep"></div>
+                    @if ($awaiting)
+                      <button type="button" class="rowmenu-item" data-email="{{ $expert->email }}" onclick="copyExpertEmail(this)">
+                        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg> Copy email
+                      </button>
+                    @endif
+                    @if ($isOff || ! $isMe)
+                      <div class="rowmenu-sep"></div>
+                    @endif
                     @if ($isOff)
                       <button type="button" class="rowmenu-item"
-                              onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
+                              onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }})">
                         <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Reactivate
                       </button>
-                    @elseif ((int) $expert->expert_id !== (int) auth('expert')->id())
+                    @elseif (! $isMe)
                     {{-- Never on your own row: nobody would be left to switch you back on. --}}
                     <button type="button" class="rowmenu-item danger"
-                            onclick="removeOneExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
+                            onclick="removeOneExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }})">
                       <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate
                     </button>
                     @endif
@@ -710,48 +675,94 @@
             </td>
           </tr>
           @endforeach
+        </tbody>
+      </table>
+      </div>
+      <div class="tk-foot">
+        <span id="tkShowing">Showing all <strong>{{ $experts->count() }}</strong> {{ Str::plural('expert', $experts->count()) }}</span>
+        <span class="tk-tip" style="color:var(--text3)">Tick rows to set roles or deactivate several at once</span>
+      </div>
+    </div>
 
 <script nonce="{{ Vite::cspNonce() }}">
-  // Client-side filtering: search, role, and status.
+  // Client-side filtering: role tab, search and status.
   (function() {
     var searchInput = document.getElementById('experts-search-input');
-    var roleFilter = document.getElementById('experts-role-filter');
+    var roleTabs = document.getElementById('experts-role-filter');
     var statusFilter = document.getElementById('statusFilter');
+    var showing = document.getElementById('tkShowing');
     var rows = document.querySelectorAll('table.table tbody tr');
+    var total = rows.length;
 
     function filterRows() {
       var q = searchInput ? searchInput.value.toLowerCase().trim() : '';
-      var role = roleFilter ? roleFilter.value : 'All Roles';
+      var role = roleTabs ? roleTabs.dataset.value : '';
       var status = statusFilter ? statusFilter.value : 'all';
+      var visible = 0;
 
       rows.forEach(function(row) {
         // Read off the row rather than out of the cells. Counting columns to
         // find the status broke the moment one moved, and the expertise is
         // truncated on screen - the attribute holds all of it.
         var searchText = (row.dataset.search || '');
-        var roleText = (row.dataset.roles || '').toLowerCase();
+        var roles = ' ' + (row.dataset.roles || '') + ' ';
         var statusText = (row.dataset.status || '');
 
         var matchSearch = !q || searchText.includes(q);
-        var matchRole = role === 'All Roles' || roleText.includes(role.toLowerCase());
-        var matchStatus = true;
-        if (status === 'active') matchStatus = statusText === 'active';
-        else if (status === 'full') matchStatus = statusText === 'full';
-        else if (status === 'offline') matchStatus = statusText === 'offline';
-        else if (status === 'off') matchStatus = statusText === 'off';
+        var matchRole = !role || roles.includes(' ' + role + ' ');
+        var matchStatus = status === 'all'
+          || (status === 'awaiting' ? row.dataset.awaiting === '1' : statusText === status);
 
-        row.style.display = (matchSearch && matchRole && matchStatus) ? '' : 'none';
+        var shown = matchSearch && matchRole && matchStatus;
+        row.style.display = shown ? '' : 'none';
+        if (shown) visible++;
+      });
+
+      noMatch.hidden = visible > 0;
+      showing.innerHTML = visible === total
+        ? 'Showing all <strong>' + total + '</strong> ' + (total === 1 ? 'expert' : 'experts')
+        : 'Showing <strong>' + visible + '</strong> of <strong>' + total + '</strong>';
+    }
+
+    // A table that just goes blank reads as broken, not as "nobody matched".
+    var noMatch = document.createElement('tr');
+    noMatch.className = 'tk-note';
+    noMatch.hidden = true;
+    noMatch.innerHTML = '<td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No expert matches that search.</td>';
+    rows[0]?.parentNode.appendChild(noMatch);
+
+    if (searchInput) searchInput.addEventListener('input', filterRows);
+    if (statusFilter) statusFilter.addEventListener('change', filterRows);
+    if (roleTabs) {
+      roleTabs.querySelectorAll('button').forEach(function (button) {
+        button.addEventListener('click', function () {
+          roleTabs.dataset.value = button.dataset.v;
+          roleTabs.querySelectorAll('button').forEach(function (b) {
+            b.setAttribute('aria-selected', b === button ? 'true' : 'false');
+          });
+          filterRows();
+        });
       });
     }
 
-    if (searchInput) searchInput.addEventListener('input', filterRows);
-    if (roleFilter) roleFilter.addEventListener('change', filterRows);
-    if (statusFilter) statusFilter.addEventListener('change', filterRows);
+    var showAwaiting = document.getElementById('tkShowAwaiting');
+    if (showAwaiting && statusFilter) {
+      showAwaiting.addEventListener('click', function () {
+        statusFilter.value = 'awaiting';
+        filterRows();
+      });
+    }
   })();
+
+  async function copyExpertEmail(button) {
+    try {
+      await navigator.clipboard.writeText(button.dataset.email);
+      showToast(button.dataset.email + ' copied.', 'success');
+    } catch (e) {
+      showToast('Could not copy the address.', 'error');
+    }
+  }
 </script>
-        </tbody>
-      </table>
-    </div>
   </div>
   </div><!-- /real-content -->
 </div>
@@ -1733,5 +1744,6 @@ onBulk('bulkRemove', function (ids, rows) {
 @include('partials.email-lookup', ['input' => 'addExpertEmail', 'kind' => 'expert', 'nameInput' => 'addExpertName'])
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

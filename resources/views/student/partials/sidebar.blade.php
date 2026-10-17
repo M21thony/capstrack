@@ -11,6 +11,8 @@
     $sidebarYearNum = preg_replace('/[^0-9]/', '', $sidebarYear);
     $sidebarYearSection = $courseAbbr ? $courseAbbr . ' - ' . $sidebarYearNum . $sidebarSection : $student->year_section ?? '';
     $studentHasTeam = \App\Models\StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
+    // The page the dashboard's "Your next step" card points at gets a dot.
+    $nextStepRoute = \App\Support\NextStep::for($student)?->route;
 
     $currentRouteName = request()->route()?->getName();
     // Experts and Consultation are one page: either address is that page.
@@ -50,6 +52,9 @@
         session()->put('seen_post_ids', array_unique(array_merge($seenPostIds, $allPostIds)));
     }
 
+    // Papers a reviewer sent back: a to-do, so it stays until the revision goes in.
+    $papersToRevise = $studentTeamId ? \App\Support\PapersToRevise::count($studentTeamId) : 0;
+
     $consultationIds = DB::table('consultation_schedule')->where('specific_date', '>=', now()->toDateString())->where('is_available', 1)->pluck('schedule_id')->toArray();
     $seenConsultationIds = session('seen_consultation_ids', []);
     $unseenConsultationCount = count(array_diff($consultationIds, $seenConsultationIds));
@@ -58,8 +63,18 @@
         session()->put('seen_consultation_ids', array_unique(array_merge($seenConsultationIds, $consultationIds)));
     }
 @endphp
+{{-- The next-step dot, and the lock on pages that need a team. --}}
+<style nonce="{{ Vite::cspNonce() }}">
+.nav-next{margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--accent,#c9a82c);box-shadow:0 0 0 3px rgba(245,193,0,.22);flex:none}
+.nav-next + .nav-badge{margin-left:8px}
+.nav-lock{margin-left:auto;display:flex;flex:none}
+.sidebar .nav-lock svg{width:14px;height:14px;opacity:.55}
+html.sb-rail .sidebar .nav-next{position:absolute;top:6px;right:12px;margin:0}
+html.sb-rail .sidebar .nav-lock{display:none}
+</style>
 <!-- SIDEBAR -->
 @include('partials.portal-nav-icons')
+@include('partials.sidebar-rail')
 <div class="sidebar">
   <div class="sidebar-brand">
     <div class="brand-badge">
@@ -99,9 +114,10 @@
       <x-portal-icon name="dashboard" />
       Dashboard
     </a>
-    <a href="{{ route('student.team') }}" data-tour-target="student.team" class="nav-item {{ request()->routeIs('student.team') ? 'active' : '' }}">
+    <a href="{{ route('student.team') }}" data-tour-target="student.team" class="nav-item {{ request()->routeIs('student.team', 'student.team_rating.*') ? 'active' : '' }}">
       <x-portal-icon name="team" />
       Team Management
+      @if ($nextStepRoute === 'student.team')<span class="nav-next" role="img" aria-label="Your next step" title="Your next step"></span>@endif
       @if ($newPostCount > 0)
         <span class="nav-badge">{{ $newPostCount > 99 ? '99+' : $newPostCount }}</span>
       @endif
@@ -112,6 +128,7 @@
     <a href="{{ route('student.experts') }}" data-tour-target="student.experts" class="nav-item {{ $onExpertsPage ? 'active' : '' }}">
       <x-portal-icon name="expert" />
       Experts &amp; Consultations
+      @if ($nextStepRoute === 'student.experts')<span class="nav-next" role="img" aria-label="Your next step" title="Your next step"></span>@endif
       @if ($unseenExpertCount > 0)
         <span class="nav-badge warn">{{ $unseenExpertCount > 99 ? '99+' : $unseenExpertCount }}</span>
       @elseif ($unseenConsultationCount > 0)
@@ -124,15 +141,21 @@
     <a href="{{ route('student.documents') }}" data-tour-target="student.documents" class="nav-item {{ request()->routeIs('student.documents', 'student.submission', 'student.review') ? 'active' : '' }}">
       <x-portal-icon name="file-up" />
       Documents
+      @unless ($studentHasTeam)<span class="nav-lock" role="img" aria-label="Needs a team" title="Needs a team"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>@endunless
+      @if ($papersToRevise > 0)
+        <span class="nav-badge" title="{{ $papersToRevise }} {{ Str::plural('paper', $papersToRevise) }} to revise">{{ $papersToRevise > 99 ? '99+' : $papersToRevise }}</span>
+      @endif
     </a>
     <a href="{{ route('student.duplication') }}" data-tour-target="student.duplication" class="nav-item {{ request()->routeIs('student.duplication') ? 'active' : '' }}">
       <x-portal-icon name="similarity" />
       Pre-Proposal Submission
+      @if ($nextStepRoute === 'student.duplication')<span class="nav-next" role="img" aria-label="Your next step" title="Your next step"></span>@endif
     </a>
     <div class="nav-section">Tracking</div>
     <a href="{{ route('student.progress') }}" data-tour-target="student.progress" class="nav-item {{ request()->routeIs('student.progress') ? 'active' : '' }}">
       <x-portal-icon name="progress" />
       Progress Tracker
+      @unless ($studentHasTeam)<span class="nav-lock" role="img" aria-label="Needs a team" title="Needs a team"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>@endunless
     </a>
     {{-- Financial Records is a tab of Team Management now, not a page of its own. --}}
     <div class="nav-section">Reference</div>
@@ -157,7 +180,7 @@
 @include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => ['url' => $student->avatarUrl(), 'initials' => $student->avatarInitials()], 'tabs' => array_values(array_filter([
     ['label' => 'Home', 'href' => route('student.dashboard'), 'active' => request()->routeIs('student.dashboard'),
         'icon' => App\Support\PortalIcons::paths('home')],
-    ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team'), 'badge' => $newPostCount,
+    ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team', 'student.team_rating.*'), 'badge' => $newPostCount,
         'icon' => App\Support\PortalIcons::paths('team')],
     // Handing in a document is what a student comes here to do most - but
     // not on Financial Records (Team Management's second tab). There the page
@@ -406,8 +429,9 @@
   $uploadConfig = [
       'plan' => route('student.submission.plan'),
       'check' => route('student.submission.warnings'),
+      // Which paper, and which version of it, a file for no line goes up as - read from its name.
+      'nextVersion' => route('student.submission.next-version'),
       'store' => route('student.submission.store'),
-      'folders' => route('student.submission.subject-adviser-folders'),
       'documents' => route('student.documents'),
       // Undo on the notice after a send takes the file back, as Unsubmit does.
       'unsubmit' => route('student.submission.unsubmit', ['document' => '__ID__']),
@@ -416,16 +440,10 @@
 @endphp
 <script type="application/json" id="upload-config">@json($uploadConfig)</script>
 
-{{-- One preview window and one message box for the whole student side. --}}
-<dialog class="preview-dialog" id="previewDialog">
-  <div class="preview-head">
-    <h2 id="previewTitle">Preview</h2>
-    <button class="x" type="button" onclick="document.getElementById('previewDialog').close()" aria-label="Close preview">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
-  </div>
-  <div class="preview-body" id="previewBody"></div>
-</dialog>
+{{-- One preview window and one message box for the whole student side. The
+     window is the app's PDF window (partials/pdf-viewer); submission-preview
+     brings its script with it. --}}
+<dialog class="pv" id="previewDialog" aria-label="Document preview"></dialog>
 
 <div id="submission-toast"></div>
 

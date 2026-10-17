@@ -79,15 +79,41 @@ class CapaGoTest extends TestCase
     {
         $defense = $this->defense();
 
-        $this->actingAs($this->adviser, 'expert')->get(route('instructor.assignments'))
-            ->assertOk()->assertSee('Defenses waiting for your go')->assertSee('Alpha');
+        // In the adviser's To do, decided from the To do's own dialog.
+        $this->actingAs($this->adviser, 'expert')->get(route('instructor.teams', ['tab' => 'todo']))
+            ->assertOk()->assertSee('Defenses waiting for your go')->assertSee('Alpha')
+            ->assertSee('data-url="'.route('instructor.defense-go.update', $defense).'"', false)
+            ->assertSee('data-note-optional="1"', false);
 
         $this->actingAs($this->adviser, 'expert')
-            ->patch(route('instructor.defense-go.update', $defense), ['answer' => 'go'])
-            ->assertRedirect(route('instructor.assignments'));
+            ->patchJson(route('instructor.defense-go.update', $defense), ['answer' => 'go'])
+            ->assertOk()->assertJson(['success' => true]);
 
         $this->assertSame(DefenseSchedule::CAPA_GO, $defense->fresh()->capa_answer);
         $this->assertSame('go', $this->row()['capa']);
+    }
+
+    public function test_after_the_go_the_team_is_good_for_its_defense_until_the_day_and_can_still_be_cancelled(): void
+    {
+        $defense = $this->defense();
+        $defense->update(['capa_answer' => DefenseSchedule::CAPA_GO, 'capa_answered_at' => now()]);
+
+        // Still listed, as a status with a way back, but not counted as to do.
+        $this->actingAs($this->adviser, 'expert')->get(route('instructor.teams', ['tab' => 'todo']))
+            ->assertOk()
+            ->assertSee('Good for Title Defense')
+            ->assertSee('You gave the go')
+            ->assertSee('>Not ready, cancel</button>', false)
+            ->assertSee('data-value="not_ready"', false)
+            ->assertDontSee('data-value="go"', false)
+            ->assertDontSee('<b class="w">', false);
+
+        $this->actingAs($this->adviser, 'expert')
+            ->patchJson(route('instructor.defense-go.update', $defense), ['answer' => 'not_ready', 'note' => 'Chapter 3 is not done.'])
+            ->assertOk()->assertJson(['success' => true]);
+
+        $this->actingAs($this->adviser, 'expert')->get(route('instructor.teams', ['tab' => 'todo']))
+            ->assertOk()->assertDontSee('Good for Title Defense');
     }
 
     public function test_not_ready_cancels_the_defense_and_the_team_waits_for_a_new_date(): void

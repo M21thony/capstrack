@@ -8,8 +8,8 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
 <style nonce="{{ Vite::cspNonce() }}">
-  /* A long list scrolls inside itself, under headings that stay: the Drive
-     card and the filters hold still and only the documents move, as the
+  /* A long list scrolls inside itself, under headings that stay: the
+     filters hold still and only the documents move, as the
      staff portals' other long lists do. A phone keeps its cards below. */
   @media (min-width: 701px) {
     .content.dr-page { display: flex; flex-direction: column; }
@@ -102,27 +102,6 @@
         {{ session('error') }}
       </div>
     @endif
-
-    <!-- GOOGLE DRIVE CONNECTION BANNER -->
-    <div class="card" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/>
-        </svg>
-        @if ($driveConnected)
-          <span style="font-size:13px;color:var(--text2)">✓ Google Drive connected — annotated PDFs sync automatically.</span>
-        @else
-          <span style="font-size:13px;color:var(--text2)">Google Drive isn't connected — annotated PDFs won't sync until you connect your account.</span>
-        @endif
-      </div>
-      <div>
-        @if ($driveConnected)
-          <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px" onclick="disconnectDrive()">Disconnect</button>
-        @else
-          <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" style="font-size:12px">Connect Google Drive</a>
-        @endif
-      </div>
-    </div>
 
     {{-- Waiting, overdue, done. "Over 5 days" is the one that matters: a
          status column says a document is unreviewed, it does not say for how
@@ -236,19 +215,6 @@
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.52.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     {{ $review->review_status === 'Reviewed' ? 'View Annotations' : ($review->review_status === 'Reviewing' ? 'Continue Review' : 'Open Annotator') }}
                   </a>
-                  @if ($review->drive_status === 'uploaded' && $review->drive_web_view_link)
-                    <a
-                      href="{{ $review->drive_web_view_link }}"
-                      target="_blank"
-                      rel="noopener"
-                      class="btn btn-ghost"
-                      style="font-size:11px;padding:5px 14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px"
-                      title="Open the Drive copy — use Google Drive's own &quot;Open with Google Docs&quot; if you want it converted"
-                    >
-                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                      View in Drive
-                    </a>
-                  @endif
                   <a
                     href="{{ route('instructor.docreview.clf', $review->review_id) }}"
                     class="btn btn-ghost"
@@ -274,22 +240,6 @@
       </table>
     </div>
   </div>
-  </div>
-</div>
-<div class="modal-overlay" id="dr-confirm" onclick="if (event.target === this) closeDisconnectConfirm()">
-  <div class="modal-box" style="width:380px">
-    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">Disconnect Google Drive?</div>
-    <p style="margin:0 0 16px;font-size:13px;line-height:1.55;color:var(--text2)">
-      Annotated PDFs will stop syncing until you reconnect. The files already in
-      Drive stay where they are.
-    </p>
-    <p id="dr-confirm-error" hidden style="margin:0 0 16px;font-size:12px;color:var(--red)">
-      Could not disconnect Google Drive. Please try again.
-    </p>
-    <div style="display:flex;justify-content:flex-end;gap:8px">
-      <button type="button" class="btn btn-ghost" style="font-size:12px" onclick="closeDisconnectConfirm()">Cancel</button>
-      <button type="button" class="btn btn-primary" style="font-size:12px" id="dr-confirm-ok" onclick="doDisconnectDrive()">Disconnect</button>
-    </div>
   </div>
 </div>
 @include('instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
@@ -349,35 +299,6 @@
   if (status) status.addEventListener('change', filterRows);
 })();
 
-/* Asked in the page's own voice rather than the browser's. A second
-   window.confirm() in the same minute offers "don't ask me again" on some
-   browsers, which turns the next irreversible action into a silent yes. */
-function disconnectDrive(){
-  document.getElementById('dr-confirm').classList.add('show');
-}
-
-function closeDisconnectConfirm(){
-  document.getElementById('dr-confirm').classList.remove('show');
-}
-
-function doDisconnectDrive(){
-  const btn = document.getElementById('dr-confirm-ok');
-  btn.disabled = true;
-  btn.textContent = 'Disconnecting...';
-
-  fetch("{{ route('gdrive.connection.destroy') }}", {
-    method: 'DELETE',
-    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-  })
-    .then((r) => r.json())
-    .then(() => window.location.reload())
-    .catch(() => {
-      btn.disabled = false;
-      btn.textContent = 'Disconnect';
-      document.getElementById('dr-confirm-error').hidden = false;
-    });
-}
-
 
 /* Mobile sidebar toggle */
 var sidebarEl = document.querySelector('.sidebar');
@@ -402,5 +323,6 @@ function closeSidebar() {
 }
 </script>
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

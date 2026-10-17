@@ -33,7 +33,7 @@ class CapsaSetsTeamSizeTest extends TestCase
     /** The team rules are one resource, so every save carries all of them. */
     private function rules(int $max): array
     {
-        return ['max_members' => $max, 'allow_creation' => true, 'allow_joining' => true];
+        return ['max_members' => ['BSIT' => $max], 'allow_creation' => true, 'allow_joining' => true];
     }
 
     public function test_five_until_a_capsa_says_otherwise(): void
@@ -46,9 +46,9 @@ class CapsaSetsTeamSizeTest extends TestCase
         $this->actingAs($this->capsa(), 'expert')
             ->putJson(route('capsa.team_rules.update'), $this->rules(3))
             ->assertOk()
-            ->assertJson(['success' => true, 'max_members' => 3]);
+            ->assertJson(['success' => true, 'max_members' => ['BSIT' => 3]]);
 
-        $this->assertSame(3, Team::maxMembers());
+        $this->assertSame(3, Team::maxMembers('BSIT-4A'));
     }
 
     /** Outside three to five is refused - that is the range the course runs. */
@@ -57,10 +57,11 @@ class CapsaSetsTeamSizeTest extends TestCase
         foreach ([2, 6, 0] as $bad) {
             $this->actingAs($this->capsa(), 'expert')
                 ->putJson(route('capsa.team_rules.update'), $this->rules($bad))
-                ->assertStatus(422);
+                ->assertStatus(422)
+                ->assertJsonValidationErrors('max_members.BSIT');
         }
 
-        $this->assertSame(5, Team::maxMembers());
+        $this->assertSame(5, Team::maxMembers('BSIT-4A'));
     }
 
     /** A stored value outside the range never escapes the model either. */

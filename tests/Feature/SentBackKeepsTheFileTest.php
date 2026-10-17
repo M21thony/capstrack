@@ -57,7 +57,10 @@ class SentBackKeepsTheFileTest extends TestCase
             ->assertOk()
             ->assertSee('Replace file')
             ->assertSee('The file you sent is kept. Replace it with a corrected copy.')
-            ->assertSee('The adviser did not sign it.');
+            ->assertSee('The adviser did not sign it.')
+            // Not listed on Documents, so the row is where the team opens what it sent.
+            ->assertSee(route('student.documents.file', $fileId), false)
+            ->assertSee('View the file you sent');
 
         // The corrected copy goes back to the CaPSA to check; both versions are kept.
         $this->upload($leader, $form, now()->addMinute()->toDateTimeString(), null, 'submissions/team-form-2.pdf');

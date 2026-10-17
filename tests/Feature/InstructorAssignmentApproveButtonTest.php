@@ -45,30 +45,19 @@ class InstructorAssignmentApproveButtonTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $response = $this->actingAs($expert, 'expert')->get(route('instructor.assignments'));
+        $response = $this->actingAs($expert, 'expert')->get(route('instructor.teams', ['tab' => 'applications']));
 
         $response->assertOk();
 
-        // The unsafe pattern must never appear again - the raw team name
-        // embedded as a second argument inside the onclick attribute.
-        $response->assertDontSee("openApproveModal({$assignment->assignment_id}, '", false);
-        $response->assertDontSee("openRejectModal({$assignment->assignment_id}, '", false);
+        // The unsafe pattern must never appear again: no inline handler
+        // carries a team name.
+        $response->assertDontSee("onclick=\"openApproveModal(", false);
+        $response->assertDontSee("onclick=\"openRejectModal(", false);
 
-        // Only the id is passed now - the rest is looked up client-side
-        // from the safely JSON-encoded assignmentData object. Since the
-        // redesign the row selects rather than decides, so the id travels
-        // through selectAssignment and the panel calls the same two
-        // functions with it; what must never come back is a team name
-        // interpolated into an attribute, which is what the two assertions
-        // above pin down.
-        $response->assertSee("selectAssignment({$assignment->assignment_id})", false);
-        $response->assertDontSee("selectAssignment({$assignment->assignment_id}, '", false);
-        $response->assertSee('openApproveModal(id)', false);
-        $response->assertSee('openRejectModal(id)', false);
-
-        // The team name still reaches the page - just through the safe
-        // Js::from()-encoded assignmentData object, not raw string
-        // concatenation into an inline event handler.
-        $response->assertSee('JOLINA');
+        // Only the id travels in the Read button, and the name sits in
+        // escaped data attributes and the JSON-encoded application data.
+        $response->assertSee('data-read="application" data-read-id="'.$assignment->assignment_id.'"', false);
+        $response->assertSee('data-title="Accept Team JOLINA&#039;s TEAM"', false);
+        $response->assertSee('"team":"JOLINA\u0027s TEAM"', false);
     }
 }

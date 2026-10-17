@@ -89,11 +89,13 @@ let dialog = null;
 
 function freshState(itemId, from, revises) {
   return {
-    itemId: itemId || '',
+    // A revision of an upload that was never for a checklist line is still
+    // for no line: it must not open on "What is this for?" with no file box.
+    itemId: itemId || (revises ? 'none' : ''),
     // The upload a "Submit revision" is the next version of.
     revises: revises || null,
     from,
-    fixedLine: !!itemId,
+    fixedLine: !!itemId || !!revises,
     plan: null,
     loadError: null,
     step: 'pick', // pick | check | sending | sent | failed
@@ -106,12 +108,12 @@ function freshState(itemId, from, revises) {
     rotation: 0,
     checking: false,
     same: null,
+    // For a file for no line: which paper its name makes it, and which version.
+    guess: null,
     warnings: [],
     diagrams: [],
     diagramProblem: null,
     picked: new Set(),
-    folders: [],
-    folder: '',
     progress: 0,
     failure: null,
     result: null,
@@ -181,29 +183,20 @@ async function loadPlan() {
   S.loadError = null;
   render();
   try {
-    const url = CONFIG.plan + (S.itemId ? '?item=' + encodeURIComponent(S.itemId) : '');
+    const query = new URLSearchParams();
+    if (S.itemId) query.set('item', S.itemId);
+    if (S.revises) query.set('revises', S.revises);
+    const url = CONFIG.plan + (query.toString() ? '?' + query : '');
     const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'This could not be opened.');
     S.plan = data;
     S.picked = new Set(data.people.filter((p) => p.on).map((p) => p.role));
-    if (S.picked.has('subject_adviser') || data.people.some((p) => p.role === 'subject_adviser')) loadFolders();
   } catch (e) {
     S.loadError = e.message || 'This could not be opened. Reload the page and try again.';
   }
   render();
   focusFirst();
-}
-
-async function loadFolders() {
-  if (!CONFIG.folders || S.plan?.item?.paper) return;
-  try {
-    const data = await fetch(CONFIG.folders, { headers: { Accept: 'application/json' } }).then((r) => r.json());
-    S.folders = data.folders || [];
-    render();
-  } catch {
-    S.folders = [];
-  }
 }
 
 function closeNow() {
@@ -246,12 +239,12 @@ async function takeFile(file) {
     return;
   }
   if (S.thumbUrl) URL.revokeObjectURL(S.thumbUrl);
-  Object.assign(S, { file, step: 'check', pages: null, pdf: null, broken: false, thumbUrl: null, rotation: 0, same: null, warnings: [], checking: true, failure: null });
+  Object.assign(S, { file, step: 'check', pages: null, pdf: null, broken: false, thumbUrl: null, rotation: 0, same: null, guess: null, warnings: [], checking: true, failure: null });
   render();
 
   // A diagram has nothing to read here: the reviewer's screen draws it.
   const reading = ext(file.name) === 'pdf' ? readPdf(file) : isDiagram(file.name) ? null : readImage(file);
-  await Promise.all([reading, serverCheck(file)]);
+  await Promise.all([reading, serverCheck(file), guessVersion(file)]);
   if (S?.file === file) {
     S.checking = false;
     render();
@@ -304,6 +297,26 @@ async function serverCheck(file) {
   }
 }
 
+/**
+ * A file for no line, not sent as a revision: the paper its name makes it
+ * (its chapter, else the name itself) and the version it goes up as, so the
+ * team sees before sending whether it starts a paper or adds to one.
+ */
+async function guessVersion(file) {
+  if (!CONFIG.nextVersion || S.plan?.item || S.revises) return;
+  const title = file.name.replace(/\.[^.]+$/, '');
+  try {
+    const data = await fetch(CONFIG.nextVersion + '?' + new URLSearchParams({ title }), {
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    }).then((r) => r.json());
+    if (S?.file !== file) return;
+    S.guess = { version: data.version, paper: data.chapter || title };
+  } catch {
+    // Only a hint: the version is counted again when the file goes up.
+  }
+}
+
 // ── Sending ──────────────────────────────────────────────────────────
 async function fileToSend() {
   const file = S.file;
@@ -329,8 +342,8 @@ async function send() {
   const body = new FormData();
   body.append('file', await fileToSend());
   if (S.plan.item) body.append('deliverable_id', S.plan.item.id);
+  else if (S.revises) body.append('revises', S.revises);
   if (!S.plan.item?.paper) S.picked.forEach((role) => body.append('recipients[]', role));
-  if (S.folder && S.picked.has('subject_adviser')) body.append('subject_adviser_folder_id', S.folder);
   if (ext(S.file.name) === 'pdf') S.diagrams.forEach((d) => body.append('diagrams[]', d));
 
   S.step = 'sending';
@@ -424,14 +437,15 @@ function sentLine(forToast) {
 function titleText() {
   if (!S.plan) return 'Submit a file';
   const item = S.plan.item;
-  if (!item) return 'Submit a file';
+  if (!item) return S.revises ? 'Submit a revision' : 'Submit a paper';
   return S.plan.round ? `${item.title} · ${S.plan.round}` : item.title;
 }
 
 function subText() {
   const item = S.plan?.item;
   if (!S.plan) return '';
-  if (!item) return S.fixedLine ? '' : 'Pick what it’s for, then the file';
+  if (!item && S.revises) return [S.plan.paper, S.plan.round, S.plan.version ? `goes up as version ${S.plan.version}` : null].filter(Boolean).join(' · ');
+  if (!item) return S.fixedLine ? 'A chapter, the manuscript, or a diagram for your experts to review' : 'Pick what it’s for, then the file';
   if (item.paper) return 'Signed paper · your CaPSA checks it';
   if (S.plan.round) return `Goes up as version ${S.plan.version}`;
   return [item.phase, item.due ? 'due ' + item.due : null].filter(Boolean).join(' · ');
@@ -470,8 +484,8 @@ function remarkHtml() {
   const r = S.plan?.remark;
   if (!r) return '';
   const count = r.count ? ` · ${r.count} ${r.count === 1 ? 'remark' : 'remarks'}` : '';
-  const first = r.first ? ` <span class="up-remark-q">“${esc(r.first)}”</span>` : '';
-  return `<div class="up-remark"><b>${esc(r.who)} asked for changes</b>${count}${first} <a class="up-link" href="${esc(r.url)}">Read them</a></div>`;
+  const first = r.first ? `<q class="up-remark-q">${esc(r.first)}</q>` : '';
+  return `<div class="up-remark"><p><b>${esc(r.who)} asked for changes</b>${count}</p>${first}<a class="up-link" href="${esc(r.url)}">Read them</a></div>`;
 }
 
 function dropHtml() {
@@ -490,7 +504,7 @@ const initials = (name) => String(name || '?').replace(/^(Dr|Prof|Engr|Mr|Ms|Mrs
 function pill(p, { locked = false, toggle = false } = {}) {
   const on = locked || S.picked.has(p.role);
   const who = [p.name, p.note].filter(Boolean).join(' · ');
-  const inner = `<i class="up-av" aria-hidden="true">${esc(initials(p.name || p.label))}</i><b>${esc(p.label)}</b>${who ? `<span>${esc(who)}</span>` : ''}`;
+  const inner = `<i class="up-av" aria-hidden="true">${esc(initials(p.name || p.label))}</i><span class="up-pill-t"><b>${esc(p.label)}</b>${who ? `<span>${esc(who)}</span>` : ''}</span>${locked ? `<span class="up-lock" title="Set by the last version">${svg('lock', 13)}</span>` : ''}`;
   if (toggle && p.available) {
     return `<button type="button" class="up-pill${on ? ' on' : ' off'}" data-act="toggle" data-role="${p.role}" aria-pressed="${on}">${inner}</button>`;
   }
@@ -513,18 +527,35 @@ function goesToHtml() {
   let hint = '';
   if (paper) hint = 'A signed paper always goes to your CaPSA to check.';
   else if (plan.locked) hint = 'A revision goes back to the people who read the last version.';
-  else if (people.some((p) => p.role === 'subject_adviser' && p.note === 'format check')) hint = 'Your CaPSA only checks this chapter when they ask to check the format.';
+  else if (people.some((p) => p.role === 'subject_adviser' && p.note === 'review if asked')) hint = 'Your CaPSA only reviews this chapter when they ask for it.';
   if (!paper && !people.some((p) => p.available)) hint = 'Nobody is assigned to your team yet, so there is no one to send it to.';
 
-  let folder = '';
-  if (!paper && S.folders.length && S.picked.has('subject_adviser')) {
-    folder = `<div class="up-field"><label class="up-label" for="up-folder">CaPSA’s folder</label>
-      <select id="up-folder" class="up-select"><option value="">Their team folder</option>${S.folders.map((f) =>
-        `<option value="${esc(f.drive_folder_id)}"${S.folder === f.drive_folder_id ? ' selected' : ''}>${esc(f.name)}</option>`).join('')}</select></div>`;
-  }
+  const head = paper ? 'Checked by' : plan.locked ? 'Goes back to' : 'Send to';
+  return step(2, head, `<div class="up-pills">${pills}</div>${hint ? `<p class="up-hint">${hint}</p>` : ''}`, peopleOn().length > 0, right);
+}
 
-  return `<div class="up-goes"><div class="up-goes-h"><span class="up-label">${plan.locked && !paper ? 'Goes back to' : 'Send to'}</span>${right}</div>
-    <div class="up-pills">${pills}</div>${hint ? `<p class="up-hint">${hint}</p>` : ''}${folder}</div>`;
+/** One numbered step of the pop-up; its number turns to a tick once it is done. */
+function step(n, title, inner, done, right = '') {
+  return `<section class="up-step"><span class="up-num${done ? ' done' : ''}" aria-hidden="true">${done ? svg('check', 13, 3) : n}</span>
+    <div class="up-step-main"><div class="up-step-h"><h3>${title}</h3>${right}</div>${inner}</div></section>`;
+}
+
+function fileStepTitle() {
+  if (S.plan?.item?.paper) return 'Your signed paper';
+  if (S.plan?.locked) return 'Your revised paper';
+  return S.plan?.item ? 'Your file' : 'Your paper';
+}
+
+function fileDone() {
+  return !!S.file && !S.broken && !S.same && !S.problem;
+}
+
+function versionText() {
+  if (S.plan?.item?.paper) return 'Handed in to your CaPSA to check';
+  if (S.plan?.version) return `Goes up as version ${S.plan.version}`;
+  if (S.revises) return 'The next version of the paper sent back';
+  if (!S.guess) return 'Reading the name…';
+  return S.guess.version > 1 ? `Goes up as version ${S.guess.version} of ${S.guess.paper}` : `A new paper · ${S.guess.paper}`;
 }
 
 function checksHtml() {
@@ -562,7 +593,7 @@ function fileCardHtml() {
     !isPdf && !diagram ? linkBtn('Rotate', 'rotate') : '',
     linkBtn('Change file', 'browse', ' data-muted'),
   ].filter(Boolean).join('<span class="up-dot" aria-hidden="true">·</span>');
-  const versionLine = S.plan?.item ? `Goes up as version ${S.plan.version}` : 'Feedback only · moves nothing on your checklist';
+  const versionLine = versionText();
   return `<div class="up-file">
       <button type="button" class="up-thumb" data-act="preview" aria-label="Preview ${esc(f.name)}"${canPreview ? '' : ' disabled'}>${thumb}${canPreview ? `<span class="up-thumb-eye">${svg('eye', 13)}</span>` : ''}</button>
       <div class="up-file-info">
@@ -584,6 +615,11 @@ function checkNotes() {
   const nameOff = !S.same && want && got && got !== want;
   if (nameOff) {
     out += note('warn', `<b>The file name says Chapter ${got}</b>, but this is ${esc(S.plan.item.title)}. Preview it to be sure.`, linkBtn('Preview', 'preview') + linkBtn('Choose another file', 'browse'));
+  }
+  // Sent as a new paper, it adds to one the team already has: the card's
+  // Submit revision is what sends it back to the same reviewers.
+  if (S.guess?.version > 1) {
+    out += note('info', `<b>${esc(S.guess.paper)} already has version ${S.guess.version - 1}.</b> If this answers a reviewer’s remarks, send it with Submit revision on its card in Documents, so it goes back to the same people.`);
   }
   // The first page naming another chapter says the same as the name did.
   if (!S.same) S.warnings.filter((w) => !(nameOff && w.type === 'heading')).forEach((w) => { out += note('warn', esc(w.message)); });
@@ -629,12 +665,12 @@ function bodyAndFoot() {
   switch (S.step) {
     case 'pick':
       return [
-        lineSelect() + remarkHtml() + (needsLine() ? '' : dropHtml()) + (needsLine() ? '' : goesToHtml()),
+        lineSelect() + remarkHtml() + (needsLine() ? '' : step(1, fileStepTitle(), dropHtml(), false) + goesToHtml()),
         btn('Cancel', 'close') + btn(sendLabel(), 'send', { primary: true, disabled: true, icon: 'send' }),
       ];
     case 'check':
       return [
-        fileCardHtml() + checkNotes() + diagramsHtml() + goesToHtml(),
+        remarkHtml() + step(1, fileStepTitle(), fileCardHtml() + checkNotes() + diagramsHtml(), fileDone()) + goesToHtml(),
         whyNot() + btn('Cancel', 'close') + btn(sendLabel(), 'send', { primary: true, disabled: !canSend(), icon: 'send' }),
       ];
     case 'sending':
@@ -745,8 +781,6 @@ function onChange(e) {
       return;
     }
     loadPlan();
-  } else if (e.target.id === 'up-folder') {
-    S.folder = e.target.value;
   }
 }
 

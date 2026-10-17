@@ -338,9 +338,7 @@
     surface = visibleColour(surface) ? surface : '#eceef0';
 
     // The skeleton comes in bands - each run of cards with nothing between
-    // them - laid edge to edge down the whole page, so it can give way a
-    // part at a time: what is on screen first, the rest as it is scrolled
-    // to.
+    // them - laid edge to edge down the whole page.
     pieces.sort(function (one, other) { return one.top - other.top; });
     var bands = [];
     pieces.forEach(function (piece) {
@@ -431,31 +429,12 @@
       sheet.node.classList.add('csk-out');
       setTimeout(function () { sheet.node.remove(); }, 450);
     }
-    // A sheet cut in two at a line across the page: the part below goes on
-    // as a sheet of its own, showing the rest of the same skeleton.
-    function cut(sheet, at) {
-      var rest = place({ node: sheet.node.cloneNode(true), origin: sheet.origin, top: at, bottom: sheet.bottom, done: false });
-      sheet.node.parentNode.insertBefore(rest.node, sheet.node.nextSibling);
-      sheet.bottom = at;
-      place(sheet);
-      sheets.splice(sheets.indexOf(sheet) + 1, 0, rest);
-      if (tail === sheet) tail = rest;
-      return rest;
-    }
-    // What was on screen gives way, down to the very edge of the screen;
-    // whatever lies above or below it stays a skeleton, still loading,
-    // until it is scrolled to.
-    function reveal(region) {
+    // The whole page gives way together, down to its end: rows further down
+    // a list are not left loading on their own when they are scrolled to.
+    function reveal() {
       revealed = true;
       if (watching) watching.disconnect();
-      sheets.slice().forEach(function (sheet) {
-        if (sheet.done) return;
-        if (sheet.fixed) return lift(sheet);
-        if (sheet.bottom <= region.top || sheet.top >= region.bottom) return;
-        if (sheet.top < region.top) sheet = cut(sheet, region.top);
-        if (sheet.bottom > region.bottom) cut(sheet, region.bottom);
-        lift(sheet);
-      });
+      finish();
     }
     function finish() {
       if (finished) return;
@@ -477,26 +456,11 @@
     var stop = finishNow;
     active = stop;
 
-    // What is on screen shows loading for 0.9s (from the first frame, or
-    // from when it is scrolled to), and until the pictures in view are in -
-    // never more than 0.7s longer - then gives way. Scrolling on while that
-    // runs adds what comes on screen to the same moment.
-    var waiting = null;
-    function schedule() {
-      var top = content.scrollTop;
-      var bottom = top + content.clientHeight;
-      var covered = sheets.some(function (sheet) {
-        return !sheet.done && (sheet.fixed || (sheet.bottom > top && sheet.top < bottom));
-      });
-      if (!covered) return;
-      if (waiting) {
-        waiting.top = Math.min(waiting.top, top);
-        waiting.bottom = Math.max(waiting.bottom, bottom);
-      } else {
-        waiting = { top: top, bottom: bottom, due: Math.max(performance.now(), shown) + 900 };
-      }
-    }
-    function onScroll() { follow(); schedule(); }
+    // The page shows loading for 0.9s from the first frame, and until the
+    // pictures in view are in - never more than 0.7s longer - then all of
+    // it gives way at once, wherever it has been scrolled to meanwhile.
+    var due = Math.max(performance.now(), shown) + 900;
+    function onScroll() { follow(); }
     function tick() {
       follow();
       var now = performance.now();
@@ -509,20 +473,14 @@
       // Nor does it give way while it is about to be drawn again: the page
       // changed, and the skeleton showing is the one from before.
       var held = !revealed && ((holds > 0 && now < shown + 4000) || redrawing);
-      if (waiting && !held && now >= waiting.due && (now >= waiting.due + 700 || picturesReady())) {
-        var region = waiting;
-        waiting = null;
-        reveal(region);
-        schedule();
-      }
+      if (!held && now >= due && (now >= due + 700 || picturesReady())) reveal();
       if (sheets.every(function (sheet) { return sheet.done; })) finish();
     }
-    schedule();
     var ticking = setInterval(tick, 50);
     content.addEventListener('scroll', onScroll, { passive: true });
     // Checked again before every frame the content area changes size in,
     // so the skeleton never falls short of it.
-    var resizing = window.ResizeObserver ? new ResizeObserver(function () { follow(); schedule(); }) : null;
+    var resizing = window.ResizeObserver ? new ResizeObserver(follow) : null;
     if (resizing) resizing.observe(content);
     window.addEventListener('resize', finishNow);
 
