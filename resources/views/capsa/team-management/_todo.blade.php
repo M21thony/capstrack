@@ -10,7 +10,8 @@
             'review' => 'file', 'leave' => 'users', 'expert' => 'user', 'invite' => 'mail', 'grade' => 'trophy'];
   $hatName = fn ($hat) => $hat === 'capsa' ? 'CaPSA' : ucfirst($hat);
   $resultTone = fn ($r) => preg_match('/Approved|Verified|Accepted|Checked|Recommended|Reviewed|Submitted/', $r) ? 'ok'
-    : (preg_match('/Turned|Declined|Rejected/', $r) ? 'bad' : 'idle');
+    : (preg_match('/Turned|Declined|Rejected/', $r) ? 'bad' : ($r === 'Needs revision' ? 'warn' : 'idle'));
+  $doneKinds = ['paper' => 'Paper', 'invite' => 'Invitation', 'decision' => 'Request'];
   $hubRoute = $portal === 'capsa' ? 'capsa.team_management' : 'instructor.teams';
 @endphp
 
@@ -98,21 +99,48 @@
       @endforelse
     </div>
 
-    <div id="tm-todo-decided" hidden>
-      @if ($decided->isEmpty())
-        <div class="empty"><b>Nothing completed yet</b>What you approve, decline or check shows up here.</div>
-      @else
-        <ul class="todo">
-          @foreach ($decided as $done)
-            <li>
-              <span class="ico"><x-tm-icon n="check" s="18" /></span>
-              <div class="what"><b>{{ $done->what }}</b>
-                <span>@if ($done->teamName)Team {{ $done->teamName }} · @endif{{ $done->at->format('M j, Y') }}</span></div>
-              <div class="acts"><span class="state st-{{ $resultTone($done->result) }}">{{ $done->result }}</span></div>
-            </li>
+  </div>
+
+  {{-- Completed: everything settled, newest first, under a heading per month.
+       Only the latest two months show; the button under them adds one older
+       month at a time, and the search looks through every month. --}}
+  <div id="tm-done" hidden>
+    @unless ($decided->isEmpty())
+      <div class="done-bar">
+        <span id="tm-done-total" aria-live="polite"></span>
+        <label class="search"><x-tm-icon n="search" s="15" />
+          <input type="search" id="tm-done-q" placeholder="Search team or paper" aria-label="Search completed" autocomplete="off"></label>
+      </div>
+    @endunless
+    <div class="done-box" id="tm-done-box" tabindex="0">
+      <div id="tm-todo-decided">
+        @if ($decided->isEmpty())
+          <div class="empty"><b>Nothing completed yet</b>Papers you review and what you approve or decline show up here.</div>
+        @else
+          @foreach ($decided->groupBy(fn ($done) => $done->at->format('Y-m')) as $month)
+            <section data-month="{{ $month->first()->at->format('F Y') }}" data-n="{{ $month->count() }}">
+              <h3 class="mon">{{ $month->first()->at->format('F Y') }} <span class="n">· {{ $month->count() }}</span></h3>
+              <ul class="todo hist">
+                @foreach ($month as $done)
+                  <li data-q="{{ \Illuminate\Support\Str::lower($done->what.' '.$done->teamName.' '.$doneKinds[$done->kind].' '.$done->detail) }}">
+                    <time class="day" datetime="{{ $done->at->toDateString() }}">{{ $done->at->format('M j') }}<small>{{ $done->at->format('D') }}</small></time>
+                    <span class="ico k-{{ $done->kind }}"><x-tm-icon :n="$icons[$done->kind] ?? 'shield'" s="18" /></span>
+                    <div class="what"><b>{{ $done->what }}</b>
+                      <span>@if ($done->teamName)Team {{ $done->teamName }} · @endif{{ $doneKinds[$done->kind] }}@if ($done->detail) · {{ $done->detail }}@endif</span></div>
+                    <div class="acts">
+                      <span class="state st-{{ $resultTone($done->result) }}">{{ $done->result }}</span>
+                      @if ($done->url)<a class="btn" href="{{ $done->url }}" data-done-open>Open</a>@else<span class="btn-gap"></span>@endif
+                    </div>
+                  </li>
+                @endforeach
+              </ul>
+            </section>
           @endforeach
-        </ul>
-      @endif
+          <div class="empty" id="tm-done-none" hidden><b>Nothing matches</b>Try a team or paper name.</div>
+          <div class="more" id="tm-done-more-row"><button type="button" class="btn" id="tm-done-more"></button></div>
+          <p class="end" id="tm-done-end" hidden></p>
+        @endif
+      </div>
     </div>
   </div>
 </div>

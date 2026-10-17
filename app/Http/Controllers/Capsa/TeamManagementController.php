@@ -88,8 +88,8 @@ class TeamManagementController extends Controller
             'rows' => $rows,
             'todo' => $todo,
             'decided' => in_array($tab, ['todo', 'applications', 'teams'], true)
-                ? $this->todo->decidedByCapsa($capsa, $rows)->concat($this->todo->decidedByExpert($capsa))
-                    ->sortByDesc(fn ($d) => $d->at->getTimestamp())->take(30)->values()
+                ? $this->todo->decidedByCapsa($capsa, $rows)->concat($this->todo->decidedByExpert($capsa, $rows, 'capsa'))
+                    ->sortByDesc(fn ($d) => $d->at->getTimestamp())->values()
                 : collect(),
             // Wears an expert's hat on at least one team as well.
             'twoHats' => $rows->contains(fn ($row) => $row->myRole)

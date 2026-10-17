@@ -443,7 +443,7 @@ class TeamTodo
     }
 
     /**
-     * What a CaPSA decided lately, newest first.
+     * Everything a CaPSA decided, newest first. Each opens on the team's page.
      *
      * @param  Collection<int, object>  $rows
      * @return Collection<int, object>
@@ -451,74 +451,82 @@ class TeamTodo
     public function decidedByCapsa(CapstoneExpert $capsa, Collection $rows): Collection
     {
         $done = collect();
+        $open = fn ($team) => ['url' => $team ? route('capsa.team_management.show', $team->team_id) : null];
 
         foreach (MemberLeaveRequest::visibleTo($capsa, MemberLeaveRequest::with(['team', 'student'])
             ->whereIn('status', [MemberLeaveRequest::APPROVED, MemberLeaveRequest::DECLINED])
-            ->latest('updated_at')->limit(30)->get()) as $request) {
+            ->latest('updated_at')->get()) as $request) {
             $done->push($this->done($request->team, 'Leave request from '.($this->nameOf($request->student) ?: 'a member'),
-                ucfirst($request->status), $request->decided_at ?? $request->updated_at, 'capsa'));
+                ucfirst($request->status), $request->decided_at ?? $request->updated_at, 'capsa', $open($request->team)));
         }
 
         foreach (ExpertRemovalRequest::visibleTo($capsa, ExpertRemovalRequest::with(['team', 'expert'])
             ->whereIn('status', [ExpertRemovalRequest::APPROVED, ExpertRemovalRequest::DECLINED])
-            ->latest('updated_at')->limit(30)->get()) as $request) {
+            ->latest('updated_at')->get()) as $request) {
             $done->push($this->done($request->team, 'Change of '.($request->expert?->name ?? 'adviser'),
-                ucfirst($request->status), $request->decided_at ?? $request->updated_at, 'capsa'));
+                ucfirst($request->status), $request->decided_at ?? $request->updated_at, 'capsa', $open($request->team)));
         }
 
         foreach ($rows->filter(fn ($row) => $row->inSections) as $row) {
             foreach ($row->proposals->filter(fn ($p) => $p->approved_status || $p->rejection_reason) as $proposal) {
                 $done->push($this->done($row->team, 'Title "'.Str::limit((string) $proposal->title, 48).'"',
-                    $proposal->approved_status ? 'Recommended' : 'Turned down', $proposal->updated_at, 'capsa'));
+                    $proposal->approved_status ? 'Recommended' : 'Turned down', $proposal->updated_at, 'capsa', $open($row->team)));
             }
         }
 
-        return $done->filter(fn ($d) => $d->at)->sortByDesc(fn ($d) => $d->at->getTimestamp())->take(30)->values();
+        return $done->filter(fn ($d) => $d->at)->sortByDesc(fn ($d) => $d->at->getTimestamp())->values();
     }
 
     /**
-     * What an expert decided lately, newest first.
+     * Everything an expert did, newest first: the invitations answered and
+     * every paper reviewed. A paper opens in the paper viewer; an invitation
+     * on the team's page, while the team is still theirs. Score sheets live
+     * on Team Grading, so they are not repeated here.
      *
+     * @param  Collection<int, object>  $rows
      * @return Collection<int, object>
      */
-    public function decidedByExpert(CapstoneExpert $expert): Collection
+    public function decidedByExpert(CapstoneExpert $expert, Collection $rows, string $portal): Collection
     {
         $expertId = (int) $expert->expert_id;
         $done = collect();
+        $mine = $rows->keyBy(fn ($row) => (int) $row->team->team_id);
+        $teamUrl = fn ($team) => $team && $mine->has((int) $team->team_id)
+            ? route($portal === 'capsa' ? 'capsa.team_management.show' : 'instructor.teams.show', $team->team_id)
+            : null;
 
         TeamExpertAssignment::where('expert_id', $expertId)
             ->whereIn('status', ['approved', 'rejected'])
             ->with(['team', 'expertRole.role', 'role'])
-            ->latest('updated_at')->limit(20)->get()
+            ->latest('updated_at')->get()
             ->filter(fn ($a) => $a->team)
-            ->each(fn ($a) => $done->push($this->done($a->team, ucfirst($a->engaged_role_name ?: 'expert').' invitation',
-                $a->status === 'approved' ? 'Accepted' : 'Declined', $a->updated_at, $a->engaged_role_name ?: 'expert')));
+            ->each(fn ($a) => $done->push($this->done($a->team, 'Asked you to be their '.($a->engaged_role_name ?: 'expert'),
+                $a->status === 'approved' ? 'Accepted' : 'Declined', $a->updated_at, $a->engaged_role_name ?: 'expert',
+                ['kind' => 'invite', 'url' => $teamUrl($a->team)])));
 
+        // ponytail: every review this expert ever finished, rendered at once and
+        // folded by month in the page; page it from here if it reaches thousands.
         $reviews = CapstoneDocumentReview::where('expert_id', $expertId)
-            ->where('role', '!=', 'subject_adviser')
             ->reviewed()
             ->whereNotNull('reviewed_at')
-            ->with('document')
-            ->latest('reviewed_at')->limit(20)->get();
-        $teamNames = Team::whereIn('team_id', $reviews->pluck('document.team_id')->filter()->unique())->pluck('team_name', 'team_id');
+            ->with('document.deliverable')
+            ->latest('reviewed_at')->get();
+        $teams = Team::whereIn('team_id', $reviews->pluck('document.team_id')->filter()->unique())->get()->keyBy('team_id');
+        $verdicts = [CapstoneDocumentReview::APPROVED => 'Approved', CapstoneDocumentReview::NEEDS_REVISION => 'Needs revision'];
 
         foreach ($reviews as $review) {
-            $teamId = $review->document?->team_id;
-            $done->push((object) [
-                'teamId' => $teamId, 'teamName' => $teamNames[$teamId] ?? null,
-                'what' => $review->document?->chapter ?: ($review->document?->file_name ?: 'A paper'),
-                'result' => 'Reviewed', 'at' => Carbon::parse($review->reviewed_at), 'hat' => 'expert',
-            ]);
+            $document = $review->document;
+            $done->push($this->done($document?->team_id ? $teams->get($document->team_id) : null,
+                $document?->deliverable?->title ?: ($document?->chapter ?: ($document?->file_name ?: 'A paper')),
+                $verdicts[$review->verdict] ?? 'Reviewed', $review->reviewed_at, (string) $review->role, [
+                    'kind' => 'paper',
+                    'url' => route('instructor.docreview.annotate', $review->review_id),
+                    'detail' => ($document ? $document->roundLabel().' · ' : '')
+                        .'as '.(SubmissionRecipients::LABELS[$review->role] ?? ucfirst((string) $review->role)),
+                ]));
         }
 
-        PanelGrade::where('expert_id', $expertId)
-            ->whereIn('status', [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED])
-            ->with('schedule.team')
-            ->latest('updated_at')->limit(20)->get()
-            ->each(fn ($grade) => $done->push($this->done($grade->schedule?->team, 'Score sheet · '.($grade->schedule?->defense_type ?? 'defense'),
-                $grade->status === PanelGrade::SUBMITTED ? 'Submitted' : 'Abstained', $grade->submitted_at ?? $grade->updated_at, 'panel')));
-
-        return $done->filter(fn ($d) => $d->at)->sortByDesc(fn ($d) => $d->at->getTimestamp())->take(30)->values();
+        return $done->filter(fn ($d) => $d->at)->sortByDesc(fn ($d) => $d->at->getTimestamp())->values();
     }
 
     /**
@@ -578,16 +586,20 @@ class TeamTodo
         ]);
     }
 
-    private function done(?object $team, string $what, string $result, $at, string $hat): object
+    /** @param  array{kind?: string, url?: ?string, detail?: string}  $extra */
+    private function done(?object $team, string $what, string $result, $at, string $hat, array $extra = []): object
     {
-        return (object) [
+        return (object) array_merge([
             'teamId' => $team?->team_id,
             'teamName' => $team?->team_name,
             'what' => $what,
             'result' => $result,
             'at' => $at ? Carbon::parse($at) : null,
             'hat' => $hat,
-        ];
+            'kind' => 'decision',
+            'url' => null,
+            'detail' => '',
+        ], $extra);
     }
 
     private function nameOf(?object $student): string

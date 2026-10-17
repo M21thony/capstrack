@@ -84,14 +84,14 @@ class MobileTabBarTest extends TestCase
 
     }
 
-    /** The staff portals float the same bar: four tabs, and Menu as the person's own face or initials. */
+    /** The staff portals float the same bar, with Menu as the person's own face or initials. */
     public function test_every_staff_portal_floats_the_same_bar(): void
     {
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'first_name' => 'Rhea', 'last_name' => 'Santos', 'profile_picture' => null]);
 
         $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))
             ->assertOk()
-            ->assertSee('<nav class="mtab is-floating" aria-label="Main" style="--n:5;--i:0">', false)
+            ->assertSee('<nav class="mtab is-floating" aria-label="Main" style="--n:4;--i:0">', false)
             ->assertSee('<span class="mtab-glide" aria-hidden="true"></span>', false)
             ->assertSee('<span class="mtab-ic mtab-avatar" aria-hidden="true">', false)
             ->assertSeeInOrder(['mtab-avatar', 'RS', '>Menu<'], false);
@@ -204,14 +204,16 @@ class MobileTabBarTest extends TestCase
             ->assertSee('class="table std-table"', false);
     }
 
-    public function test_an_expert_gets_home_teams_reviews_grading_and_menu(): void
+    public function test_an_expert_gets_home_teams_grading_and_menu(): void
     {
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
 
         $this->actingAs($expert, 'expert')->get(route('instructor.grading'))
             ->assertOk()
             ->assertSee('class="mtab is-floating"', false)
-            ->assertSeeInOrder(['>Home<', '>Teams<', '>Reviews<', '>Grading<', '>Menu<'], false);
+            ->assertSeeInOrder(['>Home<', '>Teams<', '>Grading<', '>Menu<'], false)
+            // Reviewed papers live in Teams' To do now.
+            ->assertDontSee('>Reviews<', false);
     }
 
     /** The bar is phone-only: hidden by default, shown under 768px. */

@@ -101,16 +101,6 @@
         if (in_array($currentRoute, ['capsa.team_management', 'instructor.teams'], true)) {
             session()->put('instructor_seen_assignment_ids', array_unique(array_merge($seenExpertAssignmentIds, $expertPendingAssignmentIds)));
         }
-
-        $expertPendingDocReviewIds = Schema::hasTable('capstone_document_review')
-            ? DB::table('capstone_document_review')->where('expert_id', $admin->expert_id)->where('review_status', 'pending')->pluck('review_id')->toArray()
-            : [];
-        $seenExpertDocReviewIds = session('instructor_seen_doc_review_ids', []);
-        $unseenExpertDocReviewCount = count(array_diff($expertPendingDocReviewIds, $seenExpertDocReviewIds));
-
-        if ($currentRoute === 'instructor.docreview') {
-            session()->put('instructor_seen_doc_review_ids', array_unique(array_merge($seenExpertDocReviewIds, $expertPendingDocReviewIds)));
-        }
     }
 @endphp
 
@@ -277,13 +267,6 @@
       <x-portal-icon name="consultation" />
       My Schedule
     </a>
-    <a href="{{ route('instructor.docreview') }}" class="nav-item {{ $currentRoute === 'instructor.docreview' ? 'active' : '' }}">
-      <x-portal-icon name="file-review" />
-      Document Review
-      @if ($unseenExpertDocReviewCount > 0)
-        <span class="nav-badge red">{{ $badge($unseenExpertDocReviewCount) }}</span>
-      @endif
-    </a>
     <a href="{{ route('instructor.evaluations') }}" class="nav-item {{ $currentRoute === 'instructor.evaluations' ? 'active' : '' }}">
       <x-portal-icon name="trophy" />
       My Evaluations
@@ -378,9 +361,6 @@
     if ($isExpert) {
         $phoneTabs[] = ['label' => 'Grading', 'href' => route('instructor.grading'), 'active' => in_array($currentRoute, ['instructor.grading', 'instructor.grading.show'], true),
             'icon' => App\Support\PortalIcons::paths('grading')];
-        $phoneTabs[] = ['label' => 'Reviews', 'href' => route('instructor.docreview'), 'active' => $currentRoute === 'instructor.docreview',
-            'badge' => $unseenExpertDocReviewCount ?? 0,
-            'icon' => App\Support\PortalIcons::paths('file-review')];
     }
 @endphp
 @include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => $admin ? ['url' => $admin->hasAvatarImage() ? $admin->avatarUrl() : null, 'initials' => $admin->avatarInitials()] : null, 'tabs' => array_slice($phoneTabs, 0, 4)])

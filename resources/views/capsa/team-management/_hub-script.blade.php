@@ -60,11 +60,66 @@
       if (t.dataset.quickGo) { setQuick(t.dataset.quickGo); }
     });
 
-    hub.querySelectorAll('[data-todo-mode]').forEach(b => b.onclick = () => {
-      hub.querySelectorAll('[data-todo-mode]').forEach(x => x.setAttribute('aria-pressed', x === b));
-      document.getElementById('tm-todo-waiting').hidden = b.dataset.todoMode !== 'waiting';
-      document.getElementById('tm-todo-decided').hidden = b.dataset.todoMode !== 'decided';
+    const setTodoMode = mode => {
+      hub.querySelectorAll('[data-todo-mode]').forEach(x => x.setAttribute('aria-pressed', x.dataset.todoMode === mode));
+      document.getElementById('tm-todo-waiting').hidden = mode !== 'waiting';
+      document.getElementById('tm-done').hidden = mode !== 'decided';
+    };
+
+    /* Completed: the latest two months, one older month per click, and the
+       search looks through every month. The address keeps how many months
+       are open and Open remembers the scroll, so coming back lands on the
+       same row. */
+    const doneBox = document.getElementById('tm-done-box'), doneQ = document.getElementById('tm-done-q');
+    let doneShown = Math.max(2, Number(new URL(location.href).searchParams.get('done')) || 0);
+    const keepDone = on => {
+      const url = new URL(location.href);
+      if (on) { url.searchParams.set('done', doneShown); } else { url.searchParams.delete('done'); }
+      history.replaceState(null, '', url);
+    };
+    const applyDone = () => {
+      const months = [...document.querySelectorAll('#tm-todo-decided section[data-month]')];
+      if (!months.length) { return; }
+      const q = doneQ.value.trim().toLowerCase(), next = months[doneShown];
+      let total = 0, seen = 0;
+      months.forEach((month, i) => {
+        const rows = [...month.querySelectorAll('li[data-q]')];
+        rows.forEach(li => { li.hidden = !li.dataset.q.includes(q); });
+        const hits = rows.filter(li => !li.hidden).length;
+        month.hidden = q ? !hits : i >= doneShown;
+        total += rows.length;
+        seen += month.hidden ? 0 : hits;
+      });
+      document.getElementById('tm-done-none').hidden = !q || seen > 0;
+      document.getElementById('tm-done-more-row').hidden = !!q || !next;
+      if (next) { document.getElementById('tm-done-more').textContent = 'Show ' + next.dataset.month + ' · ' + next.dataset.n; }
+      const end = document.getElementById('tm-done-end');
+      end.hidden = !!q || !!next;
+      end.textContent = 'That’s everything since ' + months[months.length - 1].dataset.month + '.';
+      document.getElementById('tm-done-total').textContent = q ? seen + ' found' : 'Showing ' + seen + ' of ' + total + ', newest first';
+    };
+    hub.addEventListener('click', e => {
+      if (e.target.closest('#tm-done-more')) {
+        const top = doneBox.scrollTop;
+        doneShown++;
+        applyDone();
+        keepDone(true);
+        doneBox.scrollTop = top;
+      } else if (e.target.closest('[data-done-open]')) {
+        try { sessionStorage.setItem('tm-done-top', doneBox.scrollTop); } catch (err) { /* blocked storage: just no scroll back */ }
+      }
     });
+    if (doneQ) { doneQ.oninput = () => { applyDone(); doneBox.scrollTop = 0; }; }
+
+    hub.querySelectorAll('[data-todo-mode]').forEach(b => b.onclick = () => {
+      setTodoMode(b.dataset.todoMode);
+      keepDone(b.dataset.todoMode === 'decided');
+    });
+    applyDone();
+    if (new URL(location.href).searchParams.has('done')) {
+      setTodoMode('decided');
+      try { doneBox.scrollTop = Number(sessionStorage.getItem('tm-done-top')) || 0; sessionStorage.removeItem('tm-done-top'); } catch (err) { /* blocked storage */ }
+    }
 
     /* Team Applications: Waiting / Declined, search and role. */
     let appsMode = 'waiting';
@@ -397,6 +452,7 @@
         delete table.querySelector('tbody').dataset.order;
         apply();
         applyApps();
+        applyDone();
       } catch (e) {
         /* Offline for a moment: the next round tries again. */
       } finally {

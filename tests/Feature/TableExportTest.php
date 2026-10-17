@@ -170,7 +170,7 @@ class TableExportTest extends TestCase
             // The Expert portal's own frame: its stylesheet, its sidebar, its bell.
             ->assertSee('css/expert.css', false)
             ->assertSee('Expert Portal')
-            ->assertSee('Document Review')
+            ->assertSee('Schedule Management')
             ->assertSee('Sign Out')
             ->assertSee('function toggleSidebar', false);
     }

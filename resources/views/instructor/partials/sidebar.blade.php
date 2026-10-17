@@ -31,17 +31,6 @@
       session()->put('instructor_seen_assignment_ids', array_unique(array_merge($seenAssignmentIds, $pendingAssignmentIds)));
     }
 
-    $pendingDocReviewIds = [];
-    if ($expert && Schema::hasTable('capstone_document_review')) {
-      $pendingDocReviewIds = DB::table('capstone_document_review')->where('expert_id', $expert->expert_id)->where('review_status', 'pending')->pluck('review_id')->toArray();
-    }
-    $seenDocReviewIds = session('instructor_seen_doc_review_ids', []);
-    $unseenDocReviewCount = count(array_diff($pendingDocReviewIds, $seenDocReviewIds));
-
-    if ($currentRouteName === 'instructor.docreview') {
-      session()->put('instructor_seen_doc_review_ids', array_unique(array_merge($seenDocReviewIds, $pendingDocReviewIds)));
-    }
-
     $scheduleIds = $expert ? DB::table('consultation_schedule')->where('expert_id', $expert->expert_id)->where('is_available', 1)->pluck('schedule_id')->toArray() : [];
     $seenScheduleIds = session('instructor_seen_schedule_ids', []);
     $unseenScheduleCount = count(array_diff($scheduleIds, $seenScheduleIds));
@@ -71,7 +60,6 @@
     'currentPage' => $currentPage ?? '',
     'totalTeams' => $totalTeams ?? 0,
     'unseenAssignmentCount' => $unseenAssignmentCount,
-    'unseenDocReviewCount' => $unseenDocReviewCount,
     'unseenScheduleCount' => $unseenScheduleCount,
   ])
 </div>
@@ -80,8 +68,6 @@
         'icon' => App\Support\PortalIcons::paths('home')],
     ['label' => 'Teams', 'href' => route('instructor.teams'), 'active' => request()->routeIs('instructor.teams', 'instructor.progress', 'instructor.assignments', 'instructor.assignments.*'), 'badge' => $unseenAssignmentCount ?? 0,
         'icon' => App\Support\PortalIcons::paths('team')],
-    ['label' => 'Reviews', 'href' => route('instructor.docreview'), 'active' => request()->routeIs('instructor.docreview'), 'badge' => $unseenDocReviewCount ?? 0,
-        'icon' => App\Support\PortalIcons::paths('file-review')],
     ['label' => 'Grading', 'href' => route('instructor.grading'), 'active' => request()->routeIs('instructor.grading', 'instructor.grading.show'),
         'icon' => App\Support\PortalIcons::paths('grading')],
 ]])
