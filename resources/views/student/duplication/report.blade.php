@@ -60,13 +60,13 @@
     @if ($top = reset($thisYear))
       <div class="ty-note">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span><b>Recommended this year:</b> {{ $top['title'] ?? '' }}@if (str_contains($top['recommended'], ' — ')) ({{ Str::after($top['recommended'], ' — ') }})@endif is {{ SimilarityBand::scoreOf($top) }}% close to yours.</span>
+        <span><b>{{ str_starts_with($top['recommended'], 'Pending') ? 'Pending this year' : 'Recommended this year' }}:</b> {{ $top['title'] ?? '' }}@if (str_contains($top['recommended'], ' — ')) ({{ Str::after($top['recommended'], ' — ') }})@endif is {{ SimilarityBand::scoreOf($top) }}% close to yours.</span>
       </div>
     @endif
   </div>
   <div class="rp-counts" aria-label="How close the matches are">
     @if ($thisYear)
-      <span class="rp-n ty"><b>{{ count($thisYear) }}</b> recommended this year</span>
+      <span class="rp-n ty"><b>{{ count($thisYear) }}</b> from this year</span>
     @endif
     <span class="rp-n"><b class="sim-close">{{ $bands['close'] }}</b> close</span>
     <span class="rp-n"><b class="sim-some">{{ $bands['some'] }}</b> some overlap</span>
@@ -128,10 +128,10 @@
     @if ($thisYear)
       <section class="card rp-list rp-ty" aria-labelledby="rp-ty-h">
         <div class="rp-card-h">
-          <h2 id="rp-ty-h"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Recommended This Year ({{ count($thisYear) }})</h2>
+          <h2 id="rp-ty-h"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>This School Year ({{ count($thisYear) }})</h2>
         </div>
         @foreach ($thisYear as $i => $m)
-          @include('student.duplication._report-row', ['sub' => Str::after($m['recommended'], ' — '), 'subClass' => 'rp-sec'])
+          @include('student.duplication._report-row', ['sub' => Str::after($m['recommended'], ' — ').(str_starts_with($m['recommended'], 'Pending') ? ' · Pending, not yet decided' : ''), 'subClass' => 'rp-sec'])
         @endforeach
       </section>
     @endif

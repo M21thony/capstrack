@@ -158,8 +158,8 @@
         <div class="notif-item-icon" style="background:rgba(201,168,44,0.18);color:#b8961c"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
         <div class="notif-item-body">
           <div class="notif-todo-tag">To do · stays here until you send it</div>
-          <div class="notif-item-title">Evaluate your experts: {{ $todoStage }}</div>
-          <div class="notif-item-msg">{{ $todoNames->count() }} {{ $todoNames->count() === 1 ? 'expert is' : 'experts are' }} waiting: {{ $todoNames->implode(', ') }}. It is anonymous, and the next phase stays locked until you do.</div>
+          <div class="notif-item-title">Evaluate your {{ \App\Support\ExpertEvaluations::whom($todoRows) }}: {{ $todoStage }}</div>
+          <div class="notif-item-msg">{{ $todoNames->count() === 1 ? 'Waiting' : $todoNames->count().' waiting' }}: {{ $todoNames->implode(', ') }}. It is anonymous, and the next phase stays locked until you do.</div>
           <div class="notif-todo-go">Evaluate now →</div>
         </div>
       </a>

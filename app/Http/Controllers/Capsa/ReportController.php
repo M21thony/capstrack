@@ -309,7 +309,7 @@ class ReportController extends Controller
         return implode(' · ', array_filter([
             'S.Y. '.$ctx['year'],
             $report === 'experts' ? 'compared with S.Y. '.$ctx['compare'] : $ctx['termOptions'][$ctx['term']],
-            $report === 'experts' ? null : ($ctx['program'] !== '' ? $ctx['program'] : $ctx['programOptions']['']),
+            $ctx['program'] !== '' ? $ctx['program'] : $ctx['programOptions'][''],
             $report === 'experts' ? null : ($ctx['section'] !== '' ? $ctx['sectionOptions'][$ctx['section']] : 'All sections'),
             in_array($report, ['results', 'schedule'], true) || in_array('results', $merged, true) ? $ctx['stage'] : null,
             $report === 'fees' || in_array('fees', $merged, true) ? $ctx['fee'].' fee' : null,
@@ -348,7 +348,7 @@ class ReportController extends Controller
     /** The shown columns in order, every cell as text with its tone, for the PDF and the sheet. */
     private function plain(array $table, array $rows, array $visible, array $groups): array
     {
-        $tone = fn ($cell) => is_array($cell) && $cell[0] === 'chip' ? $cell[2] : null;
+        $tone = fn ($cell) => is_array($cell) && in_array($cell[0], ['chip', 'tone'], true) ? $cell[2] : null;
         $line = fn (array $cells, bool $bold = false) => array_map(fn ($k) => [
             'text' => CapsaReports::text($cells[$k] ?? ''),
             'tone' => $tone($cells[$k] ?? null),
@@ -383,6 +383,7 @@ class ReportController extends Controller
             'total' => $table['total'] && $rows ? $line($table['total'], true) : null,
             'summary' => $table['summary'],
             'empty' => $table['empty'],
+            'notes' => $table['notes'] ?? [],
         ];
     }
 
@@ -405,6 +406,13 @@ class ReportController extends Controller
         $sheet->getStyle('A2')->getFont()->getColor()->setRGB('6B7280');
 
         $head = 4;
+        // Lines a report carries above its table, like the Expert Load's "Enough experts?".
+        foreach ($sheetData['notes'] as $note) {
+            $put(1, $head++, $note);
+        }
+        if ($sheetData['notes']) {
+            $head++;
+        }
         if ($sheetData['bands']) {
             $c = 1;
             foreach ($sheetData['bands'] as $band) {

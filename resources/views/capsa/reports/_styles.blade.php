@@ -41,6 +41,26 @@
 .chip.none{background:#eef0f3;color:var(--text2)}
 .chip.info{background:#e8f0fb;color:#1d4f91}
 .chip.gold{background:var(--accent-light);color:var(--accent3)}
+/* Coloured words, not pills: a verdict or a suggestion inside a sentence or a cell. */
+.tone{font-weight:600;white-space:nowrap}
+.tone.ok{color:#17663a}
+.tone.bad{color:#b42318}
+.tone.none{color:var(--text2)}
+
+/* Expert Load's "Enough experts?" box, above the table. */
+.rp-enough{flex:none;font-size:13px}
+.rp-enough p{margin:0;padding:10px 14px;display:flex;flex-wrap:wrap;gap:4px 16px}
+.rp-enough .sum{display:block;line-height:1.6;border-bottom:1px solid var(--line)}
+.rp-enough .sum > b:first-child{margin-right:6px}
+.rp-enough .box{overflow-x:auto}
+.rp-enough table{border-collapse:collapse;min-width:100%;font-variant-numeric:tabular-nums}
+.rp-enough th,.rp-enough td{padding:6px 14px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+.rp-enough th{font-size:12px;font-weight:600;color:var(--text2);background:var(--head)}
+.rp-enough .r{text-align:right}
+.rp-enough tfoot td{font-weight:600;background:var(--head);border-bottom:0}
+.rp-enough .line{border-top:1px solid var(--line)}
+.rp-enough .key{font-size:12px;color:var(--text3)}
+.rp-enough .dash{color:var(--text3)}
 
 .rp-note{margin:0;font-size:13px;color:var(--text3)}
 

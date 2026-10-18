@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Log;
  *
  * The team's adviser (CaPA) says whether the team is ready for the date it
  * was given. "Go" is kept on the defense. "Not ready" cancels it (see
- * cancel()). The CaPSA may record an answer the CaPA gave in person. On the
- * defense day, a team whose requirements are still open is cancelled too.
+ * cancel()). The CaPSA may record an answer the CaPA gave in person. Either
+ * may answer any time before or on the defense day; nothing cancels by itself.
  */
 class CapaGo
 {
@@ -38,7 +38,7 @@ class CapaGo
             ! DefenseBoard::needsCapaGo($schedule->defense_type) => 'The '.$schedule->defense_type.' needs no go from the CaPA.',
             ! $schedule->schedule_date => 'This defense has no date to say go to.',
             $schedule->outcome !== null => 'This defense has already been decided.',
-            $schedule->schedule_date->isPast() => 'This defense has already started.',
+            $schedule->schedule_date->copy()->endOfDay()->isPast() => 'The day of this defense has passed.',
             default => null,
         };
     }
@@ -58,7 +58,8 @@ class CapaGo
      * Cancel the defense. It keeps its date, venue and panel with the status
      * Cancelled, as the department's sheet does; the team's next try opens
      * with no date, under Ready to schedule, for the CaPSA to give one.
-     * $by is whoever said "Not ready", or null when cancelled automatically.
+     * $by is whoever said "Not ready" (null on cancels the system made before
+     * the CaPA alone decided).
      */
     public function cancel(DefenseSchedule $schedule, string $reason, ?string $note, ?int $by = null): void
     {

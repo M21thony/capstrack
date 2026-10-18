@@ -16,6 +16,8 @@
   .title .name { font-size: 13px; font-weight: bold; letter-spacing: .06em; text-transform: uppercase; }
   .title .scope { font-size: 9.5px; margin-top: 2px; }
   .title .asof { font-size: 8.5px; color: #444; margin-top: 1px; }
+  .note { font-size: 8.5px; margin-top: 3px; }
+  .note.lead { font-weight: bold; }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   th, td { border: 1px solid #111; padding: 3px 5px; vertical-align: top; text-align: left; }
   thead th { background: #e8e8e8; font-weight: bold; }
@@ -43,6 +45,9 @@
     <div class="scope">Capstone Project · {{ $scope }}</div>
     <div class="asof">As of {{ now()->format('F j, Y') }}</div>
   </div>
+  @foreach ($sheet['notes'] ?? [] as $note)
+    <div class="note {{ $loop->first ? 'lead' : '' }}">{{ $note }}</div>
+  @endforeach
 
   <table>
     <thead>

@@ -66,6 +66,7 @@ class DefenseSchedulingController extends Controller
                 'stages' => DefenseBoard::STAGES,
                 'teams' => $rows,
                 'experts' => $this->board->panelists()->values(),
+                'strengths' => CapstoneExpert::STRENGTHS,
                 'names' => DefenseBoard::names($rows, $other),
                 'sections' => $capsa->sections ?? [],
                 'other' => $other,

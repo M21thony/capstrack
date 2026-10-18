@@ -91,9 +91,9 @@ class ExpertRemovalRequestTest extends TestCase
         [$leader, , $assignment] = $this->teamWithAdviser();
 
         $this->askToRemove($leader, $assignment, self::REASON, ['replacement_expert_id' => ''])
-            ->assertStatus(422)->assertJson(['message' => 'Pick the expert you want instead.']);
+            ->assertStatus(422)->assertJson(['message' => 'Pick the adviser you want instead.']);
         $this->askToRemove($leader, $assignment, self::REASON, ['replacement_message' => ''])
-            ->assertStatus(422)->assertJson(['message' => 'Write a short message to the expert you picked.']);
+            ->assertStatus(422)->assertJson(['message' => 'Write a short message to the adviser you picked.']);
         $this->askToRemove($leader, $assignment, self::REASON, ['replacement_expert_id' => $assignment->expert_id])
             ->assertStatus(422);
 
@@ -221,7 +221,7 @@ class ExpertRemovalRequestTest extends TestCase
             ->get(route('student.experts', ['tab' => 'find', 'role' => 'adviser']))
             ->assertOk()
             ->assertSee('Request a change')
-            ->assertSee('Request an expert change')
+            ->assertSee("'Request a ' + esc(role) + ' change'", false)
             ->assertSee('"teamSection":"BSIT-3A"', false)
             ->assertSee('Decided by the CaPSA for ', false);
 

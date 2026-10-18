@@ -119,6 +119,14 @@ class TeamApplications
             'declinedOn' => $assignment->updated_at?->format('M j, Y') ?? '',
             'reason' => $assignment->rejection_reason,
             'status' => $assignment->status,
+            // "Meet first": the note, and the time the team booked once they have.
+            'meet' => $assignment->meet_asked_at ? [
+                'note' => $assignment->meet_note,
+                'asked' => $assignment->meet_asked_at->format('M j, Y'),
+                'booked' => ($meeting = $assignment->meeting())
+                    ? TeamExpertAssignment::timeLabel((string) $meeting->session_date?->format('Y-m-d'), $meeting->schedule?->start_time)
+                    : null,
+            ] : null,
             'acceptUrl' => route('instructor.assignments.update', $assignment->assignment_id),
             'removeUrl' => route('instructor.assignments.remove', $assignment->assignment_id),
         ];

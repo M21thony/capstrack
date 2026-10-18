@@ -144,7 +144,7 @@ class StudentExpertController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Application sent successfully. Waiting for the expert to approve.',
+                'message' => 'Application sent. Waiting for '.$expert->name.' to answer.',
                 'data' => new AssignmentResource($assignment->load('expert')),
             ]);
         } catch (\Throwable $e) {
@@ -286,9 +286,9 @@ class StudentExpertController extends Controller
             'replacement_message' => ['required', 'string', 'max:3000'],
             'replacement_proposal_file' => [$approvedProposal ? 'nullable' : 'required', 'file', 'mimes:pdf', 'max:5120'],
         ], [
-            'replacement_expert_id.required' => 'Pick the expert you want instead.',
-            'replacement_message.required' => 'Write a short message to the expert you picked.',
-            'replacement_proposal_file.required' => 'Attach your pre-proposal as a PDF for the expert you picked.',
+            'replacement_expert_id.required' => 'Pick the '.($current->engaged_role_name ?: 'person').' you want instead.',
+            'replacement_message.required' => 'Write a short message to the '.($current->engaged_role_name ?: 'person').' you picked.',
+            'replacement_proposal_file.required' => 'Attach your pre-proposal as a PDF for the '.($current->engaged_role_name ?: 'person').' you picked.',
         ]);
 
         if ($validator->fails()) {

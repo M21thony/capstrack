@@ -43,26 +43,35 @@
     @else
       <div class="apps-scroll">
         <table class="apps-t" data-export="Team Applications" data-export-into="#tm-apps-exp-waiting">
-          <colgroup><col><col style="width:128px"><col class="apps-opt" style="width:170px"><col style="width:130px"><col style="width:300px"></colgroup>
+          <colgroup><col><col style="width:128px"><col class="apps-opt" style="width:170px"><col style="width:130px"><col style="width:390px"></colgroup>
           <thead><tr><th scope="col">Team</th><th scope="col">Role</th><th scope="col" class="apps-opt">Leader</th><th scope="col">Applied</th><th scope="col" class="ar"><span class="vh">Actions</span></th></tr></thead>
           <tbody>
             @foreach ($waiting as $assignment)
               @php $d = $details[$assignment->assignment_id]; @endphp
               <tr data-q="{{ mb_strtolower($d['team'].' '.$d['leader'].' '.$d['project']) }}" data-role="{{ strtolower($d['role']) }}">
-                <td data-label="Team"><div class="nm">{{ $d['team'] }}</div>@if ($d['project'])<div class="pj">{{ $d['project'] }}</div>@endif</td>
+                <td data-label="Team"><div class="nm">{{ $d['team'] }}</div>@if ($d['project'])<div class="pj">{{ $d['project'] }}</div>@endif
+                  @if ($d['meet'])<div class="meet">{{ $d['meet']['booked'] ? 'Meeting booked · '.$d['meet']['booked'].' · approve or decline after' : 'You asked to meet first · waiting for them to book' }}</div>@endif</td>
                 <td data-label="Role"><span class="role-p">{{ $d['role'] }}</span></td>
                 <td data-label="Leader" class="apps-opt">{{ $d['leader'] ?: '—' }}</td>
                 <td data-label="Applied"><time datetime="{{ $assignment->created_at?->toIso8601String() }}" title="{{ $d['applied'] }}" @class(['late' => $d['stale']])>{{ $d['waited'] }}</time></td>
                 <td class="ar">
                   <div class="acts">
                     <button type="button" class="btn rd" data-read="application" data-read-id="{{ $d['id'] }}"><x-tm-icon n="file" s="15" />Read</button>
+                    {{-- Asked to meet first and nothing booked yet: nothing to decide until they meet. --}}
+                    @unless ($d['meet'] && ! $d['meet']['booked'])
                     <button type="button" class="btn" data-decide="decline"
                             data-url="{{ $d['acceptUrl'] }}" data-field="status" data-value="rejected" data-note="reason" data-min="20"
                             data-title="Decline: Team {{ $d['team'] }}" data-sub="Asked you to be their {{ strtolower($d['role']) }}">Decline</button>
+                    @unless ($d['meet'])
+                    <button type="button" class="btn" data-decide="meet"
+                            data-url="{{ $d['acceptUrl'] }}" data-field="status" data-value="meet" data-note="reason" data-min="10"
+                            data-title="Meet Team {{ $d['team'] }} first?" data-sub="They book one of your consultation times. You approve or decline after.">Meet first</button>
+                    @endunless
                     <button type="button" class="btn p" data-decide="approve"
                             data-url="{{ $d['acceptUrl'] }}" data-field="status" data-value="approved" data-note="reason"
                             data-effect="{{ $acceptEffect($d) }}"
                             data-title="Accept Team {{ $d['team'] }}" data-sub="As their {{ strtolower($d['role']) }}">Accept</button>
+                    @endunless
                   </div>
                 </td>
               </tr>

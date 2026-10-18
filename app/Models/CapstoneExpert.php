@@ -30,6 +30,7 @@ use Illuminate\Support\Str;
     'sections',
     'degree_title',
     'on_study_leave',
+    'panel_strengths',
     'school_year',
     'rejection_reason',
     'reject_attempts',
@@ -67,6 +68,10 @@ class CapstoneExpert extends Authenticatable
     public const EMAIL_DOMAINS = ['@cspc.edu.ph', '@gmail.com'];
 
     public const PROGRAMS = ['BSCS', 'BSIT', 'BSIS', 'BLIS'];
+
+    // What a panelist is strongest in, ticked on their profile; a panel
+    // should cover all three.
+    public const STRENGTHS = ['manuscript' => 'Manuscript', 'design' => 'System design', 'software' => 'Software development'];
 
     // The roles a team can actually engage an expert AS. capstone_adviser is
     // deliberately absent: it is a portal permission, not something a team
@@ -108,6 +113,7 @@ class CapstoneExpert extends Authenticatable
         'approved_status' => 'boolean',
         'on_study_leave' => 'boolean',
         'sections' => 'array',
+        'panel_strengths' => 'array',
         'created_at' => 'datetime',
         'reject_cooldown_until' => 'datetime',
         'last_seen_at' => 'datetime',
