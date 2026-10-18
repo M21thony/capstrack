@@ -7,11 +7,11 @@ use App\Http\Resources\InvitationResource;
 use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Student;
-use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Support\StudentTeam;
+use App\Support\TeamSeating;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -151,38 +151,6 @@ class InvitationController extends Controller
             : $this->decline($request, $invitation);
     }
 
-    /**
-     * The role a student joining this team should be given outright.
-     *
-     * Mirrors the web controller: the team's recruitment post says what they
-     * were short of, so one named role that still has a seat is assigned
-     * without asking. Two or more is a real choice, and no post at all means
-     * nothing to go on - both answer null, and the team page asks once.
-     */
-    private function roleFromTeamPost(int $teamId): ?int
-    {
-        $team = Team::find($teamId);
-
-        if (! $team) {
-            return null;
-        }
-
-        $wanted = collect((array) Recruitment::where('student_id', $team->leader_id)
-            ->where('recruitment_goal', 'build_a_team')
-            ->value('roles'))->filter()->values();
-
-        if ($wanted->isEmpty()) {
-            return null;
-        }
-
-        $open = StudentRole::memberRoles()
-            ->filter(fn ($role) => $wanted->contains($role->s_role_name))
-            ->filter(fn ($role) => StudentRole::hasSeat($teamId, $role->s_role_id))
-            ->values();
-
-        return $open->count() === 1 ? $open->first()->s_role_id : null;
-    }
-
     public function accept(Request $request, TeamInvitation $invitation): JsonResponse
     {
         $student = $request->user();
@@ -198,7 +166,7 @@ class InvitationController extends Controller
             return response()->json(['message' => $reason], 422);
         }
 
-        $memberRoleId = $this->roleFromTeamPost($invitation->team_id);
+        $memberRoleId = $joining ? TeamSeating::for($joining)->roleOnJoin() : null;
 
         if ($invitation->type === 'invite') {
             if ($invitation->receiver_id !== $studentId) {
