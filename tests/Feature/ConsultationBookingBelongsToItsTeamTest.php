@@ -68,7 +68,7 @@ class ConsultationBookingBelongsToItsTeamTest extends TestCase
     private function book(Student $student, int $scheduleId, ?string $date = null): int
     {
         $this->actingAs($student, 'web')
-            ->postJson(route('student.consultation.book'), ['schedule_id' => $scheduleId, 'session_date' => $date ?? now()->next('Monday')->toDateString()])
+            ->postJson(route('student.consultation.book'), ['schedule_id' => $scheduleId, 'session_date' => $date ?? now()->next('Monday')->toDateString(), 'topics' => ['paper']])
             ->assertOk();
 
         return (int) ConsultationBooking::latest('booking_id')->value('booking_id');
@@ -161,7 +161,7 @@ class ConsultationBookingBelongsToItsTeamTest extends TestCase
         $this->moveTo($mover, $new);
 
         $this->actingAs($newMate, 'web')
-            ->postJson(route('student.consultation.book'), ['schedule_id' => $tuesday, 'session_date' => now()->next('Tuesday')->toDateString()])
+            ->postJson(route('student.consultation.book'), ['schedule_id' => $tuesday, 'session_date' => now()->next('Tuesday')->toDateString(), 'topics' => ['paper']])
             ->assertOk();
     }
 

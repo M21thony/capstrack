@@ -26,7 +26,7 @@
     <x-portal-icon name="consultation" />
     Schedule Management
     @if (isset($unseenScheduleCount) && $unseenScheduleCount > 0)
-      <span class="nav-badge red">{{ $unseenScheduleCount > 99 ? '99+' : $unseenScheduleCount }}</span>
+      <span class="nav-badge red" title="{{ $unseenScheduleCount }} cancel {{ Str::plural('request', $unseenScheduleCount) }}">{{ $unseenScheduleCount > 99 ? '99+' : $unseenScheduleCount }}</span>
     @endif
   </a>
   <div class="nav-section">Feedback</div>

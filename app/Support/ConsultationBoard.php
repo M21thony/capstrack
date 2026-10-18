@@ -101,6 +101,9 @@ class ConsultationBoard
                         'is_adviser' => $roles->contains('adviser'),
                         // Their most senior role, which is where they sit.
                         'role_rank' => $rankOf($roles->first()),
+                        // What a team can bring them; a grammarian's is set.
+                        'topic_choices' => ConsultationTopics::choicesFor($roles->all()),
+                        'topic_fixed' => ConsultationTopics::fixedFor($roles->all()),
                     ];
                 })
                 ->sortBy([
@@ -130,7 +133,7 @@ class ConsultationBoard
         // keeps theirs.
         $myBookings = ConsultationBooking::forTeam($teamId)
             ->whereIn('booking_status', ['scheduled', 'done'])
-            ->with(['schedule.expert', 'team'])
+            ->with(['schedule.expert', 'team', 'student'])
             ->get();
 
         $today = now()->startOfDay();
@@ -178,7 +181,7 @@ class ConsultationBoard
     /**
      * One booking as the page draws it.
      *
-     * @return array{booking_id: int, expert_id: int|null, expert_name: string, slot_type: string, session_date: string|null, available_date: string|null, start_time: string|null, end_time: string|null, team_name: string, cancel_requested: bool}
+     * @return array{booking_id: int, expert_id: int|null, expert_name: string, slot_type: string, session_date: string|null, available_date: string|null, start_time: string|null, end_time: string|null, team_name: string, cancel_requested: bool, topics: string, note: string|null, booked_by: string, booked_on: string|null}
      */
     public function cardData(ConsultationBooking $booking): array
     {
@@ -193,6 +196,10 @@ class ConsultationBoard
             'end_time' => $booking->schedule?->end_time,
             'team_name' => $booking->team->team_name ?? 'N/A',
             'cancel_requested' => $booking->cancellation_requested_at !== null,
+            'topics' => $booking->topicsLabel(),
+            'note' => $booking->note,
+            'booked_by' => trim(($booking->student?->f_name ?? '').' '.($booking->student?->l_name ?? '')),
+            'booked_on' => $booking->created_at?->format('M j'),
         ];
     }
 

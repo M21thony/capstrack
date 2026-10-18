@@ -182,15 +182,6 @@
 .xh-lg-sq.is-full{background:repeating-linear-gradient(135deg,var(--bg3) 0 3px,var(--border2) 3px 5px)}
 .xh-lg-sq.is-off{border:1px solid var(--border)}
 /* The next open dates, above the calendar. */
-.xh-book-next{padding:12px 18px 0}
-.xh-next{display:flex;flex-direction:column;gap:6px}
-.xh-next-list{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
-.xh-next-btn{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-height:42px;padding:5px 12px;border-radius:9px;border:1.5px solid var(--accent);background:var(--accent-light);color:var(--text);text-align:left}
-.xh-next-btn b{font-size:13px}
-.xh-next-btn span{font-size:11.5px;font-weight:600;color:var(--xh-gold-ink)}
-.xh-next-btn:hover{background:var(--xh-gold-mid)}
-.xh-next-btn[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--bg2)}
-.xh-next-btn[aria-pressed="true"] span{color:var(--bg2)}
 .xh-month-empty{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:10px;background:var(--bg3);font-size:13px;color:var(--text2)}
 .xh-times{flex:1 1 250px;min-width:0;align-self:stretch;display:flex;flex-direction:column;gap:8px;border-left:1px solid var(--border);padding-left:18px}
 .xh-times h3{font-size:14px}
@@ -206,10 +197,6 @@
 .xh-tslot[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-light)}
 .xh-tslot[aria-pressed="true"] .xh-st{color:var(--xh-gold-ink)}
 /* Under the times, so picking a time and booking it happen in one place, on one screen. */
-.xh-confirm-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:12px}
-.xh-sum{display:flex;flex-direction:column;gap:2px;min-width:0}
-.xh-sum b{font-size:13.5px}
-.xh-sum span{font-size:12px;color:var(--text2)}
 .xh-empty{padding:32px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px}
 .xh-empty h2{font-size:18px}
 .xh-empty p{margin:0;max-width:440px;font-size:13.5px;color:var(--text2)}
@@ -341,21 +328,67 @@
 .xh-app-meta span{font-size:12px;color:var(--xh-ink-3)}
 
 /* ---------- dialogs ---------- */
-dialog.xh-dlg{border:0;padding:0;margin:auto;border-radius:16px;background:var(--bg2);width:min(480px,calc(100vw - 32px));max-height:calc(100dvh - 40px);box-shadow:0 30px 80px -20px var(--xh-shadow);overflow:hidden}
-dialog.xh-dlg.is-wide{width:min(720px,calc(100vw - 32px))}
-dialog.xh-dlg::backdrop{background:var(--xh-scrim);backdrop-filter:blur(2px)}
-dialog.xh-dlg[open]{display:flex;flex-direction:column;animation:xhIn .18s ease}
-@keyframes xhIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
-.xh-dlg-head{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 0}
-.xh-ttl{flex:1;min-width:0}
-.xh-dlg-head h2{font-size:18px}
-.xh-dlg-head p{margin:4px 0 0;font-size:13px;color:var(--text2)}
-.xh-x{width:36px;height:36px;border-radius:9px;border:0;background:transparent;color:var(--xh-ink-3);display:grid;place-items:center;flex-shrink:0;margin:-4px -8px 0 0}
-.xh-x:hover{background:var(--bg4);color:var(--text)}
-.xh-x svg{width:18px;height:18px}
-.xh-dlg-body{padding:18px 22px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;min-height:0}
-.xh-dlg-foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;padding:14px 22px 20px;border-top:1px solid var(--border)}
-.xh-dlg-foot.is-plain{border-top:0}
+/* The CapsTrack modal (partials/modal) sizes and places these; this is the
+   page's own markup inside it. A panel: header, a body that scrolls clear of
+   the scrollbar, and buttons of equal width. A small box: everything centred. */
+.xh-dlg-head{flex-shrink:0;display:flex;align-items:flex-start;gap:14px;padding:24px 20px 18px 24px;border-bottom:1px solid var(--border)}
+.xh-ttl{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.xh-dlg-head h2{font-size:20px}
+.xh-dlg-head p{margin:0;font-size:13px;color:var(--text2)}
+.xh-x{width:38px;height:38px;border-radius:50%;border:0;background:var(--bg4);color:var(--text2);display:grid;place-items:center;flex-shrink:0}
+.xh-x:hover{background:var(--border);color:var(--text)}
+.xh-x svg{width:16px;height:16px}
+.xh-dlg-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-padding:16px 0 24px;padding:20px 32px 20px 24px;display:flex;flex-direction:column;gap:18px}
+.xh-dlg-foot{flex-shrink:0;display:flex;flex-wrap:wrap;gap:8px;padding:14px 24px 20px;border-top:1px solid var(--border)}
+.xh-dlg-foot .xh-btn{flex:1 1 0;min-height:46px;border-radius:12px;justify-content:center}
+.cm-ask .xh-dlg-head{flex-direction:column;align-items:center;gap:10px;padding:0;border:0;text-align:center}
+.cm-ask .xh-ttl{align-items:center}
+.cm-ask .xh-dlg-head h2{font-size:18px}
+.cm-ask .xh-dlg-head p{font-size:13.5px;line-height:1.55}
+.cm-ask .xh-x{display:none}
+.cm-ask .xh-dlg-icon{width:56px;height:56px;margin-bottom:6px}
+.cm-ask .xh-dlg-icon svg{width:24px;height:24px}
+.cm-ask .xh-ic-red{box-shadow:0 0 0 8px #fef5f5}
+.cm-ask .xh-ic-amber{box-shadow:0 0 0 8px #fefaf0}
+.cm-ask .xh-ic-gold{box-shadow:0 0 0 8px #fdfbf3}
+.cm-ask .xh-dlg-body{align-self:stretch;flex:none;padding:0;overflow:visible;text-align:left}
+.cm-ask .xh-dlg-foot{align-self:stretch;padding:0;border:0;margin-top:8px}
+.xh-ask-text{margin:0;font-size:13.5px;line-height:1.55;color:var(--text2)}
+.xh-chipline{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:4px 14px 4px 4px;border-radius:999px;background:var(--bg3);border:1px solid var(--border);font-size:13px;font-weight:500}
+.xh-chipline i{font-style:normal;width:26px;height:26px;flex-shrink:0;border-radius:50%;background:var(--navy-dark);color:#e2c766;font-size:10.5px;font-weight:700;display:grid;place-items:center}
+.xh-dav{width:46px;height:46px;flex-shrink:0;border-radius:50%;background:var(--navy-dark);color:#e2c766;font-size:15px;font-weight:700;display:grid;place-items:center}
+/* Book this time, and a session's details */
+.xh-slotc{display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:16px;background:#fbf8ee;border:1px solid #eee3bb}
+.xh-datet{width:52px;height:56px;flex-shrink:0;border-radius:12px;background:var(--bg2);border:1px solid #eee3bb;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.xh-datet small{margin-bottom:5px;font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--xh-gold-ink)}
+.xh-datet b{font-size:21px}
+.xh-slott{min-width:0;display:flex;flex-direction:column;gap:4px}
+.xh-slott b{font-size:15px}
+.xh-slott > span{font-size:13px;color:var(--text2)}
+.xh-opt{font-weight:500;color:var(--xh-ink-3)}
+.xh-topics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.xh-topic{min-height:60px;padding:10px 14px;border:1.5px solid var(--border2);border-radius:12px;background:var(--bg2);display:flex;align-items:center;gap:10px;text-align:left}
+.xh-topic b,.xh-fixedt b{display:block;font-size:14px}
+.xh-topic small,.xh-fixedt small{display:block;font-size:12px;font-weight:500;color:var(--text2)}
+.xh-tick{width:20px;height:20px;flex-shrink:0;border-radius:6px;border:1.5px solid var(--border2);display:grid;place-items:center;color:transparent}
+.xh-tick svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.xh-topic.is-on{border-color:var(--accent);background:#fbf8ee;box-shadow:0 0 0 3px var(--accent-glow)}
+.xh-topic.is-on .xh-tick,.xh-tick.is-on{background:var(--accent);border-color:var(--accent);color:#18191f}
+.xh-field.is-bad .xh-topic{border-color:var(--xh-red)}
+.xh-fixedt{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--bg3);border:1px solid var(--border)}
+.xh-fnote{flex:1 1 100%;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;color:var(--text2)}
+.xh-fnote svg{width:14px;height:14px}
+.xh-facts{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.xh-fact{display:flex;flex-direction:column;gap:2px;padding:12px 16px;border-top:1px solid var(--border)}
+.xh-fact:first-child{border-top:0}
+.xh-fact span{font-size:12px;font-weight:600;color:var(--text2)}
+.xh-fact b{font-size:14px;font-weight:500;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}
+.xh-dangerrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;border:1px solid #f3d0d0;background:#fef8f8}
+.xh-dangerrow b{display:block;font-size:14px}
+.xh-dangerrow span{font-size:12.5px;color:var(--text2)}
+.xh-dangerrow .xh-btn{flex-shrink:0}
+.xh-sess-about{font-size:12.5px;color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.xh-tap-hint{margin:8px 0 0;font-size:12px;color:var(--xh-ink-3)}
 .xh-dlg-icon{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
 .xh-dlg-icon svg{width:22px;height:22px}
 .xh-ic-amber{background:var(--xh-amber-soft);color:var(--xh-amber)}
@@ -397,7 +430,7 @@ dl.xh-rows{margin:0;display:flex;flex-direction:column}
 .xh-prof-head .xh-av{box-shadow:0 0 0 2px var(--navy-dark),0 0 0 4px rgba(201,168,44,.6)}
 .xh-prof-head h2{font-size:17px;line-height:1.25;color:#fff;overflow-wrap:anywhere}
 .xh-prof-email{margin-top:2px;font-size:12.5px;color:rgba(255,255,255,.62);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.xh-prof-head .xh-x{color:rgba(255,255,255,.7);margin:0 -6px 0 0}
+.xh-prof-head .xh-x{background:rgba(255,255,255,.1);color:rgba(255,255,255,.75)}
 .xh-prof-head .xh-x:hover{background:rgba(255,255,255,.1);color:#fff}
 .xh-prof-body{gap:14px}
 .xh-prof-body .xh-chips{margin-top:0}
@@ -420,7 +453,7 @@ dl.xh-rows{margin:0;display:flex;flex-direction:column}
 .xh-toast{position:fixed;right:20px;bottom:20px;z-index:2000;padding:13px 16px;border-radius:12px;background:var(--navy-dark);color:#fff;font-size:13.5px;border-left:4px solid var(--green);box-shadow:0 12px 30px -8px var(--xh-shadow)}
 .xh-toast.is-error{border-left-color:var(--red)}
 
-@media (prefers-reduced-motion: reduce){.xh *,.xh-dlg,.xh-dlg *{animation:none!important;transition:none!important}}
+@media (prefers-reduced-motion: reduce){.xh *,.xh-dlg *{animation:none!important;transition:none!important}}
 
 /* Tablets and phones: your next session before the calendar, and the three
    experts as one row you swipe instead of three stacked rows. */
@@ -436,10 +469,8 @@ dl.xh-rows{margin:0;display:flex;flex-direction:column}
   .xh-cap{display:none!important}
   .xh-seg{width:100%}
   .xh-seg button{flex:1;justify-content:center;padding:0 10px}
-  .xh-book-head,.xh-book-cols,.xh-confirm-bar,.xh-book-next{padding-left:16px;padding-right:16px}
+  .xh-book-head,.xh-book-cols{padding-left:16px;padding-right:16px}
   .xh-book-notice{margin-left:16px;margin-right:16px}
-  .xh-confirm-bar .xh-btn{width:100%}
-  .xh-dlg-foot .xh-btn{flex:1}
   .xh-push{margin-right:0}
   .xh-row{flex-direction:column;gap:3px}
   .xh-row dt{width:auto}
