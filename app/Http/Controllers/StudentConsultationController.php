@@ -157,7 +157,9 @@ class StudentConsultationController extends Controller
 
         if ($fixed = ConsultationTopics::fixedFor($roles)) {
             $topics = [$fixed];
-        } elseif ($choices) {
+        } elseif ($choices && $request->has('topics')) {
+            // Asked only of a page that offers the choice: one open from
+            // before it did sends no topics at all, and still books.
             $topics = array_values(array_intersect($choices, $topics));
 
             if (! $topics) {

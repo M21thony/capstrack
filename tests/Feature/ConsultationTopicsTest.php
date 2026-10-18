@@ -115,11 +115,18 @@ class ConsultationTopicsTest extends TestCase
     {
         $slot = $this->slot($this->expertAs('adviser'));
 
-        $this->book($slot)
+        $this->book($slot, ['topics' => []])
             ->assertStatus(422)
             ->assertJsonPath('message', 'Pick what you will consult about: Paper or System.');
 
         $this->assertSame(0, ConsultationBooking::count());
+    }
+
+    public function test_a_page_open_from_before_the_choice_still_books(): void
+    {
+        $this->book($this->slot($this->expertAs('adviser')))->assertOk();
+
+        $this->assertNull(ConsultationBooking::sole()->topics);
     }
 
     public function test_the_consultant_covers_the_diagrams_and_the_system_not_the_paper(): void
