@@ -658,6 +658,8 @@ PROMPT;
                 'recommended' => $recommended,
                 'pre_proposal_id' => $proposalId,
                 'score' => $score,
+                // Step 1 kept apart: the score above is replaced by the judge's.
+                'embedding_score' => $score,
                 'reason' => '',
                 'similarities' => '',
                 'differences' => '',
@@ -701,7 +703,7 @@ PROMPT;
     }
 
     /**
-     * This year's recommended titles from other teams, any section, shaped
+     * This year's recommended and still-pending titles from other teams, any section, shaped
      * like archive documents so they are scored and judged the same way.
      *
      * The archive holds only finished capstones, so two sections could each
@@ -722,7 +724,10 @@ PROMPT;
         $proposals = CapstonePreProposal::with('team')
             ->whereIn('team_id', $teamIds)
             ->when($excludeTeamId, fn ($q) => $q->where('team_id', '!=', $excludeTeamId))
-            ->where('approved_status', true)
+            // Recommended, or turned in and not decided yet: two pending
+            // titles can be the same idea as easily as two recommended ones.
+            ->where(fn ($q) => $q->where('approved_status', true)
+                ->orWhere(fn ($q) => $q->whereNotNull('submitted_at')->whereNull('rejection_reason')))
             ->whereNull('retired_at')
             ->get();
 
@@ -746,7 +751,9 @@ PROMPT;
             $doc->embedding = $proposal->embedding;
             $section = $proposal->team ? $sections->sectionFor($proposal->team) : '';
 
-            return [$doc, 'Recommended this year'.($section ? ' — '.$section : ''), $proposal->id];
+            $label = $proposal->approved_status ? 'Recommended this year' : 'Pending, not yet decided';
+
+            return [$doc, $label.($section ? ' — '.$section : ''), $proposal->id];
         })->filter()->values()->all();
     }
 
@@ -792,6 +799,8 @@ PROMPT;
             // a separate question, handled below: not "should this be
             // buried?" but "is this number trustworthy enough to display?"
             $item['is_relevant'] = $verdict['matches'] ?? true;
+            // The judge's own number, kept even when the shown score is not it.
+            $item['judge_score'] = $verdict['score'] ?? null;
 
             // Whether a "false" verdict's own score is even worth
             // considering: only a HIGH score contradicts a rejection (the

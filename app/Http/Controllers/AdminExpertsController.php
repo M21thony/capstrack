@@ -453,7 +453,7 @@ class AdminExpertsController extends Controller
                 Notification::create([
                     'student_id' => $studentId,
                     'type' => 'expert_removed',
-                    'title' => 'Your Expert Is No Longer Available',
+                    'title' => 'Your '.strtolower($roleName).', '.$expertName.', is no longer available',
                     'message' => $message,
                     'link' => route('student.team'),
                     'is_read' => false,

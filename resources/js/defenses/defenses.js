@@ -421,10 +421,17 @@ function drawAssign() {
         : t.panel ? '<span>Has a draft panel. This replaces it.</span>' : `<span>${esc(t.title || '')}</span>`;
       return `<label class="pick${off ? ' off' : ''}"><input type="checkbox" data-ateam="${t.id}"${A.teams.has(t.id) ? ' checked' : ''}${off ? ' disabled' : ''}><span class="tbadge">${esc(initials(t.name))}</span><span class="grow"><b>${esc(t.name)} <span class="muted" style="font-weight:500">${esc(t.section)}</span></b>${note}</span></label>`;
     }).join('')}</div></div>`;
+  // Which of manuscript, system design and software the seated panel covers.
+  const seated = SEATS.map(([k]) => E(A.seats[k])).filter(Boolean);
+  const covers = `<div class="covers"><span>This panel covers</span>${Object.entries(S.strengths || {}).map(([k, label]) => {
+    const ok = seated.some(e => (e.strengths || []).includes(k));
+    return `<span class="${ok ? 'ok' : 'no'}">${ok ? '✓' : '✗'} ${esc(label)}</span>`;
+  }).join('')}<span class="n">${seated.length} of 3 picked</span></div>`;
+  const strongIn = e => (e.strengths || []).map(k => S.strengths?.[k]).filter(Boolean).join(', ');
   const seats = `<div class="seats">${SEATS.map(([k, label, rule]) => {
     const e = A.seats[k] ? { name: nameOf(A.seats[k]), degree: E(A.seats[k])?.degree } : null;
     return `<button type="button" class="seat${e ? ' filled' : ''}" data-act="seat" data-seat="${k}" aria-pressed="${A.active === k}"><span class="seat-k">${label}</span><span class="sn">${e ? esc(e.name) : 'Pick someone'}</span><span class="sr2">${e ? esc(e.degree || 'No degree on record') : rule}</span></button>`;
-  }).join('')}</div>`;
+  }).join('')}</div>${covers}`;
   const taken = SEATS.filter(([k]) => k !== A.active).map(([k]) => A.seats[k]);
   const exs = S.experts.filter(e => !own.has(e.id))
     .filter(e => !A.q || `${e.name} ${e.tags.join(' ')}`.toLowerCase().includes(A.q.toLowerCase()))
@@ -435,7 +442,7 @@ function drawAssign() {
       const on = A.seats[A.active] === e.id;
       const where = SEATS.find(([k]) => A.seats[k] === e.id);
       const why = A.active === 'chair' && !e.chair ? 'Needs a Master\'s to chair' : taken.includes(e.id) ? 'Already ' + where[1] : '';
-      return `<button type="button" class="ex${on ? ' on' : ''}" data-act="pick-ex" data-id="${e.id}"${why ? ' disabled' : ''}><span class="av">${esc(initials(e.name))}</span><span class="grow"><b>${suggested(e) ? '<span class="star" title="Matches the teams\' project tags">★</span>' : ''}${esc(e.name)}${e.degree ? ` <span class="deg">${esc(e.degree)}</span>` : ''}${LEAVE(e)}</b><span>${esc(why || e.tags.join(', ') || 'No expertise listed')}</span></span><span class="use">${on ? 'Picked' : why ? '' : 'Set as ' + SEAT_ROLE[A.active]}</span></button>`;
+      return `<button type="button" class="ex${on ? ' on' : ''}" data-act="pick-ex" data-id="${e.id}"${why ? ' disabled' : ''}><span class="av">${esc(initials(e.name))}</span><span class="grow"><b>${suggested(e) ? '<span class="star" title="Matches the teams\' project tags">★</span>' : ''}${esc(e.name)}${e.degree ? ` <span class="deg">${esc(e.degree)}</span>` : ''}${LEAVE(e)}</b><span>${esc(why || e.tags.join(', ') || 'No expertise listed')}</span>${!why && strongIn(e) ? `<span class="strong">Strong in ${esc(strongIn(e))}</span>` : ''}</span><span class="use">${on ? 'Picked' : why ? '' : 'Set as ' + SEAT_ROLE[A.active]}</span></button>`;
     }).join('') || '<div class="empty">No expert matches.</div>'}</div></div>`;
   $('aBody').innerHTML = `<div class="assign">${left}${right}</div>`;
   const n = A.teams.size;
@@ -643,7 +650,7 @@ function drawGenerate() {
   // The window's weekdays spelled out, since a date box shows 12/10/2026 - October 12 or December 10?
   const days = windowDays(min, w.end_date);
   const dayOptions = x => (days.includes(x.date) ? days : [x.date, ...days]).map(d => `<option value="${d}"${d === x.date ? ' selected' : ''}>${fmtDay(d)}</option>`).join('');
-  let html = G.rows.length ? `<div class="tablewrap"><table class="draft"><thead><tr><th></th><th>Team</th><th>Panel</th><th>Date</th><th>Time</th><th>Venue</th></tr></thead><tbody>${G.rows.map((x, i) => `<tr data-i="${i}"><td><input type="checkbox" data-g="on"${x.on ? ' checked' : ''} aria-label="Include ${esc(x.team.name)}"></td><td><b>${esc(x.team.name)}</b><br><span class="muted" style="font-size:12px">${esc(x.team.section)}</span>${x.skipped ? `<span class="muted" style="display:block;font-size:11.5px" data-skip>${esc(x.skipped)}</span>` : ''}<span class="clash-note" data-clash></span></td><td>${panelHtml(x.team)}</td>`
+  let html = G.rows.length ? `<div class="tablewrap"><table class="draft"><thead><tr><th></th><th>Team</th><th>Panel</th><th>Date</th><th>Time</th><th>Venue</th></tr></thead><tbody>${G.rows.map((x, i) => `<tr data-i="${i}"><td><input type="checkbox" data-g="on"${x.on ? ' checked' : ''} aria-label="Include ${esc(x.team.name)}"></td><td><b>${esc(x.team.name)}</b>${x.attempt > 1 ? `<span class="redo">Redefense · try ${x.attempt}</span>` : ''}<br><span class="muted" style="font-size:12px">${esc(x.team.section)}</span>${x.skipped ? `<span class="muted" style="display:block;font-size:11.5px" data-skip>${esc(x.skipped)}</span>` : ''}<span class="clash-note" data-clash></span></td><td>${panelHtml(x.team)}</td>`
     + `<td><select data-g="date" aria-label="Date">${dayOptions(x)}</select></td>`
     + `<td><select data-g="time" aria-label="Time">${G.time_slots.map(s => `<option value="${s}"${s === x.time ? ' selected' : ''}>${slotLabel(s, addMinutes(s, G.minutes))}</option>`).join('')}</select></td>`
     + `<td><select data-g="venue" aria-label="Venue">${G.venues.map(v => `<option${v === x.venue ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`
@@ -668,7 +675,8 @@ function checkGenerate() {
     clashes += c ? 1 : 0;
   });
   const n = on.length;
-  $('gSum').textContent = n ? `${n} ${n === 1 ? 'team' : 'teams'} will be scheduled, added to each panelist's Google Calendar, and told by email.${clashes ? ` Fix ${clashes} ${clashes === 1 ? 'clash' : 'clashes'} first.` : ''}` : 'Tick at least one team.';
+  const redo = on.filter(x => x.attempt > 1).length;
+  $('gSum').textContent = n ? `${n} ${n === 1 ? 'team' : 'teams'}${redo ? ` (${redo} ${redo === 1 ? 'redefense' : 'redefenses'})` : ''} will be scheduled, added to each panelist's Google Calendar, and told by email.${clashes ? ` Fix ${clashes} ${clashes === 1 ? 'clash' : 'clashes'} first.` : ''}` : 'Tick at least one team.';
   $('gSave').disabled = !n || clashes > 0;
   $('gSave').textContent = n ? `Save schedule for ${n} ${n === 1 ? 'team' : 'teams'}` : 'Save schedule';
 }

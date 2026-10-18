@@ -30,10 +30,10 @@ class DefenseOutcome
     public const REDEFENSE_NEW_TITLE = 'redefense_new_title';
 
     /**
-     * Not a panel's decision: set when the CaPA says "Not ready", or on the
-     * defense day by defenses:cancel-unready when the requirements are still
-     * open. The defense keeps its date, venue and panel, and the team's next
-     * try waits for a new date.
+     * Not a panel's decision: set when the CaPA says "Not ready", before or on
+     * the defense day. (Older rows were also set on the day by an automatic
+     * check of open requirements, since removed.) The defense keeps its date,
+     * venue and panel, and the team's next try waits for a new date.
      */
     public const CANCELLED = 'cancelled';
 

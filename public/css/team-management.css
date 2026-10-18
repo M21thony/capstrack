@@ -828,6 +828,7 @@
 .tm-hub .apps-t .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
 .tm-hub .apps-t .nm{font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tm-hub .apps-t .pj{font-size:12px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-hub .apps-t .meet{font-size:12px;color:var(--info);font-weight:600;margin-top:2px}
 .tm-hub .apps-t .late{color:var(--bad);font-weight:700}
 .tm-hub .apps-t .apps-none td{text-align:center;color:var(--mut);padding:24px 16px}
 .tm-hub .role-p{display:inline-flex;padding:2px 9px;border-radius:999px;background:var(--gold-bg);color:var(--gold-ink);font-size:11.5px;font-weight:700}

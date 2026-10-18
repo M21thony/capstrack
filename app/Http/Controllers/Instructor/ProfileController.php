@@ -133,6 +133,8 @@ class ProfileController extends Controller
             'name.middle_name' => ['nullable', 'string', 'max:50'],
             'name.last_name' => ['required_with:name', 'string', 'max:50'],
             'name.suffix' => ['nullable', 'string', 'max:50'],
+            'panel_strengths' => ['sometimes', 'array'],
+            'panel_strengths.*' => ['in:'.implode(',', array_keys(CapstoneExpert::STRENGTHS))],
         ]);
 
         $validator->after(function ($v) use ($request) {
@@ -218,11 +220,16 @@ class ProfileController extends Controller
             ? collect($validated['name'])->only(['first_name', 'middle_name', 'last_name', 'suffix'])->map(fn ($part) => filled($part) ? trim($part) : null)->all()
             : [];
 
-        DB::transaction(function () use ($expert, $accepted, $raw, $bySide, $degree, $name) {
+        // Only when sent, like the degree; kept in the STRENGTHS order.
+        $strengths = $request->exists('panel_strengths')
+            ? ['panel_strengths' => array_values(array_intersect(array_keys(CapstoneExpert::STRENGTHS), $validated['panel_strengths'] ?? []))]
+            : [];
+
+        DB::transaction(function () use ($expert, $accepted, $raw, $bySide, $degree, $name, $strengths) {
             $expert->update([
                 'program_slots' => $raw,
                 'max_teams' => array_sum($accepted),
-            ] + $degree + $name);
+            ] + $degree + $name + $strengths);
 
             // Replace rather than merge - the panel sends the full list it
             // is showing, so anything missing from it was removed there.

@@ -189,6 +189,7 @@
       return match ($v[0]) {
           'b' => '<strong>'.e($v[1]).'</strong>',
           'chip' => '<span class="chip '.e($v[2]).'">'.e($v[1]).'</span>',
+          'tone' => '<span class="tone '.e($v[2]).'">'.e($v[1]).'</span>',
           'bar' => '<span class="barw"><span>'.e($v[1].' of '.$v[2]).'</span><span class="bar"><i style="width:'.($v[2] ? (int) round($v[1] / $v[2] * 100) : 0).'%"></i></span></span>',
           'slots' => $v[2] > 0
               ? '<span class="barw"><span>'.e($v[1].' of '.$v[2]).'</span><span class="bar"><i class="'.($v[1] >= $v[2] ? 'full' : '').'" style="width:'.min(100, (int) round($v[1] / $v[2] * 100)).'%"></i></span></span>'
@@ -267,6 +268,8 @@
               @endforeach
             </select>
           </label>
+        @endif
+        @unless ($ownList)
           @if (count($ctx['programOptions']) > 1)
             <label class="rp-field">Program
               <select name="program">
@@ -276,6 +279,8 @@
               </select>
             </label>
           @endif
+        @endunless
+        @if ($report !== 'experts' && ! $ownList)
           <label class="rp-field">Section
             <select name="section">
               @foreach ($ctx['sectionOptions'] as $v => $label)
@@ -345,6 +350,46 @@
           <span class="band-chip band-{{ $g['band'] }}">{{ $g['label'] }}<a href="{{ $link(['merge' => implode(',', array_diff($merged, [$merged[$i]])) ?: null]) }}" aria-label="Remove {{ $g['label'] }}">{!! $I['x'] !!}</a></span>
         @endforeach
       </div>
+    @endif
+
+    @if (! empty($table['enough']))
+      @php
+        $en = $table['enough'];
+        $res = fn (string $v) => '<span class="tone '.($v === 'Enough' ? 'ok' : 'bad').'">'.e($v).'</span>';
+        $afterLabel = $en['later'] ? 'After '.$en['later'].' new '.Str::plural('team', $en['later']) : 'After new teams (none coming)';
+        $stuckN = array_sum(array_column($en['stuck'], 1));
+      @endphp
+      <section class="rp-card rp-enough" aria-label="Enough experts?">
+        <p class="sum"><b>Enough experts?</b> <b>{{ $en['program'] }}</b> · {{ $en['teams'] }} {{ Str::plural('team', $en['teams']) }}
+          · <b>{{ $en['loose'] }}</b> {{ Str::plural('student', $en['loose']) }} not in a team yet{{ $en['later'] ? ' (about '.$en['later'].' more '.Str::plural('team', $en['later']).')' : '' }}
+          · <b>{{ $en['all']['need'] }}</b> roles still to fill · <b>{{ $en['all']['open'] }}</b> open slots · now {!! $res($en['all']['now']) !!}@if ($en['later']) · after new teams {!! $res($en['all']['after']) !!}@endif</p>
+        <div class="box">
+          <table>
+            <thead><tr><th>Role</th><th class="r">Teams with one</th><th class="r">Still need one</th><th class="r">Experts who take it</th><th class="r">Their open slots</th><th>Now</th><th>{{ $afterLabel }}</th></tr></thead>
+            <tbody>
+              @foreach ($en['roles'] as $r)
+                <tr><td>{{ $r['role'] }} <span class="dash">· {{ $r['when'] }}</span></td><td class="r">{{ $r['with'] }}</td><td class="r">{{ $r['need'] }}</td><td class="r">{{ $r['takers'] }}</td><td class="r">{{ $r['open'] }}</td><td>{!! $res($r['now']) !!}</td><td>{!! $res($r['after']) !!}</td></tr>
+              @endforeach
+            </tbody>
+            <tfoot><tr><td>All three roles</td><td class="r">{{ $en['all']['with'] }}</td><td class="r">{{ $en['all']['need'] }}</td><td class="r">{{ $en['all']['takers'] }}</td><td class="r">{{ $en['all']['open'] }}</td><td>{!! $res($en['all']['now']) !!}</td><td>{!! $res($en['all']['after']) !!}</td></tr></tfoot>
+          </table>
+        </div>
+        <p class="line"><span><b>Requests waiting</b> · {{ $en['waiting'] }}</span>
+          @if ($stuckN)
+            <span><span class="tone bad">{{ $stuckN }} with {{ count($en['stuck']) > 1 ? 'experts who are' : 'an expert who is' }} already full</span> ({{ implode(', ', array_map(fn ($s) => $s[0].' '.$s[1], $en['stuck'])) }})</span>
+            <span class="dash">Those teams will have to ask someone else, unless the expert adds slots</span>
+          @else
+            <span class="dash">None are with a full expert</span>
+          @endif
+        </p>
+        <p class="line"><span><b>Panel</b> · {{ $en['panel']['seats'] }} {{ Str::plural('seat', $en['panel']['seats']) }} at defenses</span>
+          <span>{{ $en['panel']['panelists'] }} {{ Str::plural('expert', $en['panel']['panelists']) }} sit on panels</span>
+          @if ($en['panel']['panelists'])<span>about {{ $en['panel']['each'] }} each</span>@endif
+          @if ($en['panel']['busiest'])<span>busiest: <b>{{ $en['panel']['busiest'][0] }}</b>, {{ $en['panel']['busiest'][1] }}</span>@endif
+          <span class="dash">No limit on panel seats</span>
+        </p>
+        <p class="line key"><span>An expert's open slots count for every role they take, so check each role and the total. Open slots come from each expert's team limit, the one they already set.</span><span>New teams: students not in a team yet ÷ 5. Each one will need all three experts.</span></p>
+      </section>
     @endif
 
     <section class="rp-card rp-tcard" aria-label="{{ $name }}">

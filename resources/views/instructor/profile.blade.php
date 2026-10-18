@@ -103,6 +103,12 @@
   .pp-chair.yes{color:var(--green)}
   .pp-chair.no{color:var(--amber)}
 
+  .pp-strengths{display:grid;gap:8px}
+  .pp-strength{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border2);border-radius:10px;cursor:pointer}
+  .pp-strength:has(input:checked){border-color:var(--accent);background:var(--accent-glow)}
+  .pp-strength input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--accent);flex:0 0 auto}
+  .pp-strength b{display:block;font-size:13.5px;color:var(--text)}
+  .pp-strength small{display:block;font-size:12px;color:var(--text3);margin-top:1px}
   .pp-em{display:flex;align-items:center;gap:12px;padding:11px 0}
   .pp-em + .pp-em{border-top:1px solid var(--bg4)}
   .pp-em label{flex:1;min-width:0;cursor:pointer}
@@ -296,6 +302,17 @@
             </div>
           </section>
 
+          <section class="pp-sec" aria-labelledby="pp-strong-h">
+            <div class="pp-sec-h"><h2 id="pp-strong-h">As a panelist, I'm strongest in</h2></div>
+            <p class="pp-help">The CaPSA sees this when seating a defense panel, so each panel covers all three. Tick one or more.</p>
+            @php($strengthHints = ['manuscript' => 'Chapters, research method, writing', 'design' => 'Diagrams, database, architecture', 'software' => 'The working system, code, testing'])
+            <div class="pp-strengths">
+              @foreach (\App\Models\CapstoneExpert::STRENGTHS as $key => $label)
+                <label class="pp-strength"><input type="checkbox" data-strength="{{ $key }}"><span><b>{{ $label }}</b><small>{{ $strengthHints[$key] }}</small></span></label>
+              @endforeach
+            </div>
+          </section>
+
         </div>
 
         <aside class="pp-aside">
@@ -375,6 +392,7 @@ function closeSidebar() {
     degree: @json($expert->degree_title ?? ''),
     programs: PROGRAMS.reduce(function (o, p) { o[p] = 0; return o; }, {}),
     areas: @json((object) $researchAreas),
+    strengths: @json(array_values($expert->panel_strengths ?? [])),
     email: @json(collect($emailGroups)->map(fn ($group) => $group['on']))
   };
   Object.assign(saved.programs, @json((object) $programSlots));
@@ -523,7 +541,11 @@ function closeSidebar() {
   }
 
   function changed() { renderSaveBar(); }
-  function renderAll() { renderPrograms(); renderAreas(); renderDegree(); renderName(); renderEmail(); renderSaveBar(); }
+  function renderStrengths() {
+    document.querySelectorAll('[data-strength]').forEach(function (box) { box.checked = state.strengths.indexOf(box.dataset.strength) >= 0; });
+  }
+
+  function renderAll() { renderPrograms(); renderAreas(); renderDegree(); renderName(); renderStrengths(); renderEmail(); renderSaveBar(); }
 
   if (CAN_EDIT_NAME) {
     el('pp-name-btn').addEventListener('click', function () {
@@ -562,6 +584,13 @@ function closeSidebar() {
 
   el('pp-degree').addEventListener('change', function (e) { state.degree = e.target.value; changed(); renderDegree(); });
 
+  document.querySelectorAll('[data-strength]').forEach(function (box) {
+    box.addEventListener('change', function () {
+      state.strengths = [].filter.call(document.querySelectorAll('[data-strength]'), function (b) { return b.checked; }).map(function (b) { return b.dataset.strength; });
+      changed();
+    });
+  });
+
   document.querySelectorAll('.pp-switch[data-group]').forEach(function (sw) {
     sw.addEventListener('change', function () { state.email[sw.dataset.group] = sw.checked; changed(); });
   });
@@ -590,7 +619,7 @@ function closeSidebar() {
   // been; only the part that changed is sent.
   el('pp-save-btn').addEventListener('click', async function () {
     var btn = this;
-    var profileChanged = part(state, ['name', 'degree', 'programs', 'areas']) !== part(saved, ['name', 'degree', 'programs', 'areas']);
+    var profileChanged = part(state, ['name', 'degree', 'programs', 'areas', 'strengths']) !== part(saved, ['name', 'degree', 'programs', 'areas', 'strengths']);
     var emailChanged = JSON.stringify(state.email) !== JSON.stringify(saved.email);
     if (CAN_EDIT_NAME && (!state.name.first.trim() || !state.name.last.trim())) {
       editingName = true;
@@ -605,7 +634,7 @@ function closeSidebar() {
     btn.disabled = true;
     try {
       if (profileChanged) {
-        var body = { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null };
+        var body = { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null, panel_strengths: state.strengths };
         if (CAN_EDIT_NAME) {
           body.name = { first_name: state.name.first, middle_name: state.name.middle, last_name: state.name.last, suffix: state.name.suffix };
         }
@@ -618,6 +647,7 @@ function closeSidebar() {
         editingName = false;
         saved.programs = copy(state.programs);
         saved.areas = copy(state.areas);
+        saved.strengths = copy(state.strengths);
       }
       if (emailChanged) {
         // Every bell switch on, and each email as its group says.

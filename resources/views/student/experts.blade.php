@@ -194,7 +194,7 @@
          book; under Find experts it picks the role you are browsing. --}}
     <section class="xh-strip-sec" aria-labelledby="xh-strip-h">
       <div class="xh-strip-head">
-        <h2 id="xh-strip-h">Your team's experts</h2>
+        <h2 id="xh-strip-h">Your team's adviser, consultant and grammarian</h2>
         <span><b>{{ $filledCount }} of 3</b> chosen · <span id="xh-strip-hint">{{ $filledCount === 0 ? 'start with your adviser' : ($tab === 'find' ? 'pick the role you are looking for' : 'pick who you want to meet') }}</span></span>
       </div>
       <div class="xh-strip" id="xh-strip">
@@ -274,7 +274,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 <span class="xh-banner-text">Your request to change <b>{{ $activeFilled->expert->name }}</b> is waiting on your section's CaPSA. They stay your {{ $activeRole }} until the CaPSA decides.@if(! empty($activeRemoval['replacement'])) If approved, your application goes to <b>{{ $activeRemoval['replacement'] }}</b>.@endif</span>
                 @if($isLeader)
-                  <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="takeback" data-request="{{ $activeRemoval['request'] }}" data-name="{{ $activeFilled->expert->name }}">Take back request</button>
+                  <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="takeback" data-request="{{ $activeRemoval['request'] }}" data-name="{{ $activeFilled->expert->name }}" data-role="{{ $activeRole }}">Take back request</button>
                 @endif
               </div>
             @else
@@ -289,6 +289,36 @@
                 @endif
               </div>
             @endif
+          @elseif($activePending && $activePending->meet_asked_at)
+            {{-- They asked to meet first: the team books one of their
+                 consultation times, and they answer after the meeting. --}}
+            @php
+              $meetBooked = $activePending->meeting();
+              $meetTimes = $meetBooked ? [] : app(\App\Support\ConsultationBoard::class)->openTimes((int) $activePending->expert_id);
+            @endphp
+            <div class="xh-banner xh-info" id="xh-meet">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <span class="xh-banner-text"><b>{{ $activePending->expert?->name }}</b> wants to meet your team first, then answers as your {{ $activeRole }}.
+                @if($activePending->meet_note) Their note: “{{ $activePending->meet_note }}”@endif
+                @if($meetBooked)
+                  <br><b>Meeting booked · {{ \App\Models\TeamExpertAssignment::timeLabel((string) $meetBooked->session_date?->format('Y-m-d'), $meetBooked->schedule?->start_time) }}</b>. It is in your Consultations.
+                @elseif(! $isLeader)
+                  <br>Your leader books one of their times.
+                @elseif(! $meetTimes)
+                  <br>They have no open times in the next two weeks. Check again later.
+                @else
+                  <br>Pick a time from their schedule:
+                @endif
+              </span>
+              @if(! $meetBooked && $isLeader && $meetTimes)
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex-basis:100%">
+                  @foreach($meetTimes as $t)
+                    <button type="button" class="xh-tslot" style="width:auto;min-height:0" data-xh="meet-pick" data-schedule="{{ $t['schedule_id'] }}" data-date="{{ $t['date'] }}" aria-pressed="false">{{ $t['label'] }}</button>
+                  @endforeach
+                  <button type="button" class="xh-btn xh-gold xh-sm" data-xh="meet-book" disabled>Book this time</button>
+                </div>
+              @endif
+            </div>
           @elseif($activePending)
             <div class="xh-banner xh-wait">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -487,7 +517,7 @@
                   <span class="xh-av xh-sm r-{{ $a->engaged_role_name ?? 'adviser' }}" aria-hidden="true">{{ $a->expert->avatarInitials() }}@if($a->expert->hasAvatarImage())<img class="avatar-photo" src="{{ $a->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
                   <span class="xh-app-meta">
                     <b>{{ $a->expert->name }}</b>
-                    <span>{{ $a->engaged_role_name ? 'Applied as '.$a->engaged_role_name : 'Application' }} · {{ $a->created_at?->format('M j') }}</span>
+                    <span>{{ $a->status === 'pending' && $a->meet_asked_at ? 'Wants to meet first' : ($a->engaged_role_name ? 'Applied as '.$a->engaged_role_name : 'Application') }} · {{ $a->created_at?->format('M j') }}</span>
                   </span>
                   <span class="xh-pill xh-{{ $tone }}">{{ $a->status === 'pending' ? 'Pending' : 'Declined' }}</span>
                 </button>
@@ -501,8 +531,8 @@
             <ol class="xh-steps">
               <li><i>1</i><span>Pick the role you still need from the cards above.</span></li>
               <li><i>2</i><span>Your team leader applies, with your recommended pre-proposal attached.</span></li>
-              <li><i>3</i><span>The expert accepts or declines. Once they accept, book sessions with them in Consultations.</span></li>
-              <li><i>4</i><span>To change an expert later, ask your section's CaPSA. They decide.</span></li>
+              <li><i>3</i><span>The person you applied to accepts or declines. Once they accept, book sessions with them in Consultations.</span></li>
+              <li><i>4</i><span>To change your adviser, consultant or grammarian later, ask your section's CaPSA. They decide.</span></li>
             </ol>
           </section>
         </aside>
@@ -932,7 +962,7 @@ function renderBook() {
       + '<ol class="xh-steps xh-empty-steps">'
       + '<li><i>1</i><span>Find an adviser, consultant and grammarian.</span></li>'
       + '<li><i>2</i><span>Your team leader applies with your pre-proposal.</span></li>'
-      + '<li><i>3</i><span>Once an expert accepts, their open dates show up here.</span></li></ol>'
+      + '<li><i>3</i><span>Once your adviser or consultant accepts, their open dates show up here.</span></li></ol>'
       + '<a class="xh-btn xh-gold" href="' + esc(D.findUrl + '?tab=find') + '">Find experts</a></div>';
     return;
   }
@@ -1167,6 +1197,7 @@ function openApply(id, draft) {
     var match = p.choices.filter(function (c) { return c.name === D.activeRole; })[0];
     if (match) { pick = match.expert_role_id; }
   }
+  var pickedRole = (p.choices.filter(function (c) { return Number(c.expert_role_id) === Number(pick); })[0] || {}).name;
   var roles = p.choices.map(function (c) {
     return '<label class="xh-rp r-' + c.name + '"><input type="radio" name="xh-apply-role" value="' + c.expert_role_id + '" data-name="' + c.name + '"' + (Number(pick) === Number(c.expert_role_id) ? ' checked' : '') + '>'
       + '<span>' + esc(ucfirst(c.name)) + '</span></label>';
@@ -1174,16 +1205,16 @@ function openApply(id, draft) {
   var proposal = '<div class="xh-field"><span class="xh-flabel">Recommended pre-proposal</span><div class="xh-attach">' + ICON.file
     + '<div class="xh-attach-meta"><b>' + esc(D.proposalTitle) + '</b><span>Recommended by your CaPSA. It is sent with this application, so there is nothing to upload.</span></div>'
     + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="proposal">Preview</button></div></div>';
-  openDialog(head('Apply to ' + esc(p.name), 'Your application goes to the expert. They accept or decline.')
+  openDialog(head('Apply to ' + esc(p.name), 'Your application goes to ' + esc(p.name) + '. They accept or decline.')
     + '<div class="xh-dlg-body" data-expert="' + p.id + '">'
     + '<fieldset class="xh-field" id="xh-f-role"><legend class="xh-flabel">Apply as <span class="xh-req">*</span></legend>'
     + '<div class="xh-roles-pick">' + roles + '</div>'
     + '<span class="xh-note">An expert can take only one role per team. Once they are your adviser, you can\'t also engage them as your consultant or grammarian.</span>'
     + '<span class="xh-fmeta"><span class="xh-ferr">Choose the role you are applying for.</span></span></fieldset>'
     + proposal
-    + '<div class="xh-field" id="xh-f-msg"><label for="xh-apply-msg">Message to the expert <span class="xh-req">*</span></label>'
-    + '<textarea id="xh-apply-msg" rows="5" placeholder="Introduce your team and say why you are applying to this expert.">' + esc(draft ? draft.message : '') + '</textarea>'
-    + '<span class="xh-fmeta"><span class="xh-ferr" id="xh-msg-err">Write a short message to the expert.</span><span><span id="xh-msg-count">' + words(draft ? draft.message : '') + '</span>/500 words</span></span></div></div>'
+    + '<div class="xh-field" id="xh-f-msg"><label for="xh-apply-msg"><span id="xh-msg-to">' + (pickedRole ? 'Message to your ' + esc(pickedRole) : 'Message to ' + esc(p.name)) + '</span> <span class="xh-req">*</span></label>'
+    + '<textarea id="xh-apply-msg" rows="5" placeholder="Introduce your team and say why you are applying to ' + esc(p.name) + '.">' + esc(draft ? draft.message : '') + '</textarea>'
+    + '<span class="xh-fmeta"><span class="xh-ferr" id="xh-msg-err">Write a short message to ' + esc(p.name) + '.</span><span><span id="xh-msg-count">' + words(draft ? draft.message : '') + '</span>/500 words</span></span></div></div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="apply-review">Review application</button></div>', 'wide');
 }
 
@@ -1241,17 +1272,17 @@ function openChange(btn) {
   var file = D.hasApprovedProposal ? ''
     : '<div class="xh-field" id="xh-f-change-file"><label for="xh-change-file">Pre-proposal for them (PDF) <span class="xh-req">*</span></label>'
       + filePicker('xh-change-file', '') + '<span class="xh-fmeta"><span class="xh-ferr">That is not a PDF, or it is over 5 MB.</span></span></div>';
-  openDialog(head('Request an expert change', 'Your section\'s CaPSA decides. ' + esc(btn.dataset.name) + ' stays with your team until they do. Once approved, your application goes to the expert you pick below.',
+  openDialog(head('Request a ' + esc(role) + ' change', 'Your section\'s CaPSA decides. ' + esc(btn.dataset.name) + ' stays with your team until they do. Once approved, your application goes to the ' + esc(role) + ' you pick below.',
       '<span class="xh-dlg-icon xh-ic-amber">' + ICON.swap + '</span>')
     + '<div class="xh-dlg-body"><div class="xh-detail r-' + role + '">' + avatar(D.team[role] || {}, role, 'xh-sm') + '<span class="xh-detail-meta"><b>' + esc(btn.dataset.name) + '</b><span>' + ucfirst(role) + ' of your team'
     + (D.teamSection ? ' · Decided by the CaPSA for ' + esc(D.teamSection) : '') + '</span></span></div>'
     + '<div class="xh-field" id="xh-f-reason"><label for="xh-change-reason">Reason for your CaPSA <span class="xh-req">*</span></label>'
-    + '<textarea id="xh-change-reason" rows="3" maxlength="500" placeholder="Explain to your CaPSA why this expert has to change."></textarea>'
+    + '<textarea id="xh-change-reason" rows="3" maxlength="500" placeholder="Explain to your CaPSA why your ' + esc(role) + ' has to change."></textarea>'
     + '<span class="xh-fmeta"><span class="xh-ferr">Give at least ' + D.reasonMin + ' characters so your CaPSA can decide.</span><span><span id="xh-reason-count">0</span>/500</span></span></div>'
     + '<div class="xh-field" id="xh-f-change-to"><label for="xh-change-to">' + ucfirst(role) + ' to replace them <span class="xh-req">*</span></label>' + picker
     + '<span class="xh-note">Sent to them only if the CaPSA approves and they still have a slot then. They accept or decline your team.</span></div>'
     + (options.length ? '<div class="xh-field" id="xh-f-change-msg"><label for="xh-change-msg">Message to them <span class="xh-req">*</span></label>'
-      + '<textarea id="xh-change-msg" rows="3" maxlength="3000" placeholder="Introduce your team and your project to the expert you picked."></textarea></div>' + file : '')
+      + '<textarea id="xh-change-msg" rows="3" maxlength="3000" placeholder="Introduce your team and your project to the ' + esc(role) + ' you picked."></textarea></div>' + file : '')
     + '</div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="change-send" data-assignment="' + btn.dataset.assignment + '" id="xh-change-send" disabled>Send to CaPSA</button></div>');
 }
@@ -1269,7 +1300,7 @@ function changeReady() {
 }
 
 function openTakeBack(btn) {
-  openDialog(head('Take back your change request?', 'Your request to change <b>' + esc(btn.dataset.name) + '</b> is still waiting on your section\'s CaPSA. Taking it back keeps them as your expert.',
+  openDialog(head('Take back your change request?', 'Your request to change <b>' + esc(btn.dataset.name) + '</b> is still waiting on your section\'s CaPSA. Taking it back keeps them as your ' + esc(btn.dataset.role || 'expert') + '.',
       '<span class="xh-dlg-icon xh-ic-amber">' + ICON.swap + '</span>')
     + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep the request</button><button type="button" class="xh-btn xh-gold" data-xh="takeback-send" data-request="' + btn.dataset.request + '">Take it back</button></div>', 'ask');
 }
@@ -1277,7 +1308,7 @@ function openTakeBack(btn) {
 function openApp(id) {
   var a = APPS[id];
   if (!a) { return; }
-  var status = a.status === 'pending' ? '<span class="xh-pill xh-amber">Pending · waiting for the expert</span>' : '<span class="xh-pill xh-red">Declined</span>';
+  var status = a.status === 'pending' ? '<span class="xh-pill xh-amber">Pending · waiting for ' + esc(a.name) + (a.role ? ' (' + esc(ucfirst(a.role)) + ')' : '') + '</span>' : '<span class="xh-pill xh-red">Declined</span>';
   var proposal = a.proposalTitle ? esc(a.proposalTitle) + ' <span class="xh-note">(recommended pre-proposal)</span>'
     : (a.proposalFile ? '<a href="' + esc(a.proposalFile) + '" target="_blank" rel="noopener" data-pdf-view="' + esc(a.proposalFile) + '" data-pdf-title="Proposal">View proposal</a>' : 'None attached');
   var withdraw = '';
@@ -1474,6 +1505,21 @@ var ACT = {
   },
   list: function (el) { S.listTab = el.dataset.list; S.showAll = false; renderSessions(); },
   'show-all': function () { S.showAll = !S.showAll; renderSessions(); },
+  // Meet first: pick one of the expert's open times, then book it.
+  'meet-pick': function (el) {
+    $('xh-meet').querySelectorAll('[data-xh="meet-pick"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b === el)); });
+    $('xh-meet').querySelector('[data-xh="meet-book"]').disabled = false;
+  },
+  'meet-book': function (el) {
+    var pick = $('xh-meet').querySelector('[data-xh="meet-pick"][aria-pressed="true"]');
+    if (!pick) { return; }
+    busy(el, 'Booking…');
+    send(D.urls.book, 'POST', { schedule_id: Number(pick.dataset.schedule), session_date: pick.dataset.date }).then(function (data) {
+      if (!data.success) { idle(el); toast(data.message || 'That time could not be booked. Pick another.', 'error'); return; }
+      toast('Booked. It shows in both schedules.', 'success');
+      setTimeout(function () { window.location.reload(); }, 900);
+    }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
+  },
   topic: function (el) {
     var t = el.dataset.topic;
     var on = S.topics.indexOf(t) === -1;
@@ -1497,7 +1543,7 @@ var ACT = {
       if (data.success) {
         S.date = null; S.slotId = null; S.listTab = 'upcoming';
         ACT.close(el);
-        toast('Booked ' + when + ' with ' + (ex ? ex.name : 'your expert') + (about ? ', about ' + about : '') + '.', 'success');
+        toast('Booked ' + when + ' with ' + (ex ? ex.name : 'your ' + S.role) + (about ? ', about ' + about : '') + '.', 'success');
       } else {
         S.slotId = null;
         ACT.close(el);
@@ -1542,7 +1588,7 @@ var ACT = {
     if (!picked) { ok = false; }
     var n = words(msg);
     if (n === 0 || n > 500) {
-      $('xh-msg-err').textContent = n === 0 ? 'Write a short message to the expert.' : 'Keep it to 500 words or fewer.';
+      $('xh-msg-err').textContent = n === 0 ? 'Write a short message to ' + EXPERTS[$('xh-apply-msg').closest('[data-expert]').dataset.expert].name + '.' : 'Keep it to 500 words or fewer.';
       $('xh-f-msg').classList.add('is-bad');
       ok = false;
     }
@@ -1703,7 +1749,7 @@ document.addEventListener('input', function (e) {
 document.addEventListener('change', function (e) {
   if (e.target.classList && e.target.classList.contains('xh-file-input')) { syncFilePicker(e.target); }
   if (e.target.id === 'xh-change-to' || e.target.id === 'xh-change-file') { $('xh-change-send').disabled = !changeReady(); }
-  if (e.target.name === 'xh-apply-role') { $('xh-f-role').classList.remove('is-bad'); }
+  if (e.target.name === 'xh-apply-role') { $('xh-f-role').classList.remove('is-bad'); $('xh-msg-to').textContent = 'Message to your ' + e.target.dataset.name; }
 });
 document.querySelector('.xh-seg').addEventListener('keydown', function (e) {
   if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {

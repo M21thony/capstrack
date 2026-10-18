@@ -33,7 +33,38 @@ class TeamExpertAssignment extends Model
         'rejection_reason',
         'proposal_file',
         'message',
+        'meet_note',
+        'meet_asked_at',
     ];
+
+    protected $casts = ['meet_asked_at' => 'datetime'];
+
+    /**
+     * The consultation the team has with this expert after they asked to
+     * meet first: one still coming up (even if booked before the ask - the
+     * team can hold only one per expert), or one held since. A cancelled one
+     * puts the request back to waiting for the team to book.
+     */
+    public function meeting(): ?ConsultationBooking
+    {
+        if (! $this->meet_asked_at) {
+            return null;
+        }
+
+        return ConsultationBooking::where('team_id', $this->team_id)
+            ->where(fn ($q) => $q->where('booking_status', 'scheduled')
+                ->orWhere(fn ($q) => $q->where('booking_status', 'done')->where('created_at', '>=', $this->meet_asked_at)))
+            ->whereHas('schedule', fn ($q) => $q->where('expert_id', $this->expert_id))
+            ->with('schedule')
+            ->latest('booking_id')
+            ->first();
+    }
+
+    /** "Mon Oct 19 · 1:00 PM" - one booked or open time, as both sides read it. */
+    public static function timeLabel(string $date, ?string $start): string
+    {
+        return \Illuminate\Support\Carbon::parse($date.' '.($start ?: '00:00'))->format('D M j · g:i A');
+    }
 
     public function team()
     {

@@ -204,6 +204,52 @@ class ConsultationBoard
     }
 
     /**
+     * The next times a team can book with an expert who asked to meet first:
+     * each occurrence of their open slots over the coming days, minus the ones
+     * booking would refuse - ended, full, outside when they take bookings, or
+     * on a day they already have their most.
+     *
+     * @return list<array{schedule_id: int, date: string, label: string}>
+     */
+    public function openTimes(int $expertId, int $days = 14, int $max = 6): array
+    {
+        $slots = ConsultationSchedule::where('expert_id', $expertId)->where('is_available', true)->orderBy('start_time')->get();
+        if ($slots->isEmpty()) {
+            return [];
+        }
+
+        $full = $this->fullOccurrences($slots);
+        $availability = ConsultationAvailability::where('expert_id', $expertId)->first();
+        $perDay = ConsultationBooking::where('booking_status', 'scheduled')
+            ->whereHas('schedule', fn ($q) => $q->where('expert_id', $expertId))
+            ->get()
+            ->countBy(fn ($b) => $b->session_date?->format('Y-m-d'));
+
+        $times = [];
+        for ($i = 0; $i <= $days && count($times) < $max; $i++) {
+            $date = now()->addDays($i)->toDateString();
+            if ($availability?->max_per_day && ($perDay[$date] ?? 0) >= $availability->max_per_day) {
+                continue;
+            }
+            foreach ($slots as $slot) {
+                if (count($times) < $max
+                    && $slot->isValidOccurrenceDate($date)
+                    && ! now()->gt($date.' '.($slot->end_time ?: '23:59:59'))
+                    && ! in_array($slot->schedule_id.'|'.$date, $full, true)
+                    && (! $availability || $availability->allows($date, (string) $slot->start_time))) {
+                    $times[] = [
+                        'schedule_id' => (int) $slot->schedule_id,
+                        'date' => $date,
+                        'label' => \App\Models\TeamExpertAssignment::timeLabel($date, $slot->start_time),
+                    ];
+                }
+            }
+        }
+
+        return $times;
+    }
+
+    /**
      * Which (schedule_id, session_date) pairs already have as many scheduled
      * bookings as their consultation_limit allows. Used instead of the
      * schedule row's own is_available for recurring slots, since that column

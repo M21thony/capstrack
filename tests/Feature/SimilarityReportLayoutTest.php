@@ -151,10 +151,10 @@ class SimilarityReportLayoutTest extends TestCase
         ]);
 
         $this->actingAs($this->leader)->get(route('student.duplication.report', $check->id))
-            ->assertSee('Recommended This Year (1)')
+            ->assertSee('This School Year (1)')
             ->assertSee('Top 10 from the Archive')
-            ->assertSeeText('1 recommended this year')
-            ->assertSeeInOrder(['Recommended This Year', 'ClinicQueue', 'BSIT 3B', 'Top 10 from the Archive', 'Archive One', 'Archive Two'])
+            ->assertSeeText('1 from this year')
+            ->assertSeeInOrder(['This School Year', 'ClinicQueue', 'BSIT 3B', 'Top 10 from the Archive', 'Archive One', 'Archive Two'])
             ->assertSee(route('student.duplication.similar', [$check->id, 2]), false)
             ->assertSee(route('student.duplication.similar', [$check->id, 3]), false);
     }
@@ -178,7 +178,7 @@ class SimilarityReportLayoutTest extends TestCase
 
         $this->actingAs($this->leader)->get(route('student.duplication.similar', [$check->id, 2]))
             ->assertOk()
-            ->assertSee('Recommended this year 1 of 1')
+            ->assertSee('This year 1 of 1')
             ->assertSee('BSIT 3B')
             ->assertSeeInOrder(['Patients wait in long lines.', 'An online queue.', 'One clinic.'])
             ->assertSee('Back to all 2 matches')

@@ -278,6 +278,9 @@ class PreProposalController extends Controller
                 'recommended' => $m['recommended'] ?? null,
                 'pre_proposal_id' => $m['pre_proposal_id'] ?? null,
                 'score' => $m['score'],
+                // The two numbers the score is worked out from, for the match page.
+                'embedding_score' => $m['embedding_score'] ?? null,
+                'judge_score' => $m['judge_score'] ?? null,
                 'reason' => $m['reason'],
                 'similarities' => $m['similarities'] ?? '',
                 'differences' => $m['differences'] ?? '',
@@ -568,12 +571,13 @@ class PreProposalController extends Controller
         $group = array_keys(array_filter($matches, fn ($m) => filled($m['recommended'] ?? null) === $recommended));
 
         // A title recommended this year is read again by its id, so what is
-        // shown is what that team has now. One revised away from being
-        // recommended, or set aside, shows its title only. Older checks
+        // shown is what that team has now. One rejected since, or set
+        // aside, shows its title only. Older checks
         // stored no id and show the title only too.
         $theirs = $recommended && ! empty($match['pre_proposal_id'])
             ? CapstonePreProposal::where('id', $match['pre_proposal_id'])
-                ->where('approved_status', true)->whereNull('retired_at')->first()
+                ->where(fn ($q) => $q->where('approved_status', true)->orWhereNull('rejection_reason'))
+                ->whereNull('retired_at')->first()
             : null;
         $theirFields = array_filter([
             'Problem' => $theirs?->problem_statement,
@@ -598,7 +602,7 @@ class PreProposalController extends Controller
             'match' => $match,
             'rank' => $rank,
             'total' => count($matches),
-            'groupLabel' => $recommended ? 'Recommended this year' : 'Archive',
+            'groupLabel' => $recommended ? 'This year' : 'Archive',
             'groupPos' => array_search($rank - 1, $group, true) + 1,
             'groupTotal' => count($group),
             'theirFields' => $theirFields,

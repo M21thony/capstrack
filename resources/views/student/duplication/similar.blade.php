@@ -27,11 +27,13 @@
   // Another team's title recommended this year, not an archive study.
   $recommended = $match['recommended'] ?? null;
   $section = $recommended && str_contains($recommended, ' — ') ? Str::after($recommended, ' — ') : null;
+  // Turned in by another team and not decided yet.
+  $pending = $recommended && str_starts_with($recommended, 'Pending');
 
   $headline = $score === null
       ? 'This one came back on keywords, but was never scored'
       : ($flagged ? 'Your title is highly similar to' : 'Your title overlaps')
-        .($recommended ? ' a title already recommended this year' : ' a '.$year.' '.$program.' capstone');
+        .($pending ? ' a title still pending this year' : ($recommended ? ' a title already recommended this year' : ' a '.$year.' '.$program.' capstone'));
 
   // A match opened straight from the Pre-Proposal page has to go back there.
   // Sending them to the full report drops them on a page they never opened.
@@ -40,6 +42,15 @@
   $backUrl = $fromPreProposal ? route('student.duplication') : route('student.duplication.report', $check->id);
   $backText = $fromPreProposal ? 'Back to your pre-proposal' : 'Back to all '.$total.' matches';
   $step = fn ($r) => route('student.duplication.similar', ['check' => $check->id, 'rank' => $r] + ($fromPreProposal ? ['from' => 'pp'] : []));
+
+  // How the score above was reached, from the two numbers saved with the match
+  // (SimilarityService::enrichWithReasons). Checks run before they were saved have neither.
+  $emb = $match['embedding_score'] ?? null;
+  $judge = $match['judge_score'] ?? null;
+  $read = $match['assessed'] ?? true;
+  $same = $match['is_relevant'] ?? true;
+  $contra = $read && ! $same && $judge !== null && $judge >= 55;
+  $cut = $read && ($contra || ($judge === null && ! $same));
 @endphp
 
 <nav class="dup-crumb" aria-label="Breadcrumb">
@@ -79,7 +90,11 @@
     @if ($recommended)
       <div class="ty-note">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span><b>Recommended this year:</b> two teams can't have the same title in one school year. Change your title or its focus before you turn it in.</span>
+        @if ($pending)
+          <span><b>Pending, not yet decided:</b> another team turned this in and its CaPSA has not decided yet. If it is recommended, two teams can't have the same title in one school year, so make yours different enough.</span>
+        @else
+          <span><b>Recommended this year:</b> two teams can't have the same title in one school year. Change your title or its focus before you turn it in.</span>
+        @endif
       </div>
     @endif
   </div>
@@ -92,6 +107,67 @@
     <span class="stateline s-grey">Not assessed by the AI</span>
   @endif
 </div>
+
+<section class="card how" aria-labelledby="how-h">
+  <h2 id="how-h">How this score is worked out</h2>
+  <ol class="steps">
+    <li>
+      <span class="no">1</span>
+      <div>
+        <b>Meaning match</b>
+        <p>Both write-ups are turned into meaning vectors by <code>{{ config('services.ollama.embed_model') }}</code> and compared with cosine similarity.
+          @if ($emb !== null)
+            <code>({{ number_format($emb / 50 - 1, 2) }} + 1) ÷ 2 × 100 = {{ $emb }}%</code>.
+          @else
+            This check was run before this number was saved.
+          @endif
+          Under 40% is dropped as noise.</p>
+      </div>
+      <span class="val">{{ $emb !== null ? $emb.'%' : '—' }}</span>
+    </li>
+    <li class="{{ $read ? '' : 'skip' }}">
+      <span class="no">2</span>
+      <div>
+        <b>AI judge</b>
+        <p>
+          @if (! $read)
+            Not read. Only the {{ config('services.ollama.judge_limit') }} closest titles from step 1 go to the judge.
+          @else
+            CapsTrack's judge model (<code>{{ config('services.ollama.judge_model') ?: config('services.ollama.model') }}</code>) reads both and compares the problem, users and features.
+            It said: <b>{{ $same ? 'same kind of study' : 'not the same study' }}</b>{{ $judge !== null ? ', '.$judge.'%' : ', with no number' }}.
+          @endif
+        </p>
+      </div>
+      <span class="val">{{ $read && $judge !== null ? $judge.'%' : '—' }}</span>
+    </li>
+    <li>
+      <span class="no">3</span>
+      <div>
+        <b>Score shown</b>
+        <p>
+          @if (! $read)
+            No score is shown for a title the judge did not read.
+          @elseif ($cut)
+            {{ $contra ? 'The judge said "not the same" but gave 55% or more, which contradicts itself.' : 'The judge said "not the same" and gave no number.' }}
+            So the step 1 match is used, cut to 40%@if ($emb !== null): <code>{{ $emb }} × 0.4 = {{ $score }}</code>@endif.
+          @elseif ($judge === null && $emb !== null)
+            The judge gave no number, so the step 1 match is used.
+          @else
+            The judge's score is used.
+          @endif
+          65% and up is close to existing work, 40–64% some overlap, below 40% little overlap.
+        </p>
+      </div>
+      <span class="val">{{ $score !== null ? $score.'%' : '—' }}</span>
+    </li>
+  </ol>
+  <ol class="refs">
+    <li>Salton, G., &amp; McGill, M. J. (1983). <i>Introduction to Modern Information Retrieval.</i> McGraw-Hill. Cosine similarity for comparing texts.</li>
+    <li>Reimers, N., &amp; Gurevych, I. (2019). <i>Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks.</i> EMNLP-IJCNLP 2019. Turning sentences into meaning vectors.</li>
+    <li>Nussbaum, Z., Morris, J. X., Duderstadt, B., &amp; Mulyar, A. (2024). <i>Nomic Embed: Training a Reproducible Long Context Text Embedder.</i> arXiv:2402.01613. The model step 1 uses.</li>
+    <li>Zheng, L., et al. (2023). <i>Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.</i> NeurIPS 2023. Using a language model to judge and score.</li>
+  </ol>
+</section>
 
 <div class="vs">
   <div class="col mine">
@@ -109,9 +185,9 @@
 
   <div class="col">
     @if ($recommended)
-      <div class="who">@if ($section)<span class="ty-tag">{{ $section }}</span> @endif Recommended this year</div>
+      <div class="who">@if ($section)<span class="ty-tag">{{ $section }}</span> @endif {{ $pending ? 'Pending, not yet decided' : 'Recommended this year' }}</div>
       <h3>{!! $mark($match['title'] ?? '') !!}</h3>
-      <div class="sub">Recommended pre-proposal{{ $theirYear ? ' · '.$theirYear : '' }}</div>
+      <div class="sub">{{ $pending ? 'Pending' : 'Recommended' }} pre-proposal{{ $theirYear ? ' · '.$theirYear : '' }}</div>
       @forelse ($theirFields as $label => $value)
         <div class="field">
           <div class="k">{{ $label }}</div>

@@ -362,7 +362,7 @@
 
     <div style="height:16px"></div>
     <div class="dash-grid-v3">
-      <x-dashboard.info-card title="Capstone Expert" :empty="!$myTeam || $myTeam->expertAssignments->isEmpty()" emptyMessage="No experts assigned to your team." emptyIcon="expert">
+      <x-dashboard.info-card title="Your team's adviser, consultant and grammarian" :empty="!$myTeam || $myTeam->expertAssignments->isEmpty()" emptyMessage="No adviser, consultant or grammarian yet." emptyIcon="expert">
         @if ($myTeam && $myTeam->expertAssignments->isNotEmpty())
           @foreach ($myTeam->expertAssignments as $assignment)
             @php

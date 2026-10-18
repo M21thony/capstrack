@@ -277,13 +277,20 @@ class TeamTodo
 
         foreach ($invites as $assignment) {
             $role = $assignment->engaged_role_name ?: 'expert';
+            // Asked to meet first: nothing to do until the team books a time.
+            $meeting = $assignment->meeting();
+            if ($assignment->meet_asked_at && ! $meeting) {
+                continue;
+            }
             $items->push($this->item([
                 'kind' => 'invite', 'hat' => $role,
                 'teamId' => (int) $assignment->team_id, 'teamName' => $assignment->team->team_name,
                 'section' => $byTeam->get((int) $assignment->team_id)?->section ?? '',
                 'teamUrl' => $teamUrl((int) $assignment->team_id),
                 'what' => 'Invited as '.$role,
-                'why' => $assignment->team->project_title ?: 'They asked you to take them on',
+                'why' => $meeting
+                    ? 'Meeting booked · '.TeamExpertAssignment::timeLabel((string) $meeting->session_date?->format('Y-m-d'), $meeting->schedule?->start_time).' · approve or decline after'
+                    : ($assignment->team->project_title ?: 'They asked you to take them on'),
                 'at' => $assignment->created_at,
                 'label' => 'Accept',
                 'url' => route('instructor.teams', ['tab' => 'applications']),
@@ -358,17 +365,18 @@ class TeamTodo
 
         // The CaPA's go: a team defends Title, Pre Oral or Final Oral only once
         // its adviser says it is ready. Not ready cancels the date, and the
-        // CaPSA gives the team a new one.
+        // CaPSA gives the team a new one. The CaPA may answer before or on the
+        // defense day itself.
         $defenses = DefenseSchedule::whereIn('defense_type', DefenseBoard::PAID_STAGES)
             ->whereNull('outcome')
-            ->where('schedule_date', '>=', now())
+            ->where('schedule_date', '>=', today())
             ->with('team')
             ->get()
             ->filter(fn ($d) => $d->team && $resolver->resolveTeamRoleExpert((int) $d->team_id, 'adviser') === $expertId);
 
         foreach ($defenses as $defense) {
             // Given already: the team is good for its defense, and stays here
-            // until the day in case it is not ready after all.
+            // through the day in case it is not ready after all.
             if ($defense->capa_answer === DefenseSchedule::CAPA_GO) {
                 $items->push($this->item([
                     'kind' => 'go_given', 'hat' => 'adviser', 'counts' => false,

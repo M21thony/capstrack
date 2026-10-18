@@ -682,6 +682,7 @@ class AdminPanelAssignmentController extends Controller
                 'defense_id' => $schedule->defense_id,
                 'team_id' => $schedule->team_id,
                 'team_name' => $schedule->team->team_name,
+                'attempt' => (int) ($schedule->attempt ?? 1),
                 'date' => $slot['schedule_date']->toDateString(),
                 'start_time' => $slot['schedule_date']->format('H:i'),
                 'venue' => $slot['venue'],

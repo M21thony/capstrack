@@ -102,6 +102,19 @@
 .box-sug h3{color:var(--accent3)} .box-sug h3 svg{stroke:var(--accent3)}
 .box-sug p{color:var(--text)}
 
+/* ── how the score is worked out ─────────────────────────────────── */
+.card.how{padding:12px 16px;margin-bottom:14px}
+.how h2{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin:0 0 8px}
+.how ol.steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.how .steps li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:start}
+.how .steps li.skip{opacity:.6}
+.how .no{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--bg2);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text2)}
+.how .steps b{font-size:12.5px;font-weight:600;color:var(--text)}
+.how .steps p{font-size:12.5px;color:var(--text2);line-height:1.55;margin:2px 0 0}
+.how .val{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;color:var(--text)}
+.how code{font-size:11.5px;background:var(--bg2);padding:1px 4px;border-radius:4px}
+.how .refs{margin:10px 0 0;padding:8px 0 0 18px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3);line-height:1.5}
+
 /* ── the report page: the team's words beside what came back ────── */
 .capsa2{display:grid;grid-template-columns:480px minmax(0,1fr);gap:14px;align-items:stretch}
 @media (max-width:900px){.capsa2{grid-template-columns:1fr}}

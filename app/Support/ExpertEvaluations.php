@@ -11,6 +11,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Services\Notifier;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -269,7 +270,7 @@ class ExpertEvaluations
             Notifier::toStudent(
                 $leader,
                 'evaluation_due',
-                'Evaluate your experts: '.$stage,
+                'Evaluate your '.self::whom($rows).': '.$stage,
                 'Your team passed <strong>'.e($stage).'</strong>. Answer your CaPSA\'s evaluation for '.e($names).'. It is anonymous, and the next phase stays locked until it is done.',
                 route('student.experts', ['tab' => 'evaluations']),
                 ['tag' => 'evaluation:defense:'.$defenseId],
@@ -356,6 +357,17 @@ class ExpertEvaluations
         $at = array_search(mb_strtolower($stage), array_map('mb_strtolower', EvaluationTemplate::STAGES), true);
 
         return $at === false ? 99 : $at;
+    }
+
+    /**
+     * Who owed rows ask the team to evaluate, by role: "adviser and
+     * consultant". Students never see the word "expert" for one of theirs.
+     */
+    public static function whom(Collection $rows): string
+    {
+        $roles = array_values(array_intersect(array_keys(ExpertEvaluation::ROLES), $rows->pluck('role')->all()));
+
+        return Arr::join($roles, ', ', ' and ');
     }
 
     /**

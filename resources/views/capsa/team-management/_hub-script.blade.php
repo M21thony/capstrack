@@ -216,14 +216,22 @@
       side.append(sec('People', ...people));
       if (d.message) { side.append(sec('Their message', el('p', 'tma-quote', d.message))); }
       if (!waiting && d.reason) { side.append(sec('Why you declined', el('p', 'tma-quote', d.reason))); }
+      if (d.meet) {
+        side.append(sec('You asked to meet first',
+          el('p', 'tma-text', d.meet.booked ? 'Meeting booked · ' + d.meet.booked + ' · approve or decline after' : 'Waiting for them to book one of your times'),
+          d.meet.note ? el('p', 'tma-quote', d.meet.note) : null));
+      }
 
-      const actions = waiting ? [
+      // Asked to meet and nothing booked yet: nothing to decide until they meet.
+      const actions = waiting && !(d.meet && !d.meet.booked) ? [
         decideButton('Decline…', 'no', { decide: 'decline', url: d.acceptUrl, field: 'status', value: 'rejected', note: 'reason', min: '20',
           title: 'Decline: Team ' + d.team, sub: 'Asked you to be their ' + role }),
+        d.meet ? null : decideButton('Meet first…', '', { decide: 'meet', url: d.acceptUrl, field: 'status', value: 'meet', note: 'reason', min: '10',
+          title: 'Meet Team ' + d.team + ' first?', sub: 'They book one of your consultation times. You approve or decline after.' }),
         decideButton('Accept as ' + role, 'go', { decide: 'approve', url: d.acceptUrl, field: 'status', value: 'approved', note: 'reason',
           title: 'Accept Team ' + d.team, sub: 'As their ' + role,
           effect: 'You become the ' + role + ' of Team ' + d.team + '. The team is told.' + (all.maxSlots > 0 ? ' Uses 1 of your ' + all.maxSlots + ' slots.' : '') }),
-      ] : [];
+      ].filter(Boolean) : [];
 
       window.PdfViewer.open({
         url: d.document || null,
@@ -350,12 +358,14 @@
     const dlg = document.getElementById('tm-decide'), note = document.getElementById('tm-decide-note'),
           err = document.getElementById('tm-decide-err'), ok = document.getElementById('tm-decide-ok');
     let current = null;
-    const needsNote = b => b.dataset.decide === 'decline' && !b.dataset.noteOptional;
+    // Meet first asks for a note like a decline does, but it is not a no.
+    const needsNote = b => ['decline', 'meet'].includes(b.dataset.decide) && !b.dataset.noteOptional;
+    const isNo = b => !['approve', 'meet'].includes(b.dataset.decide);
     document.addEventListener('click', e => {
       const b = e.target.closest('[data-decide]');
       if (!b) { return; }
       current = b;
-      const declining = b.dataset.decide !== 'approve', min = Number(b.dataset.min || 0), noNote = !!b.dataset.noNote;
+      const declining = isNo(b), min = Number(b.dataset.min || 0), noNote = !!b.dataset.noNote;
       document.getElementById('tm-decide-t').textContent = b.dataset.title;
       document.getElementById('tm-decide-sub').textContent = b.dataset.sub;
       const effect = document.getElementById('tm-decide-effect');
@@ -377,9 +387,10 @@
     dlg.querySelector('form').addEventListener('submit', e => {
       e.preventDefault();
       if (!current) { return; }
-      const b = current, declining = b.dataset.decide !== 'approve';
+      const b = current, declining = isNo(b), meet = b.dataset.decide === 'meet';
       if (needsNote(b) && note.value.trim().length < Math.max(1, Number(b.dataset.min || 1))) {
-        err.textContent = 'Write a line or two so the team knows why.'; err.hidden = false; note.focus(); return;
+        err.textContent = meet ? 'Write a line or two so the team knows what to bring.' : 'Write a line or two so the team knows why.';
+        err.hidden = false; note.focus(); return;
       }
       const body = b.dataset.field ? { [b.dataset.field]: b.dataset.value } : {};
       if (note.value.trim() && b.dataset.note) { body[b.dataset.note] = note.value.trim(); }
@@ -405,7 +416,8 @@
             li.remove();
             if (!list.children.length) { list.previousElementSibling?.remove(); list.remove(); }
           }
-          b.closest('tr[data-q]')?.remove();
+          // Meet first leaves the request waiting; the refresh redraws its row.
+          if (!meet) { b.closest('tr[data-q]')?.remove(); }
           toast(data.message || (declining ? 'Declined' : 'Done'), true);
           refresh(true);
         })

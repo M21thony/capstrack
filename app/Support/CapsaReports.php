@@ -3,9 +3,12 @@
 namespace App\Support;
 
 use App\Models\CapstoneExpert;
+use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\ExpensePost;
+use App\Models\PanelGrade;
 use App\Models\Role;
+use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
@@ -38,6 +41,7 @@ class CapsaReports
         'progress' => ['Team Progress', 'How many checklist requirements each team has done, and which teams have overdue items.'],
         'master' => ['Team Master List', "Every team with its project title, members, adviser, consultant and grammarian. The list the dean's office usually asks for."],
         'results' => ['Defense Results', "Every team's verdict and average panel score at one defense, by section."],
+        'grades' => ['Student Grades', "Each student's grade at every defense held so far and their average, with their team's requirements done. A student's grade is their team's panel average."],
         'fees' => ['Fee Collection', 'Receipts handed in, approved and still to check for one defense fee, with the money collected.'],
         'experts' => ['Expert Load', 'How many teams each expert handles this school year, by role, next to another school year. Use it to spread teams fairly.'],
         'expert_list' => ['Expert List', 'The Expert Management table as a report: each expert with their roles, expertise and team slots. Pick only the columns you need, then download it as Excel or PDF.'],
@@ -47,7 +51,10 @@ class CapsaReports
     /** One row per team: these can be shown as section totals and merged with each other. */
     public const TEAM_REPORTS = ['progress', 'master', 'results', 'fees'];
 
-    public const NEW_REPORTS = ['master', 'experts', 'schedule', 'expert_list'];
+    public const NEW_REPORTS = ['master', 'grades', 'experts', 'schedule', 'expert_list'];
+
+    /** The defenses Student Grades has a column for, key => stage. */
+    private const GRADED_STAGES = ['title' => 'Title Defense', 'pod' => 'Pre Oral Defense', 'fod' => 'Final Oral Defense'];
 
     /** The Expert List's columns, key => heading. Expert Management offers these to pick from before a download. */
     public const EXPERT_LIST_COLUMNS = [
@@ -216,6 +223,7 @@ class CapsaReports
             'progress' => $bySection ? $this->progressBySection($ctx) : $this->progress($ctx),
             'master' => $bySection ? $this->masterBySection($ctx) : $this->master($ctx),
             'results' => $bySection ? $this->resultsBySection($ctx) : $this->results($ctx),
+            'grades' => $this->grades($ctx),
             'fees' => $bySection ? $this->feesBySection($ctx) : $this->fees($ctx),
             'experts' => $this->experts($ctx),
             'expert_list' => $this->expertList(),
@@ -484,6 +492,82 @@ class CapsaReports
         };
     }
 
+    // ------------------------------------------------------------------ grades
+
+    /**
+     * One row per student, by section, team, then name. A student's grade at a
+     * defense is their team's panel average there. The average is over the
+     * defenses held so far, each as a share of its rubric's points, so a
+     * 30-point Title Defense and a 100-point Final weigh the same.
+     */
+    private function grades(array $ctx): array
+    {
+        $progress = $this->progressFor($ctx);
+        $byStage = collect(self::GRADED_STAGES)->map(fn ($stage) => $this->schedulesFor($ctx['teams'], $stage)->load('grades.rubric'));
+        $rows = [];
+        $graded = 0;
+
+        foreach ($ctx['teams'] as $team) {
+            $held = $byStage->map(fn ($schedules) => $schedules->get($team->team_id));
+            $shares = $held->map(fn ($s) => $this->scoreShare($s))->filter(fn ($p) => $p !== null);
+            $p = $progress[$team->team_id] ?? null;
+            $students = $ctx['records']->get($team->team_id, collect())
+                ->map(fn ($sy) => $sy->student)->filter()->unique('student_id')
+                ->sortBy(fn ($s) => mb_strtolower($s->l_name.' '.$s->f_name));
+
+            foreach ($students as $student) {
+                $graded += $shares->isNotEmpty() ? 1 : 0;
+                $rows[] = ['id' => $team->team_id, 'cells' => [
+                    'number' => $student->student_number ?: self::DASH,
+                    'name' => ['b', trim($student->l_name.', '.$student->f_name, ', ')],
+                    'course' => Student::mapCourseToProgram((string) $student->course) ?? ($student->course ?: self::DASH),
+                    'year' => $student->year_section ?: self::DASH,
+                    'team' => $team->team_name,
+                    ...$held->map(fn ($s) => $this->scoreCell($s))->all(),
+                    'average' => $shares->isEmpty() ? self::DASH : ['num', DefenseScores::format(round($shares->avg(), 2)).'%', round($shares->avg(), 2)],
+                    'deliverables' => $p ? ['bar', $p->completed, $p->total] : self::DASH,
+                ]];
+            }
+        }
+
+        return [
+            'columns' => $this->cols(
+                ['number' => 'Student no.', 'name' => 'Name', 'course' => 'Course', 'year' => 'Year & section', 'team' => 'Team', 'title' => 'Title Defense', 'pod' => 'Pre-oral', 'fod' => 'Final', 'average' => 'Average', 'deliverables' => 'Deliverables'],
+                ['title', 'pod', 'fod', 'average', 'deliverables'],
+            ),
+            'rows' => $rows,
+            'total' => null,
+            'summary' => $this->count(count($rows), 'student').' · '.$graded.' graded at a defense so far. — means that defense has not been graded yet.',
+            'empty' => 'No students match these filters.',
+        ];
+    }
+
+    /** What the rubric was out of: the points of the rubric the panel graded on, 100 if none is known. */
+    private function rubricTotal(DefenseSchedule $s): float
+    {
+        return (float) ($s->grades->firstWhere('status', PanelGrade::SUBMITTED)?->rubric?->total_points ?: 100);
+    }
+
+    /** The panel average as a percentage of the rubric, or null until the whole panel has graded. */
+    private function scoreShare(?DefenseSchedule $s): ?float
+    {
+        $avg = $s?->panelAverage();
+
+        return $avg === null ? null : $avg / $this->rubricTotal($s) * 100;
+    }
+
+    /** "85.17", or "26 / 30" when the rubric is not out of 100; sorts by the percentage. */
+    private function scoreCell(?DefenseSchedule $s): mixed
+    {
+        $share = $this->scoreShare($s);
+        if ($share === null) {
+            return self::DASH;
+        }
+        $total = $this->rubricTotal($s);
+
+        return ['num', DefenseScores::format($s->panelAverage()).($total === 100.0 ? '' : ' / '.DefenseScores::format($total)), round($share, 2)];
+    }
+
     // -------------------------------------------------------------------- fees
 
     /** @return array{0: Collection, 1: bool} each verified team's members with their receipt status, and whether the fee is posted */
@@ -633,33 +717,65 @@ class CapsaReports
 
     private function experts(array $ctx): array
     {
-        $count = function (string $year) {
-            $teamIds = StudentSchoolYear::acrossAllTerms()->where('school_year', $year)->whereNotNull('team_id')->distinct()->pluck('team_id')->all();
+        // A team belongs to the program of its section; one with no section yet counts for every program, as on the other reports.
+        $inScope = fn (string $section) => ! $ctx['programs'] || $section === '' || in_array(TeamChecklist::programOf($section), $ctx['programs'], true);
 
-            return $this->approvedAssignments($teamIds, fresh: true)
-                ->map(fn ($a) => ['expert' => $a->expert_id, 'role' => $this->roleKey($a), 'team' => $a->team?->team_name])
-                ->filter(fn ($a) => $a['role'] !== null)
-                ->groupBy('expert');
+        // A school year's teams in the chosen program(s), and every expert role on any of that year's teams.
+        $year = function (string $year) use ($inScope) {
+            $records = StudentSchoolYear::acrossAllTerms()->where('school_year', $year)->whereNotNull('team_id')->with('student')->get()->groupBy('team_id');
+            $scoped = Team::whereIn('team_id', $records->keys())->get()
+                ->filter(fn (Team $t) => $inScope($this->scope->sectionFor($t, $records[$t->team_id])))
+                ->pluck('team_id')->map(fn ($id) => (int) $id)->all();
+            $roles = $this->approvedAssignments($records->keys()->all(), fresh: true)
+                ->map(fn ($a) => ['expert' => $a->expert_id, 'role' => $this->roleKey($a), 'id' => (int) $a->team_id, 'team' => $a->team?->team_name, 'in' => in_array((int) $a->team_id, $scoped, true)])
+                ->filter(fn ($a) => $a['role'] !== null);
+
+            return [$scoped, $roles];
         };
 
-        $now = $count($ctx['year']);
-        $then = $count($ctx['compare']);
+        [$teamIds, $allNow] = $year($ctx['year']);
+        $now = $allNow->where('in', true)->groupBy('expert');
+        $then = $year($ctx['compare'])[1]->where('in', true)->groupBy('expert');
+        $waiting = TeamExpertAssignment::whereIn('team_id', $teamIds)->where('status', 'pending')->get()->groupBy('expert_id')->map->count();
+
+        $takesProgram = fn (CapstoneExpert $e) => ! $ctx['programs'] || collect($ctx['programs'])->contains(fn ($p) => $e->acceptsProgram($p));
+        $rolesOf = fn (CapstoneExpert $e) => $e->roles->map(fn ($r) => strtolower((string) $r->role_name))->intersect(array_keys(self::ROLES))->values();
 
         // Everyone who can take a team, so an expert with none shows up as free rather than missing.
         $experts = CapstoneExpert::where('approved_status', true)->with('roles')->get()
-            ->filter(fn (CapstoneExpert $e) => $now->has($e->expert_id) || $then->has($e->expert_id)
-                || $e->roles->contains(fn ($r) => array_key_exists(strtolower((string) $r->role_name), self::ROLES)));
+            ->filter(fn (CapstoneExpert $e) => $now->has($e->expert_id) || $then->has($e->expert_id) || ($rolesOf($e)->isNotEmpty() && $takesProgram($e)));
 
-        $rows = $experts->map(function (CapstoneExpert $e) use ($now, $then) {
+        // Slots count teams in every program; an expert's open slots are what is left of their limit for the program(s) shown and overall.
+        $usedAll = fn (CapstoneExpert $e) => $allNow->where('expert', $e->expert_id)->pluck('id')->unique()->count();
+        $open = function (CapstoneExpert $e) use ($ctx, $now, $usedAll) {
+            if (! $e->hasSetPrograms() || $e->deactivated_at) {
+                return 0;
+            }
+            $caps = collect($e->parsedCapacity());
+            $max = (int) ($e->max_teams ?? $caps->sum(1));
+            $cap = ($caps->count() === 1 && $caps[0][0] === 'ALL') || ! $ctx['programs'] ? $max : $caps->whereIn(0, $ctx['programs'])->sum(1);
+            $usedHere = $now->get($e->expert_id, collect())->pluck('id')->unique()->count();
+
+            return max(0, min($cap - $usedHere, $max - $usedAll($e)));
+        };
+
+        $rows = $experts->map(function (CapstoneExpert $e) use ($now, $then, $waiting, $usedAll) {
             $mine = $now->get($e->expert_id, collect());
             $last = $then->get($e->expert_id, collect())->count();
             $total = $mine->count();
+            $max = (int) ($e->max_teams ?? 0);
+            $asks = (int) $waiting->get($e->expert_id, 0);
+            $full = $max > 0 && $usedAll($e) >= $max;
+            $suggestion = $e->hasSetPrograms() ? $e->slotSuggestion($usedAll($e)) : null;
 
-            return ['id' => null, 'now' => $total, 'name' => $e->name, 'cells' => [
+            return ['id' => null, 'now' => $total, 'name' => $e->name, 'asks' => $asks, 'full' => $full, 'cells' => [
                 'expert' => ['b', $e->name],
             ] + collect(self::ROLES)->mapWithKeys(fn ($l, $key) => [$key => ['num', $mine->where('role', $key)->count()]])->all() + [
                 'now' => ['num', $total],
-                'slots' => ['slots', $mine->pluck('team')->unique()->count(), (int) ($e->max_teams ?? 0)],
+                'slots' => ['slots', $usedAll($e), $max],
+                // Requests a full expert cannot take: those teams have to ask someone else unless the expert adds slots.
+                'waiting' => $asks && $full ? ['tone', $asks.' · full', 'bad', $asks] : ['num', $asks],
+                'suggestion' => $suggestion ? ['tone', $suggestion, ['Increase slots' => 'ok', 'Reduce slots' => 'bad'][$suggestion] ?? 'none'] : self::DASH,
                 'last' => ['num', $last],
                 'change' => $this->change($total, $last),
                 'teams' => $mine->isEmpty() ? self::DASH : $mine->pluck('team')->filter()->unique()->sort()->implode(', '),
@@ -668,15 +784,106 @@ class CapsaReports
 
         $nowTotal = $rows->sum('now');
         $lastTotal = $rows->sum(fn ($r) => $r['cells']['last'][1]);
+        $enough = $this->enoughExperts($ctx, $teamIds, $allNow->where('in', true), $experts, $rolesOf, $takesProgram, $open, $rows);
 
         return [
-            'columns' => $this->cols(['expert' => 'Expert', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'now' => 'Teams now', 'slots' => 'Slots used', 'last' => 'S.Y. '.$ctx['compare'], 'change' => 'Change', 'teams' => 'Teams they handle'], ['adviser', 'consultant', 'grammarian', 'now', 'last']),
+            'columns' => $this->cols(['expert' => 'Expert', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'now' => 'Teams now', 'slots' => 'Slots used', 'waiting' => 'Requests waiting', 'suggestion' => 'Suggestion', 'last' => 'S.Y. '.$ctx['compare'], 'change' => 'Change', 'teams' => 'Teams they handle'], ['adviser', 'consultant', 'grammarian', 'now', 'waiting', 'last']),
             'rows' => $rows->map(fn ($r) => ['id' => null, 'cells' => $r['cells']])->all(),
             'total' => $rows->isEmpty() ? null : ['expert' => ['b', 'All experts']]
                 + collect(self::ROLES)->mapWithKeys(fn ($l, $key) => [$key => ['b', (string) $rows->sum(fn ($r) => $r['cells'][$key][1])]])->all()
-                + ['now' => ['b', (string) $nowTotal], 'slots' => '', 'last' => ['b', (string) $lastTotal], 'change' => $this->change($nowTotal, $lastTotal), 'teams' => ''],
+                + ['now' => ['b', (string) $nowTotal], 'slots' => '', 'waiting' => ['b', (string) $enough['waiting']], 'suggestion' => '', 'last' => ['b', (string) $lastTotal], 'change' => $this->change($nowTotal, $lastTotal), 'teams' => ''],
             'summary' => $this->count($rows->count(), 'expert').' · '.$nowTotal.' team roles in S.Y. '.$ctx['year'].', '.$lastTotal.' in S.Y. '.$ctx['compare'].'. A team counts once for each role the expert holds on it.',
             'empty' => 'No experts to show yet.',
+            'enough' => $enough,
+            'notes' => $this->enoughNotes($enough),
+        ];
+    }
+
+    /**
+     * The "Enough experts?" box: per role, the teams still needing one
+     * against the open slots of the experts who take it, now and once the
+     * students not yet in a team form theirs (five to a team); requests
+     * waiting on full experts; and how the panel seats are spread.
+     */
+    private function enoughExperts(array $ctx, array $teamIds, Collection $roles, Collection $experts, \Closure $rolesOf, \Closure $takesProgram, \Closure $open, Collection $rows): array
+    {
+        $verdict = fn (int $need, int $slots) => $slots >= $need ? 'Enough' : 'Short by '.($need - $slots);
+
+        // Students this year with no team in any of their rows for the year.
+        $loose = StudentSchoolYear::acrossAllTerms()->where('school_year', $ctx['year'])->with('student')->get()
+            ->groupBy('student_id')
+            ->filter(function (Collection $records) use ($ctx) {
+                $student = $records->first()->student;
+                if (! $student || $records->contains(fn ($sy) => $sy->team_id)) {
+                    return false;
+                }
+                $label = (string) Student::computeSectionLabel($student->course, $student->year_section);
+
+                return ! $ctx['programs'] || $label === '' || in_array(TeamChecklist::programOf($label), $ctx['programs'], true);
+            })
+            ->count();
+        $later = (int) ceil($loose / 5);
+
+        $takers = $experts->filter(fn (CapstoneExpert $e) => ! $e->deactivated_at && $rolesOf($e)->isNotEmpty() && $takesProgram($e));
+        $teams = count($teamIds);
+        $table = [];
+        foreach (self::ROLES as $key => $label) {
+            $with = $roles->where('role', $key)->pluck('id')->unique()->count();
+            $who = $takers->filter(fn ($e) => $rolesOf($e)->contains($key));
+            $slots = $who->sum(fn ($e) => $open($e));
+            $table[] = [
+                'role' => $label,
+                'when' => in_array($key, Team::PANEL_EXPERT_ROLES, true) ? 'needed before a panel' : 'may come later',
+                'with' => $with, 'need' => $teams - $with, 'takers' => $who->count(), 'open' => $slots,
+                'now' => $verdict($teams - $with, $slots), 'after' => $verdict($teams - $with + $later, $slots),
+            ];
+        }
+        $need = array_sum(array_column($table, 'need'));
+        // An expert who takes two roles still has one set of open slots, so the total counts each expert once.
+        $slots = $takers->sum(fn ($e) => $open($e));
+
+        $seats = DefensePanel::query()->join('defense_schedule', 'defense_schedule.defense_id', '=', 'defense_panels.defense_id')
+            ->whereIn('defense_schedule.team_id', $teamIds)
+            ->where(fn ($q) => $q->whereNull('defense_schedule.outcome')->orWhere('defense_schedule.outcome', '!=', DefenseOutcome::CANCELLED))
+            ->pluck('defense_panels.expert_id')->countBy();
+        $busiest = $seats->sortDesc()->keys()->first();
+
+        return [
+            'program' => $ctx['program'] !== '' ? $ctx['program'] : $ctx['programOptions'][''],
+            'teams' => $teams,
+            'loose' => $loose,
+            'later' => $later,
+            'roles' => $table,
+            'all' => [
+                'with' => array_sum(array_column($table, 'with')), 'need' => $need, 'takers' => $takers->count(), 'open' => $slots,
+                'now' => $verdict($need, $slots), 'after' => $verdict($need + $later * count(self::ROLES), $slots),
+            ],
+            'waiting' => $rows->sum('asks'),
+            // Waiting on an expert who is already full: the "· full" cells of the table.
+            'stuck' => $rows->filter(fn ($r) => $r['full'] && $r['asks'])->map(fn ($r) => [$r['name'], $r['asks']])->values()->all(),
+            'panel' => [
+                'seats' => $seats->sum(),
+                'panelists' => $seats->count(),
+                'each' => $seats->count() ? (int) round($seats->sum() / $seats->count()) : 0,
+                'busiest' => $busiest ? [(string) CapstoneExpert::withTrashed()->find($busiest)?->name, $seats[$busiest]] : null,
+            ],
+        ];
+    }
+
+    /** The box as lines of text, for the PDF and the Excel file. */
+    private function enoughNotes(array $en): array
+    {
+        $after = $en['later'] ? 'after '.$this->count($en['later'], 'new team') : 'after new teams (none coming)';
+        $stuck = array_sum(array_column($en['stuck'], 1));
+
+        return [
+            'Enough experts? '.$en['program'].' · '.$this->count($en['teams'], 'team').' · '.$en['loose'].' not in a team yet · '
+                .$en['all']['need'].' roles still to fill · '.$en['all']['open'].' open slots · now '.$en['all']['now'].' · '.$after.' '.$en['all']['after'],
+            ...array_map(fn ($r) => $r['role'].' ('.$r['when'].'): '.$r['with'].' teams with one, '.$r['need'].' still need one, '
+                .$this->count($r['takers'], 'expert').' who take it with '.$r['open'].' open slots · now '.$r['now'].' · '.$after.' '.$r['after'], $en['roles']),
+            'Requests waiting: '.$en['waiting'].($stuck ? ' · '.$stuck.' with experts who are already full ('.implode(', ', array_map(fn ($s) => $s[0].' '.$s[1], $en['stuck'])).')' : ''),
+            'Panel: '.$en['panel']['seats'].' seats · '.$this->count($en['panel']['panelists'], 'expert').' on panels · about '.$en['panel']['each'].' each'
+                .($en['panel']['busiest'] ? ' · busiest: '.$en['panel']['busiest'][0].', '.$en['panel']['busiest'][1] : '').' · no limit on panel seats',
         ];
     }
 
@@ -879,6 +1086,7 @@ class CapsaReports
             'num' => $cell[2] ?? (is_numeric($cell[1]) ? $cell[1] + 0 : mb_strtolower((string) $cell[1])),
             'bar' => $cell[2] > 0 ? round($cell[1] / $cell[2], 4) : -1,
             'slots' => $cell[1],
+            'tone' => $cell[3] ?? mb_strtolower((string) $cell[1]),
             'lines' => mb_strtolower(implode(' ', $cell[1])),
             default => mb_strtolower((string) $cell[1]),
         };
