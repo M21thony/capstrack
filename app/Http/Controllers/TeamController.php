@@ -100,20 +100,7 @@ class TeamController extends Controller
         $isConfirmed = $myTeam && $myTeam->is_confirmed;
         $postHidden = $myTeam && $myTeam->team_status === 'Full';
 
-        $fullTeamStudentIds = Recruitment::where('recruitment_goal', 'build_a_team')
-            ->with('student.team')
-            ->get()
-            ->filter(function ($recruit) {
-                $team = $recruit->student?->team;
-
-                if (! $team) {
-                    return false;
-                }
-
-                return StudentSchoolYear::where('team_id', $team->team_id)->count() >= ($team->member_count ?? $recruit->member_count ?? 5);
-            })
-            ->pluck('student_id')
-            ->toArray();
+        $fullTeamStudentIds = Recruitment::leadersOfFullTeams();
 
         $leaderIds = $myTeam ? [(int) $myTeam->leader_id] : [];
 
@@ -144,13 +131,10 @@ class TeamController extends Controller
         // Exclude posts from leaders whose team is complete, closed, or full
         $otherRecruitments = Recruitment::with(['student.team'])
             ->where('student_id', '!=', $studentId)
+            // Off the feed only once the team reaches the CaPSA's limit. A team
+            // that has turned its pre-proposals in but still has room, or that
+            // lost a member after filling up, can still be joined.
             ->whereNotIn('student_id', $fullTeamStudentIds)
-            ->whereDoesntHave('student.team', function ($q) {
-                // Off the feed only once the team stops taking members. A
-                // team that has turned its pre-proposals in but still has
-                // room can still be joined, so it stays visible.
-                $q->where('team_status', 'Full');
-            })
             ->whereIn('student_id', function ($query) use ($student, $currentSchoolYear) {
                 $query->select('student_s_y.student_id')
                     ->from('student_s_y')

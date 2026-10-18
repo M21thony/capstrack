@@ -364,6 +364,17 @@ class Team extends Model
         return max(0, $this->memberLimit() - $taken);
     }
 
+    /**
+     * Has the team reached the CaPSA's member limit?
+     *
+     * Counted, not read off team_status: "Full" is written when the last
+     * seat goes and never set back when somebody leaves.
+     */
+    public function isFull(): bool
+    {
+        return StudentSchoolYear::where('team_id', $this->team_id)->count() >= $this->memberLimit();
+    }
+
     public function pendingInvitationCount(): int
     {
         return TeamInvitation::where('team_id', $this->team_id)
