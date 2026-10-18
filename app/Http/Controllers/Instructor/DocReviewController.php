@@ -102,7 +102,7 @@ class DocReviewController extends Controller
                 'nextRound' => $document?->nextRoundLabel(),
                 'requirement' => $item?->title,
                 'due' => $item?->due_date?->format('M j'),
-                'backUrl' => route('instructor.docreview'),
+                'backUrl' => $this->backUrl($request, $review),
                 // The draw.io files of its diagrams, when the team sent them.
                 'diagrams' => $document?->diagram_files ? route('reviews.diagrams', $review->review_id) : null,
                 // Sent as the diagram file itself: its pages are the whole document, with no PDF before them.
@@ -118,5 +118,20 @@ class DocReviewController extends Controller
                 ])->values() : [],
             ],
         ]);
+    }
+
+    /**
+     * Back goes where the reviewer came from - the To do, a team's page - and
+     * to the To do when that is unknown: a link from an email, a new tab, or
+     * this annotator itself after a reload.
+     */
+    private function backUrl(Request $request, $review): string
+    {
+        $previous = url()->previous();
+        $here = route('instructor.docreview.annotate', $review->review_id);
+
+        return parse_url($previous, PHP_URL_HOST) === $request->getHost() && ! str_starts_with($previous, $here)
+            ? $previous
+            : route('instructor.teams', ['tab' => 'todo']);
     }
 }

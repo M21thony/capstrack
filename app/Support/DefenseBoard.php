@@ -304,8 +304,9 @@ class DefenseBoard
 
     /**
      * The tries at this stage that did not end in a pass, oldest first: dates
-     * the CaPA cancelled, defenses cancelled on the day for open requirements
-     * ('auto' - they keep their date), and redefenses the panel asked for.
+     * the CaPA cancelled, defenses the system once cancelled on the day for open
+     * requirements ('auto' - they keep their date; no longer made), and
+     * redefenses the panel asked for.
      *
      * @return array<int, array{kind: string, date: string, note: ?string, auto?: bool}>
      */
@@ -408,7 +409,7 @@ class DefenseBoard
      * with no name, and nobody to tell about the defense.
      * Grammarians check the writing and never sit on a panel.
      *
-     * @return Collection<int, array{id: int, name: string, degree: string, chair: bool, tags: array<int, string>}>
+     * @return Collection<int, array{id: int, name: string, degree: string, chair: bool, tags: array<int, string>, strengths: array<int, string>}>
      */
     public function panelists(): Collection
     {
@@ -429,6 +430,8 @@ class DefenseBoard
                 'leave' => (bool) $e->on_study_leave,
                 // What they offer as a panelist, not as an adviser or consultant.
                 'tags' => $e->expertiseFor('panel')->all(),
+                // Manuscript, system design, software: what they are strongest in.
+                'strengths' => array_values(array_intersect(array_keys(CapstoneExpert::STRENGTHS), $e->panel_strengths ?? [])),
             ]);
     }
 

@@ -196,7 +196,7 @@ class SubmissionRevisionCheckTest extends TestCase
 
         $this->actingAs($this->student, 'web')->followingRedirects()->get(route('student.review', ['review_id' => $review->review_id]))
             ->assertOk()
-            ->assertSee("window.openSubmission('', this, {$fileId})", false);
+            ->assertSee("window.openSubmission('none', this, {$fileId})", false);
     }
 
     public function test_chapter_3_sent_as_a_revision_of_an_upload_with_no_line_is_caught(): void

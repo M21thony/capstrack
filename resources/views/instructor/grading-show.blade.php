@@ -79,13 +79,6 @@
   .gs-saved{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2);white-space:nowrap}
   .gs-saved i{width:8px;height:8px;border-radius:50%;background:var(--green)}
   .gs-saved.dirty i{background:var(--amber)}
-  .gs-paper{position:relative}
-  .gs-paper summary{list-style:none}
-  .gs-paper summary::-webkit-details-marker{display:none}
-  .gs-paper-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:200px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.12);padding:6px}
-  .gs-paper-menu p{margin:4px 8px 6px;font-size:12px;color:var(--text3);white-space:normal}
-  .gs-paper-menu a{display:flex;align-items:center;gap:8px;padding:0 10px;min-height:38px;border-radius:7px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none}
-  .gs-paper-menu a:hover{background:var(--bg3)}
 
   /* ── Buttons ── */
   .gs-btn{font:inherit;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;padding:0 14px;min-height:40px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;white-space:nowrap;text-decoration:none}
@@ -187,7 +180,7 @@
   .gs-main-foot .gs-btn{min-height:38px}
 
   /* ── Side column ── */
-  .gs-aside{flex:0 0 272px;min-height:0;display:flex;flex-direction:column;gap:12px}
+  .gs-aside{flex:0 0 272px;min-height:0;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
   .gs-aside .gs-card{padding:12px 16px}
   .gs-aside h3{margin:0 0 10px;font-size:13.5px;font-weight:700}
   .gs-aside h3 span{font-weight:600;color:var(--text3)}
@@ -293,6 +286,22 @@
 
   /* ── A phone: one criterion at a time ── */
   .gs-one{display:none}
+  /* Enter from paper sheets: the chair types each panelist's total. */
+  .gs-paper table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .gs-paper td{padding:5px 0;border-top:1px solid var(--border);vertical-align:middle}
+  .gs-paper tr:first-child td{border-top:0}
+  .gs-paper td small{display:block;color:var(--text3);font-size:11px}
+  .gs-paper td.v{text-align:right;white-space:nowrap;color:var(--text2);font-variant-numeric:tabular-nums}
+  .gs-paper td.v b{color:var(--text)}
+  .gs-paper input{font:inherit;width:62px;min-height:30px;padding:0 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);text-align:right}
+  .gs-paper input.err{border-color:var(--red);background:var(--red-bg)}
+  .gs-paper-avg{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;padding-top:8px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text2)}
+  .gs-paper-avg b{color:var(--text);font-size:15px;font-variant-numeric:tabular-nums}
+  .gs-paper-verdict{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .gs-paper-verdict button{font:inherit;font-size:12px;font-weight:600;padding:0 9px;min-height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer}
+  .gs-paper-verdict button[aria-pressed="true"]{background:#18191f;border-color:#18191f;color:#fff}
+  .gs-paper .hint{margin:8px 0 10px;font-size:11.5px;line-height:1.45;color:var(--text3)}
+  .gs-paper .gs-btn{width:100%;justify-content:center}
   @media (min-width: 769px) and (max-width: 1024px){
     .gs-burger{display:flex}
   }
@@ -307,7 +316,7 @@
     .gs-who h1,.gs-who h1 span{color:#fff;white-space:normal}
     .gs-meta{color:rgba(255,255,255,.7);flex-wrap:wrap;white-space:normal}
     .gs-meta .gs-chip{background:rgba(255,255,255,.12);color:#fff}
-    .gs-divider,.gs-saved,.gs-paper{display:none}
+    .gs-divider,.gs-saved{display:none}
     .gs-progress{order:5;flex:1 1 100%}
     .gs-progress-top b{color:#e3c75a}
     .gs-progress-top .of,.gs-progress-top .cnt{color:rgba(255,255,255,.7)}
@@ -387,19 +396,6 @@
       </div>
       <span class="gs-divider" aria-hidden="true"></span>
       <span class="gs-saved" id="saveStatus" role="status"><i aria-hidden="true"></i><span>{{ $saveText }}</span></span>
-      {{-- Paper copy, for a defense held without signal or power: grade by hand, enter it here later. --}}
-      <details class="gs-paper">
-        <summary class="gs-btn" title="If CapsTrack cannot be reached during the defense, grade on this and enter the scores here afterwards.">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          Paper copy
-          <svg viewBox="0 0 24 24" aria-hidden="true" style="width:13px;height:13px"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="gs-paper-menu">
-          <p>Grade on paper if CapsTrack cannot be reached, then enter the scores here.</p>
-          <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'pdf']) }}">PDF</a>
-          <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'xlsx']) }}">Excel</a>
-        </div>
-      </details>
     </header>
 
     <div class="gs-alerts">
@@ -409,6 +405,8 @@
           <span><b>You abstained from grading this team.</b> Your scores are left out of the team's average.
             <span class="why">Your reason: &ldquo;{{ $grade->remarks }}&rdquo;</span></span>
         </div>
+      @elseif ($grade?->isFromPaper() && ! $defense->hasOutcome())
+        <div class="gs-alert warn"><span><b>{{ $grade->remarks }}</b> Total {{ $fmt($grade->total_score) }} / {{ $fmt($rubric->total_points) }}. You can still change it — scoring the rubric and submitting replaces it.</span></div>
       @elseif ($grade?->status === 'submitted' && ! $defense->hasOutcome())
         <div class="gs-alert ok"><span>Submitted. You can still change it — submitting again replaces it.</span></div>
       @endif
@@ -420,6 +418,38 @@
     <div class="gs-body" id="gs-sheet-body">
       <section class="gs-card gs-main" id="gs-sheet-area" aria-live="polite"></section>
       <aside class="gs-aside" aria-label="Summary">
+        @if ($paperSeats->where('own', false)->isNotEmpty())
+          {{-- Graded on paper: whoever records the decision types each
+               panelist's total off their sheet. A seat already turned in
+               is shown, not typed over. --}}
+          <section class="gs-card gs-paper" id="gs-paper">
+            <h3>Enter from paper sheets <span>· out of {{ $fmt($rubric->total_points) }}</span></h3>
+            <table>
+              @foreach ($paperSeats as $seat)
+                <tr>
+                  <td>{{ $seat->name }}<small>{{ $seat->role }}</small></td>
+                  <td class="v">
+                    @if ($seat->abstained)
+                      Abstained
+                    @elseif ($seat->own)
+                      <b data-own="{{ $seat->total }}">{{ $fmt($seat->total) }}</b> turned in
+                    @else
+                      <input type="number" class="gs-paper-score" data-id="{{ $seat->id }}" min="0" max="{{ (float) $rubric->total_points }}" step="0.5" value="{{ $seat->total }}" aria-label="{{ $seat->name }}'s total">
+                    @endif
+                  </td>
+                </tr>
+              @endforeach
+            </table>
+            <div class="gs-paper-avg"><span>Panel average<span id="gs-paper-left"></span></span><b id="gs-paper-avg">—</b></div>
+            <div class="gs-paper-verdict" role="group" aria-label="Panel decision, optional">
+              @foreach ($outcomeOptions as $option)
+                <button type="button" data-outcome="{{ $option }}" aria-pressed="false">{{ \App\Support\DefenseOutcome::label($option, $defense->defense_type) }}</button>
+              @endforeach
+            </div>
+            <p class="hint">Saved as &ldquo;Entered from paper by {{ auth('expert')->user()?->name }} ({{ $panelRole }})&rdquo;. Each panelist still sees their score and can correct it until the decision is recorded. Pick the decision only when it's final.</p>
+            <button type="button" class="gs-btn gs-btn-dark" id="gs-paper-save" disabled>Save grades</button>
+          </section>
+        @endif
         @if ($isGrader)
           <section class="gs-card gs-shared">
             <div class="gs-shared-head">
@@ -470,7 +500,7 @@
                chair beside this. An abstention's remarks are its reason, not
                comments for the team. --}}
           <label for="gs-remarks-field">{{ $isGrader ? 'Panel remarks' : 'Your remarks' }}</label>
-          <textarea id="gs-remarks-field" name="remarks" placeholder="What should the team fix, and what worked?">{{ $isAbstained ? '' : $grade?->remarks }}</textarea>
+          <textarea id="gs-remarks-field" name="remarks" placeholder="What should the team fix, and what worked?">{{ $isAbstained || $grade?->isFromPaper() ? '' : $grade?->remarks }}</textarea>
         </form>
 
         <section class="gs-card gs-decision">
@@ -575,6 +605,7 @@ const ROUTES = {
   save: '{{ route('instructor.grading.save', $defense->defense_id) }}',
   submit: '{{ route('instructor.grading.submit', $defense->defense_id) }}',
   outcome: '{{ route('instructor.grading.outcome', $defense->defense_id) }}',
+  paper: '{{ route('instructor.grading.paper', $defense->defense_id) }}',
   abstain: '{{ route('instructor.grading.abstain', $defense->defense_id) }}',
   list: '{{ route('instructor.grading') }}',
 };
@@ -1062,6 +1093,66 @@ function reloadOnReview() {
   location.href = url.toString();
 }
 
+// Graded on paper: each panelist's total typed off their sheet, the decision
+// optional. The average counts the totals already turned in, not abstentions.
+(function paperEntry() {
+  const card = $('gs-paper');
+  if (!card) return;
+  const inputs = [...card.querySelectorAll('.gs-paper-score')];
+  const own = [...card.querySelectorAll('[data-own]')].map(b => +b.dataset.own);
+  const verdicts = [...card.querySelectorAll('[data-outcome]')];
+  const save = $('gs-paper-save');
+  let outcome = null;
+
+  function refresh() {
+    const typed = [];
+    let ok = true;
+    inputs.forEach(i => {
+      const v = i.value.trim();
+      const bad = v !== '' && !(+v >= 0 && +v <= RUBRIC_TOTAL);
+      i.classList.toggle('err', bad);
+      if (bad) ok = false; else if (v !== '') typed.push(+v);
+    });
+    const left = inputs.length - typed.length;
+    const all = own.concat(typed);
+    $('gs-paper-avg').textContent = ok && left === 0 && all.length ? (all.reduce((a, b) => a + b, 0) / all.length).toFixed(2) : '—';
+    $('gs-paper-left').textContent = left ? ' · ' + left + ' of ' + inputs.length + ' still to type' : '';
+    save.disabled = !ok || left > 0;
+  }
+
+  inputs.forEach(i => i.addEventListener('input', refresh));
+  verdicts.forEach(b => b.addEventListener('click', () => {
+    outcome = outcome === b.dataset.outcome ? null : b.dataset.outcome;
+    verdicts.forEach(x => x.setAttribute('aria-pressed', String(x.dataset.outcome === outcome)));
+  }));
+
+  save.addEventListener('click', () => {
+    const totals = {};
+    inputs.forEach(i => { totals[i.dataset.id] = +i.value; });
+    const reset = () => { save.disabled = false; save.textContent = 'Save grades'; };
+    save.disabled = true;
+    save.textContent = 'Saving…';
+    fetch(ROUTES.paper, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ totals: totals, outcome: outcome }),
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (!res.success) { showFormError(res.message || 'Could not save the grades.'); reset(); return; }
+        dirty = false;
+        location.reload();
+      })
+      .catch(() => { showFormError('Could not reach the server.'); reset(); });
+  });
+
+  refresh();
+})();
+
 function postGrade(url, method) {
   showFormError('');
   setStatus('Saving…', true);
@@ -1211,12 +1302,6 @@ document.querySelectorAll('#gs-shared-chips button[data-id]').forEach(chip => {
       })
       .catch(() => { showFormError('Could not reach the server.'); chip.disabled = false; });
   });
-});
-
-// The paper copy menu closes when anything else is clicked.
-document.addEventListener('click', e => {
-  const menu = document.querySelector('.gs-paper[open]');
-  if (menu && !menu.contains(e.target)) menu.removeAttribute('open');
 });
 
 /* Mobile sidebar toggle */

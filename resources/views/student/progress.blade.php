@@ -369,7 +369,7 @@
             <span class="pt-g-name">{{ $group->name }}
               @if ($group->past_due)<span class="pt-pill r">Past due</span>
               @elseif ($group->overdue)<span class="pt-pill r">{{ $group->overdue }} overdue</span>
-              @elseif ($group->evaluations_owed->isNotEmpty())<span class="pt-pill y">Evaluate your experts</span>
+              @elseif ($group->evaluations_owed->isNotEmpty())<span class="pt-pill y">Evaluate your {{ \App\Support\ExpertEvaluations::whom($group->evaluations_owed) }}</span>
               @elseif ($st === 'done')<span class="pt-pill g">Done</span>
               @elseif ($group->locked)<span class="pt-pill n">Locked</span>
               @elseif ($isNow)<span class="pt-pill y">You are here</span>@endif
@@ -393,7 +393,7 @@
           <div class="pt-gate is-eval">
             <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             <div>
-              <b>{{ $isLeader ? 'Evaluate your experts to unlock the next phase' : 'Waiting on your leader to evaluate the experts' }}</b>
+              <b>{{ $isLeader ? 'Evaluate your '.\App\Support\ExpertEvaluations::whom($group->evaluations_owed).' to unlock the next phase' : 'Waiting on your leader to evaluate your '.\App\Support\ExpertEvaluations::whom($group->evaluations_owed) }}</b>
               <span>{{ $group->evaluations_owed->map(fn ($e) => $e->name.' ('.ucfirst($e->role).')')->implode(', ') }} {{ $group->evaluations_owed->count() === 1 ? 'still needs' : 'still need' }} your anonymous evaluation for {{ $group->evaluations_owed->pluck('stage')->unique()->implode(' and ') }}.</span>
             </div>
             @if ($isLeader)<a class="pt-btn pt-btn-primary" href="{{ route('student.experts', ['tab' => 'evaluations']) }}">Evaluate now</a>@endif

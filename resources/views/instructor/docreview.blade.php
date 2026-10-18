@@ -145,7 +145,7 @@
       </span>
     </div>
     <div class="card dr-card" style="padding:0">
-      <table class="table dr-table" data-export="Document Review">
+      <table class="table dr-table">
         <thead>
           <tr>
             <th style="padding-left:20px">Document</th>

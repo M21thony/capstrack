@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Announcement;
 use App\Models\DefenseSchedule;
+use App\Models\GradingRubric;
 use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -62,6 +63,8 @@ class DashboardController extends Controller
                 ->sortBy(fn ($row) => $row->due_on)
                 ->first(),
             'nextDefense' => $nextDefense,
+            // The team prints the panel's rating sheets, so the link shows only when there is a rubric to print.
+            'sheetReady' => $nextDefense && GradingRubric::forStage($nextDefense->defense_type, $team?->program()),
             'announcements' => $announcements,
             'unreadNotifications' => $unreadNotifications,
             'unreadCount' => $unreadCount,

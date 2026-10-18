@@ -194,7 +194,7 @@
          book; under Find experts it picks the role you are browsing. --}}
     <section class="xh-strip-sec" aria-labelledby="xh-strip-h">
       <div class="xh-strip-head">
-        <h2 id="xh-strip-h">Your team's experts</h2>
+        <h2 id="xh-strip-h">Your team's adviser, consultant and grammarian</h2>
         <span><b>{{ $filledCount }} of 3</b> chosen · <span id="xh-strip-hint">{{ $filledCount === 0 ? 'start with your adviser' : ($tab === 'find' ? 'pick the role you are looking for' : 'pick who you want to meet') }}</span></span>
       </div>
       <div class="xh-strip" id="xh-strip">
@@ -274,7 +274,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 <span class="xh-banner-text">Your request to change <b>{{ $activeFilled->expert->name }}</b> is waiting on your section's CaPSA. They stay your {{ $activeRole }} until the CaPSA decides.@if(! empty($activeRemoval['replacement'])) If approved, your application goes to <b>{{ $activeRemoval['replacement'] }}</b>.@endif</span>
                 @if($isLeader)
-                  <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="takeback" data-request="{{ $activeRemoval['request'] }}" data-name="{{ $activeFilled->expert->name }}">Take back request</button>
+                  <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="takeback" data-request="{{ $activeRemoval['request'] }}" data-name="{{ $activeFilled->expert->name }}" data-role="{{ $activeRole }}">Take back request</button>
                 @endif
               </div>
             @else
@@ -289,6 +289,36 @@
                 @endif
               </div>
             @endif
+          @elseif($activePending && $activePending->meet_asked_at)
+            {{-- They asked to meet first: the team books one of their
+                 consultation times, and they answer after the meeting. --}}
+            @php
+              $meetBooked = $activePending->meeting();
+              $meetTimes = $meetBooked ? [] : app(\App\Support\ConsultationBoard::class)->openTimes((int) $activePending->expert_id);
+            @endphp
+            <div class="xh-banner xh-info" id="xh-meet">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <span class="xh-banner-text"><b>{{ $activePending->expert?->name }}</b> wants to meet your team first, then answers as your {{ $activeRole }}.
+                @if($activePending->meet_note) Their note: “{{ $activePending->meet_note }}”@endif
+                @if($meetBooked)
+                  <br><b>Meeting booked · {{ \App\Models\TeamExpertAssignment::timeLabel((string) $meetBooked->session_date?->format('Y-m-d'), $meetBooked->schedule?->start_time) }}</b>. It is in your Consultations.
+                @elseif(! $isLeader)
+                  <br>Your leader books one of their times.
+                @elseif(! $meetTimes)
+                  <br>They have no open times in the next two weeks. Check again later.
+                @else
+                  <br>Pick a time from their schedule:
+                @endif
+              </span>
+              @if(! $meetBooked && $isLeader && $meetTimes)
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex-basis:100%">
+                  @foreach($meetTimes as $t)
+                    <button type="button" class="xh-tslot" style="width:auto;min-height:0" data-xh="meet-pick" data-schedule="{{ $t['schedule_id'] }}" data-date="{{ $t['date'] }}" aria-pressed="false">{{ $t['label'] }}</button>
+                  @endforeach
+                  <button type="button" class="xh-btn xh-gold xh-sm" data-xh="meet-book" disabled>Book this time</button>
+                </div>
+              @endif
+            </div>
           @elseif($activePending)
             <div class="xh-banner xh-wait">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -487,7 +517,7 @@
                   <span class="xh-av xh-sm r-{{ $a->engaged_role_name ?? 'adviser' }}" aria-hidden="true">{{ $a->expert->avatarInitials() }}@if($a->expert->hasAvatarImage())<img class="avatar-photo" src="{{ $a->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
                   <span class="xh-app-meta">
                     <b>{{ $a->expert->name }}</b>
-                    <span>{{ $a->engaged_role_name ? 'Applied as '.$a->engaged_role_name : 'Application' }} · {{ $a->created_at?->format('M j') }}</span>
+                    <span>{{ $a->status === 'pending' && $a->meet_asked_at ? 'Wants to meet first' : ($a->engaged_role_name ? 'Applied as '.$a->engaged_role_name : 'Application') }} · {{ $a->created_at?->format('M j') }}</span>
                   </span>
                   <span class="xh-pill xh-{{ $tone }}">{{ $a->status === 'pending' ? 'Pending' : 'Declined' }}</span>
                 </button>
@@ -501,8 +531,8 @@
             <ol class="xh-steps">
               <li><i>1</i><span>Pick the role you still need from the cards above.</span></li>
               <li><i>2</i><span>Your team leader applies, with your recommended pre-proposal attached.</span></li>
-              <li><i>3</i><span>The expert accepts or declines. Once they accept, book sessions with them in Consultations.</span></li>
-              <li><i>4</i><span>To change an expert later, ask your section's CaPSA. They decide.</span></li>
+              <li><i>3</i><span>The person you applied to accepts or declines. Once they accept, book sessions with them in Consultations.</span></li>
+              <li><i>4</i><span>To change your adviser, consultant or grammarian later, ask your section's CaPSA. They decide.</span></li>
             </ol>
           </section>
         </aside>
@@ -749,7 +779,8 @@ var S = {
   slotId: null,
   listTab: 'upcoming',
   showAll: false,
-  draft: null
+  draft: null,
+  topics: []
 };
 
 /* ---------------- helpers ---------------- */
@@ -771,6 +802,8 @@ function lengthOf(s) {
   if (mins <= 0) { return ''; }
   return mins % 60 === 0 ? (mins / 60) + (mins === 60 ? ' hour' : ' hours') : mins + ' mins';
 }
+function firstName(n) { return String(n || '').trim().split(/\s+/)[0] || 'your expert'; }
+function initialsOf(n) { return String(n || '').trim().split(/\s+/).slice(0, 2).map(function (w) { return w.charAt(0).toUpperCase(); }).join(''); }
 function words(s) { s = String(s || '').trim(); return s ? s.split(/\s+/).length : 0; }
 function toast(message, type) {
   if (window.ctToast) { return window.ctToast(message, type || 'success'); }
@@ -824,7 +857,16 @@ function withinWindow(expertId, dateKey, startTime) {
   if (dateKey + ' ' + String(startTime || '00:00').slice(0, 5) < w.earliest) { return false; }
   return !w.latest || dateKey <= w.latest;
 }
-function matchesDate(s, dayName, dateKey) { return s.recur === 'once' ? s.specific_date === dateKey : s.available_date === dayName; }
+function matchesDate(s, dayName, dateKey) {
+  if (s.recur === 'once') { return s.specific_date === dateKey; }
+  if (s.available_date !== dayName) { return false; }
+  // Every other week: from its first date, every second week only.
+  if (s.recur === 'biweekly' && s.specific_date) {
+    var gap = Math.round((parseKey(dateKey) - parseKey(String(s.specific_date).slice(0, 10))) / 86400000);
+    return gap >= 0 && gap % 14 === 0;
+  }
+  return true;
+}
 function hasEnded(dateKey, endTime) {
   var n = new Date();
   var nowKey = keyOf(n.getFullYear(), n.getMonth(), n.getDate()) + ' ' + pad(n.getHours()) + ':' + pad(n.getMinutes());
@@ -920,7 +962,7 @@ function renderBook() {
       + '<ol class="xh-steps xh-empty-steps">'
       + '<li><i>1</i><span>Find an adviser, consultant and grammarian.</span></li>'
       + '<li><i>2</i><span>Your team leader applies with your pre-proposal.</span></li>'
-      + '<li><i>3</i><span>Once an expert accepts, their open dates show up here.</span></li></ol>'
+      + '<li><i>3</i><span>Once your adviser or consultant accepts, their open dates show up here.</span></li></ol>'
       + '<a class="xh-btn xh-gold" href="' + esc(D.findUrl + '?tab=find') + '">Find experts</a></div>';
     return;
   }
@@ -943,7 +985,17 @@ function renderBook() {
   var total = Math.ceil((startDow + dim) / 7) * 7;
   var live = liveBookingWith(ex.expert_id) || (bookedExpertIds.indexOf(Number(ex.expert_id)) !== -1 ? {} : null);
 
-  var openThisMonth = 0;
+  // Nobody hunts for a gold date: the nearest open one in the month on screen
+  // is already picked, and a month with none says where the next one is.
+  var firstOpen = null;
+  if (!live) {
+    for (var fd = 1; fd <= dim && !firstOpen; fd++) {
+      var fk = keyOf(y, m, fd);
+      if (daysUntil(fk) >= 0 && !bookingOn(ex.expert_id, fk) && slotsOn(ex.expert_id, fk).some(function (x) { return !x.taken; })) { firstOpen = fk; }
+    }
+    if (!S.date) { S.date = firstOpen; }
+  }
+
   var cells = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(function (d) { return '<span class="xh-dow" aria-hidden="true">' + d + '</span>'; });
   for (var i = 0; i < total; i++) {
     var d = i - startDow + 1;
@@ -972,18 +1024,16 @@ function renderBook() {
     cells.push('<button type="button" class="' + cls + '" data-xh="date" data-key="' + k + '"' + (disabled ? ' disabled' : '')
       + ' aria-pressed="' + sel + '" aria-label="' + longDate(k) + (aria ? ', ' + aria : '') + '">'
       + '<span class="xh-dn">' + d + '</span><span class="xh-dc"><span class="xh-cap is-long">' + cap + '</span><span class="xh-cap is-short">' + (capShort === null ? cap : capShort) + '</span></span></button>');
-    if (cls.indexOf('is-avail') !== -1) { openThisMonth++; }
   }
 
   var times;
-  var chosen = null;
   if (S.date && !live) {
     var ts = slotsOn(ex.expert_id, S.date);
     times = '<h3>' + longDate(S.date) + '</h3>' + (ts.length ? ts.map(function (x) {
       var on = S.slotId === x.slot.schedule_id;
-      if (on && !x.taken) { chosen = x.slot; }
-      var st = x.taken ? 'Taken' : (on ? 'Selected' : 'Open');
-      return '<button type="button" class="xh-tslot" data-xh="slot" data-id="' + x.slot.schedule_id + '"' + (x.taken ? ' disabled' : '') + ' aria-pressed="' + (on && !x.taken) + '">'
+      var st = x.taken ? 'Taken' : 'Book';
+      return '<button type="button" class="xh-tslot" data-xh="slot" data-id="' + x.slot.schedule_id + '"' + (x.taken ? ' disabled' : '') + ' aria-pressed="' + (on && !x.taken) + '"'
+        + ' aria-label="' + (x.taken ? 'Taken: ' : 'Book ') + fmtT(x.slot.start_time) + ' to ' + fmtT(x.slot.end_time) + '">'
         + '<span class="xh-tt"><b>' + fmtT(x.slot.start_time) + ' – ' + fmtT(x.slot.end_time) + '</b><span class="xh-note">' + (lengthOf(x.slot) || 'Consultation') + '</span></span>'
         + '<span class="xh-st">' + st + '</span></button>';
     }).join('') : '<div class="xh-hint">No open times on this date.</div>');
@@ -993,6 +1043,9 @@ function renderBook() {
   } else {
     times = '<h3>Available times</h3><div class="xh-hint">Pick a <b class="xh-gold-text">gold date</b> to see its open times.</div>';
   }
+  if (S.date && !live) {
+    times += '<p class="xh-tap-hint">Tap a time to book it.</p>';
+  }
 
   var notice = '';
   if (live) {
@@ -1001,26 +1054,13 @@ function renderBook() {
       + (live.booking_id ? '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="session" data-id="' + live.booking_id + '">View session</button>' : '') + '</div>';
   }
 
-  // The next few open dates as one-tap buttons, so nobody hunts through
-  // the month - or through the next one - for the gold dates.
-  var nextUp = '';
   var monthEmpty = '';
-  if (!live) {
-    var soon = nextOpenDates(ex.expert_id, 5);
-    if (soon.length) {
-      nextUp = '<div class="xh-next"><span class="xh-lbl">Next open dates</span><div class="xh-next-list">'
-        + soon.map(function (o) {
-          return '<button type="button" class="xh-next-btn" data-xh="jump" data-key="' + o.key + '" aria-pressed="' + (S.date === o.key) + '">'
-            + '<b>' + shortDate(o.key) + '</b><span>' + o.open + ' open</span></button>';
-        }).join('') + '</div></div>';
-      var later = soon.filter(function (o) { return monthOffsetOf(o.key) > S.monthOffset; })[0];
-      if (!openThisMonth && later) {
-        monthEmpty = '<div class="xh-month-empty"><span>No open dates in ' + MONTHS[m] + '.</span>'
-          + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="jump" data-key="' + later.key + '">Go to ' + shortDate(later.key) + '</button></div>';
-      }
-    } else {
-      nextUp = '<div class="xh-hint">' + esc(ex.name) + ' has no open dates in the next ' + (MONTHS_AHEAD + 1) + ' months yet. New ones show up here as soon as they add them.</div>';
-    }
+  if (!live && !firstOpen) {
+    var later = nextOpenDates(ex.expert_id, 1).filter(function (o) { return monthOffsetOf(o.key) > S.monthOffset; })[0];
+    monthEmpty = later
+      ? '<div class="xh-month-empty"><span>No open dates in ' + MONTHS[m] + '. Next open: <b>' + shortDate(later.key) + '</b></span>'
+        + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="jump" data-key="' + later.key + '">Go to it</button></div>'
+      : '<div class="xh-month-empty"><span>' + esc(ex.name) + ' has no open dates in the next ' + (MONTHS_AHEAD + 1) + ' months yet. New ones show up here as soon as they add them.</span></div>';
   }
 
   card.innerHTML = '<div class="xh-book-head"><div><h2>Book with ' + esc(ex.name) + '</h2>'
@@ -1029,15 +1069,10 @@ function renderBook() {
     + '<b aria-live="polite">' + MONTHS[m] + ' ' + y + '</b>'
     + '<button type="button" class="xh-icon-btn" data-xh="month" data-dir="1" aria-label="Next month"' + (S.monthOffset >= MONTHS_AHEAD ? ' disabled' : '') + '>' + ICON.right + '</button></div></div>'
     + notice
-    + (nextUp ? '<div class="xh-book-next">' + nextUp + '</div>' : '')
     + '<div class="xh-book-cols"><div class="xh-cal">' + monthEmpty + '<div class="xh-cal-grid">' + cells.join('') + '</div>'
     + '<div class="xh-legend"><span><i class="xh-lg-sq is-open"></i>Open</span><span><i class="xh-lg-sq is-mine"></i>Your booking</span>'
     + '<span><i class="xh-lg-sq is-full"></i>Fully booked</span><span><i class="xh-lg-sq is-off"></i>Not offered</span></div></div>'
-    + '<div class="xh-times">' + times
-    + '<div class="xh-confirm-bar"><div class="xh-sum">'
-    + (chosen ? '<b>' + shortDate(S.date) + ' · ' + fmtT(chosen.start_time) + ' – ' + fmtT(chosen.end_time) + '</b><span>Consultation with ' + esc(ex.name) + '</span>'
-              : '<b>No time picked yet</b><span>Choose a date, then one of its open times.</span>')
-    + '</div><button type="button" class="xh-btn xh-gold" data-xh="book-open"' + (chosen ? '' : ' disabled') + '>' + ICON.cal + 'Book this time</button></div></div></div>';
+    + '<div class="xh-times">' + times + '</div></div>';
 }
 
 function canCancel(b) { var n = daysUntil(b.session_date); return n !== null && n >= D.cutoffDays && !b.cancel_requested; }
@@ -1050,8 +1085,8 @@ function sessionCard(b, isPast, isNext) {
   if (isPast) {
     badge = '<span class="xh-pill xh-gray">Ended</span>';
   } else if (b.cancel_requested) {
-    badge = '<span class="xh-pill xh-amber">Cancel requested</span>';
-    foot = '<span class="xh-sess-foot">' + ICON.clock + 'Waiting on ' + esc(b.expert_name) + ' to approve the cancellation</span>';
+    badge = '<span class="xh-pill xh-amber">Cancel asked</span>';
+    foot = '<span class="xh-sess-foot">' + ICON.clock + 'Waiting for ' + esc(firstName(b.expert_name)) + ' to answer</span>';
   } else {
     var n = daysUntil(b.session_date);
     badge = '<span class="xh-pill ' + (isNext ? 'xh-goldp' : 'xh-green') + '">' + (n === null ? 'Scheduled' : n <= 0 ? 'Today' : n === 1 ? 'Tomorrow' : 'In ' + n + ' days') + '</span>';
@@ -1063,7 +1098,8 @@ function sessionCard(b, isPast, isNext) {
   return '<button type="button" class="xh-sess' + (isNext ? ' is-next' : '') + '" data-xh="session" data-id="' + b.booking_id + '" data-booking-id="' + b.booking_id + '">'
     + '<span class="xh-dblock' + (isPast ? ' is-past' : '') + '"><small>' + (dt ? MONTHS[dt.getMonth()].slice(0, 3).toUpperCase() : '--') + '</small><b>' + (dt ? dt.getDate() : '--') + '</b><span>' + (dt ? DAYS[dt.getDay()].slice(0, 3) : '') + '</span></span>'
     + '<span class="xh-sess-body"><span class="xh-sess-top"><b>' + fmtT(b.start_time) + (b.end_time ? ' – ' + fmtT(b.end_time) : '') + '</b>' + badge + '</span>'
-    + '<span class="xh-sess-with">Consultation with ' + esc(b.expert_name) + (role ? ' · ' + ucfirst(role) : '') + '</span>' + foot + '</span></button>';
+    + '<span class="xh-sess-with">Consultation with ' + esc(b.expert_name) + (role ? ' · ' + ucfirst(role) : '') + '</span>'
+    + (b.topics ? '<span class="xh-sess-about">About ' + esc(b.topics) + '</span>' : '') + foot + '</span></button>';
 }
 
 function renderSessions() {
@@ -1084,23 +1120,29 @@ function renderSessions() {
 }
 
 /* ---------------- dialogs ---------------- */
-function openDialog(html, size) {
+/*
+ * Every pop-up here is the CapsTrack modal (partials/modal): 'ask' is the
+ * small box in the middle for a yes or no, anything else a panel from the
+ * right ('wide' for the long forms). On a phone both are a sheet from the
+ * bottom.
+ */
+function openDialog(html, shape, onClose) {
   var d = document.createElement('dialog');
-  d.className = 'xh-dlg' + (size ? ' ' + size : '');
-  d.innerHTML = html;
+  d.className = 'cm xh-dlg ' + (shape === 'ask' ? 'cm-ask' : 'cm-panel' + (shape === 'wide' ? ' cm-wide' : ''));
+  d.innerHTML = '<div class="cm-box">' + html + '</div>';
   document.body.appendChild(d);
-  d.addEventListener('click', function (e) { if (e.target === d) { d.close(); } });
-  d.addEventListener('close', function () { d.remove(); });
-  d.showModal();
-  var first = d.querySelector('textarea, input[type="text"]');
-  if (first) { first.focus(); }
+  // A form that asks for one thing opens on it; one with a choice first does not.
+  var first = d.querySelector('[data-autofocus]') || (d.querySelector('.xh-topics') ? null : d.querySelector('textarea, input[type="text"]'));
+  window.CapsModal.open(d, { dismissible: true, focus: first, onClose: function () { d.remove(); if (onClose) { onClose(); } } });
   return d;
 }
-function head(title, sub, icon) {
-  return '<div class="xh-dlg-head">' + (icon || '') + '<div class="xh-ttl"><h2>' + title + '</h2>' + (sub ? '<p>' + sub + '</p>' : '') + '</div>'
+function head(title, sub, icon, eyebrow) {
+  return '<div class="xh-dlg-head">' + (icon || '') + '<div class="xh-ttl">' + (eyebrow ? '<span class="xh-eyebrow">' + eyebrow + '</span>' : '')
+    + '<h2>' + title + '</h2>' + (sub ? '<p>' + sub + '</p>' : '') + '</div>'
     + '<button type="button" class="xh-x" data-xh="close" aria-label="Close">' + ICON.x + '</button></div>';
 }
-function closeAll() { document.querySelectorAll('dialog.xh-dlg').forEach(function (d) { d.close(); }); }
+function closeDialog(d) { if (d) { window.CapsModal.close(d); } }
+function closeAll() { document.querySelectorAll('dialog.xh-dlg').forEach(closeDialog); }
 function busy(btn, label) { btn.disabled = true; btn.dataset.label = btn.innerHTML; btn.textContent = label; }
 function idle(btn) { btn.disabled = false; if (btn.dataset.label) { btn.innerHTML = btn.dataset.label; } }
 function reloadOnFind() {
@@ -1155,6 +1197,7 @@ function openApply(id, draft) {
     var match = p.choices.filter(function (c) { return c.name === D.activeRole; })[0];
     if (match) { pick = match.expert_role_id; }
   }
+  var pickedRole = (p.choices.filter(function (c) { return Number(c.expert_role_id) === Number(pick); })[0] || {}).name;
   var roles = p.choices.map(function (c) {
     return '<label class="xh-rp r-' + c.name + '"><input type="radio" name="xh-apply-role" value="' + c.expert_role_id + '" data-name="' + c.name + '"' + (Number(pick) === Number(c.expert_role_id) ? ' checked' : '') + '>'
       + '<span>' + esc(ucfirst(c.name)) + '</span></label>';
@@ -1162,17 +1205,17 @@ function openApply(id, draft) {
   var proposal = '<div class="xh-field"><span class="xh-flabel">Recommended pre-proposal</span><div class="xh-attach">' + ICON.file
     + '<div class="xh-attach-meta"><b>' + esc(D.proposalTitle) + '</b><span>Recommended by your CaPSA. It is sent with this application, so there is nothing to upload.</span></div>'
     + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="proposal">Preview</button></div></div>';
-  openDialog(head('Apply to ' + esc(p.name), 'Your application goes to the expert. They accept or decline.')
+  openDialog(head('Apply to ' + esc(p.name), 'Your application goes to ' + esc(p.name) + '. They accept or decline.')
     + '<div class="xh-dlg-body" data-expert="' + p.id + '">'
     + '<fieldset class="xh-field" id="xh-f-role"><legend class="xh-flabel">Apply as <span class="xh-req">*</span></legend>'
     + '<div class="xh-roles-pick">' + roles + '</div>'
     + '<span class="xh-note">An expert can take only one role per team. Once they are your adviser, you can\'t also engage them as your consultant or grammarian.</span>'
     + '<span class="xh-fmeta"><span class="xh-ferr">Choose the role you are applying for.</span></span></fieldset>'
     + proposal
-    + '<div class="xh-field" id="xh-f-msg"><label for="xh-apply-msg">Message to the expert <span class="xh-req">*</span></label>'
-    + '<textarea id="xh-apply-msg" rows="5" placeholder="Introduce your team and say why you are applying to this expert.">' + esc(draft ? draft.message : '') + '</textarea>'
-    + '<span class="xh-fmeta"><span class="xh-ferr" id="xh-msg-err">Write a short message to the expert.</span><span><span id="xh-msg-count">' + words(draft ? draft.message : '') + '</span>/500 words</span></span></div></div>'
-    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="apply-review">Review application</button></div>', 'is-wide');
+    + '<div class="xh-field" id="xh-f-msg"><label for="xh-apply-msg"><span id="xh-msg-to">' + (pickedRole ? 'Message to your ' + esc(pickedRole) : 'Message to ' + esc(p.name)) + '</span> <span class="xh-req">*</span></label>'
+    + '<textarea id="xh-apply-msg" rows="5" placeholder="Introduce your team and say why you are applying to ' + esc(p.name) + '.">' + esc(draft ? draft.message : '') + '</textarea>'
+    + '<span class="xh-fmeta"><span class="xh-ferr" id="xh-msg-err">Write a short message to ' + esc(p.name) + '.</span><span><span id="xh-msg-count">' + words(draft ? draft.message : '') + '</span>/500 words</span></span></div></div>'
+    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="apply-review">Review application</button></div>', 'wide');
 }
 
 function openReview(d) {
@@ -1189,8 +1232,8 @@ function openReview(d) {
 function openProposal() {
   var tpl = $('xh-proposal');
   if (!tpl) { return; }
-  var d = openDialog('', 'is-wide');
-  d.appendChild(tpl.content.cloneNode(true));
+  var d = openDialog('', 'wide');
+  d.querySelector('.cm-box').appendChild(tpl.content.cloneNode(true));
 }
 
 /* A PDF picker that looks like part of the form: the real input is under the whole box. */
@@ -1229,17 +1272,17 @@ function openChange(btn) {
   var file = D.hasApprovedProposal ? ''
     : '<div class="xh-field" id="xh-f-change-file"><label for="xh-change-file">Pre-proposal for them (PDF) <span class="xh-req">*</span></label>'
       + filePicker('xh-change-file', '') + '<span class="xh-fmeta"><span class="xh-ferr">That is not a PDF, or it is over 5 MB.</span></span></div>';
-  openDialog(head('Request an expert change', 'Your section\'s CaPSA decides. ' + esc(btn.dataset.name) + ' stays with your team until they do. Once approved, your application goes to the expert you pick below.',
+  openDialog(head('Request a ' + esc(role) + ' change', 'Your section\'s CaPSA decides. ' + esc(btn.dataset.name) + ' stays with your team until they do. Once approved, your application goes to the ' + esc(role) + ' you pick below.',
       '<span class="xh-dlg-icon xh-ic-amber">' + ICON.swap + '</span>')
     + '<div class="xh-dlg-body"><div class="xh-detail r-' + role + '">' + avatar(D.team[role] || {}, role, 'xh-sm') + '<span class="xh-detail-meta"><b>' + esc(btn.dataset.name) + '</b><span>' + ucfirst(role) + ' of your team'
     + (D.teamSection ? ' · Decided by the CaPSA for ' + esc(D.teamSection) : '') + '</span></span></div>'
     + '<div class="xh-field" id="xh-f-reason"><label for="xh-change-reason">Reason for your CaPSA <span class="xh-req">*</span></label>'
-    + '<textarea id="xh-change-reason" rows="3" maxlength="500" placeholder="Explain to your CaPSA why this expert has to change."></textarea>'
+    + '<textarea id="xh-change-reason" rows="3" maxlength="500" placeholder="Explain to your CaPSA why your ' + esc(role) + ' has to change."></textarea>'
     + '<span class="xh-fmeta"><span class="xh-ferr">Give at least ' + D.reasonMin + ' characters so your CaPSA can decide.</span><span><span id="xh-reason-count">0</span>/500</span></span></div>'
     + '<div class="xh-field" id="xh-f-change-to"><label for="xh-change-to">' + ucfirst(role) + ' to replace them <span class="xh-req">*</span></label>' + picker
     + '<span class="xh-note">Sent to them only if the CaPSA approves and they still have a slot then. They accept or decline your team.</span></div>'
     + (options.length ? '<div class="xh-field" id="xh-f-change-msg"><label for="xh-change-msg">Message to them <span class="xh-req">*</span></label>'
-      + '<textarea id="xh-change-msg" rows="3" maxlength="3000" placeholder="Introduce your team and your project to the expert you picked."></textarea></div>' + file : '')
+      + '<textarea id="xh-change-msg" rows="3" maxlength="3000" placeholder="Introduce your team and your project to the ' + esc(role) + ' you picked."></textarea></div>' + file : '')
     + '</div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="change-send" data-assignment="' + btn.dataset.assignment + '" id="xh-change-send" disabled>Send to CaPSA</button></div>');
 }
@@ -1257,15 +1300,15 @@ function changeReady() {
 }
 
 function openTakeBack(btn) {
-  openDialog(head('Take back your change request?', 'Your request to change <b>' + esc(btn.dataset.name) + '</b> is still waiting on your section\'s CaPSA. Taking it back keeps them as your expert.',
+  openDialog(head('Take back your change request?', 'Your request to change <b>' + esc(btn.dataset.name) + '</b> is still waiting on your section\'s CaPSA. Taking it back keeps them as your ' + esc(btn.dataset.role || 'expert') + '.',
       '<span class="xh-dlg-icon xh-ic-amber">' + ICON.swap + '</span>')
-    + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep the request</button><button type="button" class="xh-btn xh-gold" data-xh="takeback-send" data-request="' + btn.dataset.request + '">Take it back</button></div>');
+    + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep the request</button><button type="button" class="xh-btn xh-gold" data-xh="takeback-send" data-request="' + btn.dataset.request + '">Take it back</button></div>', 'ask');
 }
 
 function openApp(id) {
   var a = APPS[id];
   if (!a) { return; }
-  var status = a.status === 'pending' ? '<span class="xh-pill xh-amber">Pending · waiting for the expert</span>' : '<span class="xh-pill xh-red">Declined</span>';
+  var status = a.status === 'pending' ? '<span class="xh-pill xh-amber">Pending · waiting for ' + esc(a.name) + (a.role ? ' (' + esc(ucfirst(a.role)) + ')' : '') + '</span>' : '<span class="xh-pill xh-red">Declined</span>';
   var proposal = a.proposalTitle ? esc(a.proposalTitle) + ' <span class="xh-note">(recommended pre-proposal)</span>'
     : (a.proposalFile ? '<a href="' + esc(a.proposalFile) + '" target="_blank" rel="noopener" data-pdf-view="' + esc(a.proposalFile) + '" data-pdf-title="Proposal">View proposal</a>' : 'None attached');
   var withdraw = '';
@@ -1290,23 +1333,57 @@ function openWithdraw(id) {
   openDialog(head(pending ? 'Withdraw this application?' : 'Remove this from your list?',
       pending ? esc(a.name) + ' will no longer see it. You can apply to them again later.' : 'The declined application to ' + esc(a.name) + ' leaves your list. Nothing is sent to them.',
       '<span class="xh-dlg-icon xh-ic-red">' + ICON.trash + '</span>')
-    + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep it</button><button type="button" class="xh-btn xh-danger" data-xh="app-withdraw-send" data-id="' + a.id + '">' + (pending ? 'Withdraw application' : 'Remove from list') + '</button></div>');
+    + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep it</button><button type="button" class="xh-btn xh-danger" data-xh="app-withdraw-send" data-id="' + a.id + '">' + (pending ? 'Withdraw application' : 'Remove from list') + '</button></div>', 'ask');
 }
 
+var TOPICS = {
+  paper: { label: 'Paper', hint: 'Chapters, the manuscript' },
+  diagrams: { label: 'Diagrams', hint: 'ERD, DFD, use case' },
+  system: { label: 'System', hint: 'The app or prototype' },
+  manuscript: { label: 'Manuscript', hint: 'Grammarians check the whole manuscript.' }
+};
+var TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+
+function slotCard(dateKey, line, sub) {
+  var d = parseKey(dateKey);
+  return '<div class="xh-slotc"><span class="xh-datet" aria-hidden="true"><small>' + MONTHS[d.getMonth()].slice(0, 3).toUpperCase() + '</small><b>' + d.getDate() + '</b></span>'
+    + '<span class="xh-slott"><b>' + line + '</b><span>' + sub + '</span></span></div>';
+}
+
+/* Tapping a time opens this: what the team will bring, a note, and Book. */
 function openBookConfirm() {
   var ex = expertFor(S.role);
   var s = slots.filter(function (x) { return x.schedule_id === S.slotId; })[0];
   if (!ex || !s || !S.date) { return; }
   var n = daysUntil(S.date);
-  openDialog(head('Confirm your booking', 'Check the session before it goes on ' + esc(ex.name) + '\'s calendar.', '<span class="xh-dlg-icon xh-ic-gold">' + ICON.cal + '</span>')
-    + '<div class="xh-dlg-body"><dl class="xh-rows">'
-    + '<div class="xh-row"><dt>Date</dt><dd>' + longDate(S.date) + ', ' + parseKey(S.date).getFullYear() + '</dd></div>'
-    + '<div class="xh-row"><dt>Time</dt><dd>' + fmtT(s.start_time) + ' – ' + fmtT(s.end_time) + '</dd></div>'
-    + '<div class="xh-row"><dt>With</dt><dd>' + esc(ex.name) + ' · ' + ucfirst(S.role) + '</dd></div></dl>'
+  var first = firstName(ex.name);
+  var choices = ex.topic_fixed ? [] : (ex.topic_choices || []);
+  S.topics = [];
+  var topics = ex.topic_fixed
+    ? '<div class="xh-field"><span class="xh-flabel">What will you consult about?</span><div class="xh-fixedt"><span class="xh-tick is-on">' + TICK + '</span>'
+      + '<span><b>' + TOPICS[ex.topic_fixed].label + '</b><small>' + TOPICS[ex.topic_fixed].hint + '</small></span></div></div>'
+    : choices.length
+      ? '<fieldset class="xh-field" id="xh-f-topics"><legend class="xh-flabel">What will you consult about? <span class="xh-req">*</span> <span class="xh-opt">Pick one or both</span></legend>'
+        + '<div class="xh-topics">' + choices.map(function (t) {
+          return '<button type="button" class="xh-topic" data-xh="topic" data-topic="' + t + '" aria-pressed="false"><span class="xh-tick">' + TICK + '</span>'
+            + '<span><b>' + TOPICS[t].label + '</b><small>' + TOPICS[t].hint + '</small></span></button>';
+        }).join('') + '</div><span class="xh-fmeta"><span class="xh-ferr">Pick at least one.</span></span></fieldset>'
+      : '';
+  openDialog(head('Book this time', 'Pick what you\'ll bring so ' + esc(first) + ' can prepare.', '', 'Book a consultation')
+    + '<div class="xh-dlg-body">'
+    + slotCard(S.date, DAYS[parseKey(S.date).getDay()] + ' · ' + fmtT(s.start_time) + ' – ' + fmtT(s.end_time), 'with ' + esc(ex.name) + ', ' + ucfirst(S.role))
+    + topics
+    + '<div class="xh-field"><label for="xh-book-note">Note for ' + esc(first) + ' <span class="xh-opt">Optional</span></label>'
+    + '<textarea id="xh-book-note" rows="3" maxlength="500" placeholder="What do you want to ask or show?"></textarea>'
+    + '<span class="xh-fmeta"><span>' + esc(first) + ' and your team can read this.</span><span><span id="xh-note-count">0</span> / 500</span></span></div>'
     + '<div class="xh-banner xh-info">' + ICON.info + '<span class="xh-banner-text">' + (n >= D.cutoffDays
-      ? 'You can ask to cancel until <b>' + lastCancelDay({ session_date: S.date }) + '</b>. After that, message your expert instead.'
+      ? 'You can ask to cancel until <b>' + lastCancelDay({ session_date: S.date }) + '</b>. After that, message ' + esc(first) + ' instead.'
       : 'This session is within ' + D.cutoffDays + ' days, so <b>it can\'t be cancelled here</b> once booked.') + '</span></div></div>'
-    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Back</button><button type="button" class="xh-btn xh-gold" data-xh="book-send">' + ICON.check + 'Confirm booking</button></div>');
+    + '<div class="xh-dlg-foot"><span class="xh-fnote">' + ICON.clock + 'Booked right away. ' + esc(first) + ' gets an email.</span>'
+    + '<button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button>'
+    + '<button type="button" class="xh-btn xh-gold" data-xh="book-send" id="xh-book-send"' + (choices.length ? ' disabled' : '') + '>Book session</button></div>',
+    'panel',
+    function () { if (S.slotId) { S.slotId = null; renderBook(); } });
 }
 
 function findBooking(id) {
@@ -1318,33 +1395,44 @@ function openSession(id) {
   if (!b) { return; }
   var isPast = recent.indexOf(b) !== -1;
   var role = roleOfExpert(b.expert_id);
-  var foot = '<button type="button" class="xh-btn xh-ghost" data-xh="close">Close</button>';
+  var first = firstName(b.expert_name);
   var note = '';
+  var ask = '';
   if (!isPast && b.cancel_requested) {
-    note = '<div class="xh-banner xh-wait">' + ICON.clock + '<span class="xh-banner-text">You asked to cancel this. ' + esc(b.expert_name) + ' will approve or decline it, and it stays booked until then.</span></div>';
+    note = '<div class="xh-banner xh-wait">' + ICON.clock + '<span class="xh-banner-text">You asked to cancel this. It stays booked until ' + esc(first) + ' answers, and your whole team is told either way.</span></div>';
   } else if (!isPast && canCancel(b)) {
-    foot = '<button type="button" class="xh-btn xh-danger-ghost xh-push" data-xh="cancel-open" data-id="' + b.booking_id + '">Cancel booking</button>' + foot;
     note = '<div class="xh-banner">' + ICON.clock + '<span class="xh-banner-text">You can ask to cancel until <b>' + lastCancelDay(b) + '</b>.</span></div>';
+    ask = '<div class="xh-dangerrow"><div><b>Can\'t make it?</b><span>Ask ' + esc(first) + ' to cancel.</span></div>'
+      + '<button type="button" class="xh-btn xh-danger-ghost xh-sm" data-xh="cancel-open" data-id="' + b.booking_id + '">Ask to cancel</button></div>';
   } else if (!isPast) {
-    note = '<div class="xh-banner">' + ICON.lock + '<span class="xh-banner-text">This session is within ' + D.cutoffDays + ' days, so it can\'t be cancelled here. Message ' + esc(b.expert_name) + ' if you can\'t make it.</span></div>';
+    note = '<div class="xh-banner">' + ICON.lock + '<span class="xh-banner-text">This session is within ' + D.cutoffDays + ' days, so it can\'t be cancelled here. Message ' + esc(first) + ' if you can\'t make it.</span></div>';
   }
-  openDialog(head('Consultation', isPast ? 'This session has ended.' : 'Your upcoming session.')
-    + '<div class="xh-dlg-body"><dl class="xh-rows">'
-    + '<div class="xh-row"><dt>Date</dt><dd>' + (b.session_date ? longDate(b.session_date) + ', ' + parseKey(b.session_date).getFullYear() : esc(b.available_date || '—')) + '</dd></div>'
-    + '<div class="xh-row"><dt>Time</dt><dd>' + fmtT(b.start_time) + (b.end_time ? ' – ' + fmtT(b.end_time) : '') + '</dd></div>'
-    + '<div class="xh-row"><dt>With</dt><dd>' + esc(b.expert_name) + (role ? ' · ' + ucfirst(role) : '') + '</dd></div>'
-    + '<div class="xh-row"><dt>Status</dt><dd>' + (isPast ? '<span class="xh-pill xh-gray">Ended</span>' : b.cancel_requested ? '<span class="xh-pill xh-amber">Cancel requested</span>' : '<span class="xh-pill xh-green">Scheduled</span>') + '</dd></div></dl>' + note + '</div>'
-    + '<div class="xh-dlg-foot">' + foot + '</div>');
+  var status = isPast ? '<span class="xh-pill xh-gray">Ended</span>' : b.cancel_requested ? '<span class="xh-pill xh-amber">Cancel asked</span>' : '<span class="xh-pill xh-green">Scheduled</span>';
+  openDialog(head(esc(b.expert_name), '', '<span class="xh-dav" aria-hidden="true">' + esc(initialsOf(b.expert_name)) + '</span>', 'Consultation' + (role ? ' · ' + ucfirst(role) : ''))
+    + '<div class="xh-dlg-body">'
+    + (b.session_date
+      ? slotCard(b.session_date, DAYS[parseKey(b.session_date).getDay()] + ' · ' + fmtT(b.start_time) + (b.end_time ? ' – ' + fmtT(b.end_time) : ''), status)
+      : '<div class="xh-slotc"><span class="xh-slott"><b>' + esc(b.available_date || '—') + ' · ' + fmtT(b.start_time) + '</b><span>' + status + '</span></span></div>')
+    + '<div class="xh-facts">'
+    + '<div class="xh-fact"><span>About</span><b>' + esc(b.topics || '—') + '</b></div>'
+    + '<div class="xh-fact"><span>Your note</span><b>' + esc(b.note || 'No note') + '</b></div>'
+    + '<div class="xh-fact"><span>Booked by</span><b>' + esc(b.booked_by || '—') + (b.booked_on ? ' · ' + esc(b.booked_on) : '') + '</b></div></div>'
+    + note + ask + '</div>');
 }
 
 function openCancel(id) {
   var b = findBooking(id);
   if (!b) { return; }
-  openDialog(head('Cancel this booking?', 'Tell ' + esc(b.expert_name) + ' why. They approve or decline it, and it stays booked until then.', '<span class="xh-dlg-icon xh-ic-red">' + ICON.x + '</span>')
-    + '<div class="xh-dlg-body"><div class="xh-field" id="xh-f-cancel"><label for="xh-cancel-reason">Reason <span class="xh-req">*</span></label>'
-    + '<textarea id="xh-cancel-reason" rows="4" maxlength="1000" placeholder="For example: our draft is not ready for review yet."></textarea>'
-    + '<span class="xh-fmeta"><span class="xh-ferr">Enter a reason for the expert.</span></span></div></div>'
-    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep booking</button><button type="button" class="xh-btn xh-danger" data-xh="cancel-send" data-id="' + b.booking_id + '">Ask to cancel</button></div>');
+  var first = firstName(b.expert_name);
+  openDialog(head('Ask to cancel this session?', '', '<span class="xh-dlg-icon xh-ic-red">' + ICON.cal + '</span>')
+    + '<span class="xh-chipline"><i aria-hidden="true">' + esc(initialsOf(b.expert_name)) + '</i>' + esc(first)
+    + (b.session_date ? ' · ' + shortDate(b.session_date) : '') + ' · ' + fmtT(b.start_time) + '</span>'
+    + '<p class="xh-ask-text">It stays booked until ' + esc(first) + ' answers. Your whole team is told either way.</p>'
+    + '<div class="xh-dlg-body"><div class="xh-field" id="xh-f-cancel"><label for="xh-cancel-reason">Why do you need to cancel? <span class="xh-req">*</span></label>'
+    + '<textarea id="xh-cancel-reason" rows="3" maxlength="1000" placeholder="For example: our draft is not ready for review yet."></textarea>'
+    + '<span class="xh-fmeta"><span class="xh-ferr">Enter a reason for ' + esc(first) + '.</span></span></div></div>'
+    + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="cancel-back" data-id="' + b.booking_id + '">Back</button>'
+    + '<button type="button" class="xh-btn xh-danger" data-xh="cancel-send" data-id="' + b.booking_id + '">Send request</button></div>', 'ask');
 }
 
 /* ---------------- data refresh ---------------- */
@@ -1371,7 +1459,7 @@ function refresh(passive) {
 
 /* ---------------- actions ---------------- */
 var ACT = {
-  close: function (el) { var d = el.closest('dialog'); if (d) { d.close(); } },
+  close: function (el) { closeDialog(el.closest('dialog')); },
   tab: function (el) {
     // Find experts always opens on the role the server listed: the first one
     // the team has not filled, unless the address asked for another.
@@ -1390,9 +1478,11 @@ var ACT = {
     $(tab === 'find' ? 'xh-tab-find' : (tab === 'evaluations' ? 'xh-tab-eval' : 'xh-tab-book')).focus();
   },
   slot: function (el, e) {
+    // A time opens its booking straight away; there is no second button to find.
     if (el.classList.contains('xh-tslot')) {
       S.slotId = Number(el.dataset.id);
       renderBook();
+      openBookConfirm();
       return;
     }
     // On the booking tab a card picks who to book, without leaving the page.
@@ -1415,24 +1505,56 @@ var ACT = {
   },
   list: function (el) { S.listTab = el.dataset.list; S.showAll = false; renderSessions(); },
   'show-all': function () { S.showAll = !S.showAll; renderSessions(); },
-  'book-open': function () { if (S.date && S.slotId) { openBookConfirm(); } },
+  // Meet first: pick one of the expert's open times, then book it.
+  'meet-pick': function (el) {
+    $('xh-meet').querySelectorAll('[data-xh="meet-pick"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b === el)); });
+    $('xh-meet').querySelector('[data-xh="meet-book"]').disabled = false;
+  },
+  'meet-book': function (el) {
+    var pick = $('xh-meet').querySelector('[data-xh="meet-pick"][aria-pressed="true"]');
+    if (!pick) { return; }
+    busy(el, 'Booking…');
+    send(D.urls.book, 'POST', { schedule_id: Number(pick.dataset.schedule), session_date: pick.dataset.date }).then(function (data) {
+      if (!data.success) { idle(el); toast(data.message || 'That time could not be booked. Pick another.', 'error'); return; }
+      toast('Booked. It shows in both schedules.', 'success');
+      setTimeout(function () { window.location.reload(); }, 900);
+    }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
+  },
+  topic: function (el) {
+    var t = el.dataset.topic;
+    var on = S.topics.indexOf(t) === -1;
+    S.topics = on ? S.topics.concat(t) : S.topics.filter(function (x) { return x !== t; });
+    el.setAttribute('aria-pressed', String(on));
+    el.classList.toggle('is-on', on);
+    $('xh-book-send').disabled = S.topics.length === 0;
+    if (S.topics.length) { $('xh-f-topics').classList.remove('is-bad'); }
+  },
   'book-send': function (el) {
     var ex = expertFor(S.role);
+    var choices = ex && !ex.topic_fixed ? (ex.topic_choices || []) : [];
+    if (choices.length && !S.topics.length) { $('xh-f-topics').classList.add('is-bad'); return; }
+    var topics = ex && ex.topic_fixed ? [ex.topic_fixed] : S.topics;
+    var about = choices.filter(function (t) { return topics.indexOf(t) !== -1; }).concat(ex && ex.topic_fixed ? [ex.topic_fixed] : [])
+      .map(function (t) { return TOPICS[t].label; }).join(', ');
+    var s = slots.filter(function (x) { return x.schedule_id === S.slotId; })[0];
+    var when = shortDate(S.date) + (s ? ' · ' + fmtT(s.start_time) : '');
     busy(el, 'Booking…');
-    send(D.urls.book, 'POST', { schedule_id: S.slotId, session_date: S.date }).then(function (data) {
-      ACT.close(el);
+    send(D.urls.book, 'POST', { schedule_id: S.slotId, session_date: S.date, topics: topics, note: $('xh-book-note').value.trim() }).then(function (data) {
       if (data.success) {
-        toast('Booked ' + shortDate(S.date) + ' with ' + (ex ? ex.name : 'your expert') + '.', 'success');
         S.date = null; S.slotId = null; S.listTab = 'upcoming';
+        ACT.close(el);
+        toast('Booked ' + when + ' with ' + (ex ? ex.name : 'your ' + S.role) + (about ? ', about ' + about : '') + '.', 'success');
       } else {
-        toast(data.message || 'That time could not be booked. Pick another.', 'error');
         S.slotId = null;
+        ACT.close(el);
+        toast(data.message || 'That time could not be booked. Pick another.', 'error');
       }
       refresh(false);
     }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
   },
   session: function (el) { openSession(el.dataset.id); },
-  'cancel-open': function (el) { openCancel(el.dataset.id); },
+  'cancel-open': function (el) { closeDialog(el.closest('dialog')); openCancel(el.dataset.id); },
+  'cancel-back': function (el) { closeDialog(el.closest('dialog')); openSession(el.dataset.id); },
   'cancel-send': function (el) {
     var reason = $('xh-cancel-reason').value.trim();
     if (!reason) { $('xh-f-cancel').classList.add('is-bad'); $('xh-cancel-reason').focus(); return; }
@@ -1450,10 +1572,9 @@ var ACT = {
     }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
   },
   // Swapping between a profile and its comments replaces the window rather than stacking one on another.
-  profile: function (el) { var d = el.closest('dialog'); if (d) { d.close(); } openProfile(el.dataset.id); },
+  profile: function (el) { closeDialog(el.closest('dialog')); openProfile(el.dataset.id); },
   apply: function (el) {
-    var d = el.closest('dialog');
-    if (d) { d.close(); }
+    closeDialog(el.closest('dialog'));
     S.draft = null;
     openApply(el.dataset.id, null);
   },
@@ -1467,13 +1588,13 @@ var ACT = {
     if (!picked) { ok = false; }
     var n = words(msg);
     if (n === 0 || n > 500) {
-      $('xh-msg-err').textContent = n === 0 ? 'Write a short message to the expert.' : 'Keep it to 500 words or fewer.';
+      $('xh-msg-err').textContent = n === 0 ? 'Write a short message to ' + EXPERTS[$('xh-apply-msg').closest('[data-expert]').dataset.expert].name + '.' : 'Keep it to 500 words or fewer.';
       $('xh-f-msg').classList.add('is-bad');
       ok = false;
     }
     if (!ok) { return; }
     S.draft = { expertId: body.dataset.expert, roleId: picked.value, roleName: picked.dataset.name, message: msg };
-    dlg.close();
+    closeDialog(dlg);
     openReview(S.draft);
   },
   'apply-edit': function (el) { ACT.close(el); openApply(S.draft.expertId, S.draft); },
@@ -1587,7 +1708,9 @@ document.addEventListener('click', function (e) {
 
 document.addEventListener('input', function (e) {
   var t = e.target;
-  if (t.id === 'xh-apply-msg') {
+  if (t.id === 'xh-book-note') {
+    $('xh-note-count').textContent = t.value.length;
+  } else if (t.id === 'xh-apply-msg') {
     var n = words(t.value);
     $('xh-msg-count').textContent = n;
     if (n > 0 && n <= 500) { $('xh-f-msg').classList.remove('is-bad'); }
@@ -1626,7 +1749,7 @@ document.addEventListener('input', function (e) {
 document.addEventListener('change', function (e) {
   if (e.target.classList && e.target.classList.contains('xh-file-input')) { syncFilePicker(e.target); }
   if (e.target.id === 'xh-change-to' || e.target.id === 'xh-change-file') { $('xh-change-send').disabled = !changeReady(); }
-  if (e.target.name === 'xh-apply-role') { $('xh-f-role').classList.remove('is-bad'); }
+  if (e.target.name === 'xh-apply-role') { $('xh-f-role').classList.remove('is-bad'); $('xh-msg-to').textContent = 'Message to your ' + e.target.dataset.name; }
 });
 document.querySelector('.xh-seg').addEventListener('keydown', function (e) {
   if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
@@ -1692,7 +1815,7 @@ document.addEventListener('submit', function (e) {
     + '<div class="xh-ev-sum-who"><b>' + esc(form.dataset.expert) + '</b><span>' + esc(form.dataset.role) + '</span></div>'
     + '<div class="xh-ev-sum-score"><span class="xh-stars" role="img" aria-label="' + avg + ' out of 5">' + stars + '</span><b>' + avg + '</b><small>/ 5</small></div>'
     + '</div><p class="xh-note">' + picks.length + ' ' + (picks.length === 1 ? 'answer' : 'answers') + '. Once sent it cannot be changed. Your CaPSA and the expert see the answers, never that they came from you.</p></div>'
-    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Review answers</button><button type="button" class="xh-btn xh-gold" data-ev-send>Send evaluation</button></div>');
+    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Review answers</button><button type="button" class="xh-btn xh-gold" data-ev-send>Send evaluation</button></div>', 'ask');
   d.querySelector('[data-ev-send]').addEventListener('click', function () {
     busy(this, 'Sending…');
     var btn = form.querySelector('[type="submit"]');

@@ -136,6 +136,13 @@
   .feed-post-text{font-size:12.5px;color:var(--text2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:0}
   .feed-post-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
   .feed-post-tags .expert-tag{display:inline-block;background:var(--bg3);color:var(--text2);font-size:10px;padding:3px 9px;border-radius:7px;border:1px solid var(--border);font-weight:600}
+  .feed-post-skills{font-size:11.5px;color:var(--text2);line-height:1.5}
+  .feed-post-skills b{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-right:6px}
+  .feed-filters{display:flex;gap:8px;flex-wrap:wrap}
+  .skill-pick{max-height:200px;overflow:auto;display:grid;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);margin-bottom:25px}
+  .skill-pick-group b{display:block;font-size:11px;color:var(--text3);margin-bottom:4px}
+  .skill-pick-group div{display:flex;flex-wrap:wrap;gap:4px 14px}
+  .skill-pick label{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--text);cursor:pointer}
   .feed-empty{grid-column:1 / -1;text-align:center;padding:36px;color:var(--text3);font-size:13px;border:1px dashed var(--border2);border-radius:12px}
   .goal-lead{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#16a34a}
   .goal-member{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#3b82f6}
@@ -946,6 +953,9 @@
                   @endforeach
                 </div>
               @endif
+              @if($myRecruitment->skills)
+                <div class="feed-post-skills"><b>Skills</b>{{ implode(', ', $myRecruitment->skills) }}</div>
+              @endif
             </div>
           </div>
         </div>
@@ -957,12 +967,26 @@
           <span class="feed-title">Posts</span>
           <span class="feed-count" id="feed-count"></span>
         </div>
-        <div class="feed-filter">
-          <select class="feed-filter-select" id="feed-filter" onchange="filterFeed()">
-            <option value="all">All Posts</option>
-            <option value="build_a_team">Find Member</option>
-            <option value="find_a_team">Find Team</option>
-          </select>
+        <div class="feed-filters">
+          <div class="feed-filter">
+            <select class="feed-filter-select" id="feed-filter" onchange="filterFeed()">
+              <option value="all">All Posts</option>
+              <option value="build_a_team">Find Member</option>
+              <option value="find_a_team">Find Team</option>
+            </select>
+          </div>
+          {{-- Only skills some post on the feed actually names, in catalogue order. --}}
+          @php $feedSkills = collect(\App\Support\SkillCatalog::allSkills())->intersect($otherRecruitments->pluck('skills')->flatten()); @endphp
+          @if($feedSkills->isNotEmpty())
+            <div class="feed-filter">
+              <select class="feed-filter-select" id="feed-skill-filter" onchange="filterFeed()" aria-label="Filter by skill">
+                <option value="">Any skill</option>
+                @foreach($feedSkills as $skill)
+                  <option value="{{ $skill }}">{{ $skill }}</option>
+                @endforeach
+              </select>
+            </div>
+          @endif
         </div>
       </div>
 
@@ -978,7 +1002,7 @@
                 ? ($recruit->looking_for ?? '')
                 : ($recruit->introduction ?? $recruit->looking_for ?? '');
             @endphp
-            <div class="feed-post-card" data-goal="{{ $recruit->recruitment_goal }}" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->tagLabels()) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $recruitIsLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}", "{{ addslashes($recruit->introduction ?? '') }}")'>
+            <div class="feed-post-card" data-goal="{{ $recruit->recruitment_goal }}" data-skills="{{ implode('|', $recruit->skills ?? []) }}" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->tagLabels()) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $recruitIsLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}", "{{ addslashes($recruit->introduction ?? '') }}")'>
               <div class="feed-post-top">
                 <div class="avatar-ring {{ $ringClass }}">
                   @if ($recruit->student->avatarUrl())
@@ -1002,6 +1026,9 @@
                     <span class="expert-tag">{{ $label }}</span>
                   @endforeach
                 </div>
+              @endif
+              @if($recruit->skills)
+                <div class="feed-post-skills"><b>Skills</b>{{ implode(', ', $recruit->skills) }}</div>
               @endif
             </div>
           @endforeach
@@ -1280,6 +1307,22 @@
         </div>
         <div class="tag-suggestions-box" id="tag-suggestions" style="display: none;"></div>
       </div>
+      {{-- The same catalogue experts pick from on their profile, narrowed to
+           the student's programme; grammar is the grammarian's, not a member's. --}}
+      <label id="skills-label" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Skills we need</label>
+      <p style="margin:-2px 0 8px;font-size:11px;color:var(--text3);line-height:1.5">Optional. The same list experts pick from on their profile.</p>
+      <div class="skill-pick" id="skill-pick">
+        @foreach(collect(\App\Support\SkillCatalog::groupsForPrograms(array_filter([auth()->user()->program])))->except('Language & Editing (Grammarian)') as $group => $items)
+          <div class="skill-pick-group">
+            <b>{{ \Illuminate\Support\Str::before($group, ' (') }}</b>
+            <div>
+              @foreach($items as $skill)
+                <label><input type="checkbox" value="{{ $skill }}"> {{ $skill }}</label>
+              @endforeach
+            </div>
+          </div>
+        @endforeach
+      </div>
       <div class="modal-actions modal-actions--dual" style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
         <form method="POST" action="{{ route('recruitment.store') }}" style="width:100%;" id="recruitment-form" onsubmit="publishPost(event)">
           @csrf
@@ -1293,6 +1336,7 @@
                read from the setting. --}}
           <input type="hidden" name="member_count" id="member-count-input" value="{{ $memberCount }}">
           <input type="hidden" name="tags" id="tags-hidden-input" value="">
+          <input type="hidden" name="skills" id="skills-hidden-input" value="[]">
           <button type="submit" class="btn-primary" style="width: 100%; background: var(--blue-bg); color: var(--blue); border: 1.5px solid rgba(29,78,216,0.25); box-shadow: none;" id="form-submit-btn">Publish Post</button>
         </form>
         <button class="google-btn" style="width:100%;border:none;background:transparent;color:var(--text);" onclick="closePostModal()">Cancel</button>
@@ -1811,7 +1855,7 @@ function pickRole(roleId, btn) {
     <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.08);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
       <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
-    <h3 style="font-size:17px;font-weight:700;color:#1e2128;margin:0 0 6px;letter-spacing:-0.3px;">Expert No Longer Available</h3>
+    <h3 style="font-size:17px;font-weight:700;color:#1e2128;margin:0 0 6px;letter-spacing:-0.3px;">No longer with your team</h3>
     <div id="expertRemovedContent" style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 8px;text-align:left;max-height:200px;overflow-y:auto;padding:0 4px;">
       @foreach($expertRemovedNotifications as $notif)
         <div class="expert-removed-item" style="padding:12px 0;@if(!$loop->last)border-bottom:1px solid #f3f4f6;@endif">
@@ -2806,6 +2850,7 @@ function openEditModal() {
 
     activeTags = @json($myRecruitment->tagKeyList());
     renderActiveTags();
+    setPickedSkills(@json($myRecruitment->skills ?? []));
 
     syncRecruitmentSelectLabels();
     document.getElementById('postModal').classList.add('active');
@@ -2828,8 +2873,17 @@ function resetPostModal() {
     document.getElementById('individual-intro').value = '';
     activeTags = [];
     renderActiveTags();
+    setPickedSkills([]);
     document.getElementById('post-goal').value = 'leader';
     updateModalUI();
+}
+
+function pickedSkills() {
+    return Array.from(document.querySelectorAll('#skill-pick input:checked')).map(function (el) { return el.value; });
+}
+
+function setPickedSkills(skills) {
+    document.querySelectorAll('#skill-pick input').forEach(function (el) { el.checked = skills.indexOf(el.value) !== -1; });
 }
 
 function openPostModal() {
@@ -3048,6 +3102,7 @@ function updateModalUI() {
         submitBtn.style.cursor = closedMsg ? 'not-allowed' : 'pointer';
     }
 
+    document.getElementById('skills-label').textContent = isLeader ? 'Skills we need' : 'Skills you have';
     document.getElementById('leader-fields').style.display = isLeader && !closedMsg ? 'block' : 'none';
     document.getElementById('individual-fields').style.display = !isLeader && !closedMsg ? 'block' : 'none';
     document.getElementById('recruitment-goal-input').value = isLeader ? 'build_a_team' : 'find_a_team';
@@ -3144,13 +3199,16 @@ function showToast(msg, type) {
 
 function filterFeed() {
     var value = document.getElementById('feed-filter').value;
+    var skillFilter = document.getElementById('feed-skill-filter');
+    var skill = skillFilter ? skillFilter.value : '';
     var cards = document.querySelectorAll('#recruitment-feed .feed-post-card');
     var empty = document.getElementById('feed-filter-empty');
     var visible = 0;
 
     cards.forEach(function(card) {
         var goal = card.getAttribute('data-goal');
-        var show = value === 'all' || goal === value;
+        var show = (value === 'all' || goal === value)
+            && (!skill || (card.getAttribute('data-skills') || '').split('|').indexOf(skill) !== -1);
         card.style.display = show ? '' : 'none';
         if (show) visible++;
     });
@@ -3160,7 +3218,7 @@ function filterFeed() {
 
     if (empty) {
         empty.style.display = visible === 0 ? 'block' : 'none';
-        if (visible === 0 && value !== 'all') {
+        if (visible === 0 && (value !== 'all' || skill)) {
             empty.textContent = 'No posts match this filter.';
         }
     }
@@ -3211,6 +3269,7 @@ function publishPost(event) {
     }
     document.getElementById('member-count-input').value = {{ $memberCount }};
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
+    document.getElementById('skills-hidden-input').value = JSON.stringify(pickedSkills());
 
     if (isEditing) {
         event.preventDefault();

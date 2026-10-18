@@ -46,10 +46,10 @@
     <div id="evp-icon" aria-hidden="true">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </div>
-    <div id="evp-title">Time to evaluate your experts</div>
+    <div id="evp-title">Time to evaluate your {{ \App\Support\ExpertEvaluations::whom($evaluationsOwed) }}</div>
     <div id="evp-sub">
       Your team passed {{ $owedPhases->pluck('name')->implode(' and ') }}.
-      As team leader, answer your CaPSA's short evaluation of each expert, 1 to 5 stars per question. It is anonymous. <b>The next phase stays locked until you do.</b>
+      As team leader, answer your CaPSA's short evaluation of each one, 1 to 5 stars per question. It is anonymous. <b>The next phase stays locked until you do.</b>
     </div>
     <ul id="evp-list">
       @foreach($owedPhases->take(3) as $phase)

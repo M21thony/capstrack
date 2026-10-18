@@ -26,15 +26,7 @@
     <x-portal-icon name="consultation" />
     Schedule Management
     @if (isset($unseenScheduleCount) && $unseenScheduleCount > 0)
-      <span class="nav-badge red">{{ $unseenScheduleCount > 99 ? '99+' : $unseenScheduleCount }}</span>
-    @endif
-  </a>
-  <div class="nav-section">Documents</div>
-  <a href="{{ route('instructor.docreview') }}" class="nav-item {{ (isset($currentPage) && $currentPage === 'docreview') ? 'active' : '' }}">
-    <x-portal-icon name="file-review" />
-    Document Review
-    @if (isset($unseenDocReviewCount) && $unseenDocReviewCount > 0)
-      <span class="nav-badge red">{{ $unseenDocReviewCount > 99 ? '99+' : $unseenDocReviewCount }}</span>
+      <span class="nav-badge red" title="{{ $unseenScheduleCount }} cancel {{ Str::plural('request', $unseenScheduleCount) }}">{{ $unseenScheduleCount > 99 ? '99+' : $unseenScheduleCount }}</span>
     @endif
   </a>
   <div class="nav-section">Feedback</div>

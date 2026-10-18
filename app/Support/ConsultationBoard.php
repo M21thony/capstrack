@@ -101,6 +101,9 @@ class ConsultationBoard
                         'is_adviser' => $roles->contains('adviser'),
                         // Their most senior role, which is where they sit.
                         'role_rank' => $rankOf($roles->first()),
+                        // What a team can bring them; a grammarian's is set.
+                        'topic_choices' => ConsultationTopics::choicesFor($roles->all()),
+                        'topic_fixed' => ConsultationTopics::fixedFor($roles->all()),
                     ];
                 })
                 ->sortBy([
@@ -130,7 +133,7 @@ class ConsultationBoard
         // keeps theirs.
         $myBookings = ConsultationBooking::forTeam($teamId)
             ->whereIn('booking_status', ['scheduled', 'done'])
-            ->with(['schedule.expert', 'team'])
+            ->with(['schedule.expert', 'team', 'student'])
             ->get();
 
         $today = now()->startOfDay();
@@ -178,7 +181,7 @@ class ConsultationBoard
     /**
      * One booking as the page draws it.
      *
-     * @return array{booking_id: int, expert_id: int|null, expert_name: string, slot_type: string, session_date: string|null, available_date: string|null, start_time: string|null, end_time: string|null, team_name: string, cancel_requested: bool}
+     * @return array{booking_id: int, expert_id: int|null, expert_name: string, slot_type: string, session_date: string|null, available_date: string|null, start_time: string|null, end_time: string|null, team_name: string, cancel_requested: bool, topics: string, note: string|null, booked_by: string, booked_on: string|null}
      */
     public function cardData(ConsultationBooking $booking): array
     {
@@ -193,7 +196,57 @@ class ConsultationBoard
             'end_time' => $booking->schedule?->end_time,
             'team_name' => $booking->team->team_name ?? 'N/A',
             'cancel_requested' => $booking->cancellation_requested_at !== null,
+            'topics' => $booking->topicsLabel(),
+            'note' => $booking->note,
+            'booked_by' => trim(($booking->student?->f_name ?? '').' '.($booking->student?->l_name ?? '')),
+            'booked_on' => $booking->created_at?->format('M j'),
         ];
+    }
+
+    /**
+     * The next times a team can book with an expert who asked to meet first:
+     * each occurrence of their open slots over the coming days, minus the ones
+     * booking would refuse - ended, full, outside when they take bookings, or
+     * on a day they already have their most.
+     *
+     * @return list<array{schedule_id: int, date: string, label: string}>
+     */
+    public function openTimes(int $expertId, int $days = 14, int $max = 6): array
+    {
+        $slots = ConsultationSchedule::where('expert_id', $expertId)->where('is_available', true)->orderBy('start_time')->get();
+        if ($slots->isEmpty()) {
+            return [];
+        }
+
+        $full = $this->fullOccurrences($slots);
+        $availability = ConsultationAvailability::where('expert_id', $expertId)->first();
+        $perDay = ConsultationBooking::where('booking_status', 'scheduled')
+            ->whereHas('schedule', fn ($q) => $q->where('expert_id', $expertId))
+            ->get()
+            ->countBy(fn ($b) => $b->session_date?->format('Y-m-d'));
+
+        $times = [];
+        for ($i = 0; $i <= $days && count($times) < $max; $i++) {
+            $date = now()->addDays($i)->toDateString();
+            if ($availability?->max_per_day && ($perDay[$date] ?? 0) >= $availability->max_per_day) {
+                continue;
+            }
+            foreach ($slots as $slot) {
+                if (count($times) < $max
+                    && $slot->isValidOccurrenceDate($date)
+                    && ! now()->gt($date.' '.($slot->end_time ?: '23:59:59'))
+                    && ! in_array($slot->schedule_id.'|'.$date, $full, true)
+                    && (! $availability || $availability->allows($date, (string) $slot->start_time))) {
+                    $times[] = [
+                        'schedule_id' => (int) $slot->schedule_id,
+                        'date' => $date,
+                        'label' => \App\Models\TeamExpertAssignment::timeLabel($date, $slot->start_time),
+                    ];
+                }
+            }
+        }
+
+        return $times;
     }
 
     /**

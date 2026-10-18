@@ -184,7 +184,7 @@ class GradingSheetWorkbook
         $this->signature($ws, $row, $midStart, $midEnd, $sheet['signatures']['Panel Chair'] ?? '', 'Panel Chairman');
         $row += 3;
 
-        $ws->setCellValue('A'.$row, 'Paper copy for when CapsTrack cannot be reached. Enter these scores, the remarks and the verdict in CapsTrack (Team Grading) once it is back. '.$sheet['reference'].' · '.$sheet['panelist'].', '.$sheet['role'].'.');
+        $ws->setCellValue('A'.$row, $sheet['note']);
         $ws->mergeCells("A{$row}:{$scoreCol}{$row}");
         $ws->getStyle('A'.$row)->getFont()->setSize(7.5)->getColor()->setRGB('555555');
 

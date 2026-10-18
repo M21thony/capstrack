@@ -3,15 +3,21 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\DefenseSchedule;
+use App\Models\GradingRubric;
 use App\Models\Resource;
 use App\Models\Student;
 use App\Support\GradingSheet;
+use App\Support\GradingSheetWorkbook;
 use App\Support\StudentResources;
+use App\Support\StudentTeam;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ResourceController extends Controller
 {
@@ -132,20 +138,62 @@ class ResourceController extends Controller
 
         abort_unless($row, 404);
 
-        $dompdf = Pdf::loadView('instructor.pdf.grading-sheet', ['sheet' => $sheets->blank($row['rubric'], $row['stage'])])
+        $disposition = $request->boolean('view') ? 'inline' : 'attachment';
+
+        return response(self::pdf($sheets->blank($row['rubric'], $row['stage'])), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => $disposition.'; filename="'.$row['stage'].' Rubric.pdf"',
+        ]);
+    }
+
+    /**
+     * The team's rating sheet for one of its defenses, filled in - title,
+     * date, team and the panel's names - for the team to print, one for each
+     * panelist, and bring to the defense. If CapsTrack cannot be reached
+     * there, the panel grades on paper and enters the scores later.
+     */
+    public function sheet(DefenseSchedule $defense, string $format, GradingSheet $sheets): Response|StreamedResponse
+    {
+        /** @var Student $student */
+        $student = auth()->user();
+
+        $teamId = StudentTeam::idFor($student);
+
+        abort_unless($teamId && (int) $defense->team_id === $teamId, 404);
+
+        $rubric = GradingRubric::forStage($defense->defense_type, $defense->team?->program());
+
+        abort_unless($rubric, 404);
+
+        $sheet = $sheets->for($defense, $rubric);
+
+        if ($format === 'xlsx') {
+            $book = (new GradingSheetWorkbook)->build($sheet);
+
+            return response()->streamDownload(fn () => (new Xlsx($book))->save('php://output'), GradingSheet::fileName($sheet, 'xlsx'), [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
+        }
+
+        return response(self::pdf($sheet), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.GradingSheet::fileName($sheet, 'pdf').'"',
+        ]);
+    }
+
+    /** The department's rubric form as a PDF: letter, landscape, "Page 1 of 2" centred at the foot. */
+    private static function pdf(array $sheet): string
+    {
+        $dompdf = Pdf::loadView('instructor.pdf.grading-sheet', ['sheet' => $sheet])
             ->setPaper('letter', 'landscape')
             ->getDomPDF();
         $dompdf->render();
 
+        // CSS cannot count the pages in DomPDF, so they are written on once they exist.
         $canvas = $dompdf->getCanvas();
         $canvas->page_text($canvas->get_width() / 2 - 24, $canvas->get_height() - 36, 'Page {PAGE_NUM} of {PAGE_COUNT}', $dompdf->getFontMetrics()->getFont('Times-Roman'), 10);
 
-        $disposition = $request->boolean('view') ? 'inline' : 'attachment';
-
-        return response($dompdf->output(), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => $disposition.'; filename="'.$row['stage'].' Rubric.pdf"',
-        ]);
+        return $dompdf->output();
     }
 
     /** The category's key: the CaPSA's choice, or an older free-text one made into one. */

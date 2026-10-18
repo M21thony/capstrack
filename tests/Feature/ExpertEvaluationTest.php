@@ -453,7 +453,7 @@ class ExpertEvaluationTest extends TestCase
 
         $bell = Notification::where('student_id', $this->leader->student_id)->where('type', 'evaluation_due')->get();
         $this->assertCount(1, $bell);
-        $this->assertSame('Evaluate your experts: Pre-proposal Defense', $bell->first()->title);
+        $this->assertSame('Evaluate your adviser, consultant and grammarian: Pre-proposal Defense', $bell->first()->title);
         $this->assertStringContainsString('anonymous', $bell->first()->message);
         $this->assertStringContainsString('tab=evaluations', $bell->first()->link);
         Mail::assertQueued(NotificationMail::class, fn ($mail) => $mail->hasTo($this->leader->email));
@@ -493,7 +493,7 @@ class ExpertEvaluationTest extends TestCase
 
         $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
             ->assertOk()
-            ->assertSee('Time to evaluate your experts');
+            ->assertSee('Time to evaluate your adviser, consultant and grammarian');
 
         $this->assertSame(1, $counting->dueCalls);
         $this->assertSame(1, Notification::where('student_id', $this->leader->student_id)->where('type', 'evaluation_due')->count());
@@ -521,7 +521,7 @@ class ExpertEvaluationTest extends TestCase
 
         $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
             ->assertOk()
-            ->assertSee('Time to evaluate your experts')
+            ->assertSee('Time to evaluate your adviser, consultant and grammarian')
             ->assertSee('Your team passed Pre-proposal Defense.')
             ->assertSee('Evaluate now');
 
@@ -529,7 +529,7 @@ class ExpertEvaluationTest extends TestCase
 
         $this->actingAs($this->leader, 'web')->get(route('student.dashboard'))
             ->assertOk()
-            ->assertDontSee('Time to evaluate your experts');
+            ->assertDontSee('Time to evaluate your adviser, consultant and grammarian');
     }
 
     /**
@@ -549,8 +549,8 @@ class ExpertEvaluationTest extends TestCase
             ->assertOk()
             ->assertSee('data-todo="evaluation"', false)
             ->assertSee('To do · stays here until you send it')
-            ->assertSee('Evaluate your experts: Pre-proposal Defense')
-            ->assertSee('3 experts are waiting')
+            ->assertSee('Evaluate your adviser, consultant and grammarian: Pre-proposal Defense')
+            ->assertSee('3 waiting')
             ->assertSee('<div class="notif-dot">1</div>', false)
             ->assertSee('It stays at the top of your notifications until it is done.');
 
@@ -599,7 +599,7 @@ class ExpertEvaluationTest extends TestCase
 
         $this->actingAs($member, 'web')->get(route('student.dashboard'))
             ->assertOk()
-            ->assertDontSee('Time to evaluate your experts');
+            ->assertDontSee('Time to evaluate your adviser, consultant and grammarian');
 
         $this->artisan('evaluations:send-reminders');
         $this->assertSame(0, Notification::where('student_id', $member->student_id)->where('type', 'evaluation_due')->count());
@@ -626,7 +626,7 @@ class ExpertEvaluationTest extends TestCase
             ->assertSee('Sent evaluations')
             ->assertSee('4.5 out of 5', false)
             // the popup stays out of the way on the tab it points to
-            ->assertDontSee('Time to evaluate your experts');
+            ->assertDontSee('Time to evaluate your adviser, consultant and grammarian');
     }
 
     public function test_a_member_reads_the_tab_but_has_no_forms(): void
@@ -731,12 +731,12 @@ class ExpertEvaluationTest extends TestCase
 
         $this->actingAs($this->leader, 'web')->get(route('student.progress'))
             ->assertOk()
-            ->assertSee('Evaluate your experts to unlock the next phase')
+            ->assertSee('Evaluate your adviser, consultant and grammarian to unlock the next phase')
             ->assertSee('your anonymous evaluation for Pre-proposal Defense')
             ->assertSee('Opens after the expert evaluation for Pre-proposal Defense.');
 
         $this->actingAs($this->member(), 'web')->get(route('student.progress'))
             ->assertOk()
-            ->assertSee('Waiting on your leader to evaluate the experts');
+            ->assertSee('Waiting on your leader to evaluate your adviser, consultant and grammarian');
     }
 }

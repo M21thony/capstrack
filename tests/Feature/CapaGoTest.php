@@ -179,7 +179,7 @@ class CapaGoTest extends TestCase
         $this->assertSame('redefense', $row['tries'][0]['kind']);
     }
 
-    /** Cancelled on the day for open requirements: the date stays on record, and the team waits for a new one. */
+    /** An older automatic cancel on the day: the date stays on record, and the team waits for a new one. */
     public function test_a_defense_cancelled_on_the_day_waits_for_a_new_date(): void
     {
         $defense = $this->defense();

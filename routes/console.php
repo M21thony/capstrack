@@ -13,10 +13,6 @@ Artisan::command('inspire', function () {
 // booked session, not near/at the session's own start time.
 Schedule::command('consultations:send-reminders')->dailyAt('00:05');
 
-// On the defense day, a team whose requirements are still open loses its
-// date and waits under Ready to schedule for a new one.
-Schedule::command('defenses:cancel-unready')->dailyAt('00:10');
-
 // Every morning, each adviser/consultant with checklist documents still
 // waiting on their review gets one email listing them.
 Schedule::command('milestones:send-review-reminders')->dailyAt('07:00');

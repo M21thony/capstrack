@@ -21,6 +21,13 @@ class PanelGrade extends Model
      */
     public const ABSTAINED = 'abstained';
 
+    /**
+     * How a grade typed in off the panel's paper sheets begins its remarks:
+     * "Entered from paper by Rosa Villanueva (Panel Chair)." The panelist's
+     * own save replaces the remarks, and with them the mark.
+     */
+    public const FROM_PAPER = 'Entered from paper by ';
+
     protected $fillable = [
         'defense_id',
         'expert_id',
@@ -49,6 +56,12 @@ class PanelGrade extends Model
     public function isAbstained(): bool
     {
         return $this->status === self::ABSTAINED;
+    }
+
+    /** Typed in off the paper sheets by whoever records the decision, not by this panelist. */
+    public function isFromPaper(): bool
+    {
+        return str_starts_with((string) $this->remarks, self::FROM_PAPER);
     }
 
     /** Another panelist grades for this one: the row is a copy of theirs. */

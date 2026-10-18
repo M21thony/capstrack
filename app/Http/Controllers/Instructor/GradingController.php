@@ -12,17 +12,11 @@ use App\Models\Team;
 use App\Services\DefenseOutcomeRecorder;
 use App\Services\SharedGrading;
 use App\Support\DefenseOutcome;
-use App\Support\GradingSheet;
-use App\Support\GradingSheetWorkbook;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GradingController extends Controller
 {
@@ -244,6 +238,8 @@ class GradingController extends Controller
             ->map(fn ($id) => (int) $id)
             ->all();
 
+        $canRecord = $this->shared->canRecordOutcome($defense, (int) $expert->expert_id);
+
         return view('instructor.grading-show', [
             'defense' => $defense,
             'rubric' => $rubric,
@@ -254,7 +250,9 @@ class GradingController extends Controller
             // each panelist and tallied. Everyone else just scores.
             'isChair' => $panel->panel_role === 'Panel Chair',
             // The chair records the decision - or whoever grades for the chair.
-            'canRecord' => $this->shared->canRecordOutcome($defense, (int) $expert->expert_id),
+            'canRecord' => $canRecord,
+            // The paper sheets' totals, typed in by whoever records the decision.
+            'paperSeats' => $canRecord && ! $defense->hasOutcome() ? $this->paperSeats($defense) : collect(),
             'who' => $who,
             // Who this panelist grades for, when they grade for the panel.
             'gradingFor' => $who['grader'] === (int) $expert->expert_id
@@ -269,52 +267,6 @@ class GradingController extends Controller
                 ->map(fn (DefensePanel $p) => (int) $p->expert_id === (int) $expert->expert_id ? 'you' : ($p->expert?->name ?? $p->panel_role))
                 ->values()
                 ->all(),
-        ]);
-    }
-
-    /**
-     * GET /grading/{defense}/sheet.pdf|xlsx - this panelist's rating sheet to
-     * print, for a defense the system cannot reach: no signal, or no power.
-     * The panel grades on paper and types the scores in here afterwards.
-     */
-    public function sheet(DefenseSchedule $defense, string $format, GradingSheet $sheets): Response|StreamedResponse|RedirectResponse
-    {
-        $panel = $this->panelFor($defense);
-        $rubric = $this->rubricFor($defense);
-
-        if (! $rubric) {
-            return redirect()->route('instructor.grading')->with(
-                'error',
-                "No active rubric is configured for \"{$defense->defense_type}\" yet, so there is no sheet to print."
-            );
-        }
-
-        /** @var CapstoneExpert $expert */
-        $expert = auth()->guard('expert')->user();
-        $sheet = $sheets->for($defense, $rubric, $expert, $panel);
-
-        if ($format === 'xlsx') {
-            $book = (new GradingSheetWorkbook)->build($sheet);
-
-            return response()->streamDownload(fn () => (new Xlsx($book))->save('php://output'), GradingSheet::fileName($sheet, 'xlsx'), [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ]);
-        }
-
-        // Landscape, as the department's own rubric form is.
-        $dompdf = Pdf::loadView('instructor.pdf.grading-sheet', ['sheet' => $sheet])
-            ->setPaper('letter', 'landscape')
-            ->getDomPDF();
-        $dompdf->render();
-
-        // "Page 1 of 2", centred, as the form's footer has it. CSS cannot
-        // count the pages in DomPDF, so it is written on once they exist.
-        $canvas = $dompdf->getCanvas();
-        $canvas->page_text($canvas->get_width() / 2 - 24, $canvas->get_height() - 36, 'Page {PAGE_NUM} of {PAGE_COUNT}', $dompdf->getFontMetrics()->getFont('Times-Roman'), 10);
-
-        return response($dompdf->output(), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.GradingSheet::fileName($sheet, 'pdf').'"',
         ]);
     }
 
@@ -625,6 +577,123 @@ class GradingController extends Controller
                 'redefense_attempt' => $result['redefense']?->attempt,
             ],
         ]);
+    }
+
+    /**
+     * POST /grading/{defense}/paper - the panel graded on paper: whoever
+     * records the decision types each panelist's total off their sheet.
+     *
+     * A seat its panelist already turned in is left alone. Every other seat
+     * is saved as submitted, marked "Entered from paper by ..." so the
+     * panelist sees who typed it and can still replace it with their own
+     * until the decision is recorded. The decision is optional here.
+     */
+    public function paper(Request $request, DefenseSchedule $defense, DefenseOutcomeRecorder $recorder): JsonResponse
+    {
+        $panel = $this->panelFor($defense);
+
+        /** @var CapstoneExpert $by */
+        $by = auth()->guard('expert')->user();
+
+        if (! $this->shared->canRecordOutcome($defense, (int) $by->expert_id)) {
+            return response()->json(['success' => false, 'message' => 'Only the Panel Chair enters grades from paper.'], 403);
+        }
+
+        if ($defense->hasOutcome()) {
+            return response()->json(['success' => false, 'message' => 'The panel has already recorded its decision for this defense.'], 422);
+        }
+
+        $rubric = $this->rubricFor($defense);
+
+        if (! $rubric) {
+            return response()->json(['success' => false, 'message' => 'No active rubric is configured for this defense stage.'], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'totals' => ['required', 'array'],
+            'totals.*' => ['required', 'numeric', 'min:0', 'max:'.(float) $rubric->total_points],
+            'outcome' => ['nullable', 'string'],
+        ], [
+            'totals.required' => 'Type every panelist\'s total.',
+            'totals.*.max' => 'A total cannot be more than the rubric\'s '.(float) $rubric->total_points.'.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $validated = $validator->validated();
+        $outcome = $validated['outcome'] ?? null;
+
+        if ($outcome !== null && ! DefenseOutcome::allowedForStage($defense->defense_type, $outcome)) {
+            return response()->json(['success' => false, 'message' => 'That is not a possible outcome for a '.$defense->defense_type.'.'], 422);
+        }
+
+        $open = $this->paperSeats($defense)->reject(fn ($seat) => $seat->own);
+
+        if ($open->contains(fn ($seat) => ! isset($validated['totals'][$seat->id]))) {
+            return response()->json(['success' => false, 'message' => 'Type every panelist\'s total.'], 422);
+        }
+
+        foreach ($open as $seat) {
+            PanelGrade::updateOrCreate(
+                ['defense_id' => $defense->defense_id, 'expert_id' => $seat->id],
+                [
+                    // Typed from their own sheet, so no longer a copy of anyone's.
+                    'graded_by_expert_id' => null,
+                    'joined_at' => null,
+                    'joined_set_by' => null,
+                    'rubric_id' => $rubric->rubric_id,
+                    'scores' => [],
+                    'total_score' => (float) $validated['totals'][$seat->id],
+                    'verdict' => null,
+                    'remarks' => PanelGrade::FROM_PAPER.$by->name.' ('.$panel->panel_role.').',
+                    'status' => PanelGrade::SUBMITTED,
+                    'submitted_at' => now(),
+                ]
+            );
+        }
+
+        if ($outcome === null) {
+            return response()->json(['success' => true, 'message' => 'Grades saved from paper.']);
+        }
+
+        $defense->unsetRelation('grades')->unsetRelation('panels');
+        $result = $recorder->record($defense, $outcome, $by, null);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Grades saved from paper. Outcome recorded: '.DefenseOutcome::label($outcome, $defense->defense_type).'.',
+            'data' => ['outcome' => $result['schedule']->outcome],
+        ]);
+    }
+
+    /**
+     * Each panel seat for the paper form, chair first: `own` when the
+     * panelist turned in their own grade (or abstained), which the form shows
+     * but does not overwrite.
+     */
+    private function paperSeats(DefenseSchedule $defense): \Illuminate\Support\Collection
+    {
+        $grades = $defense->grades()->get()->keyBy(fn (PanelGrade $g) => (int) $g->expert_id);
+
+        return DefensePanel::where('defense_id', $defense->defense_id)->with('expert')->get()
+            ->sortBy(fn (DefensePanel $p) => $p->panel_role === 'Panel Chair' ? '0' : '1'.$p->panel_role)
+            ->map(function (DefensePanel $p) use ($grades) {
+                $grade = $grades->get((int) $p->expert_id);
+                $own = $grade && ! $grade->isFromPaper()
+                    && in_array($grade->status, [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED], true);
+
+                return (object) [
+                    'id' => (int) $p->expert_id,
+                    'name' => $p->expert?->name ?? $p->panel_role,
+                    'role' => $p->panel_role,
+                    'own' => $own,
+                    'abstained' => (bool) $grade?->isAbstained(),
+                    'total' => $grade && ($own || $grade->isFromPaper()) && $grade->total_score !== null ? (float) $grade->total_score : null,
+                ];
+            })
+            ->values();
     }
 
     /**

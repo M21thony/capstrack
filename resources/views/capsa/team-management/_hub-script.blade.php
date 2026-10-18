@@ -60,11 +60,66 @@
       if (t.dataset.quickGo) { setQuick(t.dataset.quickGo); }
     });
 
-    hub.querySelectorAll('[data-todo-mode]').forEach(b => b.onclick = () => {
-      hub.querySelectorAll('[data-todo-mode]').forEach(x => x.setAttribute('aria-pressed', x === b));
-      document.getElementById('tm-todo-waiting').hidden = b.dataset.todoMode !== 'waiting';
-      document.getElementById('tm-todo-decided').hidden = b.dataset.todoMode !== 'decided';
+    const setTodoMode = mode => {
+      hub.querySelectorAll('[data-todo-mode]').forEach(x => x.setAttribute('aria-pressed', x.dataset.todoMode === mode));
+      document.getElementById('tm-todo-waiting').hidden = mode !== 'waiting';
+      document.getElementById('tm-done').hidden = mode !== 'decided';
+    };
+
+    /* Completed: the latest two months, one older month per click, and the
+       search looks through every month. The address keeps how many months
+       are open and Open remembers the scroll, so coming back lands on the
+       same row. */
+    const doneBox = document.getElementById('tm-done-box'), doneQ = document.getElementById('tm-done-q');
+    let doneShown = Math.max(2, Number(new URL(location.href).searchParams.get('done')) || 0);
+    const keepDone = on => {
+      const url = new URL(location.href);
+      if (on) { url.searchParams.set('done', doneShown); } else { url.searchParams.delete('done'); }
+      history.replaceState(null, '', url);
+    };
+    const applyDone = () => {
+      const months = [...document.querySelectorAll('#tm-todo-decided section[data-month]')];
+      if (!months.length) { return; }
+      const q = doneQ.value.trim().toLowerCase(), next = months[doneShown];
+      let total = 0, seen = 0;
+      months.forEach((month, i) => {
+        const rows = [...month.querySelectorAll('li[data-q]')];
+        rows.forEach(li => { li.hidden = !li.dataset.q.includes(q); });
+        const hits = rows.filter(li => !li.hidden).length;
+        month.hidden = q ? !hits : i >= doneShown;
+        total += rows.length;
+        seen += month.hidden ? 0 : hits;
+      });
+      document.getElementById('tm-done-none').hidden = !q || seen > 0;
+      document.getElementById('tm-done-more-row').hidden = !!q || !next;
+      if (next) { document.getElementById('tm-done-more').textContent = 'Show ' + next.dataset.month + ' · ' + next.dataset.n; }
+      const end = document.getElementById('tm-done-end');
+      end.hidden = !!q || !!next;
+      end.textContent = 'That’s everything since ' + months[months.length - 1].dataset.month + '.';
+      document.getElementById('tm-done-total').textContent = q ? seen + ' found' : 'Showing ' + seen + ' of ' + total + ', newest first';
+    };
+    hub.addEventListener('click', e => {
+      if (e.target.closest('#tm-done-more')) {
+        const top = doneBox.scrollTop;
+        doneShown++;
+        applyDone();
+        keepDone(true);
+        doneBox.scrollTop = top;
+      } else if (e.target.closest('[data-done-open]')) {
+        try { sessionStorage.setItem('tm-done-top', doneBox.scrollTop); } catch (err) { /* blocked storage: just no scroll back */ }
+      }
     });
+    if (doneQ) { doneQ.oninput = () => { applyDone(); doneBox.scrollTop = 0; }; }
+
+    hub.querySelectorAll('[data-todo-mode]').forEach(b => b.onclick = () => {
+      setTodoMode(b.dataset.todoMode);
+      keepDone(b.dataset.todoMode === 'decided');
+    });
+    applyDone();
+    if (new URL(location.href).searchParams.has('done')) {
+      setTodoMode('decided');
+      try { doneBox.scrollTop = Number(sessionStorage.getItem('tm-done-top')) || 0; sessionStorage.removeItem('tm-done-top'); } catch (err) { /* blocked storage */ }
+    }
 
     /* Team Applications: Waiting / Declined, search and role. */
     let appsMode = 'waiting';
@@ -161,14 +216,22 @@
       side.append(sec('People', ...people));
       if (d.message) { side.append(sec('Their message', el('p', 'tma-quote', d.message))); }
       if (!waiting && d.reason) { side.append(sec('Why you declined', el('p', 'tma-quote', d.reason))); }
+      if (d.meet) {
+        side.append(sec('You asked to meet first',
+          el('p', 'tma-text', d.meet.booked ? 'Meeting booked · ' + d.meet.booked + ' · approve or decline after' : 'Waiting for them to book one of your times'),
+          d.meet.note ? el('p', 'tma-quote', d.meet.note) : null));
+      }
 
-      const actions = waiting ? [
+      // Asked to meet and nothing booked yet: nothing to decide until they meet.
+      const actions = waiting && !(d.meet && !d.meet.booked) ? [
         decideButton('Decline…', 'no', { decide: 'decline', url: d.acceptUrl, field: 'status', value: 'rejected', note: 'reason', min: '20',
           title: 'Decline: Team ' + d.team, sub: 'Asked you to be their ' + role }),
+        d.meet ? null : decideButton('Meet first…', '', { decide: 'meet', url: d.acceptUrl, field: 'status', value: 'meet', note: 'reason', min: '10',
+          title: 'Meet Team ' + d.team + ' first?', sub: 'They book one of your consultation times. You approve or decline after.' }),
         decideButton('Accept as ' + role, 'go', { decide: 'approve', url: d.acceptUrl, field: 'status', value: 'approved', note: 'reason',
           title: 'Accept Team ' + d.team, sub: 'As their ' + role,
           effect: 'You become the ' + role + ' of Team ' + d.team + '. The team is told.' + (all.maxSlots > 0 ? ' Uses 1 of your ' + all.maxSlots + ' slots.' : '') }),
-      ] : [];
+      ].filter(Boolean) : [];
 
       window.PdfViewer.open({
         url: d.document || null,
@@ -295,12 +358,14 @@
     const dlg = document.getElementById('tm-decide'), note = document.getElementById('tm-decide-note'),
           err = document.getElementById('tm-decide-err'), ok = document.getElementById('tm-decide-ok');
     let current = null;
-    const needsNote = b => b.dataset.decide === 'decline' && !b.dataset.noteOptional;
+    // Meet first asks for a note like a decline does, but it is not a no.
+    const needsNote = b => ['decline', 'meet'].includes(b.dataset.decide) && !b.dataset.noteOptional;
+    const isNo = b => !['approve', 'meet'].includes(b.dataset.decide);
     document.addEventListener('click', e => {
       const b = e.target.closest('[data-decide]');
       if (!b) { return; }
       current = b;
-      const declining = b.dataset.decide !== 'approve', min = Number(b.dataset.min || 0), noNote = !!b.dataset.noNote;
+      const declining = isNo(b), min = Number(b.dataset.min || 0), noNote = !!b.dataset.noNote;
       document.getElementById('tm-decide-t').textContent = b.dataset.title;
       document.getElementById('tm-decide-sub').textContent = b.dataset.sub;
       const effect = document.getElementById('tm-decide-effect');
@@ -322,9 +387,10 @@
     dlg.querySelector('form').addEventListener('submit', e => {
       e.preventDefault();
       if (!current) { return; }
-      const b = current, declining = b.dataset.decide !== 'approve';
+      const b = current, declining = isNo(b), meet = b.dataset.decide === 'meet';
       if (needsNote(b) && note.value.trim().length < Math.max(1, Number(b.dataset.min || 1))) {
-        err.textContent = 'Write a line or two so the team knows why.'; err.hidden = false; note.focus(); return;
+        err.textContent = meet ? 'Write a line or two so the team knows what to bring.' : 'Write a line or two so the team knows why.';
+        err.hidden = false; note.focus(); return;
       }
       const body = b.dataset.field ? { [b.dataset.field]: b.dataset.value } : {};
       if (note.value.trim() && b.dataset.note) { body[b.dataset.note] = note.value.trim(); }
@@ -350,7 +416,8 @@
             li.remove();
             if (!list.children.length) { list.previousElementSibling?.remove(); list.remove(); }
           }
-          b.closest('tr[data-q]')?.remove();
+          // Meet first leaves the request waiting; the refresh redraws its row.
+          if (!meet) { b.closest('tr[data-q]')?.remove(); }
           toast(data.message || (declining ? 'Declined' : 'Done'), true);
           refresh(true);
         })
@@ -397,6 +464,7 @@
         delete table.querySelector('tbody').dataset.order;
         apply();
         applyApps();
+        applyDone();
       } catch (e) {
         /* Offline for a moment: the next round tries again. */
       } finally {

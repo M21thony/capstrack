@@ -36,8 +36,8 @@ function CheckerNavbar({ ctx, status, verdict, saveState, onExport, onFinish, ve
 
   return (
     <header className="an-bar">
-      <a className="an-back" href={ctx.backUrl || "/instructor/docreview"} onClick={leave}>
-        <Icon name="left" />Document Review
+      <a className="an-back" href={ctx.backUrl || "/instructor/teams?tab=todo"} onClick={leave}>
+        <Icon name="left" />Back
       </a>
       <span className="an-divider" aria-hidden="true" />
       <div className="an-doc">

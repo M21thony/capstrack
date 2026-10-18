@@ -38,11 +38,53 @@ class AssignmentController extends Controller
      */
     public function update(Request $request, $id): JsonResponse
     {
-        return $request->validate([
-            'status' => ['required', 'in:approved,rejected'],
-        ])['status'] === 'approved'
-            ? $this->approve($id)
-            : $this->reject($request, $id);
+        return match ($request->validate(['status' => ['required', 'in:approved,rejected,meet']])['status']) {
+            'approved' => $this->approve($id),
+            'meet' => $this->meet($request, $id),
+            default => $this->reject($request, $id),
+        };
+    }
+
+    /**
+     * "Meet first": the request stays pending while the team books one of the
+     * expert's consultation times, and the expert approves or declines after.
+     */
+    public function meet(Request $request, $id): JsonResponse
+    {
+        $note = $request->validate(['reason' => ['required', 'string', 'min:10', 'max:500']], [
+            'reason.required' => 'Tell the team what you would like to talk about.',
+            'reason.min' => 'A line or two, so the team knows what to bring.',
+        ])['reason'];
+
+        $assignment = TeamExpertAssignment::where('assignment_id', $id)
+            ->where('expert_id', Auth::guard('expert')->user()->expert_id)
+            ->first();
+
+        if (! $assignment) {
+            return response()->json(['success' => false, 'message' => 'Assignment not found.'], 404);
+        }
+        if ($assignment->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'This request has already been processed.'], 422);
+        }
+        if ($assignment->meet_asked_at) {
+            return response()->json(['success' => false, 'message' => 'You already asked this team to meet first.'], 422);
+        }
+
+        $assignment->update(['meet_note' => $note, 'meet_asked_at' => now()]);
+
+        if ($leaderId = $assignment->team?->leader_id) {
+            Notification::create([
+                'student_id' => $leaderId,
+                'type' => 'expert_meet_first',
+                'title' => 'Your Expert Wants to Meet First',
+                'message' => $assignment->expert->name.' would like to meet your team before answering. Book one of their times. Note: '.$note,
+                'link' => route('student.experts'),
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Sent. The team will book one of your consultation times.']);
     }
 
     public function approve($id): JsonResponse

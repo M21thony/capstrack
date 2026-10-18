@@ -110,11 +110,13 @@ class RecommendedTitlesInDuplicationTest extends TestCase
         $this->assertSame([], $this->recommendedTitles($this->check($mine)));
     }
 
-    public function test_a_retired_or_unrecommended_title_is_not_a_match(): void
+    // A title still pending is a match now (PendingTitlesInDuplicationTest).
+    public function test_a_retired_rejected_or_unsent_title_is_not_a_match(): void
     {
         $this->ollama->shouldReceive('embed')->andReturn(array_fill(0, 8, 0.5));
         $this->proposal($this->team('B'), 'Set Aside', ['retired_at' => now()]);
-        $this->proposal($this->team('C'), 'Still Pending', ['approved_status' => false]);
+        $this->proposal($this->team('C'), 'Turned Down', ['approved_status' => false, 'rejection_reason' => 'Too broad.']);
+        $this->proposal($this->team('D'), 'Still A Draft', ['approved_status' => false, 'submitted_at' => null]);
 
         $this->assertSame([], $this->recommendedTitles($this->check($this->team('A'))));
     }

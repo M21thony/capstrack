@@ -60,7 +60,7 @@ class TeamController extends Controller
             'portal' => 'expert',
             'rows' => $rows,
             'todo' => $todo,
-            'decided' => $this->todo->decidedByExpert($expert),
+            'decided' => $this->todo->decidedByExpert($expert, $rows, 'expert'),
             'twoHats' => false,
             'defenseScores' => DefenseScores::forTeams($rows->map(fn ($row) => $row->team->team_id)),
             'applications' => $applications,

@@ -7,6 +7,7 @@ use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\Term;
+use App\Support\SkillCatalog;
 use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -97,7 +98,9 @@ class RecruitmentController extends Controller
             return back()->withErrors(['error' => Team::JOINING_CLOSED]);
         }
 
-        $recruitment = DB::transaction(function () use ($validated, $studentId, $roles, $tags): Recruitment {
+        $skills = self::pickedSkills($request);
+
+        $recruitment = DB::transaction(function () use ($validated, $studentId, $roles, $tags, $skills): Recruitment {
             // If goal is build_a_team and team_name is provided, create team and link it
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
                 $team = Team::create([
@@ -125,6 +128,7 @@ class RecruitmentController extends Controller
                 'recruitment_goal' => $validated['recruitment_goal'],
                 'roles' => $roles,
                 'role_tags' => $tags,
+                'skills' => $skills,
                 'looking_for' => $validated['looking_for'] ?? null,
                 'introduction' => $validated['introduction'] ?? null,
                 'member_count' => 5,
@@ -181,6 +185,21 @@ class RecruitmentController extends Controller
     }
 
     /**
+     * The skills the post needs, sent as a JSON list like `tags`. Only
+     * catalogue skills are kept, in catalogue order, so the feed's skill
+     * filter never meets a spelling it does not know.
+     *
+     * @return list<string>
+     */
+    private static function pickedSkills(Request $request): array
+    {
+        $raw = $request->input('skills');
+        $picked = is_string($raw) ? json_decode($raw, true) : $raw;
+
+        return array_values(array_intersect(SkillCatalog::allSkills(), array_filter((array) $picked, 'is_string')));
+    }
+
+    /**
      * The roles a recruitment post may ask for.
      *
      * The member roles, straight out of student_roles. Project Head is
@@ -219,6 +238,7 @@ class RecruitmentController extends Controller
             'recruitment_goal' => $validated['recruitment_goal'],
             'roles' => array_values(array_intersect(Recruitment::rolesForTags(self::pickedTags($request, true)), self::advertisableRoles())),
             'role_tags' => $tags,
+            'skills' => $request->has('skills') ? self::pickedSkills($request) : $recruitment->skills,
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,
             'member_count' => 5,

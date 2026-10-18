@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ConsultationTopics;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +32,8 @@ class ConsultationBooking extends Model
         'cancellation_requested_at',
         'cancellation_requested_by',
         'google_event_id',
+        'topics',
+        'note',
     ];
 
     protected function casts(): array
@@ -39,7 +42,16 @@ class ConsultationBooking extends Model
             'booking_status' => 'string',
             'cancellation_requested_at' => 'datetime',
             'session_date' => 'date',
+            'topics' => 'array',
         ];
+    }
+
+    /**
+     * "Paper, System": what the team said it would bring.
+     */
+    public function topicsLabel(): string
+    {
+        return ConsultationTopics::label($this->topics);
     }
 
     public function student(): BelongsTo

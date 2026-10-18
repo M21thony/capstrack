@@ -13,6 +13,7 @@ use App\Models\Team;
 use App\Services\GoogleCalendarService;
 use App\Services\Notifier;
 use App\Support\ConsultationBoard;
+use App\Support\ConsultationTopics;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -92,6 +93,11 @@ class StudentConsultationController extends Controller
         $request->validate([
             'schedule_id' => 'required|integer|exists:consultation_schedule,schedule_id',
             'session_date' => 'nullable|date',
+            'topics' => 'nullable|array',
+            'topics.*' => 'string|in:'.implode(',', array_keys(ConsultationTopics::LABELS)),
+            'note' => 'nullable|string|max:500',
+        ], [
+            'note.max' => 'Keep the note to 500 characters.',
         ]);
 
         // Refresh statuses first so a session that just ended (but whose row
@@ -136,6 +142,30 @@ class StudentConsultationController extends Controller
                     'success' => false,
                     'message' => 'Your team already has a session booked with '
                         .($who ?: 'this expert').'. You can book them again once that one is done.',
+                ], 422);
+            }
+        }
+
+        // What the team will bring, from what this expert covers for them:
+        // the grammarian always checks the manuscript, and the adviser and
+        // consultant each cover two things, of which the team picks one or
+        // both. An expert the team has no recorded role with takes whatever
+        // was sent, which may be nothing.
+        $roles = ConsultationTopics::rolesOf((int) $slot->expert_id, $team?->team_id);
+        $choices = ConsultationTopics::choicesFor($roles);
+        $topics = array_values(array_unique((array) $request->input('topics', [])));
+
+        if ($fixed = ConsultationTopics::fixedFor($roles)) {
+            $topics = [$fixed];
+        } elseif ($choices && $request->has('topics')) {
+            // Asked only of a page that offers the choice: one open from
+            // before it did sends no topics at all, and still books.
+            $topics = array_values(array_intersect($choices, $topics));
+
+            if (! $topics) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pick what you will consult about: '.implode(' or ', array_map(fn ($t) => ConsultationTopics::LABELS[$t], $choices)).'.',
                 ], 422);
             }
         }
@@ -240,6 +270,8 @@ class StudentConsultationController extends Controller
             'session_date' => $sessionDate,
             'booking_status' => 'scheduled',
             'google_event_id' => $googleEventId,
+            'topics' => $topics ?: null,
+            'note' => trim((string) $request->input('note')) ?: null,
         ]);
 
         // A "once" slot only ever has this single occurrence, so once it's
@@ -271,6 +303,8 @@ class StudentConsultationController extends Controller
                 'start_time' => $slot->start_time,
                 'end_time' => $slot->end_time,
                 'team_name' => $team->team_name ?? 'N/A',
+                'topics' => $booking->topicsLabel(),
+                'note' => $booking->note,
             ],
         ]);
     }
@@ -291,7 +325,8 @@ class StudentConsultationController extends Controller
             'consultation_booked',
             'Consultation booked',
             '<strong>'.e($team->team_name).'</strong> booked a consultation on '
-                .$booking->session_date->format('D, j M Y').'.',
+                .$booking->session_date->format('D, j M Y')
+                .($booking->topics ? ', about '.e($booking->topicsLabel()) : '').'.',
             route('instructor.schedule'),
             ['team_id' => $team->team_id, 'booking_id' => $booking->booking_id],
         );

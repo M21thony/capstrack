@@ -457,7 +457,7 @@ class CapsaTeamManagementTest extends TestCase
     /**
      * Papers reach this tab only under the subject_adviser role - her CaPSA
      * hat. What she reviews as somebody's adviser is a different job and
-     * stays in My Expert Duties -> Document Review.
+     * stays in her To do with the rest of her expert work.
      */
     public function test_the_team_page_shows_only_papers_sent_to_her_as_subject_adviser(): void
     {
