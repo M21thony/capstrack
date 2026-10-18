@@ -88,7 +88,9 @@ class FeedbackPatternsTest extends TestCase
 
     public function test_the_dialog_defines_both_shapes_and_manages_focus(): void
     {
-        $source = file_get_contents(resource_path('views/partials/app-dialog.blade.php'));
+        // The dialog is built on the CapsTrack modal, which returns focus and owns the motion.
+        $source = file_get_contents(resource_path('views/partials/app-dialog.blade.php'))
+            .file_get_contents(resource_path('views/partials/modal.blade.php'));
 
         $this->assertStringContainsString('window.confirmSheet =', $source);
         $this->assertStringContainsString('window.outcomeDialog =', $source);

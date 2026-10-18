@@ -7,7 +7,10 @@
   behind the scrim, Tab walked out into the page underneath, and closing one left
   the caret back at the top of the document.
 
-  Two shapes, one box:
+  It is the small centred shape of the CapsTrack modal (partials/modal): a ring
+  icon, the title, a line or two, and two buttons of equal width. On a phone it
+  is a sheet from the bottom. Being a native <dialog>, it opens above any other
+  pop-up on the page instead of behind it.
 
     confirmSheet(opts) -> Promise<boolean>
       Asks before something is destroyed. Same options the old
@@ -26,76 +29,24 @@
   Every string is set as text, never markup: these carry team names, folder names
   and server messages, which are data.
 --}}
-<style nonce="{{ Vite::cspNonce() }}">
-  .ad-scrim{position:fixed;inset:0;z-index:1600;background:rgba(24,25,31,.45);display:flex;align-items:center;justify-content:center;padding:20px;animation:adScrimIn 250ms ease-out both}
-  .ad-scrim[hidden]{display:none}
-  .ad-box{width:440px;max-width:100%;box-sizing:border-box;background:var(--bg2,#fff);border:1px solid var(--border,#e0e2e8);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;animation:adBoxIn 250ms cubic-bezier(.16,.84,.44,1) both;font-family:'DM Sans','DM Sans Fallback',sans-serif}
-  .ad-box.ad-md{width:496px}
-  .ad-box.ad-lg{width:720px}
-  @keyframes adScrimIn{from{opacity:0}to{opacity:1}}
-  @keyframes adBoxIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){
-    .ad-box{animation:adScrimIn 250ms ease-out both}
-  }
-  .ad-head{display:flex;align-items:flex-start;gap:13px}
-  .ad-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .ad-icon svg{width:19px;height:19px;fill:none;stroke-width:2;stroke-linecap:round}
-  .ad-icon[hidden]{display:none}
-  .ad-tone-error{background:#fdeaea}.ad-tone-error svg{stroke:#b91c1c}
-  .ad-tone-warn{background:#fdf5ec}.ad-tone-warn svg{stroke:#92400e}
-  .ad-tone-success{background:#f0f7f2}.ad-tone-success svg{stroke:#15803d}
-  .ad-tone-info{background:#eef2fd}.ad-tone-info svg{stroke:#1d4ed8}
-  .ad-headtext{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
-  .ad-title{font-size:16.5px;font-weight:700;color:var(--text,#18191f);line-height:1.3}
-  .ad-meta{font-size:12.5px;color:var(--text3,#656b7a)}
-  .ad-meta[hidden]{display:none}
-  .ad-x{width:34px;height:34px;flex-shrink:0;border-radius:9px;background:var(--bg3,#f7f8fa);border:1px solid var(--border,#e0e2e8);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3,#656b7a)}
-  .ad-x svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-  .ad-x[hidden]{display:none}
-  .ad-names,.ad-reason{font-size:13px;line-height:1.55;border-radius:10px;padding:12px 14px}
-  .ad-names{border:1px solid var(--border,#e0e2e8);background:var(--bg3,#f7f8fa);color:var(--text,#1e2128)}
-  .ad-reason{border-left:3px solid var(--border2,#c8cad4);background:var(--bg3,#f7f8fa);color:var(--text,#1e2128)}
-  .ad-tone-error ~ .ad-reason,.ad-box.ad-is-error .ad-reason{border-left-color:#f1c4c4;background:#fdf7f7}
-  .ad-names[hidden],.ad-reason[hidden]{display:none}
-  .ad-body{font-size:13.5px;color:var(--text2,#4a5060);line-height:1.55;margin:0}
-  .ad-body[hidden]{display:none}
-  .ad-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}
-  .ad-note{flex:1;min-width:120px;font-size:12px;color:var(--text3,#656b7a)}
-  .ad-note.ad-note-warn{color:#b91c1c;font-weight:600}
-  .ad-btn{min-height:44px;padding:11px 18px;border-radius:9px;font-size:13.5px;cursor:pointer;font-family:'DM Sans','DM Sans Fallback',sans-serif}
-  .ad-btn[hidden]{display:none}
-  .ad-btn-2{font-weight:500;background:var(--bg,#f2f3f5);color:var(--text,#1e2128);border:1px solid var(--border,#e0e2e8)}
-  .ad-btn-1{font-weight:700;background:var(--accent,#c9a82c);color:#18191f;border:1px solid var(--accent2,#b5941f)}
-  .ad-btn-1.ad-danger{background:#b91c1c;color:#fff;border-color:#b91c1c;font-weight:600}
-  @media (max-width:520px){
-    .ad-scrim{align-items:flex-end;padding:0}
-    .ad-box,.ad-box.ad-md,.ad-box.ad-lg{width:100%;border-radius:20px 20px 0 0;max-height:90vh;max-height:90dvh}
-    .ad-foot{flex-direction:column-reverse;align-items:stretch}
-    .ad-btn{width:100%}
-    .ad-note{order:-1;text-align:center}
-  }
-</style>
+@once
+@include('partials.modal')
 
-<div class="ad-scrim" id="ad-scrim" hidden>
-  <div class="ad-box" id="ad-box" role="alertdialog" aria-modal="true" aria-labelledby="ad-title">
-    <div class="ad-head">
-      <div class="ad-icon" id="ad-icon" hidden aria-hidden="true"></div>
-      <div class="ad-headtext">
-        <div class="ad-title" id="ad-title"></div>
-        <div class="ad-meta" id="ad-meta" hidden></div>
-      </div>
-      <button class="ad-x" id="ad-x" type="button" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-    </div>
-    <div class="ad-names" id="ad-names" hidden></div>
-    <div class="ad-reason" id="ad-reason" hidden></div>
-    <p class="ad-body" id="ad-body" hidden></p>
-    <div class="ad-foot">
-      <span class="ad-note" id="ad-note"></span>
-      <button class="ad-btn ad-btn-2" id="ad-cancel" type="button"></button>
-      <button class="ad-btn ad-btn-1" id="ad-ok" type="button"></button>
+<dialog class="cm cm-ask" id="ad-scrim" aria-labelledby="ad-title">
+  <div class="cm-box" id="ad-box">
+    <span class="cm-ring" id="ad-icon" hidden aria-hidden="true"></span>
+    <h2 class="cm-title" id="ad-title"></h2>
+    <div class="cm-meta" id="ad-meta" hidden></div>
+    <div class="cm-names" id="ad-names" hidden></div>
+    <div class="cm-reason" id="ad-reason" hidden></div>
+    <p class="cm-text" id="ad-body" hidden></p>
+    <div class="cm-note" id="ad-note" hidden></div>
+    <div class="cm-pair" id="ad-foot">
+      <button class="cm-btn" id="ad-cancel" type="button"></button>
+      <button class="cm-btn cm-btn-1" id="ad-ok" type="button"></button>
     </div>
   </div>
-</div>
+</dialog>
 
 <script nonce="{{ Vite::cspNonce() }}">
 (function () {
@@ -112,18 +63,18 @@
     icon: document.getElementById('ad-icon'),
     title: document.getElementById('ad-title'),
     meta: document.getElementById('ad-meta'),
-    x: document.getElementById('ad-x'),
     names: document.getElementById('ad-names'),
     reason: document.getElementById('ad-reason'),
     body: document.getElementById('ad-body'),
     note: document.getElementById('ad-note'),
+    foot: document.getElementById('ad-foot'),
     cancel: document.getElementById('ad-cancel'),
     ok: document.getElementById('ad-ok'),
   };
 
   var settle = null;
   var config = {};
-  var lastFocused = null;
+  var answer;
 
   function focusable() {
     return Array.prototype.filter.call(
@@ -132,18 +83,12 @@
     );
   }
 
-  function close(answer) {
+  // CapsModal puts the focus back on the control that opened it, and calls
+  // onClose before it returns, so the promise is settled here and now.
+  function close(value) {
     if (!settle) return;
-    var done = settle;
-    settle = null;
-    scrim.hidden = true;
-    document.body.style.overflow = '';
-    // Back to the control that opened it, so the keyboard does not restart at
-    // the top of the page.
-    if (lastFocused && typeof lastFocused.focus === 'function') {
-      try { lastFocused.focus(); } catch (e) { /* gone from the DOM */ }
-    }
-    done(answer);
+    answer = value;
+    window.CapsModal.close(scrim);
   }
 
   function open(cfg) {
@@ -151,13 +96,13 @@
     if (settle) close(cfg.reentryAnswer);
 
     config = cfg;
-    lastFocused = document.activeElement;
+    answer = cfg.cancelAnswer;
 
-    box.className = 'ad-box' + (cfg.size === 'lg' ? ' ad-lg' : cfg.size === 'md' ? ' ad-md' : '') + (cfg.tone === 'error' ? ' ad-is-error' : '');
-    box.setAttribute('role', cfg.role);
+    scrim.className = 'cm cm-ask' + (cfg.size === 'md' || cfg.size === 'lg' ? ' cm-wide' : '');
+    scrim.setAttribute('role', cfg.role);
 
     if (cfg.tone && GLYPH[cfg.tone]) {
-      els.icon.className = 'ad-icon ad-tone-' + cfg.tone;
+      els.icon.className = 'cm-ring cm-tone-' + cfg.tone;
       els.icon.innerHTML = '<svg viewBox="0 0 24 24">' + GLYPH[cfg.tone] + '</svg>';
       els.icon.hidden = false;
     } else {
@@ -185,35 +130,38 @@
     els.body.hidden = !cfg.body;
 
     els.note.textContent = cfg.note || '';
-    els.note.className = 'ad-note' + (cfg.noteWarn ? ' ad-note-warn' : '');
+    els.note.hidden = !cfg.note;
+    els.note.className = 'cm-note' + (cfg.noteWarn ? ' cm-note-warn' : '');
 
     els.cancel.textContent = cfg.cancelLabel || '';
     els.cancel.hidden = !cfg.cancelLabel;
+    els.foot.className = 'cm-pair' + (cfg.cancelLabel ? '' : ' cm-one');
     els.ok.textContent = cfg.okLabel || 'Close';
-    els.ok.className = 'ad-btn ad-btn-1' + (cfg.danger ? ' ad-danger' : '');
-    els.x.hidden = cfg.hideClose === true;
-
-    scrim.hidden = false;
-    document.body.style.overflow = 'hidden';
+    els.ok.className = 'cm-btn ' + (cfg.danger ? 'cm-btn-danger' : 'cm-btn-1');
 
     var target = cfg.focus === 'cancel' && !els.cancel.hidden ? els.cancel : els.ok;
-    target.focus();
 
-    return new Promise(function (resolve) { settle = resolve; });
+    return new Promise(function (resolve) {
+      settle = resolve;
+      window.CapsModal.open(scrim, {
+        // Destructive confirms and outcome reports both ignore a click outside;
+        // only a dialog opened to be read can be dismissed that way.
+        dismissible: cfg.dismissible,
+        focus: target,
+        onClose: function () {
+          var done = settle;
+          settle = null;
+          if (done) done(answer);
+        },
+      });
+    });
   }
 
   els.ok.addEventListener('click', function () { close(config.okAnswer); });
   els.cancel.addEventListener('click', function () { close(config.cancelAnswer); });
-  els.x.addEventListener('click', function () { close(config.cancelAnswer); });
-
-  scrim.addEventListener('click', function (e) {
-    // Destructive confirms and outcome reports both ignore this; only a dialog
-    // opened to be read can be dismissed by clicking away from it.
-    if (e.target === scrim && config.dismissible) close(config.cancelAnswer);
-  });
 
   document.addEventListener('keydown', function (e) {
-    if (scrim.hidden || !settle) return;
+    if (!scrim.open || !settle) return;
 
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -291,3 +239,4 @@
   };
 })();
 </script>
+@endonce

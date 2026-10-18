@@ -41,10 +41,19 @@
     var o = getComputedStyle(el).overflowY;
     return (o === 'auto' || o === 'scroll') && el.scrollHeight > el.clientHeight + 1;
   }
+  // An open <dialog> sits in the browser's top layer, above any z-index, so
+  // the handles live inside the newest one while it is open, and back on the
+  // page once it closes.
+  function rehome() {
+    if (!layer) return;
+    var open = document.querySelectorAll('dialog[open]');
+    var home = open.length ? open[open.length - 1] : document.body;
+    if (layer.parentNode !== home) home.appendChild(layer);
+  }
   function barFor(el) {
     for (var i = 0; i < bars.length; i++) if (bars[i].el === el) return bars[i];
     if (!scrolls(el)) return null;
-    if (!layer) { layer = document.createElement('div'); layer.id = 'sb-layer'; document.body.appendChild(layer); }
+    if (!layer) { layer = document.createElement('div'); layer.id = 'sb-layer'; rehome(); }
     var sb = document.createElement('div');
     sb.className = 'sb';
     sb.innerHTML = '<i class="sb-track"></i><b class="sb-handle"><svg viewBox="0 0 8 14"><path d="M1.5 4.5 4 2 6.5 4.5M1.5 9.5 4 12 6.5 9.5"/></svg></b>';
@@ -130,6 +139,7 @@
 
   document.addEventListener('pointerover', function (e) {
     if (e.pointerType === 'touch' || (layer && layer.contains(e.target))) return;
+    rehome();
     var now = boxesAt(e.target);
     hovered.forEach(function (b) { if (now.indexOf(b) < 0) wake(b, false); });
     now.forEach(function (b) { wake(b, true); update(b); });
@@ -140,6 +150,7 @@
   });
   document.addEventListener('scroll', function (e) {
     var b = barFor(e.target === document ? root : e.target);
+    rehome();
     if (b) wake(b, hovered.indexOf(b) > -1);
     updateAll();
   }, {capture: true, passive: true});
