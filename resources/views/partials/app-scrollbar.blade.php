@@ -48,7 +48,7 @@
     if (!layer) return;
     var open = document.querySelectorAll('dialog[open]');
     var home = open.length ? open[open.length - 1] : document.body;
-    if (layer.parentNode !== home) home.appendChild(layer);
+    if (layer.parentNode !== home) { home.appendChild(layer); updateAll(); }
   }
   function barFor(el) {
     for (var i = 0; i < bars.length; i++) if (bars[i].el === el) return bars[i];
@@ -102,6 +102,9 @@
   function update(bar) {
     var el = bar.el, sb = bar.sb, max = el.scrollHeight - el.clientHeight;
     if (!el.isConnected) { sb.remove(); bars.splice(bars.indexOf(bar), 1); return; }
+    // With a dialog open, only what scrolls inside it gets a handle: the page
+    // underneath is held still and covered.
+    if (layer.parentNode !== document.body && !layer.parentNode.contains(el)) { sb.style.display = 'none'; return; }
     var head = bar.head = headOf(el), h = el.clientHeight - head;
     var r = el === root ? {top: 0, left: 0, bottom: el.clientHeight} : el.getBoundingClientRect();
     r = {top: r.top + el.clientTop + head, left: r.left + el.clientLeft};
@@ -155,5 +158,6 @@
     updateAll();
   }, {capture: true, passive: true});
   addEventListener('resize', updateAll);
+  document.addEventListener('capsmodal:change', rehome);
 })();
 </script>

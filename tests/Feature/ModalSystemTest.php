@@ -30,6 +30,8 @@ class ModalSystemTest extends TestCase
         $this->assertStringContainsString('@once', $modal);
         $this->assertStringContainsString('.cm-ask .cm-box{max-width:420px', $modal);
         $this->assertStringContainsString('.cm-panel .cm-box{max-width:480px;height:100%', $modal);
+        // Pinned to the right edge: dialog.cm[open] centres, so the panel's rule must outrank it.
+        $this->assertStringContainsString('dialog.cm-panel[open]{place-items:stretch end}', $modal);
         // On a phone both become a sheet as tall as what they hold.
         $this->assertMatchesRegularExpression('/@media \(max-width:768px\)\{.*max-height:92dvh;border-radius:20px 20px 0 0/s', $modal);
     }
@@ -77,6 +79,9 @@ class ModalSystemTest extends TestCase
 
         $this->assertStringContainsString("document.querySelectorAll('dialog[open]')", $scrollbar);
         $this->assertStringContainsString('home.appendChild(layer)', $scrollbar);
+        $this->assertStringContainsString("document.addEventListener('capsmodal:change', rehome)", $scrollbar);
+        // The page underneath an open dialog gets no handle.
+        $this->assertStringContainsString('!layer.parentNode.contains(el)', $scrollbar);
     }
 
     public function test_a_page_that_loads_the_dialog_twice_draws_it_once(): void

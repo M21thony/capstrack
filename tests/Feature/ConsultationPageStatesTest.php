@@ -99,8 +99,10 @@ class ConsultationPageStatesTest extends TestCase
         $this->assertStringContainsString('.xh-day.is-booked{background:var(--xh-blue-soft);border:1.5px solid var(--xh-blue)}', $css);
         $this->assertStringContainsString('.xh-day.is-off::after{content:"";position:absolute;inset:8% 22%;pointer-events:none}', $css);
         // While a session with the expert is pending, the open dates stay
-        // visible, outlined, and the next open dates are offered above.
+        // visible, outlined.
         $this->assertStringContainsString('.xh-day.is-locked{background:var(--bg3);border:1.5px dashed var(--accent)', $css);
-        $this->assertStringContainsString('.xh-next-btn{', $css);
+        // The nearest open date is picked for the team, so there is no row of
+        // shortcut dates above the calendar any more.
+        $this->assertStringNotContainsString('.xh-next-btn{', $css);
     }
 }

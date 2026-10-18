@@ -59,8 +59,8 @@
   .cm-btn-danger:hover{background:#a51818}
   .cm-btn:focus-visible,.cm-x:focus-visible{outline:2px solid #8a6e10;outline-offset:2px}
 
-  .cm-panel{padding:0}
-  .cm-panel[open]{place-items:stretch end}
+  dialog.cm-panel{padding:0}
+  dialog.cm-panel[open]{place-items:stretch end}
   .cm-panel .cm-box{max-width:480px;height:100%;border-radius:20px 0 0 20px;box-shadow:0 0 0 1px rgba(16,18,26,.06),-24px 0 70px rgba(10,12,20,.3)}
   .cm-panel.cm-wide .cm-box{max-width:560px}
   .cm-h{flex-shrink:0;display:flex;align-items:flex-start;gap:14px;padding:24px 20px 18px 24px;border-bottom:1px solid var(--border,#eceef2)}
@@ -84,8 +84,8 @@
   @keyframes cmFade{from{opacity:0}to{opacity:1}}
 
   @media (max-width:768px){
-    dialog.cm,.cm-panel{padding:0}
-    dialog.cm[open],.cm-panel[open]{place-items:end stretch}
+    dialog.cm,dialog.cm-panel{padding:0}
+    dialog.cm[open],dialog.cm-panel[open]{place-items:end stretch}
     .cm-ask .cm-box,.cm-panel .cm-box{max-width:none;height:auto;max-height:92vh;max-height:92dvh;border-radius:20px 20px 0 0}
     .cm-box::before{content:"";flex-shrink:0;width:40px;height:5px;margin:8px auto 0;border-radius:3px;background:#d3d6de}
     .cm-ask .cm-box{padding:0 20px calc(24px + env(safe-area-inset-bottom))}
@@ -163,6 +163,7 @@
       dlg.removeEventListener('close', onCloseEvent);
       if (openOnes.indexOf(dlg) > -1) openOnes.splice(openOnes.indexOf(dlg), 1);
       unlock();
+      document.dispatchEvent(new CustomEvent('capsmodal:change'));
       if (lastFocused && typeof lastFocused.focus === 'function') {
         try { lastFocused.focus(); } catch (e) { /* gone from the page */ }
       }
@@ -177,6 +178,8 @@
     dlg.showModal();
     openOnes.push(dlg);
     document.documentElement.classList.add('cm-lock');
+    // The CapsTrack scrollbar moves its handles into the dialog.
+    document.dispatchEvent(new CustomEvent('capsmodal:change'));
 
     var target = typeof opts.focus === 'string' ? dlg.querySelector(opts.focus) : opts.focus;
     if (target) target.focus();
