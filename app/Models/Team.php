@@ -375,6 +375,19 @@ class Team extends Model
         return StudentSchoolYear::where('team_id', $this->team_id)->count() >= $this->memberLimit();
     }
 
+    /**
+     * Mark a Full team Active again once a seat has opened.
+     *
+     * Called wherever somebody comes off a team. Without it the CaPSA kept
+     * seeing "Full" on a team with a free seat.
+     */
+    public function reopenIfRoom(): void
+    {
+        if ($this->team_status === 'Full' && ! $this->isFull()) {
+            $this->update(['team_status' => 'Active']);
+        }
+    }
+
     public function pendingInvitationCount(): int
     {
         return TeamInvitation::where('team_id', $this->team_id)

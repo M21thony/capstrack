@@ -129,4 +129,16 @@ class TeamSelectionFeedTest extends TestCase
 
         $this->assertSame([$reopened->leader_id], $this->apiFeed($viewer));
     }
+
+    public function test_the_feed_follows_the_sections_team_rules_over_the_school_wide_limit(): void
+    {
+        Setting::set('max_team_members', '5');
+        $viewer = $this->viewer();
+        $atSectionLimit = $this->postingTeam(3);
+        Setting::set(Team::RULES_KEY.$atSectionLimit->section(), json_encode(['max' => 3, 'create' => true, 'join' => true]));
+        $open = $this->postingTeam(2);
+
+        $this->assertSame([$open->leader_id], $this->pageFeed($viewer));
+        $this->assertSame([$open->leader_id], $this->apiFeed($viewer));
+    }
 }

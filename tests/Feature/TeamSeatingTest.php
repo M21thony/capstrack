@@ -177,4 +177,14 @@ class TeamSeatingTest extends TestCase
         $this->assertSame(2, $choices[self::TESTER]['seats']);
         $this->assertCount(2, $choices[self::TESTER]['held_by']);
     }
+
+    public function test_seats_follow_the_sections_team_rules(): void
+    {
+        $team = $this->team();
+        Setting::set('max_team_members', '5');
+        Setting::set(Team::RULES_KEY.$team->section(), json_encode(['max' => 3, 'create' => true, 'join' => true]));
+        $this->seat($team, self::DESIGNER);
+
+        $this->assertSame([self::TESTER], TeamSeating::for($team)->openRoles());
+    }
 }

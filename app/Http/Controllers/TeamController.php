@@ -589,8 +589,8 @@ class TeamController extends Controller
         // Auto-close team if it has reached full capacity
         $autoClosed = false;
         if ($team->team_status === 'Active') {
-            $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
-            if ($currentCount >= 5) {
+            // The section's limit from the CaPSA's Team Rules, not a flat 5.
+            if ($team->isFull()) {
                 $team->update(['team_status' => 'Full']);
                 $autoClosed = true;
                 $this->logActivity(
@@ -732,6 +732,7 @@ class TeamController extends Controller
         }
 
         $memberSy->update(['team_id' => null, 's_role_id' => null]);
+        $myTeam->reopenIfRoom();
 
         Recruitment::where('student_id', $student->student_id)->delete();
 
