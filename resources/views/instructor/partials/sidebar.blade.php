@@ -31,13 +31,13 @@
       session()->put('instructor_seen_assignment_ids', array_unique(array_merge($seenAssignmentIds, $pendingAssignmentIds)));
     }
 
-    $scheduleIds = $expert ? DB::table('consultation_schedule')->where('expert_id', $expert->expert_id)->where('is_available', 1)->pluck('schedule_id')->toArray() : [];
-    $seenScheduleIds = session('instructor_seen_schedule_ids', []);
-    $unseenScheduleCount = count(array_diff($scheduleIds, $seenScheduleIds));
-
-    if ($currentRouteName === 'instructor.schedule') {
-      session()->put('instructor_seen_schedule_ids', array_unique(array_merge($seenScheduleIds, $scheduleIds)));
-    }
+    // Teams waiting on an answer to a cancel request: the one thing on the
+    // schedule that needs the expert. It counted open slots before, which
+    // asked nothing of anyone.
+    $unseenScheduleCount = $expert ? App\Models\ConsultationBooking::where('booking_status', 'scheduled')
+      ->whereNotNull('cancellation_requested_at')
+      ->whereHas('schedule', fn ($q) => $q->where('expert_id', $expert->expert_id))
+      ->count() : 0;
   @endphp
 
   {{-- The profile is a page of its own; it used to open a 300px drawer. --}}
