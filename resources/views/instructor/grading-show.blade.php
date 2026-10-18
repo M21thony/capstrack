@@ -79,13 +79,6 @@
   .gs-saved{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2);white-space:nowrap}
   .gs-saved i{width:8px;height:8px;border-radius:50%;background:var(--green)}
   .gs-saved.dirty i{background:var(--amber)}
-  .gs-paper{position:relative}
-  .gs-paper summary{list-style:none}
-  .gs-paper summary::-webkit-details-marker{display:none}
-  .gs-paper-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:200px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.12);padding:6px}
-  .gs-paper-menu p{margin:4px 8px 6px;font-size:12px;color:var(--text3);white-space:normal}
-  .gs-paper-menu a{display:flex;align-items:center;gap:8px;padding:0 10px;min-height:38px;border-radius:7px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none}
-  .gs-paper-menu a:hover{background:var(--bg3)}
 
   /* ── Buttons ── */
   .gs-btn{font:inherit;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;padding:0 14px;min-height:40px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;white-space:nowrap;text-decoration:none}
@@ -307,7 +300,7 @@
     .gs-who h1,.gs-who h1 span{color:#fff;white-space:normal}
     .gs-meta{color:rgba(255,255,255,.7);flex-wrap:wrap;white-space:normal}
     .gs-meta .gs-chip{background:rgba(255,255,255,.12);color:#fff}
-    .gs-divider,.gs-saved,.gs-paper{display:none}
+    .gs-divider,.gs-saved{display:none}
     .gs-progress{order:5;flex:1 1 100%}
     .gs-progress-top b{color:#e3c75a}
     .gs-progress-top .of,.gs-progress-top .cnt{color:rgba(255,255,255,.7)}
@@ -387,19 +380,6 @@
       </div>
       <span class="gs-divider" aria-hidden="true"></span>
       <span class="gs-saved" id="saveStatus" role="status"><i aria-hidden="true"></i><span>{{ $saveText }}</span></span>
-      {{-- Paper copy, for a defense held without signal or power: grade by hand, enter it here later. --}}
-      <details class="gs-paper">
-        <summary class="gs-btn" title="If CapsTrack cannot be reached during the defense, grade on this and enter the scores here afterwards.">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          Paper copy
-          <svg viewBox="0 0 24 24" aria-hidden="true" style="width:13px;height:13px"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="gs-paper-menu">
-          <p>Grade on paper if CapsTrack cannot be reached, then enter the scores here.</p>
-          <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'pdf']) }}">PDF</a>
-          <a href="{{ route('instructor.grading.sheet', [$defense->defense_id, 'xlsx']) }}">Excel</a>
-        </div>
-      </details>
     </header>
 
     <div class="gs-alerts">
@@ -1211,12 +1191,6 @@ document.querySelectorAll('#gs-shared-chips button[data-id]').forEach(chip => {
       })
       .catch(() => { showFormError('Could not reach the server.'); chip.disabled = false; });
   });
-});
-
-// The paper copy menu closes when anything else is clicked.
-document.addEventListener('click', e => {
-  const menu = document.querySelector('.gs-paper[open]');
-  if (menu && !menu.contains(e.target)) menu.removeAttribute('open');
 });
 
 /* Mobile sidebar toggle */

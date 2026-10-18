@@ -73,6 +73,8 @@
 .now-row.bad{background:rgba(220,38,38,.07)}
 .now-row.bad b{color:var(--red,#dc2626)}
 .now-row.ok b{color:var(--green,#16a34a)}
+.now-sheet{display:block;margin-top:4px;font-size:12.5px}
+.now-sheet a{color:var(--accent3,#8a6e10);font-weight:600}
 @media (max-width:760px){.now-grid{grid-template-columns:1fr}.now-row{flex-direction:column;gap:2px}.now-row b{min-width:0}}
 /* Your next step: the one setup step left, until the team has an adviser. */
 .ns-card{border:1px solid rgba(201,168,44,.35);border-left:5px solid var(--accent,#c9a82c);background:rgba(245,193,0,.06);border-radius:14px;padding:16px 18px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px}
@@ -249,7 +251,11 @@
             @if ($nextDefense)
               <div class="now-row">
                 <b>{{ $nextDefense->defense_type }}</b>
-                <span>{{ $nextDefense->schedule_date->format('D, M j') }}@if ($nextDefense->schedule_date->format('H:i') !== '00:00') · {{ $nextDefense->schedule_date->format('g:i A') }}@endif{{ $nextDefense->venue ? ' · '.$nextDefense->venue : '' }}</span>
+                <span>{{ $nextDefense->schedule_date->format('D, M j') }}@if ($nextDefense->schedule_date->format('H:i') !== '00:00') · {{ $nextDefense->schedule_date->format('g:i A') }}@endif{{ $nextDefense->venue ? ' · '.$nextDefense->venue : '' }}
+                  @if ($sheetReady)
+                    <span class="now-sheet">Print one rating sheet for each panelist and bring them, in case CapsTrack cannot be reached: <a href="{{ route('student.defense.sheet', [$nextDefense->defense_id, 'pdf']) }}">PDF</a> · <a href="{{ route('student.defense.sheet', [$nextDefense->defense_id, 'xlsx']) }}">Excel</a></span>
+                  @endif
+                </span>
               </div>
             @endif
           </div>

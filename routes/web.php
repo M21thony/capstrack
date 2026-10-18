@@ -348,8 +348,6 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/grading', [GradingController::class, 'index'])->name('grading');
     Route::get('/grading/team-defenses', [GradingController::class, 'teamDefenses'])->name('grading.team-defenses');
     Route::get('/grading/{defense}', [GradingController::class, 'show'])->name('grading.show');
-    // The rating sheet on paper, for a defense held without signal or power.
-    Route::get('/grading/{defense}/sheet.{format}', [GradingController::class, 'sheet'])->whereIn('format', ['pdf', 'xlsx'])->name('grading.sheet');
     Route::put('/grading/{defense}', [GradingController::class, 'save'])->name('grading.save');
     Route::patch('/grading/{defense}', [GradingController::class, 'submit'])->name('grading.submit');
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
@@ -544,6 +542,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/resources/{resource}/file', [StudentResourceController::class, 'download'])->name('student.resources.download');
             // The blank rubric a stage is graded with, for the student's own program.
             Route::get('/resources/rubrics/{stage}.pdf', [StudentResourceController::class, 'rubric'])->where('stage', '[a-z-]+')->name('student.resources.rubric');
+            // The team's rating sheet, filled in, to print for each panelist before the defense.
+            Route::get('/defense/{defense}/sheet.{format}', [StudentResourceController::class, 'sheet'])->whereIn('format', ['pdf', 'xlsx'])->name('student.defense.sheet');
             Route::get('/archive', [StudentArchiveController::class, 'index'])->name('student.archive');
             // The manuscript a finished team hands in, from the archive page.
             Route::post('/archive/manuscript', [StudentArchiveController::class, 'submit'])->name('student.archive.manuscript.submit');

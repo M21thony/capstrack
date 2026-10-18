@@ -35,12 +35,6 @@
   .gl-num{font-variant-numeric:tabular-nums}
   .gl-go{font:inherit;font-size:12px;font-weight:600;border-radius:6px;padding:6px 12px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);text-decoration:none;white-space:nowrap}
   .gl-go.primary{background:var(--accent);border-color:var(--accent);color:#18191f}
-  .gl-actions{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}
-  .gl-paper{display:inline-flex;border:1px solid var(--border2);border-radius:6px;overflow:hidden}
-  .gl-paper a{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;font-size:11.5px;font-weight:600;color:var(--text2);text-decoration:none;background:var(--bg2)}
-  .gl-paper a + a{border-left:1px solid var(--border2)}
-  .gl-paper a:hover{background:var(--bg3);color:var(--text)}
-  .gl-paper-hint{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);margin-left:auto}
   .gl-empty{padding:40px 16px;text-align:center;color:var(--text3);font-size:13px}
   .gl-who{font:inherit;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:0 10px;min-height:34px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;white-space:nowrap;max-width:100%}
   .gl-who:hover{border-color:var(--border2)}
@@ -142,7 +136,6 @@
         <div class="gl-head">
           <b>Your defenses</b>
           <span class="sub">{{ $toGrade }} to grade · {{ $rows->count() - $toGrade }} done</span>
-          <span class="gl-paper-hint" title="If the signal or the power goes during a defense, grade on paper and enter the scores here afterwards."><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print a team's rating sheet before the defense, in case CapsTrack cannot be reached.</span>
           <div class="gl-filter" role="group" aria-label="Show">
             <button type="button" data-show="all" aria-pressed="true">All</button>
             <button type="button" data-show="todo" aria-pressed="false">To grade</button>
@@ -218,16 +211,7 @@
                       <span class="badge badge-gray" style="font-size:10px">Not started</span>
                     @endif
                   </td>
-                  <td style="text-align:right">
-                    <span class="gl-actions">
-                      {{-- Paper copy, for a defense held without signal or power. --}}
-                      <span class="gl-paper" aria-label="Rating sheet to print">
-                        <a href="{{ route('instructor.grading.sheet', [$row->defense_id, 'pdf']) }}" title="Rating sheet as a PDF, ready to print"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> PDF</a>
-                        <a href="{{ route('instructor.grading.sheet', [$row->defense_id, 'xlsx']) }}" title="Rating sheet as an Excel file">Excel</a>
-                      </span>
-                      <a class="gl-go {{ $done || $row->joined ? '' : 'primary' }}" href="{{ $url }}">{{ $done ? 'Open' : ($row->joined ? 'View' : ($row->status === 'draft' ? 'Continue' : 'Grade')) }}</a>
-                    </span>
-                  </td>
+                  <td style="text-align:right"><a class="gl-go {{ $done || $row->joined ? '' : 'primary' }}" href="{{ $url }}">{{ $done ? 'Open' : ($row->joined ? 'View' : ($row->status === 'draft' ? 'Continue' : 'Grade')) }}</a></td>
                 </tr>
               @endforeach
               <tr class="gl-none" hidden><td colspan="7" class="gl-empty">Nothing here.</td></tr>
