@@ -6,6 +6,7 @@
 <title>Student Section List - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/table-kit.css') }}"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <style nonce="{{ Vite::cspNonce() }}">
   /* The student is here; their team is handled under another section. */
@@ -177,72 +178,48 @@
   </div>
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content list-page">
-    {{-- What the page holds on the left, the ways in on the right. The count
-         used to be a card title with the sections underneath in grey, which
-         said the same thing in two lines and left the buttons sharing a row
-         with a filter. --}}
-@php
-      // The one number a CaPSA is looking for on this page that the list
-      // itself will not tell them without scrolling all of it.
+  <div class="content list-page tk">
+    {{-- What the page holds on the left, the ways in on the right, and the
+         sections underneath the count as the first way to narrow it. --}}
+    @php
+      // The numbers a CaPSA is looking for on this page that the list itself
+      // will not tell them without scrolling all of it - one per tab.
       $unteamed = $students->filter(fn ($s) => ! ($s->currentSy && $s->currentSy->team))->count();
+      $notSignedIn = $students->filter(fn ($s) => ! $s->last_seen_at)->count();
+      $statusTabs = [
+          ['', 'All', $students->count()],
+          ['team:0', 'Without a team', $unteamed],
+          ['signed:0', 'Not signed in', $notSignedIn],
+          ['signed:1', 'Enrolled', $students->count() - $notSignedIn],
+      ];
+      $mySectionTotal = array_sum($sectionCounts);
     @endphp
     <div class="page-head">
-      <div class="page-head-text">
-        <span class="page-count">{{ $students->count() }}</span>
-        <span class="page-count-noun">{{ Str::plural('student', $students->count()) }}</span>
-        <span class="page-facts">
-          @foreach ($adminSections as $label)
-            <span class="fact">{{ $label }}</span>
-          @endforeach
-          @if ($unteamed)
-            <span class="fact fact-warn">{{ $unteamed }} without a team</span>
-          @endif
-        </span>
+      <div class="tk-head-text">
+        <div class="page-head-text">
+          <span class="page-count">{{ $students->count() }}</span>
+          <span class="page-count-noun">{{ Str::plural('student', $students->count()) }} {{ $selectedSection ? 'in '.$selectedSection : 'in your sections' }}</span>
+        </div>
+        {{-- The section filter reloads, because the server decides which
+             students are yours; the rest only hide rows already here. --}}
+        @if (count($allSections) > 1)
+          <nav class="tk-secf-row" aria-label="Section">
+            <a class="tk-secf" href="{{ route('capsa.sections') }}" @unless ($selectedSection) aria-current="page" @endunless>All sections <span class="n">{{ $mySectionTotal }}</span></a>
+            @foreach ($allSections as $section)
+              <a class="tk-secf" href="{{ route('capsa.sections', ['section' => $section]) }}" @if ($selectedSection === $section) aria-current="page" @endif>{{ $section }} <span class="n">{{ $sectionCounts[$section] ?? 0 }}</span></a>
+            @endforeach
+          </nav>
+        @endif
       </div>
-    </div>
-
-    {{-- Everything you do to the list on one line: look for someone, narrow
-         it down, or add to it. They were on two, which put a button directly
-         above a dropdown it had nothing to do with. --}}
-    <div class="page-filters">
-      <div class="experts-search">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="input" id="student-search" placeholder="Search by name, email or student number..." oninput="filterStudents()"/>
+      <div class="tk-actions">
+        {{-- View Report and Download Excel, from partials/table-export. --}}
+        <span id="tkExport" style="display:contents"></span>
+        @if ($viewerIsCapsa)
+          <button type="button" class="tk-btn" onclick="openStudentRosterModal()" title="Upload List"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg><span class="tk-lbl">Upload List</span></button>
+          <button type="button" class="tk-btn" onclick="openYearPromotion()" title="Year Promotion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.42 10.92a1 1 0 0 0-.02-1.84L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg><span class="tk-lbl">Year Promotion</span></button>
+          <button type="button" class="tk-btn tk-btn-pri" onclick="openAddStudent()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add Student</button>
+        @endif
       </div>
-      <form method="get" id="sectionFilterForm">
-        <select class="input page-filter" name="section" id="section" onchange="document.getElementById('sectionFilterForm').submit()">
-          <option value="">All my sections</option>
-          @foreach ($allSections as $section)
-            <option value="{{ $section }}" {{ request()->query('section') == $section ? 'selected' : '' }}>{{ $section }}</option>
-          @endforeach
-        </select>
-      </form>
-      {{-- The section filter reloads because the server decides which students
-           are yours. These two only hide rows already on the page, so they do
-           not - a CaPSA flipping between programs would otherwise wait for a
-           round trip each time. --}}
-      <select class="input page-filter" id="program-filter" onchange="filterStudents()">
-        <option value="">All programs</option>
-        @foreach ($students->pluck('programAbbr')->filter()->unique()->sort() as $abbr)
-          <option value="{{ $abbr }}">{{ $abbr }}</option>
-        @endforeach
-      </select>
-      <select class="input page-filter" id="team-filter" onchange="filterStudents()">
-        <option value="">All students</option>
-        <option value="0">Without a team</option>
-        <option value="1">In a team</option>
-      </select>
-      @if ($viewerIsCapsa)
-        <span class="page-filters-actions">
-          <button type="button" class="btn" onclick="openStudentRosterModal()">Upload List</button>
-          <button type="button" class="btn" onclick="openYearPromotion()">Year Promotion</button>
-          <button type="button" class="btn btn-primary" onclick="openAddStudent()">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Student
-          </button>
-        </span>
-      @endif
     </div>
 
     @if ($viewerIsCapsa)
@@ -250,50 +227,72 @@
         'table' => '.table',
         'noun' => 'student',
         'actions' => [
-          ['id' => 'bulkProgram', 'label' => 'Set program'],
-          ['id' => 'bulkSection', 'label' => 'Set year & section'],
-          ['id' => 'bulkRemove', 'label' => 'Remove from section', 'danger' => true],
+          ['id' => 'bulkProgram', 'label' => 'Set program',
+           'icon' => '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'],
+          ['id' => 'bulkSection', 'label' => 'Transfer section',
+           'icon' => '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>'],
+          ['id' => 'bulkRemove', 'label' => 'Remove from section', 'danger' => true,
+           'icon' => '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>'],
         ],
       ])
     @endif
 
-    <div class="card list-card">
+    @if (! empty($debug))
+      <div style="padding:12px;background:#fff6; border:1px dashed var(--muted);margin-bottom:12px;border-radius:8px;font-size:13px">
+        <strong>Debug:</strong>
+        <div style="font-size:12px;color:var(--text3)">SY records: {{ $debug['sy_count'] ?? '' }} — Admin sections: {{ implode(', ', $debug['adminSections'] ?? []) }} — Admin programs: {{ implode(', ', $debug['adminPrograms'] ?? []) }}</div>
+        <div style="margin-top:8px;overflow:auto;max-height:160px">
+          <table style="width:100%;font-size:12px;border-collapse:collapse">
+            <thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Student ID</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Team</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Program</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Year Section Raw</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Computed Label</th></tr></thead>
+            <tbody>
+              @foreach ($debug['sample'] as $row)
+                <tr>
+                  <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['student_id'] }}</td>
+                  <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['team_id'] ?? '' }}</td>
+                  <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['program'] }}</td>
+                  <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['year_section_raw'] ?? $row['year_section'] ?? '' }}</td>
+                  <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['computed_label'] }}</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+      </div>
+    @endif
 
-      <div>
-        @if (! empty($debug))
-          <div style="padding:12px;background:#fff6; border:1px dashed var(--muted);margin-bottom:12px;border-radius:8px;font-size:13px">
-            <strong>Debug:</strong>
-            <div style="font-size:12px;color:var(--text3)">SY records: {{ $debug['sy_count'] }} — Admin sections: {{ implode(', ', $debug['adminSections'] ?? []) }} — Admin programs: {{ implode(', ', $debug['adminPrograms'] ?? []) }}</div>
-            <div style="margin-top:8px;overflow:auto;max-height:160px">
-              <table style="width:100%;font-size:12px;border-collapse:collapse">
-                <thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Student ID</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Team</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Program</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Year Section Raw</th><th style="text-align:left;padding:6px;border-bottom:1px solid #eee">Computed Label</th></tr></thead>
-                <tbody>
-                  @foreach ($debug['sample'] as $row)
-                    <tr>
-                      <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['student_id'] }}</td>
-                      <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['team_id'] }}</td>
-                      <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['program'] }}</td>
-                      <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['year_section_raw'] }}</td>
-                      <td style="padding:6px;border-bottom:1px solid #f6f6f6">{{ $row['computed_label'] }}</td>
-                    </tr>
-                  @endforeach
-                </tbody>
-              </table>
-            </div>
-          </div>
-        @endif
-        <table class="table" data-export="Student List">
+    <div class="card list-card">
+      <div class="tk-toolbar">
+        <div class="tk-tabs" role="tablist" aria-label="Show" id="team-filter" data-value="">
+          @foreach ($statusTabs as [$value, $label, $n])
+            <button type="button" class="tk-tab" role="tab" data-v="{{ $value }}" aria-selected="{{ $value === '' ? 'true' : 'false' }}" onclick="pickStudentTab(this)">{{ $label }} <span class="n">{{ $n }}</span></button>
+          @endforeach
+        </div>
+        <label class="experts-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="tk-vh">Search students</span>
+          <input class="input" id="student-search" placeholder="Name, email or student number" oninput="filterStudents()"/>
+        </label>
+        <div class="tk-toolbar-end">
+          <label class="tk-vh" for="program-filter">Program</label>
+          <select class="input tk-select" id="program-filter" onchange="filterStudents()">
+            <option value="">All programs</option>
+            @foreach ($students->pluck('programAbbr')->filter()->unique()->sort() as $abbr)
+              <option value="{{ $abbr }}">{{ $abbr }}</option>
+            @endforeach
+          </select>
+        </div>
+      </div>
+
+      <div class="tk-scroll">
+        <table class="table" data-export="Student List" data-export-into="#tkExport">
           <thead>
             <tr>
-              {{-- The unique key first: a student number is the one thing on
-                   the row that names exactly one person. Two students share a
-                   surname often enough that a name column cannot. --}}
-              <th style="padding-left:20px">Student no.</th>
-              <th>Student</th>
-              <th>Section</th>
-              <th>Team</th>
-              <th>Status</th>
-              @if ($viewerIsCapsa)<th style="text-align:right;padding-right:20px">Action</th>@endif
+              <th style="width:32%">Student</th>
+              <th class="tk-opt2" style="width:15%">Student no.</th>
+              <th class="tk-opt" style="width:13%">Section</th>
+              <th style="width:20%">Team</th>
+              <th style="width:16%">Status</th>
+              @if ($viewerIsCapsa)<th style="width:64px"><span class="tk-vh">Action</span></th>@endif
             </tr>
           </thead>
           <tbody>
@@ -313,34 +312,35 @@
                   data-year="{{ preg_replace('/[^0-9]/', '', $year) }}"
                   data-letter="{{ strtoupper($section) }}"
                   data-team="{{ $sy && $sy->team ? '1' : '0' }}"
+                  data-signed="{{ $student->last_seen_at ? '1' : '0' }}"
                   data-search="{{ Str::lower($student->f_name.' '.$student->l_name.' '.$student->email.' '.$student->student_number) }}">
-                <td class="std-mono" style="padding-left:20px" data-label="Student no.">{{ $student->student_number ?: '—' }}</td>
-                <td data-label="Student">
+                <td class="tk-lead" data-label="Student">
                   {{-- The address under the name rather than nowhere: two
                        students share a surname often enough that it is what
                        tells them apart. --}}
-                  <span class="std-stack">
-                    <span class="std-name">{{ $student->l_name }}, {{ $student->f_name }} {{ $student->m_name ? $student->m_name[0] . '.' : '' }}</span>
-                    <span class="std-mail">{{ $student->email }}</span>
+                  <span class="tk-who-text">
+                    <span class="tk-name std-name">{{ $student->l_name }}, {{ $student->f_name }} {{ $student->m_name ? $student->m_name[0] . '.' : '' }}</span>
+                    <span class="tk-sub">{{ $student->email }}</span>
                   </span>
                 </td>
+                <td class="tk-opt2" data-label="Student no."><span class="tk-num">{{ $student->student_number ?: '—' }}</span></td>
                 {{-- One column, the way a section is written everywhere else
-                     in the app - BSIT-4A. Split across three it read as three
-                     unrelated facts, and no other screen names a section that
-                     way, so the same student looked different here. --}}
-                <td class="std-mono" data-label="Section">{{ \App\Models\Student::computeSectionLabel($student->course, $student->year_section) ?? '—' }}</td>
+                     in the app - BSIT-4A. --}}
+                <td class="tk-opt" data-label="Section"><span class="tk-secsoft">{{ \App\Models\Student::computeSectionLabel($student->course, $student->year_section) ?? '—' }}</span></td>
                 <td data-label="Team">
                   @if ($sy && $sy->team)
-                    {{ $sy->team->team_name ?? 'Team #' . $sy->team->team_id }}
-                    @if ($student->teamSection)
-                      {{-- A 4th-year team split across sections: it is one team, handled under its leader's section. --}}
-                      <span class="std-team-elsewhere"
-                            title="{{ $student->teamHandledHere ? 'This team is listed under '.$student->teamSection.', its leader\'s section.' : 'This team belongs to '.$student->teamSection.', its leader\'s section. That section\'s CaPSA handles its checklist, defenses and grading.' }}">
-                        Team in {{ $student->teamSection }}
-                      </span>
-                    @endif
+                    <span>
+                      <span class="tk-team"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>{{ $sy->team->team_name ?? 'Team #' . $sy->team->team_id }}</span>
+                      @if ($student->teamSection)
+                        {{-- A 4th-year team split across sections: it is one team, handled under its leader's section. --}}
+                        <span class="std-team-elsewhere"
+                              title="{{ $student->teamHandledHere ? 'This team is listed under '.$student->teamSection.', its leader\'s section.' : 'This team belongs to '.$student->teamSection.', its leader\'s section. That section\'s CaPSA handles its checklist, defenses and grading.' }}">
+                          Team in {{ $student->teamSection }}
+                        </span>
+                      @endif
+                    </span>
                   @else
-                    <span style="color:var(--text3)">—</span>
+                    <span class="tk-empty">&mdash;</span>
                   @endif
                 </td>
                 <td data-label="Status">
@@ -348,13 +348,13 @@
                        in. Without a word for that the row looks broken rather
                        than waiting. --}}
                   @if ($student->last_seen_at)
-                    <span class="std-tag std-tag-on">Enrolled</span>
+                    <span class="tk-pill tk-p-green"><span class="tk-dot"></span>Enrolled</span>
                   @else
-                    <span class="std-tag std-tag-wait">Not signed in yet</span>
+                    <span class="tk-pill tk-p-neutral"><span class="tk-dot"></span>Not signed in</span>
                   @endif
                 </td>
                 @if ($viewerIsCapsa)
-                  <td style="text-align:right;padding-right:20px" data-label="Action">
+                  <td class="tk-ac" data-label="Action">
                     @php
                       // Built above the tag: a multi-line @json inside an
                       // attribute is a parse error, and the message points at
@@ -371,14 +371,15 @@
                         'email' => $student->email,
                       ];
                     @endphp
+                    <div class="tk-acts">
                     <div class="rowmenu">
                       <button type="button" class="icon-btn rowmenu-btn" aria-expanded="false"
                               aria-label="Actions for {{ $student->f_name }} {{ $student->l_name }}">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
                       </button>
                       {{-- Always about this one student, ticked or not. Setting a
-                           program or a year for several at once is the bar's job;
-                           a name and a student number are one person's. --}}
+                           program or a section for several at once is the bar's
+                           job; a name and a student number are one person's. --}}
                       <div class="rowmenu-pop" hidden>
                         <button type="button" class="rowmenu-item"
                                 onclick="openEditStudent({{ Illuminate\Support\Js::from($editPayload) }})">
@@ -391,12 +392,13 @@
                         </button>
                       </div>
                     </div>
+                    </div>
                   </td>
                 @endif
               </tr>
             @empty
-              <tr>
-                <td colspan="6" style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">
+              <tr class="tk-note" data-no-select="1">
+                <td colspan="7" style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">
                   @if (empty($adminSections))
                     No sections assigned yet. <a href="{{ route('capsa.profile') }}" style="color:var(--accent)">Set your sections</a> to view students.
                   @else
@@ -405,8 +407,17 @@
                 </td>
               </tr>
             @endforelse
+            <tr class="tk-note" id="tkNoMatch" data-no-select="1" hidden>
+              <td colspan="7" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student matches that search.</td>
+            </tr>
           </tbody>
         </table>
+      </div>
+      <div class="tk-foot">
+        <span id="tkShowing">Showing all <strong>{{ $students->count() }}</strong> {{ Str::plural('student', $students->count()) }}</span>
+        @if ($viewerIsCapsa)
+          <span class="tk-tip" style="color:var(--text3)">Tick rows to set a program, transfer or remove several at once</span>
+        @endif
       </div>
     </div>
   </div>
@@ -1156,7 +1167,7 @@ function uploadStudentRoster(btn) {
   <div class="upload-sheet bulk-sheet" onclick="event.stopPropagation()">
     <div class="card" style="padding:16px;box-shadow:none;border:0">
       <div class="card-header sheet-head">
-        <span class="card-title" id="bulk-section-title">Set year &amp; section</span>
+        <span class="card-title" id="bulk-section-title">Transfer section</span>
         <span class="sheet-head-right">
           <button class="sheet-x" type="button" onclick="closeBulkSection()" aria-label="Close">
             <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1255,18 +1266,39 @@ function headers() {
   };
 }
 
-// ── search ──
+// ── search, program and the status tabs ──
+// The tabs read "team:0" (without a team), "signed:0" (not signed in yet) or
+// "signed:1" (enrolled) - the row attribute and the value it must have.
+function pickStudentTab(button) {
+  const tabs = document.getElementById('team-filter');
+  tabs.dataset.value = button.dataset.v;
+  tabs.querySelectorAll('.tk-tab').forEach(function (b) {
+    b.setAttribute('aria-selected', b === button ? 'true' : 'false');
+  });
+  filterStudents();
+}
+
 function filterStudents() {
   const q = document.getElementById('student-search').value.trim().toLowerCase();
   const program = document.getElementById('program-filter').value;
-  const team = document.getElementById('team-filter').value;
+  const [field, wanted] = (document.getElementById('team-filter').dataset.value || ':').split(':');
+  const rows = document.querySelectorAll('.table tbody tr[data-id]');
+  let shown = 0;
 
-  document.querySelectorAll('.table tbody tr[data-id]').forEach(function (tr) {
+  rows.forEach(function (tr) {
     const hit = (!q || (tr.dataset.search || '').includes(q))
       && (!program || tr.dataset.program === program)
-      && (!team || tr.dataset.team === team);
+      && (!field || tr.dataset[field] === wanted);
     tr.style.display = hit ? '' : 'none';
+    if (hit) shown++;
   });
+
+  // A table that just goes blank reads as broken, not as "nobody matched".
+  const none = document.getElementById('tkNoMatch');
+  if (none) none.hidden = shown > 0 || rows.length === 0;
+  document.getElementById('tkShowing').innerHTML = shown === rows.length
+    ? 'Showing all <strong>' + rows.length + '</strong> ' + (rows.length === 1 ? 'student' : 'students')
+    : 'Showing <strong>' + shown + '</strong> of <strong>' + rows.length + '</strong>';
 }
 
 // ── school address boxes ──
@@ -1634,7 +1666,7 @@ function openBulkSection(ids, rows) {
   bulkIds = ids;
   fillNames(document.getElementById('bulk-section-names'), pickedNames(rows));
   document.getElementById('bulk-section-title').textContent =
-    'Set year & section for ' + ids.length + (ids.length === 1 ? ' student' : ' students');
+    'Transfer ' + ids.length + (ids.length === 1 ? ' student' : ' students') + ' to another section';
   document.getElementById('bulk-section-error').style.display = 'none';
   previewBulkSection();
   document.getElementById('bulk-section-scrim').hidden = false;
@@ -1745,5 +1777,6 @@ document.addEventListener('keydown', function (e) {
 </script>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

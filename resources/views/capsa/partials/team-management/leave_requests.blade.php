@@ -49,6 +49,10 @@
   .rr-status.approved{background:var(--green-bg);color:var(--green)}
   .rr-status.declined{background:var(--red-bg);color:var(--red)}
   .rr-status.withdrawn{background:var(--bg4);color:var(--text3)}
+  .rr-status.auto{background:var(--amber-bg);color:var(--amber)}
+  .rr-auto-tag{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--amber)}
+  .rr-due{display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:999px;font-weight:700;background:var(--amber-bg);color:var(--amber)}
+  .rr-due.soon{background:var(--red-bg);color:var(--red)}
   .rr-decision{margin-top:6px;font-size:12.5px;color:var(--text2);line-height:1.5;overflow-wrap:anywhere}
 
   .rr-empty{padding:34px 20px;text-align:center;border:1px dashed var(--border);border-radius:14px;color:var(--text3);font-size:13px;line-height:1.6}
@@ -75,7 +79,7 @@
 
     <div class="rr-head">
       <div>
-        <div class="rr-sub">A member can only leave a team with your approval, and once a team passes Title Defense its leader can't remove anyone either. Those requests, and teams asking to change an expert who already took them on, come to you with a reason.</div>
+        <div class="rr-sub">A member can only leave a team with your approval, and once a team passes Title Defense its leader can't remove anyone either. Those requests, and teams asking to change an expert who already took them on, come to you with a reason. A request to leave or remove a member that you do not decide within {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days is declined automatically, and the team is told it ran out of time.</div>
       </div>
       <span class="rr-locked">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -135,6 +139,14 @@
                   <span>{{ $sectionOf[$r->id] }}</span>
                   <span title="{{ $r->created_at->format('M j, Y g:i A') }}">Asked {{ $r->created_at->diffForHumans() }}</span>
                   @if($lockedAt)<span>Locked since {{ $lockedAt->format('M j, Y') }}</span>@endif
+                  @php
+                    $deadline = $r->autoDeclinesAt();
+                    $hoursLeft = max(0, (int) ceil(now()->diffInMinutes($deadline, false) / 60));
+                  @endphp
+                  <span class="rr-due {{ $hoursLeft <= 24 ? 'soon' : '' }}" title="Not decided by {{ $deadline->format('M j, Y g:i A') }}, it is declined automatically">
+                    <svg class="rr-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    Auto-declines {{ $hoursLeft <= 24 ? 'in '.max(1, $hoursLeft).' '.(max(1, $hoursLeft) === 1 ? 'hour' : 'hours') : 'on '.$deadline->format('M j') }}
+                  </span>
                 </div>
               </div>
               <span class="rr-type {{ $isLeave ? '' : 'remove' }}">{{ $isLeave ? 'Leaving' : 'Removal' }}</span>
@@ -209,10 +221,10 @@
           @php
             $memberName = trim(($r->student->f_name ?? '').' '.($r->student->l_name ?? '')) ?: 'A member';
             $decider = trim(($r->decider->first_name ?? '').' '.($r->decider->last_name ?? ''));
-            $label = ['approved' => 'Approved', 'declined' => 'Declined', 'withdrawn' => 'Withdrawn'][$r->status] ?? ucfirst($r->status);
+            $label = $r->auto_declined ? 'Auto-declined' : (['approved' => 'Approved', 'declined' => 'Declined', 'withdrawn' => 'Withdrawn'][$r->status] ?? ucfirst($r->status));
           @endphp
           <article class="rr-card rr-decided">
-            <span class="rr-status {{ $r->status }}">{{ $label }}</span>
+            <span class="rr-status {{ $r->status }}{{ $r->auto_declined ? ' auto' : '' }}">{{ $label }}</span>
             <div class="rr-main">
               <div class="rr-line">
                 {{ $r->type === 'leave' ? 'Leaving' : 'Removal' }}: <b>{{ $memberName }}</b> · {{ $r->team?->team_name }}
@@ -221,11 +233,16 @@
                 <span>{{ $sectionOf[$r->id] ?? '' }}</span>
                 @if($r->status === 'withdrawn')
                   <span>Withdrawn by the student</span>
+                @elseif($r->auto_declined)
+                  <span class="rr-auto-tag">
+                    <svg class="rr-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    No action from CaPSA in {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days
+                  </span>
                 @elseif($decider)
                   <span>By {{ $decider }}</span>
                 @endif
               </div>
-              @if($r->decision_note)
+              @if($r->decision_note && ! $r->auto_declined)
                 <div class="rr-decision">“{{ $r->decision_note }}”</div>
               @endif
             </div>

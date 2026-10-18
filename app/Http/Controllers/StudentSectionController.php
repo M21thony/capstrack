@@ -47,6 +47,7 @@ class StudentSectionController extends Controller
             ->mapWithKeys(fn (Team $team) => [$team->team_id => $scope->sectionFor($team, $teamRecords->get($team->team_id, collect()))]);
 
         $students = collect();
+        $sectionCounts = [];
 
         foreach ($allStudents as $student) {
             $sectionLabel = Student::computeSectionLabel($student->course, $student->year_section);
@@ -59,6 +60,10 @@ class StudentSectionController extends Controller
             if (! in_array($sectionLabel, $adminSections, true)) {
                 continue;
             }
+
+            // Counted before the section filter, so each section's pill can
+            // say how many it holds while another one is picked.
+            $sectionCounts[$sectionLabel] = ($sectionCounts[$sectionLabel] ?? 0) + 1;
 
             if ($selectedSection && $sectionLabel !== $selectedSection) {
                 continue;
@@ -99,6 +104,6 @@ class StudentSectionController extends Controller
             ];
         }
 
-        return view('capsa.sections', compact('students', 'adminSections', 'allSections', 'debug'));
+        return view('capsa.sections', compact('students', 'adminSections', 'allSections', 'debug', 'sectionCounts', 'selectedSection'));
     }
 }

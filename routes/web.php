@@ -76,6 +76,7 @@ use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TableExportController;
 use App\Http\Controllers\TableReportController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TeamRatingController;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -214,6 +215,12 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // route names so nothing that links to them breaks, but its page
         // redirects here - it was only ever half of this.
         Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
+        // Team ratings live on Team Management's Team Ratings tab; these are its actions.
+        Route::post('/team-ratings', [App\Http\Controllers\Capsa\TeamRatingController::class, 'store'])->name('team_ratings.store');
+        Route::get('/team-ratings/spreadsheet', [App\Http\Controllers\Capsa\TeamRatingController::class, 'export'])->name('team_ratings.export');
+        Route::post('/team-ratings/{form}/items', [App\Http\Controllers\Capsa\TeamRatingController::class, 'addItems'])->name('team_ratings.items');
+        Route::patch('/team-ratings/{form}', [App\Http\Controllers\Capsa\TeamRatingController::class, 'update'])->name('team_ratings.update');
+        Route::post('/team-ratings/{form}/reminders', [App\Http\Controllers\Capsa\TeamRatingController::class, 'remind'])->name('team_ratings.remind');
         // Manage milestones: a page per milestone and a page per form. Before
         // the {team} pages, so "milestones" is never read as a team.
         Route::get('/team-management/milestones/setup/{program}', [MilestonePageController::class, 'setup'])->name('team_management.milestones.setup');
@@ -341,13 +348,13 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/grading', [GradingController::class, 'index'])->name('grading');
     Route::get('/grading/team-defenses', [GradingController::class, 'teamDefenses'])->name('grading.team-defenses');
     Route::get('/grading/{defense}', [GradingController::class, 'show'])->name('grading.show');
-    // The rating sheet on paper, for a defense held without signal or power.
-    Route::get('/grading/{defense}/sheet.{format}', [GradingController::class, 'sheet'])->whereIn('format', ['pdf', 'xlsx'])->name('grading.sheet');
     Route::put('/grading/{defense}', [GradingController::class, 'save'])->name('grading.save');
     Route::patch('/grading/{defense}', [GradingController::class, 'submit'])->name('grading.submit');
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
     Route::post('/grading/{defense}/abstain', [GradingController::class, 'abstain'])->name('grading.abstain');
     Route::delete('/grading/{defense}/abstain', [GradingController::class, 'withdrawAbstention'])->name('grading.abstain.withdraw');
+    Route::put('/grading/{defense}/grader', [GradingController::class, 'setGrader'])->name('grading.grader');
+    Route::delete('/grading/{defense}/join', [GradingController::class, 'leaveShared'])->name('grading.join.leave');
     // What team leaders answered about this expert, anonymously.
     Route::get('/evaluations', [InstructorEvaluationController::class, 'index'])->name('evaluations');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
@@ -376,7 +383,6 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
     Route::get('/{review}/status', [PdfAnnotationController::class, 'showStatus'])->name('status.show');
     Route::post('/{review}/status', [PdfAnnotationController::class, 'updateStatus'])->name('status.update');
     Route::post('/{review}/figures-checked', [PdfAnnotationController::class, 'updateFiguresChecked'])->name('figures-checked.update');
-    Route::put('/{review}/drive-file', [PdfAnnotationController::class, 'syncDrive'])->name('sync-drive');
     // The team's earlier uploads of the same requirement, to compare against.
     Route::get('/{review}/versions/{document}/file', [PdfAnnotationController::class, 'versionFile'])->name('versions.file');
     Route::get('/{review}/versions/{document}/remarks', [PdfAnnotationController::class, 'versionRemarks'])->name('versions.remarks');
@@ -498,6 +504,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::redirect('/', '/student/dashboard');
             Route::get('/dashboard', [DashboardController::class, 'index'])->name('student.dashboard');
             Route::get('/team', [TeamController::class, 'index'])->name('student.team');
+            Route::get('/team/rating/{form}/rate/{ratee}', [TeamRatingController::class, 'rate'])->whereNumber('ratee')->name('student.team_rating.rate');
+            Route::patch('/team/rating/{form}/rate/{ratee}', [TeamRatingController::class, 'draft'])->whereNumber('ratee')->name('student.team_rating.draft');
+            Route::post('/team/rating/{form}/submission', [TeamRatingController::class, 'submit'])->name('student.team_rating.submit');
             Route::get('/experts', [StudentExpertController::class, 'index'])->name('student.experts');
             Route::post('/experts/evaluations', [ExpertEvaluationController::class, 'store'])->name('student.evaluations.store');
             // Document Submission and Review Viewer in one: the team's files, each opening with its remarks.
@@ -507,7 +516,6 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/submission', [SubmissionController::class, 'create'])->name('student.submission');
             // Handles the actual file upload + multi-recipient Drive delivery
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
-            Route::get('/submission/subject-adviser-folders', [SubmissionController::class, 'subjectAdviserFolders'])->name('student.submission.subject-adviser-folders');
             Route::get('/submission/next-version', [SubmissionController::class, 'nextVersionForTitle'])->name('student.submission.next-version');
             // Asked before a draft goes up: is this the file they mean to send?
             Route::post('/submission/warnings', [SubmissionController::class, 'warnings'])->name('student.submission.warnings');
@@ -530,6 +538,12 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
             Route::post('/financial/receipts', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
             Route::get('/resources', [StudentResourceController::class, 'index'])->name('student.resources');
+            // The file itself: a redirect to Drive's download, counted.
+            Route::get('/resources/{resource}/file', [StudentResourceController::class, 'download'])->name('student.resources.download');
+            // The blank rubric a stage is graded with, for the student's own program.
+            Route::get('/resources/rubrics/{stage}.pdf', [StudentResourceController::class, 'rubric'])->where('stage', '[a-z-]+')->name('student.resources.rubric');
+            // The team's rating sheet, filled in, to print for each panelist before the defense.
+            Route::get('/defense/{defense}/sheet.{format}', [StudentResourceController::class, 'sheet'])->whereIn('format', ['pdf', 'xlsx'])->name('student.defense.sheet');
             Route::get('/archive', [StudentArchiveController::class, 'index'])->name('student.archive');
             // The manuscript a finished team hands in, from the archive page.
             Route::post('/archive/manuscript', [StudentArchiveController::class, 'submit'])->name('student.archive.manuscript.submit');
@@ -623,9 +637,6 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     // its own category before anything is taken on.
     Route::get('/folders/{folder}/files', [GoogleDriveController::class, 'folderFiles'])->name('folders.files.index');
     Route::post('/folders', [GoogleDriveController::class, 'createFolder'])->name('folders.store');
-    Route::get('/submission-folders', [GoogleDriveController::class, 'listSubmissionFolders'])->name('submission-folders.index');
-    Route::post('/submission-folders', [GoogleDriveController::class, 'storeSubmissionFolder'])->name('submission-folders.store');
-    Route::delete('/submission-folders/{id}', [GoogleDriveController::class, 'destroySubmissionFolder'])->name('submission-folders.destroy');
     Route::post('/resources', [GoogleDriveController::class, 'upload'])->name('resources.store');
     // Taking on files that already exist in the CaPSA's Drive. An import
     // is the thing being made here - the files are not touched beyond
@@ -644,7 +655,8 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
 // now - one who is in a team, since every page worth looking at needs one.
 if (app()->environment('local')) {
     Route::get('/__dev-login-student/{page?}', function (?string $page = null) {
-        $studentId = StudentSchoolYear::whereNotNull('team_id')->value('student_id')
+        // ?as=<student id> when the page under test needs a particular student.
+        $studentId = request()->integer('as') ?: StudentSchoolYear::whereNotNull('team_id')->value('student_id')
             ?? Student::query()->value('student_id');
 
         abort_unless($studentId && Auth::guard('web')->loginUsingId($studentId), 404, 'No student to sign in as.');

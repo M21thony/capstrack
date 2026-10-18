@@ -99,7 +99,7 @@ class DefenseScheduleNotifier
                 'defense_scheduled',
                 'Is '.$team->team_name.' ready? '.$schedule->defense_type.' on '.$schedule->schedule_date->format('M j'),
                 'Give the go, or say the team is not ready and the date is cancelled.',
-                route('instructor.assignments'),
+                route('instructor.teams', ['tab' => 'todo']),
             );
         }
     }

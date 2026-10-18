@@ -107,14 +107,14 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $this->assertMatchesRegularExpression('#<a class="sidebar-user sidebar-user-link" href="'.preg_quote(route('instructor.profile'), '#').'" aria-label="My profile"\s+id="ep-trigger"\s*>#', $html);
         $this->assertStringNotContainsString('id="ep-overlay"', $html);
 
-        // One profile: their name, sections and folders are on it too, and
-        // the old CaPSA profile sends them there.
+        // One profile: their name and sections are on it too, and the old
+        // CaPSA profile sends them there.
         $this->actingAs($capsa, 'expert')->get(route('instructor.profile'))->assertOk()
             ->assertSee('Team slots')
             ->assertSee('id="pp-name-btn"', false)
             ->assertSeeInOrder(['CaPSA of', 'BSIT-4B'])
             ->assertSee('Roles and sections are set by the administrator')
-            ->assertSee('id="pp-folders-h"', false);
+            ->assertDontSee('id="pp-folders-h"', false);
         $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertRedirect(route('instructor.profile'));
     }
 

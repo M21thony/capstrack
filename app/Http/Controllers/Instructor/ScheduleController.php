@@ -10,6 +10,7 @@ use App\Models\ConsultationSchedule;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Services\GoogleCalendarService;
+use App\Support\ConsultationTopics;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -57,12 +58,21 @@ class ScheduleController extends Controller
                 'consultation_booking.booking_status',
                 'consultation_booking.cancellation_requested_at',
                 'consultation_booking.cancellation_reason',
+                'consultation_booking.cancellation_requested_by',
+                'consultation_booking.topics',
+                'consultation_booking.note',
                 'consultation_booking.created_at as booked_at',
                 'students.f_name as student_fname',
                 'students.l_name as student_lname',
                 'team.team_name'
             )
-            ->get();
+            ->get()
+            ->each(function ($row) {
+                // The day alone: SQLite keeps "2026-10-20 00:00:00" where
+                // MySQL keeps "2026-10-20", and the page matches the day.
+                $row->session_date = $row->session_date ? substr((string) $row->session_date, 0, 10) : null;
+                $row->topics = ConsultationTopics::label(json_decode((string) $row->topics, true) ?: []);
+            });
 
         // The dates a weekly slot does NOT happen on. Without these the page
         // would draw an occurrence the adviser has already moved or skipped,
@@ -121,10 +131,10 @@ class ScheduleController extends Controller
             Notification::create([
                 'student_id' => $studentId,
                 'type' => 'consultation_cancellation',
-                'title' => $approve ? 'Cancellation approved' : 'Cancellation declined',
+                'title' => $approve ? 'Cancellation approved' : 'Cancellation rejected',
                 'message' => $approve
                     ? "Your consultation on {$when} is cancelled."
-                    : "Your expert kept your consultation on {$when}. It is still on. Why: “".e($request->input('reason')).'”',
+                    : "Your expert rejected the cancellation. Your consultation on {$when} is still on. Why: “".e($request->input('reason')).'”',
                 'link' => route('student.consultation'),
             ]);
         }
@@ -339,6 +349,10 @@ class ScheduleController extends Controller
             if ($request->recur === 'once' && $request->specific_date && Carbon::parse($request->specific_date)->lt(today())) {
                 $validator->errors()->add('specific_date', 'That day has already passed. Pick today or a later date.');
             }
+            if ($request->recur === 'biweekly' && $request->specific_date
+                && Carbon::parse($request->specific_date)->format('l') !== $request->available_date) {
+                $validator->errors()->add('specific_date', 'An every-other-week slot starts on its own weekday.');
+            }
         });
 
         if ($validator->fails()) {
@@ -355,7 +369,13 @@ class ScheduleController extends Controller
         $nextDate = $this->getNextDateForDay($request->available_date);
 
         $newRecur = $request->recur ?? 'weekly';
-        $newDate = $newRecur === 'once' ? $request->specific_date : null;
+        // A one-time slot's date, or the first date of an every-other-week
+        // one, which decides the weeks it falls on.
+        $newDate = match ($newRecur) {
+            'once' => $request->specific_date,
+            'biweekly' => ConsultationSchedule::biweeklyStart($request->available_date, $request->specific_date),
+            default => null,
+        };
 
         // A slot identical to one that already exists is nobody's intention.
         // It used to be inserted anyway, then flagged unavailable by the
@@ -420,8 +440,8 @@ class ScheduleController extends Controller
             'slot_type' => $request->slot_type,
             'is_available' => ! $hasOverlap,
             'google_event_id' => $googleEventId,
-            'recur' => $request->recur ?? 'weekly',
-            'specific_date' => $request->recur === 'once' ? $request->specific_date : null,
+            'recur' => $newRecur,
+            'specific_date' => $newDate,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -478,9 +498,17 @@ class ScheduleController extends Controller
         // A weekly slot has no date of its own, so switching away from 'once'
         // has to clear it. array_filter dropped nulls, which is why it could
         // not have been done through that list.
-        $newDate = $newRecur === 'once'
-            ? ($request->has('specific_date') ? $request->specific_date : $slot->specific_date)
-            : null;
+        $newDate = match ($newRecur) {
+            'once' => $request->has('specific_date') ? $request->specific_date : $slot->specific_date,
+            // Kept while it stays every other week on the same day, so its
+            // weeks do not shift under teams that booked them.
+            'biweekly' => ConsultationSchedule::biweeklyStart(
+                $newDay,
+                $request->input('specific_date')
+                    ?: (($slot->recur ?? 'weekly') === 'biweekly' && $slot->available_date === $newDay ? $slot->specific_date : null)
+            ),
+            default => null,
+        };
 
         if ($newRecur === 'once' && ! $newDate) {
             return response()->json(['error' => 'A one-time slot needs a date.'], 422);

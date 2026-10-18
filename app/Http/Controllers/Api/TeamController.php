@@ -53,7 +53,7 @@ class TeamController extends Controller
             ], 422);
         }
 
-        if (! Team::creationAllowed()) {
+        if (! Team::creationAllowed($request->user()->sectionLabel())) {
             return response()->json(['message' => Team::CREATION_CLOSED], 422);
         }
 
@@ -168,7 +168,7 @@ class TeamController extends Controller
         $team->update([
             'team_name' => $validated['team_name'],
             'team_status' => $validated['team_status'] ?? $team->team_status,
-            'member_count' => Team::maxMembers(),
+            'member_count' => $team->memberLimit(),
         ]);
 
         Recruitment::where('student_id', $studentId)

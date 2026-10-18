@@ -102,8 +102,10 @@ class ExpertAcceptsColumnTest extends TestCase
     {
         $this->splitExpert();
 
-        $html = $this->actingAs($this->admin(), 'expert')
-            ->get(route('admin.experts'))->assertOk()->getContent();
+        // On Expert Management, where the column lives. CaPSA Management
+        // shows the sections a CaPSA handles instead.
+        $html = $this->actingAs($this->capsa(), 'expert')
+            ->get(route('capsa.experts'))->assertOk()->getContent();
 
         // One approved team in each program: 1 of the 2 BSIT slots, the only
         // BSIS slot, each with its bar drawn to match.
@@ -117,16 +119,15 @@ class ExpertAcceptsColumnTest extends TestCase
         $this->assertStringNotContainsString('total assigned', $html);
     }
 
-    /** The CaPSA's copy of the list reads the same data the same way. */
-    public function test_the_capsa_copy_of_the_list_shows_the_same_progress(): void
+    /** Admin's copy lists CaPSAs by their sections, and leaves slots out. */
+    public function test_the_admin_copy_of_the_list_leaves_slots_out(): void
     {
         $this->splitExpert();
 
-        $html = $this->actingAs($this->capsa(), 'expert')
-            ->get(route('capsa.experts'))->assertOk()->getContent();
+        $html = $this->actingAs($this->admin(), 'expert')
+            ->get(route('admin.experts'))->assertOk()->getContent();
 
-        $this->assertStringContainsString('<span class="capacity-count">1/2</span>', $html);
-        $this->assertStringContainsString('<span class="capacity-count">1/1</span>', $html);
+        $this->assertStringNotContainsString('capacity-count', $html);
         $this->assertStringNotContainsString('total assigned', $html);
     }
 
@@ -178,8 +179,8 @@ class ExpertAcceptsColumnTest extends TestCase
             ]);
         }
 
-        $html = $this->actingAs($this->admin(), 'expert')
-            ->get(route('admin.experts'))->assertOk()->getContent();
+        $html = $this->actingAs($this->capsa(), 'expert')
+            ->get(route('capsa.experts'))->assertOk()->getContent();
 
         // BSIT is full from two approved teams whose rows name no program;
         // BSIS shows its empty slot row beside it.
@@ -221,8 +222,8 @@ class ExpertAcceptsColumnTest extends TestCase
             'status' => 'approved',
         ]);
 
-        $html = $this->actingAs($this->admin(), 'expert')
-            ->get(route('admin.experts'))->assertOk()->getContent();
+        $html = $this->actingAs($this->capsa(), 'expert')
+            ->get(route('capsa.experts'))->assertOk()->getContent();
 
         $this->assertStringContainsString('1/2 · 1 left', $html);
     }

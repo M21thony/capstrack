@@ -142,11 +142,9 @@ class PortalIconsTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder([
                 'data-icon="dashboard"', 'Dashboard',
-                'data-icon="team"', 'My Teams',
+                'data-icon="team"', 'Teams',
                 'data-icon="grading"', 'Team Grading',
-                'data-icon="inbox"', 'Team Assignments',
                 'data-icon="consultation"', 'Schedule Management',
-                'data-icon="file-review"', 'Document Review',
             ], false)
             ->assertSeeInOrder(['data-icon="inbox"', 'Team Requests', 'data-icon="file-review"', 'Documents to Review', 'data-icon="grading"', 'Grades to Submit'], false)
             ->assertSeeInOrder(['data-icon="announcement"', 'No announcements.'], false)

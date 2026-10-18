@@ -5,6 +5,7 @@
        admin/_sidebar for where that section is built. --}}
   @include('capsa._sidebar')
 @else
+@include('partials.sidebar-rail')
 @include('partials.portal-nav-icons')
 <div class="sidebar">
   @if(!isset($showBrand) || $showBrand)
@@ -25,28 +26,18 @@
     $seenAssignmentIds = session('instructor_seen_assignment_ids', []);
     $unseenAssignmentCount = count(array_diff($pendingAssignmentIds, $seenAssignmentIds));
 
-    if ($currentRouteName === 'instructor.assignments') {
+    // Seen once Teams is opened: its To do and Team Applications list them all.
+    if ($currentRouteName === 'instructor.teams') {
       session()->put('instructor_seen_assignment_ids', array_unique(array_merge($seenAssignmentIds, $pendingAssignmentIds)));
     }
 
-    $pendingDocReviewIds = [];
-    if ($expert && Schema::hasTable('capstone_document_review')) {
-      $pendingDocReviewIds = DB::table('capstone_document_review')->where('expert_id', $expert->expert_id)->where('review_status', 'pending')->pluck('review_id')->toArray();
-    }
-    $seenDocReviewIds = session('instructor_seen_doc_review_ids', []);
-    $unseenDocReviewCount = count(array_diff($pendingDocReviewIds, $seenDocReviewIds));
-
-    if ($currentRouteName === 'instructor.docreview') {
-      session()->put('instructor_seen_doc_review_ids', array_unique(array_merge($seenDocReviewIds, $pendingDocReviewIds)));
-    }
-
-    $scheduleIds = $expert ? DB::table('consultation_schedule')->where('expert_id', $expert->expert_id)->where('is_available', 1)->pluck('schedule_id')->toArray() : [];
-    $seenScheduleIds = session('instructor_seen_schedule_ids', []);
-    $unseenScheduleCount = count(array_diff($scheduleIds, $seenScheduleIds));
-
-    if ($currentRouteName === 'instructor.schedule') {
-      session()->put('instructor_seen_schedule_ids', array_unique(array_merge($seenScheduleIds, $scheduleIds)));
-    }
+    // Teams waiting on an answer to a cancel request: the one thing on the
+    // schedule that needs the expert. It counted open slots before, which
+    // asked nothing of anyone.
+    $unseenScheduleCount = $expert ? App\Models\ConsultationBooking::where('booking_status', 'scheduled')
+      ->whereNotNull('cancellation_requested_at')
+      ->whereHas('schedule', fn ($q) => $q->where('expert_id', $expert->expert_id))
+      ->count() : 0;
   @endphp
 
   {{-- The profile is a page of its own; it used to open a 300px drawer. --}}
@@ -69,17 +60,14 @@
     'currentPage' => $currentPage ?? '',
     'totalTeams' => $totalTeams ?? 0,
     'unseenAssignmentCount' => $unseenAssignmentCount,
-    'unseenDocReviewCount' => $unseenDocReviewCount,
     'unseenScheduleCount' => $unseenScheduleCount,
   ])
 </div>
 @include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => $expert ? ['url' => $expert->hasAvatarImage() ? $expert->avatarUrl() : null, 'initials' => $expert->avatarInitials()] : null, 'tabs' => [
     ['label' => 'Home', 'href' => route('instructor.dashboard'), 'active' => request()->routeIs('instructor.dashboard'),
         'icon' => App\Support\PortalIcons::paths('home')],
-    ['label' => 'Teams', 'href' => route('instructor.teams'), 'active' => request()->routeIs('instructor.teams', 'instructor.progress', 'instructor.assignments', 'instructor.assignments.*'),
+    ['label' => 'Teams', 'href' => route('instructor.teams'), 'active' => request()->routeIs('instructor.teams', 'instructor.progress', 'instructor.assignments', 'instructor.assignments.*'), 'badge' => $unseenAssignmentCount ?? 0,
         'icon' => App\Support\PortalIcons::paths('team')],
-    ['label' => 'Reviews', 'href' => route('instructor.docreview'), 'active' => request()->routeIs('instructor.docreview'), 'badge' => $unseenDocReviewCount ?? 0,
-        'icon' => App\Support\PortalIcons::paths('file-review')],
     ['label' => 'Grading', 'href' => route('instructor.grading'), 'active' => request()->routeIs('instructor.grading', 'instructor.grading.show'),
         'icon' => App\Support\PortalIcons::paths('grading')],
 ]])

@@ -61,6 +61,16 @@
       .dash-def small{display:block;color:var(--text3);font-size:12px}
       .dash-sec{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
       .dash-sec span{padding:3px 9px;border-radius:999px;background:var(--red-bg);color:var(--red);font-size:12px;font-weight:600}
+      .cap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+      .cap-table{width:100%;border-collapse:collapse;font-size:13.5px}
+      .cap-table caption{text-align:left;font-weight:700;padding:0 0 6px}
+      .cap-table th{text-align:left;font-size:12px;font-weight:600;color:var(--text3);padding:6px 8px;border-bottom:1px solid var(--border)}
+      .cap-table td{padding:7px 8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+      .cap-table th:nth-child(2),.cap-table th:nth-child(3),.cap-table td:nth-child(2),.cap-table td:nth-child(3){text-align:right}
+      .cap-table tr.cap-all td{font-weight:600;border-bottom:0}
+      .cap-table .cap-ok{color:var(--green);font-weight:600}
+      .cap-table .cap-even{color:var(--amber);font-weight:600}
+      .cap-table .cap-short{color:var(--red);font-weight:700}
     </style>
 
     @if ($capsa && $stats['capsa'])
@@ -135,6 +145,38 @@
           <x-dashboard.bars :rows="$c['bySection']" color="var(--accent)" empty="No teams in your sections yet." />
         </div>
       </div>
+
+      @if ($c['capacity'])
+        <div class="card" id="teams-vs-experts" style="margin-bottom:16px">
+          <div class="card-header"><span class="card-title">Teams vs Experts</span></div>
+          <p class="dc-sub">Teams in every section of your programs that still need each expert, against the slots experts have left. Checked every hour; you get a notice when a program runs short. Experts on study leave, or who have not set their slots, are not counted.</p>
+          <div class="cap-grid">
+            @foreach ($c['capacity'] as $program => $rows)
+              <table class="cap-table">
+                <caption>{{ $program }}</caption>
+                <thead><tr><th>Role</th><th>Teams needing</th><th>Free slots</th><th>Status</th></tr></thead>
+                <tbody>
+                  @foreach ($rows as $row)
+                    <tr class="{{ $row['role'] === 'all' ? 'cap-all' : '' }}">
+                      <td>{{ $row['label'] }}</td>
+                      <td>{{ $row['need'] }}</td>
+                      <td>{{ $row['free'] ?? 'No limit' }}</td>
+                      @if ($row['short'] > 0)
+                        <td class="cap-short">Short by {{ $row['short'] }}</td>
+                      @elseif ($row['status'] === \App\Support\ExpertCapacity::JUST_ENOUGH)
+                        <td class="cap-even">Just enough</td>
+                      @else
+                        <td class="cap-ok">OK</td>
+                      @endif
+                    </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            @endforeach
+          </div>
+          <a class="dc-more" href="{{ route('capsa.reports.show', 'expert_list') }}">See each expert's slots →</a>
+        </div>
+      @endif
 
       <p class="dc-lead" style="margin-top:6px"><b>Waiting on you</b></p>
       <div class="dash-tiles">
@@ -247,5 +289,6 @@ function closeSidebar() { sidebarEl.classList.remove('mobile-open'); sidebarOver
 </script>
 
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

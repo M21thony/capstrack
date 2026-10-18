@@ -167,7 +167,7 @@ class ExpertApplications
             'expert_application',
             'New application',
             '<strong>'.e($team->team_name).'</strong> applied to you'.($role ? ' as their '.e($role) : '').'.',
-            route('instructor.assignments'),
+            route('instructor.teams', ['tab' => 'applications']),
             ['team_id' => $team->team_id],
         );
 

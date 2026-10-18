@@ -23,6 +23,31 @@ const HIGHLIGHT_COLOR_MAP = {
 // Width of the blank sidebar strip added to the right of each page for
 // comment cards, so they never sit on top of the document's own content.
 const SIDEBAR_WIDTH = 180;
+const CARD_MARGIN = 10;
+const CARD_GAP = 8;
+
+// The PDF's built-in font knows only Western letters; these are its nearest stand-ins.
+const SWAPS = { "→": "->", "←": "<-", "↔": "<->", "⇒": "=>", "≤": "<=", "≥": ">=", "≠": "!=", "✓": "OK", "✔": "OK", "✗": "x", "✘": "x", "−": "-" };
+
+// Splits text into lines no wider than maxWidth, breaking a word too long for a line of its own.
+const wrapText = (text, font, size, maxWidth) => {
+  const fits = (s) => font.widthOfTextAtSize(s, size) <= maxWidth;
+  const lines = [];
+  let line = "";
+  text.split(" ").forEach((word) => {
+    while (word && !fits(word)) {
+      let cut = word.length - 1;
+      while (cut > 1 && !fits(word.slice(0, cut))) cut--;
+      if (line) { lines.push(line); line = ""; }
+      lines.push(word.slice(0, cut));
+      word = word.slice(cut);
+    }
+    const test = line ? `${line} ${word}` : word;
+    if (fits(test)) line = test; else { lines.push(line); line = word; }
+  });
+  if (line) lines.push(line);
+  return lines;
+};
 
 const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -63,10 +88,6 @@ function App() {
   // "approved", "needs_revision", or null when not turned in yet.
   const [reviewVerdict, setReviewVerdict] = useState(null);
   const [saveState, setSaveState] = useState("saved");
-  // Background Google Drive upload: "idle" | "syncing" | "synced" | "error".
-  const [driveSyncState, setDriveSyncState] = useState("idle");
-  const [driveSyncError, setDriveSyncError] = useState(null);
-  const driveSyncRef = useRef({ inFlight: false, pending: false });
   // The consultant is the one who checks the diagrams, so their review opens ready for figures.
   const checksDiagrams = ctx.role === "consultant";
   // Figures the reviewer looked at and had nothing to say about.
@@ -307,6 +328,11 @@ function App() {
     const pages = pdfDoc.getPages();
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    // A character the font cannot draw would throw and leave the card empty, so each one is swapped first.
+    const drawable = new Set(helveticaFont.getCharacterSet());
+    const write = (s) => [...String(s).replace(/\s+/g, " ").trim()]
+      .map((ch) => (drawable.has(ch.codePointAt(0)) ? ch : SWAPS[ch] ?? "?")).join("");
+    const reviewerName = write(ctx.reviewer || "Reviewer");
 
     const commentsByPage = {};
     commentsRef.current.forEach((comment) => {
@@ -382,109 +408,114 @@ function App() {
       page.setSize(width + SIDEBAR_WIDTH, height);
       page.drawLine({ start: { x: width, y: 0 }, end: { x: width, y: height }, thickness: 1, color: rgb(0.85, 0.85, 0.85) });
 
-      const commentBoxWidth = SIDEBAR_WIDTH - 20;
-      const commentBoxHeight = 60;
-      const margin = 10;
-      const gap = 10;
+      const boxX = width + CARD_MARGIN;
+      const boxWidth = SIDEBAR_WIDTH - 2 * CARD_MARGIN;
+      const cardHeight = (lineCount) => Math.max(40, 22 + lineCount * 9 + 12);
+      const cards = pageComments.map((comment, idx) => {
+        const lines = wrapText(write(`${comment.figure_label ? `${comment.figure_label}: ` : ""}${comment.text || ""}`), helveticaFont, 7, boxWidth - 30);
+        return { comment, idx, lines, height: cardHeight(lines.length) };
+      });
+      const drawCard = (onPage, { idx, lines, height: h }, top) => {
+        try {
+          onPage.drawRectangle({
+            x: boxX, y: top - h, width: boxWidth, height: h,
+            color: rgb(1, 1, 1), borderWidth: 1, borderColor: rgb(0.231, 0.51, 0.965),
+          });
+          onPage.drawCircle({ x: boxX + 12, y: top - 12, size: 8, color: rgb(0.231, 0.51, 0.965) });
+          onPage.drawText(String(idx + 1), { x: boxX + (idx + 1 >= 10 ? 7.5 : 9.5), y: top - 15, size: 7, font: helveticaBoldFont, color: rgb(1, 1, 1) });
+          lines.forEach((textLine, i) => onPage.drawText(textLine, {
+            x: boxX + 25, y: top - 15 - i * 9, size: 7, font: helveticaFont, color: rgb(0.2, 0.2, 0.2),
+          }));
+          onPage.drawText(`- ${reviewerName}`, { x: boxX + 5, y: top - h + 5, size: 6, font: helveticaFont, color: rgb(0.5, 0.5, 0.5) });
+        } catch (e) {
+          console.warn("Error drawing comment:", e);
+        }
+      };
+
+      // Each card sits beside its mark, pushed down when the one above takes the room.
+      // What no longer fits goes on a page of its own right after this one.
+      const overflow = [];
       let cursorMaxTop = height;
-
-      pageComments
-        .map((comment, idx) => ({ comment, idx, anchorY: anchorYByIndex[idx] ?? height - margin - idx * (commentBoxHeight + gap) }))
+      cards
+        .map((card) => ({ ...card, anchorY: anchorYByIndex[card.idx] ?? height - CARD_MARGIN - card.idx * 50 }))
         .sort((a, b) => b.anchorY - a.anchorY)
-        .forEach(({ comment, idx, anchorY }) => {
-          try {
-            const boxX = width + margin;
-            const boxTop = Math.min(anchorY + commentBoxHeight / 2, cursorMaxTop);
-            const boxY = boxTop - commentBoxHeight;
-            cursorMaxTop = boxY - gap;
-            if (boxY < 0) return;
-
-            page.drawLine({
-              start: { x: width, y: anchorY }, end: { x: boxX, y: boxTop - 8 }, thickness: 1,
-              color: HIGHLIGHT_COLOR_MAP[comment.color] || HIGHLIGHT_COLOR_MAP.yellow, opacity: 0.9,
-            });
-            page.drawRectangle({
-              x: boxX, y: boxY, width: commentBoxWidth, height: commentBoxHeight,
-              color: rgb(1, 1, 1), opacity: 1, borderWidth: 1, borderColor: rgb(0.231, 0.51, 0.965),
-            });
-            page.drawCircle({ x: boxX + 12, y: boxY + commentBoxHeight - 12, size: 8, color: rgb(0.231, 0.51, 0.965) });
-            page.drawText((idx + 1).toString(), {
-              x: boxX + 9, y: boxY + commentBoxHeight - 15, size: 7, font: helveticaBoldFont, color: rgb(1, 1, 1),
-            });
-
-            const words = `${comment.figure_label ? `${comment.figure_label}: ` : ""}${comment.text || ""}`.split(" ");
-            const lines = [];
-            let line = "";
-            words.forEach((word) => {
-              const test = line ? `${line} ${word}` : word;
-              if (test.length > 22) { lines.push(line); line = word; } else { line = test; }
-            });
-            if (line) lines.push(line);
-            lines.slice(0, 3).forEach((textLine, lineIdx) => {
-              page.drawText(textLine, {
-                x: boxX + 25, y: boxY + commentBoxHeight - 15 - lineIdx * 10, size: 7, font: helveticaFont, color: rgb(0.2, 0.2, 0.2),
-              });
-            });
-            page.drawText(`- ${comment.author || "Reviewer"}`, {
-              x: boxX + 5, y: boxY + 5, size: 6, font: helveticaFont, color: rgb(0.5, 0.5, 0.5),
-            });
-          } catch (e) {
-            console.warn("Error drawing comment:", e);
-          }
+        .forEach((card) => {
+          const top = Math.min(card.anchorY + 20, cursorMaxTop);
+          if (overflow.length || top - card.height < CARD_MARGIN) { overflow.push(card); return; }
+          cursorMaxTop = top - card.height - CARD_GAP;
+          page.drawLine({
+            start: { x: width, y: card.anchorY }, end: { x: boxX, y: top - 8 }, thickness: 1,
+            color: HIGHLIGHT_COLOR_MAP[card.comment.color] || HIGHLIGHT_COLOR_MAP.yellow, opacity: 0.9,
+          });
+          drawCard(page, card, top);
         });
+
+      // A remark taller than a whole page carries on over as many cards as it needs.
+      const maxLines = Math.floor((height - 45 - CARD_MARGIN - 34) / 9);
+      const pieces = overflow.flatMap((card) => {
+        const parts = [];
+        for (let i = 0; i === 0 || i < card.lines.length; i += maxLines) {
+          const lines = card.lines.slice(i, i + maxLines);
+          parts.push({ ...card, lines, height: cardHeight(lines.length) });
+        }
+        return parts;
+      });
+      let at = pdfDoc.getPages().indexOf(page);
+      let more = null;
+      let top = 0;
+      pieces.forEach((card) => {
+        if (!more || top - card.height < CARD_MARGIN) {
+          more = pdfDoc.insertPage(++at, [width + SIDEBAR_WIDTH, height]);
+          more.drawText(`Remarks on page ${pageIndex + 1}, continued`, { x: boxX, y: height - 30, size: 10, font: helveticaBoldFont, color: rgb(0.2, 0.2, 0.2) });
+          top = height - 45;
+        }
+        drawCard(more, card, top);
+        top -= card.height + CARD_GAP;
+      });
     });
+
+    // General remarks are about the whole document, so they close it on pages of their own.
+    if (generalComments.length) {
+      const [w, h] = pages.length ? [pages[0].getWidth(), pages[0].getHeight()] : [612, 792];
+      const textWidth = w - 2 * 50;
+      let page = null;
+      let y = 0;
+      const newPage = () => {
+        page = pdfDoc.addPage([w, h]);
+        page.drawText("General remarks", { x: 50, y: h - 60, size: 16, font: helveticaBoldFont, color: rgb(0.1, 0.1, 0.1) });
+        page.drawText(`- ${reviewerName}`, { x: 50, y: h - 78, size: 9, font: helveticaFont, color: rgb(0.45, 0.45, 0.45) });
+        y = h - 108;
+      };
+      generalComments.forEach((g, i) => {
+        const head = write(`${i + 1}.${g.section ? ` ${g.section}` : ""}`);
+        const lines = wrapText(write(g.text || ""), helveticaFont, 10, textWidth);
+        const need = 16 + lines.length * 13 + 12;
+        // A remark that fits on a page is kept whole; one longer than a page runs on to the next.
+        if (!page || (y - need < 50 && need <= h - 158) || y - 29 < 50) newPage();
+        page.drawText(head, { x: 50, y, size: 10, font: helveticaBoldFont, color: rgb(0.231, 0.51, 0.965) });
+        y -= 16;
+        lines.forEach((line) => {
+          if (y < 50) newPage();
+          page.drawText(line, { x: 50, y, size: 10, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
+          y -= 13;
+        });
+        y -= 12;
+      });
+    }
 
     return pdfDoc.save();
   };
 
-  // Uploads the annotated PDF bytes to the review's Google Drive file.
-  const syncDrive = async (pdfBytes) => {
-    const response = await request(`/reviews/${reviewId}/drive-file`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/pdf" },
-      body: pdfBytes,
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      throw new Error(body?.message || `Drive sync failed: ${response.status}`);
-    }
-    return response.json();
-  };
-
-  // Safe to call repeatedly: a sync already running just flags that another
-  // is needed once it finishes, instead of running two heavy renders at once.
-  const syncAnnotatedPdfToDrive = async () => {
-    // Its Drive copy is the team's own diagram file, left as it is.
-    if (ctx.diagramOnly) return;
-    if (driveSyncRef.current.inFlight) { driveSyncRef.current.pending = true; return; }
-    driveSyncRef.current.inFlight = true;
-    setDriveSyncState("syncing");
-    setDriveSyncError(null);
-    try {
-      await syncDrive(await renderAnnotatedPdf());
-      setDriveSyncState("synced");
-    } catch (e) {
-      setDriveSyncState("error");
-      setDriveSyncError(e.message);
-    } finally {
-      driveSyncRef.current.inFlight = false;
-      if (driveSyncRef.current.pending) {
-        driveSyncRef.current.pending = false;
-        syncAnnotatedPdfToDrive();
-      }
-    }
-  };
-
-  // Leaving while remarks save or the Drive upload runs would drop them.
+  // Leaving while remarks save would drop them.
   useEffect(() => {
     const onBeforeUnload = (e) => {
-      if (saveState !== "saving" && driveSyncState !== "syncing") return;
+      if (saveState !== "saving") return;
       e.preventDefault();
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [saveState, driveSyncState]);
+  }, [saveState]);
 
   // Turning in is the moment the reviewer decides, so it carries the verdict.
   const handleTurnIn = async (verdict) => {
@@ -497,7 +528,6 @@ function App() {
       setSaveState("saved");
       setFinishing(false);
       showToast(verdict === "approved" ? "Turned in — approved." : "Turned in — sent back for revision.");
-      syncAnnotatedPdfToDrive();
     } catch (error) {
       console.error("Turn in error:", error);
       showToast("Could not turn this in. Please try again.", { type: "error" });
@@ -512,7 +542,7 @@ function App() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${(ctx.fileName || "annotated").replace(/[^\w.-]+/g, "_")}-remarks.pdf`;
+      a.download = `${(ctx.fileName || "annotated").replace(/\.(pdf|drawio|vsdx)$/i, "").replace(/[^\w.-]+/g, "_")}-remarks.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -531,8 +561,6 @@ function App() {
         status={reviewStatus}
         verdict={reviewVerdict}
         saveState={saveState}
-        driveSyncState={driveSyncState}
-        driveSyncError={driveSyncError}
         onExport={handleExport}
         onFinish={() => setFinishing(true)}
         versions={versions}

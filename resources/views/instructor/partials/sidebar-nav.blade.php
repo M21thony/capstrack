@@ -7,8 +7,10 @@
   <div class="nav-section">Teams</div>
   <a href="{{ route('instructor.teams') }}" class="nav-item {{ (isset($currentPage) && $currentPage === 'teams') ? 'active' : '' }}">
     <x-portal-icon name="team" />
-    My Teams
-    @if (($totalTeams ?? 0) > 0)
+    Teams
+    @if (($unseenAssignmentCount ?? 0) > 0)
+      <span class="nav-badge red">{{ $unseenAssignmentCount > 99 ? '99+' : $unseenAssignmentCount }}</span>
+    @elseif (($totalTeams ?? 0) > 0)
       <span class="nav-badge">{{ $totalTeams > 99 ? '99+' : $totalTeams }}</span>
     @endif
   </a>
@@ -19,27 +21,12 @@
       <span class="nav-badge">{{ $totalTeams > 99 ? '99+' : $totalTeams }}</span>
     @endif
   </a>
-  <a href="{{ route('instructor.assignments') }}" class="nav-item {{ (isset($currentPage) && $currentPage === 'assignments') ? 'active' : '' }}">
-    <x-portal-icon name="inbox" />
-    Team Assignments
-    @if (isset($unseenAssignmentCount) && $unseenAssignmentCount > 0)
-      <span class="nav-badge red">{{ $unseenAssignmentCount > 99 ? '99+' : $unseenAssignmentCount }}</span>
-    @endif
-  </a>
   <div class="nav-section">Schedule</div>
   <a href="{{ route('instructor.schedule') }}" class="nav-item {{ (isset($currentPage) && $currentPage === 'schedule') ? 'active' : '' }}">
     <x-portal-icon name="consultation" />
     Schedule Management
     @if (isset($unseenScheduleCount) && $unseenScheduleCount > 0)
-      <span class="nav-badge red">{{ $unseenScheduleCount > 99 ? '99+' : $unseenScheduleCount }}</span>
-    @endif
-  </a>
-  <div class="nav-section">Documents</div>
-  <a href="{{ route('instructor.docreview') }}" class="nav-item {{ (isset($currentPage) && $currentPage === 'docreview') ? 'active' : '' }}">
-    <x-portal-icon name="file-review" />
-    Document Review
-    @if (isset($unseenDocReviewCount) && $unseenDocReviewCount > 0)
-      <span class="nav-badge red">{{ $unseenDocReviewCount > 99 ? '99+' : $unseenDocReviewCount }}</span>
+      <span class="nav-badge red" title="{{ $unseenScheduleCount }} cancel {{ Str::plural('request', $unseenScheduleCount) }}">{{ $unseenScheduleCount > 99 ? '99+' : $unseenScheduleCount }}</span>
     @endif
   </a>
   <div class="nav-section">Feedback</div>

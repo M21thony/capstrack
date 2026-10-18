@@ -53,7 +53,7 @@
 <section class="card ppd">
   <div class="acts">
     @if ($title['document_url'])
-      <button class="btn btn-o" type="button" id="pdf-open"><x-tm-icon n="file" s="14" />View original PDF</button>
+      <button class="btn btn-o" type="button" id="pdf-open" data-url="{{ $title['document_url'] }}"><x-tm-icon n="file" s="14" />View original PDF</button>
     @endif
     <span class="sp"></span>
     @if ($title['status'] === 'pending')
@@ -149,15 +149,8 @@
 </section>
 
 @if ($title['document_url'])
-  <dialog class="pdfd" id="pdf-dlg" aria-label="Original pre-proposal PDF">
-    <div class="doc-h">
-      <span class="di"><x-tm-icon n="file" /></span>
-      <span class="fn">{{ $title['title'] }}<small>The file the team uploaded</small></span>
-      <a href="{{ $title['document_url'] }}" target="_blank" rel="noopener"><x-tm-icon n="ext" s="13" />Open in a new tab</a>
-      <button class="x" type="button" data-close aria-label="Close">&times;</button>
-    </div>
-    <iframe title="Original pre-proposal PDF" style="flex:1;width:100%;border:0" data-src="{{ $title['document_url'] }}"></iframe>
-  </dialog>
+  {{-- The original PDF opens in the app's PDF window. --}}
+  @include('partials.pdf-viewer')
 @endif
 
 @if ($title['status'] === 'pending')
@@ -208,11 +201,14 @@
     });
 
     /* The PDF is only fetched once she asks to see it. */
-    const pdf = document.getElementById('pdf-dlg'), pdfBtn = document.getElementById('pdf-open');
+    const pdfBtn = document.getElementById('pdf-open');
     if (pdfBtn) pdfBtn.onclick = () => {
-      const f = pdf.querySelector('iframe');
-      if (!f.src) f.src = f.dataset.src;
-      open(pdf);
+      dialogs.forEach(o => o.open && o.close());
+      window.PdfViewer.open({
+        url: pdfBtn.dataset.url,
+        title: @json($title['title']),
+        meta: @json($team->team_name.' · the file the team uploaded'),
+      });
     };
 
     /* The decision endpoint answers in JSON, so the page asks it directly and

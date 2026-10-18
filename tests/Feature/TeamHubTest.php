@@ -13,6 +13,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -151,6 +152,43 @@ class TeamHubTest extends TestCase
             ->assertDontSee('>Decided</button>', false);
     }
 
+    /**
+     * Completed is the history of reviewed papers: a heading per month, newest
+     * first, each paper opening in the annotator. Document Review is no longer
+     * in the sidebar, and a paper still waiting is not in the history.
+     */
+    public function test_completed_lists_reviewed_papers_under_their_month(): void
+    {
+        $expert = $this->expert('adviser');
+        [$team, $leader] = $this->team('Papel');
+        $this->assign($expert, $team, 'adviser');
+        $review = fn (string $file, int $version, string $status, ?string $verdict, ?string $at) => DB::table('capstone_document_review')->insertGetId([
+            'file_id' => DB::table('capstone_documents')->insertGetId([
+                'student_id' => $leader->student_id, 'team_id' => $team->team_id, 'file_name' => $file, 'file_path' => "submissions/{$file}.pdf",
+                'file_version' => $version, 'document_status' => 'Pending', 'created_at' => now(), 'updated_at' => now(),
+            ]),
+            'expert_id' => $expert->expert_id, 'role' => 'adviser', 'review_status' => $status,
+            'verdict' => $verdict, 'reviewed_at' => $at, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $september = $review('Chapter2_rev', 2, 'Reviewed', 'needs_revision', '2026-09-14 10:00:00');
+        $august = $review('Chapter1_final', 1, 'Reviewed', 'approved', '2026-08-03 09:00:00');
+        $review('Chapter3_draft', 1, 'To Review', null, null);
+
+        $html = $this->actingAs($expert, 'expert')->get(route('instructor.teams'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                'data-month="September 2026" data-n="1"', 'Sep 14', 'Chapter2_rev', 'Team Papel', '1st revision · as CaPA',
+                'Needs revision', 'href="'.route('instructor.docreview.annotate', $september).'" data-done-open',
+                'data-month="August 2026" data-n="1"', 'Aug 3', 'Chapter1_final', 'First submission · as CaPA',
+                'Approved', 'href="'.route('instructor.docreview.annotate', $august).'" data-done-open',
+                'id="tm-done-more"',
+            ], false)
+            ->assertDontSee('href="'.route('instructor.docreview').'"', false)
+            ->getContent();
+
+        $this->assertStringNotContainsString('Chapter3_draft', substr($html, strpos($html, 'id="tm-todo-decided"')));
+    }
+
     public function test_my_teams_lists_an_experts_invitations_and_teams(): void
     {
         $expert = $this->expert('adviser', 'consultant');
@@ -163,7 +201,9 @@ class TeamHubTest extends TestCase
         $this->actingAs($expert, 'expert')->get(route('instructor.teams'))
             ->assertOk()
             ->assertSee('<div class="tmx tm-hub" data-portal="expert">', false)
-            ->assertSeeInOrder(['class="group-h">Invitations', 'Invited as consultant', 'Team Habi'], false)
+            // A shortcut to the Team Applications tab, with the application to read.
+            ->assertSeeInOrder(['class="group-h group-apps"', 'Team applications', 'See all', 'Invited as consultant', 'Team Habi', 'Read application'], false)
+            ->assertSee('data-read="application" data-read-id="'.$invite->assignment_id.'"', false)
             ->assertSee('data-url="'.route('instructor.assignments.update', $invite->assignment_id).'"', false)
             ->assertSee('data-note="reason" data-min="20"', false)
             // Teams: the one they advise, with their seat; not the others.
@@ -186,7 +226,8 @@ class TeamHubTest extends TestCase
 
         $this->actingAs($expert, 'expert')->get(route('instructor.teams.show', $team->team_id))
             ->assertOk()
-            ->assertSee('My Teams')
+            ->assertSee('Teams')
+            ->assertDontSee('My Teams')
             ->assertSee($proposal->title)
             ->assertSee('once the CaPSA recommends')
             // Reviewing titles and verifying are the CaPSA's.

@@ -142,6 +142,9 @@ class EvaluationTemplateController extends Controller
             $template->update(['title' => $data['title'], 'roles' => $data['roles']]);
             $template->questions()->delete();
             $this->saveQuestions($template, $data['questions']);
+            // Newest by its last edit, even one that changed only questions:
+            // that is the version leaders yet to answer are asked.
+            $template->touch();
         });
 
         return redirect()->route('capsa.evaluations')->with('evaluation_status', 'Saved "'.$data['title'].'".');

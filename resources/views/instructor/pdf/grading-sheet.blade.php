@@ -90,7 +90,7 @@
 </div>
 
 <div class="foot">
-    <span class="note">Paper copy for when CapsTrack cannot be reached · enter these scores, the remarks and the verdict in CapsTrack (Team Grading) once it is back · {{ $sheet['reference'] }} · {{ $sheet['panelist'] }}, {{ $sheet['role'] }}</span>
+    <span class="note">{{ $sheet['note'] }}</span>
 </div>
 
 <table class="head">

@@ -12,9 +12,11 @@ use App\Models\DefenseSchedule;
 use App\Models\ExpertRemovalRequest;
 use App\Models\MemberLeaveRequest;
 use App\Models\Team;
+use App\Models\TeamRatingForm;
 use App\Support\ChecklistTracker;
 use App\Support\DefenseScores;
 use App\Support\PreProposalPayload;
+use App\Support\TeamApplications;
 use App\Support\TeamChecklist;
 use App\Support\TeamRows;
 use App\Support\TeamTodo;
@@ -30,16 +32,16 @@ use Illuminate\View\View;
  * (every team, with its progress as one strip) and Milestones (setting up
  * the checklist). A CaPSA who is also an adviser, consultant, grammarian or
  * panelist gets her expert work here too - one Teams page and one To do,
- * each item saying which hat it is for - rather than a second "My Teams".
+ * each item saying which hat it is for - rather than a second "Teams".
  */
 class TeamManagementController extends Controller
 {
     use ShowsTeamPage;
 
-    public const TABS = ['todo', 'teams', 'pre_proposals', 'verification', 'papers', 'milestones', 'milestone_list', 'leave_requests', 'rules'];
+    public const TABS = ['todo', 'applications', 'teams', 'pre_proposals', 'verification', 'papers', 'milestones', 'milestone_list', 'team_ratings', 'leave_requests', 'rules'];
 
     /** The tabs along the top of the list. The first is the default. */
-    public const HUB_TABS = ['todo', 'teams', 'milestone_list'];
+    public const HUB_TABS = ['todo', 'applications', 'teams', 'milestone_list', 'team_ratings'];
 
     /** How the milestones list can be ordered. The first is the default. */
     public const MILESTONE_SORTS = ['order' => 'Checklist order', 'due' => 'Due date', 'percent' => 'Most complete', 'name' => 'Name'];
@@ -55,6 +57,7 @@ class TeamManagementController extends Controller
     public function __construct(
         private TeamRows $teamRows,
         private TeamTodo $todo,
+        private TeamApplications $applications,
     ) {}
 
     public function index(Request $request): View|RedirectResponse
@@ -84,9 +87,9 @@ class TeamManagementController extends Controller
             'portal' => 'capsa',
             'rows' => $rows,
             'todo' => $todo,
-            'decided' => in_array($tab, ['todo', 'teams'], true)
-                ? $this->todo->decidedByCapsa($capsa, $rows)->concat($this->todo->decidedByExpert($capsa))
-                    ->sortByDesc(fn ($d) => $d->at->getTimestamp())->take(30)->values()
+            'decided' => in_array($tab, ['todo', 'applications', 'teams'], true)
+                ? $this->todo->decidedByCapsa($capsa, $rows)->concat($this->todo->decidedByExpert($capsa, $rows, 'capsa'))
+                    ->sortByDesc(fn ($d) => $d->at->getTimestamp())->values()
                 : collect(),
             // Wears an expert's hat on at least one team as well.
             'twoHats' => $rows->contains(fn ($row) => $row->myRole)
@@ -94,26 +97,34 @@ class TeamManagementController extends Controller
             // Each team's score at every defense, once its whole panel has graded.
             'defenseScores' => DefenseScores::forTeams($teamIds),
             'tracker' => $tracker,
+            // The teams asking her to be their adviser, consultant or
+            // grammarian, for the Team Applications tab and the To do.
+            'applications' => $applications = $this->applications->forExpert($capsa),
             // The tabs that are still pages of their own bring their own data,
             // built only when they are the one open.
             'tabData' => match ($tab) {
                 'leave_requests' => app(LeaveRequestController::class)->pageData($capsa),
                 'milestone_list' => $this->milestoneList($request, $capsaSections),
+                'team_ratings' => $this->teamRatings($capsa),
                 default => [],
             },
             // Team rules is a small menu under its own button on the list,
             // not a page, so the list always carries what it shows.
-            'rules' => TeamRulesController::pageData(),
+            'rules' => TeamRulesController::pageData($capsa),
             'selectedSection' => $selectedSection,
             'allSections' => $capsaSections,
             'sectionOptions' => collect(AdminProfileController::getAllAvailableSections())
                 ->filter(fn ($s) => in_array($s, $capsaSections, true))
                 ->values(),
             'counts' => [
-                'todo' => $todo->count(),
+                'todo' => TeamTodo::waiting($todo)->count(),
+                'applications' => $applications['waiting']->count(),
                 'teams' => $rows->count(),
                 'leave_requests' => MemberLeaveRequest::pendingCountFor($capsa)
                     + ExpertRemovalRequest::pendingCountFor($capsa),
+                'team_ratings' => TeamRatingForm::with('items.milestone.deliverables', 'items.deliverable')
+                    ->where('capsa_id', $capsa->expert_id)->whereNull('closed_at')->get()
+                    ->filter->isOpen()->count(),
             ],
         ]);
     }
@@ -328,7 +339,7 @@ class TeamManagementController extends Controller
         return array_merge([
             $capsa
                 ? ['Team Management', route('capsa.team_management', ['tab' => 'teams'])]
-                : ['My Teams', route('instructor.teams', ['tab' => 'teams'])],
+                : ['Teams', route('instructor.teams', ['tab' => 'teams'])],
             [$row->team->team_name, $teamUrl],
         ], $below);
     }
@@ -339,6 +350,47 @@ class TeamManagementController extends Controller
      * Finished is closed or hidden from teams. A milestone with no date sorts
      * after every dated one, the way an undated one is the least pressing.
      */
+    /**
+     * The Team Ratings tab: her ratings with who has submitted and what each
+     * student got, every team that rates in any of them, and her checklist
+     * for the Create dialog with what is already in a rating.
+     */
+    private function teamRatings(CapstoneExpert $capsa): array
+    {
+        $forms = TeamRatingForm::with('items.milestone.deliverables', 'items.deliverable')
+            ->where('capsa_id', $capsa->expert_id)->orderBy('id')->get();
+
+        $ratings = $forms->map(fn (TeamRatingForm $form) => [
+            'form' => $form,
+            'status' => $form->status(),
+            'teams' => $form->teams(),
+            'done' => $form->submittedRaterIds(),
+            'results' => $form->results(),
+        ]);
+
+        $used = ['m' => [], 'd' => []];
+        foreach ($forms as $form) {
+            foreach ($form->items as $item) {
+                if ($item->checklist_milestone_id) {
+                    $used['m'][$item->checklist_milestone_id] = $form->name;
+                }
+                if ($item->deliverable_id) {
+                    $used['d'][$item->deliverable_id] = $form->name;
+                }
+            }
+        }
+
+        return [
+            'ratings' => $ratings,
+            'teams' => $ratings->reduce(fn (Collection $all, array $r) => $all->union($r['teams']), collect())->sortKeys(),
+            'checklists' => Checklist::where('capsa_id', $capsa->expert_id)
+                ->with(['milestones' => fn ($q) => $q->active(), 'milestones.deliverables' => fn ($q) => $q->whereNull('archived_at')])
+                ->get(),
+            'used' => $used,
+            'sections' => $capsa->sections ?? [],
+        ];
+    }
+
     private function milestoneList(Request $request, array $capsaSections): array
     {
         $state = in_array($request->query('state'), ['finished', 'closed'], true) ? 'finished' : 'open';

@@ -6,14 +6,12 @@ use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Deliverable;
-use App\Models\GoogleDriveToken;
-use App\Models\PdfRemark;
 use App\Models\Team;
-use App\Services\GoogleDriveService;
 use App\Services\Notifier;
 use App\Services\RecipientResolver;
 use App\Support\MilestoneProgress;
 use App\Support\RevisionCheck;
+use App\Support\RevisionRemark;
 use App\Support\SectionScope;
 use App\Support\StudentTeam;
 use App\Support\SubmissionRecipients;
@@ -26,9 +24,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class SubmissionController extends Controller
 {
@@ -36,7 +32,6 @@ class SubmissionController extends Controller
     private const DIAGRAM_TYPES = ['drawio', 'vsdx'];
 
     public function __construct(
-        private GoogleDriveService $drive,
         private RecipientResolver $resolver,
         private SubmissionRecipients $recipients,
     ) {}
@@ -49,8 +44,9 @@ class SubmissionController extends Controller
             'file' => 'required|file|max:25600', // 25 MB
             'recipients' => 'nullable|array',
             'recipients.*' => 'in:'.implode(',', SubmissionRecipients::ROLES),
-            'subject_adviser_folder_id' => 'nullable|string',
             'deliverable_id' => 'nullable|integer',
+            // The upload a revision of a file for no line is the next version of.
+            'revises' => 'nullable|integer',
             // The draw.io or Visio files of its diagrams, so a reviewer can be shown exactly what changed in them.
             'diagrams' => 'nullable|array|max:20',
             'diagrams.*' => ['file', 'max:5120', function (string $attribute, mixed $value, Closure $fail) {
@@ -136,7 +132,10 @@ class SubmissionController extends Controller
 
         // Who it goes to is the line's rule, not whatever boxes were ticked: a
         // revision goes back to exactly the people who had the last version.
-        $targets = $isPaper ? [] : $this->recipients->resolve($item, (int) $studentYear->team_id, (array) $request->input('recipients', []));
+        $revises = ! $item && $request->filled('revises')
+            ? CapstoneDocument::ofTeam((int) $studentYear->team_id)->find($request->integer('revises'))
+            : null;
+        $targets = $isPaper ? [] : $this->recipients->resolve($item, (int) $studentYear->team_id, (array) $request->input('recipients', []), $revises);
 
         if (! $isPaper && $targets === []) {
             return response()->json([
@@ -159,6 +158,14 @@ class SubmissionController extends Controller
         // this field is read (review lists, instructor doc-review, etc).
         $title = $request->input('title') ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $chapter = $request->input('chapter') ?: $this->detectChapter($title);
+
+        // A revision of a file for no line is the next version of that file
+        // whatever the new copy is called: it takes the file's chapter, or
+        // its name when it has none, which is what versions are grouped by.
+        if ($revises) {
+            $chapter = $revises->chapter ?: null;
+            $title = $chapter ? $title : $revises->file_name;
+        }
 
         // Version only increments for resubmissions of the *same* document.
         // A student who names files "Thesis_2026-08-12.pdf" then
@@ -226,7 +233,6 @@ class SubmissionController extends Controller
                     'role' => $role,
                     'review_status' => 'To Review',
                     'version' => (string) $document->file_version,
-                    'drive_status' => 'pending',
                 ]);
 
                 // No email has ever gone out for a submission - the expert found
@@ -242,14 +248,10 @@ class SubmissionController extends Controller
                     ['team_id' => $studentYear->team_id, 'review_id' => $review->review_id],
                 );
 
-                $explicitFolderId = $role === 'subject_adviser' ? $request->input('subject_adviser_folder_id') : null;
-                $this->deliverToDrive($review, $expertId, $studentYear->team_id, $team->team_name ?? 'Unknown Team', $file, $originalExt, $explicitFolderId);
-
                 $results[] = [
                     'role' => $role,
                     'label' => SubmissionRecipients::LABELS[$role],
                     'name' => $review->expert?->name,
-                    'status' => $review->fresh()->drive_status,
                 ];
             }
         }
@@ -353,7 +355,24 @@ class SubmissionController extends Controller
         $isPaper = $item && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
         $last = $item ? CapstoneDocument::ofTeam($teamId)->where('deliverable_id', $item->id)->orderByDesc('file_version')->first() : null;
         $version = ($last?->file_version ?? 0) + 1;
-        $plan = $isPaper ? ['locked' => true, 'people' => []] : $this->recipients->plan($item, $teamId);
+        // A revision of a file for no line: the upload it revises.
+        $revises = ! $item && $request->filled('revises')
+            ? CapstoneDocument::ofTeam($teamId)->find($request->integer('revises'))
+            : null;
+
+        // A revision of it goes up as the next version of that paper: counted
+        // the way store() counts it, by its chapter, else its name.
+        if ($revises) {
+            $version = (CapstoneDocument::ofTeam($teamId)
+                ->when(
+                    $revises->chapter,
+                    fn ($query) => $query->where('chapter', $revises->chapter),
+                    fn ($query) => $query->where('file_name', $revises->file_name)
+                )
+                ->max('file_version') ?? 0) + 1;
+        }
+
+        $plan = $isPaper ? ['locked' => true, 'people' => []] : $this->recipients->plan($item, $teamId, $revises);
 
         if ($isPaper) {
             $capsaId = $this->resolver->resolveSubjectAdviserAdmin($teamId);
@@ -373,48 +392,18 @@ class SubmissionController extends Controller
                 'due' => $item->due_date?->format('M j, Y'),
                 'paper' => $isPaper,
             ] : null,
-            'version' => $item ? $version : null,
+            'version' => $item || $revises ? $version : null,
+            // The paper a revision of a file for no line is the next version of.
+            'paper' => $revises ? ($revises->chapter ?: $revises->file_name) : null,
             'round' => $version > 1 ? self::ordinal($version - 1).' revision' : null,
             'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', ...self::DIAGRAM_TYPES],
             'locked' => $plan['locked'],
             'people' => array_map(fn ($p) => array_diff_key($p, ['expert_ids' => true]), $plan['people']),
-            'remark' => $last && ! $isPaper ? $this->remarkOn($last) : null,
-            'lines' => $item ? [] : $lines->reject(fn ($l) => $l->locked)->values()->map(fn ($l) => [
+            'remark' => ($last ?? $revises) && ! $isPaper ? RevisionRemark::on($last ?? $revises, 160) : null,
+            'lines' => $item || $revises ? [] : $lines->reject(fn ($l) => $l->locked)->values()->map(fn ($l) => [
                 'id' => $l->id, 'title' => $l->title, 'phase' => $l->phase, 'note' => $l->note,
             ]),
         ]);
-    }
-
-    /**
-     * What the reviewer asked for on the version sent back: whose it is, how
-     * many remarks, and the first of them.
-     *
-     * @return array{who: string, count: int, first: ?string, url: string}|null
-     */
-    private function remarkOn(CapstoneDocument $document): ?array
-    {
-        $review = CapstoneDocumentReview::where('file_id', $document->file_id)
-            ->where('verdict', CapstoneDocumentReview::NEEDS_REVISION)
-            ->orderByDesc('verdict_at')
-            ->first();
-
-        if (! $review) {
-            return null;
-        }
-
-        $remarks = PdfRemark::where('review_id', $review->review_id)
-            ->whereNotNull('comment')
-            ->orderByDesc('is_general')
-            ->orderBy('created_at')
-            ->pluck('comment')
-            ->filter(fn ($c) => trim($c) !== '');
-
-        return [
-            'who' => 'Your '.(SubmissionRecipients::LABELS[$review->role] ?? 'reviewer'),
-            'count' => $remarks->count(),
-            'first' => $remarks->first() ? Str::limit(trim($remarks->first()), 90) : null,
-            'url' => route('student.documents', ['file' => $review->file_id, 'review' => $review->review_id]),
-        ];
     }
 
     /**
@@ -492,32 +481,6 @@ class SubmissionController extends Controller
         }
 
         return 'Chapter '.(int) $matches[1];
-    }
-
-    // GET /api/student/submission/subject-adviser-folders — named folders
-    // the resolved Subject Adviser has set up for students to pick from.
-    public function subjectAdviserFolders()
-    {
-        $studentId = Auth::id();
-
-        $studentYear = DB::table('student_s_y')
-            ->where('student_id', $studentId)
-            ->orderByDesc('school_year')
-            ->first();
-
-        if (! $studentYear || ! $studentYear->team_id) {
-            return response()->json(['folders' => []]);
-        }
-
-        $expertId = $this->resolver->resolveSubjectAdviserAdmin($studentYear->team_id);
-
-        if (! $expertId) {
-            return response()->json(['folders' => []]);
-        }
-
-        return response()->json([
-            'folders' => $this->drive->listNamedFolders($expertId),
-        ]);
     }
 
     /**
@@ -617,68 +580,5 @@ class SubmissionController extends Controller
         $suffix = in_array($n % 100, [11, 12, 13], true) ? 'th' : ([1 => 'st', 2 => 'nd', 3 => 'rd'][$n % 10] ?? 'th');
 
         return $n.$suffix;
-    }
-
-    private function deliverToDrive(
-        CapstoneDocumentReview $review,
-        int $expertId,
-        int $teamId,
-        string $teamName,
-        $file,
-        string $ext,
-        ?string $explicitFolderId = null
-    ): void {
-        $hasToken = GoogleDriveToken::where('user_id', $expertId)->exists();
-
-        if (! $hasToken) {
-            $review->update([
-                'drive_status' => 'not_connected',
-                'drive_error' => 'This recipient has not connected Google Drive yet.',
-            ]);
-
-            return;
-        }
-
-        $extensionMimeMap = [
-            'pdf' => 'application/pdf',
-            'doc' => 'application/msword',
-            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'ppt' => 'application/vnd.ms-powerpoint',
-            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        ];
-        $mimeType = $extensionMimeMap[$ext] ?? $file->getMimeType();
-
-        try {
-            // A student-chosen folder (currently only offered for the Subject
-            // Adviser recipient) takes priority over the default per-team
-            // auto-created one.
-            $folderId = $explicitFolderId ?? $this->drive->getOrCreateSubmissionFolder($expertId, $teamId, $teamName);
-
-            $uploaded = $this->drive->uploadFile(
-                $expertId,
-                $file->getRealPath(),
-                $file->getClientOriginalName(),
-                $mimeType,
-                $folderId
-            );
-
-            $review->update([
-                'drive_file_id' => $uploaded['id'],
-                'drive_web_view_link' => $uploaded['web_view_link'],
-                'drive_status' => 'uploaded',
-                'drive_error' => null,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Submission Drive delivery failed', [
-                'review_id' => $review->review_id,
-                'expert_id' => $expertId,
-                'message' => $e->getMessage(),
-            ]);
-
-            $review->update([
-                'drive_status' => 'failed',
-                'drive_error' => $e->getMessage(),
-            ]);
-        }
     }
 }

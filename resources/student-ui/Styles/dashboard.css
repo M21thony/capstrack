@@ -37,8 +37,6 @@ body{font-family:'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg);co
 .user-team{font-size:11px;color:var(--navy-text2);margin-top:1px}
 .status-badge-dot{position:absolute;bottom:2px;right:2px;width:16px;height:16px;border-radius:50%;border:3px solid var(--bg2);display:block}
 .nav{flex:1;overflow-y:auto;padding:6px 0}
-.nav::-webkit-scrollbar{width:3px}
-.nav::-webkit-scrollbar-thumb{background:rgba(245,193,0,0.15)}
 .nav-section{padding:12px 16px 6px;font-size:10px;font-weight:700;color:var(--navy-text3);letter-spacing:1.8px;text-transform:uppercase}
 .nav-item{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;color:var(--navy-text2);transition:all 0.13s;font-size:14px;border-left:2px solid transparent;margin:1px 0;text-decoration:none}
 .nav-item:hover{background:var(--navy-hover);color:var(--navy-text)}
@@ -63,8 +61,6 @@ body{font-family:'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg);co
 .notif-btn svg{width:16px;height:16px;stroke:rgba(255,255,255,0.65);fill:none;stroke-width:2}
 .notif-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:#ef4444;border:1.5px solid var(--navy-mid)}
 .content{flex:1;overflow-y:auto;padding:26px}
-.content::-webkit-scrollbar{width:4px}
-.content::-webkit-scrollbar-thumb{background:var(--border)}
 
 
 /* CARDS */

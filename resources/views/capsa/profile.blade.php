@@ -137,7 +137,7 @@
   }
   .profile-page .pf-search input:focus { outline: none; border-color: var(--pf-ink); background: #fff; }
   .profile-page .pf-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--pf-text3); }
-  .profile-page .pf-sections-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
+  .profile-page .pf-sections-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding-right: 2px; }
   .profile-page .pf-section-opt {
     display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--pf-border); border-radius: 10px;
     cursor: pointer; background: #fff; transition: border-color .15s, background .15s;
@@ -167,16 +167,14 @@
   .profile-page .pf-panel[hidden], .profile-page .pf-savebar[hidden] { display: none !important; }
   /* Panels inside the form sit 18px under the tabs; the ones after it get the page's own gap. */
   .profile-page form .pf-panel { margin-top: 18px; }
-  .profile-page #pf-panel-research .pf-card, .profile-page #pf-panel-folders .pf-card { max-width: 760px; }
+  .profile-page #pf-panel-research .pf-card { max-width: 760px; }
 
   /* Below the form */
   .profile-page .pf-lower { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
-  .profile-page .pf-lower.has-folders { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .profile-page .pf-notif .notif-prefs { max-width: none; border-radius: var(--pf-radius); padding: 20px 22px; }
-  .profile-page .folder-row { display: flex; align-items: center; gap: 10px; }
 
   @media (max-width: 900px) {
-    .profile-page .pf-layout, .profile-page .pf-lower.has-folders { grid-template-columns: 1fr; }
+    .profile-page .pf-layout { grid-template-columns: 1fr; }
     .profile-page .pf-aside { position: static; }
   }
   @media (max-width: 560px) {
@@ -260,7 +258,6 @@
 
         $initials = method_exists($admin, 'avatarInitials') ? $admin->avatarInitials() : strtoupper(substr($admin->name ?? 'U', 0, 2));
         $roleLabels = $admin->roles->pluck('role_name')->map(fn ($r) => \App\Models\Role::labelFor($r))->unique()->values();
-        $isSubjectAdviser = $admin->roles->pluck('role_name')->contains('capstone_adviser');
         $schoolYearLabel = $schoolYear ? 'School year '.$schoolYear : null;
 
         // The page in tabs, so nothing is a long scroll away. ?tab= picks one,
@@ -268,7 +265,6 @@
         $pfTabs = array_filter([
           'details' => 'Details',
           'research' => 'Research areas',
-          'folders' => $isSubjectAdviser ? 'Submission folders' : null,
           'notifications' => 'Notifications',
         ]);
         $pfTab = array_key_exists(request('tab'), $pfTabs) ? request('tab') : 'details';
@@ -426,28 +422,6 @@
           <button type="submit" class="pf-btn pf-btn-primary">Save changes</button>
         </div>
       </form>
-
-      @if ($isSubjectAdviser)
-        <div class="pf-panel" id="pf-panel-folders" data-pf-panel="folders" role="tabpanel" @if ($pfTab !== 'folders') hidden @endif>
-          <section class="pf-card">
-            <div class="pf-card-head">
-              <span class="pf-card-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
-              <div>
-                <h2 class="pf-card-title">Submission folders</h2>
-                <p class="pf-card-desc">Students pick one of these when they submit to you as Subject Adviser.</p>
-              </div>
-            </div>
-            <div class="pf-add" style="margin-bottom:14px">
-              <div class="pf-add-input"><input type="text" id="newFolderName" placeholder="e.g. Batch 2026 - Section A" /></div>
-              <button type="button" id="addFolderBtn" class="pf-btn pf-btn-dark">Add folder</button>
-            </div>
-            <div id="folderNotice" hidden style="margin-bottom:14px"></div>
-            <div id="folderListContainer" style="display:flex;flex-direction:column;gap:6px">
-              <div class="pf-empty" id="folderListEmpty">Loading…</div>
-            </div>
-          </section>
-        </div>
-      @endif
 
       <div class="pf-panel pf-notif" id="pf-panel-notifications" data-pf-panel="notifications" role="tabpanel" @if ($pfTab !== 'notifications') hidden @endif>
         @include('partials.notification-settings')
@@ -700,129 +674,11 @@ if (expertiseSearch) {
     }
   });
 }
-
-// -- Submission Folders (Subject Adviser only) --
-var folderListContainer = document.getElementById('folderListContainer');
-if (folderListContainer) {
-  var FOLDER_CSRF = document.querySelector('meta[name="csrf-token"]').content;
-  var folderListEmpty = document.getElementById('folderListEmpty');
-  var newFolderInput = document.getElementById('newFolderName');
-  var addFolderBtn = document.getElementById('addFolderBtn');
-
-  function renderFolders(folders) {
-    folderListContainer.querySelectorAll('.folder-row').forEach(function (el) { el.remove(); });
-    if (!folders.length) {
-      folderListEmpty.textContent = 'No folders yet — add one above.';
-      folderListEmpty.style.display = '';
-      return;
-    }
-    folderListEmpty.style.display = 'none';
-    folders.forEach(function (folder) {
-      var row = document.createElement('div');
-      row.className = 'folder-row';
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--pf-border);border-radius:10px;background:#fff';
-      row.innerHTML =
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--pf-accent);flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' +
-        '<span style="flex:1;font-size:13.5px;font-weight:500;color:var(--pf-text)">' + folder.name.replace(/</g, '&lt;') + '</span>' +
-        '<button type="button" class="folder-delete-btn" data-id="' + folder.id + '" style="border:none;background:none;color:var(--pf-text2);cursor:pointer;padding:4px" title="Delete folder">' +
-        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>' +
-        '</button>';
-      folderListContainer.appendChild(row);
-    });
-  }
-
-  function loadFolders() {
-    fetch("{{ route('gdrive.submission-folders.index') }}")
-      .then(function (r) { return r.json(); })
-      .then(function (data) { renderFolders(data.folders || []); })
-      .catch(function () {
-        folderListEmpty.textContent = 'Could not load folders.';
-      });
-  }
-
-  addFolderBtn.addEventListener('click', function () {
-    var name = newFolderInput.value.trim();
-    if (!name) return;
-    addFolderBtn.disabled = true;
-    addFolderBtn.textContent = 'Adding…';
-    fetch("{{ route('gdrive.submission-folders.store') }}", {
-      method: 'POST',
-      headers: { 'X-CSRF-TOKEN': FOLDER_CSRF, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name }),
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        addFolderBtn.disabled = false;
-        addFolderBtn.textContent = 'Add Folder';
-        if (!data.success) {
-          formNotice('folderNotice', {
-            tone: 'error',
-            title: '\u201c' + name + '\u201d was not created',
-            body: data.message || 'The server refused it without saying why.',
-          });
-          newFolderInput.focus();
-          return;
-        }
-        newFolderInput.value = '';
-        formNotice.clear('folderNotice');
-        loadFolders();
-      })
-      .catch(function () {
-        addFolderBtn.disabled = false;
-        addFolderBtn.textContent = 'Add Folder';
-        formNotice('folderNotice', {
-          tone: 'error',
-          title: '\u201c' + name + '\u201d was not created',
-          body: 'CapsTrack could not reach the server. The name is still in the box \u2014 try again.',
-        });
-        newFolderInput.focus();
-      });
-  });
-
-  folderListContainer.addEventListener('click', async function (e) {
-    var btn = e.target.closest('.folder-delete-btn');
-    if (!btn) return;
-
-    const agreed = await confirmSheet({
-      title: 'Delete this folder?',
-      body: 'Students will no longer be able to pick it when they submit.',
-      confirmLabel: 'Delete folder',
-      danger: true,
-    });
-
-    if (!agreed) return;
-
-    fetch("{{ url('/admin/gdrive/submission-folders') }}/" + btn.dataset.id, {
-      method: 'DELETE',
-      headers: { 'X-CSRF-TOKEN': FOLDER_CSRF },
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (!data.success) {
-          formNotice('folderNotice', {
-            tone: 'error',
-            title: 'That folder was not deleted',
-            body: data.message || 'The server refused it without saying why. It is still on the list.',
-          });
-          return;
-        }
-        loadFolders();
-      })
-      .catch(function () {
-        formNotice('folderNotice', {
-          tone: 'error',
-          title: 'That folder was not deleted',
-          body: 'CapsTrack could not reach the server. Nothing changed \u2014 try again.',
-        });
-      });
-  });
-
-  loadFolders();
-}
 </script>
 
 @include('partials.form-notice')
 @include('partials.app-dialog')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

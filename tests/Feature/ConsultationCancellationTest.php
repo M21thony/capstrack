@@ -170,7 +170,7 @@ class ConsultationCancellationTest extends TestCase
         $booking = $this->booking($bookingId);
         $this->assertSame('scheduled', $booking->booking_status);
         $this->assertNull($booking->cancellation_requested_at);
-        $this->assertDatabaseHas('notifications', ['student_id' => $student->student_id, 'title' => 'Cancellation declined']);
+        $this->assertDatabaseHas('notifications', ['student_id' => $student->student_id, 'title' => 'Cancellation rejected']);
     }
 
     public function test_only_the_booked_expert_decides(): void

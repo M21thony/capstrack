@@ -16,5 +16,6 @@
 <body>
     @yield('content')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

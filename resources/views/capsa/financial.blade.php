@@ -42,8 +42,8 @@
       <symbol id="fx-i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
     </svg>
 
+    {{-- The page's name is in the top bar; the fees and New fee come first here. --}}
     <header class="fx-page-head">
-      <h1>Financial Records</h1>
       <div class="fx-tabs" role="tablist" aria-label="Fee" id="c-fees" @if (collect($state['fees'] ?? [])->isEmpty()) hidden @endif></div>
       <div class="fx-actions"><button class="fx-btn" id="c-new-fee"><svg><use href="#fx-i-plus"/></svg>New fee</button></div>
     </header>
@@ -109,5 +109,6 @@ function closeSidebar() { if (!sidebarEl || !sidebarOverlay) return; sidebarEl.c
 </script>
 @include('partials.app-dialog')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

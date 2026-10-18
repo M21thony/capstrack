@@ -69,6 +69,15 @@ final class NotificationTypes
             'label' => 'A CaPSA posts an important or urgent announcement for experts',
             'email' => true,
         ],
+        'expert_slots_short' => [
+            'label' => 'My programs have more teams needing an expert than free expert slots (CaPSA)',
+            'email' => true,
+        ],
+        // One per student, so bell only: an email each would bury the CaPSA.
+        'team_rating_submitted' => [
+            'label' => 'A student submits a team rating (CaPSA)',
+            'email' => false,
+        ],
     ];
 
     public const STUDENT = [
@@ -180,6 +189,14 @@ final class NotificationTypes
         ],
         'evaluation_due' => [
             'label' => 'We passed a defense and our experts are waiting to be evaluated',
+            'email' => true,
+        ],
+        'team_rating_opened' => [
+            'label' => 'A team rating opens for me to rate my teammates',
+            'email' => true,
+        ],
+        'team_rating_reminder' => [
+            'label' => 'A team rating I have not submitted is about to close',
             'email' => true,
         ],
     ];

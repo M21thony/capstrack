@@ -7,6 +7,120 @@
 <title>Resources - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<style nonce="{{ Vite::cspNonce() }}">
+  /* Templates & Lessons: the same list the students see on Resources, with
+     what a CaPSA needs on top - who each file is shared with, how often it
+     was downloaded, and a way to take it back off. Uploading opens beside
+     the list, the way the students' preview does. */
+  .tl-drive { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; font-size:13.5px; color:var(--text2); }
+  .tl-drive .drive-pill { background:none; border:0; padding:0; font-size:13.5px; color:var(--text); font-weight:600; }
+  .tl-drive .drive-dot { width:8px; height:8px; flex-basis:8px; }
+  .tl-drive .tl-why { color:var(--text2); }
+  .tl-drive .btn { margin-left:auto; font-size:13px !important; }
+  .tl-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .tl-card .lib-bar { margin:0; padding:14px 18px; gap:10px; border-bottom:1px solid var(--border); }
+  .tl-search { display:flex; align-items:center; gap:8px; flex:1 1 220px; max-width:420px; min-height:44px; padding:0 12px; box-sizing:border-box; border:1px solid var(--border); border-radius:10px; background:var(--bg3); }
+  .tl-search:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px rgba(201,168,44,.22); background:#fff; }
+  .tl-search svg { width:15px; height:15px; flex:none; stroke:var(--text3); fill:none; stroke-width:2; stroke-linecap:round; }
+  .tl-search .lib-search { flex:1; min-width:0; border:0; outline:0; background:transparent; height:auto; padding:0; font-size:14.5px; box-shadow:none; }
+  .tl-select { position:relative; display:inline-flex; align-items:center; }
+  .tl-select .lib-filter { appearance:none; -webkit-appearance:none; height:44px; min-width:0; max-width:170px; padding:0 34px 0 14px; border-radius:10px; border:1px solid var(--border); background:#fff; font-size:14px; font-weight:600; color:var(--text); cursor:pointer; }
+  .tl-select > svg { position:absolute; right:12px; width:13px; height:13px; pointer-events:none; stroke:var(--text2); fill:none; stroke-width:2.2; stroke-linecap:round; }
+  .tl-count { margin-left:auto; font-size:13px; color:#656b7a; margin-top:0; }
+  .tl-upload { height:44px; padding:0 18px; border-radius:10px; font-size:14px !important; gap:8px; }
+  .tl-upload svg { width:16px; height:16px; }
+  .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .tl-card .import-bulk { margin:0; border-radius:0; border-width:0 0 1px; padding:10px 18px; }
+  .tl-card .lib-head-row { padding:8px 18px; margin:0; align-items:center; border-bottom:1px solid var(--bg4); background:var(--bg3); font-size:11px; }
+  .tl-card .lib-head-row .h-file { font-weight:700; letter-spacing:.06em; }
+  /* A 16px box is too small to hit with a thumb; the label around it is the target. */
+  .tl-head .pick-box { flex:0 0 44px; height:44px; justify-content:center; margin-left:-14px; margin-right:-10px; }
+  .tl-card .lib-head-row { padding:0 18px; }
+  /* admin.css hides the old column headings on a phone; this row is Select all, which a phone needs too. */
+  .tl-card .lib-head-row:not([hidden]) { display:flex !important; }
+  .tl-all { flex:0 0 auto; min-height:40px; gap:12px; margin-left:-14px; padding-left:14px; }
+  .tl-card .lib-list { border:0; border-radius:0; }
+  .tl-card .lib-empty { margin:16px 18px 18px; }
+
+  .tl-item { display:block; padding:0; border-top:1px solid #eceef2; }
+  .tl-item:hover { background:transparent; }
+  .tl-item.is-open { background:#fffdf6; box-shadow:inset 3px 0 0 var(--accent); }
+  .tl-item.is-picked { background:var(--accent-light); }
+  .tl-head { display:flex; align-items:center; gap:12px; padding-left:18px; }
+  .tl-row { flex:1; min-width:0; display:flex; align-items:center; gap:14px; min-height:64px; padding:10px 18px 10px 0; border:0; background:transparent; color:var(--text); text-align:left; font:inherit; cursor:pointer; }
+  .tl-row:focus-visible { outline:2px solid var(--accent3); outline-offset:-2px; }
+  .tl-head:hover { background:#fafafb; }
+  .tl-item.is-open .tl-head:hover, .tl-item.is-picked .tl-head:hover { background:transparent; }
+  .tl-ico { flex:0 0 44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; }
+  .tl-ico.t-pdf { background:#fee2e2; color:#b91c1c; } .tl-ico.t-docx { background:#dbeafe; color:#1d4ed8; } .tl-ico.t-pptx { background:#ffedd5; color:#c2410c; } .tl-ico.t-other { background:var(--bg4); color:var(--text2); }
+  .tl-text { flex:1; min-width:0; }
+  .tl-title { display:block; font-size:15px; font-weight:600; line-height:1.35; overflow-wrap:anywhere; }
+  .tl-meta { display:block; margin-top:2px; font-size:13px; color:#656b7a; }
+  .tl-chev { display:flex; color:#656b7a; transition:transform .15s; }
+  .tl-chev svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
+  .tl-item.is-open .tl-chev { transform:rotate(180deg); }
+  .tl-more { padding:0 18px 18px 104px; display:flex; flex-direction:column; gap:10px; }
+  .tl-more[hidden] { display:none; }
+  .tl-facts { margin:0; display:grid; grid-template-columns:110px 1fr; gap:6px 12px; font-size:13.5px; align-items:center; }
+  .tl-facts dt { color:#656b7a; } .tl-facts dd { margin:0; display:flex; flex-wrap:wrap; gap:5px; }
+  .tl-acts { display:flex; gap:8px; flex-wrap:wrap; }
+  .tl-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:0 18px; box-sizing:border-box; border-radius:10px; border:1px solid #d6d8df; background:#fff; color:var(--text); font:inherit; font-size:14px; font-weight:600; text-decoration:none; cursor:pointer; }
+  .tl-btn:hover { border-color:var(--text); }
+  .tl-btn.danger { color:#b42318; border-color:#f3b4b0; font-weight:700; }
+  .tl-btn.danger:hover { background:#fde8e8; border-color:#b42318; }
+
+  /* The upload and import panels open beside the list, full height. */
+  .upload-scrim { align-items:stretch; justify-content:flex-end; padding:0; overflow:hidden; background:rgba(24,25,31,.38); }
+  .upload-sheet { max-width:560px; height:100%; border-radius:0; overflow-y:auto; box-shadow:-12px 0 32px rgba(24,25,31,.18); }
+  .upload-sheet > .card { padding:20px 22px !important; }
+  .upload-sheet .sheet-head .card-title { font-size:19px; font-weight:700; color:var(--text); text-transform:none; letter-spacing:0; }
+  .upload-sheet .sheet-x { width:40px; height:40px; border:1px solid var(--border); border-radius:10px; }
+  .upload-sheet .label { font-size:14px; font-weight:700; color:var(--text); text-transform:none; letter-spacing:0; }
+  .upload-sheet .input { min-height:44px; font-size:14.5px; }
+  .upload-sheet .dropzone { border:1.5px dashed var(--accent); background:var(--accent-light); padding:26px 20px; }
+  .upload-sheet .dropzone-icon { width:46px; height:46px; background:var(--accent); border-radius:12px; }
+  .upload-sheet .dropzone-icon svg { stroke:#18191f; width:22px; height:22px; }
+  .upload-sheet .dropzone-label { font-size:15px; font-weight:700; }
+  .upload-sheet .dropzone-sub { font-size:12.5px; color:#656b7a; }
+  .upload-sheet .folder-pick { min-height:42px; font-size:13.5px; font-weight:600; border-radius:10px; }
+  .upload-sheet .sheet-row { display:block; }
+  .upload-sheet .form-group { margin-bottom:20px; }
+  .tl-cats { display:flex; flex-wrap:wrap; gap:8px; }
+  .tl-cat { min-height:40px; padding:0 14px; border-radius:999px; border:1px solid #d6d8df; background:#fff; color:var(--text2); font:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+  .tl-cat:hover { border-color:var(--text); }
+  .tl-cat[aria-checked="true"] { background:#1e2128; border-color:#1e2128; color:#fff; }
+  .upload-sheet .section-picker { gap:8px; border:0; padding:0; background:none; }
+  .upload-sheet .section-box { min-height:42px; padding:0 14px 0 10px; border:1px solid #d6d8df; border-radius:10px; background:#fff; font-size:14px; }
+  .upload-sheet .section-box:has(input:checked) { background:var(--accent-light); border-color:var(--accent); }
+  .upload-sheet .section-picker.needs-pick .section-box { border-color:var(--red); }
+  .tl-more-opts { border-top:1px solid var(--border); padding-top:14px; margin-bottom:18px; }
+  .tl-more-opts summary { cursor:pointer; font-size:14px; font-weight:600; color:var(--text2); min-height:32px; }
+  .tl-more-opts[open] summary { margin-bottom:12px; }
+  #upload-btn, #import-btn { min-height:48px; font-size:15px !important; border-radius:12px; }
+
+  @media (max-width: 1024px) {
+    /* Search and Upload share the first line; the filters wrap below. */
+    .tl-search { flex:1 1 calc(100% - 190px); max-width:none; order:-2; }
+    .tl-upload { order:-1; }
+    .tl-count { display:none; }
+  }
+  @media (max-width: 640px) {
+    .tl-drive .tl-why { display:none; }
+    .tl-card { border-radius:12px; }
+    .tl-card .lib-bar { padding:12px; gap:8px; }
+    .tl-select { flex:1 1 130px; } .tl-select .lib-filter { width:100%; }
+    .tl-count { display:none; }
+    .tl-upload { flex:1 1 100%; justify-content:center; }
+    .tl-head { padding-left:12px; }
+    .tl-row { padding-right:12px; gap:12px; }
+    .tl-ico { flex-basis:40px; height:40px; }
+    .tl-more { padding:0 12px 16px; }
+    .tl-facts { grid-template-columns:96px 1fr; }
+    .tl-acts > * { flex:1 1 auto; }
+    .upload-sheet { max-width:none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .tl-chev { transition:none; } }
+</style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
   @include('partials.render-whole')
 </head>
@@ -75,26 +189,17 @@
 
     {{-- One line saying what this page is for, the Drive state as a dot
          rather than a banner, and the way in. --}}
-    <div class="lib-head">
-      <div class="lib-head-text">
-        <div class="lib-rule">Students only see files shared with their section</div>
-        <div class="lib-count" id="lib-count">&nbsp;</div>
-      </div>
-      <div class="lib-head-actions">
-        {{-- Drawn as the server knows it, not "Checking…": the check that
-             follows used to bring in the Connect button after the page was
-             on screen, and it pushed Upload and the library down a line. --}}
-        <span class="drive-pill" id="gdrive-banner">
-          <span class="drive-dot {{ $driveConnected ? 'drive-dot-on' : 'drive-dot-off' }}" id="gdrive-dot"></span>
-          <span id="gdrive-status-text">{{ $driveConnected ? 'Drive connected' : 'Drive not connected' }}</span>
-        </span>
-        <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:{{ $driveConnected ? 'none' : 'inline-flex' }}">Connect Google Drive</a>
-        <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px;display:{{ $driveConnected ? 'inline-flex' : 'none' }}" onclick="disconnectDrive()">Disconnect</button>
-        <button class="btn btn-primary" id="open-upload-btn" style="font-size:12.5px" onclick="openUpload()">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Upload
-        </button>
-      </div>
+    {{-- Whether Drive is connected, as one line above the list. Drawn as the
+         server knows it, not "Checking…": the check that follows used to
+         bring in the Connect button after the page was on screen. --}}
+    <div class="tl-drive">
+      <span class="drive-pill" id="gdrive-banner">
+        <span class="drive-dot {{ $driveConnected ? 'drive-dot-on' : 'drive-dot-off' }}" id="gdrive-dot"></span>
+        <span id="gdrive-status-text">{{ $driveConnected ? 'Drive connected' : 'Drive not connected' }}</span>
+      </span>
+      <span class="tl-why">What you post here shows up on your students’ Resources page.</span>
+      <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:{{ $driveConnected ? 'none' : 'inline-flex' }}">Connect Google Drive</a>
+      <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px;display:{{ $driveConnected ? 'inline-flex' : 'none' }}" onclick="disconnectDrive()">Disconnect</button>
     </div>
 
     {{-- The upload panel sits over the page and is opened from the button
@@ -103,7 +208,7 @@
       <div class="upload-sheet" onclick="event.stopPropagation()">
         <div class="card" style="padding:16px;box-shadow:none;border:0">
           <div class="card-header sheet-head">
-            <span class="card-title">Upload Resource</span>
+            <span class="card-title">Upload files</span>
             <span class="sheet-head-right">
               <button onclick="resetForm()" class="sheet-clear">Clear</button>
               <button class="sheet-x" onclick="closeUpload()" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
@@ -156,19 +261,14 @@
           </div>
 
           <!-- Category -->
-          <div class="form-group sheet-col">
-            <label class="label">Category</label>
-            <select class="input" id="res-category">
-              <option value="">Select a category…</option>
-              <option value="pre-proposal">Pre-Proposal Template</option>
-              <option value="ch1-3">Chapter 1–3 Template</option>
-              <option value="ch4-5">Chapter 4–5 Template</option>
-              <option value="final">Final Manuscript Template</option>
-              <option value="presentation">Presentation Template</option>
-              <option value="lesson">Lesson / Reference Material</option>
-              <option value="forms">Forms &amp; Checklists</option>
-              <option value="other">Other</option>
-            </select>
+          <div class="form-group sheet-full">
+            <span class="label">Category</span>
+            <input type="hidden" id="res-category" value="">
+            <div class="tl-cats" role="radiogroup" aria-label="Category" id="res-category-chips">
+              @foreach (['pre-proposal' => 'Pre-proposal', 'ch1-3' => 'Chapters 1–3', 'ch4-5' => 'Chapters 4–5', 'final' => 'Final manuscript', 'presentation' => 'Presentation', 'lesson' => 'Lessons', 'forms' => 'Forms', 'other' => 'Other'] as $key => $label)
+                <button type="button" class="tl-cat" role="radio" aria-checked="false" data-cat="{{ $key }}">{{ $label }}</button>
+              @endforeach
+            </div>
           </div>
 
           {{-- Who it is for. A CaPSA hands material to their own sections, so
@@ -208,8 +308,9 @@
           </div>
           @endif
 
-          <!-- Drive Folder -->
-          <div class="form-group sheet-col">
+          <details class="tl-more-opts">
+            <summary>More options</summary>
+          <div class="form-group" style="margin-bottom:0">
             <label class="label">Google Drive Folder</label>
             <div style="display:flex;gap:6px">
               <select class="input" id="res-folder" style="flex:1">
@@ -218,13 +319,14 @@
               <button class="btn btn-ghost" style="padding:0 12px;white-space:nowrap" onclick="openFolderModal()">+ New</button>
             </div>
           </div>
+          </details>
 
           </div>
 
           <div style="margin-top:4px">
             <button class="btn btn-primary" id="upload-btn" style="width:100%;justify-content:center;font-size:13px" onclick="uploadResource()">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Upload Resource
+              Post to Resources
             </button>
           </div>
         </div>
@@ -317,30 +419,62 @@
       </div>
     </div>
 
-    {{-- Four filters, one row, left to right in the order someone narrows:
-         what kind of file, who it is for, where it lives, then free text. --}}
+    <section class="tl-card" aria-label="Your uploads">
+    {{-- Search first, then the three ways a CaPSA narrows - what kind of
+         file, who it is for, where it lives - and the order. --}}
     <div class="lib-bar">
-      <select class="input lib-filter" id="category-filter" onchange="renderCards()">
-        <option value="all">All categories</option>
-        <option value="pre-proposal">Pre-Proposal</option>
-        <option value="ch1-3">Ch. 1–3</option>
-        <option value="ch4-5">Ch. 4–5</option>
-        <option value="final">Final MS</option>
-        <option value="presentation">Presentation</option>
-        <option value="lesson">Lessons</option>
-        <option value="forms">Forms</option>
-      </select>
-      <select class="input lib-filter" id="section-filter" onchange="renderCards()">
-        <option value="all">All sections</option>
-        @foreach ($mySections as $sectionLabel)
-          <option value="{{ $sectionLabel }}">{{ $sectionLabel }}</option>
-        @endforeach
-        <option value="__none__">Not shared with a section</option>
-      </select>
-      <select class="input lib-filter" id="folder-filter" onchange="renderCards()">
-        <option value="all">All folders</option>
-      </select>
-      <input class="input lib-search" id="search-input" placeholder="Search templates and lessons…" oninput="renderCards()"/>
+      <label class="tl-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="sr-only">Search your uploads</span>
+        <input class="input lib-search" id="search-input" type="search" placeholder="Search your uploads" oninput="renderCards()"/>
+      </label>
+      <label class="tl-select">
+        <span class="sr-only">Category</span>
+        <select class="input lib-filter" id="category-filter" onchange="renderCards()">
+          <option value="all">All categories</option>
+          <option value="pre-proposal">Pre-proposal</option>
+          <option value="ch1-3">Chapters 1–3</option>
+          <option value="ch4-5">Chapters 4–5</option>
+          <option value="final">Final manuscript</option>
+          <option value="presentation">Presentation</option>
+          <option value="lesson">Lessons</option>
+          <option value="forms">Forms</option>
+          <option value="other">Other</option>
+        </select>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </label>
+      <label class="tl-select">
+        <span class="sr-only">Section</span>
+        <select class="input lib-filter" id="section-filter" onchange="renderCards()">
+          <option value="all">All sections</option>
+          @foreach ($mySections as $sectionLabel)
+            <option value="{{ $sectionLabel }}">{{ $sectionLabel }}</option>
+          @endforeach
+          <option value="__none__">Not shared with a section</option>
+        </select>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </label>
+      <label class="tl-select">
+        <span class="sr-only">Folder</span>
+        <select class="input lib-filter" id="folder-filter" onchange="renderCards()">
+          <option value="all">All folders</option>
+        </select>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </label>
+      <label class="tl-select">
+        <span class="sr-only">Sort</span>
+        <select class="input lib-filter" id="sort-filter" onchange="renderCards()">
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="az">A to Z</option>
+        </select>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </label>
+      <span class="lib-count tl-count" id="lib-count" aria-live="polite">&nbsp;</span>
+      <button class="btn btn-primary tl-upload" id="open-upload-btn" onclick="openUpload()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+        Upload files
+      </button>
     </div>
 
     {{-- The strip that stops anyone having to ask what the labels mean. --}}
@@ -350,17 +484,15 @@
     </div>
 
     <div class="lib-head-row" id="lib-head-row" hidden>
-      <label class="pick-box" title="Select all">
+      <label class="pick-box tl-all">
         <input type="checkbox" id="lib-all" onchange="toggleAllLib(this.checked)">
         <span class="pick-tick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+        <span class="h-file">Select all</span>
       </label>
-      <span class="h-file">File</span>
-      <span class="h-who">Shared with</span>
-      <span class="h-when">Added</span>
-      <span class="h-acts"></span>
     </div>
 
     <div id="resource-list"></div>
+    </section>
   </div>
   </div>
 </div>
@@ -400,6 +532,8 @@ function mapResource(r) {
     // Empty means it was never aimed at particular sections, so it reaches
     // every student this CaPSA handles.
     sections: (r.sections || []).map(function (s) { return s.section; }),
+    downloads: parseInt(r.downloads, 10) || 0,
+    ts: date.getTime(),
     date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     shortDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   };
@@ -504,6 +638,12 @@ function renderCards(){
     return matchCat && matchQ && matchSection && matchFolder;
   });
 
+  const sort = document.getElementById('sort-filter').value;
+  filtered.sort(function (a, b) {
+    if (sort === 'az') { return a.name.localeCompare(b.name); }
+    return sort === 'old' ? a.ts - b.ts : b.ts - a.ts;
+  });
+
   updateStats(filtered.length);
   libShown = filtered.map(r=>r.id);
   refreshLibBulk();
@@ -531,32 +671,72 @@ function renderCards(){
 
   headRow.hidden = false;
 
-  list.innerHTML = '<div class="lib-list">' + filtered.map(r=>`
-    <div class="lib-row${libSelected.has(r.id) ? ' is-picked' : ''}" id="rcard-${r.id}">
-      <label class="pick-box">
-        <input type="checkbox" ${libSelected.has(r.id) ? 'checked ' : ''}onchange="toggleLib(${r.id}, this.checked)">
-        <span class="pick-tick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-      </label>
-      <span class="lib-file">
-        ${extIcon(r.ext)}
-        <span class="lib-file-text">
-          <b title="${esc(r.name)}">${esc(r.name)}</b>
-          <span class="lib-sub">${esc(CAT_LABELS[r.category]||'Other')} · ${esc(r.size)}</span>
-        </span>
-      </span>
-      <span class="lib-who">${sharedWith(r)}</span>
-      <span class="lib-when" title="${esc(r.date)}">${esc(r.shortDate)}</span>
-      <span class="lib-acts">
-        <button class="lib-icon" title="Open in Drive" onclick="downloadResource(${r.id},this)">
-          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+  // A row opens in place for who it is shared with and what to do with it.
+  list.innerHTML = '<div class="lib-list">' + filtered.map(r=>{
+    const open = openRow === r.id;
+    const t = TYPE_CLASS[r.ext] || 't-other';
+    const meta = [CAT_SHORT[r.category] || 'Other', (r.ext || '').toUpperCase(), r.size, r.shortDate,
+      r.downloads + (r.downloads === 1 ? ' download' : ' downloads')].filter(Boolean).join(' · ');
+    return `
+    <div class="lib-row tl-item${libSelected.has(r.id) ? ' is-picked' : ''}${open ? ' is-open' : ''}" id="rcard-${r.id}">
+      <div class="tl-head">
+        <label class="pick-box" title="Select">
+          <input type="checkbox" aria-label="Select ${esc(r.name)}" ${libSelected.has(r.id) ? 'checked ' : ''}onchange="toggleLib(${r.id}, this.checked)">
+          <span class="pick-tick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <button type="button" class="tl-row" aria-expanded="${open}" aria-controls="tl-more-${r.id}" onclick="toggleRow(${r.id})">
+          <span class="tl-ico ${t}" aria-hidden="true">${esc((r.ext || 'file').toUpperCase())}</span>
+          <span class="tl-text">
+            <span class="tl-title">${esc(r.name)}</span>
+            <span class="tl-meta">${esc(meta)}</span>
+          </span>
+          <span class="tl-chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
         </button>
-        <button class="lib-icon lib-icon-danger" title="Remove" onclick="confirmDelete(${r.id},'${r.name.replace(/'/g,"\\'")}')">
-          <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-        </button>
-      </span>
-    </div>
-  `).join('') + '</div>';
+      </div>
+      <div class="tl-more" id="tl-more-${r.id}"${open ? '' : ' hidden'}>
+        <dl class="tl-facts">
+          <dt>Shared with</dt><dd>${sharedWith(r)}</dd>
+          <dt>Downloads</dt><dd>${r.downloads} so far</dd>
+          <dt>Added</dt><dd>${esc(r.date)}</dd>
+        </dl>
+        <div class="tl-acts">
+          <button type="button" class="tl-btn" onclick="downloadResource(${r.id},this)">Open in Drive</button>
+          <button type="button" class="tl-btn danger" onclick="confirmDelete(${r.id},'${esc(r.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}')">Remove</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
 }
+
+// One row open at a time.
+let openRow = null;
+function toggleRow(id){
+  openRow = openRow === id ? null : id;
+  renderCards();
+  const btn = document.querySelector('#rcard-' + id + ' .tl-row');
+  if(btn) btn.focus();
+}
+
+const TYPE_CLASS = {pdf:'t-pdf', doc:'t-docx', docx:'t-docx', gdoc:'t-docx', ppt:'t-pptx', pptx:'t-pptx', gslides:'t-pptx'};
+const CAT_SHORT = {
+  'pre-proposal':'Pre-proposal', 'ch1-3':'Chapters 1–3', 'ch4-5':'Chapters 4–5', 'final':'Final manuscript',
+  'presentation':'Presentation', 'lesson':'Lessons', 'forms':'Forms', 'other':'Other',
+};
+
+// The category is picked from chips; the hidden field is what the upload reads.
+function syncCatChips(){
+  const value = document.getElementById('res-category').value;
+  document.querySelectorAll('#res-category-chips .tl-cat').forEach(function (b) {
+    b.setAttribute('aria-checked', b.dataset.cat === value ? 'true' : 'false');
+  });
+}
+// On the chips themselves: the panel stops clicks from reaching the page.
+document.getElementById('res-category-chips').addEventListener('click', function (e) {
+  const chip = e.target.closest('.tl-cat');
+  if(!chip) return;
+  document.getElementById('res-category').value = chip.dataset.cat;
+  syncCatChips();
+});
 
 // ── ticking several library rows ──
 // What is ticked but filtered out stays ticked, and is not what gets removed:
@@ -597,6 +777,7 @@ function clearFilters(){
   document.getElementById('category-filter').value = 'all';
   document.getElementById('section-filter').value = 'all';
   document.getElementById('folder-filter').value = 'all';
+  document.getElementById('sort-filter').value = 'new';
   document.getElementById('search-input').value = '';
   renderCards();
 }
@@ -613,7 +794,7 @@ function updateStats(shown){
   const files = total + (total === 1 ? ' file' : ' files');
   el.textContent = (shown !== undefined && shown !== total)
     ? shown + ' of ' + files
-    : files + (MY_SECTIONS.length ? ' · ' + MY_SECTIONS.join(', ') : '');
+    : files;
 }
 
 // ── the upload panel ──
@@ -631,7 +812,8 @@ function closeUpload(e){
 }
 
 document.addEventListener('keydown', function(e){
-  if(e.key === 'Escape' && !document.getElementById('upload-scrim').hidden) closeUpload();
+  // A dialog opened from inside the panel ("+ New" folder) closes first, alone.
+  if(e.key === 'Escape' && !document.getElementById('upload-scrim').hidden && !document.querySelector('.modal-overlay.show')) closeUpload();
 });
 
 // -- FILE SELECT ---------------------------------------------------------------
@@ -670,7 +852,7 @@ function onFolderSelect(e){
     const parts = [];
     if(skipped) parts.push(skipped + ' skipped');
     if(over) parts.push(over + ' over the ' + MAX_FOLDER_FILES + ' limit');
-    showToast(parts.join(' · ') + '.');
+    showToast(parts.join(' · ') + '.', 'info');
   }
 
   // Straight to the review list, because a folder holds several kinds of file
@@ -1210,7 +1392,7 @@ function uploadResource(){
   if(!selectedFile){ showToast('Please choose a file first.', 'error'); return; }
   // A folder names its own files, so a title is only asked for one at a time.
   if(!isFolder && !name){ document.getElementById('res-name').focus(); showToast('Please enter a resource name.', 'error'); return; }
-  if(!category){ document.getElementById('res-category').focus(); showToast('Please choose a category.', 'error'); return; }
+  if(!category){ document.querySelector('#res-category-chips .tl-cat').focus(); showToast('Please choose a category.', 'error'); return; }
   // Ticking nothing used to quietly mean everyone, which is a decision nobody
   // knew they were making.
   if(MY_SECTIONS.length && !chosenSections.length){
@@ -1271,6 +1453,7 @@ function resetForm(){
   clearFile();
   document.getElementById('res-name').value='';
   document.getElementById('res-category').value='';
+  syncCatChips();
   document.getElementById('res-folder').value='';
 
   // A CaPSA sees section checkboxes where an admin sees the program dropdown,
@@ -1289,9 +1472,6 @@ function resetForm(){
 function downloadResource(id, btn){
   const r = resources.find(x=>x.id===id);
   if(!r || !r.driveLink){ showToast('No file link available.', 'error'); return; }
-
-  btn.classList.add('btn-downloading');
-  btn.textContent='Opening…';
 
   window.open(r.driveLink, '_blank');
 }
@@ -1398,5 +1578,6 @@ function closeSidebar() {
 }
 </script>
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

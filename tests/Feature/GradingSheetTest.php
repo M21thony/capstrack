@@ -12,18 +12,21 @@ use App\Models\Team;
 use App\Support\GradingSheet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * A panelist's rating sheet on paper - PDF or Excel - for a defense held
- * without signal or power. The panel grades by hand and enters the scores in
- * Team Grading once CapsTrack is back.
+ * The team's rating sheet on paper - PDF or Excel - that the team prints, one
+ * for each panelist, and brings to the defense. If CapsTrack cannot be reached
+ * there, the panel grades by hand and enters the scores in Team Grading later.
  */
 class GradingSheetTest extends TestCase
 {
-    use RefreshDatabase;
+    use BuildsChecklists, RefreshDatabase;
 
     private DefenseSchedule $defense;
+
+    private Student $student;
 
     private CapstoneExpert $chair;
 
@@ -46,9 +49,13 @@ class GradingSheetTest extends TestCase
             'category_max_points' => 10, 'max_points' => 10, 'sort_order' => 2, 'score_levels' => '[]',
         ]);
 
-        $team = Team::create(['team_name' => 'Team1', 'project_title' => 'Clinic Queue System', 'team_status' => 'Active', 'is_confirmed' => true, 'member_count' => 5]);
-        $student = Student::factory()->withCompleteProfile()->create(['f_name' => 'Maria', 'l_name' => 'Cruz']);
-        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+        // The leader puts the team in BSIT-3A, the section capsaFor() handles.
+        $this->student = Student::factory()->withCompleteProfile()->create([
+            'f_name' => 'Maria', 'l_name' => 'Cruz',
+            'course' => 'Bachelor of Science in Information Technology', 'year_section' => '3rd · A',
+        ]);
+        $team = Team::create(['team_name' => 'Team1', 'project_title' => 'Clinic Queue System', 'team_status' => 'Active', 'is_confirmed' => true, 'member_count' => 5, 'leader_id' => $this->student->student_id]);
+        StudentSchoolYear::create(['student_id' => $this->student->student_id, 'team_id' => $team->team_id]);
 
         $this->defense = DefenseSchedule::create([
             'team_id' => $team->team_id, 'defense_type' => 'Title Defense', 'attempt' => 1,
@@ -58,10 +65,10 @@ class GradingSheetTest extends TestCase
         DefensePanel::create(['defense_id' => $this->defense->defense_id, 'expert_id' => $this->chair->expert_id, 'panel_role' => 'Panel Chair', 'created_at' => now()]);
     }
 
-    public function test_a_panelist_downloads_a_printable_pdf(): void
+    public function test_the_team_downloads_a_printable_pdf(): void
     {
-        $response = $this->actingAs($this->chair, 'expert')
-            ->get(route('instructor.grading.sheet', [$this->defense->defense_id, 'pdf']))
+        $response = $this->actingAs($this->student, 'web')
+            ->get(route('student.defense.sheet', [$this->defense->defense_id, 'pdf']))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
 
@@ -75,14 +82,14 @@ class GradingSheetTest extends TestCase
         $member = CapstoneExpert::factory()->create(['approved_status' => true, 'first_name' => 'Jose', 'last_name' => 'Reyes']);
         DefensePanel::create(['defense_id' => $this->defense->defense_id, 'expert_id' => $member->expert_id, 'panel_role' => 'Panel Member 1', 'created_at' => now()]);
 
-        $sheet = app(GradingSheet::class)->for($this->defense->fresh(), GradingRubric::first(), $this->chair, DefensePanel::first());
+        $sheet = app(GradingSheet::class)->for($this->defense->fresh(), GradingRubric::first());
         $html = view('instructor.pdf.grading-sheet', ['sheet' => $sheet])->render();
 
         foreach (['Republic of the Philippines', 'Camarines Sur Polytechnic Colleges', 'ISO 9001:2015 Certified',
             'Title', 'Clinic Queue System', 'Date', $this->defense->schedule_date->format('F j, Y'), 'Team Alias', 'Team1',
             'TITLE DEFENSE RUBRIC', 'Delivery', 'Excellent - Presentation', 'Fair - Presentation', 'Score', 'Total',
             'Verdict:', 'Remarks:', 'Jose Reyes', 'Panel Member 1', 'Panel Member 2', 'Rosa Villanueva', 'Panel Chairman',
-            'Team Grading', 'Defense #'.$this->defense->defense_id] as $text) {
+            'one for each panelist', 'Team Grading', 'Defense #'.$this->defense->defense_id] as $text) {
             $this->assertStringContainsString(e($text), $html, $text);
         }
         // The points in bold after each descriptor, as on the form.
@@ -94,8 +101,8 @@ class GradingSheetTest extends TestCase
 
     public function test_the_excel_sheet_adds_itself_up(): void
     {
-        $response = $this->actingAs($this->chair, 'expert')
-            ->get(route('instructor.grading.sheet', [$this->defense->defense_id, 'xlsx']))
+        $response = $this->actingAs($this->student, 'web')
+            ->get(route('student.defense.sheet', [$this->defense->defense_id, 'xlsx']))
             ->assertOk()
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
@@ -127,36 +134,47 @@ class GradingSheetTest extends TestCase
         $this->assertEquals(25, $ws->getCell($total)->getCalculatedValue());
     }
 
-    public function test_only_the_panel_gets_the_sheet(): void
+    /** Another team's defense is not found, the same as one that does not exist. */
+    public function test_only_the_team_gets_its_sheet(): void
     {
-        $outsider = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $other = Student::factory()->withCompleteProfile()->create();
+        $otherTeam = Team::create(['team_name' => 'Team2', 'team_status' => 'Active', 'is_confirmed' => true, 'member_count' => 5]);
+        StudentSchoolYear::create(['student_id' => $other->student_id, 'team_id' => $otherTeam->team_id]);
+        $noTeam = Student::factory()->withCompleteProfile()->create();
 
-        $this->actingAs($outsider, 'expert')
-            ->get(route('instructor.grading.sheet', [$this->defense->defense_id, 'pdf']))
-            ->assertForbidden();
+        foreach ([$other, $noTeam] as $student) {
+            $this->actingAs($student, 'web')
+                ->get(route('student.defense.sheet', [$this->defense->defense_id, 'pdf']))
+                ->assertNotFound();
+        }
     }
 
     public function test_no_rubric_means_no_sheet(): void
     {
         GradingRubric::query()->update(['is_active' => false]);
 
-        $this->actingAs($this->chair, 'expert')
-            ->get(route('instructor.grading.sheet', [$this->defense->defense_id, 'pdf']))
-            ->assertRedirect(route('instructor.grading'))
-            ->assertSessionHas('error');
+        $this->actingAs($this->student, 'web')
+            ->get(route('student.defense.sheet', [$this->defense->defense_id, 'pdf']))
+            ->assertNotFound();
     }
 
-    public function test_the_grading_pages_offer_the_paper_copy(): void
+    /** The team prints the sheets, not the panel: the dashboard offers them, Team Grading does not. */
+    public function test_the_dashboard_offers_the_sheet_and_team_grading_does_not(): void
     {
-        $pdf = route('instructor.grading.sheet', [$this->defense->defense_id, 'pdf']);
-        $xlsx = route('instructor.grading.sheet', [$this->defense->defense_id, 'xlsx']);
+        $pdf = route('student.defense.sheet', [$this->defense->defense_id, 'pdf']);
+        $xlsx = route('student.defense.sheet', [$this->defense->defense_id, 'xlsx']);
+
+        // The dashboard's next-defense line shows once the section has a checklist.
+        $checklist = $this->emptyChecklist($this->capsaFor());
+        $this->addDeliverable($checklist, ['title' => 'Chapter 1']);
+
+        $this->actingAs($this->student, 'web')->get(route('student.dashboard'))->assertOk()
+            ->assertSee('Print one rating sheet for each panelist')
+            ->assertSee($pdf, false)->assertSee($xlsx, false);
 
         $this->actingAs($this->chair, 'expert')->get(route('instructor.grading'))->assertOk()
-            ->assertSee($pdf, false)->assertSee($xlsx, false)
-            ->assertSee('in case CapsTrack cannot be reached');
-
+            ->assertDontSee('sheet.pdf', false)->assertDontSee('in case CapsTrack cannot be reached');
         $this->actingAs($this->chair, 'expert')->get(route('instructor.grading.show', $this->defense->defense_id))->assertOk()
-            ->assertSee('Paper copy')
-            ->assertSee($pdf, false)->assertSee($xlsx, false);
+            ->assertDontSee('Paper copy')->assertDontSee('sheet.pdf', false);
     }
 }

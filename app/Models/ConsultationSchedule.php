@@ -81,16 +81,45 @@ class ConsultationSchedule extends Model
 
         $reference ??= now();
         $diff = ($days[$this->available_date] - $reference->dayOfWeek + 7) % 7;
+        $next = $reference->copy()->startOfDay()->addDays($diff);
 
-        return $reference->copy()->addDays($diff)->toDateString();
+        // Every other week: the week of the first date, then each second one.
+        if ($this->recur === 'biweekly' && $this->specific_date) {
+            $anchor = Carbon::parse($this->specific_date)->startOfDay();
+
+            if ($next->lt($anchor)) {
+                return $anchor->toDateString();
+            }
+
+            if ((int) round($anchor->diffInDays($next)) % 14 !== 0) {
+                $next->addWeek();
+            }
+        }
+
+        return $next->toDateString();
+    }
+
+    /**
+     * The first date of an every-other-week slot, which fixes which weeks it
+     * falls on: the date given when it was made, else the next day of its
+     * weekday from today.
+     */
+    public static function biweeklyStart(string $weekday, ?string $date = null): string
+    {
+        if ($date) {
+            return Carbon::parse($date)->toDateString();
+        }
+
+        return (new static(['available_date' => $weekday, 'recur' => 'weekly']))->nextOccurrenceOnOrAfter(now());
     }
 
     /**
      * Whether $date is actually a valid occurrence of this slot: for a
-     * "once" slot that's just an exact match to specific_date; for weekly/
-     * biweekly it's any on-or-after-today date that falls on the matching
-     * weekday. Used to validate the date a student actually picked in the
-     * calendar, instead of trusting the client or silently defaulting to
+     * "once" slot that's just an exact match to specific_date; for weekly
+     * it's any on-or-after-today date that falls on the matching weekday,
+     * and for biweekly only every second one of those from its first date.
+     * Used to validate the date a student actually picked in the calendar,
+     * instead of trusting the client or silently defaulting to
      * "whichever occurrence is nearest today" regardless of what was clicked.
      */
     public function isValidOccurrenceDate(string $date): bool
@@ -104,8 +133,20 @@ class ConsultationSchedule extends Model
 
         $parsed = Carbon::parse($date)->startOfDay();
 
-        return ! $parsed->lt(now()->startOfDay())
-            && $parsed->format('l') === $this->available_date;
+        if ($parsed->lt(now()->startOfDay()) || $parsed->format('l') !== $this->available_date) {
+            return false;
+        }
+
+        // An every-other-week slot skips the weeks between. One made before
+        // its first date was kept has nothing to count from, so it is
+        // treated as every week, as it always was.
+        if ($this->recur === 'biweekly' && $this->specific_date) {
+            $anchor = Carbon::parse($this->specific_date)->startOfDay();
+
+            return ! $parsed->lt($anchor) && (int) round($anchor->diffInDays($parsed)) % 14 === 0;
+        }
+
+        return true;
     }
 
     /**

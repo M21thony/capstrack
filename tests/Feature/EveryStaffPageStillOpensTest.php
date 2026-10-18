@@ -72,9 +72,16 @@ class EveryStaffPageStillOpensTest extends TestCase
     {
         $expert = $this->everyHat();
 
-        foreach (['instructor.grading', 'instructor.assignments', 'instructor.schedule', 'instructor.docreview'] as $route) {
+        foreach (['instructor.grading', 'instructor.schedule', 'instructor.docreview'] as $route) {
             $this->actingAs($expert, 'expert')->get(route($route))->assertOk();
         }
+
+        // Team Assignments is the Team Applications tab of Teams now.
+        $this->actingAs($expert, 'expert')->get(route('instructor.assignments'))
+            ->assertRedirect(route('instructor.teams', ['tab' => 'applications']));
+        $this->actingAs($expert, 'expert')->get(route('instructor.teams', ['tab' => 'applications']))
+            ->assertRedirect(route('capsa.team_management', ['tab' => 'applications']));
+        $this->actingAs($expert, 'expert')->get(route('capsa.team_management', ['tab' => 'applications']))->assertOk();
 
         // A CaPSA's expert teams are on Team Management: one Teams page, not two.
         $this->actingAs($expert, 'expert')->get(route('instructor.teams'))
@@ -89,9 +96,9 @@ class EveryStaffPageStillOpensTest extends TestCase
             ->assertSeeInOrder([
                 'Overview', 'Dashboard', 'Announcements',
                 'People', 'Expert Management', 'Student Section List', 'Student Accounts',
-                'Teams', 'Team Management', 'Team Assignments',
+                'Teams', 'Team Management',
                 'Defenses', '/capsa/defenses"', 'Team Grading', 'Grading Rubrics',
-                'Advising', 'My Schedule', 'Document Review',
+                'Advising', 'My Schedule', 'My Evaluations',
                 'Records', 'Financial Records', 'Archived Capstones', 'Templates &amp; Lessons',
                 'Reports', 'Analytics', 'Activity Log',
                 'Account', 'System Settings', 'Sign Out',

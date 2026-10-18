@@ -50,7 +50,7 @@ class SubmissionDrawerMarkupTest extends TestCase
         $response->assertSee('v2');
         // A file for no line: no "What is this for?", straight to the file.
         $response->assertSee("window.openSubmission('none', this)", false);
-        $response->assertSee('Submit a file');
+        $response->assertSee('Submit a paper');
         $response->assertDontSee('id="submission-form-root"', false);
         $response->assertDontSee('id="dropZone"', false);
         $response->assertDontSee('data-open-upload', false);

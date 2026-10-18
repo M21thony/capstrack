@@ -86,6 +86,9 @@ class LeaveDecisionDetails
             'reason' => $request->reason,
             'requestedOn' => $request->created_at?->format('F j, Y · g:i A'),
             'decisionNote' => $request->decision_note,
+            // Declined by the clock: nobody decided, and the popup says so.
+            'auto' => (bool) $request->auto_declined,
+            'autoDays' => MemberLeaveRequest::DECIDE_WITHIN_DAYS,
             'decidedBy' => $decider ? trim(($decider->first_name ?? '').' '.($decider->last_name ?? '')) ?: 'Your CaPSA' : 'Your CaPSA',
             'decidedOn' => $request->decided_at?->format('F j, Y · g:i A'),
         ];

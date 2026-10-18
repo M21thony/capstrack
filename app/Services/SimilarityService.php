@@ -633,10 +633,10 @@ PROMPT;
 
         // ── Phase 3: Cosine similarity against every stored embedding ─
         $scored = [];
-        $candidates = $docs->map(fn (ArchivedDocument $doc) => [$doc, null])
+        $candidates = $docs->map(fn (ArchivedDocument $doc) => [$doc, null, null])
             ->concat($this->recommendedThisYear($excludeTeamId));
 
-        foreach ($candidates as [$doc, $recommended]) {
+        foreach ($candidates as [$doc, $recommended, $proposalId]) {
             $storedEmbedding = json_decode($doc->embedding, true);
 
             if (! is_array($storedEmbedding) || empty($storedEmbedding)) {
@@ -656,6 +656,7 @@ PROMPT;
             $scored[] = [
                 'document' => $doc,
                 'recommended' => $recommended,
+                'pre_proposal_id' => $proposalId,
                 'score' => $score,
                 'reason' => '',
                 'similarities' => '',
@@ -676,20 +677,27 @@ PROMPT;
         // id/matches/score/reason was producing a response long enough to
         // risk truncation or a slow generation that tripped the timeout.
         // 10 keeps the response reliable.
+        //
+        // The archive and this year's recommended titles are kept apart, so
+        // a busy year cannot push past capstones out of the archive's top N.
+        // ponytail: at most 5 recommended titles; raise it if a year has more close ones.
         usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
-        $topCandidates = array_slice($scored, 0, min(10, count($scored)));
+        $archive = array_values(array_filter($scored, fn ($m) => ! $m['recommended']));
+        $thisYear = array_values(array_filter($scored, fn ($m) => (bool) $m['recommended']));
+        $topCandidates = array_merge(array_slice($archive, 0, $topN), array_slice($thisYear, 0, 5));
+        usort($topCandidates, fn ($a, $b) => $b['score'] <=> $a['score']);
 
         // ── Phase 4: Enrich top matches with AI-generated reasons ─────
         $enriched = $this->enrichWithReasons($concepts, $topCandidates);
 
-        // Judged on its text; shown by title only (see recommendedThisYear()).
+        // Not stored with the match (see recommendedThisYear()).
         foreach ($enriched as $item) {
             if ($item['recommended']) {
                 $item['document']->abstract = null;
             }
         }
 
-        return array_slice($enriched, 0, $topN);
+        return $enriched;
     }
 
     /**
@@ -699,11 +707,11 @@ PROMPT;
      * The archive holds only finished capstones, so two sections could each
      * be recommended the same idea in the same year without either seeing
      * it. Each title is embedded once; the model clears it when the text
-     * changes. Only the title and its section reach the student - another
-     * team's work in progress is not theirs to read - so the text is used
-     * for the comparison and then dropped.
+     * changes. The text is not stored with the match; the match page reads
+     * the proposal again by its id, so a revised or retired one is never
+     * shown as it used to be.
      *
-     * @return array<int, array{0: ArchivedDocument, 1: string}>
+     * @return array<int, array{0: ArchivedDocument, 1: string, 2: int}>
      */
     private function recommendedThisYear(?int $excludeTeamId): array
     {
@@ -738,7 +746,7 @@ PROMPT;
             $doc->embedding = $proposal->embedding;
             $section = $proposal->team ? $sections->sectionFor($proposal->team) : '';
 
-            return [$doc, 'Recommended this year'.($section ? ' — '.$section : '')];
+            return [$doc, 'Recommended this year'.($section ? ' — '.$section : ''), $proposal->id];
         })->filter()->values()->all();
     }
 

@@ -5,11 +5,12 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Signs a student or an expert out after config('session.idle_timeout')
- * minutes in which they did nothing - in every portal.
+ * minutes in which they did nothing - thirty days by default, in every portal.
  *
  * "Did something" means a request they caused. A page's own background
  * checks send X-Idle-Passive and are not counted, or an open tab polling the
@@ -43,6 +44,20 @@ class EndIdleSession
         return $next($request);
     }
 
+    /** The idle limit as a person says it: "30 days", "2 hours", "10 minutes". */
+    public static function limitForHumans(?int $minutes = null): string
+    {
+        $minutes ??= (int) config('session.idle_timeout');
+
+        [$amount, $unit] = match (true) {
+            $minutes >= 1440 && $minutes % 1440 === 0 => [intdiv($minutes, 1440), 'day'],
+            $minutes >= 60 && $minutes % 60 === 0 => [intdiv($minutes, 60), 'hour'],
+            default => [$minutes, 'minute'],
+        };
+
+        return $amount.' '.Str::plural($unit, $amount);
+    }
+
     private function signedIn(): bool
     {
         return Auth::guard('web')->check() || Auth::guard('expert')->check();
@@ -58,7 +73,7 @@ class EndIdleSession
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'status' => 'session_expired',
-                'message' => 'Your session expired after '.config('session.idle_timeout').' minutes of inactivity. Please sign in again.',
+                'message' => 'Your session expired after '.self::limitForHumans().' of inactivity. Please sign in again.',
                 'redirect' => route('login'),
             ], 401);
         }

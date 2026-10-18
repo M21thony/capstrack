@@ -134,4 +134,27 @@ class RecommendedTitlesInDuplicationTest extends TestCase
         $proposal->fresh()->update(['title' => 'Barangay Records System v2']);
         $this->assertNull($proposal->fresh()->embedding, 'a revised title is read again');
     }
+
+    /** This year's titles no longer take archive places: the archive keeps its top 10 beside them. */
+    public function test_the_archive_keeps_its_top_ten_beside_this_years_titles(): void
+    {
+        $this->ollama->shouldReceive('embed')->andReturn(array_fill(0, 8, 0.5));
+        foreach (range(6, 12) as $n) {
+            $doc = ArchivedDocument::create([
+                'team_id' => 0, 'title' => "Capstone {$n}", 'abstract' => 'An abstract.',
+                'academic_year' => '2025', 'program' => 'BSIT', 'file_path' => "archive/{$n}.pdf",
+            ]);
+            $doc->embedding = json_encode(array_fill(0, 8, 0.5));
+            $doc->save();
+        }
+        $theirs = $this->proposal($this->team('B'), 'Barangay Records System');
+
+        $matches = $this->check($this->team('A'));
+        $recommended = array_values(array_filter($matches, fn ($m) => $m['recommended']));
+
+        $this->assertCount(10, array_filter($matches, fn ($m) => ! $m['recommended']));
+        $this->assertCount(1, $recommended);
+        $this->assertSame($theirs->id, $recommended[0]['pre_proposal_id']);
+        $this->assertNull($recommended[0]['document']->abstract);
+    }
 }

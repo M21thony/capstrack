@@ -52,5 +52,6 @@ document.querySelectorAll('.nav-item').forEach(function (el) {
     });
 });
 </script>
+@include('partials.app-scrollbar')
 </body>
 </html>

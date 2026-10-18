@@ -100,8 +100,9 @@ class StudentDashboardTest extends TestCase
         $response->assertOk();
         // The dashboard leads with what to do next; without a team, that is forming one.
         $response->assertViewHas('overallProgress', 0);
-        $response->assertSee('Where your team is');
-        $response->assertSee('Form or join a team');
+        $response->assertSee('Your next step');
+        $response->assertSee('Create or join a team');
+        $response->assertDontSee('id="now-card"', false);
 
         // Verify team name card shows "No Team" since current student doesn't have a team
         $response->assertSee('Team (No Team)');

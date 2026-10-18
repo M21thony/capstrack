@@ -1220,3 +1220,106 @@ a.btn.content,
 @media (min-width:769px) and (max-width:1024px) and (prefers-reduced-motion:reduce){
   .sidebar{transition:none}
 }
+
+/* ── The side column: this month, cancel requests, sessions ─────────────────
+   Two requests and four sessions show; the rest open in a panel from the
+   right, so the column stays as tall as the calendar beside it. */
+.sc-month .form-card-title,.sc-requests .form-card-title{margin-bottom:10px}
+.sc-month-line{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--text2);white-space:nowrap}
+.sc-month-line b{color:var(--text)}
+.sc-month-none{font-size:12px;color:var(--text3);font-style:italic}
+.sc-bar{height:6px;margin-top:8px;border-radius:3px;background:var(--bg4);overflow:hidden}
+.sc-bar i{display:block;height:100%;border-radius:3px;background:var(--blue)}
+.sc-requests{border-color:#f0d9a0}
+.sc-count{margin-left:auto;min-width:20px;height:20px;padding:0 7px;border-radius:999px;background:var(--bg4);color:var(--text2);
+  font-size:11px;font-weight:700;display:inline-grid;place-items:center;letter-spacing:0;text-transform:none}
+.sc-count.is-red{background:#dc2626;color:#fff}
+.sc-list{display:flex;flex-direction:column}
+.sc-req{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border)}
+.sc-req:first-child{border-top:0;padding-top:0}
+.sc-req-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sc-req-t b,.sc-req-t span,.sc-req-t q{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-req-t b{font-size:13.5px;color:var(--text)}
+.sc-req-t span{font-size:12px;color:var(--text3)}
+.sc-req-t q{font-size:12px;color:var(--text2)}
+.sc-review{flex-shrink:0;min-height:34px;padding:0 12px;border-radius:9px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-weight:600}
+.sc-all{display:block;width:calc(100% - 20px);margin:0 10px 10px;min-height:34px;border:1px dashed var(--border2);border-radius:9px;background:none;
+  font:600 12.5px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text);cursor:pointer}
+.sc-requests .sc-all{width:100%;margin:10px 0 0}
+.sc-all[hidden]{display:none}
+.sc-tabs{display:flex;gap:4px;margin:10px 10px 0;padding:3px;border-radius:10px;background:var(--bg4)}
+.sc-tabs button{flex:1;min-height:30px;border:0;border-radius:7px;background:transparent;cursor:pointer;
+  font:600 12.5px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text2)}
+.sc-tabs button[aria-selected="true"]{background:var(--bg2);color:var(--text);box-shadow:0 1px 2px rgba(24,25,31,.16)}
+.sc-sess{display:flex;gap:10px;padding:9px 2px;border-top:1px solid var(--border)}
+.sc-sess:first-child{border-top:0}
+.sc-date{width:42px;height:46px;flex-shrink:0;border-radius:10px;background:var(--navy-dark);color:#fff;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;line-height:1}
+.sc-date small{font-size:9.5px;font-weight:700;letter-spacing:.06em}
+.sc-date b{font-size:16px}
+.sc-date.is-past{background:var(--bg4);color:var(--text2)}
+.sc-sess-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--text2)}
+.sc-sess-t > span,.sc-sess-t small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-sess-t small{font-size:11.5px;color:var(--text3)}
+.sc-line{display:flex;justify-content:space-between;gap:8px}
+.sc-line b{font-size:13.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc-line span{flex-shrink:0;font-size:12px;color:var(--text3)}
+/* The panels: every request with its answer, every session, one request. */
+.sc-panel .cm-b{gap:12px}
+.sc-panel .sc-tabs{margin:0}
+.sc-reqcard{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:#fdf2d6;border:1px solid #f0d9a0}
+.sc-reqcard q{font-size:13px;line-height:1.45;color:var(--text)}
+.sc-reqcard small{font-size:12px;color:var(--text2)}
+.sc-actions{display:flex;gap:6px}
+.sc-actions .btn{flex:1;min-height:38px;border-radius:10px}
+.sc-facts{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.sc-facts > div{display:flex;flex-direction:column;gap:2px;padding:12px 16px;border-top:1px solid var(--border)}
+.sc-facts > div:first-child{border-top:0}
+.sc-facts span{font-size:12px;font-weight:600;color:var(--text2)}
+.sc-facts b{font-size:14px;font-weight:500;line-height:1.5;color:var(--text);overflow-wrap:anywhere;white-space:pre-wrap}
+.sc-field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--text)}
+.sc-field textarea{width:100%;min-height:88px;padding:10px 12px;border:1px solid var(--border2);border-radius:10px;resize:vertical;
+  font:400 14px/1.45 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text);background:var(--bg2)}
+.sc-field small{font-size:12px;font-weight:500;color:var(--text3)}
+.sc-error{font-size:12px;font-weight:600;color:var(--red,#dc2626)}
+/* A booked pill names the team; one the team asked to call off is amber. */
+.cal-slot-pill.is-asked{color:var(--amber)!important;font-weight:700}
+.cal-slot-pill.is-asked::before{background:#d97706}
+@media (max-width:768px){.sc-field textarea{font-size:16px}}
+/* Seven equal columns, whatever a pill says. */
+.cal-grid{grid-template-columns:repeat(7,minmax(0,1fr))}
+/* A laptop sees the whole page at once: the month's rows share the height
+   left under the header and legend, and only the sessions list scrolls.
+   Shorter than 740px a day has no room for a pill, so the page scrolls. */
+@media (min-width:1025px) and (min-height:740px){
+  #real-content > .content{height:100%;box-sizing:border-box;display:flex;flex-direction:column}
+  .sched-layout{flex:1;min-height:0;grid-template-rows:minmax(0,1fr);align-items:stretch}
+  .sched-layout > div:first-child{display:flex;flex-direction:column;min-height:0}
+  .sched-layout .cal-card{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .sched-layout #cal-grid{flex:1;min-height:0;grid-template-rows:auto;grid-auto-rows:minmax(0,1fr)}
+  .sched-layout .cal-cell{min-height:0;overflow:hidden}
+  .sched-layout .wk{flex:1;min-height:0;overflow:auto}
+  .sched-layout .legend-row{flex-shrink:0}
+  .side-col{min-height:0;overflow:hidden}
+  .side-col > *{flex-shrink:0}
+  .side-col .upcoming-card{flex:1 1 auto;min-height:160px;display:flex;flex-direction:column}
+  .side-col .upcoming-list{flex:1;min-height:0;max-height:none}
+  /* A short day clips its last pill instead of squeezing every pill flat. */
+  .sched-layout .cal-cell > *{flex-shrink:0}
+  /* "+2 more" rides beside the date, so two pills still fit under it. */
+  .sched-layout .cal-more{position:absolute;top:12px;right:9px;margin:0;line-height:1}
+  .sched-layout .cal-card{padding:14px 16px 16px}
+  .sched-layout .cal-header{margin-bottom:8px}
+  .legend-row{margin-top:12px}
+  .legend-row .legend-section{padding:11px 15px}
+  .legend-row .legend-section-title{margin-bottom:6px}
+  .legend-row .legend-grid{margin-bottom:0;gap:6px 18px}
+  .legend-row .guide-list{gap:1px;font-size:12px;line-height:1.45}
+  .side-col{gap:12px}
+  .side-col .sc-month,.side-col .sc-requests{padding:14px 16px}
+  .sc-req{padding:7px 0}
+  .sc-req-t{gap:1px}
+  .sc-requests .sc-all{margin-top:8px}
+  .sc-sess{padding:7px 2px}
+  #real-content > .content > .sys-credits{margin-top:12px!important;padding-top:8px}
+}

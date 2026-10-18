@@ -4,9 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
+use App\Models\GoogleDriveToken;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Services\GoogleDriveService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -73,6 +75,10 @@ class SubmissionControllerTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        // Connected or not, no copy goes to a reviewer's Drive: it would fill their storage.
+        GoogleDriveToken::create(['user_id' => $adviserId, 'access_token' => 'token']);
+        $drive = $this->spy(GoogleDriveService::class);
+
         $file = UploadedFile::fake()->create('My Thesis Draft.pdf', 100, 'application/pdf');
 
         $response = $this->actingAs($student)->post(route('student.submission.store'), [
@@ -81,6 +87,7 @@ class SubmissionControllerTest extends TestCase
         ]);
 
         $response->assertOk();
+        $drive->shouldNotHaveReceived('uploadFile');
         $response->assertJson(['success' => true]);
 
         $document = CapstoneDocument::first();
@@ -91,9 +98,7 @@ class SubmissionControllerTest extends TestCase
         $review = CapstoneDocumentReview::first();
         $this->assertSame($adviserId, $review->expert_id);
         $this->assertSame('adviser', $review->role);
-        // No Google Drive token connected for the adviser in this test, so
-        // delivery should be gracefully skipped rather than erroring out.
-        $this->assertSame('not_connected', $review->drive_status);
+        $this->assertNull($review->drive_file_id);
     }
 
     /**
@@ -142,16 +147,6 @@ class SubmissionControllerTest extends TestCase
 
         $this->assertSame(0, CapstoneDocumentReview::where('expert_id', $adminId)->count());
         $this->assertSame(0, CapstoneDocument::count());
-    }
-
-    public function test_subject_adviser_folders_endpoint_returns_empty_when_program_is_unset(): void
-    {
-        $student = Student::factory()->withCompleteProfile()->create();
-
-        $response = $this->actingAs($student)->get(route('student.submission.subject-adviser-folders'));
-
-        $response->assertOk();
-        $response->assertJson(['folders' => []]);
     }
 
     public function test_version_only_increments_for_resubmissions_of_the_same_named_file(): void

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content"/>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>CapsTRACK – Expert Portal</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
@@ -146,29 +146,43 @@
           <div class="dur-row"><button type="button" class="dur-chip is-on" data-mins="60"></button></div>
         </div>
 
-        <!-- Upcoming Appointments -->
+        <!-- This month: how much of it is taken. -->
+        <div class="form-card sc-month">
+          <div class="form-card-title">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            This month
+          </div>
+          <div id="slot-stats"><!-- Rendered by JS --></div>
+        </div>
+
+        <!-- Teams that asked to call a session off. Two here; the rest a tap away. -->
+        <div class="form-card sc-requests" id="sc-requests" hidden>
+          <div class="form-card-title">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Cancel requests
+            <span class="sc-count is-red" id="cr-count">0</span>
+          </div>
+          <div class="sc-list" id="cr-list"></div>
+          <button type="button" class="sc-all" id="cr-all" onclick="openAllRequests()" hidden></button>
+        </div>
+
+        <!-- Sessions teams booked: what is coming, and what has been. -->
         <div class="upcoming-card">
           <div class="upcoming-header">
             <div class="upcoming-title">
               <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              Next sessions
+              Sessions
             </div>
             <div class="upcoming-count" id="apt-count">0</div>
+          </div>
+          <div class="sc-tabs" role="tablist" aria-label="Sessions">
+            <button type="button" role="tab" id="sess-up" aria-selected="true" onclick="setSessionsTab('up')">Upcoming</button>
+            <button type="button" role="tab" id="sess-past" aria-selected="false" onclick="setSessionsTab('past')">Past</button>
           </div>
           <div class="upcoming-list" id="upcoming-list">
             <!-- Rendered by JS -->
           </div>
-        </div>
-
-        <!-- Slot type quick stats -->
-        <div class="form-card" style="padding:16px">
-          <div class="form-card-title" style="margin-bottom:12px">
-            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            This month&rsquo;s slots
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px" id="slot-stats">
-            <!-- Rendered by JS -->
-          </div>
+          <button type="button" class="sc-all" id="sess-all" onclick="openAllSessions()" hidden></button>
         </div>
 
       </div>
@@ -343,41 +357,43 @@
    when they meant one week is how a whole term's Mondays used to move at
    once. Asked as a modal rather than a browser confirm, so the two outcomes
    can be spelled out instead of compressed into OK and Cancel. */
-#scope-ask{position:fixed;inset:0;z-index:120;display:none;align-items:center;
-  justify-content:center;background:rgba(15,17,23,.45);padding:20px}
-#scope-ask.show{display:flex}
-#scope-ask .box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;
-  max-width:400px;width:100%;padding:20px;box-shadow:0 18px 44px -18px rgba(0,0,0,.45)}
-#scope-ask h3{margin:0 0 6px;font:600 15px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text)}
-#scope-ask p{margin:0 0 15px;font-size:12.5px;line-height:1.5;color:var(--text3)}
 #scope-ask .opt{display:block;width:100%;text-align:left;background:var(--bg3);
-  border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:8px;
+  border:1px solid var(--border);border-radius:12px;padding:12px 14px;
   cursor:pointer;font:inherit;color:var(--text)}
 #scope-ask .opt:hover{border-color:var(--accent);background:var(--accent-light)}
-#scope-ask .opt b{display:block;font:600 13px 'DM Sans','DM Sans Fallback',sans-serif}
-#scope-ask .opt span{display:block;font-size:11.5px;color:var(--text3);margin-top:2px}
-#scope-ask .cancel{width:100%;background:none;border:none;padding:6px;cursor:pointer;
-  font:500 12.5px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text3)}
-#scope-ask .cancel:hover{color:var(--text)}
+#scope-ask .opt b{display:block;font:600 13.5px 'DM Sans','DM Sans Fallback',sans-serif}
+#scope-ask .opt span{display:block;font-size:12px;color:var(--text3);margin-top:2px}
+/* Set availability as the wide panel: its two columns stack. */
+dialog.cm-panel .ga-modal{max-height:none;border:0;background:var(--bg2)}
+dialog.cm-panel .ga-grid{grid-template-columns:1fr}
+dialog.cm-panel .ga-side{border-right:0;border-bottom:1px solid var(--border)}
+dialog.cm-panel .ga-head{padding:24px 20px 18px 24px}
+dialog.cm-panel .ga-title{font-size:20px}
+dialog.cm-panel .ga-foot{flex-wrap:wrap;padding:14px 24px 20px}
+dialog.cm-panel .ga-foot .ga-summary{flex:1 1 100%}
+dialog.cm-panel .ga-foot .btn{flex:1 1 0;min-height:46px;border-radius:12px}
 </style>
 
 <!-- ─── CANCELLATION DECISION ─────────────────────────────────────────────── -->
-<div class="slot-modal-overlay" id="cancel-decision-overlay" onclick="if(event.target===this)closeCancellationDecision()">
-  <div class="block-confirm" role="dialog" aria-modal="true" aria-labelledby="cd-title">
-    <div class="block-confirm-title" id="cd-title">Cancel this consultation?</div>
-    <div class="block-confirm-sub" id="cd-sub"></div>
-    <div id="cd-reason-wrap" hidden style="margin-bottom:14px">
-      <label for="cd-reason" style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">Why can't they cancel?</label>
-      <textarea id="cd-reason" rows="3" maxlength="500" placeholder="e.g. This is the last session before your defense, so we need to meet."
-                style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;resize:vertical;background:var(--bg2);color:var(--text)"></textarea>
-      <div id="cd-error" style="font-size:11.5px;color:var(--red,#dc2626);margin-top:4px"></div>
+<dialog class="cm cm-ask" id="cancel-decision" aria-labelledby="cd-title">
+  <div class="cm-box">
+    <span class="cm-ring cm-tone-error" id="cd-ring" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><line x1="10" y1="14" x2="14" y2="18"/><line x1="14" y1="14" x2="10" y2="18"/></svg></span>
+    <h2 class="cm-title" id="cd-title">Approve this cancellation?</h2>
+    <span class="cm-chip" id="cd-chip"></span>
+    <p class="cm-text" id="cd-sub"></p>
+    <div class="cm-reason" id="cd-quote" hidden></div>
+    <div class="cm-field sc-field" id="cd-reason-wrap" hidden>
+      <label for="cd-reason">Why can't they cancel?</label>
+      <textarea id="cd-reason" rows="3" maxlength="500" placeholder="e.g. This is the last session before your defense, so we need to meet."></textarea>
+      <small>At least 10 characters. The whole team sees it.</small>
+      <div id="cd-error" class="sc-error"></div>
     </div>
-    <div class="block-confirm-actions">
-      <button class="btn btn-danger-solid" id="cd-yes" onclick="confirmCancellationDecision()">Yes</button>
-      <button class="btn btn-ghost" onclick="closeCancellationDecision()">No</button>
+    <div class="cm-pair">
+      <button type="button" class="cm-btn" onclick="closeCancellationDecision()">Back</button>
+      <button type="button" class="cm-btn cm-btn-danger" id="cd-yes" onclick="confirmCancellationDecision()">Approve</button>
     </div>
   </div>
-</div>
+</dialog>
 
 
 <!-- ─── SET AVAILABILITY ──────────────────────────────────────────────────
@@ -387,8 +403,8 @@
      and how long a consultation runs, and the slots follow. Same idea here,
      and it needs no new endpoint: a window is just several of the slots the
      add form already posts. -->
-<div class="slot-modal-overlay" id="avail-overlay" onclick="if(event.target===this)closeAvail()">
-  <div class="ga-modal" role="dialog" aria-modal="true" aria-labelledby="ga-title">
+<dialog class="cm cm-panel cm-wide" id="avail-overlay" aria-labelledby="ga-title">
+  <div class="cm-box ga-modal">
     <header class="ga-head">
       <div>
         <h2 class="ga-title" id="ga-title">Consultation availability</h2>
@@ -479,7 +495,7 @@
       <button type="button" class="btn btn-primary" id="av-save" onclick="saveAvailability()">Save availability</button>
     </footer>
   </div>
-</div>
+</dialog>
 
 <style nonce="{{ Vite::cspNonce() }}">
 /* One slot, added or edited. A dialog rather than a panel down the side: the
@@ -508,6 +524,11 @@
   background:var(--bg2);color:var(--text);font:inherit;font-size:12.5px;min-width:0;flex:1}
 .qa-times span{color:var(--text3);font-size:12px}
 .qa-note{margin-top:6px;font-size:11.5px;line-height:1.45;color:var(--text3)}
+.qa-repeat{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.qa-repeat[hidden]{display:none}
+.qa-repeat button{min-height:30px;padding:0 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;
+  font:600 11.5px 'DM Sans','DM Sans Fallback',sans-serif;color:var(--text2)}
+.qa-repeat button[aria-pressed="true"]{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
 .qa-note.is-bad{color:var(--red,#dc2626)}
 .qa-booked{margin-top:8px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--bg3);
   font-size:12px;line-height:1.5;color:var(--text2)}
@@ -561,6 +582,11 @@
           </div>
         </div>
 
+        <div class="qa-repeat" id="qa-repeat" role="group" aria-label="Repeats">
+          <button type="button" data-recur="once" aria-pressed="true" onclick="setQuickRecur('once')">Just this date</button>
+          <button type="button" data-recur="weekly" aria-pressed="false" onclick="setQuickRecur('weekly')">Every week</button>
+          <button type="button" data-recur="biweekly" aria-pressed="false" onclick="setQuickRecur('biweekly')">Every 2 weeks</button>
+        </div>
         <div class="qa-note" id="qa-note"></div>
         <div class="qa-booked" id="qa-booked" hidden></div>
       </div>
@@ -579,10 +605,11 @@
 </div>
 
 <!-- ─── EXPERT PROFILE SIDE PANEL ─────────────────────────────────────────── -->
-<div id="scope-ask" role="dialog" aria-modal="true" aria-labelledby="scope-ask-title">
-  <div class="box">
-    <h3 id="scope-ask-title">Change which weeks?</h3>
-    <p id="scope-ask-note">This slot repeats every week.</p>
+<dialog class="cm cm-ask" id="scope-ask" aria-labelledby="scope-ask-title">
+  <div class="cm-box">
+    <span class="cm-ring cm-tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+    <h2 class="cm-title" id="scope-ask-title">Change which weeks?</h2>
+    <p class="cm-text" id="scope-ask-note">This slot repeats every week.</p>
     <button type="button" class="opt" data-scope="occurrence">
       <b id="scope-ask-one">Just this date</b>
       <span>Every other week keeps the time it has now.</span>
@@ -591,9 +618,9 @@
       <b id="scope-ask-all">Every week</b>
       <span>Changes this date and every one after it.</span>
     </button>
-    <button type="button" class="cancel" data-scope="">Cancel</button>
+    <div class="cm-pair cm-one"><button type="button" class="cm-btn" data-scope="">Cancel</button></div>
   </div>
-</div>
+</dialog>
 
 <script nonce="{{ Vite::cspNonce() }}">
 // ══════════════════════════════════════════════════════════════
@@ -623,6 +650,8 @@ let editingSlotKey   = null;    // the 'YYYY-MM-DD' key the slot being edited li
 let slots      = {};
 // slotsByDay[dayName] = [ ...rawApiSlots ]  — source of truth for recurring slots
 let slotsByDay = {};
+// allBookings = [ { booking_id, session_date, team, topics, note, ... } ]
+let allBookings = [];
 
 // ══════════════════════════════════════════════════════════════
 //  HELPERS
@@ -759,23 +788,17 @@ function askEditScope(dayName) {
     document.getElementById('scope-ask-note').textContent =
       'This slot repeats every ' + dayName + '.';
     document.getElementById('scope-ask-all').textContent = 'Every ' + dayName;
-    box.classList.add('show');
 
-    function done(scope) {
-      box.classList.remove('show');
-      box.removeEventListener('click', onClick);
-      document.removeEventListener('keydown', onKey);
-      resolve(scope);
-    }
+    let scope = '';
     function onClick(e) {
       const btn = e.target.closest('[data-scope]');
-      if (btn) { done(btn.dataset.scope); return; }
-      if (e.target === box) { done(''); }
+      if (btn) { scope = btn.dataset.scope; CapsModal.close(box); }
     }
-    function onKey(e) { if (e.key === 'Escape') { done(''); } }
-
     box.addEventListener('click', onClick);
-    document.addEventListener('keydown', onKey);
+    CapsModal.open(box, {
+      dismissible: true,
+      onClose: () => { box.removeEventListener('click', onClick); resolve(scope); },
+    });
   });
 }
 
@@ -814,9 +837,25 @@ async function loadSlots() {
           team_name: s.team_name,
           student_fname: s.student_fname,
           student_lname: s.student_lname,
+          topics: s.topics || '',
+          note: s.note || '',
+          cancel_by: s.cancellation_requested_by || '',
+          status: s.booking_status,
+          booked_at: s.booked_at || '',
         });
       }
     });
+
+    // Every booking, whatever month is on screen: the side column lists
+    // sessions and cancel requests from these, not from the month's grid.
+    allBookings = [];
+    Object.values(bySchedule).forEach(s => (s.bookings || []).forEach(b => allBookings.push({
+      ...b,
+      start_time: s.start_time,
+      end_time: s.end_time,
+      team: b.team_name || [b.student_fname, b.student_lname].filter(Boolean).join(' ') || 'A team',
+      by: [b.student_fname, b.student_lname].filter(Boolean).join(' '),
+    })));
 
     slotsByDay = {};
     Object.values(bySchedule).forEach(s => {
@@ -1006,6 +1045,7 @@ function redrawCalendar() {
   } else {
     renderWeek();
   }
+  renderSlotStats();
 }
 
 function renderCalendar() {
@@ -1070,7 +1110,8 @@ function renderCalendar() {
     el.appendChild(dateEl);
 
     {
-      daySlots.slice(0, 2).forEach(s => {
+      // Booked ones first: whose session it is matters more than an open time.
+      [...daySlots].sort((a, b) => (b.hasBooking ? 1 : 0) - (a.hasBooking ? 1 : 0)).slice(0, 2).forEach(s => {
         const pill = document.createElement('div');
         const status = getSlotStatusLabel(s, key);
         let cls = TYPE_CLASS[s.type] || 'type-consult';
@@ -1084,13 +1125,17 @@ function renderCalendar() {
           pill.textContent = 'Ended ' + hr12(s.start || s.start_time).replace(' ', '');
         } else {
           // "9:00a" saved four pixels and cost the reader a word. The space
-          // goes, the meridiem stays.
-          pill.textContent = hr12(s.start || s.start_time).replace(' ', '');
+          // goes, the meridiem stays. A booked one says whose it is.
+          const asked = !!(s.booking && s.booking.cancel_requested);
+          const team = s.hasBooking ? ' ' + String(s.teamName || '').replace(/^Team\s+/i, '') : '';
+          if (asked) pill.className = 'cal-slot-pill is-asked';
+          pill.textContent = (asked ? 'Cancel? ' : '') + hr12(s.start || s.start_time).replace(' ', '') + team;
         }
         pill.title = `${hr12(s.start || s.start_time)}–${hr12(s.end || s.end_time)} · Max ${s.maxBookings || s.consultation_limit}${s.teamName ? ' · Team: ' + s.teamName : ''}${status === 'ongoing' ? ' · Ongoing now' : ''}`;
         el.appendChild(pill);
       });
 
+      el.dataset.slots = daySlots.length;
       if (daySlots.length > 2) {
         const more = document.createElement('div');
         more.className   = 'cal-more';
@@ -1132,7 +1177,44 @@ function renderCalendar() {
     el.innerHTML = `<div class="cal-date-num">${d}</div>`;
     grid.appendChild(el);
   }
+  fitDayPills(grid);
 }
+
+/**
+ * When the month is drawn to fit the screen, a short day drops the pills it
+ * has no room for and counts them in its "+N more", instead of cutting one
+ * in half or saying fewer than are hidden.
+ */
+function fitDayPills(grid) {
+  grid.querySelectorAll('.cal-cell').forEach(cell => {
+    const pills = cell.querySelectorAll('.cal-slot-pill');
+    if (pills.length < 2) {
+      return;
+    }
+    const bottom = cell.getBoundingClientRect().bottom - parseFloat(getComputedStyle(cell).paddingBottom);
+    const last = pills[pills.length - 1];
+    if (last.getBoundingClientRect().bottom <= bottom + 1) {
+      return;
+    }
+    last.remove();
+    let more = cell.querySelector('.cal-more');
+    if (!more) {
+      more = document.createElement('div');
+      more.className = 'cal-more';
+      cell.insertBefore(more, pills[0].nextSibling);
+    }
+    more.textContent = `+${Number(cell.dataset.slots) - 1} more`;
+  });
+}
+
+let fitQueued = false;
+addEventListener('resize', () => {
+  if (fitQueued || calView !== 'month') {
+    return;
+  }
+  fitQueued = true;
+  requestAnimationFrame(() => { fitQueued = false; renderCalendar(); });
+});
 
 // ══════════════════════════════════════════════════════════════
 //  WEEK VIEW
@@ -1362,8 +1444,16 @@ function labelSaveButton(key) {
 //  here repeats and there is no second form.
 // ══════════════════════════════════════════════════════════════
 let quickAddKey = null;
+let quickRecur = 'once'; // how often a new one repeats
 let quickSlot = null; // the slot being changed, or null when adding
 let quickAnchor = null;
+
+/** A new consultation: this date only, or this weekday every week or every other week. */
+function setQuickRecur(recur) {
+  quickRecur = recur;
+  document.querySelectorAll('#qa-repeat [data-recur]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.recur === recur)));
+  quickAddChanged();
+}
 
 /** What the bubble is showing: the date's consultations, or one being edited. */
 function bubbleMode(mode) {
@@ -1404,7 +1494,7 @@ function openQuickDay(key, anchor) {
     row.className = 'qa-item' + (s.hasBooking ? ' is-booked' : '') + (s.is_available === false && !s.hasBooking ? ' is-off' : '');
     row.innerHTML = '<b>' + hr12(s.start || s.start_time) + ' – ' + hr12(s.end || s.end_time) + '</b>'
       + '<span>' + escHtml(s.hasBooking
-        ? (s.teamName || 'Booked') + (asked ? ' · cancellation requested' : '')
+        ? (s.teamName || 'Booked') + (s.booking.topics ? ' · about ' + s.booking.topics : '') + (asked ? ' · cancel asked' : '')
         : (s.is_available === false ? 'Unavailable' : 'Open')) + '</span>';
     row.onclick = () => openQuickEdit(s, key, i, quickAnchor);
     list.appendChild(row);
@@ -1463,6 +1553,9 @@ function openQuickAdd(key, startMinutes, anchor) {
   const start = minutesToTime(first);
 
   document.getElementById('qa-title').textContent = 'New consultation';
+  document.getElementById('qa-repeat').hidden = false;
+  quickRecur = 'once';
+  document.querySelectorAll('#qa-repeat [data-recur]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.recur === 'once')));
   document.getElementById('qa-start').value = start;
   document.getElementById('qa-end').value = minutesToTime(timeToMinutes(start) + 60);
   document.getElementById('qa-start').disabled = false;
@@ -1489,6 +1582,7 @@ function openQuickEdit(s, key, index, anchor) {
   const repeats = (s.recur || 'weekly') !== 'once';
 
   document.getElementById('qa-title').textContent = s.hasBooking ? 'Booked consultation' : 'Consultation';
+  document.getElementById('qa-repeat').hidden = true;
   document.getElementById('qa-start').value = (s.start_time || s.start || '').slice(0, 5);
   document.getElementById('qa-end').value = (s.end_time || s.end || '').slice(0, 5);
 
@@ -1512,14 +1606,16 @@ function openQuickEdit(s, key, index, anchor) {
   booked.hidden = !s.hasBooking;
 
   if (s.hasBooking) {
-    booked.innerHTML = '<b>' + escHtml(s.teamName || 'Booked') + '</b>'
-      + (s.topic ? '<br>' + escHtml(s.topic) : '')
+    const by = [s.booking.student_fname, s.booking.student_lname].filter(Boolean).join(' ');
+    booked.innerHTML = '<b>' + escHtml(s.teamName || 'Booked') + '</b>' + (by ? ' · booked by ' + escHtml(by) : '')
+      + (s.booking.topics ? '<br>About ' + escHtml(s.booking.topics) : '')
+      + (s.booking.note ? '<br>“' + escHtml(s.booking.note) + '”' : '')
       + (asked
-        ? '<br><b>Cancellation requested</b>'
+        ? '<br><b>Cancel asked</b>'
           + (s.booking.cancel_reason ? ' · “' + escHtml(s.booking.cancel_reason) + '”' : '')
           + '<div class="qa-foot" style="padding:8px 0 0">'
-          + '<button type="button" class="qa-act" onclick="closeQuickAdd();decideCancellation(' + s.booking.booking_id + ", 'approve', '" + key + '\')">Approve</button>'
-          + '<button type="button" class="qa-act" onclick="closeQuickAdd();decideCancellation(' + s.booking.booking_id + ", 'decline', '" + key + '\')">Keep booking</button>'
+          + '<button type="button" class="qa-act" onclick="closeQuickAdd();decideCancellation(' + s.booking.booking_id + ", 'decline', '" + key + '\')">Reject</button>'
+          + '<button type="button" class="qa-act is-danger" onclick="closeQuickAdd();decideCancellation(' + s.booking.booking_id + ", 'approve', '" + key + '\')">Approve</button>'
           + '</div>'
         : '');
   }
@@ -1605,7 +1701,7 @@ function quickAddChanged() {
   }
 
   // Same rule saveSlot() enforces, shown while the time is being picked.
-  if ((!quickSlot || (quickSlot.slot.recur || 'weekly') === 'once') && isSlotDone({ end_time: end }, quickAddKey)) {
+  if ((quickSlot ? (quickSlot.slot.recur || 'weekly') === 'once' : quickRecur === 'once') && isSlotDone({ end_time: end }, quickAddKey)) {
     note.textContent = 'That time has already passed. Pick a later time.';
     note.classList.add('is-bad');
     save.disabled = true;
@@ -1625,7 +1721,7 @@ function quickAddChanged() {
     ? document.getElementById('time-overlap-text').textContent
     : (quickSlot && (quickSlot.slot.recur || 'weekly') !== 'once'
       ? length + ' · part of your weekly hours'
-      : length + ' · this date only');
+      : length + (quickSlot || quickRecur === 'once' ? ' · this date only' : quickRecur === 'weekly' ? ' · every ' + dayLabel(quickAddKey).split(',')[0] : ' · every other ' + dayLabel(quickAddKey).split(',')[0] + ', from this date'));
   note.classList.toggle('is-bad', clash);
   save.disabled = clash;
 }
@@ -1636,8 +1732,8 @@ function writeQuickAddToForm() {
   document.getElementById('f-end').value = document.getElementById('qa-end').value;
   document.getElementById('f-type').value = 'consult';
   document.getElementById('f-max').value = '1';
-  // One date. Repeating hours are set in Set availability.
-  document.getElementById('f-recur').value = quickSlot ? (quickSlot.slot.recur || 'weekly') : 'once';
+  // A new one repeats as picked; one being changed keeps how it repeats.
+  document.getElementById('f-recur').value = quickSlot ? (quickSlot.slot.recur || 'weekly') : quickRecur;
 }
 
 function saveQuickAdd() {
@@ -1857,7 +1953,7 @@ async function saveSlot() {
           consultation_limit: maxB,
           slot_type:          type,
           recur:              recur,
-          specific_date:      recur === 'once' ? selectedDate : null,
+          specific_date:      recur === 'once' || recur === 'biweekly' ? selectedDate : null,
         }),
       });
 
@@ -1903,7 +1999,7 @@ async function saveSlot() {
         consultation_limit: maxB,
         slot_type:          type,
         recur:              recur,
-        specific_date:      recur === 'once' ? selectedDate : null,
+        specific_date:      recur === 'once' || recur === 'biweekly' ? selectedDate : null,
       }),
     });
 
@@ -2150,124 +2246,142 @@ async function deleteSlot(key, index, scheduleId) {
 // ══════════════════════════════════════════════════════════════
 //  UPCOMING APPOINTMENTS
 // ══════════════════════════════════════════════════════════════
-function renderUpcoming() {
-  const list = document.getElementById('upcoming-list');
-
-  const today       = new Date();
-  const todayKey    = formatKey(today.getFullYear(), today.getMonth(), today.getDate());
-  const nowMinutes  = today.getHours() * 60 + today.getMinutes();
-  const upcoming    = [];
-
-  Object.entries(slots)
-    // Today included, not just strictly-future dates — an appointment
-    // later today is still upcoming.
-    .filter(([k]) => k >= todayKey)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .forEach(([k, daySlots]) => {
-      // Only slots somebody has actually booked. This used to ask for
-      // `booked || !is_available`, but `booked` is itself true whenever a
-      // slot is unavailable - so every slot the expert had blocked, and
-      // every duplicate the server had flagged, was listed as an
-      // appointment with a dash where the team name goes.
-      daySlots.filter(s => s.hasBooking).forEach(s => {
-        // For today specifically, a slot whose end time has already
-        // passed is done, not upcoming (the backend marks its booking
-        // 'done' the same way — this just keeps the list in sync without
-        // waiting for the next full slot reload).
-        if (k === todayKey) {
-          const endTime = s.end || s.end_time;
-          if (endTime) {
-            const [eh, em] = endTime.split(':').map(Number);
-            if (eh * 60 + em <= nowMinutes) return;
-          }
-        }
-
-        const [y, m1, d] = k.split('-').map(Number);
-        upcoming.push({
-          team:  s.teamName || 'Booked',
-          date:  `${MONTHS[m1 - 1]} ${d}`,
-          time:  `${hr12(s.start || s.start_time)}–${hr12(s.end || s.end_time)}`,
-          type:  s.type || 'consult',
-          topic: s.topic || '',
-        });
-      });
-    });
-
-  document.getElementById('apt-count').textContent = upcoming.length;
-  list.innerHTML = '';
-
-  if (upcoming.length === 0) {
-    list.innerHTML = '<div class="no-upcoming">No upcoming appointments.</div>';
-    return;
-  }
-
-  const typeColors = {
-    consult:   { bg:'rgba(29,78,216,0.1)',  color:'var(--blue)'   },
-    docreview: { bg:'rgba(124,58,237,0.1)', color:'var(--purple)' },
-    defense:   { bg:'rgba(180,83,9,0.1)',   color:'var(--amber)'  },
+/** A booking's day and its end, as one sortable stamp. */
+function bookingEnd(b) { return String(b.session_date).slice(0, 10) + ' ' + String(b.end_time || '23:59').slice(0, 5); }
+function nowStamp() { const n = new Date(); return todayDateKey() + ' ' + String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
+function shortWhen(b) {
+  const [y, m1, d] = String(b.session_date).slice(0, 10).split('-').map(Number);
+  return DAYS[makeDate(y, m1, d).getDay()] + ', ' + MONTHS[m1 - 1].slice(0, 3) + ' ' + d + ' · ' + hr12(String(b.start_time || '').slice(0, 5));
+}
+function dateTile(b, past) {
+  const [, m1, d] = String(b.session_date).slice(0, 10).split('-').map(Number);
+  return '<span class="sc-date' + (past ? ' is-past' : '') + '" aria-hidden="true"><small>' + MONTHS[m1 - 1].slice(0, 3).toUpperCase() + '</small><b>' + d + '</b></span>';
+}
+function pendingRequests() {
+  return allBookings.filter(b => b.cancel_requested && b.status === 'scheduled')
+    .sort((x, y) => bookingEnd(x).localeCompare(bookingEnd(y)));
+}
+function sessionLists() {
+  const now = nowStamp();
+  const live = allBookings.filter(b => b.status === 'scheduled' || b.status === 'done');
+  return {
+    up: live.filter(b => b.status === 'scheduled' && bookingEnd(b) > now).sort((x, y) => bookingEnd(x).localeCompare(bookingEnd(y))),
+    past: live.filter(b => b.status === 'done' || bookingEnd(b) <= now).sort((x, y) => bookingEnd(y).localeCompare(bookingEnd(x))),
   };
+}
+function sessionRow(b, past) {
+  return '<div class="sc-sess">' + dateTile(b, past)
+    + '<span class="sc-sess-t"><span class="sc-line"><b>' + escHtml(b.team) + '</b><span>' + hr12(String(b.start_time || '').slice(0, 5)) + '</span></span>'
+    + (b.topics ? '<span>About ' + escHtml(b.topics) + (b.cancel_requested && !past ? ' · cancel asked' : '') + '</span>' : (b.cancel_requested && !past ? '<span>Cancel asked</span>' : ''))
+    + '<small>' + (past ? 'Ended · ' : '') + (b.by ? 'Booked by ' + escHtml(b.by) : '') + '</small></span></div>';
+}
 
-  upcoming.forEach(apt => {
-    const tc  = typeColors[apt.type] || typeColors.consult;
-    const row = document.createElement('div');
-    row.className = 'apt-row';
-    row.innerHTML = `
-      <div class="apt-row-top">
-        <div class="apt-team">${apt.team}</div>
-        <div class="apt-type-badge" style="background:${tc.bg};color:${tc.color}">${TYPE_LABELS[apt.type]}</div>
-      </div>
-      <div class="apt-meta">
-        <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${apt.date}</span>
-        <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${apt.time}</span>
-      </div>
-      ${apt.topic ? `<div class="apt-topic">${apt.topic}</div>` : ''}`;
-    list.appendChild(row);
+let sessTab = 'up';
+function setSessionsTab(tab) {
+  sessTab = tab;
+  document.getElementById('sess-up').setAttribute('aria-selected', String(tab === 'up'));
+  document.getElementById('sess-past').setAttribute('aria-selected', String(tab === 'past'));
+  renderUpcoming();
+}
+
+// The side column: cancel requests first (two, the rest a tap away), then the
+// sessions teams booked, four of them.
+function renderUpcoming() {
+  const reqs = pendingRequests();
+  const card = document.getElementById('sc-requests');
+  card.hidden = reqs.length === 0;
+  document.getElementById('cr-count').textContent = reqs.length;
+  document.getElementById('cr-list').innerHTML = reqs.slice(0, 2).map(b =>
+    '<div class="sc-req"><span class="sc-req-t"><b>' + escHtml(b.team) + '</b><span>' + shortWhen(b) + '</span>'
+    + (b.cancel_reason ? '<q>' + escHtml(b.cancel_reason) + '</q>' : '') + '</span>'
+    + '<button type="button" class="btn btn-ghost sc-review" onclick="openRequestReview(' + b.booking_id + ')">Review</button></div>').join('');
+  const allReqs = document.getElementById('cr-all');
+  allReqs.hidden = reqs.length <= 2;
+  allReqs.textContent = 'See all ' + reqs.length + ' requests';
+  const navBadge = document.querySelector('.nav-item[href$="/instructor/schedule"] .nav-badge');
+  if (navBadge) { navBadge.textContent = reqs.length; navBadge.hidden = reqs.length === 0; }
+
+  const lists = sessionLists();
+  const list = lists[sessTab];
+  document.getElementById('apt-count').textContent = lists.up.length;
+  document.getElementById('upcoming-list').innerHTML = list.length
+    ? list.slice(0, 4).map(b => sessionRow(b, sessTab === 'past')).join('')
+    : '<div class="no-upcoming">' + (sessTab === 'up' ? 'No upcoming sessions.' : 'No past sessions yet.') + '</div>';
+  const allSess = document.getElementById('sess-all');
+  allSess.hidden = list.length <= 4;
+  allSess.textContent = 'See all ' + list.length;
+}
+
+/** A panel from the right, built for what it shows and gone once closed. */
+function openPanel(eyebrow, title, sub, body, foot) {
+  const d = document.createElement('dialog');
+  d.className = 'cm cm-panel sc-panel';
+  d.setAttribute('aria-label', title);
+  d.innerHTML = '<div class="cm-box"><div class="cm-h"><div class="cm-ht"><span class="cm-eyebrow">' + eyebrow + '</span>'
+    + '<h2 class="cm-title">' + title + '</h2>' + (sub ? '<span class="cm-meta">' + sub + '</span>' : '') + '</div>'
+    + '<button type="button" class="cm-x" data-close aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'
+    + '<div class="cm-b">' + body + '</div>' + (foot ? '<div class="cm-f">' + foot + '</div>' : '') + '</div>';
+  document.body.appendChild(d);
+  d.addEventListener('click', e => { if (e.target.closest('[data-close]')) CapsModal.close(d); });
+  CapsModal.open(d, { dismissible: true, onClose: () => d.remove() });
+  return d;
+}
+
+function openAllRequests() {
+  const reqs = pendingRequests();
+  openPanel('Cancel requests', reqs.length + (reqs.length === 1 ? ' team asked' : ' teams asked') + ' to cancel', '',
+    reqs.map(b => '<div class="sc-reqcard"><span class="sc-line"><b>' + escHtml(b.team) + '</b><span>' + shortWhen(b) + '</span></span>'
+      + (b.cancel_reason ? '<q>' + escHtml(b.cancel_reason) + '</q>' : '')
+      + '<small>' + (b.cancel_by ? 'Asked by ' + escHtml(b.cancel_by) : '') + (b.topics ? ' · about ' + escHtml(b.topics) : '') + '</small>'
+      + '<span class="sc-actions"><button type="button" class="btn btn-ghost" data-close onclick="decideCancellation(' + b.booking_id + ", 'decline')\">Reject</button>"
+      + '<button type="button" class="btn btn-danger-solid" data-close onclick="decideCancellation(' + b.booking_id + ", 'approve')\">Approve</button></span></div>").join(''));
+}
+
+function openRequestReview(id) {
+  const b = allBookings.find(x => Number(x.booking_id) === Number(id));
+  if (!b) return;
+  openPanel('Cancel request', escHtml(b.team), shortWhen(b),
+    (b.cancel_reason ? '<div class="cm-reason">“' + escHtml(b.cancel_reason) + '”</div>' : '')
+    + '<div class="sc-facts"><div><span>About</span><b>' + escHtml(b.topics || '—') + '</b></div>'
+    + '<div><span>Their note</span><b>' + escHtml(b.note || 'No note') + '</b></div>'
+    + '<div><span>Asked by</span><b>' + escHtml(b.cancel_by || b.by || '—') + '</b></div></div>',
+    '<div class="cm-pair"><button type="button" class="cm-btn" data-close onclick="decideCancellation(' + b.booking_id + ", 'decline')\">Reject</button>"
+    + '<button type="button" class="cm-btn cm-btn-danger" data-close onclick="decideCancellation(' + b.booking_id + ", 'approve')\">Approve</button></div>");
+}
+
+function openAllSessions() {
+  const lists = sessionLists();
+  const draw = tab => '<div class="sc-tabs" role="tablist" aria-label="Sessions">'
+    + '<button type="button" role="tab" data-tab="up" aria-selected="' + (tab === 'up') + '">Upcoming</button>'
+    + '<button type="button" role="tab" data-tab="past" aria-selected="' + (tab === 'past') + '">Past</button></div>'
+    + '<div class="sc-sesslist">' + (lists[tab].length ? lists[tab].map(b => sessionRow(b, tab === 'past')).join('') : '<div class="no-upcoming">Nothing here yet.</div>') + '</div>';
+  const d = openPanel('Consultations', 'All sessions', '', draw(sessTab));
+  d.addEventListener('click', e => {
+    const t = e.target.closest('[data-tab]');
+    if (t) d.querySelector('.cm-b').innerHTML = draw(t.dataset.tab);
   });
 }
 
 // ══════════════════════════════════════════════════════════════
-//  SLOT STATS
+//  THIS MONTH: how much of the month on screen is taken
 // ══════════════════════════════════════════════════════════════
 function renderSlotStats() {
   const container = document.getElementById('slot-stats');
-  container.innerHTML = '';
-
-  // A type nobody can pick any more should not hold a permanent zero row in
-  // the panel. It reappears on its own if a slot saved earlier still has it.
-  let counts = { consult: 0, defense: 0 };
+  let total = 0;
+  let booked = 0;
   Object.values(slots).forEach(daySlots => daySlots.forEach(s => {
-    const t = s.type || s.slot_type;
-    if (t === 'docreview') counts.docreview = counts.docreview || 0;
+    if (s.is_available === false && !s.hasBooking) return;
+    total++;
+    if (s.hasBooking) booked++;
   }));
-  Object.values(slots).forEach(daySlots => {
-    daySlots.forEach(s => {
-      const t = s.type || s.slot_type || 'consult';
-      if (counts[t] !== undefined) counts[t]++;
-    });
-  });
-
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
   if (total === 0) {
-    container.innerHTML = '<div style="font-size:12px;color:var(--text3);font-style:italic;text-align:center;padding:8px">No slots this month.</div>';
+    container.innerHTML = '<div class="sc-month-none">No slots this month.</div>';
     return;
   }
 
-  const colors = { consult:'var(--blue)', docreview:'var(--purple)', defense:'var(--amber)' };
-  Object.entries(counts).forEach(([type, count]) => {
-    const pct = total ? Math.round(count / total * 100) : 0;
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex;flex-direction:column;gap:4px';
-    div.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:12px;color:var(--text2);font-weight:500">${TYPE_LABELS[type]}</span>
-        <span style="font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;color:var(--text)">${count}</span>
-      </div>
-      <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${colors[type]};border-radius:3px;transition:width 0.4s"></div>
-      </div>`;
-    container.appendChild(div);
-  });
+  container.innerHTML = '<div class="sc-month-line"><span><b>' + booked + '</b> of ' + total + ' booked</span><span><b>' + (total - booked) + '</b> open</span></div>'
+    + '<div class="sc-bar"><i style="width:' + Math.round(booked / total * 100) + '%"></i></div>';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2412,7 +2526,7 @@ let ga = null;
 
 async function openAvail() {
   document.getElementById('ga-error').hidden = true;
-  document.getElementById('avail-overlay').classList.add('open');
+  CapsModal.open(document.getElementById('avail-overlay'), { dismissible: true });
 
   let saved = null;
   try {
@@ -2426,7 +2540,7 @@ async function openAvail() {
 }
 
 function closeAvail() {
-  document.getElementById('avail-overlay').classList.remove('open');
+  CapsModal.close(document.getElementById('avail-overlay'));
 }
 
 /** The settings as the dialog edits them; an expert who never saved starts from the weekly slots they already have. */
@@ -2724,28 +2838,39 @@ function showToast(msg, type = 'success') {
 // ── KICK OFF ────────────────────────────────────────────────────
 const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// A team asked to cancel: approve frees the slot, keep leaves it booked.
-// Both ask first; keeping it also needs the reason the team will read.
+// A team asked to cancel: approve frees the slot, reject leaves it booked.
+// Both ask first; rejecting it also needs the reason the team will read.
 let pendingCancellation = null;
 
 function decideCancellation(bookingId, decision, key) {
   pendingCancellation = { bookingId, decision, key };
   const approve = decision === 'approve';
-  document.getElementById('cd-title').textContent = approve ? 'Approve this cancellation?' : 'Keep this booking?';
+  const b = allBookings.find(x => Number(x.booking_id) === Number(bookingId));
+  const box = document.getElementById('cancel-decision');
+  document.getElementById('cd-ring').className = 'cm-ring ' + (approve ? 'cm-tone-error' : 'cm-tone-info');
+  document.getElementById('cd-title').textContent = approve ? 'Approve this cancellation?' : 'Reject this cancellation?';
+  document.getElementById('cd-chip').textContent = b ? b.team + ' · ' + shortWhen(b) : '';
+  document.getElementById('cd-chip').hidden = !b;
   document.getElementById('cd-sub').textContent = approve
-    ? 'The consultation is cancelled and the slot opens for other teams.'
-    : 'The consultation stays on. Tell the team why it cannot be cancelled.';
+    ? 'The session is cancelled and the time opens for other teams. The whole team is told.'
+    : 'The session stays booked. Tell the team why it can\'t be cancelled.';
+  document.getElementById('cd-quote').textContent = b && b.cancel_reason ? '“' + b.cancel_reason + '”' : '';
+  document.getElementById('cd-quote').hidden = !approve || !(b && b.cancel_reason);
   document.getElementById('cd-reason-wrap').hidden = approve;
   document.getElementById('cd-reason').value = '';
   document.getElementById('cd-error').textContent = '';
-  document.getElementById('cd-yes').textContent = approve ? 'Cancel booking' : 'Keep booking';
-  document.getElementById('cancel-decision-overlay').classList.add('open');
-  if (!approve) document.getElementById('cd-reason').focus();
+  const yes = document.getElementById('cd-yes');
+  yes.textContent = approve ? 'Approve' : 'Reject';
+  yes.className = 'cm-btn ' + (approve ? 'cm-btn-danger' : 'cm-btn-1');
+  CapsModal.open(box, {
+    dismissible: true,
+    focus: approve ? box.querySelector('.cm-btn') : document.getElementById('cd-reason'),
+    onClose: () => { pendingCancellation = null; },
+  });
 }
 
 function closeCancellationDecision() {
-  document.getElementById('cancel-decision-overlay').classList.remove('open');
-  pendingCancellation = null;
+  CapsModal.close(document.getElementById('cancel-decision'));
 }
 
 async function confirmCancellationDecision() {
@@ -2766,11 +2891,10 @@ async function confirmCancellationDecision() {
       body: JSON.stringify(decision === 'decline' ? { decision, reason } : { decision }),
     });
     closeCancellationDecision();
-    showToast(decision === 'approve' ? 'Cancellation approved. The slot is open again.' : 'Booking kept. The team has been told.', 'success');
+    showToast(decision === 'approve' ? 'Cancellation approved. The slot is open again.' : 'Cancellation rejected. The booking stays and the team has been told.', 'success');
     await loadSlots();
     redrawCalendar();
     renderUpcoming();
-    redrawCalendar();
   } catch (e) {
     document.getElementById('cd-error').textContent = e.message;
     showToast(e.message, 'error');
@@ -2816,6 +2940,8 @@ function closeSidebar() {
   document.body.style.overflow = '';
 }
 </script>
+@include('partials.modal')
 @include('partials.escape-closes-modals')
+@include('partials.app-scrollbar')
 </body>
 </html>

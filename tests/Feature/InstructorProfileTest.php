@@ -175,7 +175,7 @@ class InstructorProfileTest extends TestCase
         $expert = $this->makeExpert();
         $expert->forceFill(['notification_prefs' => [
             'email.expert_application' => false, 'email.leave_request_received' => false,
-            'email.review_reminder' => false,
+            'email.expert_slots_short' => false, 'email.review_reminder' => false,
         ]])->save();
 
         $response = $this->actingAs($expert->fresh(), 'expert')->get(route('instructor.profile'))->assertOk();

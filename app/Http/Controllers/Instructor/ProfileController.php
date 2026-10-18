@@ -52,12 +52,10 @@ class ProfileController extends Controller
             // A CaPSA or Admin who also advises keeps their name and sections
             // on their own portal's profile page.
             // A CaPSA or Admin who also advises keeps everything here: their
-            // name, and for a CaPSA the sections the Admin gave them and,
-            // as Subject Adviser, the folders students submit into.
+            // name, and for a CaPSA the sections the Admin gave them.
             'canEditName' => $expert->is_staff,
             'capsaSections' => $expert->is_capsa ? ($expert->sections ?? []) : null,
             'schoolYear' => Setting::get('current_school_year'),
-            'isSubjectAdviser' => in_array(CapstoneExpert::CAPSA_ROLE, $heldRoles, true),
             'emailGroups' => $emailGroups,
             'bellTypes' => $bellTypes,
         ]);
@@ -77,7 +75,7 @@ class ProfileController extends Controller
         $all = ($saved['all'] ?? true) !== false;
 
         $byGroup = [
-            'teams' => ['Teams', 'A team applies to you, or a student asks to leave or be removed', ['expert_application', 'leave_request_received']],
+            'teams' => ['Teams', 'A team applies to you, a student asks to leave or be removed, or (CaPSA) teams outnumber the free expert slots', ['expert_application', 'leave_request_received', 'expert_slots_short']],
             'consultations' => ['Consultations', 'Bookings, cancellations, and a reminder on the day', ['consultation_booked', 'consultation_cancelled', 'consultation_reminder']],
             'documents' => ['Documents', 'Documents and signed papers to review, and a reminder when they wait', ['document_submitted', 'paper_to_check', 'review_reminder']],
             'announcements' => ['Announcements', 'Important or urgent announcements from a CaPSA', ['announcement']],

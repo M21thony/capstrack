@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\ExpertRemovalRequest;
 use App\Models\MemberLeaveRequest;
-use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\TeamLock;
@@ -33,6 +32,9 @@ class LeaveRequestController extends Controller
     /** What the Leave Requests tab shows. */
     public function pageData(CapstoneExpert $capsa): array
     {
+        // Whatever ran out of time is declined before it is listed as waiting.
+        MemberLeaveRequest::expireOverdue();
+
         $requests = MemberLeaveRequest::visibleTo(
             $capsa,
             MemberLeaveRequest::with(['team', 'student', 'requester', 'decider'])->latest()->limit(300)->get()
@@ -81,12 +83,18 @@ class LeaveRequestController extends Controller
         /** @var CapstoneExpert $capsa */
         $capsa = auth('expert')->user();
 
+        // A page left open past the deadline cannot approve what has run out.
+        MemberLeaveRequest::expireOverdue();
+        $leaveRequest->refresh();
+
         if (MemberLeaveRequest::visibleTo($capsa, collect([$leaveRequest->loadMissing('team')]))->isEmpty()) {
             return $this->fail('This request is not from a team in your sections.', 403);
         }
 
         if (! $leaveRequest->isPending()) {
-            return $this->fail('This request was already '.$leaveRequest->status.'.', 409);
+            return $this->fail($leaveRequest->auto_declined
+                ? 'This request was declined automatically: it waited '.MemberLeaveRequest::DECIDE_WITHIN_DAYS.' days without a decision. The team has been told.'
+                : 'This request was already '.$leaveRequest->status.'.', 409);
         }
 
         $note = isset($validated['note']) ? trim($validated['note']) : null;
@@ -120,7 +128,7 @@ class LeaveRequestController extends Controller
                 'decided_at' => now(),
             ]);
 
-            $this->tellDeclined($leaveRequest, $team, $note);
+            $leaveRequest->tellDeclined();
             $message = 'Declined. The team has been told why.';
         }
 
@@ -136,38 +144,6 @@ class LeaveRequestController extends Controller
                 'decision_note' => $leaveRequest->decision_note,
             ],
         ]);
-    }
-
-    private function tellDeclined(MemberLeaveRequest $leaveRequest, Team $team, string $note): void
-    {
-        $teamName = '<strong>'.e($team->team_name).'</strong>';
-        $why = ' Their reason: "'.e($note).'"';
-
-        Notification::create([
-            'student_id' => $leaveRequest->requested_by,
-            'type' => 'leave_request_declined',
-            'title' => 'Request declined',
-            'message' => ($leaveRequest->type === MemberLeaveRequest::LEAVE
-                ? 'Your CaPSA declined your request to leave '.$teamName.'. You are still on the team.'
-                : 'Your CaPSA declined your request to remove a member from '.$teamName.'.').$why,
-            'link' => route('student.team'),
-            // Which request, so tapping it can show the whole decision.
-            'data' => ['leave_request_id' => $leaveRequest->id],
-        ]);
-
-        // The member a removal was about was told it was asked; they are told
-        // how it ended too.
-        if ($leaveRequest->type === MemberLeaveRequest::REMOVE) {
-            Notification::create([
-                'student_id' => $leaveRequest->student_id,
-                'type' => 'leave_request_declined',
-                'title' => 'You stay on the team',
-                'message' => 'Your CaPSA declined the request to remove you from '.$teamName.'.'.$why,
-                'link' => route('student.team'),
-                // Which request, so tapping it can show the whole decision.
-                'data' => ['leave_request_id' => $leaveRequest->id],
-            ]);
-        }
     }
 
     private function lockedTeamCount(CapstoneExpert $capsa): int

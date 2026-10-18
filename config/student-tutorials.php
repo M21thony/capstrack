@@ -30,11 +30,11 @@ return [
     ],
     'documents' => [
         'title' => 'Documents',
-        'summary' => 'Send documents to your reviewers and read their remarks, all on one page.',
+        'summary' => 'Send your papers to your experts and read their remarks, all on one page. Signed papers go in on Progress Tracker.',
         'steps' => [
-            'Press Submit a file, choose who it goes to, and check the preview before sending.',
-            'Each file lists every version, who sent it, and where each reviewer is.',
-            'Press View to open it with your reviewer\'s remarks beside it.',
+            'Press Submit a paper, pick who reads it, and check the preview before sending.',
+            'A paper sent back comes first, with what your reviewer asked and a button to send the revision.',
+            'Press View to open it with your reviewer\'s remarks beside it. Earlier versions fold under each paper.',
         ],
     ],
     'duplication' => [

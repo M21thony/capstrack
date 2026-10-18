@@ -71,9 +71,9 @@ class SimilarityReportLayoutTest extends TestCase
             ->assertSeeInOrder(['Pre-proposal content', 'Title', self::TITLE, 'SDG', 'SDG 3 – Good Health and Well-being'])
             ->assertSee('<span class="rp-pc sim-close">75', false)
             ->assertSee('Close to existing work')
-            ->assertSee('1 close')
-            ->assertSee('1 some overlap')
-            ->assertSee('1 little overlap')
+            ->assertSee('<b class="sim-close">1</b> close', false)
+            ->assertSee('<b class="sim-some">1</b> some overlap', false)
+            ->assertSee('<b class="sim-little">1</b> little overlap', false)
             ->assertSee('<b class="sim-some">50%</b>', false)
             ->assertDontSee('Highly similar')
             ->assertDontSee('class="scalebar', false)
@@ -139,5 +139,52 @@ class SimilarityReportLayoutTest extends TestCase
         $this->actingAs($this->leader)->get(route('student.duplication.report', $check->id))
             ->assertSee('Mark Balilla, MIT')
             ->assertDontSee('aria-label="Next experts"', false);
+    }
+
+    /** This year's recommended titles get their own card; the archive keeps its top 10, and each row links by its stored rank. */
+    public function test_the_report_splits_this_years_titles_from_the_archive(): void
+    {
+        $check = $this->report(matches: [
+            ['title' => 'Archive One', 'academic_year' => '2023', 'program' => 'BSIT', 'score' => 70, 'reason' => 'Inventory'],
+            ['title' => 'ClinicQueue', 'academic_year' => '2026', 'program' => 'BSIT', 'score' => 84, 'reason' => 'Clinic records', 'recommended' => 'Recommended this year — BSIT 3B', 'pre_proposal_id' => 999],
+            ['title' => 'Archive Two', 'academic_year' => '2022', 'program' => 'BSIS', 'score' => 45, 'reason' => 'Records'],
+        ]);
+
+        $this->actingAs($this->leader)->get(route('student.duplication.report', $check->id))
+            ->assertSee('Recommended This Year (1)')
+            ->assertSee('Top 10 from the Archive')
+            ->assertSeeText('1 recommended this year')
+            ->assertSeeInOrder(['Recommended This Year', 'ClinicQueue', 'BSIT 3B', 'Top 10 from the Archive', 'Archive One', 'Archive Two'])
+            ->assertSee(route('student.duplication.similar', [$check->id, 2]), false)
+            ->assertSee(route('student.duplication.similar', [$check->id, 3]), false);
+    }
+
+    public function test_a_recommended_match_shows_their_problem_solution_and_scope(): void
+    {
+        [$other, $otherLeader] = $this->teamInSection('Other');
+        $theirCheck = DuplicationCheck::create([
+            'student_s_y_id' => StudentSchoolYear::where('student_id', $otherLeader->student_id)->value('s_y_id'),
+            'document_path' => 'checks/o.pdf', 'concepts' => [], 'top_score' => 20, 'verdict' => 'Passed', 'matches' => [], 'instructors_suggested' => [],
+        ]);
+        $theirs = CapstonePreProposal::create([
+            'team_id' => $other->team_id, 'duplication_check_id' => $theirCheck->id, 'slot' => 1, 'title' => 'ClinicQueue', 'approved_status' => true,
+            'sdg_goals' => '3', 'research_agenda' => [], 'limitations' => 'None.', 'sdm' => 'Agile',
+            'problem_statement' => 'Patients wait in long lines.', 'proposed_solution' => 'An online queue.', 'scope' => 'One clinic.',
+        ]);
+        $check = $this->report(matches: [
+            ['title' => 'Archive One', 'academic_year' => '2023', 'program' => 'BSIT', 'score' => 70, 'reason' => 'Inventory'],
+            ['title' => 'ClinicQueue', 'academic_year' => '2026', 'program' => 'BSIT', 'score' => 84, 'reason' => 'Clinic', 'recommended' => 'Recommended this year — BSIT 3B', 'pre_proposal_id' => $theirs->id],
+        ]);
+
+        $this->actingAs($this->leader)->get(route('student.duplication.similar', [$check->id, 2]))
+            ->assertOk()
+            ->assertSee('Recommended this year 1 of 1')
+            ->assertSee('BSIT 3B')
+            ->assertSeeInOrder(['Patients wait in long lines.', 'An online queue.', 'One clinic.'])
+            ->assertSee('Back to all 2 matches')
+            ->assertDontSee('What your team wrote');
+
+        $this->actingAs($this->leader)->get(route('student.duplication.similar', [$check->id, 1]))
+            ->assertSee('Archive 1 of 1');
     }
 }
