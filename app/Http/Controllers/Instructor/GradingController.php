@@ -12,17 +12,11 @@ use App\Models\Team;
 use App\Services\DefenseOutcomeRecorder;
 use App\Services\SharedGrading;
 use App\Support\DefenseOutcome;
-use App\Support\GradingSheet;
-use App\Support\GradingSheetWorkbook;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GradingController extends Controller
 {
@@ -269,52 +263,6 @@ class GradingController extends Controller
                 ->map(fn (DefensePanel $p) => (int) $p->expert_id === (int) $expert->expert_id ? 'you' : ($p->expert?->name ?? $p->panel_role))
                 ->values()
                 ->all(),
-        ]);
-    }
-
-    /**
-     * GET /grading/{defense}/sheet.pdf|xlsx - this panelist's rating sheet to
-     * print, for a defense the system cannot reach: no signal, or no power.
-     * The panel grades on paper and types the scores in here afterwards.
-     */
-    public function sheet(DefenseSchedule $defense, string $format, GradingSheet $sheets): Response|StreamedResponse|RedirectResponse
-    {
-        $panel = $this->panelFor($defense);
-        $rubric = $this->rubricFor($defense);
-
-        if (! $rubric) {
-            return redirect()->route('instructor.grading')->with(
-                'error',
-                "No active rubric is configured for \"{$defense->defense_type}\" yet, so there is no sheet to print."
-            );
-        }
-
-        /** @var CapstoneExpert $expert */
-        $expert = auth()->guard('expert')->user();
-        $sheet = $sheets->for($defense, $rubric, $expert, $panel);
-
-        if ($format === 'xlsx') {
-            $book = (new GradingSheetWorkbook)->build($sheet);
-
-            return response()->streamDownload(fn () => (new Xlsx($book))->save('php://output'), GradingSheet::fileName($sheet, 'xlsx'), [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ]);
-        }
-
-        // Landscape, as the department's own rubric form is.
-        $dompdf = Pdf::loadView('instructor.pdf.grading-sheet', ['sheet' => $sheet])
-            ->setPaper('letter', 'landscape')
-            ->getDomPDF();
-        $dompdf->render();
-
-        // "Page 1 of 2", centred, as the form's footer has it. CSS cannot
-        // count the pages in DomPDF, so it is written on once they exist.
-        $canvas = $dompdf->getCanvas();
-        $canvas->page_text($canvas->get_width() / 2 - 24, $canvas->get_height() - 36, 'Page {PAGE_NUM} of {PAGE_COUNT}', $dompdf->getFontMetrics()->getFont('Times-Roman'), 10);
-
-        return response($dompdf->output(), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.GradingSheet::fileName($sheet, 'pdf').'"',
         ]);
     }
 
