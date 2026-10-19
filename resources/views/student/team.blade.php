@@ -545,9 +545,9 @@
                   @if($leaveRequests->contains('student_id', $member->student_id))
                     <span title="A request about this member is waiting on your CaPSA" style="font-size:9px;font-weight:700;color:var(--amber);background:var(--amber-bg);padding:2px 6px;border-radius:4px;white-space:nowrap;">WITH CAPSA</span>
                   @elseif($teamLocked && $isLeader && !$isThisUser)
-                    <button type="button" onclick="openCapsaLeaveModal('remove', {{ $member->student_id }}, '{{ addslashes(trim($member->f_name . ' ' . $member->l_name)) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Ask your CaPSA to remove this member" aria-label="Ask your CaPSA to remove {{ trim($member->f_name . ' ' . $member->l_name) }}">✕</button>
+                    <button type="button" onclick="openCapsaLeaveModal('remove', {{ $member->student_id }}, {{ Js::from(trim($member->f_name . ' ' . $member->l_name)) }})" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Ask your CaPSA to remove this member" aria-label="Ask your CaPSA to remove {{ trim($member->f_name . ' ' . $member->l_name) }}">✕</button>
                   @elseif($isLeader && !$isThisUser && !$myTeam->is_confirmed)
-                    <button type="button" onclick="openRemoveMemberModal({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}', '{{ addslashes($member->email ?? '') }}', '{{ addslashes(($member->course ?? '') . ($member->year_section ? ' · ' . $member->year_section : '')) }}', '{{ addslashes($member->avatarUrl()) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
+                    <button type="button" onclick="openRemoveMemberModal({{ $member->student_id }}, {{ Js::from($member->f_name . ' ' . $member->l_name) }}, {{ Js::from($member->email ?? '') }}, {{ Js::from(($member->course ?? '') . ($member->year_section ? ' · ' . $member->year_section : '')) }}, {{ Js::from($member->avatarUrl()) }})" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
                   @endif
                 </div>
               @else
@@ -571,7 +571,7 @@
                   </div>
                   <span style="font-size: 9px; font-weight: 700; color: var(--blue); background: rgba(29,78,216,0.15); padding: 2px 6px; border-radius: 4px;">PENDING</span>
                   @if($isLeader && !$myTeam->is_confirmed)
-                    <button type="button" onclick="cancelPendingInvite({{ $pendingInvite->id }}, '{{ addslashes(trim(($invitee->f_name ?? '') . ' ' . ($invitee->l_name ?? ''))) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:13px;line-height:1;" title="Cancel invitation">&times;</button>
+                    <button type="button" onclick="cancelPendingInvite({{ $pendingInvite->id }}, {{ Js::from(trim(($invitee->f_name ?? '') . ' ' . ($invitee->l_name ?? ''))) }})" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:13px;line-height:1;" title="Cancel invitation">&times;</button>
                   @endif
                 </div>
                 {{-- Verification does not close the roster. A member drops out
@@ -1002,7 +1002,7 @@
                 ? ($recruit->looking_for ?? '')
                 : ($recruit->introduction ?? $recruit->looking_for ?? '');
             @endphp
-            <div class="feed-post-card" data-goal="{{ $recruit->recruitment_goal }}" data-skills="{{ implode('|', $recruit->skills ?? []) }}" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->tagLabels()) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $recruitIsLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}", "{{ addslashes($recruit->introduction ?? '') }}")'>
+            <div class="feed-post-card" data-goal="{{ $recruit->recruitment_goal }}" data-skills="{{ implode('|', $recruit->skills ?? []) }}" onclick="viewPostDetails(this, {{ Js::from($recruit->student->f_name . ' ' . $recruit->student->l_name) }}, {{ Js::from(implode(', ', $recruit->tagLabels())) }}, {{ Js::from($recruit->looking_for ?? '') }}, {{ Js::from($recruit->student->team->team_name ?? 'No Team') }}, {{ Js::from($recruit->student->team->project_title ?? 'No project set') }}, {{ Js::from((string) $recruit->student->student_number) }}, false, '{{ $recruitIsLeader ? 'Leader' : 'Individual' }}', {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, {{ Js::from($recruit->student->avatarUrl()) }}, {{ Js::from($recruit->introduction ?? '') }})">
               <div class="feed-post-top">
                 <div class="avatar-ring {{ $ringClass }}">
                   @if ($recruit->student->avatarUrl())
@@ -1091,7 +1091,7 @@
                   @method('PATCH')
                   <input type="hidden" name="status" value="accepted">
                   <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                    onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Join Team',message:'Accept invitation from <strong>{{ addslashes($invite->team->team_name ?? 'this team') }}</strong>? Your current post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $invite->id }}').submit();}})">
+                    onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Join Team',message:'Accept invitation from <strong>' + {{ Js::from(e($invite->team->team_name ?? 'this team')) }} + '</strong>? Your current post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $invite->id }}').submit();}})">
                     Accept
                   </button>
                 </form>
@@ -1099,7 +1099,7 @@
                   @csrf
                   @method('PATCH')
                   <input type="hidden" name="status" value="declined">
-                  <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $invite->id }}, '{{ addslashes($invite->sender->f_name . ' ' . $invite->sender->l_name) }}', '{{ $invite->type }}', '{{ addslashes($invite->team->team_name ?? '') }}', '{{ addslashes($invite->sender->avatarUrl()) }}', '{{ addslashes($invite->sender->email ?? '') }}', '{{ addslashes(($invite->sender->course ?? '') . ($invite->sender->year_section ? ' · ' . $invite->sender->year_section : '')) }}')">
+                  <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $invite->id }}, {{ Js::from($invite->sender->f_name . ' ' . $invite->sender->l_name) }}, '{{ $invite->type }}', {{ Js::from($invite->team->team_name ?? '') }}, {{ Js::from($invite->sender->avatarUrl()) }}, {{ Js::from($invite->sender->email ?? '') }}, {{ Js::from(($invite->sender->course ?? '') . ($invite->sender->year_section ? ' · ' . $invite->sender->year_section : '')) }})">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
                 </form>
@@ -1135,7 +1135,7 @@
                       @method('PATCH')
                       <input type="hidden" name="status" value="accepted">
                       <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                        onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Accept Request',message:'Let <strong>{{ addslashes(($request->sender->f_name ?? '') . ' ' . ($request->sender->l_name ?? '')) }}</strong> join your team? Their post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $request->id }}').submit();}})">
+                        onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Accept Request',message:'Let <strong>' + {{ Js::from(e(($request->sender->f_name ?? '') . ' ' . ($request->sender->l_name ?? ''))) }} + '</strong> join your team? Their post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $request->id }}').submit();}})">
                         Accept Request
                       </button>
                     </form>
@@ -1143,7 +1143,7 @@
                       @csrf
                       @method('PATCH')
                       <input type="hidden" name="status" value="declined">
-                      <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $request->id }}, '{{ addslashes($request->sender->f_name . ' ' . $request->sender->l_name) }}', '{{ $request->type }}', '{{ addslashes($request->team->team_name ?? '') }}', '{{ addslashes($request->sender->avatarUrl()) }}', '{{ addslashes($request->sender->email ?? '') }}', '{{ addslashes(($request->sender->course ?? '') . ($request->sender->year_section ? ' · ' . $request->sender->year_section : '')) }}')">
+                      <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $request->id }}, {{ Js::from($request->sender->f_name . ' ' . $request->sender->l_name) }}, '{{ $request->type }}', {{ Js::from($request->team->team_name ?? '') }}, {{ Js::from($request->sender->avatarUrl()) }}, {{ Js::from($request->sender->email ?? '') }}, {{ Js::from(($request->sender->course ?? '') . ($request->sender->year_section ? ' · ' . $request->sender->year_section : '')) }})">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                       </button>
                     </form>
@@ -1683,8 +1683,8 @@
       </form>
 
       <div style="display: flex; gap: 10px;">
-        <button type="button" onclick="showConfirm({title:'Accept Transfer',message:'You are about to accept leadership of <strong>{{ addslashes($ltData['team_name'] ?? 'the team') }}</strong>. You will become the new team leader, and the current leader will be notified.',icon:'team',confirmText:'Yes',cancelText:'No',confirmClass:'success',onConfirm:function(){document.getElementById('leadership-pop-accept-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Approve</button>
-        <button type="button" onclick="showConfirm({title:'Decline',message:'You are about to decline leadership of <strong>{{ addslashes($ltData['team_name'] ?? 'the team') }}</strong>. You will stay a member, and the current leader will be notified.',icon:'request',confirmText:'Yes',cancelText:'No',confirmClass:'danger',onConfirm:function(){document.getElementById('leadership-pop-decline-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Decline</button>
+        <button type="button" onclick="showConfirm({title:'Accept Transfer',message:'You are about to accept leadership of <strong>' + {{ Js::from(e($ltData['team_name'] ?? 'the team')) }} + '</strong>. You will become the new team leader, and the current leader will be notified.',icon:'team',confirmText:'Yes',cancelText:'No',confirmClass:'success',onConfirm:function(){document.getElementById('leadership-pop-accept-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Approve</button>
+        <button type="button" onclick="showConfirm({title:'Decline',message:'You are about to decline leadership of <strong>' + {{ Js::from(e($ltData['team_name'] ?? 'the team')) }} + '</strong>. You will stay a member, and the current leader will be notified.',icon:'request',confirmText:'Yes',cancelText:'No',confirmClass:'danger',onConfirm:function(){document.getElementById('leadership-pop-decline-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Decline</button>
         <button type="button" onclick="leadershipPopRemindLater()" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Remind Me Later</button>
       </div>
     </div>
@@ -1992,7 +1992,7 @@ function confirmLeaveTeam() {
     @elseif($isLeader)
     showConfirm({
         title: 'Leave & Terminate Team',
-        message: 'You are the only member. Leaving will <strong>permanently terminate</strong> <strong>{{ addslashes($myTeam->team_name) }}</strong>. This cannot be undone.',
+        message: 'You are the only member. Leaving will <strong>permanently terminate</strong> <strong>' + {{ Js::from(e($myTeam->team_name)) }} + '</strong>. This cannot be undone.',
         icon: 'leave',
         confirmText: 'Leave team',
         confirmClass: 'danger',
@@ -2003,7 +2003,7 @@ function confirmLeaveTeam() {
     @else
     showConfirm({
         title: 'Leave Team',
-        message: 'Are you sure you want to leave <strong>{{ addslashes($myTeam->team_name) }}</strong>?<br><br>\u2022 Your recruitment post will be removed<br>\u2022 You can only rejoin if the leader invites you again<br><br>This action cannot be undone.',
+        message: 'Are you sure you want to leave <strong>' + {{ Js::from(e($myTeam->team_name)) }} + '</strong>?<br><br>\u2022 Your recruitment post will be removed<br>\u2022 You can only rejoin if the leader invites you again<br><br>This action cannot be undone.',
         icon: 'leave',
         confirmText: 'Leave',
         confirmClass: 'danger',
@@ -2169,7 +2169,7 @@ function confirmTransferLeadership() {
     var name = nameEl ? nameEl.textContent : 'the selected member';
     showConfirm({
         title: 'Review and transfer?',
-        message: 'You are about to transfer leadership of <strong>{{ addslashes($myTeam?->team_name ?? 'your team') }}</strong> to <strong>' + name + '</strong>. They must approve it before becoming the leader.',
+        message: 'You are about to transfer leadership of <strong>' + {{ Js::from(e($myTeam?->team_name ?? 'your team')) }} + '</strong> to <strong>' + name + '</strong>. They must approve it before becoming the leader.',
         icon: 'team',
         confirmText: 'Review & Transfer',
         confirmClass: 'primary',
@@ -2185,6 +2185,12 @@ function closeEditTeamModal() {
     document.getElementById('editTeamModal').classList.remove('active');
 }
 @endif
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 function setAvatar(avatarEl, url, name) {
     if (url) {
@@ -2204,9 +2210,9 @@ function openDeclineModal(invitationId, name, type, teamName, avatarUrl, email, 
     document.getElementById('dm-info').textContent = info || '';
     setAvatar(document.getElementById('dm-avatar'), avatarUrl, name);
 
-    var teamLabel = teamName ? ' <strong style="color:var(--text);">' + teamName + '</strong>' : '';
+    var teamLabel = teamName ? ' <strong style="color:var(--text);">' + escapeHtml(teamName) + '</strong>' : '';
     document.getElementById('dm-message').innerHTML =
-        'Are you sure you want to <strong style="color:#ef4444;">decline</strong>' + (type === 'invite' ? ' the invitation to join' + teamLabel + '?' : ' <strong style="color:var(--text);">' + name + '</strong>\'s request to join your team?') +
+        'Are you sure you want to <strong style="color:#ef4444;">decline</strong>' + (type === 'invite' ? ' the invitation to join' + teamLabel + '?' : ' <strong style="color:var(--text);">' + escapeHtml(name) + '</strong>\'s request to join your team?') +
         ' They will be notified. This action cannot be undone.';
 
     document.getElementById('declineModal').classList.add('active');
@@ -2390,7 +2396,7 @@ document.addEventListener('DOMContentLoaded', function () { openEditTeamModal();
 function cancelPendingInvite(invitationId, name) {
     showConfirm({
         title: 'Cancel invitation',
-        message: 'Cancel the invitation sent to <strong>' + name + '</strong>? They will not be able to accept it.',
+        message: 'Cancel the invitation sent to <strong>' + escapeHtml(name) + '</strong>? They will not be able to accept it.',
         icon: 'invite',
         confirmText: 'Cancel invite',
         confirmClass: 'danger',
@@ -2833,11 +2839,11 @@ function openEditModal() {
     document.getElementById('post-goal').value = isLeader ? 'leader' : 'individual';
     updateModalUI();
 
-    const teamName = '{{ addslashes($myTeam?->team_name ?? '') }}';
+    const teamName = {{ Js::from($myTeam?->team_name ?? '') }};
     document.getElementById('team-name').value = teamName;
 
-    const lookingFor = '{{ addslashes($myRecruitment->looking_for ?? '') }}';
-    const introduction = '{{ addslashes($myRecruitment->introduction ?? '') }}';
+    const lookingFor = {{ Js::from($myRecruitment->looking_for ?? '') }};
+    const introduction = {{ Js::from($myRecruitment->introduction ?? '') }};
     if (isLeader) {
         document.getElementById('leader-looking-for').value = lookingFor;
     } else {

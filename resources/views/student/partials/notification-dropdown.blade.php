@@ -195,13 +195,13 @@
               @method('PATCH')
               <input type="hidden" name="status" value="accepted">
                 @csrf
-                <button type="button" class="notif-action-btn" data-accept-id="{{ $notif->id }}" data-team="{{ addslashes($notif->data['team_name'] ?? 'your team') }}" style="flex:1;padding:6px 12px;border-radius:6px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;">Approve</button>
+                <button type="button" class="notif-action-btn" data-accept-id="{{ $notif->id }}" data-team="{{ $notif->data['team_name'] ?? 'your team' }}" style="flex:1;padding:6px 12px;border-radius:6px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;">Approve</button>
               </form>
               <form method="POST" action="{{ route('team.leadership.update', $notif->id) }}" style="display:inline;" id="leadership-decline-{{ $notif->id }}">
               @method('PATCH')
               <input type="hidden" name="status" value="declined">
                 @csrf
-                <button type="button" class="notif-action-btn" data-decline-id="{{ $notif->id }}" data-team="{{ addslashes($notif->data['team_name'] ?? 'your team') }}" style="flex:1;padding:6px 12px;border-radius:6px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;font-weight:700;cursor:pointer;">Decline</button>
+                <button type="button" class="notif-action-btn" data-decline-id="{{ $notif->id }}" data-team="{{ $notif->data['team_name'] ?? 'your team' }}" style="flex:1;padding:6px 12px;border-radius:6px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;font-weight:700;cursor:pointer;">Decline</button>
               </form>
             </div>
           </div>
@@ -317,7 +317,7 @@ document.addEventListener('click', function(e) {
     nldConfirmIcon.style.color = '#16a34a';
     nldConfirmIcon.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     nldConfirmTitle.textContent = 'Accept Transfer';
-    nldConfirmMsg.innerHTML = 'You are about to accept leadership of <strong>' + team + '</strong>. You will become the new team leader, and the current leader will be notified.';
+    nldConfirmMsg.innerHTML = 'You are about to accept leadership of <strong></strong>. You will become the new team leader, and the current leader will be notified.';
     nldConfirmOk.textContent = 'Yes';
     nldConfirmOk.style.background = '#16a34a';
   } else {
@@ -325,10 +325,12 @@ document.addEventListener('click', function(e) {
     nldConfirmIcon.style.color = '#ef4444';
     nldConfirmIcon.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     nldConfirmTitle.textContent = 'Decline';
-    nldConfirmMsg.innerHTML = 'You are about to decline leadership of <strong>' + team + '</strong>. You will stay a member, and the current leader will be notified.';
+    nldConfirmMsg.innerHTML = 'You are about to decline leadership of <strong></strong>. You will stay a member, and the current leader will be notified.';
     nldConfirmOk.textContent = 'Yes';
     nldConfirmOk.style.background = '#ef4444';
   }
+  // The team name goes in as text, never as HTML
+  nldConfirmMsg.querySelector('strong').textContent = team;
 
   nldConfirmUrl = document.getElementById(formId);
   nldConfirmOverlay.classList.add('active');
