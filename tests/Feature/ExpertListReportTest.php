@@ -49,6 +49,19 @@ class ExpertListReportTest extends TestCase
         return $rows;
     }
 
+    /**
+     * The sheet row for one expert. The CaPSA viewing the report is an expert
+     * too, with a random factory name, so the list's alphabetical order can
+     * put them first; finding the row by name keeps the test off that luck.
+     *
+     * @param  array<int, array<int, mixed>>  $rows
+     * @return array<int, mixed>
+     */
+    private function rowOf(array $rows, string $name): array
+    {
+        return collect($rows)->slice(4)->first(fn (array $row) => $row[0] === $name) ?? [];
+    }
+
     public function test_the_expert_management_page_offers_view_report_and_download_excel(): void
     {
         $capsa = $this->capsaFor();
@@ -89,7 +102,7 @@ class ExpertListReportTest extends TestCase
         $this->assertSame('Expert List', $rows[0][0]);
         $this->assertSame(['Name', 'Email', 'Role(s)'], array_slice($rows[3], 0, 3));
         $this->assertNull($rows[3][3] ?? null);
-        $this->assertSame([$ana->name, $ana->email, 'Adviser'], array_slice($rows[4], 0, 3));
+        $this->assertSame([$ana->name, $ana->email, 'Adviser'], array_slice($this->rowOf($rows, $ana->name), 0, 3));
     }
 
     public function test_name_accept_slots_and_expertise_only(): void
@@ -103,7 +116,7 @@ class ExpertListReportTest extends TestCase
         $rows = $this->sheet(['hide' => $hide, 'order' => 'expert,accepts,expertise']);
 
         $this->assertSame(['Name', 'Accept slots', 'Expertise'], array_slice($rows[3], 0, 3));
-        $this->assertSame([$ana->name, '0 of 5', 'Databases'], array_slice($rows[4], 0, 3));
+        $this->assertSame([$ana->name, '0 of 5', 'Databases'], array_slice($this->rowOf($rows, $ana->name), 0, 3));
     }
 
     public function test_the_name_column_can_never_be_left_out(): void

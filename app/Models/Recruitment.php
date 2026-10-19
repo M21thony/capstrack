@@ -154,6 +154,27 @@ class Recruitment extends Model
             ->unique()->values()->all();
     }
 
+    /**
+     * The leaders whose teams have reached the CaPSA's member limit, so
+     * their build-a-team posts come off Team selection.
+     *
+     * One answer for the page and the API, which each kept their own copy:
+     * one compared against member_count (a flat 5), and both also hid any
+     * team marked Full, which stays Full after a member leaves.
+     *
+     * @return list<int>
+     */
+    public static function leadersOfFullTeams(): array
+    {
+        return static::where('recruitment_goal', 'build_a_team')
+            ->with('student.team')
+            ->get()
+            ->filter(fn (self $recruit) => $recruit->student?->team?->isFull() ?? false)
+            ->pluck('student_id')
+            ->values()
+            ->all();
+    }
+
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class, 'student_id', 'student_id');

@@ -263,10 +263,14 @@ class Student extends Authenticatable
 
             // Off their team too: an enrolment row left naming the team made it
             // look like it still had a member (Team Torchic, "0/5 members").
-            StudentSchoolYear::withoutGlobalScope(StudentSchoolYear::ACTIVE_TERM_SCOPE)
+            $rows = StudentSchoolYear::withoutGlobalScope(StudentSchoolYear::ACTIVE_TERM_SCOPE)
                 ->where('student_id', $student->student_id)
-                ->whereNotNull('team_id')
-                ->update(['team_id' => null, 's_role_id' => null]);
+                ->whereNotNull('team_id');
+            $teamIds = (clone $rows)->pluck('team_id')->unique()->all();
+
+            $rows->update(['team_id' => null, 's_role_id' => null]);
+
+            Team::whereIn('team_id', $teamIds)->get()->each->reopenIfRoom();
         });
     }
 

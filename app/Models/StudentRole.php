@@ -115,37 +115,6 @@ class StudentRole extends Model
             ->get();
     }
 
-    /**
-     * The member roles this team still has room for, with who holds each.
-     *
-     * @return array<int, array{role: StudentRole, taken: int, seats: ?int, held_by: array<int, string>}>
-     */
-    public static function seatingFor(int $teamId): array
-    {
-        $size = self::teamSize($teamId);
-
-        $holders = StudentSchoolYear::where('team_id', $teamId)
-            ->whereNotNull('s_role_id')
-            ->with('student')
-            ->get()
-            ->groupBy('s_role_id');
-
-        return static::memberRoles()->map(function ($role) use ($holders, $size) {
-            $held = $holders->get($role->s_role_id, collect());
-
-            return [
-                'role' => $role,
-                'taken' => $held->count(),
-                'seats' => self::seatsFor($role->s_role_name, $size),
-                'held_by' => $held
-                    ->map(fn ($row) => trim(($row->student->f_name ?? '').' '.($row->student->l_name ?? '')))
-                    ->filter()
-                    ->values()
-                    ->all(),
-            ];
-        })->all();
-    }
-
     /** Can one more person take this role on this team? */
     public static function hasSeat(int $teamId, int $roleId): bool
     {

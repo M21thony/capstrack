@@ -16,6 +16,7 @@ use App\Support\DefenseProgress;
 use App\Support\FeeBoard;
 use App\Support\ProjectTags;
 use App\Support\StudentTeam;
+use App\Support\TeamSeating;
 use App\Support\TitleRevision;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -99,20 +100,7 @@ class TeamController extends Controller
         $isConfirmed = $myTeam && $myTeam->is_confirmed;
         $postHidden = $myTeam && $myTeam->team_status === 'Full';
 
-        $fullTeamStudentIds = Recruitment::where('recruitment_goal', 'build_a_team')
-            ->with('student.team')
-            ->get()
-            ->filter(function ($recruit) {
-                $team = $recruit->student?->team;
-
-                if (! $team) {
-                    return false;
-                }
-
-                return StudentSchoolYear::where('team_id', $team->team_id)->count() >= ($team->member_count ?? $recruit->member_count ?? 5);
-            })
-            ->pluck('student_id')
-            ->toArray();
+        $fullTeamStudentIds = Recruitment::leadersOfFullTeams();
 
         $leaderIds = $myTeam ? [(int) $myTeam->leader_id] : [];
 
@@ -143,13 +131,10 @@ class TeamController extends Controller
         // Exclude posts from leaders whose team is complete, closed, or full
         $otherRecruitments = Recruitment::with(['student.team'])
             ->where('student_id', '!=', $studentId)
+            // Off the feed only once the team reaches the CaPSA's limit. A team
+            // that has turned its pre-proposals in but still has room, or that
+            // lost a member after filling up, can still be joined.
             ->whereNotIn('student_id', $fullTeamStudentIds)
-            ->whereDoesntHave('student.team', function ($q) {
-                // Off the feed only once the team stops taking members. A
-                // team that has turned its pre-proposals in but still has
-                // room can still be joined, so it stays visible.
-                $q->where('team_status', 'Full');
-            })
             ->whereIn('student_id', function ($query) use ($student, $currentSchoolYear) {
                 $query->select('student_s_y.student_id')
                     ->from('student_s_y')
@@ -228,7 +213,7 @@ class TeamController extends Controller
         // page asks them once, and only once - a role is settled for the
         // semester after that.
         $needsRole = $myTeam && ! $isLeader && ! $studentSy?->s_role_id;
-        $roleChoices = $needsRole ? $this->roleChoicesFor($myTeam) : [];
+        $roleChoices = $needsRole ? TeamSeating::for($myTeam)->choices() : [];
 
         $expertRemovedNotifications = Notification::where('student_id', $studentId)
             ->where('type', 'expert_removed')
@@ -327,43 +312,6 @@ class TeamController extends Controller
     }
 
     /**
-     * The roles this team's next member may pick from.
-     *
-     * Narrowed to what the team's recruitment post asked for, when it asked
-     * for anything - a team advertising for a programmer and a tester should
-     * not have somebody arrive as a UI designer. With no post, or none of its
-     * roles left with a seat, every member role with room is on the table,
-     * because the alternative is a student who cannot answer the question.
-     *
-     * @return array<int, array{id: int, name: string, duties: ?string, taken: int, seats: int, held_by: array<int, string>, full: bool}>
-     */
-    private function roleChoicesFor(Team $team): array
-    {
-        $seating = StudentRole::seatingFor($team->team_id);
-
-        $wanted = collect((array) Recruitment::where('student_id', $team->leader_id)
-            ->where('recruitment_goal', 'build_a_team')
-            ->value('roles'))->filter();
-
-        $asked = collect($seating)
-            ->filter(fn ($row) => $wanted->contains($row['role']->s_role_name))
-            ->filter(fn ($row) => $row['seats'] === null || $row['taken'] < $row['seats']);
-
-        $offer = $asked->isNotEmpty() ? $asked : collect($seating);
-
-        return $offer->map(fn ($row) => [
-            'id' => $row['role']->s_role_id,
-            'name' => $row['role']->s_role_name,
-            'duties' => $row['role']->s_role_description,
-            'taken' => $row['taken'],
-            'seats' => $row['seats'],
-            'held_by' => $row['held_by'],
-            // A role with no seat limit never fills.
-            'full' => $row['seats'] !== null && $row['taken'] >= $row['seats'],
-        ])->values()->all();
-    }
-
-    /**
      * PUT /team/role - a member records what they do on the team.
      *
      * Once. The leader does not choose for anybody, and nobody changes their
@@ -392,7 +340,7 @@ class TeamController extends Controller
             'role_id' => ['required', 'integer'],
         ])['role_id'];
 
-        $allowed = collect($this->roleChoicesFor($team))
+        $allowed = collect(TeamSeating::for($team)->choices())
             ->reject(fn ($choice) => $choice['full'])
             ->pluck('id');
 
@@ -641,8 +589,8 @@ class TeamController extends Controller
         // Auto-close team if it has reached full capacity
         $autoClosed = false;
         if ($team->team_status === 'Active') {
-            $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
-            if ($currentCount >= 5) {
+            // The section's limit from the CaPSA's Team Rules, not a flat 5.
+            if ($team->isFull()) {
                 $team->update(['team_status' => 'Full']);
                 $autoClosed = true;
                 $this->logActivity(
@@ -784,6 +732,7 @@ class TeamController extends Controller
         }
 
         $memberSy->update(['team_id' => null, 's_role_id' => null]);
+        $myTeam->reopenIfRoom();
 
         Recruitment::where('student_id', $student->student_id)->delete();
 
