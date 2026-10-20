@@ -335,7 +335,8 @@ class TeamManagementPage
         $teamId = StudentTeam::idFor($student->student_id);
         $team = $teamId ? Team::find($teamId) : null;
         $isLeader = $team && (int) $team->leader_id === (int) $student->student_id;
-        $joiningAllowed = Team::joiningAllowed($team?->section() ?: $student->sectionLabel());
+        $section = $team?->section() ?: $student->sectionLabel();
+        $joiningAllowed = Team::joiningAllowed($section);
 
         $pending = TeamInvitation::where('sender_id', $student->student_id)->where('status', 'pending')->get(['type', 'team_id', 'receiver_id']);
         $requestedTeamIds = $pending->where('type', 'request')->pluck('team_id')->map(fn ($id) => (int) $id)->values()->all();
@@ -343,6 +344,9 @@ class TeamManagementPage
 
         return [
             'viewerTeamId' => $team?->team_id,
+            'viewerIsLeader' => $isLeader,
+            // Whose Team Rules the viewer is under, to name it on a closed post.
+            'viewerSection' => $section,
             'viewerCanRequest' => ! $team && $joiningAllowed && $requestedTeamIds === [] && $goal !== 'build_a_team' && $student->capstoneStage() === 1,
             'viewerCanInvite' => $isLeader && $joiningAllowed && $team->inviteBlockReason() === null,
             'requestedTeamIds' => $requestedTeamIds,

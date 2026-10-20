@@ -11,8 +11,12 @@
 
 **Blocked by:** 04, 05, 07
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Each of the four states renders its banner and locks, asserted on the Team page response with the section's Team Rules set.
-- [ ] Everything that should still work is enabled, and the server still refuses closed actions (TeamRulesTest passes).
-- [ ] A section's own rules win over the school-wide settings.
+- [x] Each of the four states renders its banner and locks, asserted on the Team page response with the section's Team Rules set.
+- [x] Everything that should still work is enabled, and the server still refuses closed actions (TeamRulesTest passes).
+- [x] A section's own rules win over the school-wide settings.
+
+## Comments
+
+- Done. No-team hero: a red banner per state, Build a team and Post: looking for a team locked with the reason on hover, Accept locked on invites and in invite details while Decline still works. Team selection cards show a locked "Closed" instead of Ask to join or Invite to team. A leader with open seats gets the banner, open slots read "Joining is closed", and Cancel on pending invites still works. A section's own rules decide (`Team::rulesFor`). Tests: `TeamRulesClosedStatesTest`, plus the closed cases in `NoTeamScreenTest` and `LeaderScreenTest`; the server-side refusals stay in `TeamRulesTest`.

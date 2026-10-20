@@ -75,6 +75,13 @@
   </dl>
 </section>
 
+@if ($isLeader && ! $joiningAllowed && $rosterOpen && $seatsLeft > 0)
+  <div class="tm-closed" role="status">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span><b>Joining a team is closed</b> in {{ $sectionLabel }}. You can still cancel pending invites.</span>
+  </div>
+@endif
+
 <div class="tm-row">
   <section class="tm-card tm-members" aria-labelledby="tm-members-h">
     <div class="tm-card-head">
