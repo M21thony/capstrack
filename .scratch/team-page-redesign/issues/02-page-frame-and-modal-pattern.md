@@ -17,7 +17,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] On a page with little content the footer sits at the bottom of the scroll area. On a long page it follows the content.
 - [ ] Every modal on the Team page renders through the shared component. Choose your role still has no close button.
@@ -35,3 +35,9 @@ Findings from the code, 2026-10-20. These change the scope.
   - Move the confirm dialog and the expert-removed notice onto the shared classes.
   - The other modals adopt the component when tickets 04–07 rewrite their screens. Their acceptance criteria cover it.
 - **Assets:** Vite can't fetch fonts.bunny.net in the cloud sandbox. Building with a temporary config that drops the `fonts` option works for local checks; don't commit that config.
+
+Done (revised scope).
+
+- **`x-team-modal`:** renders the system pattern: `.modal-overlay` > `.card.modal-card.team-modal`, with the close button in the corner. It takes `:closable="false"` for modals that must be answered.
+- **Overlays:** the confirm dialog and the expert-removed notice now use the system overlay (rgba(24,25,31,.9), 4px blur).
+- **Tests:** TeamModalTest.

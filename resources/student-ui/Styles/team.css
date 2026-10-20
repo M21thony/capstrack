@@ -497,3 +497,7 @@ body{font-family:'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg);co
   .legal-credits{margin-top:4px!important;padding-top:6px!important;padding-bottom:6px!important}
   .tutorial-note{margin-top:2px!important}
 }
+
+/* x-team-modal: the system's card, sized by the component, with its close button in the corner. */
+.team-modal{position:relative;width:100%;box-sizing:border-box;padding:28px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto}
+.team-modal .team-modal-close{position:absolute;top:18px;right:18px}
