@@ -23,3 +23,15 @@
 - [ ] Every modal on the Team page renders through the shared component. Choose your role still has no close button.
 - [ ] The CapsTrack scrollbar is the only vertical scrollbar on the page and its lists, with one handle at a time.
 - [ ] No horizontal scroll at 390px. Existing Team page tests pass.
+
+## Comments
+
+Findings from the code, 2026-10-20. These change the scope.
+
+- **Footer:** already handled app-wide. `partials/mobile-tabbar` appends the "System Developers" credit as the last thing in `.content` and grows the gap above it so it sits at the bottom of a short page. The Team page needs no footer of its own; only check it in the browser once the screens change.
+- **Modals:** the page's modals already share the system pattern from `student-ui/Styles/team.css`: `.modal-overlay` (rgba(24,25,31,.9), 4px blur), `.card.modal-card` and `.pm-close-btn`. Two exceptions draw their own overlay inline: the confirm dialog and the "expert removed" notice.
+- **Revised scope:**
+  - A Blade component for that pattern (overlay, card width, optional close, slot).
+  - Move the confirm dialog and the expert-removed notice onto the shared classes.
+  - The other modals adopt the component when tickets 04–07 rewrite their screens. Their acceptance criteria cover it.
+- **Assets:** Vite can't fetch fonts.bunny.net in the cloud sandbox. Building with a temporary config that drops the `fonts` option works for local checks; don't commit that config.
