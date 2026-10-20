@@ -215,7 +215,10 @@
      Two tabs on one page. The team half is the page as it always was; the
      body's class hides it while Financial Records is showing, rather than
      moving a thousand lines of markup into a wrapper. */
-  .tm-seg { display: flex; gap: 4px; padding: 4px; margin: 0 0 16px; background: var(--bg4, #eceef2); border-radius: 12px; width: fit-content; max-width: 100%; }
+  .tm-toprow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
+  .tm-toprow-end { display: none; }
+  body.tm-on-fin .tm-toprow-end { display: flex; }
+  .tm-seg { display: flex; gap: 4px; padding: 4px; margin: 0; background: var(--bg4, #eceef2); border-radius: 12px; width: fit-content; max-width: 100%; }
   .tm-seg button { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 16px; border-radius: 9px; border: 0; background: transparent; color: var(--text2); font: 600 13.5px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; white-space: nowrap; }
   .tm-seg button svg { width: 16px; height: 16px; flex-shrink: 0; }
   .tm-seg button:hover { color: var(--text); }
@@ -226,6 +229,13 @@
   body.tm-on-fin #contentWrapper,
   body.tm-on-fin .pagination-container,
   body.tm-on-fin .tutorial-note { display: none !important; }
+  /* The credits sit at the foot of the screen when a tab is short, and
+     right after the content when it is long: .tm-push takes the room
+     between, never less than 24px. */
+  .main > .content { display: flex; flex-direction: column; }
+  .main > .content > * { flex-shrink: 0; }
+  .main > .content > .tm-push { flex: 1 0 24px; }
+  .main > .content > .sys-credits { margin-top: 0 !important; }
   /* Financial Records was a page of its own that filled the window; inside a
      tab it sits in the page's flow like the team half does. */
   .tm-fin .fx { flex: none; min-height: 0; overflow: visible; background: transparent; }
@@ -251,6 +261,7 @@
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'team'])
 
+    <div class="tm-toprow">
     <div class="tm-seg" role="tablist" aria-label="Team Management sections">
       <button type="button" role="tab" id="tm-tab-team" data-tm-tab="team" aria-selected="{{ $tab === 'team' ? 'true' : 'false' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -265,6 +276,9 @@
         Team Rating
         @if ($rating['due'] > 0)<span class="n hot" title="{{ $rating['due'] }} due" aria-label="{{ $rating['due'] }} due">{{ $rating['due'] }}</span>@endif
       </button>
+    </div>
+    {{-- Financial Records puts its fee tabs here, shown only on that tab. --}}
+    <div class="tm-toprow-end" id="tm-toprow-end"></div>
     </div>
 
     <section class="tm-fin" id="tm-panel-financial" role="tabpanel" aria-labelledby="tm-tab-financial" @if ($tab !== 'financial') hidden @endif>
@@ -445,6 +459,13 @@
     </main>
 
     @include('student.team._selection')
+    <script nonce="{{ Vite::cspNonce() }}">
+      // The room between a short tab and the credits (see .tm-push above).
+      (function () {
+        var content = document.querySelector('.main > .content');
+        if (content) { var push = document.createElement('div'); push.className = 'tm-push'; push.setAttribute('aria-hidden', 'true'); content.appendChild(push); }
+      })();
+    </script>
 
    {{-- The developers' credit comes from partials/mobile-tabbar, which puts
         it last on the page and holds it at the foot of the screen. A copy of

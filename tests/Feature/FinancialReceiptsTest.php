@@ -300,4 +300,53 @@ class FinancialReceiptsTest extends TestCase
         $this->assertStringNotContainsString('data-tour-target="student.financial"', $html);
         $this->assertStringNotContainsString('href="'.route('student.financial').'"', $html);
     }
+
+    public function test_the_receipt_form_is_on_the_tab_and_not_in_a_pop_up(): void
+    {
+        [, $student] = $this->teamInSection('Alpha');
+        $this->fee();
+
+        $html = $this->actingAs($student)->get(route('student.team', ['tab' => 'financial']))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<form class="fx-sb-form" id="u-form"[^>]*hidden>/', $html);
+        $this->assertStringContainsString('<input type="file" id="u-file" accept="image/*" aria-label="Photo of your receipt">', $html);
+        $this->assertMatchesRegularExpression('/id="u-send" disabled>/', $html);
+        $this->assertStringNotContainsString('id="fx-d-upload"', $html);
+        $this->assertStringContainsString('id="fx-d-image"', $html, 'the full-size receipt viewer stays');
+        $this->assertStringContainsString('id="tm-toprow-end"', $html, 'the fee tabs go beside the page tabs');
+    }
+
+    public function test_a_sent_receipt_waits_for_the_capsa_in_the_senders_row_of_the_whole_team(): void
+    {
+        [, $leader, $member] = $this->teamOfThree();
+        $fee = $this->fee();
+        $this->upload($member, $fee)->assertSessionHasNoErrors();
+
+        $this->actingAs($member)->get(route('student.team', ['tab' => 'financial']))->assertOk()
+            ->assertViewHas('financialState', function ($state) use ($fee, $member, $leader) {
+                return count($state['members']) === 3
+                    && $state['receipts'][$fee->id.':'.$member->student_id]['status'] === 'pending'
+                    && ! isset($state['receipts'][$fee->id.':'.$leader->student_id]);
+            });
+    }
+
+    public function test_a_sent_back_receipt_comes_back_with_the_reason_and_its_or_number(): void
+    {
+        [, $student] = $this->teamInSection('Alpha');
+        $fee = $this->fee();
+        $this->upload($student, $fee, 'OR-0099');
+        FinancialRecord::query()->update(['f_record_status' => 'rejected', 'rejection_reason' => 'The OR number does not match the photo.']);
+
+        $this->actingAs($student)->get(route('student.team', ['tab' => 'financial']))->assertOk()
+            ->assertViewHas('financialState', function ($state) use ($fee, $student) {
+                $receipt = $state['receipts'][$fee->id.':'.$student->student_id];
+
+                return $receipt['status'] === 'sent_back'
+                    && $receipt['reason'] === 'The OR number does not match the photo.'
+                    && $receipt['or'] === 'OR-0099';
+            });
+
+        $this->upload($student, $fee, 'OR-0100')->assertSessionHasNoErrors();
+        $this->assertSame('pending', FinancialRecord::where('student_id', $student->student_id)->latest('id')->value('f_record_status'));
+    }
 }

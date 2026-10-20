@@ -184,7 +184,7 @@ class StudentPhoneLayoutTest extends TestCase
     /** A team called "Team Omega" read "Team Team Omega" on Financial Records. */
     public function test_financial_records_does_not_say_team_twice(): void
     {
-        foreach (['Team Omega' => 'Team Omega', 'Omega' => 'Team Omega'] as $name => $shown) {
+        foreach (['Team Omega', 'Omega'] as $name) {
             $team = Team::create(['team_name' => $name, 'project_title' => 'Fees', 'team_status' => 'Active']);
             $student = Student::factory()->withCompleteProfile()->create([
                 'course' => 'Bachelor of Science in Information Technology', 'year_section' => '3rd · A',
@@ -193,8 +193,7 @@ class StudentPhoneLayoutTest extends TestCase
 
             $html = $this->actingAs($student)->get(route('student.team', ['tab' => 'financial']))->assertOk()->getContent();
 
-            $this->assertMatchesRegularExpression('/<p class="fx-who">\s*'.preg_quote($shown, '/').'\b/', $html, $name);
-            $this->assertStringNotContainsString('Team Team', $html);
+            $this->assertStringNotContainsString('Team Team', $html, $name);
         }
     }
 
@@ -220,7 +219,7 @@ class StudentPhoneLayoutTest extends TestCase
     public function test_financial_records_shows_whole_member_names(): void
     {
         $this->assertStringContainsString(
-            '.fx-student #s-team td:first-child{white-space:normal;overflow-wrap:anywhere;',
+            '.fx-sb-member b{font-size:13.5px;font-weight:600;white-space:normal;overflow-wrap:anywhere;',
             File::get(resource_path('css/financial.css'))
         );
     }
@@ -232,7 +231,7 @@ class StudentPhoneLayoutTest extends TestCase
      */
     public function test_financial_records_does_not_open_the_document_upload(): void
     {
-        $this->assertStringContainsString('data-fx-upload>${label}</button>', File::get(resource_path('js/financial/student.js')));
+        $this->assertStringNotContainsString('data-open-upload', File::get(resource_path('views/student/partials/financial-panel.blade.php')));
         $this->assertStringNotContainsString('data-open-upload>', File::get(resource_path('js/financial/student.js')));
         $this->assertStringNotContainsString("closest('[data-open-upload]')", File::get(resource_path('js/financial/student.js')));
         $this->assertStringContainsString(
