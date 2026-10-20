@@ -13,6 +13,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * What a student's Team Management page shows.
@@ -262,6 +263,8 @@ class TeamManagementPage
             'openRoles' => $screen === self::LEADER_OPEN ? TeamSeating::for($myTeam)->openRoles() : [],
             // What the page used to ask the database for from inside its markup.
             'mySchoolYear' => $studentSy,
+            'sectionLabel' => $rulesSection ?: '',
+            'inviteDetails' => self::inviteDetails($invites),
             'teamSize' => $teamMembers->count(),
             'capstoneStage' => $myTeam?->capstoneStage() ?? $student->capstoneStage(),
             'teamSeatsFree' => $myTeam?->seatsFree() ?? 0,
@@ -339,6 +342,28 @@ class TeamManagementPage
             'invitedStudentIds' => $pending->where('type', 'invite')->pluck('receiver_id')->map(fn ($id) => (int) $id)->values()->all(),
             'joiningAllowed' => $joiningAllowed,
         ];
+    }
+
+    /**
+     * What an invite's details show: the team's size against its limit, its
+     * leader, its title and the roles its recruitment post asks for.
+     *
+     * @return array<int, array{members: int, limit: int, leader: string, title: ?string, roles: list<string>}>
+     */
+    private static function inviteDetails(Collection $invites): array
+    {
+        return $invites->mapWithKeys(function (TeamInvitation $invite) {
+            $team = $invite->team;
+            $leader = $team ? Student::find($team->leader_id) : $invite->sender;
+
+            return [$invite->id => [
+                'members' => $team ? StudentSchoolYear::where('team_id', $team->team_id)->count() : 0,
+                'limit' => $team ? $team->memberLimit() : Team::maxMembers(),
+                'leader' => trim(($leader->f_name ?? '').' '.($leader->l_name ?? '')) ?: 'The leader',
+                'title' => $team?->project_title,
+                'roles' => $team ? TeamSeating::for($team)->openRoles() : [],
+            ]];
+        })->all();
     }
 
     /** Who asked to hand this student the leadership, for the transfer pop-up. */

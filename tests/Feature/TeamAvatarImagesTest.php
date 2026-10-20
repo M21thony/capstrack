@@ -19,7 +19,9 @@ class TeamAvatarImagesTest extends TestCase
     private function imageTags(): array
     {
         // Blade echoes such as {{ $member->avatarUrl() }} contain a ">", so they are skipped over whole.
-        preg_match_all('/<img\b(?:\{\{.*?\}\}|[^>])*>/s', file_get_contents(resource_path('views/student/team.blade.php')), $matches);
+        // The page and the partials it includes for each screen.
+        $views = [resource_path('views/student/team.blade.php'), ...glob(resource_path('views/student/team/*.blade.php'))];
+        preg_match_all('/<img\b(?:\{\{.*?\}\}|[^>])*>/s', implode("\n", array_map('file_get_contents', $views)), $matches);
 
         return $matches[0];
     }

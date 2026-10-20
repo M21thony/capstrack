@@ -554,3 +554,71 @@ body{font-family:'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg);co
 .ts-stats .is-warm{background:#fff8e1;border-color:#f3dc8a}
 @media (max-width:768px){.ts-head{top:-16px}.ts-aside{position:static}}
 .ts [hidden]{display:none!important}
+
+/* No-team screen (student/team/_no-team): the hero and the invites side by side, wrapping on narrow screens. */
+.nt-row{display:flex;flex-wrap:wrap;gap:16px;align-items:stretch;margin-bottom:8px}
+.nt-hero{flex:999 1 560px;min-width:0;background:#141414;color:#fff;border-radius:16px;padding:24px 26px;display:flex;flex-direction:column;gap:18px}
+.nt-kicker{font-size:12px;font-weight:600;color:#f5b700;letter-spacing:.02em}
+.nt-hero h1{margin:6px 0 0;font-size:26px;font-weight:700;letter-spacing:-.02em;color:#fff}
+.nt-hero p{margin:8px 0 0;max-width:560px;font-size:13.5px;line-height:1.55;color:rgba(255,255,255,.7)}
+.nt-actions{display:flex;gap:8px;flex-wrap:wrap}
+.nt-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:10px;border:1px solid rgba(255,255,255,.22);background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.nt-btn:hover{background:rgba(255,255,255,.08)}
+.nt-btn-primary{border:0;background:#f5b700;color:#141414;font-weight:700}
+.nt-btn-primary:hover{background:#e6ab00}
+.nt-steps{list-style:none;margin:auto 0 0;padding:14px 0 0;border-top:1px solid rgba(255,255,255,.12);display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:rgba(255,255,255,.75)}
+.nt-steps li{display:flex;align-items:center;gap:8px}
+.nt-steps span{width:22px;height:22px;border-radius:50%;background:rgba(245,183,0,.16);color:#f5b700;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.nt-invites{flex:1 1 320px;min-width:0;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.nt-invites-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nt-invites-head h2{margin:0;font-size:15px;font-weight:700;color:var(--text)}
+.nt-count{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#fff8e1;color:#8a6e10}
+.nt-invite-list{display:flex;flex-direction:column;gap:8px;max-height:236px;overflow-y:auto}
+.nt-invite{border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.nt-invite-head{display:flex;align-items:center;gap:10px;width:100%;padding:0;border:0;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.nt-invite-head.is-static{cursor:default}
+.nt-invite-head:hover .nt-invite-view{color:var(--text)}
+.nt-invite-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.nt-invite-who>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nt-invite-sub{font-size:11.5px;color:var(--text3)}
+.nt-invite-view{display:inline-flex;align-items:center;gap:2px;font-size:12px;font-weight:600;color:var(--text3)}
+.nt-invite-actions{display:flex;gap:6px}
+.nt-invite-actions form{flex:1;display:flex}
+.nt-btn-dark,.nt-btn-line{flex:1;min-height:34px;padding:0 12px;border-radius:9px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.nt-btn-dark{border:0;background:#141414;color:#fff}
+.nt-btn-dark:hover{background:#2a2a2a}
+.nt-btn-line{border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.nt-btn-line:hover{background:var(--bg2)}
+.nt-pending{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--amber-bg,#fff8e1);color:var(--amber,#b45309)}
+.nt-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px 12px;color:var(--text3);font-size:13px}
+.ts-avatar.is-lg{width:48px;height:48px;font-size:15px}
+.ts-avatar.is-amber{background:var(--amber-bg,#fff8e1);color:var(--amber,#b45309)}
+
+/* Details inside an x-team-modal: who, a line about them, label/value rows, chips and the actions. */
+.tmd-person{display:flex;align-items:center;gap:12px;padding-right:32px}
+.tmd-person h2{margin:0;font-size:18px;font-weight:700;color:var(--text)}
+.tmd-sub{font-size:12.5px;color:var(--text3)}
+.tmd-desc{margin:14px 0 0;font-size:13px;line-height:1.55;color:var(--text2)}
+.tmd-rows{margin:14px 0 0;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:10px}
+.tmd-rows div{display:flex;justify-content:space-between;gap:12px;padding:9px 12px;font-size:13px}
+.tmd-rows div+div{border-top:1px solid var(--border)}
+.tmd-rows dt{color:var(--text3)}.tmd-rows dd{margin:0;font-weight:600;color:var(--text);text-align:right}
+.tmd-chips{margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px}
+.tmd-chips span{font-weight:600;color:var(--text3)}
+.tmd-chips b{font-weight:500;padding:3px 9px;border-radius:6px;background:var(--bg2);border:1px solid var(--border);color:var(--text2)}
+.tmd-actions{margin-top:20px;display:flex;gap:8px}
+.tmd-actions>*{flex:1}
+.tmd-actions .nt-btn-primary{min-height:40px}
+.tmd-actions .nt-btn-line{min-height:40px}
+.nt-closed{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:11px;background:rgba(220,38,38,.14);border:1px solid rgba(248,113,113,.35);color:#fecaca;font-size:12.5px;line-height:1.5}
+.nt-closed svg{flex-shrink:0;margin-top:1px;color:#f87171}
+.nt-closed b{color:#fff}
+.nt-btn:disabled{opacity:.5;cursor:not-allowed}
+.nt-btn-dark:disabled{opacity:.45;cursor:not-allowed}
+.nt-mypost{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.nt-mypost-goal{font-size:11.5px;font-weight:700;color:#f5b700}
+.nt-mypost p{margin:0;font-size:13px;color:rgba(255,255,255,.85)}
+.nt-mypost-tags{display:flex;flex-wrap:wrap;gap:4px}
+.nt-mypost-tags span{font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85)}
+.nt-mypost .feed-post-skills{margin:0;color:rgba(255,255,255,.7)}
+.nt-mypost .feed-post-skills b{color:#fff}

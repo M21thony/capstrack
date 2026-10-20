@@ -825,261 +825,14 @@
       </div>
     @endif
 
-    <!-- SEARCH AND FILTERS -->
+    <!-- SCREEN: no team / the team's own cards above Team selection -->
     <main class="main-content">
-  <div class="team-container">
-    <!-- LEFT COLUMN -->
-    <div style="display: flex; flex-direction: column; gap: 20px;">
-      {{-- Capstone 2 with no team: say so. The compose card and the feed
-           below both go quiet at this point, and an empty page with nothing
-           on it reads as broken rather than closed. --}}
-      @if(!$myTeam && $capstoneStage !== 1)
-      <div class="card" style="padding:20px 22px">
-        <div style="display:flex;align-items:flex-start;gap:14px">
-          <div style="width:38px;height:38px;border-radius:11px;background:var(--bg3);color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </div>
-          <div>
-            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Team forming is closed</div>
-            <div style="font-size:12.5px;color:var(--text3);line-height:1.55">
-              Capstone 2 has started, so teams keep the members they finished Capstone 1 with.
-              New teams and recruitment posts are closed. Speak to your CaPSA if you are not on a team.
-            </div>
-          </div>
-        </div>
-      </div>
-      @elseif(!$myTeam && !$creationAllowed && !$joiningAllowed)
-      <div class="card" style="padding:20px 22px">
-        <div style="display:flex;align-items:flex-start;gap:14px">
-          <div style="width:38px;height:38px;border-radius:11px;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </div>
-          <div>
-            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Creating and joining teams are closed</div>
-            <div style="font-size:12.5px;color:var(--text3);line-height:1.55">Your CaPSA has turned them off for now. Speak to your CaPSA if you are not on a team.</div>
-          </div>
-        </div>
-      </div>
-      @elseif(!$myTeam && !$myRecruitment)
-      @if (!$creationAllowed || !$joiningAllowed)
-        <div class="card" style="padding:12px 16px;border-color:rgba(220,38,38,.3);background:var(--red-bg);font-size:12.5px;color:var(--red)">
-          {{ !$creationAllowed ? 'Creating a team is closed right now - you can still post to find a team.' : 'Joining a team is closed right now - you can still post to build your own team.' }}
-        </div>
+      @if (! $myTeam)
+        @include('student.team._no-team')
+      @else
+        @include('student.team._team-extras')
       @endif
-      <div class="card compose-card" onclick="openPostModal()">
-        <div class="compose-card-inner">
-          <div class="compose-plus">+</div>
-          <div>
-            <div class="compose-title">Create a recruitment post</div>
-            <div class="compose-sub">Looking for a team or members? Share your needs here...</div>
-          </div>
-        </div>
-      </div>
-      @endif
-
-      @if($myRecruitment && ($myRecruitment->recruitment_goal !== 'build_a_team' || $myTeam))
-        @php
-          $recruitIsLeader = $myRecruitment->recruitment_goal === 'build_a_team';
-          $goalLabel = $recruitIsLeader ? 'BUILD A TEAM' : 'Find a Team';
-          $ringClass = $recruitIsLeader ? 'hiring' : 'looking';
-          $dotColor = $recruitIsLeader ? '#22c55e' : '#3b82f6';
-          $initials = auth()->user()->avatarInitials();
-          $introText = $recruitIsLeader
-            ? ($myRecruitment->looking_for ?? '')
-            : ($myRecruitment->introduction ?? $myRecruitment->looking_for ?? '');
-        @endphp
-        @if(!(isset($postHidden) && $postHidden))
-        <div class="my-post-wrapper" id="my-post-section">
-          <div class="my-post-header-row">
-            <div class="my-post-header-title">
-              <div class="my-post-icon">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              </div>
-              <div>
-                <div class="my-post-title">Your Post</div>
-                <div class="my-post-subtitle">Manage your recruitment post</div>
-              </div>
-            </div>
-            <div class="my-post-header-actions">
-              <button type="button" class="btn btn-edit-post" onclick="openEditModal()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                Edit Post
-              </button>
-              <button type="button" class="btn" style="padding:8px 16px; font-size:12px; background:var(--red-bg); color:var(--red); border:1px solid rgba(220,38,38,0.2);" onclick="openDeleteModal()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                Delete
-              </button>
-            </div>
-          </div>
-          <div class="my-post-card" id="my-active-post">
-            <div class="avatar-ring {{ $ringClass }}">
-              @if (auth()->user()->avatarUrl())
-                <img src="{{ auth()->user()->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $initials }}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar-text',textContent:this.dataset.initials}))">
-              @else
-                <div class="avatar-text">{{ $initials }}</div>
-              @endif
-              <div class="status-badge-dot" style="background:{{ $dotColor }}"></div>
-            </div>
-            <div class="my-post-body">
-              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <div class="my-post-name">{{ auth()->user()->f_name }} {{ auth()->user()->l_name }}</div>
-                <div class="my-post-goal {{ $recruitIsLeader ? 'is-leader' : 'is-member' }}">{{ $goalLabel }}</div>
-                @if($isTeamFull && $recruitIsLeader)
-                  <span class="my-post-closed">TEAM FULL</span>
-                @endif
-              </div>
-              @if($recruitIsLeader && $myTeam)
-                <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text3);">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span>{{ $myTeam->team_name }}</span>
-                </div>
-              @endif
-              @if($introText)
-                <div class="my-post-text">{{ $introText }}</div>
-              @endif
-              @if($myRecruitment->tagLabels() !== [])
-                <div class="my-post-tags">
-                  @foreach($myRecruitment->tagLabels() as $label)
-                    <span class="expertise-tag">{{ $label }}</span>
-                  @endforeach
-                </div>
-              @endif
-              @if($myRecruitment->skills)
-                <div class="feed-post-skills"><b>Skills</b>{{ implode(', ', $myRecruitment->skills) }}</div>
-              @endif
-            </div>
-          </div>
-        </div>
-        @endif
-      @endif
-
-    </div>
-
-    <!-- RIGHT COLUMN -->
-    <div style="display: flex; flex-direction: column; gap: 14px;">
-      <div class="card">
-        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
-          Team Invites
-          @if($invites->count() > 0)
-            <span style="background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 10px;">{{ $invites->count() }} New</span>
-          @endif
-        </div>
-        
-        <div style="margin-top: 15px;">
-          @forelse($invites as $invite)
-            <div class="invitation-card">
-              <div style="display: flex; gap: 10px; align-items: center;">
-                <div class="avatar" style="width: 32px; height: 32px; font-size: 11px; overflow: hidden; flex-shrink: 0;">
-                  @if ($invite->sender->avatarUrl())
-                    <img src="{{ $invite->sender->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ strtoupper(substr($invite->sender->f_name ?? 'U', 0, 1) . substr($invite->sender->l_name ?? '', 0, 1)) }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
-                  @else
-                    {{ strtoupper(substr($invite->sender->f_name ?? 'U', 0, 1) . substr($invite->sender->l_name ?? '', 0, 1)) }}
-                  @endif
-                </div>
-                <div>
-                  <div style="font-size: 12px; font-weight: 600;">{{ $invite->team->team_name ?? 'A Team' }} invited you</div>
-                  <div style="font-size: 10px; color: var(--text3);">From {{ $invite->sender->f_name ?? '' }} {{ $invite->sender->l_name ?? '' }}</div>
-                </div>
-              </div>
-              <div class="invitation-actions">
-                <form method="POST" action="{{ route('invitations.update', $invite->id) }}" id="accept-form-{{ $invite->id }}" style="display:inline;">
-                  @csrf
-                  @method('PATCH')
-                  <input type="hidden" name="status" value="accepted">
-                  <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                    onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Join Team',message:'Accept invitation from <strong>' + {{ Js::from(e($invite->team->team_name ?? 'this team')) }} + '</strong>? Your current post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $invite->id }}').submit();}})">
-                    Accept
-                  </button>
-                </form>
-                <form method="POST" action="{{ route('invitations.update', $invite->id) }}" id="decline-form-{{ $invite->id }}" style="display:inline;">
-                  @csrf
-                  @method('PATCH')
-                  <input type="hidden" name="status" value="declined">
-                  <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $invite->id }}, {{ Js::from($invite->sender->f_name . ' ' . $invite->sender->l_name) }}, '{{ $invite->type }}', {{ Js::from($invite->team->team_name ?? '') }}, {{ Js::from($invite->sender->avatarUrl()) }}, {{ Js::from($invite->sender->email ?? '') }}, {{ Js::from(($invite->sender->course ?? '') . ($invite->sender->year_section ? ' · ' . $invite->sender->year_section : '')) }})">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                  </button>
-                </form>
-              </div>
-            </div>
-          @empty
-            <div style="text-align: center; padding: 20px; color: var(--text3); font-size: 12px;">
-              No pending invites.
-            </div>
-          @endforelse
-
-          @if($incomingRequests->isNotEmpty())
-            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
-              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 10px;">Join Requests</div>
-              @foreach($incomingRequests as $request)
-                <div class="invitation-card">
-                  <div style="display: flex; gap: 10px; align-items: center;">
-                    <div class="avatar" style="width: 32px; height: 32px; font-size: 11px; overflow: hidden; flex-shrink: 0;">
-                      @if ($request->sender->avatarUrl())
-                        <img src="{{ $request->sender->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ strtoupper(substr($request->sender->f_name ?? 'U', 0, 1) . substr($request->sender->l_name ?? '', 0, 1)) }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
-                      @else
-                        {{ strtoupper(substr($request->sender->f_name ?? 'U', 0, 1) . substr($request->sender->l_name ?? '', 0, 1)) }}
-                      @endif
-                    </div>
-                    <div>
-                      <div style="font-size: 12px; font-weight: 600;">{{ $request->sender->f_name ?? 'Someone' }} {{ $request->sender->l_name ?? '' }} wants to join</div>
-                      <div style="font-size: 10px; color: var(--text3);">Requested to join your team</div>
-                    </div>
-                  </div>
-                  <div class="invitation-actions">
-                    <form method="POST" action="{{ route('invitations.update', $request->id) }}" id="accept-form-{{ $request->id }}" style="display:inline;">
-                      @csrf
-                      @method('PATCH')
-                      <input type="hidden" name="status" value="accepted">
-                      <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                        onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Accept Request',message:'Let <strong>' + {{ Js::from(e(($request->sender->f_name ?? '') . ' ' . ($request->sender->l_name ?? ''))) }} + '</strong> join your team? Their post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $request->id }}').submit();}})">
-                        Accept Request
-                      </button>
-                    </form>
-                    <form method="POST" action="{{ route('invitations.update', $request->id) }}" id="decline-form-{{ $request->id }}" style="display:inline;">
-                      @csrf
-                      @method('PATCH')
-                      <input type="hidden" name="status" value="declined">
-                      <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $request->id }}, {{ Js::from($request->sender->f_name . ' ' . $request->sender->l_name) }}, '{{ $request->type }}', {{ Js::from($request->team->team_name ?? '') }}, {{ Js::from($request->sender->avatarUrl()) }}, {{ Js::from($request->sender->email ?? '') }}, {{ Js::from(($request->sender->course ?? '') . ($request->sender->year_section ? ' · ' . $request->sender->year_section : '')) }})">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              @endforeach
-            </div>
-          @endif
-
-          @if($outgoingRequests->isNotEmpty())
-            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
-              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 10px;">Your Pending Requests</div>
-              @foreach($outgoingRequests as $request)
-                <div class="invitation-card">
-                  <div style="display: flex; gap: 10px; align-items: center;">
-                    <div class="avatar" style="width: 32px; height: 32px; font-size: 11px; overflow: hidden; flex-shrink: 0; background: var(--amber-bg);">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--amber);"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    </div>
-                    <div>
-                      <div style="font-size: 12px; font-weight: 600;">
-                        {{ $request->team->team_name ?? ($request->receiver->f_name . ' ' . $request->receiver->l_name) }}
-                      </div>
-                      <div style="font-size: 10px; color: var(--text3);">Awaiting leader's response</div>
-                    </div>
-                    <span style="margin-left:auto; font-size: 10px; font-weight: 700; color: var(--amber); background: var(--amber-bg); padding: 3px 8px; border-radius: 6px;">PENDING</span>
-                  </div>
-                </div>
-              @endforeach
-              <div style="margin-top: 10px; font-size: 11px; color: var(--text3);">
-                You can only send one join request at a time. Wait for this request to be accepted or declined.
-              </div>
-            </div>
-          @endif
-        </div>
-      </div>
-    </div>
-  </div>
-  </div>
-</main>
-    </div>
+    </main>
 
     @include('student.team._selection')
 
@@ -1136,7 +889,7 @@
         <option value="individual">Find a Team (Join Others)</option>
       </select>
       <div class="modal-tutorial" id="modal-note-box">
-        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.</p>
+        <p id="modal-note-text">Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.</p>
       </div>
       <div id="leader-fields">
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
@@ -2736,14 +2489,15 @@ function setPickedSkills(skills) {
     document.querySelectorAll('#skill-pick input').forEach(function (el) { el.checked = skills.indexOf(el.value) !== -1; });
 }
 
-function openPostModal() {
+// goal: 'individual' opens the form on "Find a team" (the hero's second button).
+function openPostModal(goal) {
     if (!CREATION_ALLOWED && !JOINING_ALLOWED) {
         showToast('Creating and joining teams are both closed right now - your CaPSA has turned them off.', 'error');
         return;
     }
     resetPostModal();
-    // Open on the goal that is still allowed.
-    if (!CREATION_ALLOWED) {
+    // Open on the goal asked for, or the one that is still allowed.
+    if (!CREATION_ALLOWED || goal === 'individual') {
         document.getElementById('post-goal').value = 'individual';
         updateModalUI();
     }
@@ -2935,8 +2689,8 @@ function updateModalUI() {
     const isLeader = (goal === 'leader');
     document.getElementById('modal-title').textContent = isLeader ? 'Build a Team' : 'Find a Team';
     document.getElementById('modal-note-text').innerHTML = isLeader 
-        ? '<strong>CapsTip:</strong> Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.' 
-        : '<strong>CapsTip:</strong> Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
+        ? 'Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.' 
+        : 'Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
     
     // A closed goal says so at once, and hides its fields so nothing gets typed for nothing.
     const closedMsg = isLeader ? (CREATION_ALLOWED ? null : CREATION_CLOSED_MSG) : (JOINING_ALLOWED ? null : JOINING_CLOSED_MSG);
