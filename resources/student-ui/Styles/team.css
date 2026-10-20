@@ -501,3 +501,56 @@ body{font-family:'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg);co
 /* x-team-modal: the system's card, sized by the component, with its close button in the corner. */
 .team-modal{position:relative;width:100%;box-sizing:border-box;padding:28px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto}
 .team-modal .team-modal-close{position:absolute;top:18px;right:18px}
+
+/* Team selection (student/team/_selection): scrolls with the page; the
+   filter header and the section overview stay in view. */
+.ts{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.ts-head{position:sticky;top:-26px;z-index:5;background:var(--bg);padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ts-title h2{margin:0;font-size:21px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.ts-title p{margin:4px 0 0;color:var(--text3);font-size:13px}
+.ts-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ts-tabs{display:flex;gap:4px;padding:4px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;flex-wrap:wrap}
+.ts-tab{display:flex;align-items:center;gap:8px;min-height:36px;padding:0 12px;border-radius:9px;border:0;background:transparent;color:var(--text2);font:inherit;font-size:13.5px;font-weight:500;cursor:pointer}
+.ts-tab[aria-pressed="true"]{background:var(--navy-dark,#141414);color:#fff;font-weight:600}
+.ts-tab-n{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--border)}
+.ts-tab[aria-pressed="true"] .ts-tab-n{background:rgba(255,255,255,.18)}
+.ts-dot{width:8px;height:8px;border-radius:50%;background:#a8a49a}
+.ts-dot-build_a_team{background:#1f8a47}.ts-dot-find_a_team{background:#2f6fd1}
+.ts-body{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.ts-main{flex:999 1 640px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.ts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.ts-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ts-card-head{display:flex;align-items:center;gap:10px;min-width:0}
+.ts-avatar{width:36px;height:36px;border-radius:50%;background:#7c3aed;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.ts-avatar img{width:100%;height:100%;object-fit:cover}
+.ts-who{display:flex;flex-direction:column;min-width:0}
+.ts-name{font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts-type{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap;color:#1d4f9a}
+.ts-type i{width:7px;height:7px;border-radius:50%;background:#2f6fd1;flex-shrink:0}
+.ts-card.is-building .ts-type{color:#1a6b38}.ts-card.is-building .ts-type i{background:#1f8a47}
+.ts-intro{margin:0;font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts-chips{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.ts-chips-k{font-size:11px;font-weight:600;color:var(--text3);margin-right:2px}
+.ts-chip{font-size:11px;font-weight:500;padding:2px 8px;border-radius:6px;background:var(--bg2);color:var(--text2)}
+.ts-card .ts-skills{margin:0}
+.ts-actions{margin-top:auto;display:flex;gap:6px}
+.ts-btn{flex:1;min-height:34px;padding:0 10px;border-radius:9px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.ts-btn:hover{background:var(--bg2)}
+.ts-btn-primary{border:0;background:#f5b700;color:#141414;font-weight:700}
+.ts-btn-primary:hover{background:#e6ab00}
+.ts-btn:disabled{opacity:.6;cursor:wait}
+.ts-state{flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:34px;border-radius:9px;background:var(--bg2);color:var(--text3);font-size:12px;font-weight:600}
+.ts-state.is-invited{background:rgba(29,78,216,.1);color:#1d4f9a}
+.ts-empty{background:var(--bg);border:1px dashed var(--border2);border-radius:12px;padding:40px 20px;text-align:center;color:var(--text3)}
+.ts-more{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--text3)}
+.ts-more .ts-btn{flex:none;padding:0 16px;border-radius:999px;background:var(--bg2);border:0}
+.ts-aside{flex:1 1 260px;min-width:0;position:sticky;top:66px;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.ts-aside h3{margin:0;font-size:14px;font-weight:700;color:var(--text)}
+.ts-big{font-size:13px;color:var(--text3)}.ts-big b{font-size:24px;color:var(--text);margin-right:4px}
+.ts-bar{height:8px;border-radius:4px;background:var(--bg2);overflow:hidden}.ts-bar span{display:block;height:100%;background:#f5b700}
+.ts-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ts-stats div{display:flex;flex-direction:column;gap:2px;padding:10px;border-radius:10px;background:var(--bg2);border:1px solid var(--border)}
+.ts-stats b{font-size:18px;color:var(--text)}.ts-stats span{font-size:11.5px;color:var(--text3)}
+.ts-stats .is-warm{background:#fff8e1;border-color:#f3dc8a}
+@media (max-width:768px){.ts-head{top:-16px}.ts-aside{position:static}}
+.ts [hidden]{display:none!important}

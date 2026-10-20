@@ -15,6 +15,7 @@ use App\Support\ProjectTags;
 use App\Support\StudentTeam;
 use App\Support\TeamManagementPage;
 use App\Support\TeamSeating;
+use App\Support\TeamSelectionFeed;
 use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -49,6 +50,30 @@ class TeamController extends Controller
         }
 
         return view('student.team', TeamManagementPage::for($student, $request->query('tab')));
+    }
+
+    /**
+     * GET /student/team/posts - more of Team selection, as cards.
+     *
+     * Load more and the filter tabs ask for a page of the same feed the page
+     * opened with, rendered by the same card partial.
+     */
+    public function posts(Request $request): JsonResponse
+    {
+        $student = $request->user();
+        $goal = (string) $request->query('goal', 'all');
+        $skill = $request->query('skill') ?: null;
+        $feed = TeamSelectionFeed::for($student);
+        $page = $feed->page($goal, $skill, (int) $request->query('page', 1));
+
+        return response()->json([
+            'html' => view('student.team._post-cards', ['posts' => $page->items()] + TeamManagementPage::forCards($student))->render(),
+            'shown' => $page->firstItem() === null ? 0 : $page->lastItem(),
+            'total' => $page->total(),
+            'hasMore' => $page->hasMorePages(),
+            'nextPage' => $page->currentPage() + 1,
+            'counts' => $feed->counts(),
+        ]);
     }
 
     /**

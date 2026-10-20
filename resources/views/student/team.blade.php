@@ -823,19 +823,10 @@
       </div>
       </div>
       </div>
-    </div>
     @endif
 
     <!-- SEARCH AND FILTERS -->
     <main class="main-content">
-      <div class="page-header">
-        <div>
-          <h1>Team Selection</h1>
-          <p>Find teammates or a capstone team within your section</p>
-        </div>
-      </div>
-
-
   <div class="team-container">
     <!-- LEFT COLUMN -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
@@ -962,105 +953,10 @@
         @endif
       @endif
 
-      <div class="feed-toolbar">
-        <div class="feed-toolbar-left">
-          <span class="feed-title">Posts</span>
-          <span class="feed-count" id="feed-count"></span>
-        </div>
-        <div class="feed-filters">
-          <div class="feed-filter">
-            <select class="feed-filter-select" id="feed-filter" onchange="filterFeed()">
-              <option value="all">All Posts</option>
-              <option value="build_a_team">Find Member</option>
-              <option value="find_a_team">Find Team</option>
-            </select>
-          </div>
-          {{-- Only skills some post on the feed actually names, in catalogue order. --}}
-          @php $feedSkills = collect(\App\Support\SkillCatalog::allSkills())->intersect($otherRecruitments->pluck('skills')->flatten()); @endphp
-          @if($feedSkills->isNotEmpty())
-            <div class="feed-filter">
-              <select class="feed-filter-select" id="feed-skill-filter" onchange="filterFeed()" aria-label="Filter by skill">
-                <option value="">Any skill</option>
-                @foreach($feedSkills as $skill)
-                  <option value="{{ $skill }}">{{ $skill }}</option>
-                @endforeach
-              </select>
-            </div>
-          @endif
-        </div>
-      </div>
-
-      <div class="profile-grid" id="recruitment-feed">
-          @foreach($otherRecruitments as $recruit)
-            @php
-              $recruitIsLeader = $recruit->recruitment_goal === 'build_a_team';
-              $goalLabel = $recruitIsLeader ? 'BUILD A TEAM' : 'Find a Team';
-              $ringClass = $recruitIsLeader ? 'hiring' : 'looking';
-              $dotColor = $recruitIsLeader ? '#22c55e' : '#3b82f6';
-              $initials = $recruit->student->avatarInitials();
-              $feedIntro = $recruitIsLeader
-                ? ($recruit->looking_for ?? '')
-                : ($recruit->introduction ?? $recruit->looking_for ?? '');
-            @endphp
-            <div class="feed-post-card" data-goal="{{ $recruit->recruitment_goal }}" data-skills="{{ implode('|', $recruit->skills ?? []) }}" onclick="viewPostDetails(this, {{ Js::from($recruit->student->f_name . ' ' . $recruit->student->l_name) }}, {{ Js::from(implode(', ', $recruit->tagLabels())) }}, {{ Js::from($recruit->looking_for ?? '') }}, {{ Js::from($recruit->student->team->team_name ?? 'No Team') }}, {{ Js::from($recruit->student->team->project_title ?? 'No project set') }}, {{ Js::from((string) $recruit->student->student_number) }}, false, '{{ $recruitIsLeader ? 'Leader' : 'Individual' }}', {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, {{ Js::from($recruit->student->avatarUrl()) }}, {{ Js::from($recruit->introduction ?? '') }})">
-              <div class="feed-post-top">
-                <div class="avatar-ring {{ $ringClass }}">
-                  @if ($recruit->student->avatarUrl())
-                    <img src="{{ $recruit->student->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $initials }}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar-text',textContent:this.dataset.initials}))">
-                  @else
-                    <div class="avatar-text">{{ $initials }}</div>
-                  @endif
-                  <div class="status-badge-dot" style="background:{{ $dotColor }}"></div>
-                </div>
-                <div class="feed-post-head">
-                  <div class="name-label">{{ $recruit->student->f_name }} {{ $recruit->student->l_name }}</div>
-                  <div class="goal-label {{ $recruitIsLeader ? 'goal-lead' : 'goal-member' }}">{{ $goalLabel }}</div>
-                </div>
-              </div>
-              @if($feedIntro)
-                <div class="feed-post-text">{{ $feedIntro }}</div>
-              @endif
-              @if($recruit->tagLabels() !== [])
-                <div class="feed-post-tags">
-                  @foreach($recruit->tagLabels() as $label)
-                    <span class="expert-tag">{{ $label }}</span>
-                  @endforeach
-                </div>
-              @endif
-              @if($recruit->skills)
-                <div class="feed-post-skills"><b>Skills</b>{{ implode(', ', $recruit->skills) }}</div>
-              @endif
-            </div>
-          @endforeach
-      </div>
-      <div class="feed-empty" id="feed-filter-empty" style="display:none;">
-        @if(!$myRecruitment || ($myRecruitment->recruitment_goal === 'build_a_team' && !$myTeam))
-          No recruitment posts yet. Be the first to post!
-        @else
-          No other recruitment posts yet.
-        @endif
-      </div>
     </div>
 
     <!-- RIGHT COLUMN -->
     <div style="display: flex; flex-direction: column; gap: 14px;">
-      <div class="card" style="padding: 14px;">
-        <div class="section-title" style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 10px;">Section Overview</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-          <div class="stat-chip" style="display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 8px; background: var(--bg2); border-radius: 10px;">
-            <span style="font-size: 12px; font-weight: 700; color: var(--text);">{{ $totalStudents }}</span>
-            <span style="font-size: 9px; color: var(--text3);">Total Students</span>
-          </div>
-          <div class="stat-chip" style="display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 8px; background: var(--green-bg); border-radius: 10px;">
-            <span style="font-size: 12px; font-weight: 700; color: var(--green);">{{ $teamedUp }}</span>
-            <span style="font-size: 9px; color: var(--text3);">Teamed Up</span>
-          </div>
-          <div class="stat-chip" style="display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 8px; background: var(--amber-bg); border-radius: 10px;">
-            <span style="font-size: 12px; font-weight: 700; color: var(--amber);">{{ $stillIndividual }}</span>
-            <span style="font-size: 9px; color: var(--text3);">Individual</span>
-          </div>
-        </div>
-      </div>
       <div class="card">
         <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
           Team Invites
@@ -1185,48 +1081,7 @@
 </main>
     </div>
 
-  @if ($otherRecruitments->hasPages())
-  <div class="pagination-container">
-      @if ($otherRecruitments->onFirstPage())
-          <div class="pg-arrow disabled" title="Previous" style="opacity: 0.5; cursor: not-allowed; display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </div>
-      @else
-          <a href="{{ $otherRecruitments->previousPageUrl() }}" class="pg-arrow" title="Previous" style="color: inherit; text-decoration: none; display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </a>
-      @endif
-      
-      @foreach ($otherRecruitments->getUrlRange(1, $otherRecruitments->lastPage()) as $page => $url)
-          @if ($page == $otherRecruitments->currentPage())
-              <div class="pg-btn active">{{ $page }}</div>
-          @else
-              <a href="{{ $url }}" class="pg-btn" style="color: inherit; text-decoration: none;">{{ $page }}</a>
-          @endif
-      @endforeach
-
-      @if ($otherRecruitments->hasMorePages())
-          <a href="{{ $otherRecruitments->nextPageUrl() }}" class="pg-arrow" title="Next" style="color: inherit; text-decoration: none; display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-      @else
-          <div class="pg-arrow disabled" title="Next" style="opacity: 0.5; cursor: not-allowed; display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-      @endif
-   </div>
-   @endif
-
-   <div class="tutorial-note" style="margin-top: 4px;">
-       <div class="tutorial-item">
-          <div class="dot-guide" style="background: #16a34a;"></div>
-          <span>Find Members</span>
-      </div>
-      <div class="tutorial-item">
-          <div class="dot-guide" style="background: #3b82f6;"></div>
-          <span>Find Team</span>
-      </div>
-  </div>
+    @include('student.team._selection')
 
    {{-- The developers' credit comes from partials/mobile-tabbar, which puts
         it last on the page and holds it at the foot of the screen. A copy of
@@ -3192,33 +3047,6 @@ function showToast(msg, type) {
     setTimeout(function() { el.classList.remove('show'); }, 4000);
 }
 
-function filterFeed() {
-    var value = document.getElementById('feed-filter').value;
-    var skillFilter = document.getElementById('feed-skill-filter');
-    var skill = skillFilter ? skillFilter.value : '';
-    var cards = document.querySelectorAll('#recruitment-feed .feed-post-card');
-    var empty = document.getElementById('feed-filter-empty');
-    var visible = 0;
-
-    cards.forEach(function(card) {
-        var goal = card.getAttribute('data-goal');
-        var show = (value === 'all' || goal === value)
-            && (!skill || (card.getAttribute('data-skills') || '').split('|').indexOf(skill) !== -1);
-        card.style.display = show ? '' : 'none';
-        if (show) visible++;
-    });
-
-    var countEl = document.getElementById('feed-count');
-    if (countEl) countEl.textContent = visible + ' post' + (visible === 1 ? '' : 's');
-
-    if (empty) {
-        empty.style.display = visible === 0 ? 'block' : 'none';
-        if (visible === 0 && (value !== 'all' || skill)) {
-            empty.textContent = 'No posts match this filter.';
-        }
-    }
-}
-
 function publishPost(event) {
     const closedGoal = document.getElementById('post-goal').value === 'leader' ? !CREATION_ALLOWED : !JOINING_ALLOWED;
     if (closedGoal) {
@@ -3312,7 +3140,6 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('DOMContentLoaded', function() {
     updateModalUI();
-    filterFeed();
     initTeamNameCheck();
 
     // Skeleton fade-out
