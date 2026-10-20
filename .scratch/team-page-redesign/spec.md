@@ -188,7 +188,7 @@ The Team tab becomes one compact page with three shapes, chosen by where the stu
 
 **New modules and changes**
 
-- **TeamPage** is a new deep module. It answers "what does this student's Team page show".
+- **TeamManagementPage** (done; named so to avoid the public "Meet the Team" page) is a new deep module. It answers "what does this student's Team page show".
   - **Input:** the student.
   - **Output:** the screen (no team / member / leader with open seats / leader of a full team) and that screen's data:
     - hero stats;

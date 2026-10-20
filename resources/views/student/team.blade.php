@@ -475,7 +475,7 @@
             </div>
             @endif
           </div>
-          <div style="font-size: 12px; color: var(--text3); margin-top: 4px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
+          <div style="font-size: 12px; color: var(--text3); margin-top: 4px;">{{ $mySchoolYear?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
          </div>
          <button type="button" id="teamDashboardToggle" class="team-dashboard-toggle" style="background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: var(--text3); transition: color 0.2s;" title="Minimize team card">
            <svg id="teamDashboardChevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -588,7 +588,7 @@
                      the Open Slot button below and the team looks half
                      locked. The notice is printed once; the rest render
                      nothing, because those seats cannot be filled. --}}
-                @elseif($myTeam->capstoneStage() !== 1)
+                @elseif($capstoneStage !== 1)
                 @if($i === $slotCount)
                 <div style="display:flex;align-items:center;gap:10px;border:1px dashed var(--border2);border-radius:10px;padding:8px 12px;background:var(--bg3)">
                   <div style="width:36px;height:36px;border-radius:50%;background:var(--bg2);border:1.5px dashed var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3)">
@@ -623,7 +623,7 @@
           <div style="margin-top: 14px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3);">
             @php
               $total = $memberSlots;
-              $count = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count();
+              $count = $teamSize;
             @endphp
             @for($i = 0; $i < $total; $i++)
               <span style="width: 14px; height: 4px; border-radius: 2px; display: inline-block; background: {{ $i < $count ? '#fbbf24' : 'var(--border)' }};"></span>
@@ -640,7 +640,7 @@
             <div class="stat-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 3px 0;">
               @php
                 $authStudent = auth()->user();
-                $program = $authStudent->studentSchoolYear()->first()?->program ?? '';
+                $program = $mySchoolYear?->program ?? '';
                 $yearSection = $authStudent->year_section ?? '';
                 $parts = array_map('trim', explode('·', $yearSection));
                 $year = $parts[0] ?? '';
@@ -664,7 +664,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Members</span>
-                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / {{ $memberCount }}</span>
+                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ $teamSize }} / {{ $memberCount }}</span>
               </div>
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Your Role</span>
@@ -791,7 +791,7 @@
       @endif
 
       <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
-        @if($isLeader && $myTeam->hasSubmittedPreProposals() && !$myTeam->is_confirmed)
+        @if($isLeader && $teamHasSubmittedPreProposals && !$myTeam->is_confirmed)
           <span class="pending-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(217,119,6,0.35);border:none;letter-spacing:0.2px;">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             Pending Verification
@@ -809,7 +809,7 @@
           <button type="button" onclick="openEditTeamModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--blue); background: var(--blue-bg); color: var(--blue); font-size: 10px; font-weight: 700; cursor: pointer;">Update Team</button>
         @endif
         {{-- A leader on their own ends the team by leaving; once an expert took it on, that is the CaPSA's call. --}}
-        @php $leaderAsksCapsa = $isLeader && $teamMembers->count() === 1 && $myTeam->hasApprovedExpert(); @endphp
+        @php $leaderAsksCapsa = $isLeader && $teamSize === 1 && $teamHasApprovedExpert; @endphp
         @if($isLeader && ! $leaderAsksCapsa)
           <form method="POST" action="{{ route('team.destroy') }}" id="leave-team-form" style="display: inline;">
             @csrf
@@ -842,7 +842,7 @@
       {{-- Capstone 2 with no team: say so. The compose card and the feed
            below both go quiet at this point, and an empty page with nothing
            on it reads as broken rather than closed. --}}
-      @if(!$myTeam && auth()->user()->capstoneStage() !== 1)
+      @if(!$myTeam && $capstoneStage !== 1)
       <div class="card" style="padding:20px 22px">
         <div style="display:flex;align-items:flex-start;gap:14px">
           <div style="width:38px;height:38px;border-radius:11px;background:var(--bg3);color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -937,10 +937,10 @@
                   <span class="my-post-closed">TEAM FULL</span>
                 @endif
               </div>
-              @if($recruitIsLeader && auth()->user()->team)
+              @if($recruitIsLeader && $myTeam)
                 <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text3);">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span>{{ auth()->user()->team->team_name }}</span>
+                  <span>{{ $myTeam->team_name }}</span>
                 </div>
               @endif
               @if($introText)
@@ -1312,7 +1312,7 @@
       <label id="skills-label" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Skills we need</label>
       <p style="margin:-2px 0 8px;font-size:11px;color:var(--text3);line-height:1.5">Optional. The same list experts pick from on their profile.</p>
       <div class="skill-pick" id="skill-pick">
-        @foreach(collect(\App\Support\SkillCatalog::groupsForPrograms(array_filter([auth()->user()->program])))->except('Language & Editing (Grammarian)') as $group => $items)
+        @foreach(collect(\App\Support\SkillCatalog::groupsForPrograms(array_filter([$mySchoolYear?->program])))->except('Language & Editing (Grammarian)') as $group => $items)
           <div class="skill-pick-group">
             <b>{{ \Illuminate\Support\Str::before($group, ' (') }}</b>
             <div>
@@ -1428,10 +1428,6 @@
            needs the panel's "passed with revision"; a different one goes
            through the CaPSA (TitleRevision). --}}
       <label for="edit-project-title" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin: 16px 0 8px;">Project Title</label>
-      @php
-        $approvedProposalCount = $myTeam->preProposals()->where('approved_status', true)->count();
-        $titleCanBeReworded = $myTeam->project_title && \App\Support\TitleRevision::canRevise($myTeam);
-      @endphp
       @if ($myTeam->project_title)
         <textarea name="project_title" id="edit-project-title" class="ut-title" rows="2" maxlength="255" required
                   data-saved="{{ $myTeam->project_title }}">{{ old('project_title', $myTeam->project_title) }}</textarea>
@@ -1457,10 +1453,7 @@
            pre-proposal that became its title. They come filled in; the leader
            adds from the same fixed list or removes, and a title always keeps
            at least one. Before there is a title there is nothing to tag. --}}
-      @php
-        $hasTitle = (bool) ($myTeam->project_title || $myTeam->selectedPreProposal);
-        $titleTags = $myTeam->titleTags();
-      @endphp
+      @php $hasTitle = $teamHasTitle; @endphp
       <div id="tagsSection" style="margin-bottom:20px;">
         <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Project Tags</label>
         @if ($hasTitle)
@@ -1633,7 +1626,7 @@
 @php
   $ltData = $pendingLeadershipTransfer->data ?? [];
   $ltOldLeaderId = (int) ($ltData['old_leader_id'] ?? 0);
-  $ltOldLeader = $ltOldLeaderId ? \App\Models\Student::find($ltOldLeaderId) : null;
+  $ltOldLeader = $previousLeader;
 @endphp
 <div class="modal-overlay" id="leadershipPopup" onclick="if(event.target==this) leadershipPopDismiss()">
   <div class="card modal-card modal-card--team" style="width: 440px; padding: 0; overflow: hidden; position: relative;">
@@ -1902,7 +1895,7 @@ function pickRole(roleId, btn) {
 </div>
 
 <script nonce="{{ Vite::cspNonce() }}">
-const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
+const currentStudentTeamId = {{ $mySchoolYear?->team_id ?? 'null' }};
 const currentStudentId = {{ auth()->user()->student_id }};
 const myRecruitmentGoal = '{{ $myRecruitmentGoal ?? '' }}';
 const isTeamFull = @json($isTeamFull ?? false);
@@ -1975,7 +1968,7 @@ function syncRecruitmentSelectLabels() {
 
 @if($myTeam)
 function confirmLeaveTeam() {
-    @php $teamMemberCount = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count(); @endphp
+    @php $teamMemberCount = $teamSize; @endphp
     @if($isLeader && $teamMemberCount > 1)
     showConfirm({
         title: 'Cannot Leave',
@@ -2231,7 +2224,7 @@ function submitDecline() {
 
 // Which Capstone is running, so the page can say why rather than opening a
 // list nobody can be invited from.
-const CAPSTONE_STAGE = {{ $myTeam?->capstoneStage() ?? auth()->user()->capstoneStage() }};
+const CAPSTONE_STAGE = {{ $capstoneStage }};
 // The CaPSA's Team Rules. Checked the moment somebody starts to create, join
 // or invite - never after they have filled in a form.
 //
@@ -2619,7 +2612,7 @@ function selectOpenSlotClassmate(el) {
 // five people for two seats. Rendered with the page, then re-read from the
 // classmate list every time the dialog opens, so it does not go stale after
 // invitations are sent without a reload.
-var OPEN_SLOT_SEATS_FREE = {{ $myTeam->seatsFree() }};
+var OPEN_SLOT_SEATS_FREE = {{ $teamSeatsFree }};
 
 /** How many are picked, and whether Send Invite is worth pressing. */
 function refreshOpenSlotSendButton() {

@@ -16,9 +16,15 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] TeamPage picks the right screen for a student with no team, a member, a leader with free seats, and a leader whose team is full.
-- [ ] Each screen's data is asserted through TeamPage's interface. The member limit comes from the section's Team Rules.
-- [ ] The Team page view no longer runs its own database queries.
-- [ ] All existing Team page, invitation, recruitment and role tests still pass unchanged.
+- [x] TeamPage picks the right screen for a student with no team, a member, a leader with free seats, and a leader whose team is full.
+- [x] Each screen's data is asserted through TeamPage's interface. The member limit comes from the section's Team Rules.
+- [x] The Team page view no longer runs its own database queries.
+- [x] All existing Team page, invitation, recruitment and role tests still pass unchanged.
+
+## Comments
+
+Done. The module is `TeamManagementPage` rather than "TeamPage": a `TeamPageTest` already covers the public "Meet the Team" page. It returns the page's data plus `screen` (`no_team`, `member`, `leader_open`, `leader_full`) and `openRoles`. It also returns what the view used to query for itself: school-year row, team size, stage, seats free, expert/pre-proposal flags, title data and previous leader.
+
+Tests are in `TeamManagementPageTest`. They cover screen choice, open roles, the section limit, and zero queries from the page's own markup; the shared shell's composer and partials are excluded.
