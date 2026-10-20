@@ -120,17 +120,17 @@ class LeaveRequestAutoDeclineTest extends TestCase
 
         $this->actingAs($this->member, 'web')->get(route('student.team'))
             ->assertOk()
-            ->assertSee('WAITING ON YOUR CAPSA')
+            ->assertSee('Waiting on your CaPSA')
             ->assertSee('Auto-declines Feb 4 without a decision');
 
         $this->travelTo(now()->addDays(3)->addMinute());
 
         $this->actingAs($this->member, 'web')->get(route('student.team'))
             ->assertOk()
-            ->assertDontSee('WAITING ON YOUR CAPSA')
-            ->assertSee('DECLINED AUTOMATICALLY')
+            ->assertDontSee('Waiting on your CaPSA')
+            ->assertSee('Declined automatically')
             ->assertSee('Auto-declined · No action from CaPSA in 3 days')
-            ->assertSee('Ask CaPSA to Leave');
+            ->assertSee('Ask CaPSA to leave');
 
         $this->assertTrue(MemberLeaveRequest::sole()->auto_declined);
     }

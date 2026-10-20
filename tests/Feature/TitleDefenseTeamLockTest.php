@@ -260,7 +260,7 @@ class TitleDefenseTeamLockTest extends TestCase
         // Send to CaPSA is never a silently disabled button: a short reason gets a message instead.
         $this->actingAs($a, 'web')->get(route('student.team'))
             ->assertOk()
-            ->assertSee('Ask CaPSA to Leave')
+            ->assertSee('Ask CaPSA to leave')
             ->assertSee('id="rrm-submit" style="flex:1;">Send to CaPSA', false)
             ->assertSee('id="rrm-error"', false);
 
@@ -528,6 +528,6 @@ class TitleDefenseTeamLockTest extends TestCase
             ->get(route('student.team'))
             ->assertOk()
             ->assertSee('Members locked since')
-            ->assertSee('Ask CaPSA to Leave');
+            ->assertSee('Ask CaPSA to leave');
     }
 }

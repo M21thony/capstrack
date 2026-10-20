@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\TeamInvitation;
 use App\Support\TeamManagementPage;
 use Database\Seeders\StudentRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -92,6 +93,22 @@ class TeamManagementPageTest extends TestCase
         $this->assertSame(TeamManagementPage::LEADER_FULL, $page['screen']);
         $this->assertSame(3, $page['memberCount']);
         $this->assertSame([], $page['openRoles']);
+    }
+
+    public function test_team_selection_is_folded_for_a_member_and_open_for_a_leader_with_seats(): void
+    {
+        [, $leader, $member] = $this->team(2);
+
+        $this->assertTrue(TeamManagementPage::for($member)['selectionFolded']);
+        $this->assertFalse(TeamManagementPage::for($leader)['selectionFolded']);
+    }
+
+    public function test_open_slots_leave_out_the_seats_held_by_pending_invites(): void
+    {
+        [$team, $leader] = $this->team(2);
+        TeamInvitation::create(['sender_id' => $leader->student_id, 'receiver_id' => $this->student()->student_id, 'team_id' => $team->team_id, 'type' => 'invite', 'status' => 'pending']);
+
+        $this->assertSame(2, TeamManagementPage::for($leader)['teamSeatsFree']);
     }
 
     /**

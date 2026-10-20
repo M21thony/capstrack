@@ -4,12 +4,33 @@
   eight from TeamController::posts(). $selection comes from
   TeamManagementPage: page, counts, skills, goal.
 --}}
-@php $page = $selection['page']; @endphp
-<section class="ts" id="team-selection" aria-labelledby="ts-h" data-ts-url="{{ route('student.team.posts') }}" data-ts-goal="{{ $selection['goal'] }}">
+@php
+  $page = $selection['page'];
+  $waiting = $invites->count() + $incomingRequests->count();
+@endphp
+@if ($selectionFolded)
+  {{-- A member, or a leader whose team is full, has nobody to find: the
+       section's posts wait behind one bar until asked for. --}}
+  <section class="ts-fold" aria-labelledby="ts-fold-h">
+    <span class="ts-fold-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+    <div class="ts-fold-text">
+      <h2 id="ts-fold-h">Team selection</h2>
+      <span>{{ $selection['counts']['all'] }} open {{ \Illuminate\Support\Str::plural('post', $selection['counts']['all']) }} in {{ $sectionLabel }} · {{ $teamedUp }} of {{ $totalStudents }} teamed up · {{ $waiting ? $waiting.' waiting on you' : 'No pending invites' }}</span>
+    </div>
+    <button type="button" class="ts-fold-toggle" data-ts-fold aria-expanded="false" aria-controls="team-selection">
+      <span data-ts-fold-label>Browse posts</span>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+  </section>
+@endif
+<section class="ts" id="team-selection" aria-labelledby="ts-h" data-ts-url="{{ route('student.team.posts') }}" data-ts-goal="{{ $selection['goal'] }}" @if ($selectionFolded) hidden @endif>
   <div class="ts-head">
     <div class="ts-title">
       <h2 id="ts-h">Team selection</h2>
       <p>{{ $selection['subtitle'] }}</p>
+      @if ($openRoles !== [])
+        <div class="ts-needs"><span>Your team still needs</span>@foreach ($openRoles as $role)<b>{{ str_replace('/', ' / ', $role) }}</b>@endforeach</div>
+      @endif
     </div>
     <div class="ts-filters">
       <div class="ts-tabs" role="group" aria-label="Filter posts">
@@ -57,6 +78,16 @@
 (function () {
   var root = document.getElementById('team-selection');
   if (!root) return;
+  var fold = document.querySelector('[data-ts-fold]');
+  if (fold) {
+    fold.addEventListener('click', function () {
+      var open = root.hidden;
+      root.hidden = !open;
+      fold.setAttribute('aria-expanded', open ? 'true' : 'false');
+      fold.querySelector('[data-ts-fold-label]').textContent = open ? 'Hide posts' : 'Browse posts';
+      fold.closest('.ts-fold').classList.toggle('is-open', open);
+    });
+  }
   var grid = root.querySelector('[data-ts-grid]');
   var empty = root.querySelector('[data-ts-empty]');
   var moreRow = root.querySelector('[data-ts-more-row]');

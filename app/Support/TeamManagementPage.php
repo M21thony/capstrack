@@ -217,6 +217,7 @@ class TeamManagementPage
         // still sees who sat on its last one instead of an empty card.
         $panel = collect();
         $panelDefenseType = null;
+        $stage = null;
 
         if ($myTeam) {
             $stage = (new DefenseProgress)->currentStage($myTeam);
@@ -259,6 +260,12 @@ class TeamManagementPage
                     ? 'Classmates looking for a team can be invited to your open slots'
                     : 'Find teammates or a capstone team within your section',
             ],
+            // A member, or a leader with nobody left to find, has Team selection folded into one bar.
+            'selectionFolded' => in_array($screen, [self::MEMBER, self::LEADER_FULL], true),
+            // The defense the team is working towards; null once every stage is passed.
+            'currentStage' => $stage,
+            // A leader on their own ends the team by leaving; once an expert took it on, that is the CaPSA's call.
+            'leaderAsksCapsa' => $isLeader && $teamMembers->count() === 1 && (bool) $myTeam?->hasApprovedExpert(),
             // What a leader with free seats still needs, from the seats left in each role.
             'openRoles' => $screen === self::LEADER_OPEN ? TeamSeating::for($myTeam)->openRoles() : [],
             // What the page used to ask the database for from inside its markup.

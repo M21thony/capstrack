@@ -10,9 +10,13 @@
 
 **Blocked by:** 01, 02, 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Members are listed leader first, then the viewer, with correct roles and badges.
-- [ ] Ask CaPSA to leave creates a leave request through the existing endpoint, and the modal enforces the reason rules.
-- [ ] Team selection is folded by default for a member and opens and closes in place.
-- [ ] Members n/N uses the section's limit.
+- [x] Members are listed leader first, then the viewer, with correct roles and badges.
+- [x] Ask CaPSA to leave creates a leave request through the existing endpoint, and the modal enforces the reason rules.
+- [x] Team selection is folded by default for a member and opens and closes in place.
+- [x] Members n/N uses the section's limit.
+
+## Comments
+
+- Done. `student/team/_team` serves the member and leader screens (hero with stats, members table, defense panel, CaPSA requests). Team selection folds into one bar for a member and for the leader of a full team (`selectionFolded`). Post details tell a member they can't join or invite. Tests: `MemberScreenTest`.
