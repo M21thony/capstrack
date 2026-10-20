@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Database\Factories\FinancialRecordFactory;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,27 +44,14 @@ class FinancialRecord extends Model
         ];
     }
 
-    /**
-     * A receipt a member has uploaded that their leader has not yet sent to
-     * the CaPSA. Only 'pending' and later are the CaPSA's to see.
-     */
-    public const HELD = 'held';
-
     /** 'rejected' is what the table stores; the pages call it "sent back". */
     public static function statusKey(?string $status): string
     {
         return match ($status) {
             'verified' => 'verified',
             'rejected' => 'sent_back',
-            self::HELD => 'held',
             default => 'pending',
         };
-    }
-
-    /** Everything the CaPSA is allowed to see: nothing still with a leader. */
-    public function scopeSentToCapsa(Builder $query): Builder
-    {
-        return $query->where(fn ($q) => $q->whereNull('f_record_status')->orWhere('f_record_status', '!=', self::HELD));
     }
 
     /**
@@ -94,9 +80,9 @@ class FinancialRecord extends Model
 
     /**
      * A member's receipt for one fee - their first, or a new photo in place
-     * of one still held by the leader or sent back. It goes to the team
-     * leader, not the CaPSA: see submitTeam(). A receipt already sent to the
-     * CaPSA, or verified, is not replaced.
+     * of one the CaPSA sent back. It goes straight to the CaPSA, waiting to
+     * be checked; there is no stop with the team leader. A receipt the CaPSA
+     * already has, or has verified, is not replaced.
      */
     public static function submitFor(Student $student, ExpensePost $post, UploadedFile $file, string $orNumber): self
     {
@@ -113,7 +99,7 @@ class FinancialRecord extends Model
 
         if ($current?->f_record_status === 'pending') {
             throw ValidationException::withMessages([
-                'receipt_image' => 'Your team leader already sent this receipt to the CaPSA. Wait for it to be checked.',
+                'receipt_image' => 'Your CaPSA already has this receipt. Wait for it to be checked.',
             ]);
         }
 
@@ -121,8 +107,8 @@ class FinancialRecord extends Model
             'receipt_image' => $file->store('receipts', 'public'),
             // Typed by the student; the CaPSA checks it against the photo before verifying.
             'receipt_number' => self::normaliseOrNumber($orNumber),
-            // Kept by the leader until they send the whole team's receipts.
-            'f_record_status' => self::HELD,
+            // Waiting on the CaPSA from the moment it is uploaded.
+            'f_record_status' => 'pending',
             'rejection_reason' => null,
             'verified_at' => null,
             'verified_by' => null,
@@ -139,58 +125,6 @@ class FinancialRecord extends Model
         }
 
         return self::create(['student_id' => $student->student_id, 'expense_post_id' => $post->id] + $values);
-    }
-
-    /**
-     * The leader sends the team's receipts for one fee to the CaPSA together.
-     *
-     * Every member needs a receipt in hand first (held, or already sent or
-     * verified); a member with none, or with one the CaPSA sent back, blocks
-     * it. What is sent is whatever is still held - after a send-back, only
-     * the replaced receipts go again.
-     *
-     * @return int how many receipts went to the CaPSA
-     */
-    public static function submitTeam(Student $leader, Team $team, ExpensePost $post): int
-    {
-        if ((int) $team->leader_id !== (int) $leader->student_id) {
-            throw ValidationException::withMessages([
-                'expense_post_id' => 'Only your team leader can send the receipts to the CaPSA.',
-            ]);
-        }
-
-        $memberIds = StudentSchoolYear::where('team_id', $team->team_id)
-            ->whereNotNull('student_id')
-            ->pluck('student_id')
-            ->unique();
-
-        $latest = self::where('expense_post_id', $post->id)
-            ->whereIn('student_id', $memberIds)
-            ->orderByDesc('id')
-            ->get()
-            ->unique('student_id');
-
-        $ready = $latest->filter(fn (self $r) => in_array($r->f_record_status, [self::HELD, 'pending', 'verified'], true));
-
-        if ($ready->count() < $memberIds->count()) {
-            $missing = $memberIds->count() - $ready->count();
-
-            throw ValidationException::withMessages([
-                'expense_post_id' => $missing.' of '.$memberIds->count().' teammates still '.($missing === 1 ? 'needs' : 'need').' to upload a receipt for this fee.',
-            ]);
-        }
-
-        $held = $latest->filter(fn (self $r) => $r->f_record_status === self::HELD);
-
-        if ($held->isEmpty()) {
-            throw ValidationException::withMessages([
-                'expense_post_id' => 'Everything for this fee is already with the CaPSA.',
-            ]);
-        }
-
-        self::whereIn('id', $held->pluck('id'))->update(['f_record_status' => 'pending']);
-
-        return $held->count();
     }
 
     public function student(): BelongsTo

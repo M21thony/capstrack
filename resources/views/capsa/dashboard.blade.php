@@ -244,7 +244,6 @@
             <div class="dash-fact"><span>Fees collected (verified receipts)</span><b>₱{{ number_format($fee['collected'], 2) }}</b></div>
             <div class="dash-fact"><span>Receipts verified</span><b>{{ $fee['verifiedCount'] }}</b></div>
             <div class="dash-fact"><span>Receipts waiting on a CaPSA</span><b>{{ $fee['waiting'] }}</b></div>
-            <div class="dash-fact"><span>Receipts still with team leaders</span><b>{{ $fee['heldByLeaders'] }}</b></div>
           </div>
           <h4 class="dc-h" style="margin-top:18px">Archived capstones by year</h4>
           <x-dashboard.bars :rows="$a['archive']['years']" color="var(--amber)" empty="Nothing archived yet." />

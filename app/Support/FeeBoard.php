@@ -48,8 +48,7 @@ class FeeBoard
         return [
             'fees' => $fees->map(fn (ExpensePost $p) => $this->fee($p))->values(),
             'teams' => $teamRows,
-            // A receipt still with its team leader is not the CaPSA's yet.
-            'receipts' => $this->receipts($fees->pluck('id'), $teamRows->pluck('members')->flatten(1)->pluck('id'), false),
+            'receipts' => $this->receipts($fees->pluck('id'), $teamRows->pluck('members')->flatten(1)->pluck('id')),
             'sections' => $capsa->sections ?? [],
         ];
     }
@@ -113,12 +112,9 @@ class FeeBoard
     /**
      * The latest receipt per member per fee, keyed "feeId:studentId".
      *
-     * $withHeld says whether receipts still with a team leader are included:
-     * the team sees them, the CaPSA does not.
-     *
      * @return array<string, array<string, mixed>>
      */
-    public function receipts(Collection $feeIds, Collection $studentIds, bool $withHeld = true): array
+    public function receipts(Collection $feeIds, Collection $studentIds): array
     {
         if ($feeIds->isEmpty() || $studentIds->isEmpty()) {
             return [];
@@ -126,7 +122,6 @@ class FeeBoard
 
         $latest = FinancialRecord::whereIn('expense_post_id', $feeIds)
             ->whereIn('student_id', $studentIds)
-            ->when(! $withHeld, fn ($q) => $q->sentToCapsa())
             ->orderByDesc('id')
             ->get()
             ->unique(fn (FinancialRecord $r) => $r->expense_post_id.':'.$r->student_id);
@@ -136,7 +131,6 @@ class FeeBoard
         // for two students on one receipt is real.
         $numbers = $latest->pluck('receipt_number')->filter()->unique()->values();
         $usedBy = $numbers->isEmpty() ? collect() : FinancialRecord::whereIn('receipt_number', $numbers)
-            ->when(! $withHeld, fn ($q) => $q->sentToCapsa())
             ->where(fn ($q) => $q->whereNull('f_record_status')->orWhere('f_record_status', '!=', 'rejected'))
             ->with('student:student_id,f_name,l_name')
             ->get(['id', 'student_id', 'receipt_number'])
