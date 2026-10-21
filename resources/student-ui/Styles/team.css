@@ -742,3 +742,10 @@ button.tm-slot:hover{background:var(--bg3)}
 .tm-closed{display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;padding:11px 14px;border-radius:12px;background:#fdecea;border:1px solid #f5c2bd;color:#7a1a12;font-size:13px;line-height:1.5}
 .tm-closed svg{flex-shrink:0;margin-top:2px;color:#b42318}
 .tm-closed b{color:#b42318}
+.tm-post{flex:999 1 520px;gap:10px}
+.tm-requests-card{flex:1 1 340px}
+.tm-post .tm-card-head{margin-bottom:0}
+.tm-post-actions{display:flex;gap:6px;flex-wrap:wrap}
+.tm-post-text{margin:0;font-size:13.5px;line-height:1.55;color:var(--text2)}
+.tm-post .ts-skills{margin:0}
+.tm-chip.is-seeking{background:#e8effb;color:#1d4f9a}.tm-chip.is-seeking i{background:#2f6fd1}
