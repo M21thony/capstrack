@@ -168,9 +168,10 @@ class BugsFromTestingRoundTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        // One LEADER badge and one MEMBER badge, not two MEMBERs.
-        $this->assertSame(1, substr_count($html, '>LEADER</div>'));
-        $this->assertSame(1, substr_count($html, '>MEMBER</div>'));
+        // One LEADER tag, on the leader's own row, and none on the mate's.
+        $this->assertSame(1, substr_count($html, '<span class="tm-tag is-leader">LEADER</span>'));
+        $this->assertMatchesRegularExpression('/Jerome Abella<\/b>.*?is-leader">LEADER/s', $html);
+        $this->assertDoesNotMatchRegularExpression('/John Aurillas<\/b>(?:(?!<\/div>).)*is-leader/s', $html);
     }
 
     /** A role that is recorded is shown instead of the generic wording. */
@@ -188,8 +189,8 @@ class BugsFromTestingRoundTest extends TestCase
 
         $html = $this->actingAs($leader, 'web')->get(route('student.team'))->assertOk()->getContent();
 
-        $this->assertStringContainsString(StudentRole::LEADER_ROLE_NAME, $html);
-        $this->assertSame(1, substr_count($html, '>LEADER</div>'));
+        $this->assertStringContainsString(str_replace('/', ' / ', StudentRole::LEADER_ROLE_NAME), $html);
+        $this->assertSame(1, substr_count($html, '<span class="tm-tag is-leader">LEADER</span>'));
     }
 
     // ---------------------------------------------------------------
