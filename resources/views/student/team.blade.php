@@ -954,7 +954,7 @@
      behind it is unusable without it: every roster row, and the CaPSA's own
      verification list, reads this field. --}}
 @if(!empty($needsRole) && !empty($roleChoices))
-<div class="modal-overlay active" id="roleChoiceModal" data-no-escape style="z-index:1200">
+<div class="modal-overlay" id="roleChoiceModal" data-no-escape style="z-index:1200">
   <div class="card modal-card modal-card--team" style="width:460px;max-width:94vw;padding:28px;position:relative">
     <div style="width:46px;height:46px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m19 8 2 2 3-3"/></svg>
@@ -1031,6 +1031,13 @@
 </style>
 
 <script nonce="{{ Vite::cspNonce() }}">
+// Behind the portal tour, and one at a time with the other pop-ups that
+// cover the page (partials/portal-tour).
+(function () {
+  var roleModal = document.getElementById('roleChoiceModal');
+  (window.afterPortalTour || function (fn) { fn(); })(function () { roleModal.classList.add('active'); }, function () { return roleModal.classList.contains('active'); });
+})();
+
 function pickRole(roleId, btn) {
   // Every button off at once - a double click was two people's worth of
   // seat, and the answer to the second one is an error message.

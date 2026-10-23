@@ -81,6 +81,15 @@ class PortalTourGoesFirstTest extends TestCase
         }
     }
 
+    /** Choose your role covers the page too: not drawn open, it waits its turn with the rest. */
+    public function test_choose_your_role_waits_its_turn(): void
+    {
+        $team = File::get(resource_path('views/student/team.blade.php'));
+
+        $this->assertStringContainsString('<div class="modal-overlay" id="roleChoiceModal"', $team);
+        $this->assertStringContainsString("function () { roleModal.classList.add('active'); }, function () { return roleModal.classList.contains('active'); });", $team);
+    }
+
     /** On a staff account the approval welcome is said first, then the tour. */
     public function test_the_staff_welcome_comes_before_the_tour(): void
     {
