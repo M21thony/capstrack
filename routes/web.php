@@ -505,6 +505,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::redirect('/', '/student/dashboard');
             Route::get('/dashboard', [DashboardController::class, 'index'])->name('student.dashboard');
             Route::get('/team', [TeamController::class, 'index'])->name('student.team');
+            Route::get('/team/posts', [TeamController::class, 'posts'])->name('student.team.posts');
             Route::get('/team/rating/{form}/rate/{ratee}', [TeamRatingController::class, 'rate'])->whereNumber('ratee')->name('student.team_rating.rate');
             Route::patch('/team/rating/{form}/rate/{ratee}', [TeamRatingController::class, 'draft'])->whereNumber('ratee')->name('student.team_rating.draft');
             Route::post('/team/rating/{form}/submission', [TeamRatingController::class, 'submit'])->name('student.team_rating.submit');

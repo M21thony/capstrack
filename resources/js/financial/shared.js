@@ -3,9 +3,9 @@
 export const $ = (selector, root = document) => root.querySelector(selector);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const peso = n => '₱' + Number(n).toLocaleString('en-PH', { maximumFractionDigits: 2 });
-export const LABEL = { pending: 'Waiting', verified: 'Verified', sent_back: 'Sent back', none: 'Not uploaded', held: 'With leader' };
+export const LABEL = { pending: 'Waiting', verified: 'Verified', sent_back: 'Sent back', none: 'Not uploaded' };
 export const statusHtml = (s, label = LABEL[s]) => `<span class="fx-status fx-s-${s}"><i></i>${label}</span>`;
-export const barHtml = (c, n) => `<span class="fx-v" style="width:${(c.verified / n) * 100}%"></span><span class="fx-w" style="width:${(c.pending / n) * 100}%"></span><span class="fx-h" style="width:${((c.held || 0) / n) * 100}%"></span><span class="fx-b" style="width:${(c.sent_back / n) * 100}%"></span>`;
+export const barHtml = (c, n) => `<span class="fx-v" style="width:${(c.verified / n) * 100}%"></span><span class="fx-w" style="width:${(c.pending / n) * 100}%"></span><span class="fx-b" style="width:${(c.sent_back / n) * 100}%"></span>`;
 
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 

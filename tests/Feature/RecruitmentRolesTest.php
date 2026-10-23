@@ -53,7 +53,8 @@ class RecruitmentRolesTest extends TestCase
         $this->actingAs($this->classmate('reader@my.cspc.edu.ph', '2026-0702'))
             ->get(route('student.team'))
             ->assertOk()
-            ->assertSee('Frontend Developer, UI/UX Designer');
+            // The card hands its details to the post modal as one Js::from() list.
+            ->assertSee('Frontend Developer, UI\\\\\\/UX Designer', false);
     }
 
     public function test_roles_are_written_once_and_read_back_as_given(): void

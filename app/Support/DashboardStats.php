@@ -125,7 +125,6 @@ final class DashboardStats
                 'verifiedCount' => (clone $verified)->count(),
                 'collected' => (float) (clone $verified)->sum('amount'),
                 'waiting' => FinancialRecord::where('f_record_status', 'pending')->count(),
-                'heldByLeaders' => FinancialRecord::where('f_record_status', FinancialRecord::HELD)->count(),
             ],
             'archive' => $this->archiveSummary(),
         ];

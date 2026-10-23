@@ -13,12 +13,11 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * Each member uploads their own receipt, with its OR number, to their team
- * leader, and may swap a photo the leader still holds or one that was sent
- * back. The leader sends the team's receipts to the CaPSA together, only once
- * every member has one. A receipt sent to the CaPSA, or verified, is final.
- * The CaPSA sees the fees and receipts of her own sections, and nothing that
- * a leader is still holding.
+ * Each member uploads their own receipt, with its OR number, and it goes
+ * straight to the CaPSA, waiting to be checked - there is no stop with the
+ * team leader. A receipt the CaPSA has, or has verified, is final until she
+ * sends it back; a sent-back one is replaced and waits again. The CaPSA sees
+ * the fees and receipts of her own sections.
  */
 class FinancialReceiptsTest extends TestCase
 {
@@ -45,21 +44,17 @@ class FinancialReceiptsTest extends TestCase
         ], fn ($v) => $v !== null));
     }
 
-    public function test_a_member_uploads_the_or_number_with_the_photo_and_can_replace_a_waiting_one(): void
+    public function test_a_member_uploads_the_or_number_with_the_photo(): void
     {
         [, $student] = $this->teamInSection('Alpha');
         $fee = $this->fee();
 
         $this->upload($student, $fee, ' or 0012345 ')->assertSessionHasNoErrors();
-        $first = FinancialRecord::sole()->receipt_image;
-        $this->assertSame('OR 0012345', FinancialRecord::sole()->receipt_number);
-
-        $this->upload($student, $fee, '0012399')->assertSessionHasNoErrors();
 
         $record = FinancialRecord::sole();
-        $this->assertSame('held', $record->f_record_status);
-        $this->assertSame('0012399', $record->receipt_number);
-        $this->assertNotSame($first, $record->receipt_image);
+        $this->assertSame('OR 0012345', $record->receipt_number);
+        $this->assertSame('pending', $record->f_record_status);
+        $this->assertNotNull($record->receipt_image);
     }
 
     /** The OR number and the photo go together: either alone is refused. */
@@ -84,7 +79,6 @@ class FinancialReceiptsTest extends TestCase
         $fee = $this->fee();
         $this->upload($a, $fee, '0012345');
         $this->upload($b, $fee, '0012345');
-        FinancialRecord::query()->update(['f_record_status' => 'pending']);
 
         $this->actingAs($capsa, 'expert')
             ->get(route('capsa.financial'))
@@ -102,7 +96,7 @@ class FinancialReceiptsTest extends TestCase
 
         $this->upload($student, $fee)->assertSessionHasNoErrors();
 
-        $this->assertSame(['held', null], [FinancialRecord::sole()->f_record_status, FinancialRecord::sole()->rejection_reason]);
+        $this->assertSame(['pending', null], [FinancialRecord::sole()->f_record_status, FinancialRecord::sole()->rejection_reason]);
     }
 
     public function test_a_verified_receipt_cannot_be_replaced(): void
@@ -166,124 +160,109 @@ class FinancialReceiptsTest extends TestCase
         return [$team, $leader, $members[0], $members[1]];
     }
 
-    private function sendTeam(Student $student, ExpensePost $fee)
-    {
-        return $this->actingAs($student)->postJson(route('api.student.financial.submit-team'), ['expense_post_id' => $fee->id]);
-    }
-
-    public function test_an_upload_goes_to_the_leader_and_the_capsa_does_not_see_it_yet(): void
+    public function test_an_upload_goes_straight_to_the_capsa(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A']);
-        [, $leader, $member] = $this->teamOfThree();
+        [, , $member] = $this->teamOfThree();
         $fee = $this->fee();
 
         $this->upload($member, $fee)->assertSessionHasNoErrors();
 
-        $this->assertSame('held', FinancialRecord::sole()->f_record_status);
+        $this->assertSame('pending', FinancialRecord::sole()->f_record_status);
 
         $this->actingAs($capsa, 'expert')->get(route('capsa.financial'))->assertOk()
-            ->assertViewHas('state', fn ($state) => $state['receipts'] === []);
+            ->assertViewHas('state', fn ($state) => array_keys($state['receipts']) === [$fee->id.':'.$member->student_id]);
 
-        $this->actingAs($leader)->get(route('student.team', ['tab' => 'financial']))->assertOk()
-            ->assertViewHas('financialState', fn ($state) => $state['is_leader'] === true
-                && $state['receipts'][$fee->id.':'.$member->student_id]['status'] === 'held');
-        $this->actingAs($member)->get(route('student.team', ['tab' => 'financial']))
-            ->assertViewHas('financialState', fn ($state) => $state['is_leader'] === false);
+        $this->actingAs($member)->get(route('student.team', ['tab' => 'financial']))->assertOk()
+            ->assertViewHas('financialState', fn ($state) => $state['receipts'][$fee->id.':'.$member->student_id]['status'] === 'pending');
     }
 
-    public function test_the_leader_cannot_send_the_team_until_every_member_has_a_receipt(): void
-    {
-        [, $leader, $a] = $this->teamOfThree();
-        $fee = $this->fee();
-        $this->upload($leader, $fee, 'OR-1');
-        $this->upload($a, $fee, 'OR-2');
-
-        $this->sendTeam($leader, $fee)->assertStatus(422)
-            ->assertJsonPath('errors.expense_post_id.0', '1 of 3 teammates still needs to upload a receipt for this fee.');
-
-        $this->assertSame(['held', 'held'], FinancialRecord::pluck('f_record_status')->all());
-    }
-
-    public function test_the_leader_sends_all_receipts_at_once_and_the_capsa_then_sees_them(): void
+    /** Nobody waits on the rest of the team: each receipt reaches the CaPSA as it is uploaded. */
+    public function test_each_members_receipt_reaches_the_capsa_on_its_own(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A']);
-        [, $leader, $a, $b] = $this->teamOfThree();
+        [, $leader, $a] = $this->teamOfThree();
         $fee = $this->fee();
-        $this->upload($leader, $fee, 'OR-1');
+
         $this->upload($a, $fee, 'OR-2');
-        $this->upload($b, $fee, 'OR-3');
-
-        $this->sendTeam($leader, $fee)->assertOk()->assertJsonPath('data.sent', 3);
-
-        $this->assertSame(['pending', 'pending', 'pending'], FinancialRecord::pluck('f_record_status')->all());
         $this->actingAs($capsa, 'expert')->get(route('capsa.financial'))
-            ->assertViewHas('state', fn ($state) => count($state['receipts']) === 3);
+            ->assertViewHas('state', fn ($state) => count($state['receipts']) === 1);
 
-        $this->sendTeam($leader, $fee)->assertStatus(422);
+        $this->upload($leader, $fee, 'OR-1');
+        $this->actingAs($capsa, 'expert')->get(route('capsa.financial'))
+            ->assertViewHas('state', fn ($state) => count($state['receipts']) === 2);
+
+        $this->assertSame(['pending', 'pending'], FinancialRecord::pluck('f_record_status')->all());
     }
 
-    public function test_only_the_leader_can_send_the_team(): void
+    /** The leader's "send the team's receipts" step is gone. */
+    public function test_there_is_no_team_send_step(): void
+    {
+        [, $leader] = $this->teamOfThree();
+        $fee = $this->fee();
+
+        $this->actingAs($leader)->postJson('/api/student/financial/team-submit', ['expense_post_id' => $fee->id])
+            ->assertNotFound();
+
+        $this->actingAs($leader)->get(route('student.team', ['tab' => 'financial']))->assertOk()
+            ->assertDontSee('s-team-submit', false)
+            ->assertDontSee('team leader sends', false);
+    }
+
+    public function test_replacing_a_sent_back_receipt_sends_only_that_one_again(): void
     {
         [, $leader, $a, $b] = $this->teamOfThree();
         $fee = $this->fee();
         foreach ([$leader, $a, $b] as $i => $who) {
             $this->upload($who, $fee, 'OR-'.$i);
         }
-
-        $this->sendTeam($a, $fee)->assertStatus(422)
-            ->assertJsonPath('errors.expense_post_id.0', 'Only your team leader can send the receipts to the CaPSA.');
-
-        $this->assertSame(['held', 'held', 'held'], FinancialRecord::pluck('f_record_status')->all());
-    }
-
-    public function test_a_sent_back_receipt_blocks_a_resend_until_replaced_and_only_that_one_goes_again(): void
-    {
-        [, $leader, $a, $b] = $this->teamOfThree();
-        $fee = $this->fee();
-        foreach ([$leader, $a, $b] as $i => $who) {
-            $this->upload($who, $fee, 'OR-'.$i);
-        }
-        $this->sendTeam($leader, $fee)->assertOk();
         FinancialRecord::where('student_id', $a->student_id)->update(['f_record_status' => 'rejected', 'rejection_reason' => 'Blurry']);
         FinancialRecord::where('student_id', $b->student_id)->update(['f_record_status' => 'verified']);
 
-        $this->sendTeam($leader, $fee)->assertStatus(422);
-
         $this->upload($a, $fee, 'OR-9')->assertSessionHasNoErrors();
-        $this->sendTeam($leader, $fee)->assertOk()->assertJsonPath('data.sent', 1);
 
         $this->assertSame('pending', FinancialRecord::where('student_id', $a->student_id)->value('f_record_status'));
         $this->assertSame('verified', FinancialRecord::where('student_id', $b->student_id)->value('f_record_status'));
+        $this->assertSame('pending', FinancialRecord::where('student_id', $leader->student_id)->value('f_record_status'));
     }
 
-    public function test_a_receipt_already_sent_to_the_capsa_cannot_be_replaced(): void
+    public function test_a_receipt_waiting_on_the_capsa_cannot_be_replaced(): void
     {
         [, $student] = $this->teamInSection('Solo');
         $fee = $this->fee();
-        $this->upload($student, $fee);
-        $this->sendTeam($student, $fee)->assertOk();
+        $this->upload($student, $fee, '0012345');
 
-        $this->upload($student, $fee)->assertSessionHasErrors('receipt_image');
+        $this->upload($student, $fee, '0012399')->assertSessionHasErrors('receipt_image');
 
-        $this->assertSame('pending', FinancialRecord::sole()->f_record_status);
+        $this->assertSame(['pending', '0012345'], [FinancialRecord::sole()->f_record_status, FinancialRecord::sole()->receipt_number]);
     }
 
-    public function test_the_capsa_cannot_verify_or_reject_a_receipt_a_leader_is_still_holding(): void
+    public function test_the_capsa_can_check_a_receipt_as_soon_as_it_is_uploaded(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A']);
-        [, $student] = $this->teamInSection('Holding');
+        [, $student] = $this->teamInSection('Quick');
         $fee = $this->fee();
         $this->upload($student, $fee);
         $record = FinancialRecord::sole();
 
         $this->actingAs($capsa, 'expert')
             ->patchJson(route('api.admin.financial.update', $record), ['status' => 'approved', 'or_confirmed' => true])
-            ->assertStatus(422);
-        $this->actingAs($capsa, 'expert')
-            ->patchJson(route('api.admin.financial.update', $record), ['status' => 'rejected', 'rejection_reason' => 'x'])
-            ->assertStatus(422);
+            ->assertOk();
 
-        $this->assertSame('held', $record->fresh()->f_record_status);
+        $this->assertSame('verified', $record->fresh()->f_record_status);
+    }
+
+    /** Receipts a leader was still holding when the change shipped go to the CaPSA. */
+    public function test_receipts_still_held_by_a_leader_are_released_to_the_capsa(): void
+    {
+        [, $student] = $this->teamInSection('Held');
+        $fee = $this->fee();
+        $this->upload($student, $fee);
+        FinancialRecord::query()->update(['f_record_status' => 'held']);
+
+        (require database_path('migrations/2026_10_20_175311_release_held_receipts_to_the_capsa.php'))->up();
+
+        $this->assertSame('pending', FinancialRecord::sole()->f_record_status);
     }
 
     /** Financial Records is Team Management's second tab; the old address opens it. */
@@ -320,5 +299,54 @@ class FinancialReceiptsTest extends TestCase
 
         $this->assertStringNotContainsString('data-tour-target="student.financial"', $html);
         $this->assertStringNotContainsString('href="'.route('student.financial').'"', $html);
+    }
+
+    public function test_the_receipt_form_is_on_the_tab_and_not_in_a_pop_up(): void
+    {
+        [, $student] = $this->teamInSection('Alpha');
+        $this->fee();
+
+        $html = $this->actingAs($student)->get(route('student.team', ['tab' => 'financial']))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<form class="fx-sb-form" id="u-form"[^>]*hidden>/', $html);
+        $this->assertStringContainsString('<input type="file" id="u-file" accept="image/*" aria-label="Photo of your receipt">', $html);
+        $this->assertMatchesRegularExpression('/id="u-send" disabled>/', $html);
+        $this->assertStringNotContainsString('id="fx-d-upload"', $html);
+        $this->assertStringContainsString('id="fx-d-image"', $html, 'the full-size receipt viewer stays');
+        $this->assertStringContainsString('id="tm-toprow-end"', $html, 'the fee tabs go beside the page tabs');
+    }
+
+    public function test_a_sent_receipt_waits_for_the_capsa_in_the_senders_row_of_the_whole_team(): void
+    {
+        [, $leader, $member] = $this->teamOfThree();
+        $fee = $this->fee();
+        $this->upload($member, $fee)->assertSessionHasNoErrors();
+
+        $this->actingAs($member)->get(route('student.team', ['tab' => 'financial']))->assertOk()
+            ->assertViewHas('financialState', function ($state) use ($fee, $member, $leader) {
+                return count($state['members']) === 3
+                    && $state['receipts'][$fee->id.':'.$member->student_id]['status'] === 'pending'
+                    && ! isset($state['receipts'][$fee->id.':'.$leader->student_id]);
+            });
+    }
+
+    public function test_a_sent_back_receipt_comes_back_with_the_reason_and_its_or_number(): void
+    {
+        [, $student] = $this->teamInSection('Alpha');
+        $fee = $this->fee();
+        $this->upload($student, $fee, 'OR-0099');
+        FinancialRecord::query()->update(['f_record_status' => 'rejected', 'rejection_reason' => 'The OR number does not match the photo.']);
+
+        $this->actingAs($student)->get(route('student.team', ['tab' => 'financial']))->assertOk()
+            ->assertViewHas('financialState', function ($state) use ($fee, $student) {
+                $receipt = $state['receipts'][$fee->id.':'.$student->student_id];
+
+                return $receipt['status'] === 'sent_back'
+                    && $receipt['reason'] === 'The OR number does not match the photo.'
+                    && $receipt['or'] === 'OR-0099';
+            });
+
+        $this->upload($student, $fee, 'OR-0100')->assertSessionHasNoErrors();
+        $this->assertSame('pending', FinancialRecord::where('student_id', $student->student_id)->latest('id')->value('f_record_status'));
     }
 }

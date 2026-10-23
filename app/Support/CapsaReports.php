@@ -739,7 +739,7 @@ class CapsaReports
         $waiting = TeamExpertAssignment::whereIn('team_id', $teamIds)->where('status', 'pending')->get()->groupBy('expert_id')->map->count();
 
         $takesProgram = fn (CapstoneExpert $e) => ! $ctx['programs'] || collect($ctx['programs'])->contains(fn ($p) => $e->acceptsProgram($p));
-        $rolesOf = fn (CapstoneExpert $e) => $e->roles->map(fn ($r) => strtolower((string) $r->role_name))->intersect(array_keys(self::ROLES))->values();
+        $rolesOf = fn (CapstoneExpert $e) => $e->roles->toBase()->map(fn ($r) => strtolower((string) $r->role_name))->intersect(array_keys(self::ROLES))->values();
 
         // Everyone who can take a team, so an expert with none shows up as free rather than missing.
         $experts = CapstoneExpert::where('approved_status', true)->with('roles')->get()

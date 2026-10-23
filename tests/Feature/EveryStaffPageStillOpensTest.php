@@ -144,6 +144,6 @@ class EveryStaffPageStillOpensTest extends TestCase
         DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => DefenseOutcome::TITLE_DEFENSE, 'attempt' => 1, 'outcome' => DefenseOutcome::PASSED, 'outcome_recorded_at' => now()]);
 
         $this->actingAs($leader, 'web')->get(route('student.team'))->assertOk()->assertSee('Members locked');
-        $this->actingAs($member, 'web')->get(route('student.team'))->assertOk()->assertSee('Ask CaPSA to Leave');
+        $this->actingAs($member, 'web')->get(route('student.team'))->assertOk()->assertSee('Ask CaPSA to leave');
     }
 }

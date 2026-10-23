@@ -291,10 +291,7 @@ class TeamReachesTitleDefenseTest extends TestCase
                 ])->assertSessionHasNoErrors();
         }
 
-        $this->asStudent($this->leader())
-            ->postJson(route('api.student.financial.submit-team'), ['expense_post_id' => $fee->id])
-            ->assertOk();
-
+        // Each receipt is with the CaPSA as soon as it is uploaded.
         foreach ($this->members as $member) {
             $record = FinancialRecord::where('student_id', $member->student_id)->where('expense_post_id', $fee->id)->firstOrFail();
             $this->asExpert($this->capsa)

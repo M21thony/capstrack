@@ -17,7 +17,7 @@
   <div class="modal-box">
     <div class="modal-icon-wrap"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--amber)" stroke-width="2.5"><path d="M12 5v14"/><polyline points="18 11 12 17 6 11"/></svg></div>
     <div class="modal-title" id="del-modal-title">Archive Rubric?</div>
-    <div class="modal-sub" id="del-modal-sub">This will archive the rubric. You can restore it later from the Archived tab.</div>
+    <div class="modal-sub" id="del-modal-sub">This will archive the rubric. You can restore it later with Show archived.</div>
     <div class="modal-actions">
       <button class="btn btn-ghost" style="color:var(--text2);border-color:var(--border)" onclick="closeDelModal()">Cancel</button>
       <button class="btn" id="del-confirm-btn" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber)">Archive</button>
@@ -25,182 +25,65 @@
   </div>
 </div>
 
-<!-- ADD/EDIT RUBRIC MODAL -->
-<div class="modal-overlay" id="rubric-modal">
-  <div class="modal-box modal-box-lg" id="rb-modal-box">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
-      <div>
-        <div class="modal-title" id="modal-form-title">New Rubric</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px" id="modal-form-sub">Fill in the details below to create a grading rubric.</div>
-      </div>
-      <button onclick="closeRubricModal()" class="rb-close-btn">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
-    <!-- Step Indicator -->
-    <div class="modal-steps">
-      <div class="modal-step active" id="step-ind-1">
-        <div class="step-circle">1</div>
-        <span>Rubric Info</span>
-      </div>
-      <div class="step-connector"></div>
-      <div class="modal-step" id="step-ind-2">
-        <div class="step-circle">2</div>
-        <span>Criteria</span>
-      </div>
-    </div>
-
-    <!-- STEP 1: Rubric Info -->
-    <div id="modal-step-1" style="flex:1">
-      <div class="form-group">
-        <label class="label">Rubric Name <span class="required-star">*</span></label>
-        <input class="input" id="rb-name" placeholder="e.g. Pre-Proposal Defense Rubric"/>
-        <div class="input-hint">Give a clear, descriptive name for this rubric.</div>
-      </div>
-      <div class="form-group">
-        <label class="label">Rubric Type <span class="required-star">*</span></label>
-        <div class="rb-type-grid">
-          <label class="rb-type-opt" data-val="pre_proposal">
-            <input type="radio" name="rb-type-radio" value="pre_proposal" onchange="selectRbType(this)"/>
-            <div class="rb-type-opt-inner">
-              <div class="rb-type-icon" style="background:var(--blue-bg)">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              </div>
-              <div class="rb-type-label">Pre-Proposal</div>
-              <div class="rb-type-sublabel">Defense</div>
-            </div>
-          </label>
-          <label class="rb-type-opt" data-val="title_defense">
-            <input type="radio" name="rb-type-radio" value="title_defense" onchange="selectRbType(this)"/>
-            <div class="rb-type-opt-inner">
-              <div class="rb-type-icon" style="background:rgba(201,168,44,0.1)">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent3)" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
-              </div>
-              <div class="rb-type-label">Title Defense</div>
-              <div class="rb-type-sublabel">Evaluation</div>
-            </div>
-          </label>
-          <label class="rb-type-opt" data-val="pre_oral_defense">
-            <input type="radio" name="rb-type-radio" value="pre_oral_defense" onchange="selectRbType(this)"/>
-            <div class="rb-type-opt-inner">
-              <div class="rb-type-icon" style="background:var(--purple-bg)">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              </div>
-              <div class="rb-type-label">Pre Oral</div>
-              <div class="rb-type-sublabel">Defense</div>
-            </div>
-          </label>
-          <label class="rb-type-opt" data-val="final_oral_defense">
-            <input type="radio" name="rb-type-radio" value="final_oral_defense" onchange="selectRbType(this)"/>
-            <div class="rb-type-opt-inner">
-              <div class="rb-type-icon" style="background:var(--green-bg)">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-              </div>
-              <div class="rb-type-label">Final Oral</div>
-              <div class="rb-type-sublabel">Defense</div>
-            </div>
-          </label>
-        </div>
-        <input type="hidden" id="rb-type" value=""/>
-      </div>
-      <div class="form-group">
-        <label class="label" for="rb-program">Program</label>
-        <select class="input" id="rb-program">
-          <option value="">All programs</option>
-          @foreach (\App\Models\CapstoneExpert::PROGRAMS as $program)
-            <option value="{{ $program }}">{{ $program }} &ndash; {{ \App\Models\Student::PROGRAM_COURSES[$program] ?? $program }}</option>
-          @endforeach
-        </select>
-        <div class="input-hint">Teams in this program are graded with it. A program with no rubric of its own for this stage uses the one for all programs.</div>
-      </div>
-
-      <div class="rb-ai-panel">
-        <div class="rb-ai-panel-header">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--accent3)" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
-          <span>Draft with AI</span>
-        </div>
-        <div class="rb-ai-panel-row">
-          <div class="rb-ai-field rb-ai-field-topic" id="rb-ai-field-topic">
-            <label class="rb-ai-field-label" for="rb-ai-topic">Focus Area <span style="font-weight:400">(optional)</span></label>
-            <input class="input" id="rb-ai-topic" placeholder="e.g. &quot;BSIT capstone systems&quot;"/>
-          </div>
-          <div class="rb-ai-field rb-ai-field-count" id="rb-ai-field-count">
-            <label class="rb-ai-field-label" for="rb-ai-count"># of Criteria</label>
-            <select class="input" id="rb-ai-count">
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5" selected>5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-              <option value="10">10</option>
-              <option value="11">11</option>
-              <option value="12">12</option>
-              <option value="13">13</option>
-              <option value="14">14</option>
-              <option value="15">15</option>
-            </select>
-          </div>
-          <button type="button" class="rb-ai-generate-btn" id="rb-ai-btn" onclick="aiGenerateRubric()">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
-            <span id="rb-ai-btn-label">Generate</span>
-          </button>
-        </div>
-        <div class="input-hint" id="rb-ai-hint">Select a rubric type above, then generate a draft name, description, and criteria you can review and edit before saving. "# of Criteria" sets how many scoring criteria the draft will include.</div>
-      </div>
-
-      <div class="form-group" style="margin-bottom:0">
-        <label class="label">Description <span style="color:var(--text3);font-weight:400">(optional)</span></label>
-        <textarea class="input" id="rb-desc" style="min-height:72px" placeholder="Brief description of this rubric's purpose and usage context…"></textarea>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:20px">
-        <button class="btn btn-primary" onclick="goToStep2()">
-          Next: Add Criteria
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- STEP 2: Criteria -->
-    <div id="modal-step-2" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0">
-      <div class="rb-criteria-toolbar" style="flex-shrink:0">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">Scoring Criteria</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px">Set what a criterion is worth and the others give up the points to match. A criterion is worth its highest-scoring level.</div>
-        </div>
-        <div class="rb-pts-status">
-          <div class="rb-pts-badge" id="total-pts-label">0 / 100 pts</div>
-          <div class="rb-pts-hint" id="total-pts-hint">Total points are valid.</div>
-        </div>
-      </div>
-
-      <div class="rb-pts-note" id="total-pts-note">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>A rubric totals 100 points across its criteria, each worth its highest-scoring level. Set what one is worth and the others give up the points to match.</span>
-      </div>
-
-      <div id="criteria-list" style="display:flex;flex-direction:column;gap:10px;padding-right:4px;margin-bottom:12px;flex:1;overflow-y:auto;min-height:0;scroll-behavior:smooth"></div>
-
-      <button class="rb-btn-add-criterion" onclick="addCriterion()" style="flex-shrink:0">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Criterion
-      </button>
-
-      <div style="display:flex;gap:8px;margin-top:20px;justify-content:space-between;flex-shrink:0">
-        <button class="btn btn-ghost" style="color:var(--text2);border-color:var(--border)" onclick="goToStep1()">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          Back
-        </button>
-        <button class="btn btn-primary" id="form-save-btn" onclick="saveRubric()">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          <span id="form-save-label">Save Rubric</span>
-        </button>
-      </div>
+<dialog class="cm rb-new" id="rb-dialog" aria-labelledby="rb-dlg-title"><div class="cm-box">
+  <div>
+    <h3 id="rb-dlg-title">New Rubric</h3>
+    <div class="sub" id="rb-dlg-sub">Name it and pick the stage. The criteria come next, on the full page.</div>
+  </div>
+  <input type="hidden" id="rb-type" value=""/>
+  <div class="mk-f">
+    <label class="label" for="rb-name">Rubric name</label>
+    <input class="input" id="rb-name" placeholder="e.g. Pre-Proposal Defense Rubric" maxlength="255"/>
+  </div>
+  <div class="mk-f">
+    <label class="label">Stage</label>
+    <div class="mk-stages">
+      <button type="button" style="--c:var(--blue)" data-type="pre_proposal" onclick="selectStage('pre_proposal')">Pre-Proposal</button>
+      <button type="button" style="--c:var(--accent3)" data-type="title_defense" onclick="selectStage('title_defense')">Title Defense</button>
+      <button type="button" style="--c:var(--purple)" data-type="pre_oral_defense" onclick="selectStage('pre_oral_defense')">Pre-Oral</button>
+      <button type="button" style="--c:var(--green)" data-type="final_oral_defense" onclick="selectStage('final_oral_defense')">Final Oral</button>
     </div>
   </div>
-</div>
+  <div class="mk-2col">
+    <div class="mk-f">
+      <label class="label" for="rb-program">Program</label>
+      <select class="input" id="rb-program">
+        <option value="">All programs</option>
+        @foreach (\App\Models\CapstoneExpert::PROGRAMS as $program)
+          <option value="{{ $program }}">{{ $program }} &ndash; {{ \App\Models\Student::PROGRAM_COURSES[$program] ?? $program }}</option>
+        @endforeach
+      </select>
+      <div class="input-hint">Teams in this program are graded with it. A program with no rubric of its own for this stage uses the one for all programs.</div>
+    </div>
+    <div class="mk-f">
+      <label class="label" for="rb-desc">Description <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
+      <textarea class="input" id="rb-desc" rows="3" placeholder="Brief description of this rubric's purpose and usage context&hellip;"></textarea>
+    </div>
+  </div>
+  <div class="mk-ai" id="rb-ai-box">
+    <div class="t"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg> Let the AI draft the criteria</div>
+    <div class="mk-f" id="rb-ai-field-topic">
+      <label class="label" for="rb-ai-topic">What should the criteria focus on? <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
+      <textarea class="input" id="rb-ai-topic" rows="4" placeholder="e.g. &quot;BSIT capstone systems&quot;"></textarea>
+    </div>
+    <div class="row2">
+      <div class="mk-f cnt" id="rb-ai-field-count">
+        <label class="label" for="rb-ai-count">Number of criteria (3&ndash;15)</label>
+        <input type="number" class="input" id="rb-ai-count" min="3" max="15" value="5"/>
+      </div>
+      <div class="hint" id="rb-ai-hint"></div>
+    </div>
+  </div>
+  <div class="mk-foot" id="rb-foot-new">
+    <button type="button" class="mk-btn ghost" onclick="closeDialog()">Cancel</button>
+    <button type="button" class="mk-btn" onclick="startBlank()">Start blank</button>
+    <button type="button" class="mk-btn pri" id="rb-ai-btn" onclick="aiGenerateRubric()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg> <span id="rb-ai-btn-label">Draft with AI</span></button>
+  </div>
+  <div class="mk-foot" id="rb-foot-details" hidden>
+    <button type="button" class="mk-btn ghost" onclick="closeDialog()">Cancel</button>
+    <button type="button" class="mk-btn pri" onclick="applyDetails()">Apply</button>
+  </div>
+</div></dialog>
 
 <div class="toast" id="toast"></div>
 
@@ -229,86 +112,48 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-
-    <!-- Page Header: Stats + New Button -->
-    <div class="rb-page-header">
-      <div class="rb-stat-strip">
-        <div class="rb-stat-item">
-          <div class="rb-stat-n" id="stat-total" style="color:var(--accent3)">0</div>
-          <div class="rb-stat-l">Total Rubrics</div>
+    <div class="mk" id="rb-list-view">
+      <div class="mk-head">
+        <div class="mk-tiles" id="rb-tiles"></div>
+        <button type="button" class="mk-btn pri big" onclick="openNewRubricModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Rubric</button>
+      </div>
+      <div class="mk-card">
+        <div class="mk-bar">
+          <span class="ttl" id="rb-list-title">All rubrics</span>
+          <span class="cnt" id="rb-count"></span>
+          <label class="mk-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="rb-search" oninput="renderList()" placeholder="Search by name, stage or program" aria-label="Search rubrics"/></label>
+          <label class="mk-check"><input type="checkbox" id="rb-show-archived" onchange="toggleArchived(this.checked)"/> Show archived</label>
         </div>
-        <div class="rb-stat-divider"></div>
-        <div class="rb-stat-item">
-          <div class="rb-stat-n" id="stat-criteria" style="color:var(--blue)">0</div>
-          <div class="rb-stat-l">Total Criteria</div>
-        </div>
-        <div class="rb-stat-divider"></div>
-        <div class="rb-stat-item">
-          <div class="rb-stat-n" style="color:var(--purple)" id="stat-types">0</div>
-          <div class="rb-stat-l">Rubric Types</div>
-        </div>
-        <div class="rb-stat-divider rb-mobile-divider"></div>
-        <div class="rb-stat-item rb-mobile-new-btn">
-          <button class="btn btn-primary" onclick="openNewRubricModal()" style="width:100%;justify-content:center">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New Rubric
-          </button>
+        <div class="mk-scroll">
+          <table class="mk-t">
+            <thead><tr><th>Rubric</th><th>Stage</th><th>Program</th><th>Criteria</th><th>Points</th><th>Last edited</th><th></th></tr></thead>
+            <tbody id="rb-list"></tbody>
+          </table>
         </div>
       </div>
-      <button class="btn btn-primary rb-desktop-new-btn" onclick="openNewRubricModal()">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        New Rubric
-      </button>
     </div>
-
-    <!-- Main Card with Tabs + List -->
-    <div class="card" style="padding:0;overflow:hidden">
-
-      <!-- Tab Header -->
-      <div class="rb-tab-header">
-        <div class="rb-tab-nav" id="type-tabs">
-          <button class="rb-tab-btn active" onclick="filterType('all',this)" data-type="all">
-            All <span class="rb-tab-count" id="tc-all">0</span>
-          </button>
-          <button class="rb-tab-btn" onclick="filterType('pre_proposal',this)" data-type="pre_proposal">
-            Pre-Proposal <span class="rb-tab-count" id="tc-pre_proposal">0</span>
-          </button>
-          <button class="rb-tab-btn" onclick="filterType('title_defense',this)" data-type="title_defense">
-            Title Defense <span class="rb-tab-count" id="tc-title_defense">0</span>
-          </button>
-          <button class="rb-tab-btn" onclick="filterType('pre_oral_defense',this)" data-type="pre_oral_defense">
-            Pre Oral <span class="rb-tab-count" id="tc-pre_oral_defense">0</span>
-          </button>
-          <button class="rb-tab-btn" onclick="filterType('final_oral_defense',this)" data-type="final_oral_defense">
-            Final Oral <span class="rb-tab-count" id="tc-final_oral_defense">0</span>
-          </button>
-          <button class="rb-tab-btn rb-tab-archived" onclick="filterType('archived',this)" data-type="archived">
-            Archived <span class="rb-tab-count" id="tc-archived">0</span>
-          </button>
+    <div class="mk" id="rb-editor-view" hidden>
+      <div class="mk-detail-head">
+        <div class="mk-dh-main" id="rb-ed-head"></div>
+        <div class="mk-meter" id="mk-total">
+          <div class="v"><span>Total</span><span><b>0</b> / 100 pts</span></div>
+          <div class="track"><div class="fill"></div></div>
+          <div class="hint"></div>
         </div>
-        <div class="rb-tab-search">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--text3)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="rb-search-input" id="rb-search" placeholder="Search rubrics&hellip;" oninput="renderList()"/>
+        <div class="mk-dh-btns">
+          <button type="button" class="mk-btn" onclick="showList()">Cancel</button>
+          <button type="button" class="mk-btn pri" id="form-save-btn" onclick="saveRubric()"><span id="form-save-label">Save changes</span></button>
         </div>
       </div>
-
-      <!-- Rubric List -->
-      <div id="rubric-list" style="padding:16px;display:flex;flex-direction:column;gap:12px;min-height:120px"></div>
-
-      <!-- Pagination Footer -->
-      <div class="rb-pagination" id="rb-pagination">
-        <div style="font-size:12px;color:var(--text3)" id="pg-info">No results</div>
-        <div class="rb-pg-btns">
-          <button class="rb-pg-btn" id="pg-prev" onclick="changePage(-1)" disabled>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <div class="rb-pg-pages" id="pg-pages"></div>
-          <button class="rb-pg-btn" id="pg-next" onclick="changePage(1)">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
+      <div class="mk-card">
+        <div class="mk-scroll">
+          <table class="mk-t mk-matrix">
+            <colgroup><col style="width:210px"><col><col><col><col><col style="width:40px"></colgroup>
+            <thead><tr><th>Criterion</th><th class="lv" style="--c:var(--green)">Excellent</th><th class="lv" style="--c:var(--blue)">Good</th><th class="lv" style="--c:var(--amber)">Fair</th><th class="lv" style="--c:var(--red)">Poor</th><th></th></tr></thead>
+            <tbody id="rb-matrix"></tbody>
+          </table>
         </div>
       </div>
-
     </div>
   </div>
   </div>
@@ -337,8 +182,30 @@ const TYPE_BG = {
 const LEVEL_LABELS = ["Excellent","Good","Fair","Poor"];
 const LEVEL_COLORS = ["var(--green)","var(--blue)","var(--amber)","var(--red)"];
 
-const ITEMS_PER_PAGE = 3;
-let currentPage = 1;
+const STAGE_SHORT = {
+  pre_proposal: "Pre-Proposal",
+  title_defense: "Title Defense",
+  pre_oral_defense: "Pre-Oral",
+  final_oral_defense: "Final Oral"
+};
+const SVG16 = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">';
+const STAGE_ICON = {
+  pre_proposal: SVG16 + '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>',
+  title_defense: SVG16 + '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+  pre_oral_defense: SVG16 + '<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg>',
+  final_oral_defense: SVG16 + '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>'
+};
+const ICON = {
+  plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  ok: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
+  warn: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  clock: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  archive: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>',
+  chev: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg>',
+  restore: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><polyline points="18 11 12 17 6 11"/></svg>'
+};
+const WARN_SVG = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+const PROGRAMS = @json(\App\Models\CapstoneExpert::PROGRAMS);
 
 function escHtml(str) {
   return String(str == null ? '' : str)
@@ -546,14 +413,9 @@ function syncScoreInputs() {
   draftCriteria.forEach(function (c, i) {
     (c.levels || []).forEach(function (lvl, li) {
       var next = String(lvl.score === '' || lvl.score === null ? '' : lvl.score);
-
-      // The top level shows in two places - the collapsed row and the open
-      // body - so both are written, and whichever has focus is left alone.
-      [document.getElementById('sc-' + i + '-' + li), document.getElementById('scb-' + i + '-' + li)]
-        .forEach(function (el) {
-          if (!el || el === focused) return;
-          if (el.value !== next) el.value = next;
-        });
+      var el = document.getElementById('sc-' + i + '-' + li);
+      if (!el || el === focused) return;
+      if (el.value !== next) el.value = next;
     });
   });
 
@@ -561,7 +423,8 @@ function syncScoreInputs() {
 }
 
 let rubrics = [];
-let activeFilter = "all";
+let stageFilter = '';
+let showArchived = false;
 let editingId = null;
 let draftCriteria = [];
 // Which criterion was just added, so scoring it makes room while editing an
@@ -583,7 +446,6 @@ async function loadRubrics() {
     const json = await res.json();
     if (json.success && json.data) {
       rubrics = json.data.map(normalizeRubric);
-      currentPage = 1;
       renderList();
       updateStats();
     }
@@ -601,6 +463,7 @@ function normalizeRubric(r) {
     program: r.program || '',
     description: r.description || '',
     isArchived: r.is_archived || false,
+    updatedAt: r.updated_at,
     criteria: (r.criteria || []).map(normalizeCriterion),
   };
 }
@@ -618,143 +481,112 @@ function normalizeCriterion(c) {
   };
 }
 
-// ── CRITERION BUILDER ─────────────────────────────────────────────────────────
-function addCriterion(preload) {
-  var crit = preload || { name: '', category: '', categoryMaxPoints: null, maxScore: 100, levels: LEVEL_LABELS.map(function(label) { return { label: label, score: '', desc: '' }; }) };
-  if (!preload) {
-    draftCriteria.push(crit);
-    newCriterionIndex = draftCriteria.length - 1;
-    // Open it: a new criterion is the one case where the levels do need
-    // filling in straight away.
-    openCriterion = newCriterionIndex;
-  }
+function blankCriterion(category) {
+  return { name: '', category: category || '', categoryMaxPoints: null, maxScore: 100, levels: LEVEL_LABELS.map(function(label) { return { label: label, score: '', desc: '' }; }) };
+}
+
+// Put an empty criterion at the given place and bring it into view.
+// Nothing to make room for until it is given points - that happens in
+// fitOnScoreCommitted() when the score is committed.
+function addCriterion(at, category) {
+  draftCriteria.splice(at, 0, blankCriterion(category));
+  newCriterionIndex = at;
   nameErrors = [];
   descErrors = [];
-  renderCriteriaBuilder();
-  // Nothing to make room for until it is given points - that happens in
-  // fitOnScoreCommitted() when the score is committed.
-  if (!preload) {
-    var list = document.getElementById('criteria-list');
-    var cards = list.querySelectorAll('.rb-criterion-card');
-    if (cards.length) {
-      cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }
+  renderMatrix();
+  var row = document.getElementById('crc-' + at);
+  if (row) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  return row;
 }
 
 function removeCriterion(idx) {
   draftCriteria.splice(idx, 1);
   nameErrors = [];
   descErrors = [];
-  renderCriteriaBuilder();
+  renderMatrix();
 }
 
-function renderCriteriaBuilder() {
-  var el = document.getElementById('criteria-list');
-  if (!draftCriteria.length) {
-    el.innerHTML = '<div class="rb-empty-criteria">' +
-      '<div class="rb-empty-criteria-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--text3)" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>' +
-      '<div style="font-size:13px;font-weight:500;color:var(--text2)">No criteria yet</div>' +
-      '<div style="font-size:12px;color:var(--text3);margin-top:3px">Click "Add Criterion" to get started</div>' +
-      '</div>';
-    updateTotalPts();
-    return;
-  }
-  // Draft criteria are grouped by category (AI-generated drafts arrive
-  // pre-grouped; manually-added criteria default to no category and just
-  // render under a plain "Ungrouped" heading). A header only renders when
-  // the category changes from the previous card, so criteria sharing a
-  // category stay visually clustered instead of repeating headers.
-  var html = '';
-  var lastCategory = undefined;
+// The categories in the order they first appear. Criteria with none share
+// one band.
+function categoryOrder() {
+  var cats = [];
+  draftCriteria.forEach(function (c) {
+    var cat = (c.category || '').trim();
+    if (cats.indexOf(cat) === -1) cats.push(cat);
+  });
+  return cats;
+}
 
-  draftCriteria.forEach(function(cr, i) {
-    var cat = (cr.category || '').trim();
-    if (cat !== lastCategory) {
-      lastCategory = cat;
-      var catTotal = round2(draftCriteria.reduce(function(s, c) {
-        return ((c.category || '').trim() === cat) ? s + criterionScore(c) : s;
-      }, 0));
-      html += '<div class="rb-category-header">' +
-        '<span>' + (cat ? escHtml(cat) : 'Ungrouped') + '</span>' +
-        '<span class="rb-category-header-pts">' + formatPts(catTotal) + ' pts</span>' +
-        '</div>';
-    }
-    html += renderCriterionCard(cr, i);
+// The bands as last drawn, so a band's buttons can name it by position.
+var renderedCats = [];
+
+function renderMatrix() {
+  renderedCats = categoryOrder();
+  var html = draftCriteria.length ? '' : '<tr><td colspan="6" class="mk-empty">No criteria yet. Add a category to start.</td></tr>';
+
+  renderedCats.forEach(function (cat, ci) {
+    html += '<tr class="mk-cat" data-cat="' + escHtml(cat) + '"><td colspan="6">' +
+      '<input class="mk-cat-in" value="' + escHtml(cat) + '" placeholder="Uncategorised" aria-label="Category name" onchange="renameCategory(' + ci + ', this.value)"/><span></span></td></tr>';
+    draftCriteria.forEach(function (cr, i) {
+      if ((cr.category || '').trim() === cat) html += criterionRow(cr, i);
+    });
+    html += '<tr class="mk-add-in"><td colspan="6"><button type="button" onclick="addCriterionToCategory(' + ci + ')">' + ICON.plus + ' Add criterion to ' + escHtml(cat || 'Uncategorised') + '</button></td></tr>';
+  });
+  html += '<tr class="mk-add"><td colspan="6"><button type="button" onclick="addCategory()">' + ICON.plus + ' Add category</button></td></tr>';
+
+  document.getElementById('rb-matrix').innerHTML = html;
+  renderEditorHead();
+  updateTotalPts();
+  refreshPinMarkers();
+}
+
+function criterionRow(cr, i) {
+  var nameErr = !!nameErrors[i];
+  var html = '<tr id="crc-' + i + '" class="' + (cr.pinned ? 'pinned' : '') + (nameErr ? ' rb-card-error' : '') + '"><td>' +
+    '<div class="mk-crit-row"><input class="mk-crit-in rb-crit-name-input' + (nameErr ? ' rb-error' : '') + '" value="' + escHtml(cr.name || '') + '" placeholder="Criterion name" aria-label="Criterion name" oninput="draftCriteria[' + i + '].name=this.value;clearNameError(' + i + ',this)"/>' +
+    '<button type="button" class="rb-pin" onclick="unpinCriterion(' + i + ')" title="You set this, so its points are left alone. Click to let it adjust again."><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button></div>' +
+    (topLevelOutranked(cr) ? '<div class="rb-crit-warn">' + WARN_SVG + escHtml(highestLevel(cr).label || 'A lower level') + ' is worth ' + formatPts(highestLevel(cr).score) + ' pts, more than ' + escHtml(cr.levels[0].label || 'Excellent') + ' at ' + formatPts(+cr.levels[0].score || 0) + '. This criterion counts as ' + formatPts(criterionScore(cr)) + ' pts.</div>' : '') +
+    (nameErr ? '<div class="rb-crit-name-error">' + WARN_SVG + ' Criterion Name is required.</div>' : '') +
+    '</td>';
+
+  (cr.levels || []).forEach(function (lv, li) {
+    var descErr = !!(descErrors[i] && descErrors[i][li]);
+    var label = escHtml(lv.label || LEVEL_LABELS[li]);
+    // Every level, not only the top one: a criterion is worth its highest,
+    // so raising Good above Excellent changes what it is worth and the rest
+    // of the rubric moves with it.
+    html += '<td><div class="mk-cell">' +
+      '<div class="mk-score"><input type="number" id="sc-' + i + '-' + li + '" value="' + escHtml(lv.score === null ? '' : lv.score) + '" min="0" step="0.25" placeholder="0" aria-label="' + label + ' points" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;syncScoreInputs();updateTotalPts()" onchange="fitOnScoreCommitted(' + i + ')"/> pts</div>' +
+      '<textarea class="mk-desc rb-desc-area' + (descErr ? ' rb-error' : '') + '" placeholder="Describe this performance level&hellip;" aria-label="' + label + ' description" oninput="draftCriteria[' + i + '].levels[' + li + '].desc=this.value;clearDescError(' + i + ',' + li + ',this)">' + escHtml(lv.desc || '') + '</textarea>' +
+      (descErr ? '<div class="rb-level-desc-error" id="ldesc-err-' + i + '-' + li + '">' + WARN_SVG + ' Performance level description is required.</div>' : '') +
+      '</div></td>';
   });
 
-  el.innerHTML = html;
-  updateTotalPts();
+  return html + '<td><button onclick="removeCriterion(' + i + ')" class="rb-remove-btn" title="Remove criterion"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></td></tr>';
 }
 
-// One row per criterion, collapsed.
-//
-// Every criterion used to render as a full card with its four performance
-// levels open - about 400px each, so a 27-criterion rubric was a 10,000-pixel
-// scroll to change one number. The row carries what you usually want (the
-// name and what it is worth, both editable in place), and the level
-// descriptions open only when you ask for them.
-function renderCriterionCard(cr, i) {
-  var hasNameErr = !!nameErrors[i];
-  var hasDescErr = !!(descErrors[i] && descErrors[i].some(Boolean));
-  var open = openCriterion === i;
+// A new criterion goes in after the band's last one.
+function addCriterionToCategory(ci) {
+  var cat = renderedCats[ci], at = draftCriteria.length;
+  draftCriteria.forEach(function (c, i) { if ((c.category || '').trim() === cat) at = i + 1; });
+  var row = addCriterion(at, cat);
+  if (row) row.querySelector('.mk-crit-in').focus({ preventScroll: true });
+}
 
-  return '<div class="rb-criterion-card' + (open ? ' open' : '') + (cr.pinned ? ' pinned' : '') + (hasNameErr || hasDescErr ? ' rb-card-error' : '') + '" id="crc-' + i + '">' +
+function addCategory() {
+  var cats = categoryOrder(), name = 'New category', n = 2;
+  while (cats.indexOf(name) !== -1) name = 'New category ' + n++;
+  addCriterion(draftCriteria.length, name);
+  var band = document.querySelectorAll('#rb-matrix .mk-cat-in')[renderedCats.indexOf(name)];
+  if (band) { band.focus({ preventScroll: true }); band.select(); }
+}
 
-    // ---- the row that is always visible ----
-    '<div class="rb-crit-row">' +
-      '<button type="button" class="rb-crit-toggle" onclick="toggleCriterion(' + i + ')" title="Show performance levels" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-        '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>' +
-      '</button>' +
-      '<div class="rb-crit-num">' + (i + 1) + '</div>' +
-      '<input class="input rb-crit-name-input' + (hasNameErr ? ' rb-error' : '') + '" value="' + escHtml(cr.name) + '" placeholder="Criterion name (e.g. Oral Presentation)&hellip;" oninput="draftCriteria[' + i + '].name=this.value;clearNameError(' + i + ',this)"/>' +
-      '<button type="button" class="rb-pin" onclick="unpinCriterion(' + i + ')" title="You set this, so its points are left alone. Click to let it adjust again."><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>' +
-      '<div class="rb-crit-row-pts">' +
-        '<input type="number" class="input rb-score-tiny" id="sc-' + i + '-0" value="' + cr.levels[0].score + '" placeholder="0" title="What this criterion is worth" oninput="draftCriteria[' + i + '].levels[0].score=+this.value;updateTotalPts()" onchange="fitOnScoreCommitted(' + i + ')" min="0" step="0.25"/>' +
-        '<span class="rb-pts-unit">pts</span>' +
-      '</div>' +
-      '<button onclick="removeCriterion(' + i + ')" class="rb-remove-btn" title="Remove criterion">' +
-        '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-      '</button>' +
-    '</div>' +
-
-    (topLevelOutranked(cr)
-      ? '<div class="rb-crit-warn">' +
-          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-          escHtml(highestLevel(cr).label || 'A lower level') + ' is worth ' + formatPts(highestLevel(cr).score) + ' pts, more than ' +
-          escHtml(cr.levels[0].label || 'Excellent') + ' at ' + formatPts(+cr.levels[0].score || 0) + '. This criterion counts as ' + formatPts(criterionScore(cr)) + ' pts.' +
-        '</div>'
-      : '') +
-    (hasNameErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Criterion Name is required.</div>' : '') +
-    (!open && hasDescErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>A performance level still needs a description &mdash; open this criterion to fill it in.</div>' : '') +
-
-    // ---- the part that opens ----
-    '<div class="rb-crit-body">' +
-      '<input class="input rb-crit-category-input" value="' + escHtml(cr.category || '') + '" placeholder="Category (optional, e.g. Oral Examination/Presentation)&hellip;" oninput="draftCriteria[' + i + '].category=this.value" onchange="renderCriteriaBuilder()"/>' +
-      '<div class="rb-levels-grid">' +
-      cr.levels.map(function(lv, li) {
-        var levelErr = !!(descErrors[i] && descErrors[i][li]);
-        return '<div class="rb-level-card">' +
-          '<div class="rb-level-label-wrap">' +
-          '<input type="text" class="input rb-level-label-input" style="color:' + LEVEL_COLORS[li] + '" value="' + escHtml(lv.label) + '" placeholder="' + LEVEL_LABELS[li] + '" maxlength="255" oninput="draftCriteria[' + i + '].levels[' + li + '].label=this.value"/>' +
-          '<div class="rb-level-input-wrap">' +
-          // The top level also appears on the collapsed row, so both write to
-          // the same value and each refreshes the other.
-          '<input type="number" class="input rb-score-tiny" id="scb-' + i + '-' + li + '" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;syncScoreInputs();updateTotalPts()"' +
-            // Every level, not only the top one: a criterion is worth
-            // its highest, so raising Good above Excellent changes what it
-            // is worth and the rest of the rubric moves with it.
-            ' onchange="fitOnScoreCommitted(' + i + ')" min="0" step="0.25"/>' +
-          '<span class="rb-pts-unit">pts</span>' +
-          '</div>' +
-          '</div>' +
-          '<textarea class="input rb-desc-area' + (levelErr ? ' rb-error' : '') + '" placeholder="Describe this performance level&hellip;" oninput="draftCriteria[' + i + '].levels[' + li + '].desc=this.value;clearDescError(' + i + ',' + li + ',this)">' + lv.desc + '</textarea>' +
-          (levelErr ? '<div class="rb-level-desc-error" id="ldesc-err-' + i + '-' + li + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Performance level description is required.</div>' : '') +
-          '</div>';
-      }).join('') +
-      '</div>' +
-    '</div>' +
-    '</div>';
+// Renaming a band renames it on every criterion in it. Giving it another
+// band's name merges the two.
+function renameCategory(ci, val) {
+  var from = renderedCats[ci], to = val.trim();
+  draftCriteria.forEach(function (c) { if ((c.category || '').trim() === from) c.category = to; });
+  renderMatrix();
 }
 
 // A criterion is worth its highest level, so a Good scored above Excellent
@@ -775,29 +607,6 @@ function topLevelOutranked(cr) {
   var top = +cr.levels[0].score || 0;
 
   return criterionScore(cr) > top + 0.001;
-}
-
-// Which criterion is open. One at a time - opening them all is the scroll
-// this replaced.
-let openCriterion = null;
-
-// Which rubric's criteria preview is expanded on the list. One at a time,
-// so the list stays a list.
-let openRubric = null;
-
-function toggleRubricPreview(id) {
-  openRubric = (openRubric === id) ? null : id;
-  renderList();
-}
-
-function toggleCriterion(i) {
-  openCriterion = (openCriterion === i) ? null : i;
-  renderCriteriaBuilder();
-
-  if (openCriterion === i) {
-    var card = document.getElementById('crc-' + i);
-    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
 }
 
 function clearNameError(i, el) {
@@ -824,19 +633,17 @@ function clearDescError(i, li, el) {
 
 function validateCriterionNames() {
   nameErrors = draftCriteria.map(function(c) { return !(c.name || '').trim(); });
-  renderCriteriaBuilder();
+  renderMatrix();
   return nameErrors.indexOf(true) === -1;
 }
 
-// Open the first criterion with a problem, so an error is never hidden
-// inside a collapsed row.
+// Bring the first criterion with a problem into view, so an error is never
+// left off-screen.
 function openFirstProblemCriterion() {
   for (var i = 0; i < draftCriteria.length; i++) {
     if (nameErrors[i] || (descErrors[i] && descErrors[i].some(Boolean))) {
-      openCriterion = i;
-      renderCriteriaBuilder();
-      var card = document.getElementById('crc-' + i);
-      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      var row = document.getElementById('crc-' + i);
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
   }
@@ -846,7 +653,7 @@ function validateLevelDescriptions() {
   descErrors = draftCriteria.map(function(c) {
     return (c.levels || []).map(function(lv) { return !(lv.desc || '').trim(); });
   });
-  renderCriteriaBuilder();
+  renderMatrix();
   return descErrors.some(function(errs) { return errs.some(Boolean); }) === false;
 }
 
@@ -870,67 +677,34 @@ function updateTotalPts() {
   var total = draftTotal();
   var atHundred = isAtHundred(total);
   var diff = round2(100 - total);
+  var meter = document.getElementById('mk-total');
+  var num = meter.querySelector('.v b');
+  var fill = meter.querySelector('.fill');
 
-  var lbl = document.getElementById('total-pts-label');
-  var hint = document.getElementById('total-pts-hint');
-  var note = document.getElementById('total-pts-note');
-  var saveBtn = document.getElementById('form-save-btn');
+  num.textContent = formatPts(total);
+  num.classList.toggle('amb', !atHundred);
+  fill.style.width = Math.max(0, Math.min(total, 100)) + '%';
+  fill.classList.toggle('amb', !atHundred);
+  meter.querySelector('.hint').textContent = atHundred ? 'Adds up to 100.'
+    : diff > 0 ? formatPts(diff) + ' points still unassigned.'
+    : formatPts(-diff) + ' points over.';
 
-  if (lbl) {
-    lbl.textContent = formatPts(total) + ' / 100 pts';
-    lbl.className = 'rb-pts-badge' + (atHundred ? ' rb-pts-ok' : diff > 0 ? ' rb-pts-under' : ' rb-pts-over');
-  }
-  // The banner waits until you have stopped typing.
-  //
-  // It used to toggle on every keystroke, so ramping a number up one press at
-  // a time made it blink in and out as the total crossed 100. The small
-  // badge above stays live - that is the useful running feedback - while the
-  // banner only settles in once a score box no longer has focus.
-  if (note) {
-    var editingAScore = document.activeElement && document.activeElement.classList
-      && document.activeElement.classList.contains('rb-score-tiny');
-
-    if (!editingAScore) {
-      note.classList.toggle('show', !atHundred);
-    } else if (atHundred) {
-      // Landing on 100 mid-edit is worth reflecting straight away - that is
-      // the banner going away, never appearing.
-      note.classList.remove('show');
-    }
-  }
-  if (hint) {
-    if (atHundred) {
-      hint.textContent = 'Adds up to 100.';
-      hint.className = 'rb-pts-hint rb-pts-hint-ok';
-    } else if (diff > 0) {
-      hint.textContent = formatPts(diff) + ' points still unassigned.';
-      hint.className = 'rb-pts-hint rb-pts-hint-warn';
-    } else {
-      hint.textContent = formatPts(-diff) + ' points over.';
-      hint.className = 'rb-pts-hint rb-pts-hint-warn';
-    }
-  }
   // Never disabled on the total. A rubric is under 100 for the whole time it
   // is being built, and blocking the save meant you could not stop halfway -
   // the page warns instead.
-  if (saveBtn) {
-    saveBtn.disabled = false;
-  }
+  document.getElementById('form-save-btn').disabled = false;
   refreshCategoryTotals();
 }
 
 // Each category's running subtotal. Redrawn on every change, not only on a
 // full re-render, or the header keeps showing what it was worth before.
 function refreshCategoryTotals() {
-  document.querySelectorAll('.rb-category-header').forEach(function (header) {
-    var name = (header.firstElementChild && header.firstElementChild.textContent || '').trim();
-    var cat = name === 'Ungrouped' ? '' : name;
+  document.querySelectorAll('#rb-matrix tr.mk-cat').forEach(function (band) {
+    var cat = band.dataset.cat;
     var total = round2(draftCriteria.reduce(function (sum, c) {
       return ((c.category || '').trim() === cat) ? sum + criterionScore(c) : sum;
     }, 0));
-
-    var ptsEl = header.querySelector('.rb-category-header-pts');
-    if (ptsEl) ptsEl.textContent = formatPts(total) + ' pts';
+    band.querySelector('span').textContent = formatPts(total) + ' pts';
   });
 }
 
@@ -939,70 +713,109 @@ function formatPts(n) {
   return String(round2(n));
 }
 
-// ── MODAL ─────────────────────────────────────────────────────────────────────
+// ── DIALOG AND EDITOR ─────────────────────────────────────────────────────────
+var rbDialog = document.getElementById('rb-dialog');
+
+// The same dialog starts a rubric and edits its details; only a new rubric
+// gets the AI box and Start blank.
+function showDialog(isNew) {
+  document.getElementById('rb-dlg-title').textContent = isNew ? 'New Rubric' : 'Edit details';
+  document.getElementById('rb-dlg-sub').textContent = isNew
+    ? 'Name it and pick the stage. The criteria come next, on the full page.'
+    : 'Change the name, stage, program or description.';
+  document.getElementById('rb-ai-box').hidden = !isNew;
+  document.getElementById('rb-foot-new').hidden = !isNew;
+  document.getElementById('rb-foot-details').hidden = isNew;
+  CapsModal.open(rbDialog, { focus: '#rb-name' });
+}
+
 function openNewRubricModal() {
   editingId = null;
-  document.getElementById('rb-name').value = '';
-  document.getElementById('rb-type').value = '';
-  document.getElementById('rb-program').value = '';
-  document.getElementById('rb-desc').value = '';
-  document.querySelectorAll('.rb-type-opt').forEach(function(o) { o.classList.remove('selected'); });
-  document.querySelectorAll('input[name=rb-type-radio]').forEach(function(r) { r.checked = false; });
-  document.getElementById('modal-form-title').textContent = 'New Rubric';
-  document.getElementById('modal-form-sub').textContent = 'Fill in the details below to create a grading rubric.';
-  document.getElementById('form-save-label').textContent = 'Save Rubric';
+  ['rb-name', 'rb-program', 'rb-desc', 'rb-ai-topic'].forEach(function (id) {
+    document.getElementById(id).value = '';
+  });
+  selectStage('');
+  document.getElementById('form-save-label').textContent = 'Save rubric';
   draftCriteria = [];
-  // A rubric arrives with nothing pinned - only figures set in this sitting
-  // are held.
-  draftCriteria.forEach(function (c) { c.pinned = false; });
   nameErrors = [];
   descErrors = [];
-  goToStep1();
-  document.getElementById('rubric-modal').classList.add('show');
+  newCriterionIndex = null;
+  showDialog(true);
 }
 
-function closeRubricModal() {
-  document.getElementById('rubric-modal').classList.remove('show');
+function openDetails() { showDialog(false); }
+
+function closeDialog() {
+  if (rbDialog.open) CapsModal.close(rbDialog);
 }
 
-document.getElementById('rubric-modal').addEventListener('click', function(e) {
-  if (e.target === e.currentTarget) closeRubricModal();
-});
+// A name and a stage are all a rubric needs before its criteria.
+function detailsValid() {
+  var name = document.getElementById('rb-name');
+  if (!name.value.trim()) { toast('Enter a rubric name.', 'error'); name.focus(); return false; }
+  if (!document.getElementById('rb-type').value) { toast('Select a rubric type.', 'error'); return false; }
+  return true;
+}
+
+function startBlank() {
+  if (!detailsValid()) return;
+  draftCriteria = [];
+  openEditor();
+}
+
+function applyDetails() {
+  if (!detailsValid()) return;
+  closeDialog();
+  renderEditorHead();
+}
+
+function selectStage(type) {
+  document.getElementById('rb-type').value = type;
+  document.querySelectorAll('.mk-stages button[data-type]').forEach(function (b) {
+    b.classList.toggle('on', b.dataset.type === type);
+  });
+  updateAiPanelForType(type);
+}
+
+// The editor's heading, drawn from the dialog's fields so Edit details
+// shows straight away. The top bar becomes the way back to the list.
+function renderEditorHead() {
+  var name = document.getElementById('rb-name').value.trim();
+  var type = document.getElementById('rb-type').value;
+  var prog = document.getElementById('rb-program').value;
+  var desc = document.getElementById('rb-desc').value.trim();
+  var n = draftCriteria.length, k = categoryOrder().length;
+
+  document.getElementById('rb-ed-head').innerHTML = '<h2>' + escHtml(name) + '</h2>' +
+    '<div class="mk-meta"><span class="mk-stage" style="--c:' + (TYPE_COLOR[type] || 'var(--text3)') + '">' + escHtml(TYPE_LABEL[type] || '') + '</span>' +
+    '<span class="sep">|</span>' + escHtml(prog || 'All programs') +
+    '<span class="sep">|</span>' + n + (n === 1 ? ' criterion' : ' criteria') + ' in ' + k + (k === 1 ? ' category' : ' categories') +
+    '<span class="sep">|</span><a href="#" onclick="openDetails();return false">Edit details</a></div>' +
+    (desc ? '<div class="mk-dh-desc">' + escHtml(desc) + '</div>' : '');
+
+  document.querySelector('.page-title').innerHTML = '<nav class="mk-crumb"><a href="#" onclick="showList();return false">Grading Rubrics</a><span class="sep">&rsaquo;</span><span>' + escHtml(name) + '</span></nav>';
+}
+
+function openEditor() {
+  closeDialog();
+  document.getElementById('rb-list-view').hidden = true;
+  document.getElementById('rb-editor-view').hidden = false;
+  renderMatrix();
+}
+
+function showList() {
+  document.getElementById('rb-editor-view').hidden = true;
+  document.getElementById('rb-list-view').hidden = false;
+  document.querySelector('.page-title').textContent = 'Grading Rubrics';
+}
+
 document.getElementById('del-modal').addEventListener('click', function(e) {
   if (e.target === e.currentTarget) closeDelModal();
 });
 
-function goToStep1() {
-  document.getElementById('rb-modal-box').classList.remove('modal-criteria-mode');
-  document.getElementById('modal-step-1').style.display = '';
-  document.getElementById('modal-step-2').style.display = 'none';
-  document.getElementById('step-ind-1').className = 'modal-step active';
-  document.getElementById('step-ind-2').className = 'modal-step';
-}
-
-function goToStep2() {
-  var name = document.getElementById('rb-name').value.trim();
-  var type = document.getElementById('rb-type').value;
-  if (!name) { document.getElementById('rb-name').focus(); toast('Enter a rubric name.', 'error'); return; }
-  if (!type) { toast('Select a rubric type.', 'error'); return; }
-  document.getElementById('modal-step-1').style.display = 'none';
-  document.getElementById('modal-step-2').style.display = 'flex';
-  document.getElementById('rb-modal-box').classList.add('modal-criteria-mode');
-  document.getElementById('step-ind-1').className = 'modal-step done';
-  document.getElementById('step-ind-2').className = 'modal-step active';
-  renderCriteriaBuilder();
-}
-
-function selectRbType(radio) {
-  document.getElementById('rb-type').value = radio.value;
-  document.querySelectorAll('.rb-type-opt').forEach(function(o) { o.classList.remove('selected'); });
-  radio.closest('.rb-type-opt').classList.add('selected');
-  updateAiPanelForType(radio.value);
-}
-
 // Pre-Proposal Defense reproduces the school's real rubric (all 12 of its
 // actual criteria) - there's nothing to type or choose a count for, so
-// those fields hide and Generate becomes a literal one-click action.
+// those fields hide and Draft with AI becomes a literal one-click action.
 function updateAiPanelForType(type) {
   var isPreProposal = type === 'pre_proposal';
   var topicField = document.getElementById('rb-ai-field-topic');
@@ -1012,8 +825,8 @@ function updateAiPanelForType(type) {
   if (countField) countField.style.display = isPreProposal ? 'none' : '';
   if (hint) {
     hint.textContent = isPreProposal
-      ? 'Generates the school\'s real Pre-Proposal Defense Rubric (all 12 criteria) — just click Generate.'
-      : 'Select a rubric type above, then generate a draft name, description, and criteria you can review and edit before saving. "# of Criteria" sets how many scoring criteria the draft will include.';
+      ? 'Generates the school\'s real Pre-Proposal Defense Rubric (all 12 criteria) — just click Draft with AI.'
+      : 'Filled in for this stage; change it as you like. You check and change everything the AI drafts before saving.';
   }
 
   // A bare "BSIT Capstone" left the model guessing what the stage grades, and
@@ -1034,8 +847,8 @@ var AI_FOCUS_TEMPLATES = {
 
 // ── AI DRAFT ──────────────────────────────────────────────────────────────────
 // Drafts name/description/criteria via the same Ollama model used by the
-// duplication checker, then drops the result straight into the Step 2
-// criteria builder so it's just a normal editable draft — nothing is saved
+// duplication checker, then opens it in the rubric editor so it's just a
+// normal editable draft — nothing is saved
 // until the admin clicks Save/Update Rubric like any other rubric.
 async function aiGenerateRubric() {
   var type = document.getElementById('rb-type').value;
@@ -1044,7 +857,7 @@ async function aiGenerateRubric() {
   var btn = document.getElementById('rb-ai-btn');
   var label = document.getElementById('rb-ai-btn-label');
   btn.disabled = true;
-  label.textContent = 'Generating…';
+  label.textContent = 'Drafting…';
 
   try {
     var res = await fetch('/api/admin/grading-rubrics/drafts', {
@@ -1079,13 +892,13 @@ async function aiGenerateRubric() {
     nameErrors = [];
     descErrors = [];
 
-    toast('Draft generated — review the criteria below before saving.');
-    goToStep2();
+    toast('Draft generated — review the criteria before saving.');
+    openEditor();
   } catch (e) {
     toast('AI generation failed. Please try again.', 'error');
   } finally {
     btn.disabled = false;
-    label.textContent = 'Generate';
+    label.textContent = 'Draft with AI';
   }
 }
 
@@ -1095,8 +908,8 @@ async function saveRubric() {
   var type = document.getElementById('rb-type').value;
   var program = document.getElementById('rb-program').value;
   var desc = document.getElementById('rb-desc').value.trim();
-  if (!name) { toast('Enter a rubric name.', 'error'); goToStep1(); return; }
-  if (!type) { toast('Select a rubric type.', 'error'); goToStep1(); return; }
+  if (!name) { toast('Enter a rubric name.', 'error'); openDetails(); return; }
+  if (!type) { toast('Select a rubric type.', 'error'); openDetails(); return; }
   if (!draftCriteria.length) { toast('Add at least one criterion.', 'error'); return; }
   if (!validateCriterionNames()) { toast('Criterion Name is required for every criterion.', 'error'); openFirstProblemCriterion(); return; }
   if (!validateLevelDescriptions()) { toast('Performance level description is required for every performance level.', 'error'); openFirstProblemCriterion(); return; }
@@ -1153,7 +966,7 @@ async function saveRubric() {
       return;
     }
 
-    closeRubricModal();
+    showList();
     await loadRubrics();
     toast(editingId ? 'Rubric updated.' : 'Rubric saved.');
   } catch (e) {
@@ -1167,25 +980,18 @@ function editRubric(id) {
   if (!rb) return;
   editingId = id;
   document.getElementById('rb-name').value = rb.name;
-  document.getElementById('rb-type').value = rb.type;
   document.getElementById('rb-program').value = rb.program || '';
   document.getElementById('rb-desc').value = rb.description || '';
-  document.getElementById('modal-form-title').textContent = 'Edit Rubric';
-  document.getElementById('modal-form-sub').textContent = 'Update the rubric details and criteria below.';
-  document.getElementById('form-save-label').textContent = 'Update Rubric';
-  document.querySelectorAll('.rb-type-opt').forEach(function(o) { o.classList.remove('selected'); });
-  document.querySelectorAll('input[name=rb-type-radio]').forEach(function(r) {
-    r.checked = (r.value === rb.type);
-    if (r.checked) r.closest('.rb-type-opt').classList.add('selected');
-  });
+  selectStage(rb.type);
+  document.getElementById('form-save-label').textContent = 'Save changes';
   draftCriteria = JSON.parse(JSON.stringify(rb.criteria));
   // A rubric arrives with nothing pinned - only figures set in this sitting
   // are held.
   draftCriteria.forEach(function (c) { c.pinned = false; });
   nameErrors = [];
   descErrors = [];
-  goToStep1();
-  document.getElementById('rubric-modal').classList.add('show');
+  newCriterionIndex = null;
+  openEditor();
 }
 
 // ── ARCHIVE via API ────────────────────────────────────────────────────────────────
@@ -1201,7 +1007,7 @@ function confirmDelete(id) {
   btn.textContent = 'Archive';
   document.getElementById('del-modal-title').textContent = 'Archive Rubric?';
   var rb = rubrics.find(function(r) { return r.id === id; });
-  document.getElementById('del-modal-sub').textContent = '"' + (rb ? rb.name : '') + '" will be archived. You can restore it later from the Archived tab.';
+  document.getElementById('del-modal-sub').textContent = '"' + (rb ? rb.name : '') + '" will be archived. You can restore it later with Show archived.';
   document.getElementById('del-modal').classList.add('show');
   btn.onclick = executeArchive;
 }
@@ -1304,164 +1110,114 @@ function closeDelModal() {
   document.getElementById('del-modal').classList.remove('show');
 }
 
-// ── FILTER ────────────────────────────────────────────────────────────────────
-function filterType(type, btn) {
-  activeFilter = type;
-  currentPage = 1;
-  document.querySelectorAll('#type-tabs .rb-tab-btn').forEach(function(b) { b.classList.remove('active'); });
-  btn.classList.add('active');
+// ── LIST ──────────────────────────────────────────────────────────────────────
+// A tile filters the list to its stage; clicking it again shows every stage.
+function setStage(t) {
+  stageFilter = stageFilter === t ? '' : t;
+  renderList();
+  updateStats();
+}
+
+function toggleArchived(on) {
+  showArchived = on;
   renderList();
 }
 
-// ── PAGINATION ────────────────────────────────────────────────────────────────
 function getFiltered() {
   var q = (document.getElementById('rb-search').value || '').trim().toLowerCase();
-  if (activeFilter === 'all') {
-    var list = rubrics.filter(function(r) { return !r.isArchived; });
-  } else if (activeFilter === 'archived') {
-    var list = rubrics.filter(function(r) { return r.isArchived; });
-  } else {
-    var list = rubrics.filter(function(r) { return r.type === activeFilter && !r.isArchived; });
-  }
-  if (q) {
-    list = list.filter(function(r) {
-      return r.name.toLowerCase().includes(q) ||
-        (r.description || '').toLowerCase().includes(q) ||
-        (TYPE_LABEL[r.type] || '').toLowerCase().includes(q) ||
-        (r.program || 'all programs').toLowerCase().includes(q);
-    });
-  }
-  return list;
-}
-
-function changePage(dir) {
-  var filtered = getFiltered();
-  var totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  currentPage = Math.min(Math.max(1, currentPage + dir), totalPages);
-  renderList();
-}
-
-function jumpPage(p) { currentPage = p; renderList(); }
-
-// ── RENDER LIST ───────────────────────────────────────────────────────────────
-function renderList() {
-  var filtered = getFiltered();
-  var totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  if (currentPage > totalPages) currentPage = totalPages;
-  var start = (currentPage - 1) * ITEMS_PER_PAGE;
-  var paged = filtered.slice(start, start + ITEMS_PER_PAGE);
-
-  ['all', 'pre_proposal', 'title_defense', 'pre_oral_defense', 'final_oral_defense', 'archived'].forEach(function(t) {
-    var el = document.getElementById('tc-' + t);
-    if (el) el.textContent = t === 'all' ? rubrics.filter(function(r) { return !r.isArchived; }).length : (t === 'archived' ? rubrics.filter(function(r) { return r.isArchived; }).length : rubrics.filter(function(r) { return r.type === t && !r.isArchived; }).length);
+  return rubrics.filter(function (r) {
+    if (r.isArchived && !showArchived) return false;
+    if (stageFilter && r.type !== stageFilter) return false;
+    if (!q) return true;
+    return [r.name, r.description, TYPE_LABEL[r.type], r.program || 'all programs'].join(' ').toLowerCase().indexOf(q) !== -1;
   });
-
-  var el = document.getElementById('rubric-list');
-  if (!filtered.length) {
-    el.innerHTML = '<div class="rb-empty-state">' +
-      '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--border2)" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' +
-      '<div style="font-size:14px;font-weight:500;color:var(--text2);margin-top:10px">No rubrics found</div>' +
-      '<div style="font-size:12px;color:var(--text3);margin-top:4px">Try a different filter or add a new rubric.</div>' +
-      '</div>';
-    renderPagination(0, 1);
-    return;
-  }
-
-  el.innerHTML = paged.map(function(rb) {
-    var total = rb.criteria.reduce(function(s, c) {
-      return s + criterionScore(c);
-    }, 0);
-    var col = TYPE_COLOR[rb.type] || 'var(--text3)';
-    var bg = TYPE_BG[rb.type] || 'var(--bg4)';
-    // Edit and Delete live in the header, beside the rubric's name.
-    //
-    // They used to sit in a footer BELOW every criterion, so acting on a
-    // 27-criterion rubric meant scrolling past all 27 to reach the button,
-    // then scrolling back up. The criteria are a preview, not the point of
-    // this page, so they fold away too - the list is for finding a rubric
-    // and doing something with it.
-    var open = openRubric === rb.id;
-
-    return '<div class="card rb-rubric-card' + (open ? ' open' : '') + '" style="padding:0;overflow:hidden' + (rb.isArchived ? ';opacity:0.6' : '') + '">' +
-      '<div class="rb-rubric-header">' +
-      '<div style="flex:1;min-width:0">' +
-      '<div style="margin-bottom:6px"><span class="badge" style="background:' + bg + ';color:' + col + ';font-size:10px;font-weight:600">' + (TYPE_LABEL[rb.type] || rb.type) + '</span>' +
-        ' <span class="badge" style="background:var(--bg4);color:var(--text2);font-size:10px;font-weight:600">' + escHtml(rb.program || 'All programs') + '</span>' + (rb.isArchived ? ' <span class="badge" style="background:var(--amber-bg);color:var(--amber);font-size:9px;font-weight:600;border:1px solid rgba(217,119,6,0.2)">ARCHIVED</span>' : '') + '</div>' +
-      '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px">' + rb.name + '</div>' +
-      (rb.description ? '<div style="font-size:12px;color:var(--text3)">' + rb.description + '</div>' : '') +
-      '</div>' +
-
-      '<div class="rb-card-side">' +
-      '<div style="text-align:right">' +
-      '<div style="font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:' + col + '">' + formatPts(round2(total)) + '<span style="font-size:11px;color:var(--text3);font-family:\'DM Sans\',sans-serif"> pts</span></div>' +
-      '<div style="font-size:11px;color:var(--text3)">' + rb.criteria.length + ' criteria</div>' +
-      '</div>' +
-      '<div class="rb-card-actions">' +
-      (rb.isArchived
-        ? '<button class="btn" style="font-size:11px;padding:5px 14px;background:var(--green-bg);color:var(--green);border:1px solid var(--green)" onclick="confirmRestore(' + rb.id + ')">' +
-          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14"/><polyline points="18 11 12 17 6 11"/></svg> Restore</button>'
-        : '<button class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="editRubric(' + rb.id + ')">' +
-          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4z"/></svg> Edit</button>' +
-
-          '<button class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="confirmDelete(' + rb.id + ')">' +
-          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Archive</button>'
-
-      ) +
-      '</div>' +
-      '</div>' +
-      '</div>' +
-
-      (rb.criteria.length
-        ? '<button type="button" class="rb-preview-toggle" onclick="toggleRubricPreview(' + rb.id + ')" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-            '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>' +
-            (open ? 'Hide the ' + rb.criteria.length + ' criteria' : 'Show the ' + rb.criteria.length + ' criteria') +
-          '</button>'
-        : '') +
-
-      '<div class="rb-rubric-preview" style="padding:0 18px 14px">' +
-      rb.criteria.map(function(cr, i) {
-        return '<div class="rb-crit-row">' +
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
-          '<div style="font-size:12px;font-weight:600;color:var(--text)">' + (i + 1) + '. ' + cr.name + '</div>' +
-          '<span style="font-variant-numeric:tabular-nums;font-size:11px;color:' + col + ';font-weight:700">' + formatPts(criterionScore(cr)) + ' pts</span>' +
-          '</div>' +
-          '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">' +
-          cr.levels.map(function(lv, li) {
-            return '<div class="rb-level-chip">' +
-              '<div style="font-size:9px;font-weight:700;color:' + LEVEL_COLORS[li] + ';margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px">' + escHtml(lv.label || LEVEL_LABELS[li]) + '</div>' +
-              '<div class="rb-level-score">' + lv.score + ' pts</div>' +
-              '<div class="rb-level-desc">' + lv.desc + '</div>' +
-              '</div>';
-          }).join('') +
-          '</div>' +
-          '</div>';
-      }).join('') +
-      '</div>' +
-      '</div>';
-  }).join('');
-
-  renderPagination(filtered.length, totalPages);
 }
 
-function renderPagination(total, totalPages) {
-  var start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
-  var end = Math.min(currentPage * ITEMS_PER_PAGE, total);
-  document.getElementById('pg-info').textContent = total ? 'Showing ' + start + '\u2013' + end + ' of ' + total : 'No results';
-  document.getElementById('pg-prev').disabled = currentPage <= 1;
-  document.getElementById('pg-next').disabled = currentPage >= totalPages;
-  var html = '';
-  for (var p = 1; p <= totalPages; p++) {
-    html += '<button class="rb-pg-num' + (p === currentPage ? ' active' : '') + '" onclick="jumpPage(' + p + ')">' + p + '</button>';
+function fmtDate(d) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function relTime(d) {
+  var days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 864e5);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return days + ' days ago';
+  if (days < 60) { var w = Math.floor(days / 7); return w + (w === 1 ? ' week ago' : ' weeks ago'); }
+  return Math.floor(days / 30) + ' months ago';
+}
+
+// Criteria with no category count as one category between them.
+function categoryCount(r) {
+  var seen = {};
+  (r.criteria || []).forEach(function (c) { seen[(c.category || '').trim()] = 1; });
+  return Object.keys(seen).length;
+}
+
+function joinAnd(a) {
+  return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+}
+
+// Which programs a stage's rubrics cover. Archived ones grade nobody.
+function coverage(type) {
+  var live = rubrics.filter(function (r) { return r.type === type && !r.isArchived; });
+  var own = PROGRAMS.filter(function (p) { return live.some(function (r) { return r.program === p; }); });
+  var missing = PROGRAMS.filter(function (p) { return own.indexOf(p) === -1; });
+
+  if (live.some(function (r) { return !r.program; })) {
+    return { ok: true, text: 'All programs' + (own.length ? ' · ' + joinAnd(own) + (own.length === 1 ? ' has its own' : ' have their own') : '') };
   }
-  document.getElementById('pg-pages').innerHTML = html;
-  document.getElementById('rb-pagination').style.display = 'flex';
+  if (own.length && !missing.length) return { ok: true, text: 'Every program has its own' };
+  if (own.length) return { ok: false, text: joinAnd(missing) + (missing.length === 1 ? ' has none' : ' have none') };
+  return { ok: false, text: 'None yet' };
+}
+
+function rubricRow(r) {
+  var crit = r.criteria || [];
+  var k = categoryCount(r);
+  var total = round2(crit.reduce(function (s, c) { return s + criterionScore(c); }, 0));
+  var diff = round2(100 - total);
+  var when = r.updatedAt ? new Date(r.updatedAt) : null;
+  var color = TYPE_COLOR[r.type] || 'var(--text3)';
+
+  return '<tr' + (r.isArchived ? ' style="opacity:.6"' : '') + '>' +
+    '<td><div class="mk-rub"><span class="mk-ic" style="--c:' + color + '">' + (STAGE_ICON[r.type] || '') + '</span><div class="tx">' +
+      '<div class="nm">' + escHtml(r.name) + '</div>' +
+      (r.description ? '<div class="ds">' + escHtml(r.description) + '</div>' : '<div class="ds none">No description yet</div>') +
+    '</div></div></td>' +
+    '<td><span class="mk-stage" style="--c:' + color + '">' + escHtml(TYPE_LABEL[r.type] || r.type) + '</span></td>' +
+    '<td class="nw">' + escHtml(r.program || 'All programs') + '</td>' +
+    '<td class="mk-num"><b>' + crit.length + '</b><div class="sub">' + k + (k === 1 ? ' category' : ' categories') + '</div></td>' +
+    '<td class="mk-num">' + (isAtHundred(total)
+      ? '<span class="mk-ok">' + ICON.ok + '100 / 100</span><div class="sub">Adds up</div>'
+      : '<span class="mk-short">' + ICON.warn + formatPts(total) + ' / 100</span><div class="sub amb">' + formatPts(Math.abs(diff)) + (diff > 0 ? ' points short' : ' points over') + '</div>') + '</td>' +
+    '<td class="nw">' + (when && !isNaN(when)
+      ? '<span class="mk-when">' + ICON.clock + fmtDate(when) + '</span><div class="sub">' + relTime(when) + '</div>'
+      : '&mdash;') + '</td>' +
+    '<td><div class="mk-act"><button type="button" class="mk-btn" onclick="editRubric(' + r.id + ')">Open' + ICON.chev + '</button>' +
+      (r.isArchived
+        ? '<button type="button" class="mk-btn ghost" onclick="confirmRestore(' + r.id + ')">' + ICON.restore + 'Restore</button>'
+        : '<button type="button" class="mk-btn ghost" onclick="confirmDelete(' + r.id + ')">' + ICON.archive + 'Archive</button>') +
+    '</div></td></tr>';
+}
+
+function renderList() {
+  var list = getFiltered();
+  document.getElementById('rb-count').textContent = list.length + (list.length === 1 ? ' rubric' : ' rubrics');
+  document.getElementById('rb-list-title').textContent = stageFilter ? STAGE_SHORT[stageFilter] : 'All rubrics';
+  document.getElementById('rb-list').innerHTML = list.length ? list.map(rubricRow).join('')
+    : '<tr><td colspan="7"><div class="mk-empty"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--border2)" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' +
+      '<div style="font-weight:600;color:var(--text2);margin-top:8px">No rubrics found</div><div style="font-size:13px;margin-top:2px">Try a different filter or add a new rubric.</div></div></td></tr>';
 }
 
 function updateStats() {
-  var visible = getFiltered();
-  document.getElementById('stat-total').textContent = visible.length;
-  document.getElementById('stat-criteria').textContent = visible.reduce(function(s, r) { return s + r.criteria.length; }, 0);
-  document.getElementById('stat-types').textContent = new Set(visible.map(function(r) { return r.type; })).size;
+  document.getElementById('rb-tiles').innerHTML = Object.keys(TYPE_LABEL).map(function (t) {
+    var n = rubrics.filter(function (r) { return r.type === t && !r.isArchived; }).length;
+    var cov = coverage(t);
+    return '<button type="button" class="mk-tile' + (stageFilter === t ? ' on' : '') + '" style="--c:' + TYPE_COLOR[t] + '" aria-pressed="' + (stageFilter === t) + '" onclick="setStage(\'' + t + '\')">' +
+      '<div class="top"><span class="mk-ic">' + STAGE_ICON[t] + '</span><b>' + STAGE_SHORT[t] + '</b></div>' +
+      '<div class="n">' + n + '<small>' + (n === 1 ? 'rubric' : 'rubrics') + '</small></div>' +
+      '<div class="cov' + (cov.ok ? '' : ' none') + '">' + (cov.ok ? ICON.ok : ICON.warn) + '<span>' + escHtml(cov.text) + '</span></div></button>';
+  }).join('');
 }
 
 function toast(msg, type) {
@@ -1527,432 +1283,215 @@ loadRubrics();
   background: rgba(0,0,0,0.5);
 }
 
-/* ── STATS CARDS (desktop + mobile) ── */
-.rb-stat-item {
-  align-items: center;
-  text-align: center;
-  gap: 4px;
-  transition: all 0.2s ease;
-}
-.rb-stat-item:hover { transform: translateY(-2px); }
-.rb-stat-n { text-align: center; font-size: 24px; transition: color 0.2s; }
-.rb-stat-l { text-align: center; font-size: 11px; letter-spacing: 0.6px; }
+/* ── ARCHIVE CONFIRM + TOAST ── */
+.modal-box{border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.25);animation:modalSlideIn .25s ease}
+.modal-overlay.show{animation:modalFadeIn .2s ease}
+.modal-actions .btn{padding:8px 20px;border-radius:10px}
+@keyframes modalFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes modalSlideIn{from{opacity:0;transform:translateY(-16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.toast{border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
 
-.rb-desktop-new-btn { display: inline-flex; }
-.rb-mobile-new-btn,
-.rb-mobile-divider { display: none; }
+/* ── LIST AND EDITOR ── */
+.mk{max-width:1360px;display:flex;flex-direction:column;gap:16px;height:100%;min-height:0}
+.mk *{box-sizing:border-box}
+.mk-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
 
-/* ── NEW RUBRIC BUTTON ── */
-.rb-desktop-new-btn {
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-.rb-desktop-new-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(201,168,44,.3);
-}
+/* stage tiles */
+.mk-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;flex:1}
+.mk-tile{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px 12px 16px;position:relative;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.mk-tile::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--c)}
+.mk-tile.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c) inset}
+.mk-tile b{display:block;font-size:13px;color:var(--text)}
+.mk-tile .n{font-size:22px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.2;margin-top:4px}
+.mk-tile .n small{font-size:12px;font-weight:500;color:var(--text3);margin-left:4px}
+.mk-tile .cov{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);margin-top:2px}
+.mk-tile .cov.none{color:var(--amber);font-weight:600}
+.mk-tile .top{display:flex;align-items:center;gap:10px}
+.mk-tile .cov svg{color:var(--green);flex-shrink:0}
+.mk-tile .cov.none svg{color:var(--amber)}
+/* stage icon: the stage colour on a light tint of itself */
+.mk-ic{flex-shrink:0;display:grid;place-items:center;width:34px;height:34px;border-radius:9px;color:var(--c);background:color-mix(in srgb,var(--c) 13%,#fff)}
+.mk-tile .mk-ic{width:28px;height:28px;border-radius:8px}
 
-/* ── TABS ── */
-.rb-tab-btn { padding: 8px 16px; font-size: 13px; }
-.rb-search-input:focus { width: 260px; }
+/* the list card */
+.mk-card{background:#fff;border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
+.mk-bar{display:flex;align-items:center;gap:16px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.mk-bar .ttl{font-weight:700;font-size:14px}
+.mk-bar .cnt{color:var(--text3);font-size:13px}
+.mk-search{margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:8px;padding:7px 10px;width:280px;color:var(--text3);font-size:13px}
+.mk-search input{border:none;outline:none;background:none;font:inherit;color:var(--text);flex:1;min-width:0}
+.mk-check{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap}
+.mk-check input{accent-color:var(--accent3)}
+.mk-scroll{overflow:auto;min-height:0;flex:1}
+table.mk-t{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.mk-t th{position:sticky;top:0;background:var(--bg3);text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);padding:10px 12px;border-bottom:1px solid var(--border);z-index:1}
+.mk-t td{padding:14px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text2)}
+.mk-t tr:hover td{background:var(--accent-light)}
+.mk-t .nm{font-weight:700;color:var(--text);font-size:14px}
+.mk-t .ds{font-size:12px;color:var(--text3);margin-top:2px;max-width:270px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mk-t .ds.none{font-style:italic}
+.mk-rub{display:flex;align-items:center;gap:12px;min-width:0}
+.mk-rub .tx{min-width:0}
+.mk-t .sub{font-size:12px;color:var(--text3);margin-top:2px;font-weight:400}
+.mk-t .sub.amb{color:var(--amber)}
+.mk-t .mk-num b{font-size:14px;color:var(--text)}
+.mk-ok,.mk-short,.mk-when{display:inline-flex;align-items:center;gap:6px}
+.mk-when{color:var(--text2)}
+.mk-when svg{color:var(--text3)}
+.mk-stage{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.mk-stage::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.mk-num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.mk-t td.nw{white-space:nowrap}
+.mk-ok{color:var(--green);font-weight:700}
+.mk-short{color:var(--amber);font-weight:700}
+.mk-act{display:flex;gap:6px;justify-content:flex-end}
+.mk-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 12px;font-family:inherit;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;cursor:pointer}
+.mk-btn:disabled{opacity:.6;cursor:default}
+.mk-btn.ghost{border-color:transparent;color:var(--text3);font-weight:500}
+.mk-btn.pri{background:var(--accent);border-color:var(--accent);color:#18191f;font-weight:700}
+.mk-btn.big{padding:9px 16px;font-size:14px}
+.mk-empty{padding:32px;text-align:center;color:var(--text3)}
 
-/* ── RUBRIC CARDS ── */
-.rb-rubric-card {
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
-}
-.rb-rubric-card:hover {
-  box-shadow: 0 8px 28px rgba(0,0,0,.1) !important;
-  transform: translateY(-2px);
-}
+/* editor */
+.mk-detail-head{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:flex;gap:24px;align-items:center}
+.mk-dh-main{flex:1;min-width:0}
+.mk-dh-main h2{margin:0;font-size:20px;color:var(--text)}
+.mk-meta{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--text2);margin-top:6px;flex-wrap:wrap}
+.mk-meta .sep{color:var(--border2)}
+.mk-meta a{color:var(--accent3);font-weight:600;text-decoration:none}
+.mk-dh-desc{font-size:13px;color:var(--text3);margin-top:6px}
+.mk-meter{width:230px}
+.mk-meter .v{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--text3)}
+.mk-meter .v b{font-size:20px;color:var(--green);font-variant-numeric:tabular-nums}
+.mk-meter .v b.amb{color:var(--amber)}
+.mk-meter .track{height:6px;border-radius:3px;background:var(--bg4);margin-top:6px;overflow:hidden}
+.mk-meter .fill{height:100%;background:var(--green)}
+.mk-meter .fill.amb{background:var(--amber)}
+.mk-meter .hint{font-size:12px;color:var(--text3);margin-top:6px}
+.mk-dh-btns{display:flex;gap:8px}
 
-/* ── RUBRIC FOOTER BUTTONS ── */
-.rb-rubric-footer .btn {
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-.rb-rubric-footer .btn:hover { transform: translateY(-1px); }
+.mk-matrix{table-layout:fixed}
+.mk-matrix th{padding:10px 12px}
+.mk-matrix th.lv{color:var(--c)}
+.mk-matrix td{padding:10px 12px;vertical-align:top}
+.mk-matrix tr:hover td{background:transparent}
+.mk-cat td{background:var(--bg3);padding:8px 12px;font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.04em;text-transform:uppercase}
+.mk-cat td span{float:right;font-weight:600;color:var(--text3);text-transform:none;letter-spacing:0;line-height:28px}
+.mk-cell{display:flex;flex-direction:column;gap:6px}
+.mk-score{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text3)}
+.mk-matrix .mk-score input{width:62px;border:1px solid var(--border);border-radius:6px;padding:4px 6px;font:inherit;font-size:13px;font-weight:700;color:var(--text);text-align:right;font-variant-numeric:tabular-nums;background:#fff}
+.mk-matrix .mk-desc{width:100%;resize:vertical;font:inherit;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;line-height:1.45;color:var(--text2);min-height:52px;background:#fff}
+.mk-matrix .rb-error{border-color:var(--red);background:var(--red-bg)}
+.mk-matrix .rb-crit-name-error{margin:4px 0 0}
+.mk-crit-row{display:flex;align-items:center;gap:6px}
+tr.pinned .rb-pin{display:inline-flex}
+tr.rb-card-error td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+.mk-add td{padding:10px 12px;border-bottom:none}
+.mk-add button{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--border2);background:#fff;border-radius:8px;padding:8px 14px;font:inherit;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer}
+.mk-add-in td{padding:4px 12px 8px;border-bottom:none}
+.mk-add-in button{display:inline-flex;align-items:center;gap:6px;border:none;background:none;padding:4px 0;font:inherit;font-size:12.5px;font-weight:600;color:var(--accent3);cursor:pointer}
+.mk-matrix .mk-cat-in{border:1px solid var(--border);border-radius:6px;padding:4px 8px;font:inherit;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text);background:#fff;width:260px;max-width:60%}
+.mk-matrix .mk-crit-in{width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;font-weight:700;color:var(--text);background:#fff}
+.mk-matrix .mk-cat-in:focus,.mk-matrix .mk-crit-in:focus,.mk-matrix .mk-desc:focus,.mk-matrix .mk-score input:focus{border-color:var(--accent);outline:none}
 
-.rb-btn-danger {
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-.rb-btn-danger:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220,38,38,.2);
-}
+/* topbar breadcrumb, same look as Team Management's */
+.mk-crumb{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+.mk-crumb a{color:rgba(255,255,255,.55);font-weight:500;text-decoration:none}
+.mk-crumb .sep{color:rgba(255,255,255,.3)}
+.mk-crumb span:last-child{overflow:hidden;text-overflow:ellipsis}
 
-/* ── PAGINATION ── */
-.rb-pagination { padding: 14px 20px; }
-.rb-pg-btn { border-radius: 8px; transition: all 0.2s ease; }
-.rb-pg-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
-}
-.rb-pg-num { border-radius: 8px; transition: all 0.2s ease; }
-.rb-pg-num:hover:not(.active) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
-}
-.rb-pg-num.active {
-  background: var(--navy-dark);
-  border-color: var(--navy-dark);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
-}
+/* ── NEW RUBRIC DIALOG ── */
+.rb-new .cm-box{display:flex;flex-direction:column;max-width:640px;width:100%;background:#fff;border-radius:16px;padding:24px;gap:16px;max-height:calc(100dvh - 32px);overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.rb-new h3{margin:0;font-size:17px}
+.rb-new .sub{font-size:13px;color:var(--text3);margin-top:4px}
+.mk-f label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.mk-stages{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mk-stages button{border:1px solid var(--border);border-radius:8px;padding:9px 10px;font:inherit;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;background:#fff;color:var(--text);cursor:pointer;text-align:left}
+.mk-stages button::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c);flex-shrink:0}
+.mk-stages button.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c) inset}
+.mk-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mk-ai{border:1px dashed #e2cf88;background:var(--accent-light);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.mk-ai .t{font-size:13px;font-weight:700;color:var(--accent3);display:flex;align-items:center;gap:6px}
+#rb-ai-topic{min-height:104px;line-height:1.55;font-size:14px;background:#fff}
+.mk-ai .row2{display:flex;align-items:flex-end;gap:16px}
+.mk-ai .cnt{flex-shrink:0}
+.mk-ai .cnt label{white-space:nowrap}
+#rb-ai-count{width:96px;font-weight:600;font-variant-numeric:tabular-nums;background:#fff}
+.mk-ai .hint{font-size:12px;color:var(--text2);line-height:1.45;padding-bottom:3px}
+.mk-foot{display:flex;justify-content:flex-end;gap:8px;padding-top:4px}
 
-/* ── MODALS ── */
-.modal-box {
-  border-radius: 18px;
-  box-shadow: 0 24px 80px rgba(0,0,0,.25);
-  animation: modalSlideIn 0.25s ease;
-}
-.modal-overlay.show { animation: modalFadeIn 0.2s ease; }
-.modal-actions .btn { padding: 8px 20px; border-radius: 10px; }
-.rb-close-btn {
-  transition: all 0.2s ease;
-  border-radius: 8px;
-}
-.rb-close-btn:hover { background: var(--bg4); color: var(--text); }
-@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes modalSlideIn { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+/* the list or the editor fills the page; each scrolls in its own box */
+#real-content .content{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#real-content .content > .mk{flex:1}
+.mk[hidden],.rb-new [hidden]{display:none!important}
 
-/* ── TOAST ── */
-.toast { border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
-
-/* ── ADD CRITERION ── */
-.rb-btn-add-criterion {
-  transition: all 0.2s ease;
-  border-radius: 9px;
+@media (max-width:768px){
+  .hamburger-btn{display:inline-flex}
+  .sidebar{display:flex!important;position:fixed!important;z-index:1000;transform:translateX(-100%);transition:transform .25s cubic-bezier(0.16,1,0.3,1);width:250px!important;min-width:250px!important}
+  .sidebar-open .sidebar{transform:translateX(0)}
+  .sidebar-open .sidebar-overlay{display:block}
+  body.sidebar-open{overflow:hidden}
+  .topbar{padding:0 14px;gap:10px}
+  .content{padding:14px}
+  .page-title{font-size:15px}
+  .toast{left:16px;right:16px;bottom:16px;text-align:center}
+  #real-content .content{overflow-y:auto}
+  .mk-card{min-height:360px}
+  .mk-head{flex-direction:column;align-items:stretch}
+  .mk-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mk-bar{flex-wrap:wrap}
+  .mk-search{width:auto;margin-left:0;flex:1 1 100%;order:3}
+  .mk-matrix{min-width:900px}
+  .mk-detail-head{flex-wrap:wrap}
+  .mk-meter{width:100%}
+  .rb-new .cm-box{max-width:none;border-radius:16px 16px 0 0;padding:16px}
+  .mk-2col{grid-template-columns:1fr}
+  .mk-stages{grid-template-columns:repeat(2,1fr)}
 }
-.rb-btn-add-criterion:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(201,168,44,.2);
+@media (max-width:640px){
+  .content{padding:12px}
 }
-
-/* ── AI DRAFT PANEL ── */
-.rb-ai-panel {
-  background: linear-gradient(135deg, rgba(201,168,44,.08), rgba(201,168,44,.03));
-  border: 1px dashed rgba(201,168,44,.4);
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin-bottom: 16px;
+@media (max-width:576px){
+  .topbar{padding:0 10px}
+  .page-title{font-size:14px}
+  .content{padding:10px}
 }
-.rb-ai-panel-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent3);
-  margin-bottom: 10px;
+/* The same edges and title as the portal's other pages on a phone
+   (admin.css). This page used to shrink everything a step further at every
+   width below here - 5px edges, 7px labels, 9px button text by 390px. */
+@media (max-width:480px){
+  .topbar{padding:0 10px 0 16px}
+  .page-title{font-size:14px}
+  .content{padding:10px}
 }
-.rb-ai-panel-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
+@media (max-width:280px){
+  .topbar{padding:0 4px;gap:4px}
+  .hamburger-btn{width:30px;height:30px}
+  .hamburger-btn svg{width:14px;height:14px}
+  .page-title{font-size:11px}
+  .content{padding:4px}
 }
-.rb-ai-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+@media (max-width:200px){
+  .topbar{padding:0 3px;gap:3px}
+  .page-title{font-size:10px}
+  .content{padding:3px}
+  .sidebar{width:180px!important;min-width:180px!important}
 }
-.rb-ai-field-topic { flex: 1; min-width: 0; }
-.rb-ai-field-count { width: 90px; flex-shrink: 0; }
-.rb-ai-field-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: .4px;
+@media (max-width:100px){
+  .topbar{padding:0 2px;gap:2px}
+  .hamburger-btn{width:24px;height:24px}
+  .hamburger-btn svg{width:12px;height:12px}
+  .page-title{font-size:8px}
+  .content{padding:2px}
 }
-.rb-ai-panel-row .input {
-  padding: 8px 10px;
-  font-size: 12px;
-  background: #fff;
-}
-/* Own styling instead of .btn-ghost - that class is tuned for the dark
-   navy topbar/sidebar (near-white text on a near-transparent fill), which
-   is unreadable against this panel's near-white background. */
-.rb-ai-generate-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  white-space: nowrap;
-  gap: 6px;
-  font-family: 'DM Sans','DM Sans Fallback', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 9px 16px;
-  border-radius: 9px;
-  border: 1.5px solid var(--accent);
-  background: var(--accent);
-  color: #18191f;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.rb-ai-generate-btn:hover:not(:disabled) {
-  background: var(--accent2);
-  border-color: var(--accent2);
-}
-.rb-ai-generate-btn:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-@media (max-width: 480px) {
-  .rb-ai-panel-row { flex-wrap: wrap; }
-  .rb-ai-field-topic { flex: 1 1 100%; }
-  .rb-ai-field-count { flex: 1 1 auto; width: auto; }
-  .rb-ai-generate-btn { flex: 1 1 100%; justify-content: center; }
-}
-
-/* ── EMPTY STATE ── */
-.rb-empty-state { padding: 56px 24px; }
-
-/* ================================================================
-   RESPONSIVE
-   ================================================================ */
-
-@media (max-width: 768px) {
-  .hamburger-btn { display: inline-flex; }
-  .sidebar {
-    display: flex !important;
-    position: fixed !important;
-    z-index: 1000;
-    transform: translateX(-100%);
-    transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
-    width: 250px !important;
-    min-width: 250px !important;
-  }
-  .sidebar-open .sidebar { transform: translateX(0); }
-  .sidebar-open .sidebar-overlay { display: block; }
-  body.sidebar-open { overflow: hidden; }
-  .topbar { padding: 0 14px; gap: 10px; }
-  .content { padding: 14px; }
-  .page-title { font-size: 15px; }
-
-  .rb-desktop-new-btn { display: none; }
-  .rb-mobile-new-btn,
-  .rb-mobile-divider { display: block; }
-
-  .rb-page-header { flex-direction: column; align-items: stretch; gap: 12px; }
-  .rb-stat-strip {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    overflow: visible;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    border-radius: 0;
-  }
-  .rb-stat-divider { display: none; }
-  .rb-stat-item {
-    padding: 16px 20px;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.05);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 4px;
-    min-width: 0;
-  }
-  .rb-mobile-new-btn {
-    padding: 0;
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    border-radius: 0;
-  }
-  .rb-mobile-new-btn .btn-primary {
-    height: 100%;
-    min-height: 56px;
-    border-radius: 12px;
-    font-size: 13px;
-  }
-  .rb-stat-n { font-size: 20px; }
-  .rb-stat-l { font-size: 9px; }
-
-  .rb-tab-header { flex-direction: column; }
-  .rb-tab-nav { padding: 8px 10px; }
-  .rb-tab-btn { font-size: 11px; padding: 5px 10px; }
-  .rb-tab-search { border-left: none; border-top: 1px solid var(--border); padding: 8px 12px; }
-  .rb-search-input { width: 100%; }
-  .rb-search-input:focus { width: 100%; }
-
-  .rb-rubric-header { flex-direction: column; gap: 10px; }
-  .rb-rubric-header > div:last-child { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
-  .rb-rubric-footer { flex-direction: row; flex-wrap: wrap; gap: 6px; }
-  .rb-rubric-footer .btn { flex: 1; min-width: 0; }
-
-  .modal-box-lg { width: min(95vw, 700px); }
-  .rb-type-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
-  .rb-type-opt-inner { padding: 10px 6px; }
-  .rb-levels-grid { grid-template-columns: 1fr; gap: 6px; }
-  .rb-criteria-toolbar { flex-direction: column; gap: 8px; align-items: flex-start; }
-  .rb-pts-status { align-items: flex-start; }
-  /* Only appears while the rubric is off 100 - see updateTotalPts(). */
-  .modal-steps { padding: 10px 12px; }
-  .step-connector { width: 24px; margin: 0 4px; }
-  .rb-pagination { flex-wrap: wrap; gap: 8px; }
-  .toast { left: 16px; right: 16px; bottom: 16px; text-align: center; }
-}
-
-@media (max-width: 640px) {
-  .content { padding: 12px; }
-  .rb-stat-item { padding: 14px 16px; }
-  .rb-stat-n { font-size: 18px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 50px; font-size: 12px; }
-  .rb-tab-btn { font-size: 10px; padding: 4px 8px; }
-  .rb-tab-count { min-width: 15px; height: 15px; font-size: 9px; padding: 0 4px; }
-  .rb-rubric-footer .btn { font-size: 10px; padding: 5px 10px; }
-  .rb-pagination { flex-wrap: wrap; gap: 6px; }
-  #pg-info { font-size: 11px; }
-}
-
-@media (max-width: 576px) {
-  .topbar { padding: 0 10px; }
-  .page-title { font-size: 14px; }
-  .content { padding: 10px; }
-  .rb-stat-strip { gap: 8px; }
-  .rb-stat-item { padding: 12px 14px; }
-  .rb-stat-n { font-size: 16px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 46px; font-size: 12px; }
-  .rb-tab-btn { font-size: 10px; padding: 4px 8px; }
-  #pg-info { font-size: 11px; }
-}
-
-@media (max-width: 480px) {
-  /* The same edges and title as the portal's other pages on a phone
-     (admin.css). This page used to shrink everything a step further at every
-     width below here - 5px edges, 7px labels, 9px button text by 390px. */
-  .topbar { padding: 0 10px 0 16px; }
-  .page-title { font-size: 14px; }
-  .content { padding: 10px; }
-  .rb-page-header { gap: 8px; }
-  .rb-stat-strip { gap: 8px; }
-  .rb-stat-item { padding: 12px 14px; }
-  .rb-stat-n { font-size: 18px; }
-  .rb-stat-l { font-size: 10px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 44px; font-size: 13px; }
-  .rb-tab-btn { font-size: 11px; padding: 5px 9px; }
-  .rb-tab-count { min-width: 15px; height: 15px; font-size: 9px; padding: 0 4px; }
-  .rb-rubric-footer { flex-direction: column; gap: 6px; }
-  .rb-rubric-footer .btn { width: 100%; justify-content: center; }
-  .rb-rubric-header > div:last-child { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
-  .rb-type-grid { grid-template-columns: repeat(2, 1fr); gap: 4px; }
-  .rb-type-opt-inner { padding: 8px 4px; gap: 4px; }
-  .rb-type-icon { width: 30px; height: 30px; }
-  .rb-type-label { font-size: 11px; }
-  .rb-type-sublabel { font-size: 9px; }
-  .rb-criterion-card { padding: 10px; }
-  .rb-criterion-header { flex-wrap: wrap; gap: 6px; }
-  .rb-crit-name-input { width: 100%; }
-  .rb-maxpts-wrap { margin-left: auto; }
-  .rb-crit-num { width: 20px; height: 20px; font-size: 10px; }
-  .rb-level-card { padding: 8px; }
-  .modal-overlay { padding: 10px; align-items: flex-start; padding-top: 20px; }
-  .modal-box { padding: 16px !important; }
-  .modal-box-lg { padding: 16px !important; }
-  .rb-criteria-toolbar { padding: 8px 10px; }
-  .rb-pts-badge { font-size: 11px; }
-  #pg-info { font-size: 11px; }
-  .rb-pg-btn { width: 26px; height: 26px; }
-  .rb-pg-num { width: 26px; height: 26px; font-size: 11px; }
-}
-
-@media (max-width: 425px) {
-  .rb-rubric-header { gap: 6px; padding: 12px 14px; }
-  .rb-rubric-header > div:last-child { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
-}
-
-
-@media (max-width: 375px) {
-  .rb-type-grid { grid-template-columns: 1fr 1fr; }
-  .rb-crit-name-input { font-size: 12px !important; }
-  .rb-maxpts-input { width: 54px !important; font-size: 11px !important; }
-  .rb-score-tiny { font-size: 11px !important; }
-  .rb-level-label-input { font-size: 11px !important; padding: 5px 7px !important; }
-  .rb-desc-area { font-size: 11px !important; min-height: 44px; }
-  .rb-level-badge { font-size: 9px; padding: 2px 6px; }
-}
-
-@media (max-width: 320px) {
-  .rb-stat-item { min-width: 0; padding: 10px; }
-  .rb-type-grid { grid-template-columns: 1fr; }
-  .modal-steps { flex-direction: column; gap: 6px; align-items: flex-start; }
-  .step-connector { width: 2px; height: 16px; margin: 0 0 0 10px; }
-  .modal-step { width: 100%; }
-  .rb-pagination { flex-direction: column; gap: 4px; align-items: flex-start; padding: 8px 10px; }
-  #pg-info { white-space: normal; word-break: break-word; }
-  .rb-pg-btn { width: 24px; height: 24px; }
-  .rb-pg-num { width: 24px; height: 24px; font-size: 10px; }
-}
-
-@media (max-width: 280px) {
-  .topbar { padding: 0 4px; gap: 4px; }
-  .hamburger-btn { width: 30px; height: 30px; }
-  .hamburger-btn svg { width: 14px; height: 14px; }
-  .page-title { font-size: 11px; }
-  .content { padding: 4px; }
-  .rb-stat-strip { gap: 4px; }
-  .rb-stat-item { padding: 5px 6px; }
-  .rb-stat-n { font-size: 12px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 28px; font-size: 8px; }
-  .rb-pagination { flex-direction: column; gap: 4px; align-items: flex-start; padding: 6px 8px; }
-  #pg-info { font-size: 10px; }
-  .rb-pg-btn { width: 22px; height: 22px; }
-  .rb-pg-num { width: 22px; height: 22px; font-size: 10px; }
-}
-
-@media (max-width: 200px) {
-  .topbar { padding: 0 3px; gap: 3px; }
-  .page-title { font-size: 10px; }
-  .content { padding: 3px; }
-  .sidebar { width: 180px !important; min-width: 180px !important; }
-  .rb-stat-item { padding: 3px 4px; }
-  .rb-stat-n { font-size: 10px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 24px; font-size: 7px; }
-  .modal-box { padding: 10px !important; }
-  .rb-pagination { flex-direction: column; gap: 3px; align-items: flex-start; padding: 4px 6px; }
-  #pg-info { font-size: 9px; white-space: normal; word-break: break-word; }
-  .rb-pg-btn { width: 20px; height: 20px; }
-  .rb-pg-num { width: 20px; height: 20px; font-size: 9px; }
-}
-
-@media (max-width: 100px) {
-  .topbar { padding: 0 2px; gap: 2px; }
-  .hamburger-btn { width: 24px; height: 24px; }
-  .hamburger-btn svg { width: 12px; height: 12px; }
-  .page-title { font-size: 8px; }
-  .content { padding: 2px; }
-  .rb-stat-item { padding: 2px 3px; }
-  .rb-stat-n { font-size: 8px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 20px; font-size: 6px; }
-  .rb-pagination { flex-direction: column; gap: 2px; align-items: stretch; padding: 3px 4px; }
-  #pg-info { font-size: 8px; white-space: normal; word-break: break-word; }
-}
-
-@media (max-width: 50px) {
-  .topbar { height: 40px; min-height: 40px; padding: 0 1px; }
-  .page-title { font-size: 6px; }
-  .content { padding: 1px; }
-  .rb-stat-item { padding: 2px 2px; }
-  .rb-stat-n { font-size: 7px; }
-  .rb-mobile-new-btn .btn-primary { min-height: 16px; font-size: 5px; }
-  .rb-pagination { flex-direction: column; gap: 2px; align-items: stretch; padding: 2px 3px; }
-  #pg-info { font-size: 7px; white-space: normal; word-break: break-word; }
+@media (max-width:50px){
+  .topbar{height:40px;min-height:40px;padding:0 1px}
+  .page-title{font-size:6px}
+  .content{padding:1px}
 }
 </style>
 @include('partials.escape-closes-modals')
 @include('partials.app-scrollbar')
+@include('partials.modal')
 </body>
 </html>

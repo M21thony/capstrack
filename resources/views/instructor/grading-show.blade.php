@@ -493,7 +493,7 @@
         <div class="gs-review-list" id="gs-review-list"></div>
       </section>
       <aside class="gs-review-aside">
-        <form id="gradingForm" class="gs-card gs-remarks" onsubmit="return false">
+        <form id="gradingForm" class="gs-card gs-remarks" method="post" onsubmit="return false">
           @csrf
           {{-- Remarks are this panelist's own. The verdict is not: the panel
                confers and gives the team one result, recorded once by the

@@ -165,7 +165,7 @@ class RecruitmentTest extends TestCase
         ]);
 
         // Create 6 other recruitment posts from other students in same school year
-        for ($i = 1; $i <= 6; $i++) {
+        for ($i = 1; $i <= 10; $i++) {
             $otherStudent = Student::create([
                 'email' => "other{$i}@my.cspc.edu.ph",
                 'f_name' => "Other{$i}",
@@ -194,8 +194,8 @@ class RecruitmentTest extends TestCase
 
         // Verify it returns exactly 5 other posts on first page
         $otherRecruitments = $response->viewData('otherRecruitments');
-        $this->assertEquals(5, $otherRecruitments->count());
-        $this->assertEquals(6, $otherRecruitments->total());
+        $this->assertEquals(8, $otherRecruitments->count());
+        $this->assertEquals(10, $otherRecruitments->total());
         $this->assertTrue($otherRecruitments->hasPages());
     }
 
@@ -337,7 +337,11 @@ class RecruitmentTest extends TestCase
         };
 
         $hasRoom = $postTeam('hasroom', 'Active');
-        $postTeam('full', 'Full');
+        $full = $postTeam('full', 'Full');
+        // Full means every seat taken: the feed counts members, not the status.
+        foreach (range(1, 4) as $i) {
+            StudentSchoolYear::create(['student_id' => $sectionmate('fullmember'.$i)->student_id, 'team_id' => $full->team->team_id, 'school_year' => 2026, 'program' => 'BSIT']);
+        }
 
         $feed = $this->actingAs($viewer)->get('/student/team')->viewData('otherRecruitments');
 

@@ -214,7 +214,7 @@ class TeamInvitePopupTest extends TestCase
 
         $this->assertStringContainsString('id="osl-send"', $html);
         $this->assertStringContainsString('sendOpenSlotInvites()', $html);
-        $this->assertStringContainsString('Send Invite', $html);
+        $this->assertStringContainsString('>Send invite<', $html);
 
         // No per-click confirmation, and no single-invite sender left behind.
         $this->assertStringNotContainsString('function sendOpenSlotInvite(', $html);
@@ -237,7 +237,7 @@ class TeamInvitePopupTest extends TestCase
         $html = $this->actingAs($leader, 'web')->get(route('student.team'))->getContent();
 
         $this->assertStringContainsString('openOpenSlotInviteModal()', $html);
-        $this->assertStringContainsString('Click to invite a classmate', $html);
+        $this->assertStringContainsString('<span>· Invite a classmate</span>', $html);
     }
 
     /**
@@ -264,7 +264,7 @@ class TeamInvitePopupTest extends TestCase
 
         $html = $this->actingAs($leader, 'web')->get(route('student.team'))->getContent();
 
-        $this->assertStringNotContainsString('Click to invite a classmate', $html);
+        $this->assertStringNotContainsString('<span>· Invite a classmate</span>', $html);
         $this->assertStringContainsString('Members Addition no longer available.', $html);
     }
 }

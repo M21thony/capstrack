@@ -63,7 +63,7 @@
 
     $archivedCount = App\Models\ArchivedDocument::count();
 
-    $pendingReceiptIds = App\Models\FinancialRecord::sentToCapsa()
+    $pendingReceiptIds = App\Models\FinancialRecord::query()
         ->whereNull('verified_at')
         ->whereNotNull('receipt_image')
         ->pluck('id')

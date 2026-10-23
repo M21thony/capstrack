@@ -332,13 +332,14 @@ test('Financial Records on a phone: no document upload pop-up, and a photo can b
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => !!document.querySelector('dialog.up[open]')), 'the document upload stayed shut').toBe(false);
 
-  const upload = page.locator('[data-fx-upload]');
-  test.skip(await upload.count() === 0, 'no fee to upload a receipt for in this database');
-  await upload.click();
-  await expect(page.locator('#fx-d-upload')).toBeVisible();
+  // The receipt form is part of the page, shown while there is a receipt to send.
+  const form = page.locator('#u-form');
+  test.skip(!(await form.isVisible()), 'no receipt to send in this database');
   expect(await page.locator('#u-file').getAttribute('capture')).toBeNull();
+  await expect(page.locator('#u-send')).toBeDisabled();
   await page.setInputFiles('#u-file', { name: 'receipt.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
-  await expect(page.locator('#u-pick-t')).toHaveText('Choose a different photo');
+  await expect(page.locator('#u-pick-t')).toHaveText('receipt.png');
+  await expect(page.locator('#u-send')).toBeEnabled();
   expect(await page.evaluate(() => !!document.querySelector('dialog.up[open]'))).toBe(false);
   await context.close();
 });

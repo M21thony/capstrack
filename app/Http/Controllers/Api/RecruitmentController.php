@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RecruitmentResource;
 use App\Models\Recruitment;
 use App\Models\StudentRole;
-use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\Term;
 use App\Support\StudentTeam;
@@ -21,30 +20,12 @@ class RecruitmentController extends Controller
     {
         $student = $request->user();
 
-        $fullTeamStudentIds = Recruitment::where('recruitment_goal', 'build_a_team')
-            ->with('student.team')
-            ->get()
-            ->filter(function ($recruit) {
-                $team = $recruit->student->team;
-
-                if (! $team) {
-                    return false;
-                }
-
-                return StudentSchoolYear::where('team_id', $team->team_id)->count() >= $team->memberLimit();
-            })
-            ->pluck('student_id')
-            ->toArray();
+        $fullTeamStudentIds = Recruitment::leadersOfFullTeams();
 
         $recruitments = Recruitment::with(['student.team'])
             ->where('student_id', '!=', $student->student_id)
+            // Off the feed only once the team reaches the CaPSA's limit.
             ->whereNotIn('student_id', $fullTeamStudentIds)
-            ->whereDoesntHave('student.team', function ($q) {
-                // Off the feed only once the team stops taking members. A
-                // team that has turned its pre-proposals in but still has
-                // room can still be joined, so it stays visible.
-                $q->where('team_status', 'Full');
-            })
             ->whereIn('student_id', function ($query) use ($student) {
                 $query->select('student_s_y.student_id')
                     ->from('student_s_y')

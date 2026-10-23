@@ -206,7 +206,7 @@
       </div>
       <div class="field">
         <div class="k">Abstract</div>
-        <div class="v">{!! $match['abstract'] ? $mark($match['abstract']) : 'No abstract was recorded for this capstone.' !!}</div>
+        <div class="v">{!! filled($match['abstract'] ?? null) ? $mark($match['abstract']) : 'No abstract was recorded for this capstone.' !!}</div>
       </div>
     @endif
   </div>

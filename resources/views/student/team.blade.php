@@ -215,7 +215,10 @@
      Two tabs on one page. The team half is the page as it always was; the
      body's class hides it while Financial Records is showing, rather than
      moving a thousand lines of markup into a wrapper. */
-  .tm-seg { display: flex; gap: 4px; padding: 4px; margin: 0 0 16px; background: var(--bg4, #eceef2); border-radius: 12px; width: fit-content; max-width: 100%; }
+  .tm-toprow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
+  .tm-toprow-end { display: none; }
+  body.tm-on-fin .tm-toprow-end { display: flex; }
+  .tm-seg { display: flex; gap: 4px; padding: 4px; margin: 0; background: var(--bg4, #eceef2); border-radius: 12px; width: fit-content; max-width: 100%; }
   .tm-seg button { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 16px; border-radius: 9px; border: 0; background: transparent; color: var(--text2); font: 600 13.5px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; white-space: nowrap; }
   .tm-seg button svg { width: 16px; height: 16px; flex-shrink: 0; }
   .tm-seg button:hover { color: var(--text); }
@@ -226,6 +229,13 @@
   body.tm-on-fin #contentWrapper,
   body.tm-on-fin .pagination-container,
   body.tm-on-fin .tutorial-note { display: none !important; }
+  /* The credits sit at the foot of the screen when a tab is short, and
+     right after the content when it is long: .tm-push takes the room
+     between, never less than 24px. */
+  .main > .content { display: flex; flex-direction: column; }
+  .main > .content > * { flex-shrink: 0; }
+  .main > .content > .tm-push { flex: 1 0 24px; }
+  .main > .content > .sys-credits { margin-top: 0 !important; }
   /* Financial Records was a page of its own that filled the window; inside a
      tab it sits in the page's flow like the team half does. */
   .tm-fin .fx { flex: none; min-height: 0; overflow: visible; background: transparent; }
@@ -251,6 +261,7 @@
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'team'])
 
+    <div class="tm-toprow">
     <div class="tm-seg" role="tablist" aria-label="Team Management sections">
       <button type="button" role="tab" id="tm-tab-team" data-tm-tab="team" aria-selected="{{ $tab === 'team' ? 'true' : 'false' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -265,6 +276,9 @@
         Team Rating
         @if ($rating['due'] > 0)<span class="n hot" title="{{ $rating['due'] }} due" aria-label="{{ $rating['due'] }} due">{{ $rating['due'] }}</span>@endif
       </button>
+    </div>
+    {{-- Financial Records puts its fee tabs here, shown only on that tab. --}}
+    <div class="tm-toprow-end" id="tm-toprow-end"></div>
     </div>
 
     <section class="tm-fin" id="tm-panel-financial" role="tabpanel" aria-labelledby="tm-tab-financial" @if ($tab !== 'financial') hidden @endif>
@@ -432,801 +446,26 @@
     @endif
 
     @if($myTeam)
-    <!-- TEAM DASHBOARD -->
-    <div class="team-dashboard-compact" style="margin-bottom: 16px;">
-      <div class="team-dash-header" id="teamDashHeader" onclick="toggleTeamDashboard()" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; cursor: pointer;">
-        <div class="team-dash-logo" style="width: 44px; height: 44px; border-radius: 10px; background: #fbbf24; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #1a1a1a; flex-shrink: 0;">
-          {{ substr($myTeam->team_name, 0, 2) }}
-        </div>
-        @php
-          $statusColors = [
-            'on-going' => ['bg' => '#16a34a', 'label' => 'ON-GOING'],
-            'complete' => ['bg' => '#2563eb', 'label' => 'COMPLETED'],
-            'closed' => ['bg' => '#6b7280', 'label' => 'CLOSED'],
-          ];
-          $statusData = $statusColors[$myTeam->team_status] ?? ['bg' => '#16a34a', 'label' => 'ON-GOING'];
-          $isVerified = $myTeam->is_confirmed;
-          $isPendingVerification = $myTeam->team_status === 'complete' && ! $myTeam->is_confirmed;
-        @endphp
-        <div style="flex: 1; min-width: 0;">
-          @if($myTeam->project_title)
-            <div style="font-size: 18px; color: var(--text); font-weight: 700; margin-bottom: 2px; line-height: 1.3;">{{ $myTeam->project_title }}</div>
-          @endif
-          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <div style="font-size: 16px; font-weight: 600; color: var(--text3);">{{ $myTeam->team_name }}</div>
-            <div class="team-status-badge team-status-badge--inline" style="background: {{ $statusData['bg'] }}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-              <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>{{ $statusData['label'] }}
-              @if($isVerified)
-                <span class="verified-chip-inline" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.2);color:#fff;padding:1px 8px 1px 5px;border-radius:20px;font-size:8px;font-weight:600;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);">
-                  <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                  Verified
-                </span>
-              @elseif($isPendingVerification)
-                <span class="pending-chip-inline" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.2);color:#fff;padding:1px 8px 1px 5px;border-radius:20px;font-size:8px;font-weight:600;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);">
-                  <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  Pending
-                </span>
-              @endif
-            </div>
-            @if($isVerified)
-            <div class="verified-phone-badge" style="display:none;align-items:center;gap:4px;background:#fff;border:1px solid #a7f3d0;color:#059669;padding:2px 10px 2px 6px;border-radius:20px;font-size:10px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-              Verified
-            </div>
-            @endif
-          </div>
-          <div style="font-size: 12px; color: var(--text3); margin-top: 4px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
-         </div>
-         <button type="button" id="teamDashboardToggle" class="team-dashboard-toggle" style="background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: var(--text3); transition: color 0.2s;" title="Minimize team card">
-           <svg id="teamDashboardChevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-         </button>
-     </div>
-
-      <div class="team-dashboard-body" id="teamDashboardBody" style="margin-top: 14px;">
-      <div class="team-dashboard-grid" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px;">
-        <!-- Team Members -->
-        <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max {{ $memberCount }}</span></div>
-          @if($teamLocked)
-          <div role="status" style="display:flex;gap:10px;align-items:flex-start;margin:-4px 0 14px;padding:10px 12px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <div style="font-size:11.5px;line-height:1.5;color:var(--text2);">
-              <strong style="color:var(--text);">Members locked{{ $teamLockedAt ? ' since '.$teamLockedAt->format('M j, Y') : '' }}.</strong>
-              Your team passed Title Defense, so no one can join, and a member leaves only with your CaPSA's approval.
-            </div>
-          </div>
-          @endif
-          @php
-            // The number of seats drawn, which is the number the CaPSA set.
-            // Spelled out as 5, this page went on showing five rows however
-            // many a team was allowed - so setting three changed the labels
-            // and left two slots nobody could ever fill.
-            $memberSlots = $memberCount;
-            // Invitations already sent and unanswered. They hold a slot, so
-            // the leader can see the team is fuller than the member count.
-            $pendingInvites = collect($outgoingInvitations ?? []);
-            $slotCount = $teamMembers->count();
-            $slotIndex = 0;
-          @endphp
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            @for($i = 0; $i < $memberSlots; $i++)
-              @if($i < $slotCount)
-                @php
-                  $member = $teamMembers[$i];
-                  $isThisUser = $member->student_id === auth()->user()->student_id;
-
-                  // Who leads is teams.leader_id, the same fact the rest of
-                  // this page reads. It used to be decided by comparing the
-                  // student's role to the string "Leader", which no row has
-                  // ever held - the leader's role is spelled out in full as
-                  // "Project Head/Network Engineer" - so the comparison was
-                  // false for everybody and the leader was labelled a member
-                  // on their own team.
-                  $isTeamLeader = (int) $member->student_id === (int) $myTeam->leader_id;
-
-                  // Their actual job on the team when one is recorded, and a
-                  // plain description of where they stand when it is not.
-                  $memberRole = $member->s_role_name
-                      ?: ($isTeamLeader ? 'Team Leader' : 'Team Member');
-                @endphp
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <div style="width: 36px; height: 36px; border-radius: 50%; background: {{ $isTeamLeader || $isThisUser ? '#fbbf24' : '#7c3aed' }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
-                    @if ($member->avatarUrl())
-                      <img src="{{ $member->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $member->avatarInitials() }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
-                    @else
-                      {{ $member->avatarInitials() }}
-                    @endif
-                  </div>
-                  <div style="flex: 1;">
-                    <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ trim(($member->f_name ?? '') . ' ' . ($member->l_name ?? '')) ?: $member->email ?? 'Member' }}</div>
-                    <div style="font-size: 11px; color: var(--text3);">{{ $memberRole }}</div>
-                  </div>
-                  <div style="background: {{ $isTeamLeader ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $isTeamLeader ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $isTeamLeader ? 'LEADER' : 'MEMBER' }}</div>
-                  @if($leaveRequests->contains('student_id', $member->student_id))
-                    <span title="A request about this member is waiting on your CaPSA" style="font-size:9px;font-weight:700;color:var(--amber);background:var(--amber-bg);padding:2px 6px;border-radius:4px;white-space:nowrap;">WITH CAPSA</span>
-                  @elseif($teamLocked && $isLeader && !$isThisUser)
-                    <button type="button" onclick="openCapsaLeaveModal('remove', {{ $member->student_id }}, '{{ addslashes(trim($member->f_name . ' ' . $member->l_name)) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Ask your CaPSA to remove this member" aria-label="Ask your CaPSA to remove {{ trim($member->f_name . ' ' . $member->l_name) }}">✕</button>
-                  @elseif($isLeader && !$isThisUser && !$myTeam->is_confirmed)
-                    <button type="button" onclick="openRemoveMemberModal({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}', '{{ addslashes($member->email ?? '') }}', '{{ addslashes(($member->course ?? '') . ($member->year_section ? ' · ' . $member->year_section : '')) }}', '{{ addslashes($member->avatarUrl()) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
-                  @endif
-                </div>
-              @else
-                @php
-                  $pendingIndex = $i - $teamMembers->count();
-                  $pendingInvite = $pendingInvites->values()->get($pendingIndex);
-                  $invitee = $pendingInvite?->receiver;
-                @endphp
-                @if($invitee)
-                <div style="display: flex; align-items: center; gap: 10px; border: 1px solid rgba(29,78,216,0.3); border-radius: 10px; padding: 6px 12px; background: var(--blue-bg);">
-                  <div style="width: 36px; height: 36px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
-                    @if ($invitee->avatarUrl())
-                      <img src="{{ $invitee->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $invitee->avatarInitials() }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
-                    @else
-                      {{ $invitee->avatarInitials() }}
-                    @endif
-                  </div>
-                  <div style="flex: 1; min-width: 0;">
-                    <div style="font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ trim(($invitee->f_name ?? '') . ' ' . ($invitee->l_name ?? '')) }}</div>
-                    <div style="font-size: 11px; color: var(--text3);">Invited &mdash; waiting on a reply</div>
-                  </div>
-                  <span style="font-size: 9px; font-weight: 700; color: var(--blue); background: rgba(29,78,216,0.15); padding: 2px 6px; border-radius: 4px;">PENDING</span>
-                  @if($isLeader && !$myTeam->is_confirmed)
-                    <button type="button" onclick="cancelPendingInvite({{ $pendingInvite->id }}, '{{ addslashes(trim(($invitee->f_name ?? '') . ' ' . ($invitee->l_name ?? ''))) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:13px;line-height:1;" title="Cancel invitation">&times;</button>
-                  @endif
-                </div>
-                {{-- Verification does not close the roster. A member drops out
-                     after the CaPSA verifies a team and the leader still has to
-                     be able to replace them; hiding this left them with no way
-                     to. InvitationController::store() never enforced it either,
-                     so this was a button hidden over a door that was open. --}}
-                {{-- The roster closes at Capstone 2 - the first semester of 4th
-                     year - because somebody joining then was not there for the
-                     title, the proposal or any of the work being graded. The
-                     endpoint refuses it too; this only saves them the click. --}}
-                {{-- Capstone 2: every remaining seat comes down this branch,
-                     not just the first, or the ones after it fall through to
-                     the Open Slot button below and the team looks half
-                     locked. The notice is printed once; the rest render
-                     nothing, because those seats cannot be filled. --}}
-                @elseif($myTeam->capstoneStage() !== 1)
-                @if($i === $slotCount)
-                <div style="display:flex;align-items:center;gap:10px;border:1px dashed var(--border2);border-radius:10px;padding:8px 12px;background:var(--bg3)">
-                  <div style="width:36px;height:36px;border-radius:50%;background:var(--bg2);border:1.5px dashed var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3)">
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  </div>
-                  <div style="flex:1">
-                    <div style="font-size:12.5px;font-weight:600;color:var(--text3)">{{ $teamLocked ? 'Members are locked.' : 'Members Addition no longer available.' }}</div>
-                    <div style="font-size:11px;color:var(--text3);line-height:1.45">{{ $teamLocked ? 'Your team passed Title Defense, so no one can be added.' : 'Capstone 2 has started, so a team keeps the members it finished Capstone 1 with.' }}</div>
-                  </div>
-                </div>
-                @endif
-                @elseif($isLeader)
-                <button type="button" onclick="openOpenSlotInviteModal()" style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75; background: transparent; cursor: pointer; width: 100%; text-align: left; transition: all 0.2s;" onmouseover="this.style.opacity='1'; this.style.borderColor='var(--blue)'; this.style.background='var(--blue-bg)'" onmouseout="this.style.opacity='0.75'; this.style.borderColor='var(--border2)'; this.style.background='transparent'">
-                  <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
-                  <div style="flex: 1;">
-                    <div style="font-size: 12.5px; font-weight: 600; color: var(--text3);">Open Slot</div>
-                    <div style="font-size: 11px; color: var(--text3);">Click to invite a classmate</div>
-                  </div>
-                </button>
-                @else
-                <div style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75;">
-                  <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
-                  <div style="flex: 1;">
-                    <div style="font-size: 12.5px; font-weight: 600; color: var(--text3);">Open Slot</div>
-                    <div style="font-size: 11px; color: var(--text3);">Waiting for a member...</div>
-                  </div>
-                </div>
-                @endif
-              @endif
-            @endfor
-          </div>
-          <div style="margin-top: 14px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3);">
-            @php
-              $total = $memberSlots;
-              $count = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count();
-            @endphp
-            @for($i = 0; $i < $total; $i++)
-              <span style="width: 14px; height: 4px; border-radius: 2px; display: inline-block; background: {{ $i < $count ? '#fbbf24' : 'var(--border)' }};"></span>
-            @endfor
-            <span style="margin-left: 4px;">{{ $count }} / {{ $total }} members</span>
-          </div>
-        </div>
-
-
-        <!-- Team Overview -->
-        <div style="display: flex; flex-direction: column; gap: 0;">
-          <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px;">
-            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 12px;">TEAM OVERVIEW</div>
-            <div class="stat-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 3px 0;">
-              @php
-                $authStudent = auth()->user();
-                $program = $authStudent->studentSchoolYear()->first()?->program ?? '';
-                $yearSection = $authStudent->year_section ?? '';
-                $parts = array_map('trim', explode('·', $yearSection));
-                $year = $parts[0] ?? '';
-                $section = $parts[1] ?? '';
-                $yearNum = preg_replace('/[^0-9]/', '', $year);
-                $sectionLabel = $program
-                  ? $program . ' - ' . $yearNum . $section
-                  : $yearSection;
-              @endphp
-              <span style="color: var(--text3);">Section</span>
-              <span style="font-weight: 700; color: var(--text);">{{ $sectionLabel }}</span>
-            </div>
-            <div class="stat-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 6px 0; border-top: 1px solid var(--border);">
-              <span style="color: var(--text3);">Team Name</span>
-              <span style="font-weight: 700; color: var(--text);">{{ $myTeam->team_name }}</span>
-            </div>
-            <div class="stat-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 6px 0; border-top: 1px solid var(--border);">
-              <span style="color: var(--text3);">Status</span>
-              <span style="font-weight: 700; color: {{ $statusData['bg'] }};">{{ $statusData['label'] }}</span>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
-              <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
-                <span style="font-size: 9px; color: var(--text3);">Members</span>
-                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / {{ $memberCount }}</span>
-              </div>
-              <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
-                <span style="font-size: 9px; color: var(--text3);">Your Role</span>
-                <span style="font-size: 9px; font-weight: 700; color: {{ (int) $myTeam->leader_id === (int) auth()->user()->student_id ? '#fbbf24' : 'var(--text3)' }};">{{ (int) $myTeam->leader_id === (int) auth()->user()->student_id ? 'Leader' : ($userRole ?? 'Member') }}</span>
-              </div>
-              <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
-                <span style="font-size: 9px; color: var(--text3);">Date Formed</span>
-                <span style="font-size: 9px; font-weight: 700; color: var(--text);">
-                  {{ $myTeam->created_at ? \Carbon\Carbon::parse($myTeam->created_at)->format('M j, Y') : \Carbon\Carbon::now()->format('M j, Y') }}
-                </span>
-              </div>
-              <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
-                <span style="font-size: 9px; color: var(--text3);">Verified</span>
-                <span style="font-size: 9px; font-weight: 700; color: {{ $isVerified ? 'var(--green)' : ($isPendingVerification ? '#d97706' : 'var(--text3)') }};">
-                  {{ $isVerified ? 'Yes' : ($isPendingVerification ? 'Pending' : 'No') }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {{-- Defense Panel: who the CaPSA put on the team's next defense.
-               Assigning a panel writes the same three experts onto every
-               stage at once, so this is "the" panel rather than one for a
-               single date - see TeamController::index(). --}}
-          <div style="margin-top: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px;">
-            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 12px;">DEFENSE PANEL</div>
-            @if($panel->isNotEmpty())
-              <div style="font-size: 10.5px; color: var(--text3); margin-bottom: 10px;">Assigned for your {{ $panelDefenseType }}</div>
-              <div style="display: flex; flex-direction: column;">
-                @foreach($panel as $seat)
-                  @php $ex = $seat->expert; @endphp
-                  <div style="display: flex; align-items: center; gap: 10px; padding: 7px 0; @if(!$loop->last) border-bottom: 1px solid var(--border); @endif">
-                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0;">
-                      @if($ex?->hasAvatarImage())
-                        <img src="{{ $ex->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $ex?->avatarInitials() }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
-                      @else
-                        {{ $ex?->avatarInitials() }}
-                      @endif
-                    </div>
-                    <div style="flex: 1; min-width: 0;">
-                      <div style="font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $ex?->name ?? 'Unknown' }}</div>
-                      <div style="font-size: 10.5px; color: var(--text3);">{{ $seat->panel_role }}</div>
-                    </div>
-                  </div>
-                @endforeach
-              </div>
-            @else
-              <div style="font-size: 11.5px; color: var(--text3); line-height: 1.5;">Not assigned yet. Your CaPSA sets your defense panel once your team is ready.</div>
-            @endif
-          </div>
-        </div>
-      </div>
-
-      @if($leaveRequests->isNotEmpty())
-      <div style="margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3);">WAITING ON YOUR CAPSA</div>
-        <div style="font-size: 11px; color: var(--text3); margin: 3px 0 12px;">These need your CaPSA's decision.</div>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          @foreach($leaveRequests as $rr)
-            @php
-              $rrMember = trim(($rr->student->f_name ?? '').' '.($rr->student->l_name ?? '')) ?: 'A member';
-              $rrBy = trim(($rr->requester->f_name ?? '').' '.($rr->requester->l_name ?? '')) ?: 'The leader';
-              $rrMine = (int) $rr->requested_by === (int) auth()->user()->student_id;
-            @endphp
-            <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 13px; font-weight: 600; color: var(--text);">
-                  {{ $rr->type === 'leave' ? $rrMember.' asked to leave' : $rrBy.' asked to remove '.$rrMember }}
-                </div>
-                <div style="font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; overflow-wrap: anywhere;">“{{ $rr->reason }}”</div>
-                @php
-                  $rrDeadline = $rr->autoDeclinesAt();
-                  $rrHoursLeft = max(0, (int) ceil(now()->diffInMinutes($rrDeadline, false) / 60));
-                @endphp
-                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 10.5px; color: var(--text3); margin-top: 6px;">
-                  <span>Sent {{ $rr->created_at->diffForHumans() }}</span>
-                  <span title="If your CaPSA has not decided by {{ $rrDeadline->format('M j, g:i A') }}, it is declined automatically" style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-weight: 700; {{ $rrHoursLeft <= 24 ? 'background: var(--red-bg); color: var(--red);' : 'background: var(--amber-bg); color: var(--amber);' }}">
-                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                    Auto-declines {{ $rrHoursLeft <= 24 ? 'in '.max(1, $rrHoursLeft).' '.(max(1, $rrHoursLeft) === 1 ? 'hour' : 'hours') : $rrDeadline->format('M j') }} without a decision
-                  </span>
-                </div>
-              </div>
-              @if($rrMine)
-              <form method="POST" action="{{ route('team.capsa-leave-requests.update', $rr->id) }}" style="flex-shrink: 0;">
-                @csrf
-                @method('PATCH')
-                <input type="hidden" name="status" value="withdrawn">
-                <button type="submit" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font-size: 11px; font-weight: 700; cursor: pointer;">Withdraw</button>
-              </form>
-              @endif
-            </div>
-          @endforeach
-        </div>
-      </div>
-      @endif
-
-      {{-- Declined by the clock, not the CaPSA: said plainly, with the way to ask again. --}}
-      @if($autoDeclinedRequests->isNotEmpty())
-      <div style="margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3);">DECLINED AUTOMATICALLY</div>
-        <div style="font-size: 11px; color: var(--text3); margin: 3px 0 12px;">Your CaPSA did not act on these within {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days. You can send the request again.</div>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          @foreach($autoDeclinedRequests as $rr)
-            @php
-              $rrMember = trim(($rr->student->f_name ?? '').' '.($rr->student->l_name ?? '')) ?: 'A member';
-              $rrBy = trim(($rr->requester->f_name ?? '').' '.($rr->requester->l_name ?? '')) ?: 'The leader';
-            @endphp
-            <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
-              <div style="flex: 1; min-width: 0;">
-                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text);">
-                  <span>{{ $rr->type === 'leave' ? $rrMember.' asked to leave' : $rrBy.' asked to remove '.$rrMember }}</span>
-                  <span style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; background: var(--bg3); color: var(--text2); border: 1px solid var(--border);">
-                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                    Auto-declined · No action from CaPSA in {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days
-                  </span>
-                </div>
-                <div style="font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; overflow-wrap: anywhere;">“{{ $rr->reason }}”</div>
-                <div style="font-size: 10.5px; color: var(--text3); margin-top: 4px;">Sent {{ $rr->created_at->format('M j') }} · declined {{ $rr->decided_at?->format('M j, g:i A') }}</div>
-              </div>
-            </div>
-          @endforeach
-        </div>
-      </div>
-      @endif
-
-      <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
-        @if($isLeader && $myTeam->hasSubmittedPreProposals() && !$myTeam->is_confirmed)
-          <span class="pending-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(217,119,6,0.35);border:none;letter-spacing:0.2px;">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Pending Verification
-          </span>
-        @elseif($isLeader && $myTeam->is_confirmed)
-          <span class="verified-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(16,185,129,0.35);border:none;letter-spacing:0.2px;">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-            Verified
-          </span>
-        @endif
-        @if($isLeader)
-          <button type="button" onclick="@if($teamMembers->count() > 1)openTransferModal()@else void(0)@endif" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--amber); background: var(--amber-bg); color: var(--amber); font-size: 10px; font-weight: 700; @if($teamMembers->count() <= 1)cursor: not-allowed; opacity: 0.5;@else cursor: pointer;@endif">Transfer Leadership</button>
-        @endif
-        @if($isLeader)
-          <button type="button" onclick="openEditTeamModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--blue); background: var(--blue-bg); color: var(--blue); font-size: 10px; font-weight: 700; cursor: pointer;">Update Team</button>
-        @endif
-        {{-- A leader on their own ends the team by leaving; once an expert took it on, that is the CaPSA's call. --}}
-        @php $leaderAsksCapsa = $isLeader && $teamMembers->count() === 1 && $myTeam->hasApprovedExpert(); @endphp
-        @if($isLeader && ! $leaderAsksCapsa)
-          <form method="POST" action="{{ route('team.destroy') }}" id="leave-team-form" style="display: inline;">
-            @csrf
-            @method('DELETE')
-            <button type="button" onclick="confirmLeaveTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; cursor: pointer;">Leave Team</button>
-          </form>
-        @else
-          @php $myLeaveRequest = $leaveRequests->firstWhere('student_id', auth()->user()->student_id); @endphp
-          <button type="button" @if(!$myLeaveRequest) onclick="openCapsaLeaveModal('leave')" @endif title="{{ $myLeaveRequest ? 'Your request is waiting on your CaPSA' : 'Ask your CaPSA to let you leave' }}" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; {{ $myLeaveRequest ? 'opacity:0.6;cursor:not-allowed;' : 'cursor:pointer;' }}">{{ $myLeaveRequest ? 'Leave Request with CaPSA' : 'Ask CaPSA to Leave' }}</button>
-        @endif
-      </div>
-      </div>
-      </div>
-    </div>
+      @include('student.team._team')
     @endif
 
-    <!-- SEARCH AND FILTERS -->
+    <!-- SCREEN: no team / the team's own cards above Team selection -->
     <main class="main-content">
-      <div class="page-header">
-        <div>
-          <h1>Team Selection</h1>
-          <p>Find teammates or a capstone team within your section</p>
-        </div>
-      </div>
-
-
-  <div class="team-container">
-    <!-- LEFT COLUMN -->
-    <div style="display: flex; flex-direction: column; gap: 20px;">
-      {{-- Capstone 2 with no team: say so. The compose card and the feed
-           below both go quiet at this point, and an empty page with nothing
-           on it reads as broken rather than closed. --}}
-      @if(!$myTeam && auth()->user()->capstoneStage() !== 1)
-      <div class="card" style="padding:20px 22px">
-        <div style="display:flex;align-items:flex-start;gap:14px">
-          <div style="width:38px;height:38px;border-radius:11px;background:var(--bg3);color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </div>
-          <div>
-            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Team forming is closed</div>
-            <div style="font-size:12.5px;color:var(--text3);line-height:1.55">
-              Capstone 2 has started, so teams keep the members they finished Capstone 1 with.
-              New teams and recruitment posts are closed. Speak to your CaPSA if you are not on a team.
-            </div>
-          </div>
-        </div>
-      </div>
-      @elseif(!$myTeam && !$creationAllowed && !$joiningAllowed)
-      <div class="card" style="padding:20px 22px">
-        <div style="display:flex;align-items:flex-start;gap:14px">
-          <div style="width:38px;height:38px;border-radius:11px;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </div>
-          <div>
-            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Creating and joining teams are closed</div>
-            <div style="font-size:12.5px;color:var(--text3);line-height:1.55">Your CaPSA has turned them off for now. Speak to your CaPSA if you are not on a team.</div>
-          </div>
-        </div>
-      </div>
-      @elseif(!$myTeam && !$myRecruitment)
-      @if (!$creationAllowed || !$joiningAllowed)
-        <div class="card" style="padding:12px 16px;border-color:rgba(220,38,38,.3);background:var(--red-bg);font-size:12.5px;color:var(--red)">
-          {{ !$creationAllowed ? 'Creating a team is closed right now - you can still post to find a team.' : 'Joining a team is closed right now - you can still post to build your own team.' }}
-        </div>
-      @endif
-      <div class="card compose-card" onclick="openPostModal()">
-        <div class="compose-card-inner">
-          <div class="compose-plus">+</div>
-          <div>
-            <div class="compose-title">Create a recruitment post</div>
-            <div class="compose-sub">Looking for a team or members? Share your needs here...</div>
-          </div>
-        </div>
-      </div>
-      @endif
-
-      @if($myRecruitment && ($myRecruitment->recruitment_goal !== 'build_a_team' || $myTeam))
-        @php
-          $recruitIsLeader = $myRecruitment->recruitment_goal === 'build_a_team';
-          $goalLabel = $recruitIsLeader ? 'BUILD A TEAM' : 'Find a Team';
-          $ringClass = $recruitIsLeader ? 'hiring' : 'looking';
-          $dotColor = $recruitIsLeader ? '#22c55e' : '#3b82f6';
-          $initials = auth()->user()->avatarInitials();
-          $introText = $recruitIsLeader
-            ? ($myRecruitment->looking_for ?? '')
-            : ($myRecruitment->introduction ?? $myRecruitment->looking_for ?? '');
-        @endphp
-        @if(!(isset($postHidden) && $postHidden))
-        <div class="my-post-wrapper" id="my-post-section">
-          <div class="my-post-header-row">
-            <div class="my-post-header-title">
-              <div class="my-post-icon">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              </div>
-              <div>
-                <div class="my-post-title">Your Post</div>
-                <div class="my-post-subtitle">Manage your recruitment post</div>
-              </div>
-            </div>
-            <div class="my-post-header-actions">
-              <button type="button" class="btn btn-edit-post" onclick="openEditModal()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                Edit Post
-              </button>
-              <button type="button" class="btn" style="padding:8px 16px; font-size:12px; background:var(--red-bg); color:var(--red); border:1px solid rgba(220,38,38,0.2);" onclick="openDeleteModal()">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                Delete
-              </button>
-            </div>
-          </div>
-          <div class="my-post-card" id="my-active-post">
-            <div class="avatar-ring {{ $ringClass }}">
-              @if (auth()->user()->avatarUrl())
-                <img src="{{ auth()->user()->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $initials }}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar-text',textContent:this.dataset.initials}))">
-              @else
-                <div class="avatar-text">{{ $initials }}</div>
-              @endif
-              <div class="status-badge-dot" style="background:{{ $dotColor }}"></div>
-            </div>
-            <div class="my-post-body">
-              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <div class="my-post-name">{{ auth()->user()->f_name }} {{ auth()->user()->l_name }}</div>
-                <div class="my-post-goal {{ $recruitIsLeader ? 'is-leader' : 'is-member' }}">{{ $goalLabel }}</div>
-                @if($isTeamFull && $recruitIsLeader)
-                  <span class="my-post-closed">TEAM FULL</span>
-                @endif
-              </div>
-              @if($recruitIsLeader && auth()->user()->team)
-                <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text3);">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span>{{ auth()->user()->team->team_name }}</span>
-                </div>
-              @endif
-              @if($introText)
-                <div class="my-post-text">{{ $introText }}</div>
-              @endif
-              @if($myRecruitment->tagLabels() !== [])
-                <div class="my-post-tags">
-                  @foreach($myRecruitment->tagLabels() as $label)
-                    <span class="expertise-tag">{{ $label }}</span>
-                  @endforeach
-                </div>
-              @endif
-              @if($myRecruitment->skills)
-                <div class="feed-post-skills"><b>Skills</b>{{ implode(', ', $myRecruitment->skills) }}</div>
-              @endif
-            </div>
-          </div>
-        </div>
-        @endif
-      @endif
-
-      <div class="feed-toolbar">
-        <div class="feed-toolbar-left">
-          <span class="feed-title">Posts</span>
-          <span class="feed-count" id="feed-count"></span>
-        </div>
-        <div class="feed-filters">
-          <div class="feed-filter">
-            <select class="feed-filter-select" id="feed-filter" onchange="filterFeed()">
-              <option value="all">All Posts</option>
-              <option value="build_a_team">Find Member</option>
-              <option value="find_a_team">Find Team</option>
-            </select>
-          </div>
-          {{-- Only skills some post on the feed actually names, in catalogue order. --}}
-          @php $feedSkills = collect(\App\Support\SkillCatalog::allSkills())->intersect($otherRecruitments->pluck('skills')->flatten()); @endphp
-          @if($feedSkills->isNotEmpty())
-            <div class="feed-filter">
-              <select class="feed-filter-select" id="feed-skill-filter" onchange="filterFeed()" aria-label="Filter by skill">
-                <option value="">Any skill</option>
-                @foreach($feedSkills as $skill)
-                  <option value="{{ $skill }}">{{ $skill }}</option>
-                @endforeach
-              </select>
-            </div>
-          @endif
-        </div>
-      </div>
-
-      <div class="profile-grid" id="recruitment-feed">
-          @foreach($otherRecruitments as $recruit)
-            @php
-              $recruitIsLeader = $recruit->recruitment_goal === 'build_a_team';
-              $goalLabel = $recruitIsLeader ? 'BUILD A TEAM' : 'Find a Team';
-              $ringClass = $recruitIsLeader ? 'hiring' : 'looking';
-              $dotColor = $recruitIsLeader ? '#22c55e' : '#3b82f6';
-              $initials = $recruit->student->avatarInitials();
-              $feedIntro = $recruitIsLeader
-                ? ($recruit->looking_for ?? '')
-                : ($recruit->introduction ?? $recruit->looking_for ?? '');
-            @endphp
-            <div class="feed-post-card" data-goal="{{ $recruit->recruitment_goal }}" data-skills="{{ implode('|', $recruit->skills ?? []) }}" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->tagLabels()) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $recruitIsLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}", "{{ addslashes($recruit->introduction ?? '') }}")'>
-              <div class="feed-post-top">
-                <div class="avatar-ring {{ $ringClass }}">
-                  @if ($recruit->student->avatarUrl())
-                    <img src="{{ $recruit->student->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ $initials }}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar-text',textContent:this.dataset.initials}))">
-                  @else
-                    <div class="avatar-text">{{ $initials }}</div>
-                  @endif
-                  <div class="status-badge-dot" style="background:{{ $dotColor }}"></div>
-                </div>
-                <div class="feed-post-head">
-                  <div class="name-label">{{ $recruit->student->f_name }} {{ $recruit->student->l_name }}</div>
-                  <div class="goal-label {{ $recruitIsLeader ? 'goal-lead' : 'goal-member' }}">{{ $goalLabel }}</div>
-                </div>
-              </div>
-              @if($feedIntro)
-                <div class="feed-post-text">{{ $feedIntro }}</div>
-              @endif
-              @if($recruit->tagLabels() !== [])
-                <div class="feed-post-tags">
-                  @foreach($recruit->tagLabels() as $label)
-                    <span class="expert-tag">{{ $label }}</span>
-                  @endforeach
-                </div>
-              @endif
-              @if($recruit->skills)
-                <div class="feed-post-skills"><b>Skills</b>{{ implode(', ', $recruit->skills) }}</div>
-              @endif
-            </div>
-          @endforeach
-      </div>
-      <div class="feed-empty" id="feed-filter-empty" style="display:none;">
-        @if(!$myRecruitment || ($myRecruitment->recruitment_goal === 'build_a_team' && !$myTeam))
-          No recruitment posts yet. Be the first to post!
-        @else
-          No other recruitment posts yet.
-        @endif
-      </div>
-    </div>
-
-    <!-- RIGHT COLUMN -->
-    <div style="display: flex; flex-direction: column; gap: 14px;">
-      <div class="card" style="padding: 14px;">
-        <div class="section-title" style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 10px;">Section Overview</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-          <div class="stat-chip" style="display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 8px; background: var(--bg2); border-radius: 10px;">
-            <span style="font-size: 12px; font-weight: 700; color: var(--text);">{{ $totalStudents }}</span>
-            <span style="font-size: 9px; color: var(--text3);">Total Students</span>
-          </div>
-          <div class="stat-chip" style="display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 8px; background: var(--green-bg); border-radius: 10px;">
-            <span style="font-size: 12px; font-weight: 700; color: var(--green);">{{ $teamedUp }}</span>
-            <span style="font-size: 9px; color: var(--text3);">Teamed Up</span>
-          </div>
-          <div class="stat-chip" style="display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 8px; background: var(--amber-bg); border-radius: 10px;">
-            <span style="font-size: 12px; font-weight: 700; color: var(--amber);">{{ $stillIndividual }}</span>
-            <span style="font-size: 9px; color: var(--text3);">Individual</span>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
-          Team Invites
-          @if($invites->count() > 0)
-            <span style="background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 10px;">{{ $invites->count() }} New</span>
-          @endif
-        </div>
-        
-        <div style="margin-top: 15px;">
-          @forelse($invites as $invite)
-            <div class="invitation-card">
-              <div style="display: flex; gap: 10px; align-items: center;">
-                <div class="avatar" style="width: 32px; height: 32px; font-size: 11px; overflow: hidden; flex-shrink: 0;">
-                  @if ($invite->sender->avatarUrl())
-                    <img src="{{ $invite->sender->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ strtoupper(substr($invite->sender->f_name ?? 'U', 0, 1) . substr($invite->sender->l_name ?? '', 0, 1)) }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
-                  @else
-                    {{ strtoupper(substr($invite->sender->f_name ?? 'U', 0, 1) . substr($invite->sender->l_name ?? '', 0, 1)) }}
-                  @endif
-                </div>
-                <div>
-                  <div style="font-size: 12px; font-weight: 600;">{{ $invite->team->team_name ?? 'A Team' }} invited you</div>
-                  <div style="font-size: 10px; color: var(--text3);">From {{ $invite->sender->f_name ?? '' }} {{ $invite->sender->l_name ?? '' }}</div>
-                </div>
-              </div>
-              <div class="invitation-actions">
-                <form method="POST" action="{{ route('invitations.update', $invite->id) }}" id="accept-form-{{ $invite->id }}" style="display:inline;">
-                  @csrf
-                  @method('PATCH')
-                  <input type="hidden" name="status" value="accepted">
-                  <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                    onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Join Team',message:'Accept invitation from <strong>{{ addslashes($invite->team->team_name ?? 'this team') }}</strong>? Your current post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $invite->id }}').submit();}})">
-                    Accept
-                  </button>
-                </form>
-                <form method="POST" action="{{ route('invitations.update', $invite->id) }}" id="decline-form-{{ $invite->id }}" style="display:inline;">
-                  @csrf
-                  @method('PATCH')
-                  <input type="hidden" name="status" value="declined">
-                  <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $invite->id }}, '{{ addslashes($invite->sender->f_name . ' ' . $invite->sender->l_name) }}', '{{ $invite->type }}', '{{ addslashes($invite->team->team_name ?? '') }}', '{{ addslashes($invite->sender->avatarUrl()) }}', '{{ addslashes($invite->sender->email ?? '') }}', '{{ addslashes(($invite->sender->course ?? '') . ($invite->sender->year_section ? ' · ' . $invite->sender->year_section : '')) }}')">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                  </button>
-                </form>
-              </div>
-            </div>
-          @empty
-            <div style="text-align: center; padding: 20px; color: var(--text3); font-size: 12px;">
-              No pending invites.
-            </div>
-          @endforelse
-
-          @if($incomingRequests->isNotEmpty())
-            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
-              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 10px;">Join Requests</div>
-              @foreach($incomingRequests as $request)
-                <div class="invitation-card">
-                  <div style="display: flex; gap: 10px; align-items: center;">
-                    <div class="avatar" style="width: 32px; height: 32px; font-size: 11px; overflow: hidden; flex-shrink: 0;">
-                      @if ($request->sender->avatarUrl())
-                        <img src="{{ $request->sender->avatarUrl() }}" alt="" referrerpolicy="no-referrer" data-initials="{{ strtoupper(substr($request->sender->f_name ?? 'U', 0, 1) . substr($request->sender->l_name ?? '', 0, 1)) }}" onerror="this.replaceWith(this.dataset.initials)" style="width: 100%; height: 100%; object-fit: cover;">
-                      @else
-                        {{ strtoupper(substr($request->sender->f_name ?? 'U', 0, 1) . substr($request->sender->l_name ?? '', 0, 1)) }}
-                      @endif
-                    </div>
-                    <div>
-                      <div style="font-size: 12px; font-weight: 600;">{{ $request->sender->f_name ?? 'Someone' }} {{ $request->sender->l_name ?? '' }} wants to join</div>
-                      <div style="font-size: 10px; color: var(--text3);">Requested to join your team</div>
-                    </div>
-                  </div>
-                  <div class="invitation-actions">
-                    <form method="POST" action="{{ route('invitations.update', $request->id) }}" id="accept-form-{{ $request->id }}" style="display:inline;">
-                      @csrf
-                      @method('PATCH')
-                      <input type="hidden" name="status" value="accepted">
-                      <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                        onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Accept Request',message:'Let <strong>{{ addslashes(($request->sender->f_name ?? '') . ' ' . ($request->sender->l_name ?? '')) }}</strong> join your team? Their post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $request->id }}').submit();}})">
-                        Accept Request
-                      </button>
-                    </form>
-                    <form method="POST" action="{{ route('invitations.update', $request->id) }}" id="decline-form-{{ $request->id }}" style="display:inline;">
-                      @csrf
-                      @method('PATCH')
-                      <input type="hidden" name="status" value="declined">
-                      <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $request->id }}, '{{ addslashes($request->sender->f_name . ' ' . $request->sender->l_name) }}', '{{ $request->type }}', '{{ addslashes($request->team->team_name ?? '') }}', '{{ addslashes($request->sender->avatarUrl()) }}', '{{ addslashes($request->sender->email ?? '') }}', '{{ addslashes(($request->sender->course ?? '') . ($request->sender->year_section ? ' · ' . $request->sender->year_section : '')) }}')">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              @endforeach
-            </div>
-          @endif
-
-          @if($outgoingRequests->isNotEmpty())
-            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
-              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 10px;">Your Pending Requests</div>
-              @foreach($outgoingRequests as $request)
-                <div class="invitation-card">
-                  <div style="display: flex; gap: 10px; align-items: center;">
-                    <div class="avatar" style="width: 32px; height: 32px; font-size: 11px; overflow: hidden; flex-shrink: 0; background: var(--amber-bg);">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--amber);"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    </div>
-                    <div>
-                      <div style="font-size: 12px; font-weight: 600;">
-                        {{ $request->team->team_name ?? ($request->receiver->f_name . ' ' . $request->receiver->l_name) }}
-                      </div>
-                      <div style="font-size: 10px; color: var(--text3);">Awaiting leader's response</div>
-                    </div>
-                    <span style="margin-left:auto; font-size: 10px; font-weight: 700; color: var(--amber); background: var(--amber-bg); padding: 3px 8px; border-radius: 6px;">PENDING</span>
-                  </div>
-                </div>
-              @endforeach
-              <div style="margin-top: 10px; font-size: 11px; color: var(--text3);">
-                You can only send one join request at a time. Wait for this request to be accepted or declined.
-              </div>
-            </div>
-          @endif
-        </div>
-      </div>
-    </div>
-  </div>
-  </div>
-</main>
-    </div>
-
-  @if ($otherRecruitments->hasPages())
-  <div class="pagination-container">
-      @if ($otherRecruitments->onFirstPage())
-          <div class="pg-arrow disabled" title="Previous" style="opacity: 0.5; cursor: not-allowed; display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </div>
+      @if (! $myTeam)
+        @include('student.team._no-team')
       @else
-          <a href="{{ $otherRecruitments->previousPageUrl() }}" class="pg-arrow" title="Previous" style="color: inherit; text-decoration: none; display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </a>
+        @include('student.team._team-extras')
       @endif
-      
-      @foreach ($otherRecruitments->getUrlRange(1, $otherRecruitments->lastPage()) as $page => $url)
-          @if ($page == $otherRecruitments->currentPage())
-              <div class="pg-btn active">{{ $page }}</div>
-          @else
-              <a href="{{ $url }}" class="pg-btn" style="color: inherit; text-decoration: none;">{{ $page }}</a>
-          @endif
-      @endforeach
+    </main>
 
-      @if ($otherRecruitments->hasMorePages())
-          <a href="{{ $otherRecruitments->nextPageUrl() }}" class="pg-arrow" title="Next" style="color: inherit; text-decoration: none; display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-      @else
-          <div class="pg-arrow disabled" title="Next" style="opacity: 0.5; cursor: not-allowed; display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-      @endif
-   </div>
-   @endif
-
-   <div class="tutorial-note" style="margin-top: 4px;">
-       <div class="tutorial-item">
-          <div class="dot-guide" style="background: #16a34a;"></div>
-          <span>Find Members</span>
-      </div>
-      <div class="tutorial-item">
-          <div class="dot-guide" style="background: #3b82f6;"></div>
-          <span>Find Team</span>
-      </div>
-  </div>
+    @include('student.team._selection')
+    <script nonce="{{ Vite::cspNonce() }}">
+      // The room between a short tab and the credits (see .tm-push above).
+      (function () {
+        var content = document.querySelector('.main > .content');
+        if (content) { var push = document.createElement('div'); push.className = 'tm-push'; push.setAttribute('aria-hidden', 'true'); content.appendChild(push); }
+      })();
+    </script>
 
    {{-- The developers' credit comes from partials/mobile-tabbar, which puts
         it last on the page and holds it at the foot of the screen. A copy of
@@ -1281,7 +520,7 @@
         <option value="individual">Find a Team (Join Others)</option>
       </select>
       <div class="modal-tutorial" id="modal-note-box">
-        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.</p>
+        <p id="modal-note-text">Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.</p>
       </div>
       <div id="leader-fields">
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
@@ -1312,7 +551,7 @@
       <label id="skills-label" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Skills we need</label>
       <p style="margin:-2px 0 8px;font-size:11px;color:var(--text3);line-height:1.5">Optional. The same list experts pick from on their profile.</p>
       <div class="skill-pick" id="skill-pick">
-        @foreach(collect(\App\Support\SkillCatalog::groupsForPrograms(array_filter([auth()->user()->program])))->except('Language & Editing (Grammarian)') as $group => $items)
+        @foreach(collect(\App\Support\SkillCatalog::groupsForPrograms(array_filter([$mySchoolYear?->program])))->except('Language & Editing (Grammarian)') as $group => $items)
           <div class="skill-pick-group">
             <b>{{ \Illuminate\Support\Str::before($group, ' (') }}</b>
             <div>
@@ -1428,10 +667,6 @@
            needs the panel's "passed with revision"; a different one goes
            through the CaPSA (TitleRevision). --}}
       <label for="edit-project-title" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin: 16px 0 8px;">Project Title</label>
-      @php
-        $approvedProposalCount = $myTeam->preProposals()->where('approved_status', true)->count();
-        $titleCanBeReworded = $myTeam->project_title && \App\Support\TitleRevision::canRevise($myTeam);
-      @endphp
       @if ($myTeam->project_title)
         <textarea name="project_title" id="edit-project-title" class="ut-title" rows="2" maxlength="255" required
                   data-saved="{{ $myTeam->project_title }}">{{ old('project_title', $myTeam->project_title) }}</textarea>
@@ -1457,10 +692,7 @@
            pre-proposal that became its title. They come filled in; the leader
            adds from the same fixed list or removes, and a title always keeps
            at least one. Before there is a title there is nothing to tag. --}}
-      @php
-        $hasTitle = (bool) ($myTeam->project_title || $myTeam->selectedPreProposal);
-        $titleTags = $myTeam->titleTags();
-      @endphp
+      @php $hasTitle = $teamHasTitle; @endphp
       <div id="tagsSection" style="margin-bottom:20px;">
         <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Project Tags</label>
         @if ($hasTitle)
@@ -1490,26 +722,19 @@
 
 {{-- Open Slot Invite Modal --}}
 <div class="modal-overlay" id="openSlotInviteModal" onclick="if(event.target===this) closeOpenSlotInviteModal()">
-  <div class="card modal-card modal-card--team" style="width: 460px; padding: 0; overflow: hidden; max-height: 80vh;max-height: 80dvh; display: flex; flex-direction: column;">
-    <div style="background: linear-gradient(135deg, rgba(29,78,216,0.10), rgba(29,78,216,0.02)); border-bottom: 1px solid var(--border); padding: 22px 26px 18px; position: relative;">
-      <button type="button" onclick="closeOpenSlotInviteModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 16px; right: 16px;">
+  <div class="card modal-card modal-card--team" role="dialog" aria-modal="true" aria-labelledby="osl-title" style="width: 460px; max-width: 100%; padding: 0; border-radius: 14px; overflow: hidden; max-height: 80vh;max-height: 80dvh; display: flex; flex-direction: column; position: relative;">
+    <div style="padding: 28px 28px 0; position: relative;">
+      <button type="button" onclick="closeOpenSlotInviteModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 18px; right: 18px;">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(29,78,216,0.14); color: var(--blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        </div>
+      <div style="display: flex; align-items: center; gap: 14px; padding-right: 40px;">
+        <span style="width: 48px; height: 48px; border-radius: 50%; background: var(--bg4); color: #8a6500; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+        </span>
         <div>
-          <div style="font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.2px;">Invite Classmate</div>
-          <div style="font-size: 12px; color: var(--text3); margin-top: 2px;">{{ $myTeam?->team_name }}</div>
+          <h2 id="osl-title" style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text);">Invite a classmate</h2>
+          <div style="font-size: 13px; color: var(--text3); margin-top: 2px;">Classmates in {{ $sectionLabel }} without a team. They pick their role after joining.</div>
         </div>
-      </div>
-    </div>
-
-    <div style="padding: 22px 26px 18px; border-bottom: 1px solid var(--border);">
-      <div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--blue-bg); border: 1px solid rgba(29,78,216,0.2); border-radius: 10px; color: var(--blue); font-size: 12px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-        <span>Classmates in your section appear here. Only those without a team can be invited.</span>
       </div>
     </div>
 
@@ -1517,7 +742,7 @@
          the dialog had two bars down its right edge and the search box slid
          away under the header. It lays the search and the list out; the list
          is the only thing that moves. --}}
-    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 18px 26px 26px;">
+    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 18px 28px 20px;">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
         <div style="position: relative; flex: 1;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -1541,11 +766,11 @@
          fired the moment you touched a name. Picking who to invite and
          deciding to invite them are two different acts, and inviting four
          people should not be four dialogs. --}}
-    <div style="padding: 16px 26px 22px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px;">
+    <div style="padding: 16px 28px 22px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
       <span id="osl-count" style="font-size: 12px; color: var(--text3); margin-right: auto;">Pick who to invite.</span>
-      <button type="button" class="google-btn" style="border: none;" onclick="closeOpenSlotInviteModal()">Close</button>
-      <button type="button" class="btn-primary" id="osl-send" disabled
-              style="opacity:.5;cursor:not-allowed;" onclick="sendOpenSlotInvites()">Send Invite</button>
+      <button type="button" class="nt-btn-line" style="flex: none; border: 0; background: transparent; min-height: 40px;" onclick="closeOpenSlotInviteModal()">Cancel</button>
+      <button type="button" class="nt-btn nt-btn-primary" id="osl-send" disabled
+              style="opacity:.5;cursor:not-allowed;" onclick="sendOpenSlotInvites()">Send invite</button>
     </div>
   </div>
 </div>
@@ -1633,7 +858,7 @@
 @php
   $ltData = $pendingLeadershipTransfer->data ?? [];
   $ltOldLeaderId = (int) ($ltData['old_leader_id'] ?? 0);
-  $ltOldLeader = $ltOldLeaderId ? \App\Models\Student::find($ltOldLeaderId) : null;
+  $ltOldLeader = $previousLeader;
 @endphp
 <div class="modal-overlay" id="leadershipPopup" onclick="if(event.target==this) leadershipPopDismiss()">
   <div class="card modal-card modal-card--team" style="width: 440px; padding: 0; overflow: hidden; position: relative;">
@@ -1683,8 +908,8 @@
       </form>
 
       <div style="display: flex; gap: 10px;">
-        <button type="button" onclick="showConfirm({title:'Accept Transfer',message:'You are about to accept leadership of <strong>{{ addslashes($ltData['team_name'] ?? 'the team') }}</strong>. You will become the new team leader, and the current leader will be notified.',icon:'team',confirmText:'Yes',cancelText:'No',confirmClass:'success',onConfirm:function(){document.getElementById('leadership-pop-accept-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Approve</button>
-        <button type="button" onclick="showConfirm({title:'Decline',message:'You are about to decline leadership of <strong>{{ addslashes($ltData['team_name'] ?? 'the team') }}</strong>. You will stay a member, and the current leader will be notified.',icon:'request',confirmText:'Yes',cancelText:'No',confirmClass:'danger',onConfirm:function(){document.getElementById('leadership-pop-decline-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Decline</button>
+        <button type="button" onclick="showConfirm({title:'Accept Transfer',message:'You are about to accept leadership of <strong>' + {{ Js::from(e($ltData['team_name'] ?? 'the team')) }} + '</strong>. You will become the new team leader, and the current leader will be notified.',icon:'team',confirmText:'Yes',cancelText:'No',confirmClass:'success',onConfirm:function(){document.getElementById('leadership-pop-accept-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Approve</button>
+        <button type="button" onclick="showConfirm({title:'Decline',message:'You are about to decline leadership of <strong>' + {{ Js::from(e($ltData['team_name'] ?? 'the team')) }} + '</strong>. You will stay a member, and the current leader will be notified.',icon:'request',confirmText:'Yes',cancelText:'No',confirmClass:'danger',onConfirm:function(){document.getElementById('leadership-pop-decline-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Decline</button>
         <button type="button" onclick="leadershipPopRemindLater()" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Remind Me Later</button>
       </div>
     </div>
@@ -1850,7 +1075,7 @@ function pickRole(roleId, btn) {
   // Still to see the portal tour: hidden from the first frame, shown once the tour closes.
   $expertRemovedAfterTour = (bool) auth('web')->user()?->needsPortalTour();
 @endphp
-<div id="expertRemovedModal" style="position:fixed;inset:0;z-index:99999;display:{{ $expertRemovedAfterTour ? 'none' : 'flex' }};align-items:center;justify-content:center;background:rgba(15,16,22,0.75);backdrop-filter:blur(6px);padding:20px;" data-ids="{{ $expertRemovedIds }}">
+<div id="expertRemovedModal" style="position:fixed;inset:0;z-index:99999;display:{{ $expertRemovedAfterTour ? 'none' : 'flex' }};align-items:center;justify-content:center;background:rgba(24,25,31,0.9);backdrop-filter:blur(4px);padding:20px;" data-ids="{{ $expertRemovedIds }}">
   <div style="background:#fff;border-radius:18px;padding:32px 28px 24px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,0.25);text-align:center;position:relative;animation:expertPopIn 0.25s cubic-bezier(0.16,1,0.3,1);">
     <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.08);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
       <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1893,7 +1118,7 @@ function pickRole(roleId, btn) {
 <div class="msg-toast" id="msg-toast"></div>
 
 {{-- Custom Confirm Modal --}}
-<div id="customConfirmModal" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center; background:rgba(15,16,22,0.75); backdrop-filter:blur(6px); padding:20px;">
+<div id="customConfirmModal" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center; background:rgba(24,25,31,0.9); backdrop-filter:blur(4px); padding:20px;">
   <div id="ccm-card" style="background:#fff; border-radius:18px; padding:32px 28px 24px; width:100%; max-width:380px; box-shadow:0 24px 60px rgba(0,0,0,0.25); transform:scale(0.92); transition:transform 0.22s cubic-bezier(0.16,1,0.3,1); text-align:center; position:relative;">
     <div id="ccm-icon-wrap" style="width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; flex-shrink:0;"></div>
     <h3 id="ccm-title" style="font-size:17px; font-weight:700; color:#1e2128; margin:0 0 8px; letter-spacing:-0.3px;"></h3>
@@ -1906,12 +1131,15 @@ function pickRole(roleId, btn) {
 </div>
 
 <script nonce="{{ Vite::cspNonce() }}">
-const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
+const currentStudentTeamId = {{ $mySchoolYear?->team_id ?? 'null' }};
 const currentStudentId = {{ auth()->user()->student_id }};
 const myRecruitmentGoal = '{{ $myRecruitmentGoal ?? '' }}';
 const isTeamFull = @json($isTeamFull ?? false);
 const isPostHidden = @json(isset($postHidden) && $postHidden);
 const hasPendingRequest = @json($hasPendingRequest ?? false);
+// Who in a team may act on a post: only the leader invites, and only while a seat is free.
+const VIEWER_IS_LEADER = @json((bool) ($isLeader ?? false));
+const VIEWER_TEAM_FULL = @json((bool) ($isTeamFull ?? false));
 let activeTags = [];
 let isEditing = false;
 let editingId = null;
@@ -1979,7 +1207,7 @@ function syncRecruitmentSelectLabels() {
 
 @if($myTeam)
 function confirmLeaveTeam() {
-    @php $teamMemberCount = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count(); @endphp
+    @php $teamMemberCount = $teamSize; @endphp
     @if($isLeader && $teamMemberCount > 1)
     showConfirm({
         title: 'Cannot Leave',
@@ -1996,7 +1224,7 @@ function confirmLeaveTeam() {
     @elseif($isLeader)
     showConfirm({
         title: 'Leave & Terminate Team',
-        message: 'You are the only member. Leaving will <strong>permanently terminate</strong> <strong>{{ addslashes($myTeam->team_name) }}</strong>. This cannot be undone.',
+        message: 'You are the only member. Leaving will <strong>permanently terminate</strong> <strong>' + {{ Js::from(e($myTeam->team_name)) }} + '</strong>. This cannot be undone.',
         icon: 'leave',
         confirmText: 'Leave team',
         confirmClass: 'danger',
@@ -2007,7 +1235,7 @@ function confirmLeaveTeam() {
     @else
     showConfirm({
         title: 'Leave Team',
-        message: 'Are you sure you want to leave <strong>{{ addslashes($myTeam->team_name) }}</strong>?<br><br>\u2022 Your recruitment post will be removed<br>\u2022 You can only rejoin if the leader invites you again<br><br>This action cannot be undone.',
+        message: 'Are you sure you want to leave <strong>' + {{ Js::from(e($myTeam->team_name)) }} + '</strong>?<br><br>\u2022 Your recruitment post will be removed<br>\u2022 You can only rejoin if the leader invites you again<br><br>This action cannot be undone.',
         icon: 'leave',
         confirmText: 'Leave',
         confirmClass: 'danger',
@@ -2173,7 +1401,7 @@ function confirmTransferLeadership() {
     var name = nameEl ? nameEl.textContent : 'the selected member';
     showConfirm({
         title: 'Review and transfer?',
-        message: 'You are about to transfer leadership of <strong>{{ addslashes($myTeam?->team_name ?? 'your team') }}</strong> to <strong>' + name + '</strong>. They must approve it before becoming the leader.',
+        message: 'You are about to transfer leadership of <strong>' + {{ Js::from(e($myTeam?->team_name ?? 'your team')) }} + '</strong> to <strong>' + name + '</strong>. They must approve it before becoming the leader.',
         icon: 'team',
         confirmText: 'Review & Transfer',
         confirmClass: 'primary',
@@ -2189,6 +1417,12 @@ function closeEditTeamModal() {
     document.getElementById('editTeamModal').classList.remove('active');
 }
 @endif
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 function setAvatar(avatarEl, url, name) {
     if (url) {
@@ -2208,9 +1442,9 @@ function openDeclineModal(invitationId, name, type, teamName, avatarUrl, email, 
     document.getElementById('dm-info').textContent = info || '';
     setAvatar(document.getElementById('dm-avatar'), avatarUrl, name);
 
-    var teamLabel = teamName ? ' <strong style="color:var(--text);">' + teamName + '</strong>' : '';
+    var teamLabel = teamName ? ' <strong style="color:var(--text);">' + escapeHtml(teamName) + '</strong>' : '';
     document.getElementById('dm-message').innerHTML =
-        'Are you sure you want to <strong style="color:#ef4444;">decline</strong>' + (type === 'invite' ? ' the invitation to join' + teamLabel + '?' : ' <strong style="color:var(--text);">' + name + '</strong>\'s request to join your team?') +
+        'Are you sure you want to <strong style="color:#ef4444;">decline</strong>' + (type === 'invite' ? ' the invitation to join' + teamLabel + '?' : ' <strong style="color:var(--text);">' + escapeHtml(name) + '</strong>\'s request to join your team?') +
         ' They will be notified. This action cannot be undone.';
 
     document.getElementById('declineModal').classList.add('active');
@@ -2229,7 +1463,7 @@ function submitDecline() {
 
 // Which Capstone is running, so the page can say why rather than opening a
 // list nobody can be invited from.
-const CAPSTONE_STAGE = {{ $myTeam?->capstoneStage() ?? auth()->user()->capstoneStage() }};
+const CAPSTONE_STAGE = {{ $capstoneStage }};
 // The CaPSA's Team Rules. Checked the moment somebody starts to create, join
 // or invite - never after they have filled in a form.
 //
@@ -2394,7 +1628,7 @@ document.addEventListener('DOMContentLoaded', function () { openEditTeamModal();
 function cancelPendingInvite(invitationId, name) {
     showConfirm({
         title: 'Cancel invitation',
-        message: 'Cancel the invitation sent to <strong>' + name + '</strong>? They will not be able to accept it.',
+        message: 'Cancel the invitation sent to <strong>' + escapeHtml(name) + '</strong>? They will not be able to accept it.',
         icon: 'invite',
         confirmText: 'Cancel invite',
         confirmClass: 'danger',
@@ -2617,7 +1851,7 @@ function selectOpenSlotClassmate(el) {
 // five people for two seats. Rendered with the page, then re-read from the
 // classmate list every time the dialog opens, so it does not go stale after
 // invitations are sent without a reload.
-var OPEN_SLOT_SEATS_FREE = {{ $myTeam->seatsFree() }};
+var OPEN_SLOT_SEATS_FREE = {{ $teamSeatsFree }};
 
 /** How many are picked, and whether Send Invite is worth pressing. */
 function refreshOpenSlotSendButton() {
@@ -2631,7 +1865,7 @@ function refreshOpenSlotSendButton() {
     btn.disabled = picked.length === 0 || tooMany;
     btn.style.opacity = btn.disabled ? '.5' : '1';
     btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
-    btn.textContent = picked.length > 1 ? 'Send ' + picked.length + ' Invites' : 'Send Invite';
+    btn.textContent = picked.length > 1 ? 'Send ' + picked.length + ' invites' : 'Send invite';
 
     if (label) {
         if (tooMany) {
@@ -2643,8 +1877,7 @@ function refreshOpenSlotSendButton() {
         } else {
             label.style.color = 'var(--text3)';
             label.textContent = picked.length
-                ? picked.length + (picked.length === 1 ? ' classmate picked' : ' classmates picked')
-                  + ' · ' + OPEN_SLOT_SEATS_FREE + ' seat' + (OPEN_SLOT_SEATS_FREE === 1 ? '' : 's') + ' free'
+                ? picked.length + ' of ' + OPEN_SLOT_SEATS_FREE + ' picked'
                 : (OPEN_SLOT_SEATS_FREE
                     ? 'Pick who to invite - ' + OPEN_SLOT_SEATS_FREE + ' seat'
                       + (OPEN_SLOT_SEATS_FREE === 1 ? '' : 's') + ' free.'
@@ -2837,11 +2070,11 @@ function openEditModal() {
     document.getElementById('post-goal').value = isLeader ? 'leader' : 'individual';
     updateModalUI();
 
-    const teamName = '{{ addslashes($myTeam?->team_name ?? '') }}';
+    const teamName = {{ Js::from($myTeam?->team_name ?? '') }};
     document.getElementById('team-name').value = teamName;
 
-    const lookingFor = '{{ addslashes($myRecruitment->looking_for ?? '') }}';
-    const introduction = '{{ addslashes($myRecruitment->introduction ?? '') }}';
+    const lookingFor = {{ Js::from($myRecruitment->looking_for ?? '') }};
+    const introduction = {{ Js::from($myRecruitment->introduction ?? '') }};
     if (isLeader) {
         document.getElementById('leader-looking-for').value = lookingFor;
     } else {
@@ -2886,14 +2119,15 @@ function setPickedSkills(skills) {
     document.querySelectorAll('#skill-pick input').forEach(function (el) { el.checked = skills.indexOf(el.value) !== -1; });
 }
 
-function openPostModal() {
+// goal: 'individual' opens the form on "Find a team" (the hero's second button).
+function openPostModal(goal) {
     if (!CREATION_ALLOWED && !JOINING_ALLOWED) {
         showToast('Creating and joining teams are both closed right now - your CaPSA has turned them off.', 'error');
         return;
     }
     resetPostModal();
-    // Open on the goal that is still allowed.
-    if (!CREATION_ALLOWED) {
+    // Open on the goal asked for, or the one that is still allowed.
+    if (!CREATION_ALLOWED || goal === 'individual') {
         document.getElementById('post-goal').value = 'individual';
         updateModalUI();
     }
@@ -2912,13 +2146,17 @@ function sendInviteOrRequest(receiverId, teamId, type) {
         return;
     }
     const isInvite = type === 'invite';
+    if (isInvite && typeof OPEN_SLOT_SEATS_FREE !== 'undefined' && OPEN_SLOT_SEATS_FREE < 1) {
+        showToast('No seats left on your team.', 'error');
+        return;
+    }
     showConfirm({
-        title: isInvite ? 'Invite Student' : 'Send Join Request',
+        title: isInvite ? 'Invite to team' : 'Send Join Request',
         message: isInvite
-            ? 'Send a team invitation to this student?'
+            ? 'Invite this classmate to your team? They pick their role after joining.'
             : 'Send a request to join this team? Your post will remain visible until accepted.',
         icon: isInvite ? 'invite' : 'request',
-        confirmText: isInvite ? 'Send Invite' : 'Send Request',
+        confirmText: isInvite ? 'Send invite' : 'Send Request',
         confirmClass: 'primary',
         onConfirm: function() {
             document.getElementById('ir-receiver-id').value = receiverId;
@@ -2998,7 +2236,9 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
                 actionBtn.onclick = null;
             } else if (currentStudentTeamId) {
                 // Already in a team — cannot request to join another
-                actionBtn.textContent = 'Leave your team first';
+                ownerMsg.style.display = 'block';
+                ownerMsg.textContent = 'You’re already on a team, so you can’t join another one.';
+                actionBtn.textContent = 'You’re on a team';
                 actionBtn.disabled = true;
                 actionBtn.style.opacity = 0.5;
                 actionBtn.style.cursor = 'not-allowed';
@@ -3025,7 +2265,23 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
             }
         } else {
             // find_a_team poster — current user can invite them if they have a team
-            if (currentStudentTeamId) {
+            if (currentStudentTeamId && !VIEWER_IS_LEADER) {
+                ownerMsg.style.display = 'block';
+                ownerMsg.textContent = 'Only your team leader can invite classmates.';
+                actionBtn.textContent = 'Leader invites only';
+                actionBtn.disabled = true;
+                actionBtn.style.opacity = 0.5;
+                actionBtn.style.cursor = 'not-allowed';
+                actionBtn.onclick = null;
+            } else if (currentStudentTeamId && VIEWER_TEAM_FULL) {
+                ownerMsg.style.display = 'block';
+                ownerMsg.textContent = 'Your team is full, so you can’t invite anyone else.';
+                actionBtn.textContent = 'Team is full';
+                actionBtn.disabled = true;
+                actionBtn.style.opacity = 0.5;
+                actionBtn.style.cursor = 'not-allowed';
+                actionBtn.onclick = null;
+            } else if (currentStudentTeamId) {
                 actionBtn.textContent = 'Invite to Team';
                 actionBtn.onclick = function() {
                     sendInviteOrRequest(postOwnerId, currentStudentTeamId, 'invite');
@@ -3064,29 +2320,14 @@ function closeDetailModal() {
     document.getElementById('detailModal').classList.remove('active');
 }
 
-function toggleTeamDashboard() {
-    var body = document.getElementById('teamDashboardBody');
-    var chevron = document.getElementById('teamDashboardChevron');
-    var toggleBtn = document.getElementById('teamDashboardToggle');
-    if (body.style.display === 'none') {
-        body.style.display = 'block';
-        chevron.setAttribute('transform', '');
-        toggleBtn.title = 'Minimize team card';
-    } else {
-        body.style.display = 'none';
-        chevron.setAttribute('transform', 'rotate(-180)');
-        toggleBtn.title = 'Expand team card';
-    }
-}
-
 function updateModalUI() {
   syncRecruitmentSelectLabels();
     const goal = document.getElementById('post-goal').value;
     const isLeader = (goal === 'leader');
     document.getElementById('modal-title').textContent = isLeader ? 'Build a Team' : 'Find a Team';
     document.getElementById('modal-note-text').innerHTML = isLeader 
-        ? '<strong>CapsTip:</strong> Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.' 
-        : '<strong>CapsTip:</strong> Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
+        ? 'Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.' 
+        : 'Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
     
     // A closed goal says so at once, and hides its fields so nothing gets typed for nothing.
     const closedMsg = isLeader ? (CREATION_ALLOWED ? null : CREATION_CLOSED_MSG) : (JOINING_ALLOWED ? null : JOINING_CLOSED_MSG);
@@ -3197,33 +2438,6 @@ function showToast(msg, type) {
     setTimeout(function() { el.classList.remove('show'); }, 4000);
 }
 
-function filterFeed() {
-    var value = document.getElementById('feed-filter').value;
-    var skillFilter = document.getElementById('feed-skill-filter');
-    var skill = skillFilter ? skillFilter.value : '';
-    var cards = document.querySelectorAll('#recruitment-feed .feed-post-card');
-    var empty = document.getElementById('feed-filter-empty');
-    var visible = 0;
-
-    cards.forEach(function(card) {
-        var goal = card.getAttribute('data-goal');
-        var show = (value === 'all' || goal === value)
-            && (!skill || (card.getAttribute('data-skills') || '').split('|').indexOf(skill) !== -1);
-        card.style.display = show ? '' : 'none';
-        if (show) visible++;
-    });
-
-    var countEl = document.getElementById('feed-count');
-    if (countEl) countEl.textContent = visible + ' post' + (visible === 1 ? '' : 's');
-
-    if (empty) {
-        empty.style.display = visible === 0 ? 'block' : 'none';
-        if (visible === 0 && (value !== 'all' || skill)) {
-            empty.textContent = 'No posts match this filter.';
-        }
-    }
-}
-
 function publishPost(event) {
     const closedGoal = document.getElementById('post-goal').value === 'leader' ? !CREATION_ALLOWED : !JOINING_ALLOWED;
     if (closedGoal) {
@@ -3317,7 +2531,6 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('DOMContentLoaded', function() {
     updateModalUI();
-    filterFeed();
     initTeamNameCheck();
 
     // Skeleton fade-out

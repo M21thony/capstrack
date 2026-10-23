@@ -184,7 +184,10 @@ class SimilarityReportLayoutTest extends TestCase
             ->assertSee('Back to all 2 matches')
             ->assertDontSee('What your team wrote');
 
+        // An archive match saved without its abstract still opens, saying so.
         $this->actingAs($this->leader)->get(route('student.duplication.similar', [$check->id, 1]))
-            ->assertSee('Archive 1 of 1');
+            ->assertOk()
+            ->assertSee('Archive 1 of 1')
+            ->assertSee('No abstract was recorded for this capstone.');
     }
 }

@@ -190,7 +190,7 @@
                   ? 'Grading rubric · '.$item['forProgram'].' · '.$item['points'].' pts'
                   : collect([$item['categoryLabel'], $item['type'], $item['size'], $item['date']])->filter()->implode(' · ');
             @endphp
-            <li class="rs-item" data-key="{{ $item['key'] }}" data-cat="{{ $item['category'] }}" data-sort="{{ $item['sort'] }}" data-title="{{ Str::lower($item['title']) }}" data-find="{{ Str::lower($item['title'].' '.$item['categoryLabel']) }}">
+            <li class="rs-item" data-key="{{ $item['key'] }}" data-cat="{{ $item['category'] }}" data-sort="{{ $loop->remaining }}" data-title="{{ Str::lower($item['title']) }}" data-find="{{ Str::lower($item['title'].' '.$item['categoryLabel']) }}">
               <button type="button" class="rs-row" aria-expanded="false" aria-controls="rs-more-{{ $item['key'] }}">
                 <span class="rs-ico {{ $icon }}" aria-hidden="true">{{ $item['kind'] === 'rubric' ? 'RUB' : $item['type'] }}</span>
                 <span class="rs-text">

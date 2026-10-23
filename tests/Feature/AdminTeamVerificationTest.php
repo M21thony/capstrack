@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\PreProposalController;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
@@ -10,6 +11,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminTeamVerificationTest extends TestCase
@@ -255,7 +257,7 @@ class AdminTeamVerificationTest extends TestCase
 
         // Up to whatever submitting currently asks for, rather than a fixed
         // three - the minimum is a rule that moves.
-        foreach (range(2, \App\Http\Controllers\PreProposalController::RECOMMENDED_PROPOSALS) as $slot) {
+        foreach (range(2, PreProposalController::RECOMMENDED_PROPOSALS) as $slot) {
             $this->createPendingProposal($team, $leader, $slot, "Candidate Title Number {$slot} For This Team To Consider Fully");
         }
 
@@ -297,7 +299,7 @@ class AdminTeamVerificationTest extends TestCase
         $response = $this->get(route('student.team'));
 
         $response->assertOk();
-        $response->assertSee('Pending Verification');
+        $response->assertSee('Pending verification');
         $response->assertDontSee('Confirm Team');
     }
 
@@ -621,12 +623,12 @@ class AdminTeamVerificationTest extends TestCase
     // download.
     public function test_admin_can_view_the_original_pre_proposal_document_inline(): void
     {
-        \Illuminate\Support\Facades\Storage::fake();
+        Storage::fake();
         $this->createAdmin();
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
         $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
-        \Illuminate\Support\Facades\Storage::put($proposal->duplicationCheck->document_path, 'fake pdf contents');
+        Storage::put($proposal->duplicationCheck->document_path, 'fake pdf contents');
 
         $response = $this->get(route('capsa.verify_teams.pre_proposals.document', $proposal->id));
 
@@ -636,7 +638,7 @@ class AdminTeamVerificationTest extends TestCase
 
     public function test_download_document_404s_when_the_file_is_missing(): void
     {
-        \Illuminate\Support\Facades\Storage::fake();
+        Storage::fake();
         $this->createAdmin();
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
@@ -649,7 +651,7 @@ class AdminTeamVerificationTest extends TestCase
 
     public function test_the_title_page_links_to_the_original_document(): void
     {
-        \Illuminate\Support\Facades\Storage::fake();
+        Storage::fake();
         $this->createAdmin();
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);

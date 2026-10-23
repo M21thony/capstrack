@@ -156,8 +156,8 @@ class StudentFinancialController extends Controller
             ], 422);
         }
 
-        // A first receipt, or a new photo for one still held or sent back. It
-        // goes to the team leader, who sends the team's receipts together.
+        // A first receipt, or a new photo for one sent back. It goes straight
+        // to the CaPSA.
         $record = FinancialRecord::submitFor($student, ExpensePost::findOrFail($validated['expense_post_id']), $request->file('receipt_image'), $validated['receipt_number']);
 
         $record->load('expensePost');
@@ -167,34 +167,6 @@ class StudentFinancialController extends Controller
             'message' => 'Receipt submitted successfully.',
             'data' => $this->formatSubmission($record),
         ], 201);
-    }
-
-    /** The team leader sends every member's receipt for one fee to the CaPSA at once. */
-    public function submitTeam(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'expense_post_id' => ['required', 'exists:expense_posts,id'],
-        ]);
-
-        /** @var Student $student */
-        $student = $request->user();
-        $team = $student->team;
-
-        if (! $team) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => ['expense_post_id' => ['Join a team first.']],
-            ], 422);
-        }
-
-        $sent = FinancialRecord::submitTeam($student, $team, ExpensePost::findOrFail($validated['expense_post_id']));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Sent '.$sent.' '.($sent === 1 ? 'receipt' : 'receipts').' to your CaPSA.',
-            'data' => ['sent' => $sent],
-        ]);
     }
 
     public function expensePosts(Request $request): JsonResponse

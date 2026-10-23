@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Student;
 use App\Support\DefenseAnalytics;
 use App\Support\DefenseProgress;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -21,8 +23,9 @@ class AnalyticsController extends Controller
     public function index(Request $request, DefenseAnalytics $analytics)
     {
         $filters = $request->validate([
-            'school_year' => ['nullable', 'string', 'max:20'],
-            'program' => ['nullable', 'string', 'max:20'],
+            // The year also goes into the CSV's filename, so only a real year.
+            'school_year' => ['nullable', 'string', 'regex:/^(\d{4}-\d{4}|'.DefenseAnalytics::ALL_YEARS.')$/'],
+            'program' => ['nullable', Rule::in([...array_keys(Student::PROGRAM_COURSES), 'Unassigned'])],
             'section' => ['nullable', 'string', 'max:60'],
             'tag' => ['nullable', 'string', 'max:60'],
             'export' => ['nullable', 'in:csv'],

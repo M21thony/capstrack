@@ -19,14 +19,16 @@ class TeamAvatarImagesTest extends TestCase
     private function imageTags(): array
     {
         // Blade echoes such as {{ $member->avatarUrl() }} contain a ">", so they are skipped over whole.
-        preg_match_all('/<img\b(?:\{\{.*?\}\}|[^>])*>/s', file_get_contents(resource_path('views/student/team.blade.php')), $matches);
+        // The page and the partials it includes for each screen.
+        $views = [resource_path('views/student/team.blade.php'), ...glob(resource_path('views/student/team/*.blade.php'))];
+        preg_match_all('/<img\b(?:\{\{.*?\}\}|[^>])*>/s', implode("\n", array_map('file_get_contents', $views)), $matches);
 
         return $matches[0];
     }
 
     public function test_the_team_page_has_profile_photos_to_check(): void
     {
-        $this->assertGreaterThanOrEqual(13, count($this->imageTags()));
+        $this->assertGreaterThanOrEqual(12, count($this->imageTags()));
     }
 
     public function test_every_photo_is_requested_without_a_referrer(): void
@@ -48,7 +50,7 @@ class TeamAvatarImagesTest extends TestCase
     {
         $serverDrawn = array_filter($this->imageTags(), fn (string $tag): bool => str_contains($tag, 'src="{{'));
 
-        $this->assertCount(10, $serverDrawn);
+        $this->assertCount(9, $serverDrawn);
 
         foreach ($serverDrawn as $tag) {
             $this->assertStringContainsString('data-initials="{{', $tag, $tag);

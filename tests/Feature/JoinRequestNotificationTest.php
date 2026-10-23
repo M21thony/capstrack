@@ -115,7 +115,7 @@ class JoinRequestNotificationTest extends TestCase
         $this->assertEquals($requester->student_id, $response->viewData('incomingRequests')->first()->sender_id);
         $this->assertCount(0, $response->viewData('invites'));
 
-        $response->assertSee('Join Requests');
+        $response->assertSee('Join requests');
         $response->assertSee('Student2 Member wants to join');
     }
 }
