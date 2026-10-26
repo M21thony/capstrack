@@ -207,6 +207,32 @@ const linesOf = (words) => {
   return lines;
 };
 
+// A page number in the header or footer would count as changed whenever pages
+// shift. Only short numbers near the page edge: "2026" on a title page is text.
+const PAGE_NUMBER = /^(page\s*)?(\d{1,3}|[ivxlc]{1,6})(\s*of\s*\d{1,3})?$/i;
+const NUMBER = /^(\d+|[ivxlc]{1,6})$/;
+const nearEdge = (top) => top < 0.12 || top > 0.88;
+
+/**
+ * The words without the header and footer lines that would count as changed
+ * whenever the page breaks move: a line that is only a page number, and a line
+ * near the edge of at least half the pages (a running header, the school's
+ * letterhead), numbers in it aside. Half, so a "Table 3" at the top of a page
+ * or two is still compared.
+ */
+export function dropRunningLines(words) {
+  const lines = linesOf(words).map((l) => ({
+    ...l,
+    edge: nearEdge(words[l.start].rects[0].top_position),
+    key: l.text.split(" ").filter((t) => !NUMBER.test(t)).join(" "),
+  }));
+  const pages = new Map(); // a line's text -> the pages it is near the edge of
+  lines.forEach((l) => l.edge && l.key && pages.set(l.key, (pages.get(l.key) || new Set()).add(l.page)));
+  const need = Math.max(2, Math.ceil(new Set(words.map((w) => w.page)).size / 2));
+  const running = (l) => l.edge && (PAGE_NUMBER.test(words.slice(l.start, l.end).map((w) => w.raw).join(" ")) || pages.get(l.key)?.size >= need);
+  return lines.filter((l) => !running(l)).flatMap((l) => words.slice(l.start, l.end));
+}
+
 const snippet = (words, s, e) =>
   words.slice(s, Math.min(e, s + 60)).map((w) => w.raw).join(" ") + (e - s > 60 ? " …" : "");
 

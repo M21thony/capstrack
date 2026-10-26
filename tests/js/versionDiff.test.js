@@ -2,7 +2,7 @@
 // view). Run with `npm run test:js` - Node's own test runner, nothing to install.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { compareVersions, editScript } from "../../resources/js/component/reader/versionDiff.js";
+import { compareVersions, dropRunningLines, editScript } from "../../resources/js/component/reader/versionDiff.js";
 
 // The same words the PDF reader hands over, laid out `perLine` words a line.
 const normalise = (s) => s.toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, "");
@@ -130,4 +130,38 @@ test("the words both versions keep always line up", () => {
 
     assert.deepEqual(before.filter((_, i) => !removed[i]), after.filter((_, j) => !added[j]));
   }
+});
+
+// Pages of `perPage` body words, each with `head` across the top and its page
+// number at the foot, the way readWords hands them over.
+const paged = (body, perPage, head) => {
+  const words = [];
+  const add = (raw, page, line, top) => words.push({ raw, t: normalise(raw), page, line, rects: [{ top_position: top, left_position: 0.1, highlight_width: 0.01, highlight_height: 0.01 }] });
+  for (let p = 1; (p - 1) * perPage < body.length; p++) {
+    [...head, String(p)].forEach((raw) => add(raw, p, 0, 0.04));
+    body.slice((p - 1) * perPage, p * perPage).forEach((raw, i) => add(raw, p, 1 + Math.floor(i / 12), 0.2 + 0.6 * (i / perPage)));
+    add(String(p), p, 99, 0.95);
+  }
+  return words;
+};
+
+test("a heading on every page is not a change when the page breaks move", () => {
+  const body = chapterOf(1200, randomFrom(8));
+  const head = wordsOf("CapsTrack: A Centralized Capstone System - Chapter 1");
+  const before = paged(body, 300, head);
+  const after = paged(body, 260, head);
+
+  assert.ok(compareVersions(before, after).changes.length > 0);
+  assert.equal(compareVersions(dropRunningLines(before), dropRunningLines(after)).changes.length, 0);
+});
+
+test("a line at the top of only a few pages is still compared", () => {
+  const words = paged(chapterOf(3000, randomFrom(9)), 300, wordsOf("Chapter 4 Results"));
+  [3, 7].forEach((page) => ["Table", String(page)].forEach((raw) => words.push({ raw, t: normalise(raw), page, line: 50, rects: [{ top_position: 0.08 }] })));
+
+  const kept = dropRunningLines(words).map((w) => w.t);
+
+  assert.equal(kept.filter((t) => t === "table").length, 2);
+  assert.equal(kept.filter((t) => t === "results").length, 0);
+  assert.equal(kept.length, 3000 + 4);
 });
