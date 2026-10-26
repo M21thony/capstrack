@@ -124,8 +124,9 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-hl.rr-diff.del{background:#cf222e;box-shadow:none;mix-blend-mode:normal}
 /* On the earlier version: what was taken out, crossed out in red. A line, not
    a fill, so it never passes for a "Must fix" remark and a remark under it
-   still shows. */
-.rr-hl.rr-diff.old{background:linear-gradient(transparent calc(50% - 1px),#cf222e calc(50% - 1px),#cf222e calc(50% + 1px),transparent calc(50% + 1px));box-shadow:none}
+   still shows. A word's box runs from a font-size above its baseline to a
+   fifth below, so 60% down is where a font draws its own strikethrough. */
+.rr-hl.rr-diff.old{background:linear-gradient(transparent calc(60% - 1px),#cf222e calc(60% - 1px),#cf222e calc(60% + 1px),transparent calc(60% + 1px));box-shadow:none}
 .rr-hl.rr-diff.old.on{outline:2px solid #cf222e}
 .rr-hl.rr-diff.old.ins{background:#1a7f37;box-shadow:none;mix-blend-mode:normal}
 /* A changed spot inside a diagram: boxed, since a picture has no words to underline. */
