@@ -353,6 +353,8 @@ class ExpertController extends Controller
             // same way the CaPSA side scopes it, so the two cannot disagree.
             'teamSection' => $team ? app(SectionScope::class)->sectionFor($team) : '',
             'isLeader' => $isLeader,
+            // The checklist lines a booking can name as what the team brings.
+            'deliverableOptions' => $this->board->deliverableOptions($team),
             // Who a change request may name instead of each expert the team
             // has: same role, room for the team, not already with it.
             'replacementOptions' => $isLeader && $team ? $this->replacementOptions($team, $student, $roleAssignments) : [],

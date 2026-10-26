@@ -34,6 +34,9 @@
                  consultation page already prints a dash for that; the mail crashed. --}}
             <div><strong>Time:</strong> {{ $booking->schedule?->start_time ? \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') : '—' }} – {{ $booking->schedule?->end_time ? \Carbon\Carbon::parse($booking->schedule->end_time)->format('h:i A') : '—' }}</div>
             <div><strong>Team:</strong> {{ $team->team_name }}</div>
+            @if ($booking->deliverables)
+            <div><strong>Deliverables:</strong> {{ $booking->deliverablesLabel() }}</div>
+            @endif
             @if ($booking->topics)
             <div><strong>About:</strong> {{ $booking->topicsLabel() }}</div>
             @endif

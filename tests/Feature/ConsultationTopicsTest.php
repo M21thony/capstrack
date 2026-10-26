@@ -6,11 +6,13 @@ use App\Mail\ConsultationBookedMail;
 use App\Models\CapstoneExpert;
 use App\Models\ConsultationBooking;
 use App\Models\ConsultationSchedule;
+use App\Models\Deliverable;
 use App\Models\Student;
 use App\Support\ConsultationTopics;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
@@ -20,7 +22,7 @@ use Tests\TestCase;
  */
 class ConsultationTopicsTest extends TestCase
 {
-    use RefreshDatabase;
+    use BuildsChecklists, RefreshDatabase;
 
     private Student $student;
 
@@ -127,6 +129,53 @@ class ConsultationTopicsTest extends TestCase
         $this->book($this->slot($this->expertAs('adviser')))->assertOk();
 
         $this->assertNull(ConsultationBooking::sole()->topics);
+        $this->assertNull(ConsultationBooking::sole()->deliverables);
+    }
+
+    public function test_the_team_names_the_deliverables_it_brings_and_the_email_shows_them(): void
+    {
+        $slot = $this->slot($this->expertAs('adviser'));
+
+        $this->book($slot, ['topics' => ['paper'], 'deliverables' => [' Chapter 1 Draft ', 'chapter 1 draft', '', 'Revised ERD']])
+            ->assertOk()
+            ->assertJsonPath('newBooking.deliverables', 'Chapter 1 Draft, Revised ERD');
+
+        $this->assertSame(['Chapter 1 Draft', 'Revised ERD'], ConsultationBooking::sole()->deliverables);
+
+        Mail::assertQueued(ConsultationBookedMail::class, function (ConsultationBookedMail $mail) {
+            $html = $mail->render();
+
+            return str_contains($html, 'Team:</strong> Team Lumina')
+                && str_contains($html, 'Deliverables:</strong> Chapter 1 Draft, Revised ERD');
+        });
+    }
+
+    public function test_a_page_with_the_deliverables_field_must_name_one(): void
+    {
+        $slot = $this->slot($this->expertAs('adviser'));
+
+        foreach ([[], ['  ']] as $deliverables) {
+            $this->book($slot, ['topics' => ['paper'], 'deliverables' => $deliverables])
+                ->assertStatus(422)
+                ->assertJsonPath('message', 'Pick or type at least one deliverable.');
+        }
+
+        $this->assertSame(0, ConsultationBooking::count());
+    }
+
+    public function test_the_booking_window_offers_the_checklist_documents(): void
+    {
+        $capsa = $this->capsaFor();
+        [$team] = $this->teamInSection('Team Orbit');
+        $checklist = $this->emptyChecklist($capsa);
+        $this->addDeliverable($checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
+        $this->addDeliverable($checklist, ['title' => 'Adviser Acceptance Form']);
+        $this->addDeliverable($checklist, ['title' => 'Revised ERD', 'kind' => Deliverable::CUSTOM]);
+        $this->addDeliverable($checklist, ['title' => 'Old Outline', 'kind' => Deliverable::DOCUMENT, 'archived_at' => now()]);
+
+        $board = app(\App\Support\ConsultationBoard::class);
+        $this->assertSame(['Chapter 1 Draft', 'Revised ERD'], $board->deliverableOptions($team));
+        $this->assertSame([], $board->deliverableOptions(null));
     }
 
     public function test_the_consultant_covers_the_diagrams_and_the_system_not_the_paper(): void

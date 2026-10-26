@@ -96,8 +96,12 @@ class StudentConsultationController extends Controller
             'topics' => 'nullable|array',
             'topics.*' => 'string|in:'.implode(',', array_keys(ConsultationTopics::LABELS)),
             'note' => 'nullable|string|max:500',
+            'deliverables' => 'nullable|array|max:10',
+            'deliverables.*' => 'nullable|string|max:120',
         ], [
             'note.max' => 'Keep the note to 500 characters.',
+            'deliverables.max' => 'Pick at most 10 deliverables.',
+            'deliverables.*.max' => 'Keep each deliverable to 120 characters.',
         ]);
 
         // Refresh statuses first so a session that just ended (but whose row
@@ -168,6 +172,19 @@ class StudentConsultationController extends Controller
                     'message' => 'Pick what you will consult about: '.implode(' or ', array_map(fn ($t) => ConsultationTopics::LABELS[$t], $choices)).'.',
                 ], 422);
             }
+        }
+
+        // Which deliverables the team is bringing, picked from its checklist
+        // or typed. Asked only of a page that offers the field, like topics.
+        $deliverables = collect((array) $request->input('deliverables', []))
+            ->map(fn ($d) => trim((string) $d))
+            ->filter()
+            ->unique(fn ($d) => mb_strtolower($d))
+            ->values()
+            ->all();
+
+        if ($request->has('deliverables') && ! $deliverables) {
+            return response()->json(['success' => false, 'message' => 'Pick or type at least one deliverable.'], 422);
         }
 
         // The date the student actually clicked in the calendar. Recurring
@@ -272,6 +289,7 @@ class StudentConsultationController extends Controller
             'google_event_id' => $googleEventId,
             'topics' => $topics ?: null,
             'note' => trim((string) $request->input('note')) ?: null,
+            'deliverables' => $deliverables ?: null,
         ]);
 
         // A "once" slot only ever has this single occurrence, so once it's
@@ -305,6 +323,7 @@ class StudentConsultationController extends Controller
                 'team_name' => $team->team_name ?? 'N/A',
                 'topics' => $booking->topicsLabel(),
                 'note' => $booking->note,
+                'deliverables' => $booking->deliverablesLabel(),
             ],
         ]);
     }

@@ -59,7 +59,7 @@ class ConsultationBookingPageTest extends TestCase
         $this->assertStringContainsString('openBookConfirm();', $html);
         $this->assertStringContainsString("head('Book this time'", $html);
         $this->assertStringContainsString('data-xh="topic"', $html);
-        $this->assertStringContainsString('topics: topics, note:', $html);
+        $this->assertStringContainsString('topics: topics, deliverables: deliverables, note:', $html);
         $this->assertStringContainsString('maxlength="500" placeholder="What do you want to ask or show?"', $html);
     }
 

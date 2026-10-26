@@ -6,8 +6,10 @@ use App\Models\CapstoneExpert;
 use App\Models\ConsultationAvailability;
 use App\Models\ConsultationBooking;
 use App\Models\ConsultationSchedule;
+use App\Models\Deliverable;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -179,9 +181,33 @@ class ConsultationBoard
     }
 
     /**
+     * What a team can say it is bringing to a consultation: the document and
+     * custom lines on its checklist's open milestones, in checklist order.
+     * The team can type one that is not here.
+     *
+     * @return list<string>
+     */
+    public function deliverableOptions(?Team $team): array
+    {
+        $checklist = $team ? app(TeamChecklist::class)->for($team) : null;
+
+        if (! $checklist) {
+            return [];
+        }
+
+        return $checklist->milestones()->active()->open()
+            ->with(['deliverables' => fn ($q) => $q->whereNull('archived_at')->whereIn('kind', [Deliverable::DOCUMENT, Deliverable::CUSTOM])])
+            ->get()
+            ->flatMap(fn ($milestone) => $milestone->deliverables->pluck('title'))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * One booking as the page draws it.
      *
-     * @return array{booking_id: int, expert_id: int|null, expert_name: string, slot_type: string, session_date: string|null, available_date: string|null, start_time: string|null, end_time: string|null, team_name: string, cancel_requested: bool, topics: string, note: string|null, booked_by: string, booked_on: string|null}
+     * @return array{booking_id: int, expert_id: int|null, expert_name: string, slot_type: string, session_date: string|null, available_date: string|null, start_time: string|null, end_time: string|null, team_name: string, cancel_requested: bool, topics: string, note: string|null, deliverables: string, booked_by: string, booked_on: string|null}
      */
     public function cardData(ConsultationBooking $booking): array
     {
@@ -198,6 +224,7 @@ class ConsultationBoard
             'cancel_requested' => $booking->cancellation_requested_at !== null,
             'topics' => $booking->topicsLabel(),
             'note' => $booking->note,
+            'deliverables' => $booking->deliverablesLabel(),
             'booked_by' => trim(($booking->student?->f_name ?? '').' '.($booking->student?->l_name ?? '')),
             'booked_on' => $booking->created_at?->format('M j'),
         ];

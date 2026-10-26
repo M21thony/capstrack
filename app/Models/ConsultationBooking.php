@@ -34,6 +34,7 @@ class ConsultationBooking extends Model
         'google_event_id',
         'topics',
         'note',
+        'deliverables',
     ];
 
     protected function casts(): array
@@ -43,6 +44,7 @@ class ConsultationBooking extends Model
             'cancellation_requested_at' => 'datetime',
             'session_date' => 'date',
             'topics' => 'array',
+            'deliverables' => 'array',
         ];
     }
 
@@ -52,6 +54,15 @@ class ConsultationBooking extends Model
     public function topicsLabel(): string
     {
         return ConsultationTopics::label($this->topics);
+    }
+
+    /**
+     * "Chapter 1 Draft, Chapter 2 Draft": the deliverables the team picked
+     * or typed. Empty for bookings made before teams were asked.
+     */
+    public function deliverablesLabel(): string
+    {
+        return implode(', ', $this->deliverables ?? []);
     }
 
     public function student(): BelongsTo

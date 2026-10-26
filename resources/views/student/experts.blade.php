@@ -727,6 +727,7 @@
   'upcoming' => $upcomingBookings,
   'recent' => $recentBookings,
   'pendingByRole' => $pendingByRole,
+  'deliverableOptions' => $deliverableOptions ?? [],
   'cutoffDays' => \App\Http\Controllers\StudentConsultationController::CANCEL_CUTOFF_DAYS,
   'reasonMin' => \App\Models\ExpertRemovalRequest::REASON_MIN,
   'replacementOptions' => $replacementOptions,
@@ -1369,10 +1370,18 @@ function openBookConfirm() {
             + '<span><b>' + TOPICS[t].label + '</b><small>' + TOPICS[t].hint + '</small></span></button>';
         }).join('') + '</div><span class="xh-fmeta"><span class="xh-ferr">Pick at least one.</span></span></fieldset>'
       : '';
+  S.deliverables = [];
+  var opts = D.deliverableOptions || [];
   openDialog(head('Book this time', 'Pick what you\'ll bring so ' + esc(first) + ' can prepare.', '', 'Book a consultation')
     + '<div class="xh-dlg-body">'
     + slotCard(S.date, DAYS[parseKey(S.date).getDay()] + ' · ' + fmtT(s.start_time) + ' – ' + fmtT(s.end_time), 'with ' + esc(ex.name) + ', ' + ucfirst(S.role))
     + topics
+    + '<fieldset class="xh-field" id="xh-f-deliv"><legend class="xh-flabel">Which deliverables? <span class="xh-req">*</span> <span class="xh-opt">'
+    + (opts.length ? 'From your team\'s checklist. Pick one or more.' : 'Type what you\'ll bring.') + '</span></legend>'
+    + '<div class="xh-delivs" id="xh-delivs">' + opts.map(function (t) { return delivChip(t, false); }).join('') + '</div>'
+    + '<div class="xh-deliv-add"><input type="text" id="xh-deliv-other" maxlength="120" autocomplete="off" placeholder="Not listed? Type it, like Revised ERD" aria-label="Type a deliverable">'
+    + '<button type="button" class="xh-btn xh-ghost" data-xh="deliv-add" data-enter-default>Add</button></div>'
+    + '<span class="xh-fmeta"><span class="xh-ferr" id="xh-deliv-err">Pick or type at least one.</span></span></fieldset>'
     + '<div class="xh-field"><label for="xh-book-note">Note for ' + esc(first) + ' <span class="xh-opt">Optional</span></label>'
     + '<textarea id="xh-book-note" rows="3" maxlength="500" placeholder="What do you want to ask or show?"></textarea>'
     + '<span class="xh-fmeta"><span>' + esc(first) + ' and your team can read this.</span><span><span id="xh-note-count">0</span> / 500</span></span></div>'
@@ -1381,9 +1390,47 @@ function openBookConfirm() {
       : 'This session is within ' + D.cutoffDays + ' days, so <b>it can\'t be cancelled here</b> once booked.') + '</span></div></div>'
     + '<div class="xh-dlg-foot"><span class="xh-fnote">' + ICON.clock + 'Booked right away. ' + esc(first) + ' gets an email.</span>'
     + '<button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button>'
-    + '<button type="button" class="xh-btn xh-gold" data-xh="book-send" id="xh-book-send"' + (choices.length ? ' disabled' : '') + '>Book session</button></div>',
+    + '<button type="button" class="xh-btn xh-gold" data-xh="book-send" id="xh-book-send" disabled>Book session</button></div>',
     'panel',
     function () { if (S.slotId) { S.slotId = null; renderBook(); } });
+}
+
+function delivChip(t, on) {
+  return '<button type="button" class="xh-deliv' + (on ? ' is-on' : '') + '" data-xh="deliv" data-title="' + esc(t) + '" aria-pressed="' + on + '">'
+    + '<span class="xh-tick">' + TICK + '</span><span>' + esc(t) + '</span></button>';
+}
+
+/* The picked deliverables, plus anything typed but not yet added. */
+function delivPicked() {
+  var typed = $('xh-deliv-other') ? $('xh-deliv-other').value.trim() : '';
+  var have = S.deliverables.map(function (x) { return x.toLowerCase(); });
+  return typed && have.indexOf(typed.toLowerCase()) === -1 ? S.deliverables.concat(typed) : S.deliverables;
+}
+
+function syncBook() {
+  var ex = expertFor(S.role);
+  var choices = ex && !ex.topic_fixed ? (ex.topic_choices || []) : [];
+  $('xh-book-send').disabled = (choices.length && !S.topics.length) || !delivPicked().length;
+}
+
+function delivError(msg) {
+  $('xh-deliv-err').textContent = msg;
+  $('xh-f-deliv').classList.add('is-bad');
+}
+
+function addDeliv() {
+  var input = $('xh-deliv-other');
+  var t = input.value.trim();
+  if (!t) { delivError('Type a deliverable first.'); input.focus(); return; }
+  var chip = Array.prototype.filter.call($('xh-delivs').querySelectorAll('[data-xh="deliv"]'), function (b) {
+    return b.dataset.title.toLowerCase() === t.toLowerCase();
+  })[0];
+  if (!chip) {
+    $('xh-delivs').insertAdjacentHTML('beforeend', delivChip(t, false));
+    chip = $('xh-delivs').lastElementChild;
+  }
+  input.value = '';
+  if (!chip.classList.contains('is-on')) { ACT.deliv(chip); } else { syncBook(); }
 }
 
 function findBooking(id) {
@@ -1415,6 +1462,7 @@ function openSession(id) {
       : '<div class="xh-slotc"><span class="xh-slott"><b>' + esc(b.available_date || '—') + ' · ' + fmtT(b.start_time) + '</b><span>' + status + '</span></span></div>')
     + '<div class="xh-facts">'
     + '<div class="xh-fact"><span>About</span><b>' + esc(b.topics || '—') + '</b></div>'
+    + '<div class="xh-fact"><span>Deliverables</span><b>' + esc(b.deliverables || '—') + '</b></div>'
     + '<div class="xh-fact"><span>Your note</span><b>' + esc(b.note || 'No note') + '</b></div>'
     + '<div class="xh-fact"><span>Booked by</span><b>' + esc(b.booked_by || '—') + (b.booked_on ? ' · ' + esc(b.booked_on) : '') + '</b></div></div>'
     + note + ask + '</div>');
@@ -1526,20 +1574,33 @@ var ACT = {
     S.topics = on ? S.topics.concat(t) : S.topics.filter(function (x) { return x !== t; });
     el.setAttribute('aria-pressed', String(on));
     el.classList.toggle('is-on', on);
-    $('xh-book-send').disabled = S.topics.length === 0;
+    syncBook();
     if (S.topics.length) { $('xh-f-topics').classList.remove('is-bad'); }
   },
+  deliv: function (el) {
+    var t = el.dataset.title;
+    var on = S.deliverables.indexOf(t) === -1;
+    if (on && S.deliverables.length >= 10) { delivError('Pick at most 10.'); return; }
+    S.deliverables = on ? S.deliverables.concat(t) : S.deliverables.filter(function (x) { return x !== t; });
+    el.setAttribute('aria-pressed', String(on));
+    el.classList.toggle('is-on', on);
+    $('xh-f-deliv').classList.remove('is-bad');
+    syncBook();
+  },
+  'deliv-add': function () { addDeliv(); },
   'book-send': function (el) {
     var ex = expertFor(S.role);
     var choices = ex && !ex.topic_fixed ? (ex.topic_choices || []) : [];
     if (choices.length && !S.topics.length) { $('xh-f-topics').classList.add('is-bad'); return; }
+    var deliverables = delivPicked();
+    if (!deliverables.length) { delivError('Pick or type at least one.'); return; }
     var topics = ex && ex.topic_fixed ? [ex.topic_fixed] : S.topics;
     var about = choices.filter(function (t) { return topics.indexOf(t) !== -1; }).concat(ex && ex.topic_fixed ? [ex.topic_fixed] : [])
       .map(function (t) { return TOPICS[t].label; }).join(', ');
     var s = slots.filter(function (x) { return x.schedule_id === S.slotId; })[0];
     var when = shortDate(S.date) + (s ? ' · ' + fmtT(s.start_time) : '');
     busy(el, 'Booking…');
-    send(D.urls.book, 'POST', { schedule_id: S.slotId, session_date: S.date, topics: topics, note: $('xh-book-note').value.trim() }).then(function (data) {
+    send(D.urls.book, 'POST', { schedule_id: S.slotId, session_date: S.date, topics: topics, deliverables: deliverables, note: $('xh-book-note').value.trim() }).then(function (data) {
       if (data.success) {
         S.date = null; S.slotId = null; S.listTab = 'upcoming';
         ACT.close(el);
@@ -1710,6 +1771,9 @@ document.addEventListener('input', function (e) {
   var t = e.target;
   if (t.id === 'xh-book-note') {
     $('xh-note-count').textContent = t.value.length;
+  } else if (t.id === 'xh-deliv-other') {
+    $('xh-f-deliv').classList.remove('is-bad');
+    syncBook();
   } else if (t.id === 'xh-apply-msg') {
     var n = words(t.value);
     $('xh-msg-count').textContent = n;
