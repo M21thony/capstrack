@@ -692,14 +692,18 @@ class PdfAnnotationTest extends TestCase
             'text' => 'Reword this.',
             'selectedText' => 'the words',
             'figure_label' => 'Figure 9',
-            'highlightRects' => [['top_position' => 0.1, 'left_position' => 0.1, 'highlight_width' => 0.4, 'highlight_height' => 0.02]],
+            'highlightRects' => [
+                ['top_position' => 0.1, 'left_position' => 0.1, 'highlight_width' => 0.4, 'highlight_height' => 0.02],
+                ['top_position' => 0.12, 'left_position' => 0.3, 'highlight_width' => 0.1, 'highlight_height' => 0.02],
+            ],
         ]]])->assertOk();
 
         $remark = PdfRemark::where('review_id', $reviewId)->sole();
         $this->assertSame('text', $remark->mark_type);
         $this->assertNull($remark->figure_label);
         $this->assertSame('the words', $remark->selected_text);
-        $this->assertNull($remark->rects);
+        // Each line's highlight is kept, not one block around both lines.
+        $this->assertCount(2, $remark->rects);
     }
 
     public function test_refuses_an_unknown_mark_or_diagram_type(): void

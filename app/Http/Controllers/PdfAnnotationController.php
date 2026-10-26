@@ -199,9 +199,9 @@ class PdfAnnotationController extends Controller
                     'left_position' => $minLeft,
                     'highlight_width' => $maxRight - $minLeft,
                     'highlight_height' => $maxBottom - $minTop,
-                    // Each box of a figure remark, so two boxes on one remark
-                    // come back as two boxes instead of one around both.
-                    'rects' => in_array($type, ['box', 'shape'], true) ? array_values($rects) : null,
+                    // Each box, so a passage over three lines comes back as three
+                    // line highlights instead of one block around all of them.
+                    'rects' => array_values($rects),
                 ];
             } else {
                 // A pin, or a remark with no highlight: a point on the page.

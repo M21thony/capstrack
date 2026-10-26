@@ -149,7 +149,7 @@ export function shapeLabel(ref) {
   return cells.length === 2 ? `${one(cells[0])}; ${one(cells[1])}` : `${one(cells[0])} and ${cells.length - 1} more`;
 }
 
-/** A saved remark as the screen keeps it: every box of a figure remark, or the point of a pin. */
+/** A saved remark as the screen keeps it: every box it was saved with, or the point of a pin. */
 export const remarkFromServer = (r) => {
   const type = r.mark_type || "text";
   const box = {
@@ -158,7 +158,8 @@ export const remarkFromServer = (r) => {
     highlight_width: Number(r.highlight_width),
     highlight_height: Number(r.highlight_height),
   };
-  const rects = (type === "box" || type === "shape") && Array.isArray(r.rects) && r.rects.length
+  // A remark saved before its boxes were kept has only the box around them all.
+  const rects = type !== "pin" && Array.isArray(r.rects) && r.rects.length
     ? r.rects.map((x) => ({
         top_position: Number(x.top_position),
         left_position: Number(x.left_position),
