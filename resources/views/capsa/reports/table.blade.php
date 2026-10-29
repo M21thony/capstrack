@@ -60,10 +60,11 @@
 
 .rp > .rp-tcard{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;position:relative}
 .rp-scroll{flex:1;min-height:0;overflow:auto;scroll-behavior:smooth}
-.rp-table{border-collapse:separate;border-spacing:0;min-width:100%;font-size:14px}
-.rp-table th,.rp-table td{padding:11px 16px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap;background:var(--bg2);font-variant-numeric:tabular-nums}
+/* The same look as the app's other tables: a dark header, light rows. */
+.rp-table{border-collapse:separate;border-spacing:0;min-width:100%;font-size:13.5px}
+.rp-table th,.rp-table td{padding:10px 16px;border-bottom:1px solid var(--bg4);text-align:left;vertical-align:top;white-space:nowrap;background:var(--bg2);font-variant-numeric:tabular-nums}
 .rp-table td.r,.rp-table th.r{text-align:right}
-.rp-table thead th{position:sticky;top:var(--band-h,0px);z-index:2;background:var(--head);font-size:12.5px;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);padding:0}
+.rp-table thead th{position:sticky;top:var(--band-h,0px);z-index:2;background:var(--navy-dark);font-size:11px;font-weight:600;color:#d4d6de;letter-spacing:.06em;text-transform:uppercase;border-bottom:0;padding:0;vertical-align:middle}
 .rp-table thead tr.bands th{top:0;height:30px;padding:0 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;box-sizing:border-box}
 .rp-table thead tr.bands th.band-grey{background:#eef0f3;color:var(--text2)}
 .rp-table thead tr.bands th.band-gold{background:var(--accent-light);color:var(--accent3)}
@@ -72,15 +73,23 @@
 .rp-table .gstart{border-left:2px solid var(--border)}
 .rp-table th .sort{display:flex;align-items:center;gap:6px;width:100%;padding:11px 16px;border:0;background:none;font:inherit;color:inherit;cursor:pointer;text-align:inherit;white-space:nowrap}
 .rp-table th.r .sort{justify-content:flex-end}
-.rp-table th .sort:hover{color:var(--text)}
-.rp-table th .arr{width:12px;color:var(--text3)}
-.rp-table th[aria-sort="ascending"] .arr::after{content:"▲";font-size:9px;color:var(--text)}
-.rp-table th[aria-sort="descending"] .arr::after{content:"▼";font-size:9px;color:var(--text)}
+.rp-table th .sort:hover{color:#fff}
+.rp-table th .arr{width:12px}
+.rp-table th[aria-sort="ascending"] .arr::after{content:"▲";font-size:9px;color:#fff}
+.rp-table th[aria-sort="descending"] .arr::after{content:"▼";font-size:9px;color:#fff}
 /* The first column names the row and stays put while the rest scroll under it. */
 .rp-table th:first-child,.rp-table td:first-child{position:sticky;left:0;z-index:1;box-shadow:1px 0 0 var(--border)}
 .rp-table thead th:first-child{z-index:3}
 .rp-table tbody tr[data-team]{cursor:pointer}
-.rp-table tbody tr[data-team]:hover td{background:#fbfaf5}
+.rp-table tbody tr[data-team]:hover td{background:var(--accent-light)}
+/* A section's name sits on a row above its teams, instead of in a column on every row. */
+.rp-table tr.grp td{position:static;box-shadow:none;background:var(--bg3);font-weight:700;font-size:12.5px;padding:9px 16px}
+.rp-table tr.grp td > span{position:sticky;left:16px;display:inline-block}
+.rp-table tr.grp small{font-size:inherit;font-weight:500;color:var(--text3);margin-left:6px}
+.rp-table .note{color:var(--text3);margin-left:8px}
+.rp-enough-line{margin:0;padding:12px 16px;font-size:13.5px}
+.rp-enough-line .tone{font-weight:700}
+.rp-enough-line a{color:inherit;font-weight:600}
 .rp-table tfoot td{background:var(--head);font-weight:700;border-top:1px solid var(--border);position:sticky;bottom:0}
 .rp-table tfoot td:first-child{z-index:2}
 .rp-table .dash{color:var(--text3)}
@@ -139,10 +148,27 @@
   .rp-search{flex:1 1 100%}
   .rp-tools .grow{display:none}
 }
+/* On a phone each row becomes a small card: the first column as its title, then label and value lines. */
+@media (max-width:640px){
+  .rp-table,.rp-table tbody{display:block;min-width:0}
+  .rp-table thead,.rp-table tfoot{display:none}
+  .rp-table tbody tr{display:block;padding:12px 14px;border-bottom:1px solid var(--bg4)}
+  .rp-table tbody td{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border:0;position:static;box-shadow:none;white-space:normal;text-align:right;background:none}
+  .rp-table tbody tr[hidden],.rp-table tbody td[hidden]{display:none}
+  .rp-table tbody td::before{content:attr(data-label);color:var(--text3);text-align:left;flex-shrink:0;font-weight:500}
+  .rp-table tbody td:first-child{font-weight:700;font-size:14px;text-align:left;padding-bottom:6px}
+  .rp-table tbody td:first-child::before{content:none}
+  .rp-table tbody tr.grp{padding:0;border:0}
+  .rp-table tbody tr.grp td{padding:10px 14px;background:var(--bg3);font-size:12.5px}
+  .rp-edge{display:none}
+  /* Menus open under the whole toolbar, full width, instead of hanging off the button. */
+  .rp-tools{position:relative}
+  .rp-pop-wrap{position:static}
+  .rp-pop{left:0;right:0}
+  .rp-pop.cols{width:auto}
+}
 @media (max-width:520px){
   .rp-filters .rp-field,.rp-filters .rp-field.wide{width:100%}
-  .rp-table th .sort,.rp-table td{padding-left:12px;padding-right:12px}
-  .rp-edge{display:none}
 }
 @media (prefers-reduced-motion:reduce){.rp-scroll{scroll-behavior:auto}.rp-toast{transition:none}}
 </style>
@@ -191,9 +217,10 @@
           'chip' => '<span class="chip '.e($v[2]).'">'.e($v[1]).'</span>',
           'tone' => '<span class="tone '.e($v[2]).'">'.e($v[1]).'</span>',
           'bar' => '<span class="barw"><span>'.e($v[1].' of '.$v[2]).'</span><span class="bar"><i style="width:'.($v[2] ? (int) round($v[1] / $v[2] * 100) : 0).'%"></i></span></span>',
-          'slots' => $v[2] > 0
+          'slots' => ($v[2] > 0
               ? '<span class="barw"><span>'.e($v[1].' of '.$v[2]).'</span><span class="bar"><i class="'.($v[1] >= $v[2] ? 'full' : '').'" style="width:'.min(100, (int) round($v[1] / $v[2] * 100)).'%"></i></span></span>'
-              : e($v[1]).' <span class="dash">· no limit</span>',
+              : e($v[1]).' <span class="dash">· no limit</span>')
+              .(($v[3] ?? '') !== '' ? '<span class="note">'.e($v[3]).'</span>' : ''),
           'lines' => e(implode(', ', $v[1])),
           default => e($v[1]),
       };
@@ -353,43 +380,8 @@
     @endif
 
     @if (! empty($table['enough']))
-      @php
-        $en = $table['enough'];
-        $res = fn (string $v) => '<span class="tone '.($v === 'Enough' ? 'ok' : 'bad').'">'.e($v).'</span>';
-        $afterLabel = $en['later'] ? 'After '.$en['later'].' new '.Str::plural('team', $en['later']) : 'After new teams (none coming)';
-        $stuckN = array_sum(array_column($en['stuck'], 1));
-      @endphp
-      <section class="rp-card rp-enough" aria-label="Enough experts?">
-        <p class="sum"><b>Enough experts?</b> <b>{{ $en['program'] }}</b> · {{ $en['teams'] }} {{ Str::plural('team', $en['teams']) }}
-          · <b>{{ $en['loose'] }}</b> {{ Str::plural('student', $en['loose']) }} not in a team yet{{ $en['later'] ? ' (about '.$en['later'].' more '.Str::plural('team', $en['later']).')' : '' }}
-          · <b>{{ $en['all']['need'] }}</b> roles still to fill · <b>{{ $en['all']['open'] }}</b> open slots · now {!! $res($en['all']['now']) !!}@if ($en['later']) · after new teams {!! $res($en['all']['after']) !!}@endif</p>
-        <div class="box">
-          <table>
-            <thead><tr><th>Role</th><th class="r">Teams with one</th><th class="r">Still need one</th><th class="r">Experts who take it</th><th class="r">Their open slots</th><th>Now</th><th>{{ $afterLabel }}</th></tr></thead>
-            <tbody>
-              @foreach ($en['roles'] as $r)
-                <tr><td>{{ $r['role'] }} <span class="dash">· {{ $r['when'] }}</span></td><td class="r">{{ $r['with'] }}</td><td class="r">{{ $r['need'] }}</td><td class="r">{{ $r['takers'] }}</td><td class="r">{{ $r['open'] }}</td><td>{!! $res($r['now']) !!}</td><td>{!! $res($r['after']) !!}</td></tr>
-              @endforeach
-            </tbody>
-            <tfoot><tr><td>All three roles</td><td class="r">{{ $en['all']['with'] }}</td><td class="r">{{ $en['all']['need'] }}</td><td class="r">{{ $en['all']['takers'] }}</td><td class="r">{{ $en['all']['open'] }}</td><td>{!! $res($en['all']['now']) !!}</td><td>{!! $res($en['all']['after']) !!}</td></tr></tfoot>
-          </table>
-        </div>
-        <p class="line"><span><b>Requests waiting</b> · {{ $en['waiting'] }}</span>
-          @if ($stuckN)
-            <span><span class="tone bad">{{ $stuckN }} with {{ count($en['stuck']) > 1 ? 'experts who are' : 'an expert who is' }} already full</span> ({{ implode(', ', array_map(fn ($s) => $s[0].' '.$s[1], $en['stuck'])) }})</span>
-            <span class="dash">Those teams will have to ask someone else, unless the expert adds slots</span>
-          @else
-            <span class="dash">None are with a full expert</span>
-          @endif
-        </p>
-        <p class="line"><span><b>Panel</b> · {{ $en['panel']['seats'] }} {{ Str::plural('seat', $en['panel']['seats']) }} at defenses</span>
-          <span>{{ $en['panel']['panelists'] }} {{ Str::plural('expert', $en['panel']['panelists']) }} sit on panels</span>
-          @if ($en['panel']['panelists'])<span>about {{ $en['panel']['each'] }} each</span>@endif
-          @if ($en['panel']['busiest'])<span>busiest: <b>{{ $en['panel']['busiest'][0] }}</b>, {{ $en['panel']['busiest'][1] }}</span>@endif
-          <span class="dash">No limit on panel seats</span>
-        </p>
-        <p class="line key"><span>An expert's open slots count for every role they take, so check each role and the total. Open slots come from each expert's team limit, the one they already set.</span><span>New teams: students not in a team yet ÷ 5. Each one will need all three experts.</span></p>
-      </section>
+      {{-- The full check lives on Expert Management; the report only says the answer. --}}
+      <p class="rp-card rp-enough-line">Enough experts? <span class="tone {{ $table['enough']['all']['now'] === 'Enough' ? 'ok' : 'bad' }}">{{ $table['enough']['all']['now'] }}</span> · the full check is on <a href="{{ url('capsa/experts') }}">Expert Management</a></p>
     @endif
 
     <section class="rp-card rp-tcard" aria-label="{{ $name }}">
@@ -411,10 +403,18 @@
               </tr>
             </thead>
             <tbody id="rows">
+              @php
+                $inGroup = array_count_values(array_map(fn ($r) => $r['group'] ?? '', $table['rows']));
+                $lastGroup = null;
+              @endphp
               @foreach ($table['rows'] as $row)
-                <tr @if ($row['id'] && isset($details[$row['id']])) data-team="{{ $row['id'] }}" tabindex="-1" @endif>
+                @if (isset($row['group']) && $row['group'] !== $lastGroup)
+                  @php $lastGroup = $row['group']; @endphp
+                  <tr class="grp" data-group="{{ $row['group'] }}"><td colspan="{{ count(array_diff($order, $hidden)) }}"><span>{{ $row['group'] }}<small>{{ $inGroup[$row['group']] }} {{ Str::plural($report === 'grades' ? 'student' : 'team', $inGroup[$row['group']]) }}</small></span></td></tr>
+                @endif
+                <tr @if (isset($row['group'])) data-group="{{ $row['group'] }}" @endif @if ($row['id'] && isset($details[$row['id']])) data-team="{{ $row['id'] }}" tabindex="-1" @endif>
                   @foreach ($order as $k)
-                    <td data-col="{{ $k }}" data-v="{{ $sortAttr($row['cells'][$k] ?? '') }}" class="{{ $cls($k) }}" @if (in_array($k, $hidden, true)) hidden @endif>{!! $cell($row['cells'][$k] ?? '') !!}</td>
+                    <td data-col="{{ $k }}" data-label="{{ $columns[$k]['label'] }}" data-v="{{ $sortAttr($row['cells'][$k] ?? '') }}" class="{{ $cls($k) }}" @if (in_array($k, $hidden, true)) hidden @endif>{!! $cell($row['cells'][$k] ?? '') !!}</td>
                   @endforeach
                 </tr>
               @endforeach
@@ -631,7 +631,16 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
 
   var heads = document.getElementById('heads');
   var body = document.getElementById('rows');
-  var allRows = Array.prototype.slice.call(body.rows);
+  var allRows = Array.prototype.slice.call(body.querySelectorAll('tr:not(.grp)'));
+  // Section rows: each stays above its own teams, whatever the sort or search.
+  var grpRows = Array.prototype.slice.call(body.querySelectorAll('tr.grp'));
+  var grpAt = {};
+  grpRows.forEach(function (g, i) { grpAt[g.dataset.group] = { row: g, i: i }; });
+  function paintGroups() {
+    grpRows.forEach(function (g) {
+      g.hidden = !allRows.some(function (tr) { return !tr.hidden && tr.dataset.group === g.dataset.group; });
+    });
+  }
 
   // ---- columns: order and visibility
   function currentOrder() { return Array.prototype.map.call(heads.cells, function (th) { return th.dataset.col; }); }
@@ -643,6 +652,7 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
       Array.prototype.forEach.call(tr.cells, function (c) { byCol[c.dataset.col] = c; });
       order.forEach(function (k) { if (byCol[k]) { byCol[k].hidden = hidden.indexOf(k) !== -1; tr.appendChild(byCol[k]); } });
     });
+    grpRows.forEach(function (g) { g.cells[0].colSpan = order.length - hidden.length; });
     paintBands();
     var isDefault = order.join(',') === REPORT.defaultOrder.join(',');
     setParam('order', isDefault ? null : order.join(','));
@@ -767,12 +777,20 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
   function sortBy(key, dir) {
     Array.prototype.forEach.call(heads.cells, function (th) { th.setAttribute('aria-sort', th.dataset.col === key ? (dir === 'desc' ? 'descending' : 'ascending') : 'none'); });
     var idx = function (tr) { return Array.prototype.find.call(tr.cells, function (c) { return c.dataset.col === key; }); };
+    var groupOf = function (tr) { return grpAt[tr.dataset.group] || { i: 0 }; };
+    var last = null;
     allRows.slice().sort(function (a, b) {
+      var g = groupOf(a).i - groupOf(b).i;
+      if (g) return g;
       var x = valueOf(idx(a)), y = valueOf(idx(b));
       if ((x === '') !== (y === '')) return x === '' ? 1 : -1;
       var c = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true });
       return dir === 'desc' ? -c : c;
-    }).forEach(function (tr) { body.appendChild(tr); });
+    }).forEach(function (tr) {
+      var g = groupOf(tr).row;
+      if (g && tr.dataset.group !== last) { body.appendChild(g); last = tr.dataset.group; }
+      body.appendChild(tr);
+    });
     setParam('sort', key);
     setParam('dir', dir === 'desc' ? 'desc' : null);
   }
@@ -792,10 +810,11 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
     var term = q.value.trim().toLowerCase();
     var shown = 0;
     allRows.forEach(function (tr) {
-      var hit = !term || tr.textContent.toLowerCase().indexOf(term) !== -1;
+      var hit = !term || ((tr.dataset.group || '') + ' ' + tr.textContent).toLowerCase().indexOf(term) !== -1;
       tr.hidden = !hit;
       if (hit) shown++;
     });
+    paintGroups();
     document.getElementById('no-match').hidden = shown > 0;
     var foot = table.tFoot;
     if (foot) foot.hidden = !!term;

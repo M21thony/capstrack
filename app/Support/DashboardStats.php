@@ -47,7 +47,7 @@ final class DashboardStats
         $students = $ctx['records']->toBase()->only($teamIds->all())->flatten(1)->pluck('student_id')->unique()->count();
 
         $progress = collect($this->reports->build('progress', $ctx)['rows']);
-        $statuses = $progress->countBy(fn ($r) => $r['cells']['status'][1]);
+        $statuses = $progress->countBy(fn ($r) => ($r['cells']['status'][3] ?? 0) < 0 ? 'Has overdue items' : $r['cells']['status'][1]);
         $done = $progress->sum(fn ($r) => $r['cells']['done'][1]);
         $total = $progress->sum(fn ($r) => $r['cells']['done'][2]);
 

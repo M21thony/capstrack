@@ -62,9 +62,7 @@ class CapsaReports
         'email' => 'Email',
         'roles' => 'Role(s)',
         'expertise' => 'Expertise',
-        'accepts' => 'Accept slots',
-        'capacity' => 'Slots per program',
-        'program' => 'Program',
+        'accepts' => 'Slots',
         'sections' => 'Sections',
         'degree' => 'Highest degree',
         'status' => 'Status',
@@ -75,12 +73,17 @@ class CapsaReports
 
     public const DASH = '—';
 
-    /** The columns each one-row-per-team report has, key => heading. */
+    /**
+     * The columns each one-row-per-team report has, key => heading. The section
+     * is not a column: each row carries it as 'group' and the page puts a
+     * section row above its teams. A column another report already shows
+     * (title, members) is left to that report.
+     */
     public const TEAM_COLUMNS = [
-        'progress' => ['team' => 'Team', 'section' => 'Section', 'milestone' => 'Current milestone', 'done' => 'Requirements done', 'overdue' => 'Overdue', 'status' => 'Status'],
-        'master' => ['team' => 'Team', 'section' => 'Section', 'title' => 'Project title', 'members' => 'Members', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian'],
-        'results' => ['team' => 'Team', 'section' => 'Section', 'title' => 'Project title', 'verdict' => 'Verdict', 'average' => 'Average score'],
-        'fees' => ['team' => 'Team', 'section' => 'Section', 'members' => 'Members', 'paid' => 'Paid', 'waiting' => 'Receipts to check', 'collected' => 'Collected', 'status' => 'Status'],
+        'progress' => ['team' => 'Team', 'milestone' => 'Current milestone', 'done' => 'Requirements done', 'status' => 'Status'],
+        'master' => ['team' => 'Team', 'title' => 'Project title', 'members' => 'Members', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian'],
+        'results' => ['team' => 'Team', 'verdict' => 'Verdict', 'average' => 'Average score'],
+        'fees' => ['team' => 'Team', 'paid' => 'Paid', 'waiting' => 'Receipts to check', 'collected' => 'Collected', 'status' => 'Status'],
     ];
 
     private const ROLES = ['adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian'];
@@ -277,26 +280,27 @@ class CapsaReports
     {
         $progress = $this->progressFor($ctx);
         $rows = [];
+        $behind = 0;
 
         foreach ($ctx['teams'] as $team) {
             $p = $progress[$team->team_id] ?? null;
             $overdue = $p->overdue ?? 0;
             $status = $this->progressStatus($team, $overdue);
+            $behind += $overdue > 0 ? 1 : 0;
 
-            $rows[] = ['id' => $team->team_id, 'cells' => [
+            $rows[] = ['id' => $team->team_id, 'group' => $this->sectionName($ctx, $team), 'cells' => [
                 'team' => ['b', $team->team_name],
-                'section' => $this->sectionName($ctx, $team),
                 'milestone' => $p && $p->total > 0 ? $this->currentMilestone($p) : self::DASH,
                 'done' => ['bar', $p->completed ?? 0, $p->total ?? 0],
-                'overdue' => ['num', $overdue],
-                'status' => ['chip', $status, $this->tone($status)],
+                // The overdue count is the status when there is one; sorts most overdue first.
+                'status' => $status === 'Has overdue items'
+                    ? ['tone', $overdue.' overdue', 'bad', -$overdue]
+                    : ['tone', $status, $this->tone($status)],
             ]];
         }
 
-        $behind = collect($rows)->filter(fn ($r) => $r['cells']['overdue'][1] > 0)->count();
-
         return [
-            'columns' => $this->cols(self::TEAM_COLUMNS['progress'], ['done', 'overdue']),
+            'columns' => $this->cols(self::TEAM_COLUMNS['progress'], ['done']),
             'rows' => $rows,
             'total' => null,
             'summary' => $this->count(count($rows), 'team').' · '.$behind.' with overdue items',
@@ -365,9 +369,8 @@ class CapsaReports
             $roles = $this->rolesOf($assignments->get($team->team_id, collect()));
             $members = $this->memberNames($ctx, $team);
 
-            $rows[] = ['id' => $team->team_id, 'cells' => [
+            $rows[] = ['id' => $team->team_id, 'group' => $this->sectionName($ctx, $team), 'cells' => [
                 'team' => ['b', $team->team_name],
-                'section' => $this->sectionName($ctx, $team),
                 'title' => $team->project_title ?: self::DASH,
                 'members' => $members ? ['lines', $members] : self::DASH,
                 'adviser' => $roles['adviser'] ?? self::DASH,
@@ -440,10 +443,8 @@ class CapsaReports
                 $scores->push($average);
             }
 
-            $rows[] = ['id' => $team->team_id, 'cells' => [
+            $rows[] = ['id' => $team->team_id, 'group' => $this->sectionName($ctx, $team), 'cells' => [
                 'team' => ['b', $team->team_name],
-                'section' => $this->sectionName($ctx, $team),
-                'title' => $team->project_title ?: self::DASH,
                 'verdict' => ['chip', $verdict, $this->verdictTone($s?->outcome)],
                 'average' => $average === null ? self::DASH : ['num', DefenseScores::format($average)],
             ]];
@@ -455,7 +456,7 @@ class CapsaReports
         return [
             'columns' => $this->cols(self::TEAM_COLUMNS['results'], ['average']),
             'rows' => $rows,
-            'total' => $rows ? ['team' => ['b', 'All sections'], 'section' => '', 'title' => $withVerdict.' of '.count($rows).' teams have a verdict', 'verdict' => '', 'average' => ['b', $avg]] : null,
+            'total' => $rows ? ['team' => ['b', 'All sections'], 'verdict' => $withVerdict.' of '.count($rows).' teams have a verdict', 'average' => ['b', $avg]] : null,
             'summary' => $this->count(count($rows), 'team').' · '.$ctx['stage'].' · average of scored teams: '.$avg,
             'empty' => 'No verified teams match these filters.',
         ];
@@ -502,7 +503,6 @@ class CapsaReports
      */
     private function grades(array $ctx): array
     {
-        $progress = $this->progressFor($ctx);
         $byStage = collect(self::GRADED_STAGES)->map(fn ($stage) => $this->schedulesFor($ctx['teams'], $stage)->load('grades.rubric'));
         $rows = [];
         $graded = 0;
@@ -510,30 +510,26 @@ class CapsaReports
         foreach ($ctx['teams'] as $team) {
             $held = $byStage->map(fn ($schedules) => $schedules->get($team->team_id));
             $shares = $held->map(fn ($s) => $this->scoreShare($s))->filter(fn ($p) => $p !== null);
-            $p = $progress[$team->team_id] ?? null;
             $students = $ctx['records']->get($team->team_id, collect())
                 ->map(fn ($sy) => $sy->student)->filter()->unique('student_id')
                 ->sortBy(fn ($s) => mb_strtolower($s->l_name.' '.$s->f_name));
 
             foreach ($students as $student) {
                 $graded += $shares->isNotEmpty() ? 1 : 0;
-                $rows[] = ['id' => $team->team_id, 'cells' => [
+                $rows[] = ['id' => $team->team_id, 'group' => $this->sectionName($ctx, $team), 'cells' => [
                     'number' => $student->student_number ?: self::DASH,
                     'name' => ['b', trim($student->l_name.', '.$student->f_name, ', ')],
-                    'course' => Student::mapCourseToProgram((string) $student->course) ?? ($student->course ?: self::DASH),
-                    'year' => $student->year_section ?: self::DASH,
                     'team' => $team->team_name,
                     ...$held->map(fn ($s) => $this->scoreCell($s))->all(),
                     'average' => $shares->isEmpty() ? self::DASH : ['num', DefenseScores::format(round($shares->avg(), 2)).'%', round($shares->avg(), 2)],
-                    'deliverables' => $p ? ['bar', $p->completed, $p->total] : self::DASH,
                 ]];
             }
         }
 
         return [
             'columns' => $this->cols(
-                ['number' => 'Student no.', 'name' => 'Name', 'course' => 'Course', 'year' => 'Year & section', 'team' => 'Team', 'title' => 'Title Defense', 'pod' => 'Pre-oral', 'fod' => 'Final', 'average' => 'Average', 'deliverables' => 'Deliverables'],
-                ['title', 'pod', 'fod', 'average', 'deliverables'],
+                ['number' => 'Student no.', 'name' => 'Name', 'team' => 'Team', 'title' => 'Title Defense', 'pod' => 'Pre-oral', 'fod' => 'Final', 'average' => 'Average'],
+                ['title', 'pod', 'fod', 'average'],
             ),
             'rows' => $rows,
             'total' => null,
@@ -619,10 +615,8 @@ class CapsaReports
                 default => 'Not paid',
             };
 
-            $rows[] = ['id' => $team->team_id, 'cells' => [
+            $rows[] = ['id' => $team->team_id, 'group' => $this->sectionName($ctx, $team), 'cells' => [
                 'team' => ['b', $team->team_name],
-                'section' => $this->sectionName($ctx, $team),
-                'members' => ['num', $g->count()],
                 'paid' => $g->isEmpty() ? self::DASH : $paid.' of '.$g->count(),
                 'waiting' => ['num', $waiting],
                 'collected' => $this->money($this->collected($g)),
@@ -633,11 +627,10 @@ class CapsaReports
         $collected = $this->money($this->collected($members));
 
         return [
-            'columns' => $this->cols(self::TEAM_COLUMNS['fees'], ['members', 'paid', 'waiting', 'collected']),
+            'columns' => $this->cols(self::TEAM_COLUMNS['fees'], ['paid', 'waiting', 'collected']),
             'rows' => $rows,
             'total' => $rows && $posted ? [
-                'team' => ['b', 'All sections'], 'section' => '',
-                'members' => ['b', (string) $members->count()],
+                'team' => ['b', 'All sections'],
                 'paid' => ['b', $members->where('status', 'Verified')->count().' of '.$members->count()],
                 'waiting' => ['b', (string) $members->where('status', 'Waiting')->count()],
                 'collected' => ['b', $collected], 'status' => '',
@@ -771,7 +764,6 @@ class CapsaReports
             return ['id' => null, 'now' => $total, 'name' => $e->name, 'asks' => $asks, 'full' => $full, 'cells' => [
                 'expert' => ['b', $e->name],
             ] + collect(self::ROLES)->mapWithKeys(fn ($l, $key) => [$key => ['num', $mine->where('role', $key)->count()]])->all() + [
-                'now' => ['num', $total],
                 'slots' => ['slots', $usedAll($e), $max],
                 // Requests a full expert cannot take: those teams have to ask someone else unless the expert adds slots.
                 'waiting' => $asks && $full ? ['tone', $asks.' · full', 'bad', $asks] : ['num', $asks],
@@ -787,11 +779,11 @@ class CapsaReports
         $enough = $this->enoughExperts($ctx, $teamIds, $allNow->where('in', true), $experts, $rolesOf, $takesProgram, $open, $rows);
 
         return [
-            'columns' => $this->cols(['expert' => 'Expert', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'now' => 'Teams now', 'slots' => 'Slots used', 'waiting' => 'Requests waiting', 'suggestion' => 'Suggestion', 'last' => 'S.Y. '.$ctx['compare'], 'change' => 'Change', 'teams' => 'Teams they handle'], ['adviser', 'consultant', 'grammarian', 'now', 'waiting', 'last']),
+            'columns' => $this->cols(['expert' => 'Expert', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'slots' => 'Slots used', 'waiting' => 'Requests waiting', 'suggestion' => 'Suggestion', 'last' => 'S.Y. '.$ctx['compare'], 'change' => 'Change', 'teams' => 'Teams they handle'], ['adviser', 'consultant', 'grammarian', 'waiting', 'last']),
             'rows' => $rows->map(fn ($r) => ['id' => null, 'cells' => $r['cells']])->all(),
             'total' => $rows->isEmpty() ? null : ['expert' => ['b', 'All experts']]
                 + collect(self::ROLES)->mapWithKeys(fn ($l, $key) => [$key => ['b', (string) $rows->sum(fn ($r) => $r['cells'][$key][1])]])->all()
-                + ['now' => ['b', (string) $nowTotal], 'slots' => '', 'waiting' => ['b', (string) $enough['waiting']], 'suggestion' => '', 'last' => ['b', (string) $lastTotal], 'change' => $this->change($nowTotal, $lastTotal), 'teams' => ''],
+                + ['slots' => '', 'waiting' => ['b', (string) $enough['waiting']], 'suggestion' => '', 'last' => ['b', (string) $lastTotal], 'change' => $this->change($nowTotal, $lastTotal), 'teams' => ''],
             'summary' => $this->count($rows->count(), 'expert').' · '.$nowTotal.' team roles in S.Y. '.$ctx['year'].', '.$lastTotal.' in S.Y. '.$ctx['compare'].'. A team counts once for each role the expert holds on it.',
             'empty' => 'No experts to show yet.',
             'enough' => $enough,
@@ -913,16 +905,16 @@ class CapsaReports
                     $e->is_online => ['Active', 'ok'],
                     default => ['Offline', 'none'],
                 };
-                $capacity = $takesTeams && $slotsSet ? collect($e->parsedCapacity())->map(fn ($row) => $row[0].': max '.$row[1])->all() : [];
+                $caps = collect($takesTeams && $slotsSet ? $e->parsedCapacity() : []);
+                // Which programs the slots are for, beside the slots themselves.
+                $programs = $caps->count() === 1 && $caps[0][0] === 'ALL' ? 'any program' : $caps->map(fn ($row) => $row[0].': max '.$row[1])->implode(', ');
 
                 return ['id' => null, 'cells' => [
                     'expert' => ['b', (string) $e->name],
                     'email' => $e->email ?: self::DASH,
                     'roles' => $e->roles->isEmpty() ? self::DASH : $e->roles->pluck('role_name')->map(fn ($r) => Role::labelFor($r))->implode(', '),
                     'expertise' => $e->allExpertise()->isEmpty() ? self::DASH : $e->allExpertise()->implode(', '),
-                    'accepts' => ! $takesTeams ? self::DASH : (! $slotsSet ? 'Not set' : ['slots', $teams, (int) $e->max_teams]),
-                    'capacity' => $capacity ? ['lines', $capacity] : self::DASH,
-                    'program' => $e->program ?: self::DASH,
+                    'accepts' => ! $takesTeams ? self::DASH : (! $slotsSet ? 'Not set' : ['slots', $teams, (int) $e->max_teams, $programs]),
                     'sections' => $e->sections ? implode(', ', $e->sections) : self::DASH,
                     'degree' => trim(($e->highest_degree ?? '').' '.($e->degree_title ? '('.$e->degree_title.')' : '')) ?: self::DASH,
                     'status' => ['chip', $status, $tone],
@@ -1068,7 +1060,7 @@ class CapsaReports
         return match ($cell[0]) {
             'bar' => $cell[1].' of '.$cell[2],
             'lines' => implode($lineBreak, $cell[1]),
-            'slots' => $cell[2] > 0 ? $cell[1].' of '.$cell[2] : $cell[1].' (no limit)',
+            'slots' => ($cell[2] > 0 ? $cell[1].' of '.$cell[2] : $cell[1].' (no limit)').(($cell[3] ?? '') !== '' ? ' · '.$cell[3] : ''),
             default => (string) $cell[1],
         };
     }

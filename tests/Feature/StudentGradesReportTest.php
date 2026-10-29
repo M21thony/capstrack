@@ -68,7 +68,7 @@ class StudentGradesReportTest extends TestCase
     {
         $table = $this->get(route('capsa.reports.show', ['report' => 'grades'] + $query))->assertOk()->viewData('table');
 
-        return array_map(fn ($r) => $r['cells'], $table['rows']);
+        return array_map(fn ($r) => $r['cells'] + ['group' => $r['group'] ?? null], $table['rows']);
     }
 
     public function test_every_student_carries_their_teams_grade_at_each_defense_and_the_average(): void
@@ -113,9 +113,8 @@ class StudentGradesReportTest extends TestCase
         $this->assertSame(['Beta', 'Beta', 'Zeta', 'Zeta', 'Alpha'], array_column($rows, 'team'));
         $this->assertSame(['b', 'Cruz, Carl'], $rows[0]['name']);
         $this->assertSame(['b', 'Abad, Ana'], $rows[2]['name']);
-        $this->assertSame('BSIT', $rows[0]['course']);
-        $this->assertSame('3rd · A', $rows[0]['year']);
-        $this->assertSame('3rd · B', $rows[4]['year']);
+        $this->assertSame('BSIT-3A', $rows[0]['group']);
+        $this->assertSame('BSIT-3B', $rows[4]['group']);
         $this->assertSame($zetaLead->fresh()->student_number, $rows[3]['number']);
 
         // The section filter keeps one section's students.
@@ -150,7 +149,7 @@ class StudentGradesReportTest extends TestCase
         $this->defense($team, 'Final Oral Defense', 100, [70, 80, 90]);
 
         $xlsx = $this->actingAs($capsa, 'expert')
-            ->get(route('capsa.reports.show', ['report' => 'grades', 'download' => 'xlsx', 'hide' => 'course,year']))->assertOk();
+            ->get(route('capsa.reports.show', ['report' => 'grades', 'download' => 'xlsx']))->assertOk();
         $this->assertStringContainsString('student-grades_', $xlsx->headers->get('content-disposition'));
 
         $path = tempnam(sys_get_temp_dir(), 'grd');
@@ -159,8 +158,8 @@ class StudentGradesReportTest extends TestCase
         unlink($path);
 
         $this->assertSame('Student Grades', $rows[0][0]);
-        $this->assertSame(['Student no.', 'Name', 'Team', 'Title Defense', 'Pre-oral', 'Final', 'Average', 'Deliverables'], array_slice($rows[3], 0, 8));
-        $this->assertSame([$leader->student_number, $leader->l_name.', '.$leader->f_name, 'Alpha', '—', '—', '80', '80%'], array_map('strval', array_slice($rows[4], 0, 7)));
+        $this->assertSame(['Student no.', 'Section', 'Name', 'Team', 'Title Defense', 'Pre-oral', 'Final', 'Average'], array_slice($rows[3], 0, 8));
+        $this->assertSame([$leader->student_number, 'BSIT-3A', $leader->l_name.', '.$leader->f_name, 'Alpha', '—', '—', '80', '80%'], array_map('strval', array_slice($rows[4], 0, 8)));
     }
 
     public function test_it_is_on_the_reports_list_and_shows_only_her_sections_with_requirements_done(): void
@@ -178,6 +177,5 @@ class StudentGradesReportTest extends TestCase
         $rows = $this->rows();
         $this->assertSame([$mine->student_number], array_column($rows, 'number'));
         $this->assertNotContains($theirs->student_number, array_column($rows, 'number'));
-        $this->assertSame(['bar', 0, 1], $rows[0]['deliverables']);
     }
 }

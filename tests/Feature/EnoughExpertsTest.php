@@ -87,7 +87,6 @@ class EnoughExpertsTest extends TestCase
         $this->actingAs($capsa, 'expert')
             ->get(route('capsa.reports.show', 'experts'))
             ->assertOk()
-            ->assertSee('After 2 new teams')
             ->assertViewHas('table', function ($t) {
                 $en = $t['enough'];
 
@@ -120,7 +119,6 @@ class EnoughExpertsTest extends TestCase
         $this->actingAs($capsa, 'expert')
             ->get(route('capsa.reports.show', 'experts'))
             ->assertOk()
-            ->assertSee('Those teams will have to ask someone else')
             ->assertViewHas('table', function ($t) use ($full, $free) {
                 $row = fn ($e) => collect($t['rows'])->first(fn ($r) => $r['cells']['expert'][1] === $e->name)['cells'];
 

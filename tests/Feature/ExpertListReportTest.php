@@ -86,8 +86,7 @@ class ExpertListReportTest extends TestCase
             ->assertSee('Ana Cruz')
             ->assertSee('Adviser, Consultant')
             ->assertSee('Machine Learning, Databases')
-            ->assertSee('Accept slots')
-            ->assertSee('Slots per program');
+            ->assertSee('Slots');
     }
 
     public function test_the_excel_file_has_only_the_ticked_columns_in_order(): void
@@ -115,8 +114,8 @@ class ExpertListReportTest extends TestCase
         $hide = collect(array_keys(CapsaReports::EXPERT_LIST_COLUMNS))->diff(['expert', 'accepts', 'expertise'])->implode(',');
         $rows = $this->sheet(['hide' => $hide, 'order' => 'expert,accepts,expertise']);
 
-        $this->assertSame(['Name', 'Accept slots', 'Expertise'], array_slice($rows[3], 0, 3));
-        $this->assertSame([$ana->name, '0 of 5', 'Databases'], array_slice($this->rowOf($rows, $ana->name), 0, 3));
+        $this->assertSame(['Name', 'Slots', 'Expertise'], array_slice($rows[3], 0, 3));
+        $this->assertSame([$ana->name, '0 of 5 · any program', 'Databases'], array_slice($this->rowOf($rows, $ana->name), 0, 3));
     }
 
     public function test_the_name_column_can_never_be_left_out(): void

@@ -96,7 +96,7 @@ class ReportsTest extends TestCase
             ->assertSee('Alpha')
             ->assertSee('Charlie')
             ->assertDontSee('Outsider')
-            ->assertViewHas('table', fn ($t) => array_keys($t['columns']) === ['team', 'section', 'milestone', 'done', 'overdue', 'status']);
+            ->assertViewHas('table', fn ($t) => array_keys($t['columns']) === ['team', 'milestone', 'done', 'status']);
     }
 
     public function test_section_totals_add_up_her_sections(): void
@@ -227,7 +227,7 @@ class ReportsTest extends TestCase
                 $row = collect($t['rows'])->first(fn ($r) => $r['cells']['expert'][1] === $expert->name);
 
                 return $row['cells']['adviser'] === ['num', 1] && $row['cells']['consultant'] === ['num', 1]
-                    && $row['cells']['now'] === ['num', 2] && $row['cells']['change'] === ['chip', 'New', 'info'];
+                    && $row['cells']['change'] === ['chip', 'New', 'info'];
             });
     }
 
@@ -278,8 +278,9 @@ class ReportsTest extends TestCase
 
         // Title and scope on top, then the headings in the order picked, less the hidden ones.
         $this->assertSame('Team Progress', $rows[0][0]);
-        $this->assertSame(['Team', 'Status', 'Requirements done'], array_slice($rows[3], 0, 3));
-        $this->assertNull($rows[3][3] ?? null);
+        // Section rides beside the team, since a sorted sheet loses the page's section rows.
+        $this->assertSame(['Team', 'Section', 'Status', 'Requirements done'], array_slice($rows[3], 0, 4));
+        $this->assertNull($rows[3][4] ?? null);
         $this->assertSame('Alpha', $rows[4][0]);
         $this->assertSame('C9A82C', $sheet->getStyle('A4')->getFill()->getStartColor()->getRGB());
         $this->assertSame('B5', $sheet->getFreezePane());

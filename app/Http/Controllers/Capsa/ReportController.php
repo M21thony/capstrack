@@ -324,7 +324,7 @@ class ReportController extends Controller
         $q = mb_strtolower(trim($q));
         if ($q !== '') {
             $rows = array_values(array_filter($rows, fn ($row) => str_contains(
-                mb_strtolower(implode(' ', array_map(fn ($k) => CapsaReports::text($row['cells'][$k] ?? '', ' '), $visible))),
+                mb_strtolower(($row['group'] ?? '').' '.implode(' ', array_map(fn ($k) => CapsaReports::text($row['cells'][$k] ?? '', ' '), $visible))),
                 $q,
             )));
         }
@@ -375,7 +375,7 @@ class ReportController extends Controller
             }
         }
 
-        return [
+        $sheet = [
             'headings' => array_map(fn ($k) => $table['columns'][$k]['label'], $visible),
             'right' => array_map(fn ($k) => $table['columns'][$k]['align'] === 'right', $visible),
             'bands' => $bands,
@@ -385,6 +385,20 @@ class ReportController extends Controller
             'empty' => $table['empty'],
             'notes' => $table['notes'] ?? [],
         ];
+
+        // The page shows each row's section as a row above its group; a download keeps it as a column beside the first, so a sorted or filtered sheet still says it.
+        if ($rows && isset($rows[0]['group'])) {
+            $at = fn (array $list, $value) => [$list[0], $value, ...array_slice($list, 1)];
+            $sheet['headings'] = $at($sheet['headings'], 'Section');
+            $sheet['right'] = $at($sheet['right'], false);
+            $sheet['rows'] = array_map(fn ($line, $r) => $at($line, ['text' => $r['group'], 'tone' => null, 'bold' => false]), $sheet['rows'], $rows);
+            $sheet['total'] = $sheet['total'] ? $at($sheet['total'], ['text' => '', 'tone' => null, 'bold' => true]) : null;
+            if ($bands) {
+                $sheet['bands'][0]['span']++;
+            }
+        }
+
+        return $sheet;
     }
 
     /**

@@ -58,7 +58,7 @@ class AdminDashboardController extends Controller
         $studentIds = $ctx['records']->toBase()->only($teamIds->all())->flatten(1)->pluck('student_id')->unique();
 
         $progress = collect($this->reports->build('progress', $ctx)['rows']);
-        $behind = $progress->filter(fn ($r) => $r['cells']['overdue'][1] > 0)->count();
+        $behind = $progress->filter(fn ($r) => ($r['cells']['status'][3] ?? 0) < 0)->count();
 
         return [
             'toVerify' => $teams->filter(fn ($t) => $t->team_status === 'complete' && ! $t->is_confirmed)->count(),
