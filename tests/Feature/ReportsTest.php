@@ -27,7 +27,7 @@ class ReportsTest extends TestCase
     use BuildsChecklists;
     use RefreshDatabase;
 
-    public function test_the_index_lists_every_report_and_counts_only_her_teams(): void
+    public function test_reports_opens_on_team_progress_with_a_tab_for_every_report_and_only_her_teams(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A']);
         $this->teamInSection('Alpha');
@@ -35,10 +35,14 @@ class ReportsTest extends TestCase
 
         $this->actingAs($capsa, 'expert')
             ->get(route('capsa.reports'))
+            ->assertRedirect(route('capsa.reports.show', 'progress'));
+
+        $this->get(route('capsa.reports.show', 'progress'))
             ->assertOk()
-            ->assertSeeInOrder(['Team Progress', 'Team Master List', 'Defense Results', 'Fee Collection', 'Expert Load', 'Defense Schedule'])
+            ->assertSeeInOrder(['Team Progress', 'Master List', 'Defense Results', 'Fee Collection', 'Student Grades', 'Expert Load', 'Expert List', 'Defense Schedule'])
             ->assertSee(route('capsa.reports.show', 'experts'), false)
-            ->assertViewHas('teamCount', 1);
+            ->assertSee('Alpha')
+            ->assertDontSee('Outsider');
     }
 
     /** A team with overdue requirements - the everyday case - opens with them named in its side panel. */
@@ -67,7 +71,7 @@ class ReportsTest extends TestCase
         $odd = ['merge' => ['master'], 'hide' => ['section'], 'order' => ['team'], 'q' => ['a'], 'sort' => ['team'], 'dir' => ['desc'], 'rows' => ['sections'], 'year' => ['x'], 'section' => ['y']];
         $this->get(route('capsa.reports.show', ['report' => 'progress'] + $odd))->assertOk();
         $this->get(route('capsa.reports.show', ['report' => 'progress', 'download' => 'xlsx'] + $odd))->assertOk();
-        $this->get(route('capsa.reports', $odd))->assertOk();
+        $this->get(route('capsa.reports', $odd))->assertRedirect();
     }
 
     /** The merge dialog lists each report's columns without building every report. */

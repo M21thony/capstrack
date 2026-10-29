@@ -20,7 +20,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Reports: pick the period once on the index, then open any report as a web
+ * Reports: open any report as a web
  * table - sorted, searched, columns shown, hidden and reordered, merged with
  * another report - and download exactly that as a PDF or an Excel sheet.
  */
@@ -40,30 +40,13 @@ class ReportController extends Controller
 
     public function __construct(private CapsaReports $reports) {}
 
-    public function index(Request $request): View|RedirectResponse
+    /** No list page: Reports opens on Team Progress, and each report has tabs to the others. */
+    public function index(Request $request): RedirectResponse
     {
         // The old page kept the report in ?tab=; send those links to the report's own page.
-        if ($request->has('tab')) {
-            $report = in_array($request->query('tab'), CapsaReports::TEAM_REPORTS, true) ? $request->query('tab') : 'progress';
+        $report = in_array($request->query('tab'), CapsaReports::TEAM_REPORTS, true) ? $request->query('tab') : 'progress';
 
-            return redirect()->route('capsa.reports.show', ['report' => $report] + $request->except(['tab', 'from', 'to']));
-        }
-
-        $ctx = $this->reports->context(auth('expert')->user(), $request->query());
-
-        return view('capsa.reports.index', [
-            'ctx' => $ctx,
-            'reports' => collect(CapsaReports::REPORTS)->map(fn ($r, $key) => [
-                'key' => $key,
-                'name' => $r[0],
-                'about' => $r[1],
-                'new' => in_array($key, CapsaReports::NEW_REPORTS, true),
-                'extra' => $this->reports->extraFilters($key, $ctx),
-            ])->values()->all(),
-            'period' => $this->periodQuery($ctx),
-            'teamCount' => $ctx['teams']->count(),
-            'sectionCount' => $ctx['teams']->map(fn ($t) => $ctx['teamSections'][$t->team_id])->unique()->count(),
-        ]);
+        return redirect()->route('capsa.reports.show', ['report' => $report] + $request->except(['tab', 'from', 'to']));
     }
 
     /** A section on its own: the Team Progress table filtered to it. */

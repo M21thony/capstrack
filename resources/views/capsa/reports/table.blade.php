@@ -12,6 +12,16 @@
 <style nonce="{{ Vite::cspNonce() }}">
 /* The page itself does not scroll on a desktop: the table card takes what is left and scrolls inside. */
 .rp.fit{overflow:hidden;height:100%;box-sizing:border-box}
+/* The reports, as tabs grouped under small labels; a phone gets one select instead. */
+.rp-tabs{display:flex;align-items:flex-end;gap:22px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.rp-tabs .g{display:flex;flex-direction:column;gap:2px}
+.rp-tabs .gl{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
+.rp-tabs .row{display:flex;gap:18px}
+.rp-tabs a{padding:6px 0 10px;font-size:14px;font-weight:500;color:var(--text2);text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap}
+.rp-tabs a:hover{color:var(--text)}
+.rp-tabs a[aria-current="page"]{color:var(--text);font-weight:600;border-bottom-color:var(--accent)}
+.rp-tabs .sep{width:1px;align-self:stretch;margin:14px 0 10px;background:var(--border)}
+.rp-pick{display:none}
 .rp-top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;justify-content:space-between}
 .rp-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
 .rp-filters .rp-field{width:170px}
@@ -166,9 +176,15 @@
   .rp-pop-wrap{position:static}
   .rp-pop{left:0;right:0}
   .rp-pop.cols{width:auto}
-}
-@media (max-width:520px){
-  .rp-filters .rp-field,.rp-filters .rp-field.wide{width:100%}
+  .rp-tabs{display:none}
+  .rp-pick{display:flex;width:100%}
+  /* Two filters to a row, tool buttons two to a row under a full-width search. */
+  .rp-filters{width:100%}
+  .rp-filters .rp-field,.rp-filters .rp-field.wide{width:calc(50% - 5px)}
+  .rp-tools{display:grid;grid-template-columns:1fr 1fr}
+  .rp-tools .rp-search,.rp-tools .rp-seg,.rp-tools .grow{grid-column:1/-1}
+  .rp-tools .grow{display:none}
+  .rp-tools .rp-btn,.rp-tools .rp-pop-wrap > .rp-btn{width:100%;justify-content:center}
 }
 @media (prefers-reduced-motion:reduce){.rp-scroll{scroll-behavior:auto}.rp-toast{transition:none}}
 </style>
@@ -214,8 +230,8 @@
 
       return match ($v[0]) {
           'b' => '<strong>'.e($v[1]).'</strong>',
-          'chip' => '<span class="chip '.e($v[2]).'">'.e($v[1]).'</span>',
-          'tone' => '<span class="tone '.e($v[2]).'">'.e($v[1]).'</span>',
+          // A status is a coloured word, not a pill.
+          'chip', 'tone' => '<span class="tone '.e($v[2]).'">'.e($v[1]).'</span>',
           'bar' => '<span class="barw"><span>'.e($v[1].' of '.$v[2]).'</span><span class="bar"><i style="width:'.($v[2] ? (int) round($v[1] / $v[2] * 100) : 0).'%"></i></span></span>',
           'slots' => ($v[2] > 0
               ? '<span class="barw"><span>'.e($v[1].' of '.$v[2]).'</span><span class="bar"><i class="'.($v[1] >= $v[2] ? 'full' : '').'" style="width:'.min(100, (int) round($v[1] / $v[2] * 100)).'%"></i></span></span>'
@@ -250,9 +266,7 @@
         <span class="sep">›</span>
         <span class="here" aria-current="page">{{ $name }}</span>
       @else
-        <a href="{{ route('capsa.reports', $period) }}">Reports</a>
-        <span class="sep">›</span>
-        <span class="here" aria-current="page">{{ $name }}</span>
+        <span class="here" aria-current="page">Reports</span>
       @endif
     </nav>
     <div class="topbar-actions">
@@ -269,6 +283,41 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content rp fit">
+    @unless ($isSnapshot)
+      @php
+        $tabs = [
+            'Teams' => ['progress' => 'Team Progress', 'master' => 'Master List', 'results' => 'Defense Results', 'fees' => 'Fee Collection'],
+            'Students' => ['grades' => 'Student Grades'],
+            'Experts' => ['experts' => 'Expert Load', 'expert_list' => 'Expert List'],
+            'Defenses' => ['schedule' => 'Defense Schedule'],
+        ];
+        $tabUrl = fn ($key) => route('capsa.reports.show', ['report' => $key] + $period);
+      @endphp
+      <nav class="rp-tabs" aria-label="Reports">
+        @foreach ($tabs as $group => $items)
+          @if (! $loop->first)<span class="sep"></span>@endif
+          <div class="g">
+            <span class="gl">{{ $group }}</span>
+            <div class="row">
+              @foreach ($items as $key => $label)
+                <a href="{{ $tabUrl($key) }}" @if ($key === $report) aria-current="page" @endif>{{ $label }}</a>
+              @endforeach
+            </div>
+          </div>
+        @endforeach
+      </nav>
+      <label class="rp-field rp-pick">Report
+        <select id="rp-pick">
+          @foreach ($tabs as $group => $items)
+            <optgroup label="{{ $group }}">
+              @foreach ($items as $key => $label)
+                <option value="{{ $tabUrl($key) }}" @selected($key === $report)>{{ $label }}</option>
+              @endforeach
+            </optgroup>
+          @endforeach
+        </select>
+      </label>
+    @endunless
     <div class="rp-top">
       <header class="rp-head">
         <p>{{ $ctx['section'] !== '' && $report === 'progress' ? $name.' for '.$ctx['section'].'.' : $about }}</p>
@@ -540,6 +589,8 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
 
 (function () {
   var params = new URLSearchParams(location.search);
+  var pick = document.getElementById('rp-pick');
+  if (pick) { pick.addEventListener('change', function () { location.href = pick.value; }); }
   var table = document.getElementById('rp-table');
   var scroller = document.getElementById('rp-scroll');
 

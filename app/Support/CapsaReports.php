@@ -51,8 +51,6 @@ class CapsaReports
     /** One row per team: these can be shown as section totals and merged with each other. */
     public const TEAM_REPORTS = ['progress', 'master', 'results', 'fees'];
 
-    public const NEW_REPORTS = ['master', 'grades', 'experts', 'schedule', 'expert_list'];
-
     /** The defenses Student Grades has a column for, key => stage. */
     private const GRADED_STAGES = ['title' => 'Title Defense', 'pod' => 'Pre Oral Defense', 'fod' => 'Final Oral Defense'];
 
