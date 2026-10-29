@@ -266,7 +266,9 @@
         <span class="sep">›</span>
         <span class="here" aria-current="page">{{ $name }}</span>
       @else
-        <span class="here" aria-current="page">Reports</span>
+        <a href="{{ route('capsa.reports', $period) }}">Reports</a>
+        <span class="sep">›</span>
+        <span class="here" aria-current="page">{{ $name }}</span>
       @endif
     </nav>
     <div class="topbar-actions">

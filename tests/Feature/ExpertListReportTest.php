@@ -158,9 +158,9 @@ class ExpertListReportTest extends TestCase
         $this->assertStringStartsWith('%PDF', $pdf->getContent());
     }
 
-    public function test_every_report_has_a_tab_to_it(): void
+    public function test_the_reports_index_lists_it(): void
     {
-        $this->actingAs($this->capsaFor(), 'expert')->get(route('capsa.reports.show', 'progress'))
+        $this->actingAs($this->capsaFor(), 'expert')->get(route('capsa.reports'))
             ->assertOk()
             ->assertSee('Expert List');
     }

@@ -170,7 +170,7 @@ class StudentGradesReportTest extends TestCase
         [, $mine] = $this->teamInSection('Alpha');
         [, $theirs] = $this->teamInSection('Other', yearSection: '4th · A');
 
-        $this->actingAs($capsa, 'expert')->get(route('capsa.reports.show', 'progress'))->assertOk()
+        $this->actingAs($capsa, 'expert')->get(route('capsa.reports'))->assertOk()
             ->assertSee('Student Grades')
             ->assertSee(route('capsa.reports.show', 'grades'), false);
 

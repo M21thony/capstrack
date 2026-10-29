@@ -20,7 +20,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Reports: open any report as a web
+ * Reports: pick the period once on the list, then open any report as a web
  * table - sorted, searched, columns shown, hidden and reordered, merged with
  * another report - and download exactly that as a PDF or an Excel sheet.
  */
@@ -40,13 +40,29 @@ class ReportController extends Controller
 
     public function __construct(private CapsaReports $reports) {}
 
-    /** No list page: Reports opens on Team Progress, and each report has tabs to the others. */
-    public function index(Request $request): RedirectResponse
+    public function index(Request $request): View|RedirectResponse
     {
         // The old page kept the report in ?tab=; send those links to the report's own page.
-        $report = in_array($request->query('tab'), CapsaReports::TEAM_REPORTS, true) ? $request->query('tab') : 'progress';
+        if ($request->has('tab')) {
+            $report = in_array($request->query('tab'), CapsaReports::TEAM_REPORTS, true) ? $request->query('tab') : 'progress';
 
-        return redirect()->route('capsa.reports.show', ['report' => $report] + $request->except(['tab', 'from', 'to']));
+            return redirect()->route('capsa.reports.show', ['report' => $report] + $request->except(['tab', 'from', 'to']));
+        }
+
+        $ctx = $this->reports->context(auth('expert')->user(), $request->query());
+
+        return view('capsa.reports.index', [
+            'ctx' => $ctx,
+            'groups' => collect(CapsaReports::GROUPS)->map(fn ($keys) => array_map(fn ($key) => [
+                'key' => $key,
+                'name' => CapsaReports::REPORTS[$key][0],
+                'about' => CapsaReports::REPORTS[$key][1],
+                'extra' => $this->reports->extraFilters($key, $ctx),
+            ], $keys))->all(),
+            'period' => $this->periodQuery($ctx),
+            'teamCount' => $ctx['teams']->count(),
+            'sectionCount' => $ctx['teams']->map(fn ($t) => $ctx['teamSections'][$t->team_id])->unique()->count(),
+        ]);
     }
 
     /** A section on its own: the Team Progress table filtered to it. */

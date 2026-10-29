@@ -48,8 +48,7 @@ class EveryStaffPageStillOpensTest extends TestCase
         ];
 
         foreach ($routes as $route) {
-            // Reports has no page of its own: it opens on Team Progress.
-            $this->actingAs($expert, 'expert')->followingRedirects()->get(route($route))
+            $this->actingAs($expert, 'expert')->get(route($route))
                 ->assertOk()
                 ->assertSee('Sign Out');
         }
