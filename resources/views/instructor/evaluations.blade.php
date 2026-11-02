@@ -48,6 +48,12 @@
           <b>No evaluations yet</b>
           When a team you advise passes {{ $stage ?? 'a defense' }}, its leader's evaluation of you appears here.
         </div>
+      @elseif(! $enough)
+        <div class="ev-none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <b>{{ $total }} of {{ \App\Support\EvaluationResults::MIN_REVIEWS }} reviews{{ $stage ? ' after '.$stage : '' }}</b>
+          Your rating shows once {{ \App\Support\EvaluationResults::MIN_REVIEWS }} teams have answered, so no one team's answers can be picked out.
+        </div>
       @else
         <section class="ev-overview" aria-label="Your rating">
           <div class="ev-big">
@@ -67,7 +73,7 @@
         @if(! $stage && $byStage->count() > 1)
           <div class="ev-bystage">
             @foreach($byStage as $s => $row)
-              <div><span>{{ $s }}</span><b>@if($row['average'] !== null){{ \App\Support\EvaluationResults::format($row['average']) }}<small> /5 · {{ $row['total'] }}</small>@else – @endif</b></div>
+              <div><span>{{ $s }}</span><b>@if($row['average'] !== null){{ \App\Support\EvaluationResults::format($row['average']) }}<small> /5 · {{ $row['total'] }}</small>@else<small>{{ $row['total'] }} of {{ \App\Support\EvaluationResults::MIN_REVIEWS }} reviews</small>@endif</b></div>
             @endforeach
           </div>
         @endif

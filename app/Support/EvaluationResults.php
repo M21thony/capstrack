@@ -15,6 +15,12 @@ use Illuminate\Support\Collection;
 class EvaluationResults
 {
     /**
+     * Fewer than this and the expert sees no breakdown: one or two answers
+     * would point to the team that sent them.
+     */
+    public const MIN_REVIEWS = 3;
+
+    /**
      * Each expert's average, how many evaluations, the average per question
      * and every response, best-known first.
      *
@@ -64,22 +70,21 @@ class EvaluationResults
     }
 
     /**
-     * Each response as the pages show it: the stage, the role, the rating and
-     * the answers - and no one's name.
+     * Each response as the pages show it: the role, the rating and the
+     * answers - no name, date or defense, and highest rating first rather
+     * than newest, so no response can be matched to the team that sent it.
      *
      * @param  Collection<int, ExpertEvaluation>  $evaluations
-     * @return Collection<int, object{stage: string, role: string, role_label: string, rating: float, date: ?string, answers: array, comment: ?string}>
+     * @return Collection<int, object{role: string, role_label: string, rating: float, answers: array, comment: ?string}>
      */
     public static function responses(Collection $evaluations): Collection
     {
         return $evaluations
-            ->sortByDesc('created_at')
+            ->sortByDesc('rating')
             ->map(fn (ExpertEvaluation $e) => (object) [
-                'stage' => $e->defense?->defense_type ?? 'Earlier phase',
                 'role' => $e->role,
                 'role_label' => ExpertEvaluation::ROLES[$e->role] ?? ucfirst((string) $e->role),
                 'rating' => (float) $e->rating,
-                'date' => $e->created_at?->format('M j, Y'),
                 'answers' => $e->answers ?? [],
                 'comment' => $e->comment,
             ])

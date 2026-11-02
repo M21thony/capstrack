@@ -1,5 +1,6 @@
 {{-- Team leaders' answers, one per evaluation, with nobody's name: the
      default avatar and "Anonymous team leader" stand in for whoever sent it.
+     No date or defense either: either one could point to the team.
      $responses comes from App\Support\EvaluationResults::responses(). --}}
 <ul class="ev-resps">
   @foreach($responses as $r)
@@ -7,8 +8,8 @@
       <div class="ev-resp-top">
         @include('partials.anonymous-avatar')
         <div class="ev-resp-who">
-          <b>Team leader <span class="ev-anon-tag">Anonymous</span></b>
-          <span>{{ $r->stage }} · {{ $r->role_label }}@if($r->date) · {{ $r->date }}@endif</span>
+          <b>Anonymous team leader</b>
+          <span>As {{ $r->role_label }}</span>
         </div>
         <span class="ev-resp-score">@include('partials.evaluation-stars', ['rating' => $r->rating]){{ \App\Support\EvaluationResults::format($r->rating) }}</span>
       </div>

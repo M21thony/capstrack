@@ -38,10 +38,6 @@
 .ev-tpl-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .ev-tpl-top b{font-size:14px;color:var(--text);line-height:1.35}
 .ev-tpl-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text3)}
-.ev-role{display:inline-flex;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
-.ev-role.r-adviser{background:var(--blue-bg);color:var(--blue)}
-.ev-role.r-consultant{background:var(--purple-bg);color:var(--purple)}
-.ev-role.r-grammarian{background:var(--cyan-bg);color:var(--cyan)}
 .ev-tpl-qs{margin:10px 0 0;padding-left:20px;font-size:12.5px;line-height:1.5;color:var(--text2)}
 .ev-tpl-qs li+li{margin-top:2px}
 .ev-tpl-acts{display:flex;gap:6px;flex-shrink:0}
@@ -97,10 +93,9 @@
 .ev-anon-lock svg{width:9px;height:9px}
 .ev-anon-av.is-sm .ev-anon-lock{width:14px;height:14px;right:-2px;bottom:-2px}
 .ev-anon-av.is-sm .ev-anon-lock svg{width:7px;height:7px}
-.ev-anon-tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.2px;vertical-align:1px;background:var(--bg4);color:var(--text2)}
 .ev-x-main{flex:1;min-width:0}
 .ev-x-main b{display:block;font-size:14.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ev-x-roles{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.ev-x-roles{display:block;margin-top:4px;font-size:12px;font-weight:600;color:var(--text2)}
 .ev-score{display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:13px;color:var(--text3)}
 .ev-score b{font-size:16px;color:var(--text);font-variant-numeric:tabular-nums}
 .ev-score b small{font-size:12px;color:var(--text3)}
@@ -178,8 +173,8 @@
 .ev-ibtn svg{width:16px;height:16px}
 .ev-qrow textarea{min-height:42px;resize:vertical;line-height:1.45}
 .ev-qtools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.ev-scale{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--text2)}
-.ev-scale span{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:var(--bg3);border:1px solid var(--border)}
+.ev-scale{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12px;color:var(--text2)}
+.ev-scale span{display:inline-flex;align-items:center;gap:4px}
 .ev-scale b{color:#b8961c}
 .ev-form-foot{position:sticky;bottom:-26px;display:flex;justify-content:flex-end;gap:8px;margin:0 -22px -18px;padding:14px 22px;border-top:1px solid var(--border);background:var(--bg2);border-radius:0 0 14px 14px;z-index:2}
 .ev-compose{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
@@ -224,8 +219,7 @@
 
 /* the CaPSA's evaluations: only the ones they made */
 .ev-tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;align-items:stretch}
-.ev-stage-tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.3px;background:var(--accent-light);color:var(--accent3);border:1px solid rgba(201,168,44,.3);white-space:nowrap}
-.ev-stage-tag.is-muted{background:var(--bg3);color:var(--text3);border-color:var(--border);margin-right:8px}
+.ev-stage-tag{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--accent3);white-space:nowrap}
 .ev-card2{display:flex;flex-direction:column;gap:10px;padding:16px 16px 0;border:1px solid var(--border);border-radius:14px;background:var(--bg2);box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .2s,border-color .2s,transform .2s}
 .ev-card2:hover{border-color:var(--border2);box-shadow:0 8px 24px -12px rgba(15,18,30,.25)}
 .ev-card2-head{display:flex;align-items:center;justify-content:space-between;gap:8px}

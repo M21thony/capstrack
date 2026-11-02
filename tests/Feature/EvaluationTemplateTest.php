@@ -361,10 +361,10 @@ class EvaluationTemplateTest extends TestCase
         $this->actingAs($adviser, 'expert')->get(route('instructor.evaluations'))
             ->assertOk()
             ->assertSee('My Evaluations')
-            ->assertSee('3.8<small>/5</small>', false)
-            ->assertSee('2 reviews')
-            ->assertSee('Anonymous team leader')
-            ->assertSee('Knew the field.')
+            // Two answers could point to the team that sent them: the expert sees a count only.
+            ->assertSee('2 of 3 reviews')
+            ->assertDontSee('3.8<small>/5</small>', false)
+            ->assertDontSee('Knew the field.')
             ->assertDontSee('Alpha Squad')
             ->assertDontSee($this->leader->email);
     }

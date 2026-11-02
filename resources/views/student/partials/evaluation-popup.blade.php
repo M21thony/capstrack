@@ -53,7 +53,7 @@
     </div>
     <ul id="evp-list">
       @foreach($owedPhases->take(3) as $phase)
-        <li><b>{{ $phase['name'] }}</b><span>{{ $phase['experts']->implode(', ') }}</span></li>
+        <li><b>{{ $phase['name'] }}</b>@foreach($phase['experts'] as $who)<span>{{ $who }}</span>@endforeach</li>
       @endforeach
       @if($owedPhases->count() > 3)
         <li><span>and {{ $owedPhases->count() - 3 }} more defense{{ $owedPhases->count() - 3 === 1 ? '' : 's' }}</span></li>

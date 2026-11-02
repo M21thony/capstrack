@@ -95,7 +95,7 @@
                   <span class="ev-live"><i aria-hidden="true"></i>Active</span>
                 </header>
                 <h3 id="ev-t-{{ $t->id }}">{{ $t->title }}</h3>
-                <div class="ev-x-roles">@foreach($t->roles ?? [] as $r)<span class="ev-role r-{{ $r }}">{{ \App\Models\ExpertEvaluation::ROLES[$r] ?? ucfirst($r) }}</span>@endforeach</div>
+                <div class="ev-x-roles">{{ collect($t->roles ?? [])->map(fn ($r) => \App\Models\ExpertEvaluation::ROLES[$r] ?? ucfirst($r))->implode(' · ') }}</div>
                 <dl class="ev-card2-stats">
                   <div><dt>Questions</dt><dd>{{ $t->questions->count() }}</dd></div>
                   <div><dt>Answered</dt><dd>{{ number_format($t->evaluations_count) }}</dd></div>
@@ -131,7 +131,7 @@
                 <li class="ev-off-row">
                   <div class="ev-off-main">
                     <b>{{ $t->title }}</b>
-                    <span><span class="ev-stage-tag is-muted">{{ $t->defense_type }}</span>{{ $t->questions->count() }} {{ $t->questions->count() === 1 ? 'question' : 'questions' }} · {{ $t->evaluations_count }} answered</span>
+                    <span>{{ $t->defense_type }} · {{ $t->questions->count() }} {{ $t->questions->count() === 1 ? 'question' : 'questions' }} · {{ $t->evaluations_count }} answered</span>
                   </div>
                   <div class="ev-off-acts">
                     <a class="ev-btn sm" href="{{ route('capsa.evaluations.create', ['from' => $t->id]) }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Use again</a>
@@ -180,7 +180,7 @@
                   <span class="ev-av" aria-hidden="true">{{ $x->expert?->avatarInitials() }}@if($x->expert?->hasAvatarImage())<img src="{{ $x->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
                   <span class="ev-x-main">
                     <b>{{ $x->name }}</b>
-                    <span class="ev-x-roles">@foreach($x->roles as $r)<span class="ev-role r-{{ $r }}">{{ \App\Models\ExpertEvaluation::ROLES[$r] ?? ucfirst($r) }}</span>@endforeach</span>
+                    <span class="ev-x-roles">{{ collect($x->roles)->map(fn ($r) => \App\Models\ExpertEvaluation::ROLES[$r] ?? ucfirst($r))->implode(' · ') }}</span>
                   </span>
                   <span class="ev-score">@include('partials.evaluation-stars', ['rating' => $x->average])<b>{{ \App\Support\EvaluationResults::format($x->average) }}<small>/5</small></b>{{ $x->total }} {{ $x->total === 1 ? 'review' : 'reviews' }}</span>
                   <svg class="ev-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>

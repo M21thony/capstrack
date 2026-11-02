@@ -30,17 +30,22 @@ class EvaluationController extends Controller
         // Only the defenses this expert was actually evaluated after.
         $evaluatedStages = collect(EvaluationTemplate::STAGES)->filter(fn ($s) => $all->contains(fn ($e) => $e->defense?->defense_type === $s))->values();
 
+        // Under the minimum, only the count shows: one or two answers would
+        // give away the team behind them.
+        $enough = $shown->count() >= EvaluationResults::MIN_REVIEWS;
+
         return view('instructor.evaluations', [
             'stages' => $evaluatedStages->all(),
             'stage' => $stage,
-            'average' => $shown->isEmpty() ? null : round((float) $shown->avg('rating'), 1),
+            'enough' => $enough,
+            'average' => $enough ? round((float) $shown->avg('rating'), 1) : null,
             'total' => $shown->count(),
             // How the five stars split, for the bar beside the average.
             'distribution' => collect(range(5, 1))->mapWithKeys(fn ($s) => [$s => $shown->filter(fn ($e) => (int) round($e->rating) === $s)->count()]),
             'byStage' => $evaluatedStages->mapWithKeys(fn ($s) => [$s => $all->filter(fn ($e) => $e->defense?->defense_type === $s)])
-                ->map(fn ($rows) => ['average' => $rows->isEmpty() ? null : round((float) $rows->avg('rating'), 1), 'total' => $rows->count()]),
-            'questions' => EvaluationResults::byQuestion($shown),
-            'responses' => EvaluationResults::responses($shown),
+                ->map(fn ($rows) => ['average' => $rows->count() >= EvaluationResults::MIN_REVIEWS ? round((float) $rows->avg('rating'), 1) : null, 'total' => $rows->count()]),
+            'questions' => $enough ? EvaluationResults::byQuestion($shown) : collect(),
+            'responses' => $enough ? EvaluationResults::responses($shown) : collect(),
         ]);
     }
 }

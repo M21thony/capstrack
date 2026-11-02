@@ -22,6 +22,8 @@
 
 <style nonce="{{ Vite::cspNonce() }}">
 .nt-stack{position:fixed;right:20px;bottom:20px;z-index:2500;display:flex;flex-direction:column;gap:10px;width:min(380px,calc(100vw - 32px));pointer-events:none}
+/* Bottom-right is where the evaluation sheet's send button sits: drop in under the page tabs there instead. */
+@media (min-width:769px){body:has(.xh-ev-form) .nt-stack{top:140px;bottom:auto;flex-direction:column-reverse}}
 .nt{pointer-events:auto;position:relative;display:flex;gap:12px;align-items:flex-start;padding:14px 40px 16px 14px;background:var(--bg2,#fff);border:1px solid var(--border,#e5e7eb);border-left:4px solid var(--accent,#c9a82c);border-radius:14px;box-shadow:0 14px 36px rgba(24,25,31,.2);overflow:hidden;cursor:pointer;text-align:left;animation:ntIn .3s cubic-bezier(.2,.8,.2,1)}
 .nt:hover{box-shadow:0 16px 40px rgba(24,25,31,.26)}
 .nt.is-announcement{border-left-color:#f97316}

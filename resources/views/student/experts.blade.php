@@ -444,7 +444,7 @@
                       <div class="xh-rating">
                         @if($p['ratings'] > 0)
                           <span class="xh-stars" role="img" aria-label="Rated {{ $p['rating'] }} out of 5">@for($s = 1; $s <= 5; $s++)<svg viewBox="0 0 24 24" class="{{ $s <= round($p['rating']) ? 'is-on' : '' }}" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>@endfor</span>
-                          <b>{{ number_format($p['rating'], 1) }}<small>/5</small></b><span class="xh-rating-n">{{ number_format($p['ratings']) }} {{ $p['ratings'] === 1 ? 'review' : 'reviews' }}</span>
+                          <b>{{ \App\Support\EvaluationResults::format((float) $p['rating']) }}<small>/5</small></b><span class="xh-rating-n">{{ number_format($p['ratings']) }} {{ $p['ratings'] === 1 ? 'review' : 'reviews' }}</span>
                         @else
                           <span class="xh-rating-n">No reviews yet</span>
                         @endif
@@ -549,7 +549,7 @@
       $scale = \App\Models\EvaluationTemplate::SCALE;
       $star = '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
       $starsOf = fn (float $r) => collect(range(1, 5))->map(fn ($s) => '<svg viewBox="0 0 24 24" class="'.($s <= round($r) ? 'is-on' : '').'" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>')->implode('');
-      $fmtRating = fn ($r) => rtrim(rtrim(number_format((float) $r, 2), '0'), '.');
+      $fmtRating = fn ($r) => \App\Support\EvaluationResults::format((float) $r);
     @endphp
     <section id="xh-panel-eval" role="tabpanel" aria-labelledby="xh-tab-eval" @if($tab !== 'evaluations') hidden @endif>
       @if(session('evaluation_saved'))
@@ -590,7 +590,7 @@
                     <span class="xh-ev-kicker">Defense passed</span>
                     <h3>{{ $rows->first()->stage }}</h3>
                   </div>
-                  <span class="xh-pill xh-amber">{{ $rows->count() }} to evaluate</span>
+                  <span class="xh-ev-left">{{ $rows->count() }} to evaluate</span>
                 </header>
                 @foreach($rows as $row)
                   @php
@@ -609,7 +609,7 @@
                     <div class="xh-ev-top">
                       <div class="xh-ev-who">
                         <span class="xh-av r-{{ $row->role }}" aria-hidden="true">{{ $ex?->avatarInitials() }}@if($ex?->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
-                        <span class="xh-ev-name"><b>{{ $row->expert }}</b><span class="xh-chip r-{{ $row->role }}">{{ $row->role_label }}</span></span>
+                        <span class="xh-ev-name"><b>{{ $row->expert }}</b><span class="xh-ev-left">{{ $row->role_label }}</span></span>
                       </div>
                       <div class="xh-ev-avg" aria-live="polite"><span>Rating</span><b data-avg>–</b><small>/ 5</small></div>
                     </div>
@@ -1835,7 +1835,7 @@ function evalTally(form) {
     if (on) { sum += Number(on.value); picked++; }
   });
   var avg = form.querySelector('[data-avg]');
-  if (avg) { avg.textContent = picked ? (Math.round(sum / picked * 100) / 100).toString() : '–'; }
+  if (avg) { avg.textContent = picked ? (Math.round(sum / picked * 10) / 10).toString() : '–'; }
   var left = form.querySelector('[data-left]');
   if (left) {
     var n = qs.length - picked;
@@ -1871,7 +1871,7 @@ document.addEventListener('submit', function (e) {
     return;
   }
   var picks = Array.prototype.map.call(form.querySelectorAll('.xh-ev-q input:checked'), function (i) { return Number(i.value); });
-  var avg = Math.round(picks.reduce(function (a, b) { return a + b; }, 0) / picks.length * 100) / 100;
+  var avg = Math.round(picks.reduce(function (a, b) { return a + b; }, 0) / picks.length * 10) / 10;
   var stars = '';
   for (var s = 1; s <= 5; s++) { stars += '<svg viewBox="0 0 24 24" class="' + (s <= Math.round(avg) ? 'is-on' : '') + '" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'; }
   var d = openDialog(head('Send this evaluation?', esc(form.dataset.stage))
