@@ -6,7 +6,8 @@ import { test, expect } from '@playwright/test';
 
 const student = async (page, at = '', as = '') => { await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(`/__dev-login-student/${at}${as ? `?as=${as}` : ''}`); await expect(page, 'signed in as a student').not.toHaveURL(/\/login/); };
 const staff = async (page, role, at = '') => { await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(`/__dev-login-expert/${role}/${at}`); await expect(page, `signed in as ${role}`).not.toHaveURL(/\/login/); };
-const shot = async (page, testInfo, name) => testInfo.attach(name, { body: await page.screenshot(), contentType: 'image/png' });
+// Waits for the grey loading cover to lift, so the picture shows the page.
+const shot = async (page, testInfo, name) => { await expect(page.locator('#csk')).toHaveCount(0); return testInfo.attach(name, { body: await page.screenshot(), contentType: 'image/png' }); };
 
 test('the student rates every expert on one sheet and the counts keep up', async ({ page }, testInfo) => {
   await student(page, 'experts', process.env.EVAL_STUDENT || '131');
