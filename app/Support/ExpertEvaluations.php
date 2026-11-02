@@ -335,6 +335,34 @@ class ExpertEvaluations
     }
 
     /**
+     * Every evaluation still owed on this CaPSA's own questions, across the
+     * teams of their sections - what the results page counts as waiting.
+     * Each row is an owedForTeams() row plus its team_id.
+     *
+     * @return Collection<int, object>
+     */
+    public static function owedForCapsa(CapstoneExpert $capsa): Collection
+    {
+        $sections = $capsa->sections ?? [];
+        $teamIds = DefenseSchedule::whereIn('outcome', self::PASSING)->distinct()->pluck('team_id');
+
+        if ($sections === [] || $teamIds->isEmpty()) {
+            return collect();
+        }
+
+        $teams = Team::whereIn('team_id', $teamIds)->get();
+        $records = StudentSchoolYear::with('student')->whereIn('team_id', $teamIds)->get()->groupBy('team_id');
+        $scope = app(SectionScope::class);
+        $mine = $teams->filter(fn (Team $team) => in_array($scope->sectionFor($team, $records->get($team->team_id, collect())), $sections, true))->pluck('team_id');
+        $templateIds = EvaluationTemplate::where('capsa_id', $capsa->expert_id)->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        return collect(self::owedForTeams($mine))
+            ->flatMap(fn (Collection $rows, $teamId) => $rows->map(fn ($row) => (object) ((array) $row + ['team_id' => (int) $teamId])))
+            ->filter(fn ($row) => in_array((int) $row->template_id, $templateIds, true))
+            ->values();
+    }
+
+    /**
      * Every CaPSA of each section, by section.
      *
      * @return array<string, array<int, int>>

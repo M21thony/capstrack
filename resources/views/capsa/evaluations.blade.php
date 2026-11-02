@@ -158,45 +158,86 @@
         </nav>
         @endif
 
-        <div class="ev-stats">
-          <div class="ev-stat"><span>Average rating</span><b>@if($overall !== null){{ \App\Support\EvaluationResults::format($overall) }}<small>/ 5</small>@else – @endif</b></div>
-          <div class="ev-stat"><span>Evaluations</span><b>{{ number_format($totalAnswered) }}</b></div>
-          <div class="ev-stat"><span>Experts evaluated</span><b>{{ $results->count() }}</b></div>
-        </div>
+        @php
+          $fmt = fn ($n) => \App\Support\EvaluationResults::format((float) $n);
+          $roleLabel = fn (array $roles) => collect($roles)->map(fn ($r) => \App\Models\ExpertEvaluation::ROLES[$r] ?? ucfirst($r))->implode(' · ');
+        @endphp
+        <h1 class="ev-sum-h">{{ $resultStage ?? 'All defenses' }} summary</h1>
+
+        <dl class="ev-sum-card ev-sum-strip">
+          <div class="ev-sum-tile">
+            <dt>Response rate</dt>
+            <dd>{{ $summary->rate !== null ? $summary->rate.'%' : '–' }}</dd>
+            <small>{{ $totalAnswered }} of {{ $summary->all }} {{ $summary->all === 1 ? 'evaluation' : 'evaluations' }} in</small>
+          </div>
+          <div class="ev-sum-tile">
+            <dt>Average score</dt>
+            <dd>@if($overall !== null){{ $fmt($overall) }} / 5 @else – @endif</dd>
+            <small>across {{ $summary->rated }} rated {{ $summary->rated === 1 ? 'expert' : 'experts' }}</small>
+          </div>
+          <div class="ev-sum-tile">
+            <dt>Lowest question</dt>
+            @if($summary->lowest)
+              <dd class="is-text">{{ $summary->lowest->question }}</dd>
+              <small>{{ $fmt($summary->lowest->average) }} average</small>
+            @else
+              <dd>–</dd>
+              <small>No answers yet</small>
+            @endif
+          </div>
+          <div class="ev-sum-tile">
+            <dt>Still waiting</dt>
+            <dd @class(['is-wait' => $summary->owed > 0])>{{ $summary->owed }}</dd>
+            <small>{{ $summary->owed === 1 ? 'evaluation' : 'evaluations' }}@if($summary->topOwed) · {{ $summary->topOwed->count }} of them for {{ $summary->topOwed->name }}@endif</small>
+          </div>
+        </dl>
 
         <p class="ev-anon-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Every response is anonymous. No team or student is shown, here or to the expert.</p>
 
-        @if($results->isEmpty())
+        @if($summary->experts->isEmpty())
           <div class="ev-none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             <b>No answers yet</b>
             Results appear here once team leaders evaluate their experts after a passed defense{{ $resultStage ? ' at '.$resultStage : '' }}.
           </div>
         @else
-          <div class="ev-list">
-            @foreach($results as $x)
-              <details class="ev-x">
-                <summary>
-                  <span class="ev-av" aria-hidden="true">{{ $x->expert?->avatarInitials() }}@if($x->expert?->hasAvatarImage())<img src="{{ $x->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
-                  <span class="ev-x-main">
-                    <b>{{ $x->name }}</b>
-                    <span class="ev-x-roles">{{ collect($x->roles)->map(fn ($r) => \App\Models\ExpertEvaluation::ROLES[$r] ?? ucfirst($r))->implode(' · ') }}</span>
-                  </span>
-                  <span class="ev-score">@include('partials.evaluation-stars', ['rating' => $x->average])<b>{{ \App\Support\EvaluationResults::format($x->average) }}<small>/5</small></b>{{ $x->total }} {{ $x->total === 1 ? 'review' : 'reviews' }}</span>
-                  <svg class="ev-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-                </summary>
-                <div class="ev-x-body">
-                  <div>
-                    <div class="ev-sub">By question</div>
-                    @include('partials.evaluation-question-bars', ['questions' => $x->questions])
+          <div class="ev-sum-row">
+            <section class="ev-sum-card ev-sum-by" aria-labelledby="ev-sum-by-h">
+              <h2 id="ev-sum-by-h">By expert</h2>
+              @foreach($summary->experts as $x)
+                @php
+                  $teamsClass = $x->teamsAnswered === 0 ? 'is-zero' : ($x->teamsAnswered >= $x->teams ? 'is-all' : '');
+                @endphp
+                @if($x->average !== null)
+                  <a class="ev-sum-x" href="{{ route('capsa.evaluations.expert', array_filter(['expert' => $x->expert_id, 'stage' => $resultStage])) }}">
+                @else
+                  <div class="ev-sum-x">
+                @endif
+                    <span><b>{{ $x->name }}</b><span class="ev-sum-roles">{{ $roleLabel($x->roles) }}</span></span>
+                    <span class="ev-sum-track" aria-hidden="true"><span class="ev-sum-fill" style="width:{{ $x->average !== null ? round($x->average / 5 * 100) : 0 }}%"></span></span>
+                    <span @class(['ev-sum-score', 'is-none' => $x->average === null])>{{ $x->average !== null ? $fmt($x->average) : '—' }}</span>
+                    <span class="ev-sum-teams {{ $teamsClass }}">{{ $x->teamsAnswered }} of {{ $x->teams }} {{ $x->teams === 1 ? 'team' : 'teams' }}</span>
+                    <span class="ev-sum-go" aria-hidden="true">{{ $x->average !== null ? '›' : '' }}</span>
+                @if($x->average !== null)
+                  </a>
+                @else
                   </div>
-                  <div>
-                    <div class="ev-sub">Responses</div>
-                    @include('partials.evaluation-responses', ['responses' => $x->responses])
-                  </div>
+                @endif
+              @endforeach
+            </section>
+
+            @if($summary->questions->isNotEmpty())
+            <section class="ev-sum-card ev-sum-byq" aria-labelledby="ev-sum-q-h">
+              <h2 id="ev-sum-q-h">By question</h2>
+              @foreach($summary->questions as $q)
+                <div class="ev-sum-q">
+                  <div><span>{{ $q->question }}</span><b>{{ $fmt($q->average) }}</b></div>
+                  <span class="ev-sum-track" aria-hidden="true"><span class="ev-sum-fill is-dark" style="width:{{ round($q->average / 5 * 100) }}%"></span></span>
                 </div>
-              </details>
-            @endforeach
+              @endforeach
+              <p class="ev-sum-foot">All experts together, from the {{ $totalAnswered }} {{ $totalAnswered === 1 ? 'evaluation' : 'evaluations' }} in so far.</p>
+            </section>
+            @endif
           </div>
         @endif
       @endif

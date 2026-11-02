@@ -282,6 +282,63 @@ class ExpertEvaluationTest extends TestCase
         $this->assertSame(0, ExpertEvaluation::count());
     }
 
+    public function test_the_leader_sends_every_expert_of_a_defense_at_once(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+
+        $this->actingAs($this->leader, 'web')->post(route('student.evaluations.store_all'), $this->sheet($defense, $template, ['adviser' => [5, 4, 4, 3, 5], 'consultant' => [], 'grammarian' => []]))
+            ->assertRedirect(route('student.experts', ['tab' => 'evaluations']))
+            ->assertSessionHas('evaluation_saved', '3 evaluations sent. Thank you!');
+
+        $this->assertSame(3, ExpertEvaluation::count());
+        $this->assertSame(4.2, ExpertEvaluation::where('role', 'adviser')->sole()->rating);
+        $this->assertCount(0, $this->due());
+    }
+
+    public function test_one_refused_in_the_sheet_does_not_hold_back_the_others(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+        $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $template);
+
+        $this->actingAs($this->leader, 'web')->post(route('student.evaluations.store_all'), $this->sheet($defense, $template, ['adviser' => [], 'consultant' => []]))
+            ->assertSessionHas('evaluation_error', fn ($m) => str_starts_with($m, '1 sent. '));
+
+        $this->assertSame(2, ExpertEvaluation::count());
+        $this->assertSame(['grammarian'], $this->due()->pluck('role')->all());
+    }
+
+    public function test_a_member_cannot_send_the_sheet_either(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+
+        $this->actingAs($this->member(), 'web')->post(route('student.evaluations.store_all'), $this->sheet($defense, $template, ['adviser' => []]))
+            ->assertSessionHas('evaluation_error', 'Only your team leader evaluates the experts.');
+        $this->actingAs($this->leader, 'web')->post(route('student.evaluations.store_all'), ['defense_id' => $defense->defense_id, 'evaluations' => [
+            'x' => ['expert_id' => $this->experts['adviser']->expert_id, 'role' => 'adviser', 'answers' => [$template->questions[0]->id => 6]],
+        ]])->assertSessionHasErrors('evaluations.x.answers.'.$template->questions[0]->id);
+
+        $this->assertSame(0, ExpertEvaluation::count());
+    }
+
+    /** @param  array<string, array<int, int>>  $byRole  scores per role, 5 where left out */
+    private function sheet(DefenseSchedule $defense, EvaluationTemplate $template, array $byRole): array
+    {
+        $evaluations = [];
+        foreach ($byRole as $role => $scores) {
+            $expert = $this->experts[$role];
+            $answers = [];
+            foreach ($template->questions->values() as $i => $question) {
+                $answers[$question->id] = $scores[$i] ?? 5;
+            }
+            $evaluations[$expert->expert_id.'-'.$role] = ['expert_id' => $expert->expert_id, 'role' => $role, 'answers' => $answers];
+        }
+
+        return ['defense_id' => $defense->defense_id, 'evaluations' => $evaluations];
+    }
+
     public function test_a_defense_not_passed_cannot_be_evaluated(): void
     {
         $template = $this->template();
@@ -388,8 +445,8 @@ class ExpertEvaluationTest extends TestCase
 
         $this->actingAs($this->leader, 'web')->get(route('student.experts', ['tab' => 'evaluations']))
             ->assertOk()
-            ->assertSee('2 to evaluate')
-            ->assertDontSee('3 to evaluate');
+            ->assertSee('of 2 experts done')
+            ->assertDontSee('of 3 experts done');
         $this->assertTrue($this->chaptersGateOpensAfter(['adviser', 'consultant'], $theirs->fresh('questions')));
     }
 
@@ -618,10 +675,10 @@ class ExpertEvaluationTest extends TestCase
             ->assertSee('Pre-proposal Defense')
             ->assertSee('Answered our questions quickly.')
             ->assertSee('Explained the panel&#039;s comments.', false)
-            ->assertSee('name="answers['.$template->questions[0]->id.']"', false)
+            ->assertSee('name="evaluations['.$this->experts['consultant']->expert_id.'-consultant][answers]['.$template->questions[0]->id.']"', false)
             ->assertSee('5 · Excellent')
             ->assertSee('Anonymous.')
-            ->assertSee('Submit evaluation')
+            ->assertSee('Send all 2 evaluations')
             ->assertSee($this->experts['consultant']->name)
             ->assertSee('Sent evaluations')
             ->assertSee('4.5 out of 5', false)
@@ -637,7 +694,7 @@ class ExpertEvaluationTest extends TestCase
         $this->actingAs($this->member(), 'web')->get(route('student.experts', ['tab' => 'evaluations']))
             ->assertOk()
             ->assertSee('Your team leader evaluates the experts.')
-            ->assertDontSee('Submit evaluation');
+            ->assertDontSee(route('student.evaluations.store_all'));
     }
 
     /**

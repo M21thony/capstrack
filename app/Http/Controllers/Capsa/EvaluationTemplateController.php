@@ -59,7 +59,106 @@ class EvaluationTemplateController extends Controller
             'resultStage' => $stage,
             'totalAnswered' => $answered->count(),
             'overall' => $answered->isEmpty() ? null : round((float) $answered->avg('rating'), 1),
+            'summary' => $tab === 'results' ? $this->summary($capsa, $answered, $stage) : null,
         ]);
+    }
+
+    /**
+     * GET /capsa/evaluations/experts/{expert} - how teams answered each of
+     * the CaPSA's questions about one expert. Anonymous like the results.
+     */
+    public function expert(Request $request, int $expert): View
+    {
+        $capsa = $this->capsa();
+        $stage = in_array($request->query('stage'), EvaluationTemplate::STAGES, true) ? $request->query('stage') : null;
+        $answered = ExpertEvaluation::with(['expert', 'defense'])
+            ->where('expert_id', $expert)
+            ->whereHas('template', fn ($q) => $q->where('capsa_id', $capsa->expert_id))
+            ->when($stage, fn ($q) => $q->whereHas('defense', fn ($d) => $d->where('defense_type', $stage)))
+            ->get();
+
+        abort_if($answered->isEmpty(), 404);
+
+        $owed = $this->owed($capsa, $stage)->where('expert_id', $expert);
+        $teams = $answered->pluck('team_id')->unique();
+        $answers = $answered->flatMap(fn (ExpertEvaluation $e) => $e->answers ?? [])->filter(fn ($a) => isset($a['question'], $a['score']));
+
+        return view('capsa.evaluation-expert', [
+            'x' => EvaluationResults::byExpert($answered)->first(),
+            'resultStage' => $stage,
+            'teamsAnswered' => $teams->count(),
+            'teamsTotal' => $teams->merge($owed->pluck('team_id'))->unique()->count(),
+            // Per question, how many answers fell on each point of the scale.
+            'spread' => $answers->groupBy('question')->map(fn ($rows, $question) => (object) [
+                'question' => $question,
+                'average' => round((float) $rows->avg('score'), 1),
+                'total' => $rows->count(),
+                'counts' => collect(range(1, 5))->mapWithKeys(fn ($s) => [$s => $rows->where('score', $s)->count()])->all(),
+            ])->values(),
+            'high' => $answers->isEmpty() ? 0 : (int) round(100 * $answers->where('score', '>=', 4)->count() / $answers->count()),
+            'low' => $answers->isEmpty() ? 0 : (int) round(100 * $answers->where('score', '<=', 2)->count() / $answers->count()),
+            'byRole' => $answered->groupBy('role')->map(fn ($rows, $role) => (object) [
+                'label' => ExpertEvaluation::ROLES[$role] ?? ucfirst((string) $role),
+                'total' => $rows->count(),
+                'average' => round((float) $rows->avg('rating'), 1),
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * The results tab's numbers: how many evaluations are in against how
+     * many are owed, each expert's teams, and the weakest question.
+     */
+    private function summary(CapstoneExpert $capsa, $answered, ?string $stage): object
+    {
+        $owed = $this->owed($capsa, $stage);
+        $all = $answered->count() + $owed->count();
+        $owedBy = $owed->groupBy('expert_id');
+        $answeredBy = $answered->groupBy('expert_id');
+        $teamsOf = fn (int $id) => $answeredBy->get($id, collect())->pluck('team_id')
+            ->merge($owedBy->get($id, collect())->pluck('team_id'))->unique()->count();
+
+        $experts = EvaluationResults::byExpert($answered)->map(fn ($x) => (object) [
+            'expert_id' => $x->expert_id,
+            'name' => $x->name,
+            'roles' => $x->roles,
+            'average' => $x->average,
+            'teamsAnswered' => $answeredBy->get($x->expert_id)->pluck('team_id')->unique()->count(),
+            'teams' => $teamsOf($x->expert_id),
+        ]);
+        // Experts nobody has answered for yet still get a row.
+        foreach ($owedBy->except($experts->pluck('expert_id')->all()) as $id => $rows) {
+            $experts->push((object) [
+                'expert_id' => (int) $id,
+                'name' => $rows->first()->name,
+                'roles' => $rows->pluck('role')->unique()->values()->all(),
+                'average' => null,
+                'teamsAnswered' => 0,
+                'teams' => $teamsOf((int) $id),
+            ]);
+        }
+
+        $questions = EvaluationResults::byQuestion($answered);
+        $topOwed = $owedBy->sortByDesc(fn ($rows) => $rows->count())->first();
+
+        return (object) [
+            'rate' => $all ? (int) round(100 * $answered->count() / $all) : null,
+            'all' => $all,
+            'owed' => $owed->count(),
+            'topOwed' => $topOwed && $owedBy->count() > 1 ? (object) ['name' => $topOwed->first()->name, 'count' => $topOwed->count()] : null,
+            'rated' => $experts->whereNotNull('average')->count(),
+            'experts' => $experts,
+            'questions' => $questions,
+            'lowest' => $questions->sortBy('average')->first(),
+        ];
+    }
+
+    /** What leaders in this CaPSA's sections still owe, for one stage or all. */
+    private function owed(CapstoneExpert $capsa, ?string $stage)
+    {
+        return ExpertEvaluations::owedForCapsa($capsa)
+            ->when($stage, fn ($rows) => $rows->filter(fn ($row) => $row->stage === $stage))
+            ->values();
     }
 
     /** GET /capsa/evaluations/new - a blank evaluation, or a copy of one. */

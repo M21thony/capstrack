@@ -283,6 +283,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // defense, and the anonymous results.
         Route::get('/evaluations', [EvaluationTemplateController::class, 'index'])->name('evaluations');
         Route::get('/evaluations/new', [EvaluationTemplateController::class, 'create'])->name('evaluations.create');
+        Route::get('/evaluations/experts/{expert}', [EvaluationTemplateController::class, 'expert'])->whereNumber('expert')->name('evaluations.expert');
         Route::post('/evaluations', [EvaluationTemplateController::class, 'store'])->name('evaluations.store');
         Route::get('/evaluations/{template}/edit', [EvaluationTemplateController::class, 'edit'])->name('evaluations.edit');
         Route::put('/evaluations/{template}', [EvaluationTemplateController::class, 'update'])->name('evaluations.update');
@@ -511,6 +512,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/team/rating/{form}/submission', [TeamRatingController::class, 'submit'])->name('student.team_rating.submit');
             Route::get('/experts', [StudentExpertController::class, 'index'])->name('student.experts');
             Route::post('/experts/evaluations', [ExpertEvaluationController::class, 'store'])->name('student.evaluations.store');
+            Route::post('/experts/evaluations/all', [ExpertEvaluationController::class, 'storeAll'])->name('student.evaluations.store_all');
             // Document Submission and Review Viewer in one: the team's files, each opening with its remarks.
             Route::get('/documents', [DocumentsController::class, 'index'])->name('student.documents');
             Route::get('/documents/{document}/file', [DocumentsController::class, 'file'])->name('student.documents.file');

@@ -351,9 +351,21 @@ class EvaluationTemplateTest extends TestCase
         $page = $this->actingAs($this->capsa, 'expert')->get(route('capsa.evaluations', ['tab' => 'results']))
             ->assertOk()
             ->assertSee($adviser->name)
-            ->assertSee('3.8<small>/5</small></b>2 reviews', false)
-            ->assertSee('Anonymous team leader')
+            ->assertSee('<span class="ev-sum-score">3.8</span>', false)
             ->assertSee('Was there for us.')
+            ->assertSee(route('capsa.evaluations.expert', $adviser->expert_id))
+            ->assertDontSee('Alpha Squad')
+            ->assertDontSee($this->leader->email);
+        $this->assertStringNotContainsString($this->leader->l_name, $page->getContent());
+
+        // The expert's own page: every answer, still with nobody's name.
+        $page = $this->actingAs($this->capsa, 'expert')->get(route('capsa.evaluations.expert', $adviser->expert_id))
+            ->assertOk()
+            ->assertSee('2 reviews from 1 of 1 team')
+            ->assertSee('3.8<small> / 5</small>', false)
+            ->assertSee('0 Poor, 0 Fair, 1 Good, 0 Very good, 1 Excellent', false)
+            ->assertSee('Anonymous team leader')
+            ->assertSee('Knew the field.')
             ->assertDontSee('Alpha Squad')
             ->assertDontSee($this->leader->email);
         $this->assertStringNotContainsString($this->leader->l_name, $page->getContent());
@@ -367,6 +379,50 @@ class EvaluationTemplateTest extends TestCase
             ->assertDontSee('Knew the field.')
             ->assertDontSee('Alpha Squad')
             ->assertDontSee($this->leader->email);
+    }
+
+    public function test_the_summary_counts_the_evaluations_still_owed(): void
+    {
+        $adviser = $this->engage('adviser');
+        $consultant = $this->engage('consultant');
+        $template = EvaluationTemplate::factory()->withQuestions(['Was there for us.'])
+            ->create(['capsa_id' => $this->capsa->expert_id, 'defense_type' => DefenseOutcome::TITLE_DEFENSE]);
+        $defense = DefenseSchedule::create(['team_id' => $this->team->team_id, 'defense_type' => DefenseOutcome::TITLE_DEFENSE, 'attempt' => 1, 'schedule_date' => now(), 'outcome' => DefenseOutcome::PASSED, 'outcome_recorded_at' => now()]);
+        ExpertEvaluation::create([
+            'team_id' => $this->team->team_id, 'expert_id' => $adviser->expert_id, 'defense_id' => $defense->defense_id,
+            'evaluation_template_id' => $template->id, 'role' => 'adviser', 'student_id' => $this->leader->student_id,
+            'answers' => [['question' => 'Was there for us.', 'score' => 4]], 'rating' => 4,
+        ]);
+
+        $this->actingAs($this->capsa, 'expert')->get(route('capsa.evaluations', ['tab' => 'results']))
+            ->assertOk()
+            ->assertSee('<dd>50%</dd>', false)
+            ->assertSee('1 of 2 evaluations in')
+            ->assertSee('<dd class="is-wait">1</dd>', false)
+            // Owed but not answered: listed, with nothing to open.
+            ->assertSee($consultant->name)
+            ->assertSee('0 of 1 team')
+            ->assertDontSee(route('capsa.evaluations.expert', $consultant->expert_id));
+    }
+
+    public function test_an_experts_page_shows_only_the_capsas_own_answers(): void
+    {
+        $adviser = $this->engage('adviser');
+        $template = EvaluationTemplate::factory()->withQuestions(['Was there for us.'])
+            ->create(['capsa_id' => $this->capsa->expert_id, 'defense_type' => DefenseOutcome::TITLE_DEFENSE]);
+        $defense = DefenseSchedule::create(['team_id' => $this->team->team_id, 'defense_type' => DefenseOutcome::TITLE_DEFENSE, 'attempt' => 1, 'schedule_date' => now(), 'outcome' => DefenseOutcome::PASSED, 'outcome_recorded_at' => now()]);
+        ExpertEvaluation::create([
+            'team_id' => $this->team->team_id, 'expert_id' => $adviser->expert_id, 'defense_id' => $defense->defense_id,
+            'evaluation_template_id' => $template->id, 'role' => 'adviser', 'student_id' => $this->leader->student_id,
+            'answers' => [['question' => 'Was there for us.', 'score' => 4]], 'rating' => 4,
+        ]);
+        $url = route('capsa.evaluations.expert', $adviser->expert_id);
+
+        $this->actingAs($this->capsa, 'expert')->get($url)->assertOk()->assertSee('1 review from 1 of 1 team');
+        $this->actingAs($this->capsa, 'expert')->get($url.'?stage='.urlencode(DefenseOutcome::PRE_PROPOSAL))->assertNotFound();
+        $this->actingAs($this->capsaFor(['BSIT-3B']), 'expert')->get($url)->assertNotFound();
+        $this->actingAs($this->capsa, 'expert')->get(route('capsa.evaluations.expert', 999999))->assertNotFound();
+        $this->actingAs($adviser, 'expert')->get($url)->assertForbidden();
     }
 
     public function test_an_expert_sees_only_their_own_evaluations(): void
@@ -415,7 +471,8 @@ class EvaluationTemplateTest extends TestCase
 
         $pages = [
             [$this->capsa, 'expert', route('capsa.evaluations'), 'ev-card2'],
-            [$this->capsa, 'expert', route('capsa.evaluations', ['tab' => 'results']), 'ev-resps'],
+            [$this->capsa, 'expert', route('capsa.evaluations', ['tab' => 'results']), 'ev-sum-strip'],
+            [$this->capsa, 'expert', route('capsa.evaluations.expert', $adviser->expert_id), 'ev-resps'],
             [$this->capsa, 'expert', route('capsa.evaluations.create'), 'ev-qlist'],
             [$this->capsa, 'expert', route('capsa.evaluations.edit', $template), 'ev-qlist'],
             [$this->capsa, 'expert', route('capsa.dashboard'), 'erp-overlay'],
