@@ -17,6 +17,10 @@ test.use({ baseURL: 'http://127.0.0.1:8010', viewport: { width: 1440, height: 90
 test.describe.configure({ mode: 'default' });
 
 const CAPSA = 'pw-ann-capsa@cspc.edu.ph';
+// Each run's titles are its own, so a bell left from an earlier run (or a
+// failed one) can never pass for this one's.
+const RUN = Date.now().toString(36);
+const t = (title) => `PW ${title} ${RUN}`;
 const student = (name) => `pw-ann-${name}@my.cspc.edu.ph`;
 
 async function asCapsa(page) {
@@ -62,35 +66,35 @@ test.afterEach(async ({ page }) => {
 
 test('a post to Students reaches the CaPSA\'s own sections and nobody else', async ({ page }) => {
   await asCapsa(page);
-  await post(page, { title: 'PW Chapter 3 deadline', body: 'Upload Chapter 3 by Friday.', audience: ['student'] });
+  await post(page, { title: t('Chapter 3 deadline'), body: 'Upload Chapter 3 by Friday.', audience: ['student'] });
 
   for (const name of ['ana', 'ben', 'cara']) {
-    expect(await seenBy(page, name, 'PW Chapter 3 deadline'), name).toEqual({ onDashboard: true, inBell: true });
+    expect(await seenBy(page, name, t('Chapter 3 deadline')), name).toEqual({ onDashboard: true, inBell: true });
   }
-  expect(await seenBy(page, 'dan', 'PW Chapter 3 deadline'), 'dan, outside the sections').toEqual({ onDashboard: false, inBell: false });
+  expect(await seenBy(page, 'dan', t('Chapter 3 deadline')), 'dan, outside the sections').toEqual({ onDashboard: false, inBell: false });
 });
 
 test('a picked section is the only one reached', async ({ page }) => {
   await asCapsa(page);
-  await post(page, { title: 'PW 3B room change', body: 'BSIT-3B meets in Lab 2.', audience: ['student'], sections: ['BSIT-3B'] });
+  await post(page, { title: t('3B room change'), body: 'BSIT-3B meets in Lab 2.', audience: ['student'], sections: ['BSIT-3B'] });
 
-  expect(await seenBy(page, 'cara', 'PW 3B room change')).toEqual({ onDashboard: true, inBell: true });
-  expect(await seenBy(page, 'ana', 'PW 3B room change')).toEqual({ onDashboard: false, inBell: false });
+  expect(await seenBy(page, 'cara', t('3B room change'))).toEqual({ onDashboard: true, inBell: true });
+  expect(await seenBy(page, 'ana', t('3B room change'))).toEqual({ onDashboard: false, inBell: false });
 });
 
 test('a team mentioned mid-sentence is the one reached', async ({ page }) => {
   await asCapsa(page);
-  await post(page, { title: 'PW Bring the signed form', body: 'Reminder: @PW Bug Busters please bring the signed CLF tomorrow.', audience: ['student'] });
+  await post(page, { title: t('Bring the signed form'), body: 'Reminder: @PW Bug Busters please bring the signed CLF tomorrow.', audience: ['student'] });
 
-  expect(await seenBy(page, 'ana', 'PW Bring the signed form')).toEqual({ onDashboard: true, inBell: true });
-  expect(await seenBy(page, 'ben', 'PW Bring the signed form'), 'her classmate, not on the team').toEqual({ onDashboard: false, inBell: false });
+  expect(await seenBy(page, 'ana', t('Bring the signed form'))).toEqual({ onDashboard: true, inBell: true });
+  expect(await seenBy(page, 'ben', t('Bring the signed form')), 'her classmate, not on the team').toEqual({ onDashboard: false, inBell: false });
 });
 
 test('an expert-only post reaches no student', async ({ page }) => {
   await asCapsa(page);
-  await post(page, { title: 'PW Panel briefing', body: '@PW Bug Busters is first on Monday.', audience: ['expert'] });
+  await post(page, { title: t('Panel briefing'), body: '@PW Bug Busters is first on Monday.', audience: ['expert'] });
 
-  expect(await seenBy(page, 'ana', 'PW Panel briefing')).toEqual({ onDashboard: false, inBell: false });
+  expect(await seenBy(page, 'ana', t('Panel briefing'))).toEqual({ onDashboard: false, inBell: false });
 });
 
 test('a refused post keeps the draft and says so', async ({ page }) => {
