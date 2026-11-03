@@ -11,7 +11,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: 'html',
   use: {
-    baseURL: 'http://127.0.0.1:8000',
+    // PW_BASE_URL=http://127.0.0.1:8002 for the specs that send (see
+    // experts-end-to-end.spec.js) - that server logs mail instead of sending.
+    baseURL: process.env.PW_BASE_URL || 'http://127.0.0.1:8000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     // Off by default - recording every run costs seconds and disk for

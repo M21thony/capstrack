@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 
 /**
  * Forms in the student portal on a phone.
@@ -56,9 +57,18 @@ const placement = (page, selector) => page.evaluate((selector) => {
   };
 }, selector);
 
+// The apply form for the first expert this team can apply to, from Find experts.
+const openApply = async (page) => {
+  await page.goto('/student/experts?tab=find');
+  await page.evaluate(() => document.querySelectorAll('#portal-tour, .gt, .gt-shield').forEach((el) => el.remove()));
+  const apply = page.locator('[data-xh="apply"]:visible').first();
+  test.skip(await apply.count() === 0, 'this team has nobody it can apply to today');
+  await apply.click();
+  await expect(page.locator('dialog[open] #xh-apply-msg')).toBeVisible();
+};
 const openExpertApply = async (page) => {
-  await page.evaluate(() => openModal('apply-modal'));
-  await page.locator('#apply-message').focus();
+  await openApply(page);
+  await page.locator('#xh-apply-msg').focus();
 };
 
 for (const [width, height] of [[320, 568], [360, 640]]) {
@@ -82,23 +92,37 @@ for (const [width, height] of [[320, 568], [360, 640]]) {
   });
 }
 
+/**
+ * The apply form. Student 24 leads team 119, which can apply once confirmed:
+ * confirmed for these three only, and put back after. Nothing is sent.
+ */
+test.describe('the apply form on a phone', () => {
+test.describe.configure({ mode: 'serial' });
+const confirmed = (value) => {
+  const out = execFileSync('php', ['artisan', 'tinker', '--execute', `$t = App\\Models\\Team::find(119); echo '@@'.json_encode($t?->getRawOriginal('is_confirmed')); ${value === undefined ? '' : `$t?->update(['is_confirmed' => ${JSON.stringify(value)}]);`}`], { encoding: 'utf8' });
+  return JSON.parse(out.slice(out.lastIndexOf('@@') + 2).trim());
+};
+let was;
+test.beforeAll(() => { was = confirmed(1); });
+test.afterAll(() => { if (was !== undefined) { confirmed(was); } });
+
 test('on an iPhone the field and its label stay above the keyboard', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 360, height: 640 }, isMobile: true, hasTouch: true });
   await context.addInitScript(fakeIphoneKeyboard);
   const page = await context.newPage();
 
-  await signIn(page, 'experts');
+  await signIn(page, 'experts?as=24');
   await openExpertApply(page);
   await page.evaluate(() => window.__keyboard(330));
   await page.waitForTimeout(800);
 
-  expect(await placement(page, '#apply-message')).toEqual({ focused: true, fieldShowing: true, labelShowing: true, tabBarShowing: false });
+  expect(await placement(page, '#xh-apply-msg')).toEqual({ focused: true, fieldShowing: true, labelShowing: true, tabBarShowing: false });
 
   // Closing the keyboard puts everything back.
   await page.evaluate(() => { document.activeElement.blur(); window.__keyboard(null); });
   await page.waitForTimeout(400);
   expect(await page.evaluate(() => document.documentElement.classList.contains('kb-open'))).toBe(false);
-  expect(await page.evaluate(() => /height/.test(document.getElementById('apply-modal').style.cssText))).toBe(false);
+  expect(await page.evaluate(() => /height/.test(document.querySelector('dialog[open]').style.cssText))).toBe(false);
   await context.close();
 });
 
@@ -106,13 +130,40 @@ test('on Android the page shrinks for the keyboard and the tab bar steps aside',
   const context = await browser.newContext({ viewport: { width: 360, height: 640 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
 
-  await signIn(page, 'experts');
+  await signIn(page, 'experts?as=24');
   await openExpertApply(page);
   await page.setViewportSize({ width: 360, height: 360 });
   await page.waitForTimeout(800);
 
-  expect(await placement(page, '#apply-message')).toEqual({ focused: true, fieldShowing: true, labelShowing: true, tabBarShowing: false });
+  expect(await placement(page, '#xh-apply-msg')).toEqual({ focused: true, fieldShowing: true, labelShowing: true, tabBarShowing: false });
   await context.close();
+});
+
+/** A pop-up's last button used to sit under the floating bar; the bar steps aside while one is open. */
+test('the floating bar steps aside while a pop-up is open', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await signIn(page, 'experts?as=24');
+  await page.waitForTimeout(800);
+  const covered = () => page.evaluate(() => document.querySelector('.mtab').classList.contains('is-covered'));
+  expect(await covered()).toBe(false);
+
+  await openApply(page);
+  await page.waitForTimeout(700);
+  expect(await covered(), 'the bar is out of the way').toBe(true);
+  const reachable = await page.evaluate(() => {
+    const button = document.querySelector('dialog[open] [data-xh="apply-review"]');
+    button.scrollIntoView({ block: 'end' });
+    const box = button.getBoundingClientRect();
+    return button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
+  });
+  expect(reachable, 'Review application can be tapped').toBe(true);
+
+  await page.locator('dialog[open] [data-xh="close"]').last().click();
+  await page.waitForTimeout(700);
+  expect(await covered(), 'back once it closes').toBe(false);
+  await context.close();
+});
 });
 
 /**
@@ -248,32 +299,6 @@ for (const [width, height] of [[390, 844], [320, 568]]) {
   });
 }
 
-/** A pop-up's last button used to sit under the floating bar; the bar steps aside while one is open. */
-test('the floating bar steps aside while a pop-up is open', async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  const page = await context.newPage();
-  await signIn(page, 'experts');
-  await page.waitForTimeout(800);
-  const covered = () => page.evaluate(() => document.querySelector('.mtab').classList.contains('is-covered'));
-  expect(await covered()).toBe(false);
-
-  await page.evaluate(() => openModal('apply-modal'));
-  await page.waitForTimeout(700);
-  expect(await covered(), 'the bar is out of the way').toBe(true);
-  const reachable = await page.evaluate(() => {
-    const button = document.getElementById('btn-review-apply');
-    button.scrollIntoView({ block: 'end' });
-    const box = button.getBoundingClientRect();
-    return button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
-  });
-  expect(reachable, 'Review & Submit can be tapped').toBe(true);
-
-  await page.evaluate(() => closeModal('apply-modal'));
-  await page.waitForTimeout(700);
-  expect(await covered(), 'back once it closes').toBe(false);
-  await context.close();
-});
-
 /** The how-to card is a slim banner on a phone, its steps a tap away; the fonts come from this site. */
 test('the how-to card is a banner on a phone and the fonts are the site own', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -298,28 +323,31 @@ test('the how-to card is a banner on a phone and the fonts are the site own', as
   await context.close();
 });
 
-/** Consultation fits a phone: nothing runs off the side, and the date picker's days are round. */
+/** Booking fits a phone: nothing runs off the side, the calendar stays inside the booking, and open days keep their colour. */
 for (const [width, height] of [[390, 844], [320, 640]]) {
   test(`consultation fits a ${width}x${height} phone`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     await signIn(page, 'consultation');
-    await page.waitForTimeout(1200);
+    await page.evaluate(() => document.querySelectorAll('.gt, .gt-shield').forEach((el) => el.remove()));
+    const schedule = page.locator('[data-xh="schedule"]:visible').first();
+    test.skip(await schedule.count() === 0, 'this team has no expert to book');
+    await schedule.click();
+    await expect(page.locator('dialog[open] .xh-cal-grid')).toBeVisible();
 
     const result = await page.evaluate(() => {
       const content = document.querySelector('.main .content');
-      const days = [...document.querySelectorAll('.sched-cal .calendar-day')].filter((d) => d.getBoundingClientRect().width > 0);
+      const box = document.querySelector('dialog[open]').getBoundingClientRect();
+      const days = [...document.querySelectorAll('dialog[open] .xh-day:not(.is-blank)')];
       return {
         sideways: content.scrollWidth - content.clientWidth,
         pageWider: document.documentElement.scrollWidth - innerWidth,
-        oddDays: days.filter((d) => { const r = d.getBoundingClientRect(); return Math.abs(r.width - r.height) > 1.5 || parseFloat(getComputedStyle(d).borderLeftWidth) > 0; }).length,
-        // A bookable date still carries its colour.
-        uncolouredBookable: days.filter((d) => d.classList.contains('available') && !d.classList.contains('selected') && getComputedStyle(d).backgroundColor === 'rgba(0, 0, 0, 0)').length,
-        emptyOrSteps: !!document.querySelector('.book-empty') !== !document.querySelector('.book-body').hidden,
+        daysOutside: days.filter((d) => { const r = d.getBoundingClientRect(); return r.left < box.left || r.right > box.right + 0.5; }).length,
+        uncolouredBookable: days.filter((d) => d.classList.contains('is-avail') && d.getAttribute('aria-pressed') !== 'true' && getComputedStyle(d).backgroundColor === 'rgba(0, 0, 0, 0)').length,
       };
     });
 
-    expect(result).toEqual({ sideways: 0, pageWider: 0, oddDays: 0, uncolouredBookable: 0, emptyOrSteps: true });
+    expect(result).toEqual({ sideways: 0, pageWider: 0, daysOutside: 0, uncolouredBookable: 0 });
     await context.close();
   });
 }

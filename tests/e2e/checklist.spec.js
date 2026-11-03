@@ -31,14 +31,15 @@ test('experts: View Original PDF opens a readable panel of its own', async ({ pa
   await student(page, 'experts');
 
   test.skip(
-    await page.locator('#previewDialog').count() === 0,
+    await page.locator('#xh-proposal').evaluate((t) => !t.content.querySelector('[data-xh="pdf"]')).catch(() => true),
     'this team has no approved pre-proposal with an uploaded file'
   );
 
-  // The button lives in the preview, which lives in the apply form. Opened
-  // directly because the width is what is under test, and whether this team
-  // can apply to anybody today depends on which experts set their programmes.
-  await page.evaluate(() => window.openOriginalPdf());
+  // The Preview button lives in the apply form, and whether this team can
+  // apply to anybody today depends on which experts set their programmes -
+  // so the same button is pressed here, and the PDF opened from the preview.
+  await page.evaluate(() => { const b = document.createElement('button'); b.dataset.xh = 'proposal'; document.body.appendChild(b); b.click(); b.remove(); });
+  await page.locator('dialog[open] [data-xh="pdf"]').click();
 
   const box = page.locator('#previewDialog');
   await expect(box).toBeVisible();

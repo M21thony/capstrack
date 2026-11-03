@@ -41,14 +41,15 @@ test('the original PDF opens in a panel wide enough to read', async ({ page }) =
   // The button sits inside the preview, which sits inside the apply form -
   // three panels deep, which is the whole reason its width had to be fought
   // for. Whether this team can currently apply to anybody depends on which
-  // experts have set their programmes, so the panel is opened directly: the
-  // width is the thing under test, not the path to it.
+  // experts have set their programmes, so the preview's own button is
+  // pressed here: the width is the thing under test, not the path to it.
   test.skip(
-    await page.locator('#previewDialog').count() === 0,
+    await page.locator('#xh-proposal').evaluate((t) => !t.content.querySelector('[data-xh="pdf"]')).catch(() => true),
     'this team has no approved pre-proposal with a file'
   );
 
-  await page.evaluate(() => window.openOriginalPdf());
+  await page.evaluate(() => { const b = document.createElement('button'); b.dataset.xh = 'proposal'; document.body.appendChild(b); b.click(); b.remove(); });
+  await page.locator('dialog[open] [data-xh="pdf"]').click();
 
   const box = page.locator('#previewDialog');
   await expect(box).toBeVisible();

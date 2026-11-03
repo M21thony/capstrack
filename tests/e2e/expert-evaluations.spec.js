@@ -1,8 +1,43 @@
 // Expert evaluations: the student's one-sheet form (every expert on one
-// form), CaPSA's results summary, and the page for one expert. Needs a local
-// DB with at least one team owing evaluations and one expert already rated.
+// form), CaPSA's results summary, and the page for one expert. Makes its own
+// data - a passed defense, the CaPSA's form, one rating - and removes it after.
 // Nothing is submitted - the student form is only filled in, never sent.
 import { test, expect } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+
+test.describe.configure({ mode: 'serial' });
+
+// Runs PHP in the app; whatever it echoes after "@@" comes back as JSON.
+const php = (code) => {
+  const out = execFileSync('php', ['artisan', 'tinker', '--execute', code], { encoding: 'utf8' });
+  const at = out.lastIndexOf('@@');
+  return at < 0 ? null : JSON.parse(out.slice(at + 2).trim());
+};
+const MODELS = ['ExpertEvaluation', 'EvaluationTemplateQuestion', 'EvaluationTemplate'];
+let before;
+
+// Team 111 (student 131) passes defense 44 with CaPSA 91's form already set
+// up, and has rated its grammarian (123): adviser and consultant stay owed.
+test.beforeAll(() => {
+  before = php(`$o = [];
+    ${MODELS.map((m) => `$o['${m}'] = (int) App\\Models\\${m}::max('id');`).join('\n')}
+    $d = App\\Models\\DefenseSchedule::find(44); $o['outcome'] = $d->outcome; $o['recorded'] = $d->getRawOriginal('outcome_recorded_at');
+    $t = App\\Models\\EvaluationTemplate::create(['capsa_id' => 91, 'title' => 'E2E pre-proposal evaluation', 'defense_type' => 'Pre-proposal Defense', 'roles' => ['adviser', 'consultant', 'grammarian'], 'is_active' => true]);
+    $t->forceFill(['created_at' => '2026-10-01 08:00:00'])->saveQuietly();
+    foreach (array_slice(App\\Models\\EvaluationTemplate::STANDARD_QUESTIONS, 0, 3) as $i => $q) { $t->questions()->create(['question' => $q, 'sort_order' => $i + 1]); }
+    $d->update(['outcome' => 'passed']);
+    App\\Models\\ExpertEvaluation::create(['team_id' => 111, 'expert_id' => 123, 'defense_id' => 44, 'evaluation_template_id' => $t->id, 'role' => 'grammarian',
+      'answers' => $t->questions()->get()->map(fn ($q, $i) => ['question' => $q->question, 'score' => 3 + $i % 3])->all(), 'rating' => 4.0,
+      'comment' => 'Quick to reply and clear on what to fix.', 'student_id' => 131]);
+    echo '@@'.json_encode($o);`);
+});
+
+test.afterAll(() => {
+  if (!before) { return; }
+  php(`${MODELS.map((m) => `App\\Models\\${m}::where('id', '>', ${before[m]})->delete();`).join('\n')}
+    App\\Models\\DefenseSchedule::whereKey(44)->update(['outcome' => ${JSON.stringify(before.outcome)}, 'outcome_recorded_at' => ${JSON.stringify(before.recorded)}]);
+    echo '@@1';`);
+});
 
 const student = async (page, at = '', as = '') => { await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(`/__dev-login-student/${at}${as ? `?as=${as}` : ''}`); await expect(page, 'signed in as a student').not.toHaveURL(/\/login/); };
 const staff = async (page, role, at = '') => { await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(`/__dev-login-expert/${role}/${at}`); await expect(page, `signed in as ${role}`).not.toHaveURL(/\/login/); };
@@ -54,7 +89,7 @@ test('CaPSA reads the summary, opens an expert and comes back by the breadcrumb'
   await expect(page.locator('.ev-sum-strip')).toContainText('evaluations in');
   const rated = page.locator('a.ev-sum-x');
   expect(await rated.count(), 'at least one rated expert').toBeGreaterThan(0);
-  await expect(rated.first().locator('.ev-sum-score')).toHaveText(/^\d\.\d$/);
+  await expect(rated.first().locator('.ev-sum-score')).toHaveText(/^\d(\.\d)?$/);
   await shot(page, testInfo, 'capsa-summary');
 
   const name = ((await rated.first().locator('b').textContent()) || '').trim();

@@ -60,6 +60,7 @@ class ScheduleController extends Controller
                 'consultation_booking.cancellation_reason',
                 'consultation_booking.cancellation_requested_by',
                 'consultation_booking.topics',
+                'consultation_booking.deliverables',
                 'consultation_booking.note',
                 'consultation_booking.created_at as booked_at',
                 'students.f_name as student_fname',
@@ -71,7 +72,11 @@ class ScheduleController extends Controller
                 // The day alone: SQLite keeps "2026-10-20 00:00:00" where
                 // MySQL keeps "2026-10-20", and the page matches the day.
                 $row->session_date = $row->session_date ? substr((string) $row->session_date, 0, 10) : null;
-                $row->topics = ConsultationTopics::label(json_decode((string) $row->topics, true) ?: []);
+                // Bookings now carry the deliverables the team is bringing
+                // instead of topics; the page shows either as "About ...".
+                $row->topics = ConsultationTopics::label(json_decode((string) $row->topics, true) ?: [])
+                    ?: implode(', ', json_decode((string) $row->deliverables, true) ?: []);
+                unset($row->deliverables);
             });
 
         // The dates a weekly slot does NOT happen on. Without these the page
