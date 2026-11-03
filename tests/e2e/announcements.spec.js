@@ -1,20 +1,45 @@
 import { expect, test } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 
 /**
  * Announcements (capsa/announcements): who a post reaches.
  *
  * Posts from the CaPSA page and checks each seeded student's dashboard and
- * bell. Run against the sandbox (port 8010, its own SQLite file) after
+ * bell. Posting SENDS mail - run it only against the no-mail server:
  *
- *   php artisan db:seed --class=AnnouncementsDemoSeeder
+ *   PW_BASE_URL=http://127.0.0.1:8002 npx playwright test announcements
  *
- * The CaPSA covers BSIT-3A and BSIT-3B. Ana (3A) is on "PW Bug Busters",
- * Ben is her classmate, Cara is in 3B and Dan in 3C. With the sandbox down,
- * or the seed missing, the tests skip. Every post they make is deleted
- * afterwards.
+ * It seeds its own accounts (AnnouncementsDemoSeeder) and takes them out
+ * after, with every notification the posts made. The CaPSA covers BSIT-3A
+ * and BSIT-3B. Ana (3A) is on "PW Bug Busters", Ben is her classmate, Cara
+ * is in 3B and Dan in 3C.
  */
-test.use({ baseURL: 'http://127.0.0.1:8010', viewport: { width: 1440, height: 900 } });
-test.describe.configure({ mode: 'default' });
+test.skip(!process.env.PW_BASE_URL, 'sends - point PW_BASE_URL at the no-mail server');
+test.use({ viewport: { width: 1440, height: 900 } });
+test.describe.configure({ mode: 'serial' });
+
+// Runs PHP in the app; whatever it echoes after "@@" comes back as JSON.
+const php = (code) => {
+  const out = execFileSync('php', ['artisan', 'tinker', '--execute', code], { encoding: 'utf8' });
+  const at = out.lastIndexOf('@@');
+  return at < 0 ? null : JSON.parse(out.slice(at + 2).trim());
+};
+// Real students in 3A/3B (and every expert, for Panel) get a bell too.
+const MODELS = ['Notification', 'ActivityLog'];
+let before;
+
+test.beforeAll(() => {
+  before = php(`(new Database\\Seeders\\AnnouncementsDemoSeeder)->run(); $o = [];
+    ${MODELS.map((m) => `$o['${m}'] = (int) App\\Models\\${m}::max((new App\\Models\\${m})->getKeyName());`).join('\n')}
+    echo '@@'.json_encode($o);`);
+});
+
+test.afterAll(() => {
+  if (!before) { return; }
+  php(`Database\\Seeders\\AnnouncementsDemoSeeder::clean();
+    ${MODELS.map((m) => `App\\Models\\${m}::where((new App\\Models\\${m})->getKeyName(), '>', ${before[m]})->delete();`).join('\n')}
+    echo '@@1';`);
+});
 
 const CAPSA = 'pw-ann-capsa@cspc.edu.ph';
 // Each run's titles are its own, so a bell left from an earlier run (or a
@@ -25,7 +50,7 @@ const student = (name) => `pw-ann-${name}@my.cspc.edu.ph`;
 
 async function asCapsa(page) {
   const response = await page.goto(`/__dev-login-expert/capsa/announcements?email=${CAPSA}`).catch(() => null);
-  test.skip(!response || response.status() >= 400, 'the sandbox on port 8010 is not running or not seeded');
+  test.skip(!response || response.status() >= 400, 'the CaPSA account was not seeded');
   await page.evaluate(() => document.getElementById('erp-overlay')?.remove());
   await expect(page.locator('#ann-title')).toBeVisible();
 }
