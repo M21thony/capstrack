@@ -84,7 +84,7 @@ const shot = async (page, testInfo, name) => {
   await testInfo.attach(name, { body, contentType: 'image/png' });
 };
 
-const row = (page, name) => page.locator('.ml-row', { hasText: name });
+const row = (page, name) => page.locator('.ms-req', { hasText: name });
 
 test('Which defense shows only for a Defense, and a blank name is refused', async ({ page }, testInfo) => {
   await as(page, `/__dev-login-expert/capsa?email=${CAPSA}`);
@@ -113,7 +113,8 @@ test('the CaPSA adds an Upload file with instructions', async ({ page }, testInf
   await page.getByRole('button', { name: 'Add requirement' }).click();
 
   await expect(page).toHaveURL(new RegExp(`/milestones/${milestone}$`));
-  await expect(row(page, UPLOAD)).toContainText('Upload file · 0 of 1 team');
+  await expect(row(page, UPLOAD)).toContainText('Upload file');
+  await expect(row(page, UPLOAD)).toContainText('0 of 1 done');
   expect(php(`echo '@@' . json_encode(App\\Models\\Deliverable::where('title', '${UPLOAD}')->first(['kind', 'instructions']));`))
     .toEqual({ kind: 'form', instructions: STEPS });
 });
@@ -126,7 +127,8 @@ test('the CaPSA adds a Defense and it reads as that defense', async ({ page }, t
   await page.selectOption('[name=defense_type]', 'Pre Oral Defense');
   await page.getByRole('button', { name: 'Add requirement' }).click();
 
-  await expect(row(page, DEFENSE)).toContainText('Pre Oral Defense · 0 of 1 team');
+  await expect(row(page, DEFENSE)).toContainText('Pre Oral Defense');
+  await expect(row(page, DEFENSE)).toContainText('0 of 1 done');
   await shot(page, testInfo, 'milestone-rows');
 
   await row(page, DEFENSE).getByRole('link', { name: 'Edit' }).click();

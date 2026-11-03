@@ -61,18 +61,18 @@ class MilestoneListTest extends TestCase
             ->assertSee('Milestones')
             ->assertSee('Chapter 1-3 Submission')
             ->assertDontSee('Title defense forms and the first three chapters.')
-            ->assertSee('Due '.now()->subDays(3)->format('M j, Y'))
-            ->assertSee('Past due for 1 team')
-            ->assertSee('1 of 2 teams done')
-            ->assertSee('50%')
-            ->assertSee('in 28 days');
+            ->assertSee(now()->subDays(3)->format('M j'))
+            ->assertSee('1 past due')
+            ->assertSee('1<span class="mlx-mut">/2</span>', false)
+            ->assertSee('width:50%', false)
+            ->assertSee(now()->addDays(28)->format('M j'));
     }
 
     public function test_sorting_by_due_date_puts_the_soonest_first_and_by_completeness_the_most_done(): void
     {
         $this->checklist->milestones()->where('name', 'Chapter 1-3 Submission')->update(['due_on' => now()->addDays(40)->toDateString()]);
 
-        $this->page()->assertSeeInOrder(['1. Chapter 1-3 Submission', '2. Pre-Oral Defense Requirements']);
+        $this->page()->assertSeeInOrder(['>1<', 'Chapter 1-3 Submission', '>2<', 'Pre-Oral Defense Requirements'], false);
         $this->page(['sort' => 'due'])->assertSeeInOrder(['Pre-Oral Defense Requirements', 'Chapter 1-3 Submission']);
         $this->page(['sort' => 'percent'])->assertSeeInOrder(['Chapter 1-3 Submission', 'Pre-Oral Defense Requirements']);
         $this->page(['sort' => 'name'])->assertSeeInOrder(['Chapter 1-3 Submission', 'Pre-Oral Defense Requirements']);
@@ -90,7 +90,7 @@ class MilestoneListTest extends TestCase
         $this->page(['state' => 'finished'])
             ->assertOk()
             ->assertSee('Pre-Oral Defense Requirements')
-            ->assertSee('Finished '.now()->format('M j, Y'))
+            ->assertSee('<i class="mlx-dot ok"></i>Finished', false)
             ->assertSee('Reopen')
             ->assertDontSee('Chapter 1-3 Submission');
     }

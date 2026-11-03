@@ -57,7 +57,7 @@ class MilestonePagesTest extends TestCase
             ->assertSee('Edit milestone')
             ->assertSee('Mark finished')
             ->assertSee('Signed endorsement form')
-            ->assertSee('Upload file · 1 of 2 teams done')
+            ->assertSee('Upload file')->assertSee('1<span class="ms-mut"> of 2 done', false)
             ->assertSee('Old draft')
             ->assertSee('Hidden from teams')
             ->assertSee(route('capsa.team_management.milestones.requirements.create', $this->milestone), false)
@@ -85,7 +85,9 @@ class MilestonePagesTest extends TestCase
             ->assertOk()
             ->assertSee('New milestone')
             ->assertSee('Teams can start this only after they pass the defense in Chapter 1-3 Submission')
-            ->assertSee('It goes at the end of the list.');
+            ->assertSee('Description')
+            ->assertSee('Place in the list')
+            ->assertSee('value="2 of 2"', false);
 
         // Named once, in the top bar: the milestone, then Edit.
         $this->get(route('capsa.team_management.milestones.edit', $this->milestone))
@@ -94,6 +96,8 @@ class MilestonePagesTest extends TestCase
             ->assertDontSee('<h1 class="ml-title">', false)
             ->assertSee('value="Chapter 1-3 Submission"', false)
             ->assertSee('Hide from teams')
+            ->assertSee('value="1 of 1"', false)
+            ->assertSee('Delete milestone')
             ->assertDontSee('Teams can start this only after');
 
         $this->get(route('capsa.team_management.milestones.requirements.create', $this->milestone))
@@ -158,10 +162,12 @@ class MilestonePagesTest extends TestCase
             'name' => 'Pre-Oral Defense',
             'due_on' => '2026-11-30',
             'requires_previous' => true,
+            'description' => '  Bring the revised manuscript.  ',
         ])->assertCreated();
 
         $made = ChecklistMilestone::findOrFail($response->json('id'));
         $this->assertSame('Pre-Oral Defense', $made->name);
+        $this->assertSame('Bring the revised manuscript.', $made->description);
         $this->assertSame('2026-11-30', $made->due_on->toDateString());
         $this->assertTrue((bool) $made->requires_previous);
     }
@@ -208,7 +214,7 @@ class MilestonePagesTest extends TestCase
         $defense = $this->addDeliverable($this->checklist, ['title' => 'Oral', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Pre Oral Defense']);
 
         $this->get(route('capsa.team_management.milestones.show', $this->milestone))
-            ->assertSee('Pre Oral Defense · 0 of 2 teams done');
+            ->assertSee('Pre Oral Defense')->assertSee('0<span class="ms-mut"> of 2 done', false);
 
         $this->get(route('capsa.team_management.milestones.requirements.edit', $defense))
             ->assertOk()

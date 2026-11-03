@@ -25,10 +25,12 @@ class ChecklistMilestoneController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'due_on' => ['nullable', 'date', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
             'requires_previous' => ['sometimes', 'boolean'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
 
         $milestone = $checklist->milestones()->create([
             'name' => trim($data['name']),
+            'description' => trim((string) ($data['description'] ?? '')) ?: null,
             'due_on' => $data['due_on'] ?? null,
             'requires_previous' => $data['requires_previous'] ?? false,
             'position' => (int) $checklist->milestones()->withTrashed()->max('position') + 1,

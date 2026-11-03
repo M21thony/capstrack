@@ -151,6 +151,8 @@ class ChecklistTracker
                 ->filter(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
                 ->countBy(fn ($row) => $row->item->id)
                 ->all(),
+            // Every team's rows, by team id, for what a milestone page lists.
+            'progress' => $progress,
         ];
     }
 
