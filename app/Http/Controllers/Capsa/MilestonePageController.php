@@ -29,10 +29,10 @@ class MilestonePageController extends Controller
      */
     public const HOW = [
         'form' => ['label' => 'Signed form', 'help' => 'Teams upload a scan of a signed paper, and you check it.', 'kind' => Deliverable::FORM, 'role' => null],
-        'document' => ['label' => 'Upload a file', 'help' => 'Teams upload a file, like a chapter draft.', 'kind' => Deliverable::DOCUMENT, 'role' => null],
-        'adviser' => ['label' => 'Signed CLF (adviser)', 'help' => 'The adviser signs a CLF; teams upload the scan.', 'kind' => Deliverable::APPROVAL, 'role' => 'adviser'],
-        'consultant' => ['label' => 'Signed CLF (consultant)', 'help' => 'The consultant signs a CLF; teams upload the scan.', 'kind' => Deliverable::APPROVAL, 'role' => 'consultant'],
-        'defense' => ['label' => 'Defense', 'help' => 'Done once the defense is held and graded.', 'kind' => Deliverable::DEFENSE, 'role' => null],
+        'document' => ['label' => 'Upload a file', 'help' => 'Teams upload a file, like a chapter draft; once the adviser approves it, you check it.', 'kind' => Deliverable::DOCUMENT, 'role' => null],
+        'adviser' => ['label' => 'Signed CLF (adviser)', 'help' => 'The adviser signs a CLF, teams upload the scan, and you check it.', 'kind' => Deliverable::APPROVAL, 'role' => 'adviser'],
+        'consultant' => ['label' => 'Signed CLF (consultant)', 'help' => 'The consultant signs a CLF, teams upload the scan, and you check it.', 'kind' => Deliverable::APPROVAL, 'role' => 'consultant'],
+        'defense' => ['label' => 'Defense', 'help' => 'The only one that closes by itself: a pass closes it, a redefense keeps it open.', 'kind' => Deliverable::DEFENSE, 'role' => null],
         'custom' => ['label' => 'Task', 'help' => 'Teams mark it done, and you check it.', 'kind' => Deliverable::CUSTOM, 'role' => null],
     ];
 

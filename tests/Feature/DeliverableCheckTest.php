@@ -80,11 +80,11 @@ class DeliverableCheckTest extends TestCase
             ->assertJsonPath('waiting_on', MilestoneProgress::WAITING_ON_CAPSA);
     }
 
-    public function test_a_line_that_closes_itself_cannot_be_checked(): void
+    public function test_a_defense_cannot_be_checked(): void
     {
-        $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
+        $defense = $this->addDeliverable($this->checklist, ['title' => 'Title Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Title Defense']);
 
-        $this->putJson($this->url($draft), ['status' => DeliverableCheck::COMPLETE])->assertStatus(422);
+        $this->putJson($this->url($defense), ['status' => DeliverableCheck::COMPLETE])->assertStatus(422);
     }
 
     public function test_a_team_outside_her_sections_cannot_be_checked(): void

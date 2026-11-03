@@ -436,7 +436,7 @@
             $closer = [
                 'form' => 'Closed when your CaPSA checks the signed form',
                 'approval' => 'Closed when your CaPSA checks the CLF signed by your '.($item->role ?: 'adviser'),
-                'document' => 'Closes when you upload it',
+                'document' => 'Closed when your CaPSA checks it, after your adviser approves it',
                 'defense' => 'Closes when the panel records a pass',
                 'custom' => 'Ticked by your CaPSA',
             ][$item->kind] ?? '';

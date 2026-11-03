@@ -360,7 +360,7 @@ class MilestoneProgress
     public static function steps(string $kind, string $state, ?string $waitingOn): array
     {
         $labels = match ($kind) {
-            Deliverable::DOCUMENT => ['Handed in', 'Reviewed', 'Revised', 'Approved'],
+            Deliverable::DOCUMENT => ['Handed in', 'Reviewed', 'Revised', 'Approved', 'Checked'],
             Deliverable::APPROVAL => ['Handed in', 'Signed', 'Checked'],
             Deliverable::DEFENSE => ['Scheduled', 'Defended', 'Passed'],
             default => ['Handed in', 'Checked'],
@@ -457,7 +457,7 @@ class MilestoneProgress
             $byRecommendation => self::titleRecommendationState($titles, $check),
             $byArchive => self::archiveEntryState($archive, $check),
             default => match ($deliverable->kind) {
-                Deliverable::DOCUMENT => self::documentState($own, $myReviews),
+                Deliverable::DOCUMENT => self::documentState($own, $myReviews, $check),
                 Deliverable::DEFENSE => self::defenseState($deliverable, $defenses),
                 default => self::checkedState($deliverable, $own, $reviewed, $myReviews, $approvedAt, $check),
             },
@@ -603,10 +603,20 @@ class MilestoneProgress
      * consultant's too when it was sent to them. Uploading it is only the
      * first step.
      */
-    private static function documentState(Collection $own, Collection $reviews): array
+    private static function documentState(Collection $own, Collection $reviews, ?DeliverableCheck $check): array
     {
         if ($own->isEmpty()) {
             return [null, false, null, false];
+        }
+
+        if ($check?->status === DeliverableCheck::COMPLETE) {
+            return [$check->checked_at, true, null, false];
+        }
+
+        // Sent back by the CaPSA, and nothing uploaded since: the team owes a new version.
+        if ($check?->status === DeliverableCheck::SENT_BACK
+            && Carbon::parse($own->max('created_at'))->lte($check->checked_at)) {
+            return [null, true, self::WAITING_ON_TEAM, true];
         }
 
         $decided = $reviews->whereNotNull('verdict_at')->sortBy('verdict_at');
@@ -618,8 +628,6 @@ class MilestoneProgress
             && ! $own->contains(fn ($upload) => $upload->created_at > $latest->verdict_at)) {
             return [null, true, self::WAITING_ON_TEAM, true];
         }
-
-        $approvals = [];
 
         // The adviser always, and the consultant when the draft went to them.
         // Chapters 1, 2 and 5 and both manuscripts go to the adviser and
@@ -636,10 +644,10 @@ class MilestoneProgress
                 return [null, true, $role, false];
             }
 
-            $approvals[] = $last->verdict_at;
         }
 
-        return [max($approvals), true, null, false];
+        // Approved by the reviewers; the CaPSA's check is what closes it.
+        return [null, true, self::WAITING_ON_CAPSA, false];
     }
 
     /**

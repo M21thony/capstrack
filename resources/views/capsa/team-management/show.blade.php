@@ -368,8 +368,8 @@
                     </div>
                     @if ($item->locked && $item->state !== 'handed_in')
                       <span class="tp-state lk"><x-tm-icon n="lock" s="12" />{{ $selected->not_open ? 'Not open yet' : 'Locked' }}</span>
-                    @elseif ($asCapsa && $item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
-                      {{-- A signed paper closes on the CaPSA's check, and the check
+                    @elseif ($asCapsa && $item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CLOSED_BY_CAPSA, true))
+                      {{-- A line closes on the CaPSA's check, and the check
                            itself lives in the Milestones tracker. Once it is
                            checked, or put down, the tracker brings her back
                            here (return). --}}

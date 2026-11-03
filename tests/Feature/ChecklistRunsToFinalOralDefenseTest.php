@@ -53,17 +53,24 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
     /** Close a line the way it closes for real. */
     private function close(Deliverable $item): void
     {
-        match ($item->kind) {
-            Deliverable::DEFENSE => DefenseSchedule::create([
+        if ($item->kind === Deliverable::DEFENSE) {
+            DefenseSchedule::create([
                 'team_id' => $this->team->team_id, 'defense_type' => $item->defense_type, 'attempt' => 1,
                 'schedule_date' => now(), 'outcome' => DefenseOutcome::PASSED, 'outcome_recorded_at' => now(),
-            ]),
-            Deliverable::DOCUMENT => $this->approve($this->upload($this->student, $item, chapter: $item->chapter)),
-            // A signed paper or a CaPSA's own task: her check closes it, and she may only check an open line.
-            default => $this->actingAs($this->capsa, 'expert')
-                ->putJson(route('capsa.deliverables.checks.update', [$item->id, $this->team->team_id]), ['status' => DeliverableCheck::COMPLETE])
-                ->assertOk(),
-        };
+            ]);
+
+            return;
+        }
+
+        // A draft is approved by its reviewers first.
+        if ($item->kind === Deliverable::DOCUMENT) {
+            $this->approve($this->upload($this->student, $item, chapter: $item->chapter));
+        }
+
+        // Every other line: her check closes it, and she may only check an open line.
+        $this->actingAs($this->capsa, 'expert')
+            ->putJson(route('capsa.deliverables.checks.update', [$item->id, $this->team->team_id]), ['status' => DeliverableCheck::COMPLETE])
+            ->assertOk();
     }
 
     private function approve(int $fileId): void

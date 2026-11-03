@@ -170,7 +170,7 @@ class ChecklistTracker
     public static function row(object $row, int $teamId, bool $canCheck = true): array
     {
         $item = $row->item;
-        $checkable = $canCheck && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
+        $checkable = $canCheck && in_array($item->kind, Deliverable::CLOSED_BY_CAPSA, true);
 
         return [
             'id' => $item->id,
@@ -200,11 +200,11 @@ class ChecklistTracker
         ];
     }
 
-    /** A signed paper uploaded and waiting for the CaPSA. */
+    /** Handed in and waiting for the CaPSA's check. */
     public static function toCheck(object $row): bool
     {
         return $row->waiting_on === MilestoneProgress::WAITING_ON_CAPSA
-            && in_array($row->item->kind, Deliverable::CHECKED_BY_CAPSA, true);
+            && in_array($row->item->kind, Deliverable::CLOSED_BY_CAPSA, true);
     }
 
     /** @return array{0: Collection<string, Collection<int, Team>>, 1: Collection<int, Collection<int, StudentSchoolYear>>} */

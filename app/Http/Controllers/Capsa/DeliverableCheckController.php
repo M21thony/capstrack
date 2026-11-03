@@ -89,8 +89,8 @@ class DeliverableCheckController extends Controller
         $this->access->deliverable($deliverable);
         $section = $this->access->team($team);
 
-        if (! in_array($deliverable->kind, Deliverable::CHECKED_BY_CAPSA, true)) {
-            return response()->json(['message' => 'This one closes on its own when the upload or the defense happens.'], 422);
+        if (! in_array($deliverable->kind, Deliverable::CLOSED_BY_CAPSA, true)) {
+            return response()->json(['message' => 'A defense closes on its own when the panel records the result.'], 422);
         }
 
         if ($this->checklists->forSection($section)?->id !== $deliverable->milestone->checklist_id) {

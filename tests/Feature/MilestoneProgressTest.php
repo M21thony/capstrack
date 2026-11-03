@@ -78,7 +78,7 @@ class MilestoneProgressTest extends TestCase
     }
 
     /**
-     * Handed in, reviewed, revised, approved by both - only then done. Sent
+     * Handed in, reviewed, revised, approved by both, checked by the CaPSA - only then done. Sent
      * to the consultant as well, so their verdict is waited for; a draft that
      * never went to them closes on the adviser's (TeamReachesTitleDefenseTest).
      */
@@ -109,6 +109,16 @@ class MilestoneProgressTest extends TestCase
 
         CapstoneDocumentReview::where('file_id', $second)->where('role', 'consultant')
             ->update(['review_status' => CapstoneDocumentReview::REVIEWED, 'verdict' => CapstoneDocumentReview::APPROVED, 'verdict_at' => now()->subDay()]);
+        $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $this->progressOf($checklist, $this->team, $draft)->waiting_on);
+
+        // Sent back by the CaPSA: the team owes a new version, then she checks it again.
+        $this->check($draft, DeliverableCheck::SENT_BACK, now()->subHours(12)->toDateTimeString(), 'Fix the margins');
+        $state = $this->progressOf($checklist, $this->team, $draft);
+        $this->assertSame(MilestoneProgress::WAITING_ON_TEAM, $state->waiting_on);
+        $this->assertTrue($state->changes_requested);
+
+        $this->upload($this->student, $draft, now()->subHours(6)->toDateTimeString());
+        $this->check($draft);
         $this->assertSame(MilestoneProgress::DONE, $this->progressOf($checklist, $this->team, $draft)->state);
     }
 

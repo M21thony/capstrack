@@ -6,6 +6,7 @@ use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Checklist;
 use App\Models\Deliverable;
+use App\Models\DeliverableCheck;
 use App\Models\Student;
 use App\Models\Team;
 use App\Support\MilestoneProgress;
@@ -121,6 +122,7 @@ class MilestoneChecklistLinkTest extends TestCase
         $file = $this->upload($this->student, $draft, now()->subDays(2)->toDateTimeString());
         $this->review($file, CapstoneDocumentReview::APPROVED, now()->toDateTimeString());
         $this->review($file, CapstoneDocumentReview::APPROVED, now()->toDateTimeString(), 'consultant');
+        DeliverableCheck::create(['deliverable_id' => $draft->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()]);
 
         $state = $this->state($draft);
         $this->assertSame(MilestoneProgress::DONE_LATE, $state->state);

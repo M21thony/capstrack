@@ -31,8 +31,11 @@ class Deliverable extends Model
 
     public const KINDS = [self::FORM, self::DOCUMENT, self::APPROVAL, self::DEFENSE, self::CUSTOM];
 
-    /** The kinds the CaPSA's check closes. */
+    /** The signed papers and tasks: sent as a scan, opened by the CaPSA as the file itself. */
     public const CHECKED_BY_CAPSA = [self::FORM, self::APPROVAL, self::CUSTOM];
+
+    /** The kinds only the CaPSA's check closes: everything but a defense, which closes on its result. */
+    public const CLOSED_BY_CAPSA = [self::FORM, self::DOCUMENT, self::APPROVAL, self::CUSTOM];
 
     /**
      * The Recommended Pre-Proposal Title Form. The CaPSA recommends a title in

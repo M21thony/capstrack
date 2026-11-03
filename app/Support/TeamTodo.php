@@ -120,10 +120,10 @@ class TeamTodo
             foreach ($milestones as $milestone) {
                 foreach ($milestone->items as $entry) {
                     if ($entry->waiting_on === MilestoneProgress::WAITING_ON_CAPSA
-                        && in_array($entry->item->kind, Deliverable::CHECKED_BY_CAPSA, true)) {
+                        && in_array($entry->item->kind, Deliverable::CLOSED_BY_CAPSA, true)) {
                         $items->push($item([
                             'kind' => 'signed', 'hat' => 'capsa',
-                            'what' => 'Check a signed paper',
+                            'what' => $entry->item->kind === Deliverable::DOCUMENT ? 'Check an approved file' : 'Check a signed paper',
                             'why' => $entry->item->title.' · '.$milestone->milestone->name,
                             'at' => $entry->submitted_at ?? null,
                             'label' => 'Check',
