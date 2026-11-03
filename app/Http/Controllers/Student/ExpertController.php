@@ -361,7 +361,7 @@ class ExpertController extends Controller
             // What team leaders rated each listed expert, across every team
             // and defense: the average and how many. The rating is all a
             // student sees - the answers stay with the CaPSA and the expert.
-            'expertRatings' => ExpertEvaluation::whereIn('expert_id', $experts->pluck('expert_id'))
+            'expertRatings' => ExpertEvaluation::whereIn('expert_id', $experts->pluck('expert_id')->merge($assignments->where('status', 'approved')->pluck('expert_id')))
                 ->groupBy('expert_id')
                 ->selectRaw('expert_id, AVG(rating) as average, COUNT(*) as total')
                 ->get()
@@ -444,13 +444,17 @@ class ExpertController extends Controller
 
             $out[$role] = $experts
                 ->reject(fn (CapstoneExpert $e) => $applications->refusal($team, $leader, $e, (int) $candidates[$e->expert_id], $current->assignment_id) !== null)
-                ->map(function (CapstoneExpert $e) use ($ratings) {
+                ->map(function (CapstoneExpert $e) use ($ratings, $role) {
                     $max = (int) ($e->max_teams ?? 0);
                     $used = TeamExpertAssignment::where('expert_id', $e->expert_id)->where('status', 'approved')->count();
 
                     return [
                         'id' => (int) $e->expert_id,
                         'name' => $e->name,
+                        // For the type-ahead row: photo (initials if none) and their field.
+                        'initials' => $e->avatarInitials(),
+                        'avatar' => $e->hasAvatarImage() ? $e->avatarUrl() : null,
+                        'field' => $e->expertiseFor($role)->first(),
                         'slots' => $max > 0 ? ($max - $used).' of '.$max.' slots open' : 'Slots not set',
                         'rating' => isset($ratings[$e->expert_id]) ? round((float) $ratings[$e->expert_id], 1) : null,
                         'studyLeave' => (bool) $e->on_study_leave,

@@ -58,9 +58,10 @@ class ConsultationBookingPageTest extends TestCase
         $this->assertStringNotContainsString('data-xh="book-open"', $html);
         $this->assertStringContainsString('openBookConfirm();', $html);
         $this->assertStringContainsString("head('Book this time'", $html);
-        $this->assertStringContainsString('data-xh="topic"', $html);
-        $this->assertStringContainsString('topics: topics, deliverables: deliverables, note:', $html);
-        $this->assertStringContainsString('maxlength="500" placeholder="What do you want to ask or show?"', $html);
+        $this->assertStringContainsString('data-deliv value=', $html);
+        $this->assertStringContainsString('deliverables: deliverables })', $html);
+        $this->assertStringContainsString('placeholder="Please specify"', $html);
+        $this->assertStringNotContainsString('data-xh="topic"', $html);
     }
 
     public function test_the_nearest_open_date_is_picked_and_an_empty_month_says_where_the_next_is(): void
