@@ -152,8 +152,6 @@
                   // Abstaining finishes a panelist's part as much as scoring does.
                   $done = in_array($row->status, ['submitted', 'abstained'], true);
                   $isRedefense = ($row->attempt ?? 1) > 1;
-                  $attempt = $row->attempt ?? 1;
-                  $ordinal = $attempt === 2 ? '2nd' : ($attempt === 3 ? '3rd' : $attempt.'th');
                 @endphp
                 <tr data-state="{{ $done ? 'done' : 'todo' }}">
                   <td>
@@ -166,7 +164,7 @@
                     {{ $row->defense_type }}
                     <div style="margin-top:2px">
                       @if($isRedefense)
-                        <span class="badge badge-amber" style="font-size:10px">Redefense · {{ $ordinal }} attempt</span>
+                        <span class="badge badge-amber" style="font-size:10px">Redefense</span>
                       @else
                         <span class="badge badge-gray" style="font-size:10px">Defense</span>
                       @endif
