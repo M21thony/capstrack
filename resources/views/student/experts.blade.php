@@ -77,7 +77,13 @@
     // Who a card is, what they do, how much room they have and what this
     // team may do about them - read by the profile and apply dialogs.
     $expertPayloads = [];
-    foreach ($shownExperts as $expert) {
+    // The team's own experts too, so Profile works on the Your experts cards.
+    $ownRoleOf = $approvedAssignments->mapWithKeys(fn ($a) => [$a->expert_id => $a->engaged_role_name]);
+    foreach ($shownExperts->concat($approvedAssignments->pluck('expert')) as $expert) {
+      $ownRole = $ownRoleOf->get($expert->expert_id);
+      if ($ownRoleOf->has($expert->expert_id) && ! isset($expert->slots_used)) {
+        $expert->slots_used = $expert->teamAssignments()->where('status', 'approved')->count();
+      }
       $max = (int) ($expert->max_teams ?? 0);
       $used = (int) $expert->slots_used;
       $isFull = $max > 0 && $used >= $max;
@@ -105,6 +111,9 @@
         $status = ['text' => 'Waiting on your other application', 'tone' => 'gray'];
       }
 
+      if ($ownRoleOf->has($expert->expert_id)) { $status = null; }
+      $tagRole = $ownRole && in_array($ownRole, $roleNames, true) ? $ownRole : $activeRole;
+
       $expertPayloads[$expert->expert_id] = [
         'id' => $expert->expert_id,
         'name' => $expert->name,
@@ -115,12 +124,13 @@
         'avatar' => $expert->hasAvatarImage() ? $expert->avatarUrl() : null,
         'roles' => $roles->all(),
         // What they offer in the role being browsed - kept apart from their other sides.
-        'tags' => $expert->expertiseFor($activeRole)->all(),
+        'tags' => $expert->expertiseFor($tagRole)->all(),
+        'side' => \App\Models\ExpertExpertise::SIDES[$tagRole] ?? ucfirst($tagRole),
         'used' => $used,
         'max' => $max,
         'choices' => $choices->all(),
         'status' => $status,
-        'apply' => $canApply && ! $status && $choices->isNotEmpty(),
+        'apply' => $canApply && ! $status && $choices->isNotEmpty() && ! $ownRoleOf->has($expert->expert_id),
         // Stars team leaders gave them after each phase, averaged.
         'rating' => $expertRatings[$expert->expert_id]['average'] ?? null,
         'ratings' => $expertRatings[$expert->expert_id]['total'] ?? 0,
@@ -167,104 +177,223 @@
     ]));
   @endphp
 
+  @php
+    // Your experts tab: what is owed for the latest passed defense, and
+    // how much of it the leader has already sent.
+    $dueDefense = $evaluationsDue->first();
+    $dueRows = $dueDefense ? $evaluationsDue->where('defense_id', $dueDefense->defense_id) : collect();
+    $dueDone = $dueDefense ? $evaluationHistory->where('defense_id', $dueDefense->defense_id)->count() : 0;
+    $dueTotal = $dueRows->count() + $dueDone;
+  @endphp
   <div class="xh" id="xh" data-tab="{{ $tab }}">
     <div class="xh-pagehead">
       <div>
-        <p>Your team's adviser, consultant and grammarian, and the sessions you book with them.</p>
+        <h1 class="xh-h1">Experts</h1>
+        <p>Book consultations, rate your experts, or find a new one.</p>
       </div>
       <div class="xh-seg" role="tablist" aria-label="Experts page sections">
-        <button type="button" role="tab" id="xh-tab-book" aria-controls="xh-panel-book" data-xh="tab" data-tab="consultations" aria-selected="{{ $tab === 'consultations' ? 'true' : 'false' }}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-          Consultations
+        <button type="button" role="tab" id="xh-tab-book" aria-controls="xh-panel-book" data-xh="tab" data-tab="consultations" aria-selected="{{ $tab !== 'find' ? 'true' : 'false' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Your experts
           <span class="xh-count" id="xh-book-count" @if($upcomingBookings->isEmpty()) hidden @endif>{{ $upcomingBookings->count() }}</span>
         </button>
         <button type="button" role="tab" id="xh-tab-find" aria-controls="xh-panel-find" data-xh="tab" data-tab="find" aria-selected="{{ $tab === 'find' ? 'true' : 'false' }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
           Find experts
         </button>
-        <button type="button" role="tab" id="xh-tab-eval" aria-controls="xh-panel-eval" data-xh="tab" data-tab="evaluations" aria-selected="{{ $tab === 'evaluations' ? 'true' : 'false' }}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          Evaluations
-          @if($isLeader && $evaluationsDue->isNotEmpty())<span class="xh-count xh-count-due">{{ $evaluationsDue->count() }}</span>@endif
-        </button>
       </div>
     </div>
 
-    {{-- The team's three experts. Under Consultations a card picks who you
-         book; under Find experts it picks the role you are browsing. --}}
-    <section class="xh-strip-sec" aria-labelledby="xh-strip-h">
-      <div class="xh-strip-head">
-        <h2 id="xh-strip-h">Your team's adviser, consultant and grammarian</h2>
-        <span><b>{{ $filledCount }} of 3</b> chosen · <span id="xh-strip-hint">{{ $filledCount === 0 ? 'start with your adviser' : ($tab === 'find' ? 'pick the role you are looking for' : 'pick who you want to meet') }}</span></span>
-      </div>
-      <div class="xh-strip" id="xh-strip">
-        @foreach($roleNames as $r)
-          @php
-            $a = $filledSlots[$r] ?? null;
-            $ex = $a?->expert;
-            $removal = $a ? $removalByAssignment->get($a->assignment_id) : null;
-            if ($a) {
-              $findMeta = $removal ? 'Change request waiting on CaPSA' : 'Accepted your team';
-            } elseif ($pendingByRole->has($r)) {
-              $findMeta = 'Waiting on '.$pendingByRole[$r];
-            } else {
-              $n = $roleCounts[$r] ?? 0;
-              $findMeta = $n.' '.\Illuminate\Support\Str::plural($r, $n).' to browse';
-            }
-          @endphp
-          <a class="xh-slot r-{{ $r }} role-{{ $r }}{{ $activeRole === $r ? ' is-on' : '' }}{{ $a ? '' : ' is-open' }}" data-slot-role="{{ $r }}" data-xh="slot" data-role="{{ $r }}"
-             href="{{ $findUrl($r) }}" aria-current="{{ $activeRole === $r ? 'true' : 'false' }}">
-            @if($ex)
-              <span class="xh-av r-{{ $r }}" aria-hidden="true">{{ $ex->avatarInitials() }}@if($ex->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
-            @else
-              <span class="xh-av is-vacant" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
-            @endif
-            <span class="xh-slot-body">
-              <span class="xh-slot-role">{{ ucfirst($r) }}</span>
-              <span class="xh-slot-name">{{ $ex ? $ex->name : 'Not chosen yet' }}</span>
-              <span class="xh-slot-meta" data-meta="find">{{ $findMeta }}</span>
-              <span class="xh-slot-meta" data-meta="book">{{ $ex ? 'No session booked' : ($pendingByRole->has($r) ? '1 application pending' : 'Not chosen yet') }}</span>
-            </span>
-            @if($removal)
-              <span class="xh-pill xh-amber">Change asked</span>
-            @elseif(! $ex)
-              <span class="xh-pill xh-gray">Open</span>
-            @endif
-          </a>
-        @endforeach
-        @foreach($unslotted as $a)
-          <div class="xh-slot" data-slot-role="assigned">
-            <span class="xh-av" aria-hidden="true">{{ $a->expert->avatarInitials() }}@if($a->expert->hasAvatarImage())<img class="avatar-photo" src="{{ $a->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
-            <span class="xh-slot-body">
-              <span class="xh-slot-role">Expert</span>
-              <span class="xh-slot-name">{{ $a->expert->name }}</span>
-              <span class="xh-slot-meta">Accepted your team</span>
-            </span>
-          </div>
-        @endforeach
-      </div>
-    </section>
-
-    {{-- ===================== CONSULTATIONS ===================== --}}
+    {{-- ===================== YOUR EXPERTS ===================== --}}
     <section id="xh-panel-book" role="tabpanel" aria-labelledby="xh-tab-book" @if($tab !== 'consultations') hidden @endif>
-      <div class="xh-split">
-        <div class="xh-card xh-grow xh-book" id="xh-book"></div>
-        <aside class="xh-card xh-rail xh-rail-card" id="xh-sessions" aria-label="My consultations"></aside>
+      @if($isLeader && $dueDefense)
+        <div class="xh-due">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+          <div class="xh-due-text"><b>{{ $dueDefense->stage }} passed. Rate your {{ $dueTotal }} {{ \Illuminate\Support\Str::plural('expert', $dueTotal) }}.</b>
+            <span>{{ $dueDone }} of {{ $dueTotal }} done · Answers stay anonymous.</span></div>
+          <button type="button" class="xh-btn xh-gold" data-xh="tab" data-tab="evaluations">Rate experts</button>
+        </div>
+      @endif
+
+      <div class="xh-stats">
+        <div class="xh-card xh-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><div><b>{{ $filledCount }} of 3</b><span>Experts chosen</span></div></div>
+        <div class="xh-card xh-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><div><b id="xh-up-count">{{ $upcomingBookings->count() }}</b><span>Upcoming consultations</span></div></div>
+        @if($dueDefense)
+          <div class="xh-card xh-stat"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg><div><b>{{ $dueDone }} of {{ $dueTotal }}</b><span>Experts rated · {{ $dueDefense->stage }}</span></div></div>
+        @else
+          <div class="xh-card xh-stat"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg><div><b>{{ $evaluationHistory->count() }}</b><span>Evaluations sent</span></div></div>
+        @endif
+      </div>
+
+      <section class="xh-card xh-mine" aria-labelledby="xh-mine-h">
+        <h2 id="xh-mine-h" class="xh-label">Your experts</h2>
+        <div class="xh-mine-grid">
+          @foreach($roleNames as $r)
+            @php
+              $a = $filledSlots[$r] ?? null;
+              $ex = $a?->expert;
+              $removal = $a ? $removalByAssignment->get($a->assignment_id) : null;
+              $pendingApp = $waitingRequests->first(fn ($w) => $w->engaged_role_name === $r);
+            @endphp
+            @if($ex)
+              @php $rt = $expertRatings[$ex->expert_id] ?? null; $field = $ex->expertiseFor($r)->first(); @endphp
+              <article class="xh-ex-card r-{{ $r }}" data-expert-card="{{ $ex->expert_id }}">
+                <div class="xh-ex-head">
+                  <span class="xh-avw">
+                    <span class="xh-av xh-lg r-{{ $r }}" aria-hidden="true">{{ $ex->avatarInitials() }}@if($ex->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                    <i class="xh-dot{{ $ex->is_online ? ' is-on' : '' }}" role="img" aria-label="{{ $ex->is_online ? 'Online now' : 'Offline' }}" title="{{ $ex->is_online ? 'Online now' : 'Offline' }}"></i>
+                  </span>
+                  <div class="xh-ex-id">
+                    <b class="xh-ex-name">{{ $ex->name }}</b>
+                    <div class="xh-ex-sub"><b>{{ ucfirst($r) }}</b>@if($field) • {{ $field }}@endif</div>
+                    <div class="xh-ex-rate">
+                      @if($rt)<span class="xh-star" aria-hidden="true">★</span> <b>{{ \App\Support\EvaluationResults::format((float) $rt['average']) }}</b> <span class="xh-mut">({{ $rt['total'] }} {{ $rt['total'] === 1 ? 'review' : 'reviews' }})</span>@else<span class="xh-mut">No reviews yet</span>@endif
+                      <span class="xh-mut">·</span>
+                      @if($removal)<span class="xh-t-amber">Change asked</span>@else<span class="xh-t-green">Approved</span>@endif
+                    </div>
+                  </div>
+                </div>
+                <div class="xh-ex-stats">
+                  <div><span>Consultations</span><b data-sessions-for="{{ $ex->expert_id }}">0 sessions</b></div>
+                  <div><span>Next consultation</span><b data-next-for="{{ $ex->expert_id }}">None booked</b></div>
+                </div>
+                <div class="xh-ex-acts">
+                  <button type="button" class="xh-btn xh-gold xh-sm" data-xh="schedule" data-role="{{ $r }}">Schedule</button>
+                  <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="tab" data-tab="evaluations">Evaluate</button>
+                  <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="profile" data-id="{{ $ex->expert_id }}">Profile</button>
+                </div>
+              </article>
+            @else
+              <article class="xh-ex-card is-vacant r-{{ $r }}">
+                <div class="xh-ex-head">
+                  <span class="xh-av xh-lg is-vacant" aria-hidden="true">?</span>
+                  <div class="xh-ex-id">
+                    <b class="xh-ex-name xh-t-amber">Not chosen yet</b>
+                    <div class="xh-ex-sub"><b>{{ ucfirst($r) }}</b> • {{ $roleBlurbs[$r] }}</div>
+                  </div>
+                </div>
+                @if($pendingApp)
+                  <p class="xh-ex-app"><span class="xh-mut">Your application:</span> <b>{{ $pendingApp->expert->name }}</b> · <b class="xh-t-amber">{{ $pendingApp->meet_asked_at ? 'Wants to meet first' : 'Pending' }}</b></p>
+                  <div class="xh-ex-acts"><button type="button" class="xh-btn xh-ghost xh-sm" data-xh="app" data-id="{{ $pendingApp->assignment_id }}">View application</button></div>
+                @else
+                  <p class="xh-ex-app xh-mut">No application out yet.</p>
+                  <div class="xh-ex-acts"><a class="xh-btn xh-ghost xh-sm" href="{{ $findUrl($r) }}">Find a {{ $r }}</a></div>
+                @endif
+              </article>
+            @endif
+          @endforeach
+          @foreach($unslotted as $a)
+            <article class="xh-ex-card">
+              <div class="xh-ex-head">
+                <span class="xh-av xh-lg" aria-hidden="true">{{ $a->expert->avatarInitials() }}@if($a->expert->hasAvatarImage())<img class="avatar-photo" src="{{ $a->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                <div class="xh-ex-id">
+                  <b class="xh-ex-name">{{ $a->expert->name }}</b>
+                  <div class="xh-ex-sub"><b>Expert</b></div>
+                  <div class="xh-ex-rate"><span class="xh-t-green">Approved</span></div>
+                </div>
+              </div>
+              <div class="xh-ex-acts"><button type="button" class="xh-btn xh-ghost xh-sm" data-xh="profile" data-id="{{ $a->expert_id }}">Profile</button></div>
+            </article>
+          @endforeach
+        </div>
+      </section>
+
+      <section class="xh-card xh-upc" aria-labelledby="xh-upc-h">
+        <div class="xh-upc-head">
+          <h2 id="xh-upc-h" class="xh-label">Upcoming consultations</h2>
+          <span class="xh-upc-links">
+            <button type="button" class="xh-link" data-xh="schedule">All sessions ›</button>
+            <button type="button" class="xh-link" data-xh="tab" data-tab="evaluations">Sent evaluations ›</button>
+          </span>
+        </div>
+        <div class="xh-upc-list" id="xh-upcoming"></div>
+      </section>
+
+      {{-- The calendar and session list, opened in a dialog by Schedule. --}}
+      <div class="xh-book-holder" id="xh-book-holder" hidden>
+        <div class="xh-split">
+          <div class="xh-card xh-grow xh-book" id="xh-book"></div>
+          <aside class="xh-card xh-rail xh-rail-card" id="xh-sessions" aria-label="My consultations"></aside>
+        </div>
       </div>
     </section>
-
     {{-- ===================== FIND EXPERTS ===================== --}}
     <section id="xh-panel-find" role="tabpanel" aria-labelledby="xh-tab-find" @if($tab !== 'find') hidden @endif>
+      {{-- Quick guide: open until the team has its first expert, folded after. --}}
+      <details class="xh-guide" @if($filledCount === 0) open @endif>
+        <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>How expert selection works</summary>
+        <ol>
+          <li><b>Choose a role</b><span>The one your team still needs.</span></li>
+          <li><b>Apply to one expert</b><span>Pick someone with an open slot.</span></li>
+          <li><b>Wait for them to accept</b><span>They then show up in Your experts.</span></li>
+        </ol>
+        <p>To change your adviser, consultant or grammarian later, ask your section's CaPSA.</p>
+      </details>
+      {{-- The team's three experts. Under Consultations a card picks who you
+           book; under Find experts it picks the role you are browsing. --}}
+      <section class="xh-strip-sec" aria-labelledby="xh-strip-h">
+        <div class="xh-strip-head">
+          <h2 id="xh-strip-h">Your team's adviser, consultant and grammarian</h2>
+          @php $stillNeed = array_values(array_filter($roleNames, fn ($r) => ! isset($filledSlots[$r]))); @endphp
+          <span><b>{{ $filledCount }} of 3</b> chosen<span id="xh-strip-hint">{{ $filledCount === 0 ? ' · start with your adviser' : ($stillNeed ? ' · still need your '.implode(' and ', $stillNeed) : '') }}</span></span>
+        </div>
+        <div class="xh-strip" id="xh-strip">
+          @foreach($roleNames as $r)
+            @php
+              $a = $filledSlots[$r] ?? null;
+              $ex = $a?->expert;
+              $removal = $a ? $removalByAssignment->get($a->assignment_id) : null;
+              if ($a) {
+                $findMeta = $removal ? 'Change request waiting on CaPSA' : 'Accepted your team';
+              } elseif ($pendingByRole->has($r)) {
+                $findMeta = 'Waiting on '.$pendingByRole[$r];
+              } else {
+                $n = $roleCounts[$r] ?? 0;
+                $findMeta = $n.' '.\Illuminate\Support\Str::plural($r, $n).' to browse';
+              }
+            @endphp
+            <a class="xh-slot r-{{ $r }} role-{{ $r }}{{ $activeRole === $r ? ' is-on' : '' }}{{ $a ? '' : ' is-open' }}" data-slot-role="{{ $r }}" data-xh="slot" data-role="{{ $r }}"
+               href="{{ $findUrl($r) }}" aria-current="{{ $activeRole === $r ? 'true' : 'false' }}">
+              @if($ex)
+                <span class="xh-av r-{{ $r }}" aria-hidden="true">{{ $ex->avatarInitials() }}@if($ex->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+              @else
+                <span class="xh-av is-vacant" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+              @endif
+              <span class="xh-slot-body">
+                <span class="xh-slot-role">{{ ucfirst($r) }}</span>
+                <span class="xh-slot-name">{{ $ex ? $ex->name : 'Not chosen yet' }}</span>
+                <span class="xh-slot-meta" data-meta="find">{{ $findMeta }}</span>
+                <span class="xh-slot-meta" data-meta="book">{{ $ex ? 'No session booked' : ($pendingByRole->has($r) ? '1 application pending' : 'Not chosen yet') }}</span>
+              </span>
+              @if($removal)
+                <span class="xh-t-amber">Change asked</span>
+              @elseif(! $ex)
+                <span class="xh-t-gray">Open</span>
+              @endif
+            </a>
+          @endforeach
+          @foreach($unslotted as $a)
+            <div class="xh-slot" data-slot-role="assigned">
+              <span class="xh-av" aria-hidden="true">{{ $a->expert->avatarInitials() }}@if($a->expert->hasAvatarImage())<img class="avatar-photo" src="{{ $a->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+              <span class="xh-slot-body">
+                <span class="xh-slot-role">Expert</span>
+                <span class="xh-slot-name">{{ $a->expert->name }}</span>
+                <span class="xh-slot-meta">Accepted your team</span>
+              </span>
+            </div>
+          @endforeach
+        </div>
+      </section>
       <div class="xh-split">
         <div class="xh-grow xh-find">
           @if(! $team)
             <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">You need to join or create a team before you can apply for an expert.</span></div>
           @elseif(! $isLeader)
-            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Only your team leader can apply for experts. You can still browse who is available.</span></div>
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Only your team leader can apply for experts.</span></div>
           @elseif(! $teamConfirmed)
-            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your team has to be verified before you can apply for experts. You can still browse who is available.</span></div>
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your team has to be verified before you can apply for experts.</span></div>
           @elseif(! $approvedProposal)
-            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your pre-proposal has to be recommended by your CaPSA before you can apply for experts. You can still browse who is available.</span></div>
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your pre-proposal has to be recommended by your CaPSA before you can apply for experts.</span></div>
           @endif
 
           @if($activeFilled)
@@ -280,7 +409,7 @@
             @else
               <div class="xh-banner xh-ok">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
-                <span class="xh-banner-text"><b>{{ $activeFilled->expert->name }}</b> is your {{ $activeRole }}. You can still browse, but changing them goes through your section's CaPSA.</span>
+                <span class="xh-banner-text"><b>{{ $activeFilled->expert->name }}</b> is your {{ $activeRole }}.</span>
                 @if($isLeader)
                   <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="change" data-assignment="{{ $activeFilled->assignment_id }}" data-name="{{ $activeFilled->expert->name }}" data-role="{{ $activeRole }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
@@ -329,6 +458,7 @@
 
           {{-- Searching reloads the page: the name and skill search runs on
                the server, which also puts the best fits first. --}}
+          <div class="xh-card xh-filter">
           <form class="filters xh-find-head" method="GET" action="{{ route('student.experts') }}">
             <input type="hidden" name="tab" value="find">
             <input type="hidden" name="role" value="{{ $activeRole }}">
@@ -384,6 +514,26 @@
               <a class="xh-chip-x" href="{{ route('student.experts', array_filter(['tab' => 'find', 'role' => $activeRole, 'q' => $search ?: null, 'open' => $openOnly ? 1 : null])) }}" aria-label="Clear skill filter">Clear skill</a>
             @endif
           </form>
+          <div class="xh-apps" role="group" aria-labelledby="xh-apps-h">
+            <span class="xh-label" id="xh-apps-h">Your applications</span>
+            @if($waitingRequests->isNotEmpty())
+              <span class="xh-rail-sub">{{ $waitingRequests->count() }} {{ \Illuminate\Support\Str::plural('request', $waitingRequests->count()) }} waiting on a reply</span>
+            @endif
+            @forelse($openRequests as $a)
+              @php $tone = $a->status === 'pending' ? 'amber' : 'red'; @endphp
+              <button type="button" class="app-item xh-app" data-xh="app" data-id="{{ $a->assignment_id }}">
+                <span class="xh-av xh-sm r-{{ $a->engaged_role_name ?? 'adviser' }}" aria-hidden="true">{{ $a->expert->avatarInitials() }}@if($a->expert->hasAvatarImage())<img class="avatar-photo" src="{{ $a->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                <span class="xh-app-meta">
+                  <b>{{ $a->expert->name }}</b>
+                  <span>{{ $a->status === 'pending' && $a->meet_asked_at ? 'Wants to meet first' : ($a->engaged_role_name ? 'Applied as '.$a->engaged_role_name : 'Application') }} · {{ $a->created_at?->format('M j') }}</span>
+                </span>
+                <span class="xh-t-{{ $tone }}">{{ $a->status === 'pending' ? 'Pending' : 'Declined' }}</span>
+              </button>
+            @empty
+              <span class="xh-mut">No requests out yet.</span>
+            @endforelse
+          </div>
+          </div>
 
           @if($shownExperts->isEmpty())
             <div class="xh-card xh-hint xh-empty-list">
@@ -411,10 +561,10 @@
                   <button type="button" data-xh="side" data-side="closed" aria-pressed="false" @disabled($openCount === $shownExperts->count())>Full or not taking<small>{{ $shownExperts->count() - $openCount }}</small></button>
                 </div>
                 <div class="xh-pgnav" id="xh-pgnav" hidden>
-                  <span id="xh-pg-range"></span>
                   <span class="xh-dots" id="xh-pg-dots" aria-hidden="true"></span>
                   <span class="xh-keys" title="Keyboard: the left and right arrow keys flip pages"><kbd>&larr;</kbd><kbd>&rarr;</kbd> keys</span>
                   <button type="button" class="xh-pg" data-xh="page" data-dir="-1" aria-label="Previous page (left arrow key)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+                  <span id="xh-pg-range"></span>
                   <button type="button" class="xh-pg" data-xh="page" data-dir="1" aria-label="Next page (right arrow key)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
                 </div>
               </div>
@@ -492,7 +642,7 @@
                     @if($p['apply'])
                       <button type="button" class="xh-btn xh-gold" data-xh="apply" data-apply-expert="{{ $expert->expert_id }}" data-id="{{ $expert->expert_id }}">Apply</button>
                     @elseif($p['status'])
-                      <span class="xh-xstatus xh-pill xh-{{ $p['status']['tone'] }}">{{ $p['status']['text'] }}</span>
+                      <span class="xh-xstatus xh-t-{{ $p['status']['tone'] }}">{{ $p['status']['text'] }}</span>
                     @endif
                   </div>
                 </article>
@@ -502,40 +652,6 @@
           @endif
         </div>
 
-        <aside class="xh-rail xh-rail-stack">
-          <section class="xh-card xh-rail-card" aria-labelledby="xh-apps-h">
-            <div>
-              <h2 id="xh-apps-h">Your applications</h2>
-              @if($waitingRequests->isNotEmpty())
-                <p class="xh-rail-sub">{{ $waitingRequests->count() }} {{ \Illuminate\Support\Str::plural('request', $waitingRequests->count()) }} waiting on a reply</p>
-              @endif
-            </div>
-            <div class="xh-list">
-              @forelse($openRequests as $a)
-                @php $tone = $a->status === 'pending' ? 'amber' : 'red'; @endphp
-                <button type="button" class="app-item xh-app" data-xh="app" data-id="{{ $a->assignment_id }}">
-                  <span class="xh-av xh-sm r-{{ $a->engaged_role_name ?? 'adviser' }}" aria-hidden="true">{{ $a->expert->avatarInitials() }}@if($a->expert->hasAvatarImage())<img class="avatar-photo" src="{{ $a->expert->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
-                  <span class="xh-app-meta">
-                    <b>{{ $a->expert->name }}</b>
-                    <span>{{ $a->status === 'pending' && $a->meet_asked_at ? 'Wants to meet first' : ($a->engaged_role_name ? 'Applied as '.$a->engaged_role_name : 'Application') }} · {{ $a->created_at?->format('M j') }}</span>
-                  </span>
-                  <span class="xh-pill xh-{{ $tone }}">{{ $a->status === 'pending' ? 'Pending' : 'Declined' }}</span>
-                </button>
-              @empty
-                <div class="xh-hint">No requests out yet.</div>
-              @endforelse
-            </div>
-          </section>
-          <section class="xh-card xh-rail-card" aria-labelledby="xh-how-h">
-            <h2 id="xh-how-h">How it works</h2>
-            <ol class="xh-steps">
-              <li><i>1</i><span>Pick the role you still need from the cards above.</span></li>
-              <li><i>2</i><span>Your team leader applies, with your recommended pre-proposal attached.</span></li>
-              <li><i>3</i><span>The person you applied to accepts or declines. Once they accept, book sessions with them in Consultations.</span></li>
-              <li><i>4</i><span>To change your adviser, consultant or grammarian later, ask your section's CaPSA. They decide.</span></li>
-            </ol>
-          </section>
-        </aside>
       </div>
     </section>
 
@@ -551,7 +667,8 @@
       $starsOf = fn (float $r) => collect(range(1, 5))->map(fn ($s) => '<svg viewBox="0 0 24 24" class="'.($s <= round($r) ? 'is-on' : '').'" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>')->implode('');
       $fmtRating = fn ($r) => \App\Support\EvaluationResults::format((float) $r);
     @endphp
-    <section id="xh-panel-eval" role="tabpanel" aria-labelledby="xh-tab-eval" @if($tab !== 'evaluations') hidden @endif>
+    <section id="xh-panel-eval" role="tabpanel" aria-labelledby="xh-tab-book" @if($tab !== 'evaluations') hidden @endif>
+      <nav class="xh-crumb" aria-label="Breadcrumb"><button type="button" class="xh-link" data-xh="tab" data-tab="consultations">Your experts</button> <span aria-hidden="true">›</span> <b>Rate your experts</b></nav>
       @if(session('evaluation_saved'))
         <div class="xh-banner xh-ok xh-ev-flash" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span class="xh-banner-text">{{ session('evaluation_saved') }}</span></div>
       @endif
@@ -927,19 +1044,50 @@ function monthOffsetOf(dateKey) {
 function render() {
   var book = S.tab === 'consultations';
   $('xh').dataset.tab = S.tab;
-  [['book', 'consultations'], ['find', 'find'], ['eval', 'evaluations']].forEach(function (t) {
-    var on = S.tab === t[1];
-    $('xh-tab-' + t[0]).setAttribute('aria-selected', String(on));
-    $('xh-tab-' + t[0]).tabIndex = on ? 0 : -1;
-    $('xh-panel-' + t[0]).hidden = !on;
+  // Two tabs; the rating sheet belongs to Your experts.
+  ['book', 'find'].forEach(function (t) {
+    var on = (S.tab === 'find') === (t === 'find');
+    $('xh-tab-' + t).setAttribute('aria-selected', String(on));
+    $('xh-tab-' + t).tabIndex = on ? 0 : -1;
   });
+  $('xh-panel-book').hidden = !book;
+  $('xh-panel-find').hidden = S.tab !== 'find';
+  $('xh-panel-eval').hidden = S.tab !== 'evaluations';
   var count = $('xh-book-count');
   count.textContent = upcoming.length;
   count.hidden = upcoming.length === 0;
+  $('xh-up-count').textContent = upcoming.length;
   var filled = ROLES.filter(function (r) { return D.team[r]; }).length;
-  $('xh-strip-hint').textContent = filled === 0 ? 'start with your adviser' : (book ? 'pick who you want to meet' : 'pick the role you are looking for');
+  var hint = $('xh-strip-hint');
+  var need = ROLES.filter(function (r) { return !D.team[r]; });
+  if (hint) { hint.textContent = filled === 0 ? ' · start with your adviser' : need.length ? ' · still need your ' + need.join(' and ') : ''; }
   renderStrip();
-  if (book) { renderBook(); renderSessions(); }
+  if (book) { renderMine(); renderUpcoming(); }
+  if (S.sched) { renderBook(); renderSessions(); }
+}
+
+// Each expert card: how many sessions so far, and the next one.
+function renderMine() {
+  document.querySelectorAll('[data-sessions-for]').forEach(function (el) {
+    var id = Number(el.dataset.sessionsFor);
+    var n = upcoming.concat(recent).filter(function (b) { return Number(b.expert_id) === id; }).length;
+    el.textContent = n + (n === 1 ? ' session' : ' sessions');
+  });
+  document.querySelectorAll('[data-next-for]').forEach(function (el) {
+    var nx = liveBookingWith(Number(el.dataset.nextFor));
+    el.textContent = nx && nx.session_date ? shortDate(nx.session_date) + ' · ' + fmtT(nx.start_time) : 'None booked';
+  });
+}
+
+function renderUpcoming() {
+  var box = $('xh-upcoming');
+  box.innerHTML = upcoming.length ? upcoming.map(function (b) {
+    var p = EXPERTS[b.expert_id] || { initials: initialsOf(b.expert_name) };
+    return '<div class="xh-upc-row">' + avatar(p, roleOfExpert(b.expert_id), 'xh-sm')
+      + '<span class="xh-upc-who"><b>' + esc(b.expert_name) + '</b><span>' + (b.session_date ? shortDate(b.session_date) + ' · ' : '') + fmtT(b.start_time) + ' · ' + esc(b.slot_type || 'Online') + '</span></span>'
+      + (b.cancel_requested ? '<b class="xh-t-amber">Cancel asked</b>' : '<b class="xh-t-green">Scheduled</b>')
+      + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="session" data-id="' + b.booking_id + '">Details</button></div>';
+  }).join('') : '<p class="xh-hint">Nothing booked yet. Press Schedule on an expert to pick a date.</p>';
 }
 
 function renderStrip() {
@@ -1099,13 +1247,13 @@ function sessionCard(b, isPast, isNext) {
   var foot = '';
   var badge;
   if (isPast) {
-    badge = '<span class="xh-pill xh-gray">Ended</span>';
+    badge = '<span class="xh-t-gray">Ended</span>';
   } else if (b.cancel_requested) {
-    badge = '<span class="xh-pill xh-amber">Cancel asked</span>';
+    badge = '<span class="xh-t-amber">Cancel asked</span>';
     foot = '<span class="xh-sess-foot">' + ICON.clock + 'Waiting for ' + esc(firstName(b.expert_name)) + ' to answer</span>';
   } else {
     var n = daysUntil(b.session_date);
-    badge = '<span class="xh-pill ' + (isNext ? 'xh-goldp' : 'xh-green') + '">' + (n === null ? 'Scheduled' : n <= 0 ? 'Today' : n === 1 ? 'Tomorrow' : 'In ' + n + ' days') + '</span>';
+    badge = '<span class="xh-t-' + (isNext ? 'goldp' : 'green') + '">' + (n === null ? 'Scheduled' : n <= 0 ? 'Today' : n === 1 ? 'Tomorrow' : 'In ' + n + ' days') + '</span>';
     foot = canCancel(b)
       ? '<span class="xh-sess-foot">' + ICON.clock + 'You can cancel until ' + lastCancelDay(b) + '</span>'
       : '<span class="xh-sess-foot">' + ICON.lock + 'Within ' + D.cutoffDays + ' days, so it can\'t be cancelled here</span>';
@@ -1190,14 +1338,14 @@ function openProfile(id) {
   var role = p.roles.indexOf(D.activeRole) !== -1 ? D.activeRole : p.roles[0];
   var action = p.apply
     ? '<button type="button" class="xh-btn xh-gold" data-xh="apply" data-id="' + p.id + '">Apply</button>'
-    : (p.status ? '<span class="xh-pill xh-' + p.status.tone + ' xh-pill-center">' + esc(p.status.text) + '</span>' : '');
+    : (p.status ? '<span class="xh-t-' + p.status.tone + ' xh-pill-center">' + esc(p.status.text) + '</span>' : '');
   openDialog('<div class="xh-prof-head">' + avatar(p, role, 'xh-lg') + '<div class="xh-ttl"><h2>' + esc(p.profileName) + '</h2>'
     + (p.email ? '<div class="xh-prof-email">' + esc(p.email) + '</div>' : '') + '</div>'
     + '<button type="button" class="xh-x" data-xh="close" aria-label="Close">' + ICON.x + '</button></div>'
     + '<div class="xh-dlg-body xh-prof-body"><div class="xh-chips">'
     + (p.roles.length ? p.roles.map(function (r) { return '<span class="xh-chip r-' + r + '">' + ucfirst(r) + '</span>'; }).join('') : '<span class="xh-chip">No role yet</span>') + '</div>'
     + '<div>' + slotsHtml(p) + '</div>'
-    + '<div><div class="xh-prof-sub">Research areas as ' + esc({{ Illuminate\Support\Js::from(\App\Models\ExpertExpertise::SIDES[$activeRole] ?? ucfirst($activeRole)) }}) + '</div><div class="xh-tags">'
+    + '<div><div class="xh-prof-sub">Research areas as ' + esc(p.side) + '</div><div class="xh-tags">'
     + (p.tags.length ? p.tags.map(function (t) { return '<span class="xh-tag">' + esc(t) + '</span>'; }).join('') : '<span class="xh-prof-none">None yet</span>') + '</div></div>'
     + (p.studyLeave ? '<p class="xh-leave"><span class="xh-leave-tag">Study leave</span> May be slow to reply and hard to book. Plan sessions early.</p>' : '')
     + '<div class="xh-prof-rating"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>'
@@ -1278,13 +1426,13 @@ function syncFilePicker(input) {
 function openChange(btn) {
   var role = btn.dataset.role;
   var options = (D.replacementOptions || {})[role] || [];
+  // Type a name, pick from the matches, like adding a recipient in Gmail.
   var picker = options.length
-    ? '<select id="xh-change-to"><option value="">Choose a ' + esc(role) + '…</option>'
-      + options.map(function (o) {
-        return '<option value="' + o.id + '">' + esc(o.name) + ' · ' + esc(o.slots)
-          + (o.rating ? ' · ★ ' + Number(o.rating).toFixed(1) : '') + (o.studyLeave ? ' · Study leave' : '') + '</option>';
-      }).join('') + '</select>'
-    : '<p class="xh-note xh-note-warn">No other ' + esc(role) + ' has a free slot for your team right now, so a change cannot be asked for yet.</p>';
+    ? '<div class="xh-ta" data-role="' + esc(role) + '"><input type="hidden" id="xh-change-to" value="">'
+      + '<input type="text" id="xh-change-q" role="combobox" aria-expanded="false" aria-controls="xh-ta-list" aria-autocomplete="list" autocomplete="off" placeholder="Type a name">'
+      + '<div class="xh-ta-picked" id="xh-ta-picked" hidden></div>'
+      + '<div class="xh-ta-list" id="xh-ta-list" role="listbox" hidden></div></div>'
+    :'<p class="xh-note xh-note-warn">No other ' + esc(role) + ' has a free slot for your team right now, so a change cannot be asked for yet.</p>';
   var file = D.hasApprovedProposal ? ''
     : '<div class="xh-field" id="xh-f-change-file"><label for="xh-change-file">Pre-proposal for them (PDF) <span class="xh-req">*</span></label>'
       + filePicker('xh-change-file', '') + '<span class="xh-fmeta"><span class="xh-ferr">That is not a PDF, or it is over 5 MB.</span></span></div>';
@@ -1295,12 +1443,46 @@ function openChange(btn) {
     + '<div class="xh-field" id="xh-f-reason"><label for="xh-change-reason">Reason for your CaPSA <span class="xh-req">*</span></label>'
     + '<textarea id="xh-change-reason" rows="3" maxlength="500" placeholder="Explain to your CaPSA why your ' + esc(role) + ' has to change."></textarea>'
     + '<span class="xh-fmeta"><span class="xh-ferr">Give at least ' + D.reasonMin + ' characters so your CaPSA can decide.</span><span><span id="xh-reason-count">0</span>/500</span></span></div>'
-    + '<div class="xh-field" id="xh-f-change-to"><label for="xh-change-to">' + ucfirst(role) + ' to replace them <span class="xh-req">*</span></label>' + picker
+    + '<div class="xh-field" id="xh-f-change-to"><label for="' + (options.length ? 'xh-change-q' : 'xh-change-to') + '">' + ucfirst(role) + ' to replace them <span class="xh-req">*</span></label>' + picker
     + '<span class="xh-note">Sent to them only if the CaPSA approves and they still have a slot then. They accept or decline your team.</span></div>'
     + (options.length ? '<div class="xh-field" id="xh-f-change-msg"><label for="xh-change-msg">Message to them <span class="xh-req">*</span></label>'
       + '<textarea id="xh-change-msg" rows="3" maxlength="3000" placeholder="Introduce your team and your project to the ' + esc(role) + ' you picked."></textarea></div>' + file : '')
     + '</div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="change-send" data-assignment="' + btn.dataset.assignment + '" id="xh-change-send" disabled>Send to CaPSA</button></div>');
+}
+
+function taRow(o, q) {
+  var name = esc(o.name);
+  var at = q ? o.name.toLowerCase().indexOf(q.toLowerCase()) : -1;
+  if (at !== -1) { name = esc(o.name.slice(0, at)) + '<u>' + esc(o.name.slice(at, at + q.length)) + '</u>' + esc(o.name.slice(at + q.length)); }
+  var meta = [o.field, o.slots, o.rating ? '★ ' + Number(o.rating).toFixed(1) : '', o.studyLeave ? 'Study leave' : ''].filter(Boolean).map(esc).join(' · ');
+  return avatar(o, '', 'xh-sm') + '<span class="xh-ta-meta"><b>' + name + '</b><span>' + meta + '</span></span>';
+}
+
+function taOptions() {
+  return (D.replacementOptions || {})[document.querySelector('.xh-ta').dataset.role] || [];
+}
+
+function taSearch(q) {
+  var list = $('xh-ta-list');
+  var hits = taOptions().filter(function (o) { return o.name.toLowerCase().indexOf(q.toLowerCase()) !== -1; }).slice(0, 6);
+  list.innerHTML = hits.length
+    ? hits.map(function (o, i) { return '<button type="button" class="xh-ta-opt" role="option" aria-selected="' + (i === 0) + '" data-xh="ta-pick" data-id="' + o.id + '">' + taRow(o, q) + '</button>'; }).join('')
+    : '<span class="xh-ta-none">No match with a free slot.</span>';
+  list.hidden = !q;
+  $('xh-change-q').setAttribute('aria-expanded', String(!!q));
+}
+
+function taPick(id) {
+  var o = taOptions().filter(function (x) { return String(x.id) === String(id); })[0];
+  $('xh-change-to').value = o ? o.id : '';
+  $('xh-ta-picked').innerHTML = o ? taRow(o, '') + '<button type="button" class="xh-link" data-xh="ta-clear">Change</button>' : '';
+  $('xh-ta-picked').hidden = !o;
+  $('xh-change-q').hidden = !!o;
+  $('xh-ta-list').hidden = true;
+  $('xh-change-q').setAttribute('aria-expanded', 'false');
+  if (!o) { $('xh-change-q').value = ''; $('xh-change-q').focus(); }
+  $('xh-change-send').disabled = !changeReady();
 }
 
 /* Send is open once every required part of the change request is there. */
@@ -1324,7 +1506,7 @@ function openTakeBack(btn) {
 function openApp(id) {
   var a = APPS[id];
   if (!a) { return; }
-  var status = a.status === 'pending' ? '<span class="xh-pill xh-amber">Pending · waiting for ' + esc(a.name) + (a.role ? ' (' + esc(ucfirst(a.role)) + ')' : '') + '</span>' : '<span class="xh-pill xh-red">Declined</span>';
+  var status = a.status === 'pending' ? '<span class="xh-t-amber">Pending · waiting for ' + esc(a.name) + (a.role ? ' (' + esc(ucfirst(a.role)) + ')' : '') + '</span>' : '<span class="xh-t-red">Declined</span>';
   var proposal = a.proposalTitle ? esc(a.proposalTitle) + ' <span class="xh-note">(recommended pre-proposal)</span>'
     : (a.proposalFile ? '<a href="' + esc(a.proposalFile) + '" target="_blank" rel="noopener" data-pdf-view="' + esc(a.proposalFile) + '" data-pdf-title="Proposal">View proposal</a>' : 'None attached');
   var withdraw = '';
@@ -1352,12 +1534,8 @@ function openWithdraw(id) {
     + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep it</button><button type="button" class="xh-btn xh-danger" data-xh="app-withdraw-send" data-id="' + a.id + '">' + (pending ? 'Withdraw application' : 'Remove from list') + '</button></div>', 'ask');
 }
 
-var TOPICS = {
-  paper: { label: 'Paper', hint: 'Chapters, the manuscript' },
-  diagrams: { label: 'Diagrams', hint: 'ERD, DFD, use case' },
-  system: { label: 'System', hint: 'The app or prototype' },
-  manuscript: { label: 'Manuscript', hint: 'Grammarians check the whole manuscript.' }
-};
+var DELIVS = ['Chapter 1', 'Chapter 2', 'Chapter 3', 'Chapter 4', 'Chapter 5', 'Chapters 1–3, together', 'Chapters 1–5, together',
+  'Final manuscript', 'Logical diagram (DFD or system flowchart)', 'Prototype', 'Collection instrument (survey, interview)'];
 var TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
 
 function slotCard(dateKey, line, sub) {
@@ -1373,33 +1551,16 @@ function openBookConfirm() {
   if (!ex || !s || !S.date) { return; }
   var n = daysUntil(S.date);
   var first = firstName(ex.name);
-  var choices = ex.topic_fixed ? [] : (ex.topic_choices || []);
-  S.topics = [];
-  var topics = ex.topic_fixed
-    ? '<div class="xh-field"><span class="xh-flabel">What will you consult about?</span><div class="xh-fixedt"><span class="xh-tick is-on">' + TICK + '</span>'
-      + '<span><b>' + TOPICS[ex.topic_fixed].label + '</b><small>' + TOPICS[ex.topic_fixed].hint + '</small></span></div></div>'
-    : choices.length
-      ? '<fieldset class="xh-field" id="xh-f-topics"><legend class="xh-flabel">What will you consult about? <span class="xh-req">*</span> <span class="xh-opt">Pick one or both</span></legend>'
-        + '<div class="xh-topics">' + choices.map(function (t) {
-          return '<button type="button" class="xh-topic" data-xh="topic" data-topic="' + t + '" aria-pressed="false"><span class="xh-tick">' + TICK + '</span>'
-            + '<span><b>' + TOPICS[t].label + '</b><small>' + TOPICS[t].hint + '</small></span></button>';
-        }).join('') + '</div><span class="xh-fmeta"><span class="xh-ferr">Pick at least one.</span></span></fieldset>'
-      : '';
-  S.deliverables = [];
-  var opts = D.deliverableOptions || [];
   openDialog(head('Book this time', 'Pick what you\'ll bring so ' + esc(first) + ' can prepare.', '', 'Book a consultation')
     + '<div class="xh-dlg-body">'
     + slotCard(S.date, DAYS[parseKey(S.date).getDay()] + ' · ' + fmtT(s.start_time) + ' – ' + fmtT(s.end_time), 'with ' + esc(ex.name) + ', ' + ucfirst(S.role))
-    + topics
-    + '<fieldset class="xh-field" id="xh-f-deliv"><legend class="xh-flabel">Which deliverables? <span class="xh-req">*</span> <span class="xh-opt">'
-    + (opts.length ? 'From your team\'s checklist. Pick one or more.' : 'Type what you\'ll bring.') + '</span></legend>'
-    + '<div class="xh-delivs" id="xh-delivs">' + opts.map(function (t) { return delivChip(t, false); }).join('') + '</div>'
-    + '<div class="xh-deliv-add"><input type="text" id="xh-deliv-other" maxlength="120" autocomplete="off" placeholder="Not listed? Type it, like Revised ERD" aria-label="Type a deliverable">'
-    + '<button type="button" class="xh-btn xh-ghost" data-xh="deliv-add" data-enter-default>Add</button></div>'
-    + '<span class="xh-fmeta"><span class="xh-ferr" id="xh-deliv-err">Pick or type at least one.</span></span></fieldset>'
-    + '<div class="xh-field"><label for="xh-book-note">Note for ' + esc(first) + ' <span class="xh-opt">Optional</span></label>'
-    + '<textarea id="xh-book-note" rows="3" maxlength="500" placeholder="What do you want to ask or show?"></textarea>'
-    + '<span class="xh-fmeta"><span>' + esc(first) + ' and your team can read this.</span><span><span id="xh-note-count">0</span> / 500</span></span></div>'
+    + '<div class="xh-field" id="xh-f-deliv"><span class="xh-flabel" id="xh-deliv-h">Which deliverables? <span class="xh-req">*</span> <span class="xh-opt">Pick one or more</span></span>'
+    + '<details class="xh-dd" id="xh-deliv-dd"><summary aria-describedby="xh-deliv-h"><span id="xh-deliv-sum" class="xh-mut">Choose deliverables</span></summary>'
+    + '<div class="xh-dd-list">' + DELIVS.map(function (t) {
+      return '<label class="xh-dd-item"><input type="checkbox" data-deliv value="' + esc(t) + '"><span>' + esc(t) + '</span></label>';
+    }).join('') + '<label class="xh-dd-item"><input type="checkbox" id="xh-deliv-others"><span>Others</span></label></div></details>'
+    + '<input type="text" id="xh-deliv-other" maxlength="112" autocomplete="off" placeholder="Please specify" aria-label="Other deliverable" hidden>'
+    + '<span class="xh-fmeta"><span class="xh-ferr" id="xh-deliv-err">Pick at least one.</span></span></div>'
     + '<div class="xh-banner xh-info">' + ICON.info + '<span class="xh-banner-text">' + (n >= D.cutoffDays
       ? 'You can ask to cancel until <b>' + lastCancelDay({ session_date: S.date }) + '</b>. After that, message ' + esc(first) + ' instead.'
       : 'This session is within ' + D.cutoffDays + ' days, so <b>it can\'t be cancelled here</b> once booked.') + '</span></div></div>'
@@ -1410,42 +1571,25 @@ function openBookConfirm() {
     function () { if (S.slotId) { S.slotId = null; renderBook(); } });
 }
 
-function delivChip(t, on) {
-  return '<button type="button" class="xh-deliv' + (on ? ' is-on' : '') + '" data-xh="deliv" data-title="' + esc(t) + '" aria-pressed="' + on + '">'
-    + '<span class="xh-tick">' + TICK + '</span><span>' + esc(t) + '</span></button>';
-}
-
-/* The picked deliverables, plus anything typed but not yet added. */
+/* The ticked deliverables, with Others as "Others: what they typed". */
 function delivPicked() {
-  var typed = $('xh-deliv-other') ? $('xh-deliv-other').value.trim() : '';
-  var have = S.deliverables.map(function (x) { return x.toLowerCase(); });
-  return typed && have.indexOf(typed.toLowerCase()) === -1 ? S.deliverables.concat(typed) : S.deliverables;
+  var picked = Array.prototype.map.call(document.querySelectorAll('#xh-deliv-dd [data-deliv]:checked'), function (c) { return c.value; });
+  var other = $('xh-deliv-others').checked ? $('xh-deliv-other').value.trim() : '';
+  return other ? picked.concat('Others: ' + other) : picked;
 }
 
+/* The closed dropdown reads like the mockup: "Chapters 1–3, Logical diagram, Others: Gantt chart". */
 function syncBook() {
-  var ex = expertFor(S.role);
-  var choices = ex && !ex.topic_fixed ? (ex.topic_choices || []) : [];
-  $('xh-book-send').disabled = (choices.length && !S.topics.length) || !delivPicked().length;
+  var picked = delivPicked();
+  var sum = $('xh-deliv-sum');
+  sum.textContent = picked.length ? picked.map(function (t) { return t.replace(/ \(.*\)$/, '').replace(/, together$/, ''); }).join(', ') : 'Choose deliverables';
+  sum.classList.toggle('xh-mut', !picked.length);
+  $('xh-book-send').disabled = !picked.length;
 }
 
 function delivError(msg) {
   $('xh-deliv-err').textContent = msg;
   $('xh-f-deliv').classList.add('is-bad');
-}
-
-function addDeliv() {
-  var input = $('xh-deliv-other');
-  var t = input.value.trim();
-  if (!t) { delivError('Type a deliverable first.'); input.focus(); return; }
-  var chip = Array.prototype.filter.call($('xh-delivs').querySelectorAll('[data-xh="deliv"]'), function (b) {
-    return b.dataset.title.toLowerCase() === t.toLowerCase();
-  })[0];
-  if (!chip) {
-    $('xh-delivs').insertAdjacentHTML('beforeend', delivChip(t, false));
-    chip = $('xh-delivs').lastElementChild;
-  }
-  input.value = '';
-  if (!chip.classList.contains('is-on')) { ACT.deliv(chip); } else { syncBook(); }
 }
 
 function findBooking(id) {
@@ -1469,7 +1613,7 @@ function openSession(id) {
   } else if (!isPast) {
     note = '<div class="xh-banner">' + ICON.lock + '<span class="xh-banner-text">This session is within ' + D.cutoffDays + ' days, so it can\'t be cancelled here. Message ' + esc(first) + ' if you can\'t make it.</span></div>';
   }
-  var status = isPast ? '<span class="xh-pill xh-gray">Ended</span>' : b.cancel_requested ? '<span class="xh-pill xh-amber">Cancel asked</span>' : '<span class="xh-pill xh-green">Scheduled</span>';
+  var status = isPast ? '<span class="xh-t-gray">Ended</span>' : b.cancel_requested ? '<span class="xh-t-amber">Cancel asked</span>' : '<span class="xh-t-green">Scheduled</span>';
   openDialog(head(esc(b.expert_name), '', '<span class="xh-dav" aria-hidden="true">' + esc(initialsOf(b.expert_name)) + '</span>', 'Consultation' + (role ? ' · ' + ucfirst(role) : ''))
     + '<div class="xh-dlg-body">'
     + (b.session_date
@@ -1538,7 +1682,23 @@ var ACT = {
     // A tab opened for the first time since signing in comes up as its
     // skeleton (student/partials/content-skeleton), like a page.
     if (window.contentSkeleton) { window.contentSkeleton.show(tab); }
-    $(tab === 'find' ? 'xh-tab-find' : (tab === 'evaluations' ? 'xh-tab-eval' : 'xh-tab-book')).focus();
+    $(tab === 'find' ? 'xh-tab-find' : 'xh-tab-book').focus();
+  },
+  // The calendar and session list open over the page, for one expert's role.
+  schedule: function (el) {
+    if (el.dataset.role) { S.role = el.dataset.role; }
+    S.date = null;
+    S.slotId = null;
+    S.monthOffset = 0;
+    S.sched = true;
+    var split = document.querySelector('#xh-book-holder .xh-split');
+    var d = openDialog(head('Schedule a consultation', 'Pick a date, then a time.', '', ''), 'wide', function () {
+      $('xh-book-holder').appendChild(split);
+      S.sched = false;
+    });
+    d.querySelector('.cm-box').appendChild(split);
+    renderBook();
+    renderSessions();
   },
   slot: function (el, e) {
     // A time opens its booking straight away; there is no second button to find.
@@ -1583,43 +1743,18 @@ var ACT = {
       setTimeout(function () { window.location.reload(); }, 900);
     }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
   },
-  topic: function (el) {
-    var t = el.dataset.topic;
-    var on = S.topics.indexOf(t) === -1;
-    S.topics = on ? S.topics.concat(t) : S.topics.filter(function (x) { return x !== t; });
-    el.setAttribute('aria-pressed', String(on));
-    el.classList.toggle('is-on', on);
-    syncBook();
-    if (S.topics.length) { $('xh-f-topics').classList.remove('is-bad'); }
-  },
-  deliv: function (el) {
-    var t = el.dataset.title;
-    var on = S.deliverables.indexOf(t) === -1;
-    if (on && S.deliverables.length >= 10) { delivError('Pick at most 10.'); return; }
-    S.deliverables = on ? S.deliverables.concat(t) : S.deliverables.filter(function (x) { return x !== t; });
-    el.setAttribute('aria-pressed', String(on));
-    el.classList.toggle('is-on', on);
-    $('xh-f-deliv').classList.remove('is-bad');
-    syncBook();
-  },
-  'deliv-add': function () { addDeliv(); },
   'book-send': function (el) {
     var ex = expertFor(S.role);
-    var choices = ex && !ex.topic_fixed ? (ex.topic_choices || []) : [];
-    if (choices.length && !S.topics.length) { $('xh-f-topics').classList.add('is-bad'); return; }
     var deliverables = delivPicked();
-    if (!deliverables.length) { delivError('Pick or type at least one.'); return; }
-    var topics = ex && ex.topic_fixed ? [ex.topic_fixed] : S.topics;
-    var about = choices.filter(function (t) { return topics.indexOf(t) !== -1; }).concat(ex && ex.topic_fixed ? [ex.topic_fixed] : [])
-      .map(function (t) { return TOPICS[t].label; }).join(', ');
+    if (!deliverables.length) { delivError('Pick at least one.'); return; }
     var s = slots.filter(function (x) { return x.schedule_id === S.slotId; })[0];
     var when = shortDate(S.date) + (s ? ' · ' + fmtT(s.start_time) : '');
     busy(el, 'Booking…');
-    send(D.urls.book, 'POST', { schedule_id: S.slotId, session_date: S.date, topics: topics, deliverables: deliverables, note: $('xh-book-note').value.trim() }).then(function (data) {
+    send(D.urls.book, 'POST', { schedule_id: S.slotId, session_date: S.date, deliverables: deliverables }).then(function (data) {
       if (data.success) {
         S.date = null; S.slotId = null; S.listTab = 'upcoming';
         ACT.close(el);
-        toast('Booked ' + when + ' with ' + (ex ? ex.name : 'your ' + S.role) + (about ? ', about ' + about : '') + '.', 'success');
+        toast('Booked ' + when + ' with ' + (ex ? ex.name : 'your ' + S.role) + '.', 'success');
       } else {
         S.slotId = null;
         ACT.close(el);
@@ -1628,6 +1763,8 @@ var ACT = {
       refresh(false);
     }).catch(function () { idle(el); toast('Network error. Please try again.', 'error'); });
   },
+  'ta-pick': function (el) { taPick(el.dataset.id); },
+  'ta-clear': function () { taPick(null); },
   session: function (el) { openSession(el.dataset.id); },
   'cancel-open': function (el) { closeDialog(el.closest('dialog')); openCancel(el.dataset.id); },
   'cancel-back': function (el) { closeDialog(el.closest('dialog')); openSession(el.dataset.id); },
@@ -1759,7 +1896,7 @@ function findPage() {
   box.querySelectorAll('[data-xh="side"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.side === FIND.side)); });
   $('xh-side-empty').hidden = side.length > 0;
   $('xh-pgnav').hidden = side.length === 0;
-  $('xh-pg-range').innerHTML = '<b>' + (from + 1) + '–' + Math.min(from + per, side.length) + '</b> of ' + side.length;
+  $('xh-pg-range').innerHTML = 'Page <b>' + (FIND.page + 1) + '</b> of ' + pages;
   $('xh-pg-dots').innerHTML = pages > 1 && pages <= 8
     ? Array.from({ length: pages }, function (_, i) { return '<i' + (i === FIND.page ? ' class="on"' : '') + '></i>'; }).join('') : '';
   box.querySelector('.xh-keys').hidden = pages < 2;
@@ -1777,6 +1914,8 @@ document.addEventListener('click', function (e) {
   var el = e.target.closest('[data-xh]');
   var pop = $('xh-skill-pop');
   if (pop && !pop.hidden && !e.target.closest('#xh-skill')) { pop.hidden = true; $('xh-skill-trigger').setAttribute('aria-expanded', 'false'); }
+  var dd = $('xh-deliv-dd');
+  if (dd && dd.open && !e.target.closest('#xh-deliv-dd')) { dd.open = false; }
   if (!el || el.disabled) { return; }
   var fn = ACT[el.dataset.xh];
   if (fn) { fn(el, e); }
@@ -1784,8 +1923,8 @@ document.addEventListener('click', function (e) {
 
 document.addEventListener('input', function (e) {
   var t = e.target;
-  if (t.id === 'xh-book-note') {
-    $('xh-note-count').textContent = t.value.length;
+  if (t.id === 'xh-change-q') {
+    taSearch(t.value.trim());
   } else if (t.id === 'xh-deliv-other') {
     $('xh-f-deliv').classList.remove('is-bad');
     syncBook();
@@ -1828,14 +1967,19 @@ document.addEventListener('input', function (e) {
 document.addEventListener('change', function (e) {
   if (e.target.classList && e.target.classList.contains('xh-file-input')) { syncFilePicker(e.target); }
   if (e.target.id === 'xh-change-to' || e.target.id === 'xh-change-file') { $('xh-change-send').disabled = !changeReady(); }
+  if (e.target.closest && e.target.closest('#xh-deliv-dd')) {
+    // At most 10 reach the server; Others counts as one.
+    if (e.target.checked && document.querySelectorAll('#xh-deliv-dd input:checked').length > 10) { e.target.checked = false; delivError('Pick at most 10.'); return; }
+    if (e.target.id === 'xh-deliv-others') { $('xh-deliv-other').hidden = !e.target.checked; if (e.target.checked) { $('xh-deliv-other').focus(); } }
+    $('xh-f-deliv').classList.remove('is-bad');
+    syncBook();
+  }
   if (e.target.name === 'xh-apply-role') { $('xh-f-role').classList.remove('is-bad'); $('xh-msg-to').textContent = 'Message to your ' + e.target.dataset.name; }
 });
 document.querySelector('.xh-seg').addEventListener('keydown', function (e) {
   if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
     e.preventDefault();
-    var order = ['consultations', 'find', 'evaluations'];
-    var step = e.key === 'ArrowRight' ? 1 : order.length - 1;
-    ACT.tab({ dataset: { tab: order[(order.indexOf(S.tab) + step) % order.length] } });
+    ACT.tab({ dataset: { tab: S.tab === 'find' ? 'consultations' : 'find' } });
   }
 });
 // Each expert card says how far it is, and the sheet counts the answers.
@@ -1923,6 +2067,18 @@ document.addEventListener('submit', function (e) {
   d.querySelector('[data-ev-send]').focus();
 });
 document.addEventListener('keydown', function (e) {
+  // The change type-ahead: arrows move through the matches, Enter picks one.
+  if (e.target.id === 'xh-change-q' && !$('xh-ta-list').hidden) {
+    var opts = Array.prototype.slice.call($('xh-ta-list').querySelectorAll('.xh-ta-opt'));
+    var at = opts.map(function (o) { return o.getAttribute('aria-selected'); }).indexOf('true');
+    if (opts.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault();
+      at = (at + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
+      opts.forEach(function (o, i) { o.setAttribute('aria-selected', String(i === at)); });
+      return;
+    }
+    if (e.key === 'Enter' && opts[at]) { e.preventDefault(); taPick(opts[at].dataset.id); return; }
+  }
   if (e.key === 'Escape') { var pop = $('xh-skill-pop'); if (pop) { pop.hidden = true; } return; }
   // Left and right flip Find experts' pages, unless typing, a modifier is
   // held, the skill list or a dialog is open, or the tabs took the key.
