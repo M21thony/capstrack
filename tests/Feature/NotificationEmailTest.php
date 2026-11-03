@@ -183,7 +183,9 @@ class NotificationEmailTest extends TestCase
         Mail::fake();
         $capsa = $this->expert();
         $capsa->roles()->attach(Role::firstOrCreate(['role_name' => CapstoneExpert::CAPSA_ROLE])->role_id);
-        $capsa->update(['sections' => ['BSIT-3A']]);
+        // The student's own section (withCompleteProfile is BSCS 4th · A): an
+        // announcement reaches the poster's sections, as the dashboard shows it.
+        $capsa->update(['sections' => ['BSCS-4A']]);
         $expert = $this->expert();
         $student = $this->student();
 

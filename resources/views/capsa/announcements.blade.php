@@ -520,14 +520,22 @@ function savePost() {
   }
   formNotice.clear('annNotice');
 
-  // Extract @mentions from body to determine team_id
+  // The team an @mention names. Matched against the team list rather than
+  // read off the text: "@Bug Busters please submit" used to be taken as a
+  // team called "Bug Busters please submit", so a mention anywhere but the
+  // very end of the post was dropped. The longest name wins, so "@Code
+  // Crafters 2" is not taken for "Code Crafters".
   var teamId = null;
-  var mentionMatch = body.match(/@(\w[\w\s]*\w)/);
-  if (mentionMatch) {
-    var mentionedName = mentionMatch[1].trim().toLowerCase();
-    var found = teamsList.find(function(t) { return t.team_name.toLowerCase() === mentionedName; });
-    if (found) teamId = found.team_id;
-  }
+  var lowerBody = body.toLowerCase();
+  var mentioned = teamsList
+    .filter(function(t) {
+      var at = lowerBody.indexOf('@' + t.team_name.toLowerCase());
+      if (at === -1) return false;
+      var next = lowerBody.charAt(at + 1 + t.team_name.length);
+      return next === '' || !/[a-z0-9_]/.test(next);
+    })
+    .sort(function(a, b) { return b.team_name.length - a.team_name.length; });
+  if (mentioned.length) teamId = mentioned[0].team_id;
 
   var url = editingId ? '/api/admin/announcements/' + editingId : '/api/admin/announcements';
   var method = editingId ? 'PUT' : 'POST';
@@ -543,7 +551,12 @@ function savePost() {
     },
     body: JSON.stringify(payload),
   })
-    .then(function(r) { return r.json(); })
+    // A refused post (422, an expired session) comes back as JSON too, and
+    // used to reload the page as if it had gone out, losing the draft.
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function() { location.reload(); })
     .catch(function() {
       formNotice('annNotice', {
@@ -613,7 +626,10 @@ function confirmDelete() {
       'Accept': 'application/json',
     },
   })
-    .then(function() { location.reload(); })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      location.reload();
+    })
     .catch(function() {
       btn.textContent = 'Delete';
       btn.disabled = false;
@@ -686,7 +702,11 @@ function verifySubmission(annId, submissionId, verified) {
     },
     body: JSON.stringify({ verified: verified }),
   })
-    .then(function(r) { return r.json(); })
+    // A refused change comes back as JSON too; only a 2xx is recorded.
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function() { location.reload(); })
     .catch(function() {
       formNotice('annNotice', {

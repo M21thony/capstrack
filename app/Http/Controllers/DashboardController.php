@@ -9,6 +9,7 @@ use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Support\AnnouncementAudience;
 use App\Support\MilestoneProgress;
 use App\Support\NextStep;
 use App\Support\StudentTeam;
@@ -141,68 +142,14 @@ class DashboardController extends Controller
     // from the student's own course and year.
     private function getAnnouncements(Student $student): Collection
     {
-        if (! $student->course || ! $student->year_section) {
-            return collect();
-        }
-
-        $studentSectionLabel = Student::computeSectionLabel($student->course, $student->year_section);
-        if (! $studentSectionLabel) {
+        if (! Student::computeSectionLabel($student->course, $student->year_section)) {
             return collect();
         }
 
         return Announcement::with('admin', 'team', 'milestone')
             ->where('is_active', true)
             ->get()
-            ->filter(function ($announcement) use ($studentSectionLabel, $student) {
-                $admin = $announcement->admin;
-
-                $audience = $announcement->target_audience;
-                if (empty($audience)) {
-                    $audience = ['all'];
-                }
-                $audience = (array) $audience;
-
-                if (! in_array('all', $audience, true) && ! in_array('student', $audience, true)) {
-                    return false;
-                }
-
-                // A team-targeted announcement is that team's business - it
-                // names their defense or their milestone. Members see it
-                // whatever their section; nobody else does. This used to fall
-                // through to the section checks for non-members, which handed
-                // one team's defense schedule to every student in the same
-                // section.
-                if ($announcement->team_id) {
-                    $teamMemberIds = StudentSchoolYear::where('team_id', $announcement->team_id)
-                        ->whereNotNull('student_id')
-                        ->pluck('student_id')
-                        ->toArray();
-
-                    return in_array($student->student_id, $teamMemberIds, true);
-                }
-
-                // Case-insensitive section matching
-                $studentSectionLower = strtolower($studentSectionLabel);
-
-                // Extract explicit section targets (e.g., 'section:BSIT-3A')
-                $targetSections = array_values(array_filter(
-                    $audience,
-                    fn ($a) => str_starts_with((string) $a, 'section:')
-                ));
-                $targetSections = array_map(fn ($s) => strtolower(substr((string) $s, 8)), $targetSections);
-
-                if (! empty($targetSections)) {
-                    return in_array($studentSectionLower, $targetSections, true);
-                }
-
-                if ($admin && ! empty($admin->sections)) {
-                    $adminSectionsLower = array_map('strtolower', $admin->sections);
-
-                    return in_array($studentSectionLower, $adminSectionsLower, true);
-                }
-
-                return true;
-            })
+            ->filter(fn (Announcement $announcement) => AnnouncementAudience::reachesStudent($announcement, $student))
             ->sortByDesc('created_at')
             ->take(10)
             ->values();

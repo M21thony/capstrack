@@ -660,7 +660,10 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
 if (app()->environment('local')) {
     Route::get('/__dev-login-student/{page?}', function (?string $page = null) {
         // ?as=<student id> when the page under test needs a particular student.
-        $studentId = request()->integer('as') ?: StudentSchoolYear::whereNotNull('team_id')->value('student_id')
+        // ?email=<address> when the test only knows the account by address.
+        $studentId = request()->integer('as')
+            ?: (request()->filled('email') ? Student::where('email', request('email'))->value('student_id') : null)
+            ?: StudentSchoolYear::whereNotNull('team_id')->value('student_id')
             ?? Student::query()->value('student_id');
 
         abort_unless($studentId && Auth::guard('web')->loginUsingId($studentId), 404, 'No student to sign in as.');
@@ -679,7 +682,11 @@ if (app()->environment('local')) {
         // whose instructor/* pages are under test.
         // A numeric role is an expert id, for when the page under test only
         // has data on one particular account.
-        $expert = ctype_digit($role) ? CapstoneExpert::find($role) : match ($role) {
+        // ?email=<address> picks the account outright, for a test that
+        // seeded its own and knows it only by address.
+        $expert = request()->filled('email') ? CapstoneExpert::where('email', request('email'))->first() : null;
+
+        $expert ??= ctype_digit($role) ? CapstoneExpert::find($role) : match ($role) {
             'admin' => CapstoneExpert::where('is_admin', true)->first(),
             'capsa' => CapstoneExpert::whereHas(
                 'roles',
