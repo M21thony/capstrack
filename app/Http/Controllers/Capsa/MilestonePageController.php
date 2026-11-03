@@ -8,6 +8,7 @@ use App\Models\ChecklistMilestone;
 use App\Models\Deliverable;
 use App\Support\ChecklistAccess;
 use App\Support\ChecklistTracker;
+use App\Support\DefenseBoard;
 use App\Support\MilestoneTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -22,19 +23,17 @@ use Illuminate\View\View;
 class MilestonePageController extends Controller
 {
     /**
-     * The ways a team can complete a requirement, as the form offers them.
-     * A signed CLF is one kind with two signers, so it is two choices here.
-     *
-     * @var array<string, array{label: string, help: string, kind: string, role: ?string}>
+     * The type a requirement shows as: its defense, or Upload file for every
+     * other kind. Null for the lines nothing is uploaded for.
      */
-    public const HOW = [
-        'form' => ['label' => 'Signed form', 'help' => 'Teams upload a scan of a signed paper, and you check it.', 'kind' => Deliverable::FORM, 'role' => null],
-        'document' => ['label' => 'Upload a file', 'help' => 'Teams upload a file, like a chapter draft; once the adviser approves it, you check it.', 'kind' => Deliverable::DOCUMENT, 'role' => null],
-        'adviser' => ['label' => 'Signed CLF (adviser)', 'help' => 'The adviser signs a CLF, teams upload the scan, and you check it.', 'kind' => Deliverable::APPROVAL, 'role' => 'adviser'],
-        'consultant' => ['label' => 'Signed CLF (consultant)', 'help' => 'The consultant signs a CLF, teams upload the scan, and you check it.', 'kind' => Deliverable::APPROVAL, 'role' => 'consultant'],
-        'defense' => ['label' => 'Defense', 'help' => 'The only one that closes by itself: a pass closes it, a redefense keeps it open.', 'kind' => Deliverable::DEFENSE, 'role' => null],
-        'custom' => ['label' => 'Task', 'help' => 'Teams mark it done, and you check it.', 'kind' => Deliverable::CUSTOM, 'role' => null],
-    ];
+    public static function typeOf(Deliverable $deliverable): ?string
+    {
+        return match (true) {
+            $deliverable->kind === Deliverable::DEFENSE => $deliverable->defense_type ?: 'Defense',
+            $deliverable->closesOnTitleRecommendation(), $deliverable->closesOnArchiveEntry() => null,
+            default => 'Upload file',
+        };
+    }
 
     public function __construct(private ChecklistAccess $access, private ChecklistTracker $tracker) {}
 
@@ -143,15 +142,11 @@ class MilestonePageController extends Controller
 
     private function requirementForm(ChecklistMilestone $milestone, ?Deliverable $deliverable): View
     {
-        $how = $deliverable
-            ? ($deliverable->kind === Deliverable::APPROVAL ? ($deliverable->role ?: 'adviser') : $deliverable->kind)
-            : 'form';
-
         return view('capsa.team-management.requirement-form', [
             'milestone' => $milestone,
             'deliverable' => $deliverable,
-            'how' => $how,
-            'ways' => self::HOW,
+            'defense' => $deliverable?->kind === Deliverable::DEFENSE,
+            'stages' => DefenseBoard::STAGES,
             'trail' => $this->trail([
                 [$milestone->name, route('capsa.team_management.milestones.show', $milestone)],
                 [$deliverable ? 'Edit requirement' : 'Add requirement', null],

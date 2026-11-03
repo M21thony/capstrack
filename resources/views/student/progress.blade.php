@@ -141,6 +141,7 @@
 .pt-item-body{flex:1;min-width:0;display:grid;gap:3px}
 .pt-item-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35}
 .pt-item-who{font-size:11.5px;color:var(--text3)}
+.pt-item-instr{font-size:12.5px;line-height:1.5;color:var(--text2);white-space:pre-line;margin-top:4px}
 .pt-kept{font-size:12px;color:var(--text2);margin-top:4px}
 .pt-file{display:inline-flex;align-items:center;gap:5px;margin-top:4px;font-size:12px;font-weight:600;color:var(--accent3);text-decoration:underline;text-underline-offset:2px}
 .pt-file:hover{color:var(--text)}
@@ -474,6 +475,9 @@
                 @endif
               </div>
               <div class="pt-item-who">{{ $closer }}</div>
+              @if ($item->instructions)
+                <div class="pt-item-instr">{{ $item->instructions }}</div>
+              @endif
               @if ($item->closesOnArchiveEntry() && ! $done)
                 <a class="pt-file" href="{{ route('student.archive') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>Open it in Archive</a>
               @endif

@@ -84,6 +84,9 @@ dialog.up::backdrop{background:rgba(15,16,22,.5)}
 /* The remark a revision answers: who asked, the first thing they asked, the rest one click away. */
 .up-remark{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 14px;border-radius:12px;border:1px solid #f0dcc4;background:#fdf8f1;font-size:13px;line-height:1.45;color:var(--text2)}
 .up-remark p{margin:0}
+.up-instr{padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:13px;line-height:1.5;color:var(--text2)}
+.up-instr b{display:block;color:var(--text);font-weight:600;margin-bottom:4px}
+.up-instr p{margin:0;white-space:pre-line}
 .up-remark b{color:#b45309;font-weight:600}
 .up-remark-q{display:block;font-size:14px;line-height:1.55;color:var(--text);quotes:"\201C" "\201D"}
 

@@ -8,8 +8,6 @@
   @include('capsa.partials.team-management._milestone_kit')
 @endpush
 
-@php $how = collect(\App\Http\Controllers\Capsa\MilestonePageController::HOW); @endphp
-
 @section('tm-content')
 <div class="ml-page">
   <div class="ml-head">
@@ -37,7 +35,7 @@
   <div class="ml-list" id="ml-reqs">
     @forelse ($requirements as $requirement)
       @php
-        $way = $requirement->kind === \App\Models\Deliverable::APPROVAL ? ($requirement->role ?: 'adviser') : $requirement->kind;
+        $type = \App\Http\Controllers\Capsa\MilestonePageController::typeOf($requirement);
         $finished = $done[$requirement->id] ?? 0;
       @endphp
       <div class="ml-row" data-id="{{ $requirement->id }}">
@@ -50,7 +48,7 @@
             @if ($requirement->archived_at)
               <span>Hidden from teams</span>
             @endif
-            <span>{{ $how[$way]['label'] ?? ucfirst($way) }} · {{ $finished }} of {{ $teams }} {{ \Illuminate\Support\Str::plural('team', $teams) }} done</span>
+            <span>{{ $type ? $type.' · ' : '' }}{{ $finished }} of {{ $teams }} {{ \Illuminate\Support\Str::plural('team', $teams) }} done</span>
             @if ($requirement->due_date)
               <span>Due {{ $requirement->due_date->format('M j, Y') }}</span>
             @endif

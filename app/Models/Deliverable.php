@@ -53,6 +53,7 @@ class Deliverable extends Model
         'checklist_milestone_id',
         'template_key',
         'title',
+        'instructions',
         'kind',
         'role',
         'chapter',

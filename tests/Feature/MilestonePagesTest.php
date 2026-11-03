@@ -7,6 +7,7 @@ use App\Models\Checklist;
 use App\Models\ChecklistMilestone;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
+use App\Models\Student;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsChecklists;
@@ -28,12 +29,14 @@ class MilestonePagesTest extends TestCase
 
     private Team $team;
 
+    private Student $leader;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->capsa = $this->capsaFor();
-        [$this->team] = $this->teamInSection('Team Done');
+        [$this->team, $this->leader] = $this->teamInSection('Team Done');
         $this->teamInSection('Team Behind');
 
         $this->checklist = $this->emptyChecklist($this->capsa, milestone: 'Chapter 1-3 Submission');
@@ -54,7 +57,7 @@ class MilestonePagesTest extends TestCase
             ->assertSee('Edit milestone')
             ->assertSee('Mark finished')
             ->assertSee('Signed endorsement form')
-            ->assertSee('Signed form · 1 of 2 teams done')
+            ->assertSee('Upload file · 1 of 2 teams done')
             ->assertSee('Old draft')
             ->assertSee('Hidden from teams')
             ->assertSee(route('capsa.team_management.milestones.requirements.create', $this->milestone), false)
@@ -96,8 +99,10 @@ class MilestonePagesTest extends TestCase
         $this->get(route('capsa.team_management.milestones.requirements.create', $this->milestone))
             ->assertOk()
             ->assertSee('Add requirement')
-            ->assertSee('How teams complete it')
-            ->assertSee('In Chapter 1-3 Submission');
+            ->assertSee('Instructions')
+            ->assertSee('Upload file')
+            ->assertSee('Which defense')
+            ->assertSee('In <b>Chapter 1-3 Submission</b>', false);
 
         $this->get(route('capsa.team_management.milestones.requirements.edit', $this->form))
             ->assertOk()
@@ -159,5 +164,74 @@ class MilestonePagesTest extends TestCase
         $this->assertSame('Pre-Oral Defense', $made->name);
         $this->assertSame('2026-11-30', $made->due_on->toDateString());
         $this->assertTrue((bool) $made->requires_previous);
+    }
+
+    public function test_a_new_requirement_keeps_its_instructions_and_which_defense(): void
+    {
+        $this->postJson(route('capsa.checklist_milestones.deliverables.store', $this->milestone), [
+            'titles' => ['Pre Oral'], 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Pre Oral Defense', 'instructions' => "Bring 5 copies.\nArrive early.",
+        ])->assertCreated();
+        // An upload never carries a defense, whatever is sent with it.
+        $this->postJson(route('capsa.checklist_milestones.deliverables.store', $this->milestone), [
+            'titles' => ['Endorsement'], 'kind' => Deliverable::FORM, 'defense_type' => 'Title Defense',
+        ])->assertCreated();
+
+        $defense = Deliverable::where('title', 'Pre Oral')->sole();
+        $this->assertSame('Pre Oral Defense', $defense->defense_type);
+        $this->assertSame("Bring 5 copies.\nArrive early.", $defense->instructions);
+        $this->assertNull(Deliverable::where('title', 'Endorsement')->sole()->defense_type);
+
+        $this->postJson(route('capsa.checklist_milestones.deliverables.store', $this->milestone), [
+            'titles' => ['Bad'], 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Midterm Defense',
+        ])->assertUnprocessable();
+    }
+
+    public function test_editing_an_upload_without_a_type_keeps_how_it_is_checked(): void
+    {
+        $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
+
+        $this->patchJson(route('capsa.deliverables.update', $draft), [
+            'title' => 'Chapter 1', 'instructions' => 'Use the template.', 'due_date' => '2026-12-01',
+        ])->assertOk();
+
+        $draft->refresh();
+        $this->assertSame(Deliverable::DOCUMENT, $draft->kind);
+        $this->assertSame('Chapter 1', $draft->title);
+        $this->assertSame('Use the template.', $draft->instructions);
+
+        $this->patchJson(route('capsa.deliverables.update', $draft), ['instructions' => null])->assertOk();
+        $this->assertNull($draft->fresh()->instructions);
+    }
+
+    public function test_a_defense_requirement_shows_and_opens_as_its_defense(): void
+    {
+        $defense = $this->addDeliverable($this->checklist, ['title' => 'Oral', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Pre Oral Defense']);
+
+        $this->get(route('capsa.team_management.milestones.show', $this->milestone))
+            ->assertSee('Pre Oral Defense · 0 of 2 teams done');
+
+        $this->get(route('capsa.team_management.milestones.requirements.edit', $defense))
+            ->assertOk()
+            ->assertSee('value="defense" checked', false)
+            ->assertSee('<option selected>Pre Oral Defense</option>', false)
+            ->assertDontSee('hidden >Which defense', false);
+
+        $this->get(route('capsa.team_management.milestones.requirements.edit', $this->form))
+            ->assertSee('value="upload" checked', false)
+            ->assertSee('hidden >Which defense', false);
+    }
+
+    public function test_students_see_a_requirements_instructions(): void
+    {
+        $this->form->update(['instructions' => 'Signed by the adviser and the dean.']);
+        $open = $this->addDeliverable($this->checklist, ['title' => 'Approval sheet', 'kind' => Deliverable::FORM, 'instructions' => 'Signed by the adviser and the dean.']);
+
+        $this->actingAs($this->leader)->get('/student/progress')
+            ->assertOk()
+            ->assertSee('Signed by the adviser and the dean.');
+
+        $this->actingAs($this->leader)->getJson(route('student.submission.plan', ['item' => $open->id]))
+            ->assertOk()
+            ->assertJsonPath('item.instructions', 'Signed by the adviser and the dean.');
     }
 }

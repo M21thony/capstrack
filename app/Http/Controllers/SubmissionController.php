@@ -391,6 +391,7 @@ class SubmissionController extends Controller
                 'chapter' => SubmissionRecipients::chapterKey($item),
                 'due' => $item->due_date?->format('M j, Y'),
                 'paper' => $isPaper,
+                'instructions' => $item->instructions,
             ] : null,
             'version' => $item || $revises ? $version : null,
             // The paper a revision of a file for no line is the next version of.

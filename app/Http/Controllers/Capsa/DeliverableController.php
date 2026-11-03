@@ -7,6 +7,7 @@ use App\Models\ChecklistMilestone;
 use App\Models\Deliverable;
 use App\Services\Notifier;
 use App\Support\ChecklistAccess;
+use App\Support\DefenseBoard;
 use App\Support\TeamChecklist;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,8 @@ class DeliverableController extends Controller
             'titles.*' => ['required', 'string', 'max:255'],
             'kind' => ['required', Rule::in(Deliverable::KINDS)],
             'role' => ['nullable', 'required_if:kind,'.Deliverable::APPROVAL, Rule::in(['adviser', 'consultant'])],
+            'defense_type' => ['nullable', Rule::in(DefenseBoard::STAGES)],
+            'instructions' => ['nullable', 'string', 'max:5000'],
             'due_date' => ['nullable', ...self::DATE_RULE],
         ], self::DATE_MESSAGES);
 
@@ -48,6 +51,8 @@ class DeliverableController extends Controller
             'title' => trim($title),
             'kind' => $data['kind'],
             'role' => $data['kind'] === Deliverable::APPROVAL ? $data['role'] : null,
+            'defense_type' => $data['kind'] === Deliverable::DEFENSE ? ($data['defense_type'] ?? null) : null,
+            'instructions' => $data['instructions'] ?? null,
             'due_date' => $data['due_date'] ?? null,
             'position' => $next + $i,
         ]));
@@ -191,6 +196,8 @@ class DeliverableController extends Controller
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'kind' => ['sometimes', 'required', Rule::in(Deliverable::KINDS)],
             'role' => ['sometimes', 'nullable', Rule::in(['adviser', 'consultant'])],
+            'defense_type' => ['sometimes', 'nullable', Rule::in(DefenseBoard::STAGES)],
+            'instructions' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'due_date' => ['sometimes', 'nullable', ...self::DATE_RULE],
             'archived' => ['sometimes', 'boolean'],
         ];
@@ -199,7 +206,7 @@ class DeliverableController extends Controller
     /** Validated input as columns. A CLF always says who signs it; nothing else does. */
     private function changes(array $data): array
     {
-        $out = array_intersect_key($data, array_flip(['title', 'kind', 'role', 'due_date']));
+        $out = array_intersect_key($data, array_flip(['title', 'instructions', 'kind', 'role', 'defense_type', 'due_date']));
 
         if (isset($out['title'])) {
             $out['title'] = trim($out['title']);

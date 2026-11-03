@@ -480,6 +480,11 @@ function lineSelect() {
     <select id="up-line" class="up-select"><option value="">Choose…</option>${options}<option value="none"${S.itemId === 'none' ? ' selected' : ''}>Not a checklist requirement (feedback only)</option></select></div>`;
 }
 
+function instructionsHtml() {
+  const text = S.plan?.item?.instructions;
+  return text ? `<div class="up-instr"><b>Instructions</b><p>${esc(text)}</p></div>` : '';
+}
+
 function remarkHtml() {
   const r = S.plan?.remark;
   if (!r) return '';
@@ -665,12 +670,12 @@ function bodyAndFoot() {
   switch (S.step) {
     case 'pick':
       return [
-        lineSelect() + remarkHtml() + (needsLine() ? '' : step(1, fileStepTitle(), dropHtml(), false) + goesToHtml()),
+        lineSelect() + instructionsHtml() + remarkHtml() + (needsLine() ? '' : step(1, fileStepTitle(), dropHtml(), false) + goesToHtml()),
         btn('Cancel', 'close') + btn(sendLabel(), 'send', { primary: true, disabled: true, icon: 'send' }),
       ];
     case 'check':
       return [
-        remarkHtml() + step(1, fileStepTitle(), fileCardHtml() + checkNotes() + diagramsHtml(), fileDone()) + goesToHtml(),
+        instructionsHtml() + remarkHtml() + step(1, fileStepTitle(), fileCardHtml() + checkNotes() + diagramsHtml(), fileDone()) + goesToHtml(),
         whyNot() + btn('Cancel', 'close') + btn(sendLabel(), 'send', { primary: true, disabled: !canSend(), icon: 'send' }),
       ];
     case 'sending':
