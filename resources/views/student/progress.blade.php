@@ -128,6 +128,7 @@
 .pt-gate b{color:var(--text);font-size:13px}
 .pt-gate.is-eval{background:var(--accent-light,#faf7ed);border-color:rgba(201,168,44,.35)}
 .pt-gate.is-eval > svg{fill:#e0a800;stroke:none}
+.pt-desc{margin:4px 0 8px 50px;font-size:12.5px;line-height:1.5;color:var(--text2);white-space:pre-line}
 .pt-items{list-style:none;margin:4px 0 10px 50px;padding:0;display:grid;gap:8px}
 .pt-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg);border-left:3px solid var(--text3)}
 .pt-item.st-done{border-left-color:var(--green)}
@@ -169,7 +170,7 @@
   .pt-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .pt-list-wrap{padding:14px 12px 6px;border-radius:16px}
   .pt-legend{display:none}
-  .pt-items,.pt-gate{margin-left:0}
+  .pt-items,.pt-gate,.pt-desc{margin-left:0}
   .pt-item{flex-wrap:wrap}
   .pt-item .pt-btn{width:100%;margin-left:34px;width:calc(100% - 34px)}
 }
@@ -404,6 +405,9 @@
             <div><b>Locked</b><span>Opens after {{ $group->requires }}.</span></div>
           </div>
         @endif
+        @if ($group->description)
+          <p class="pt-desc">{{ $group->description }}</p>
+        @endif
         <ul class="pt-items">
         @foreach ($group->rows as $row)
           @php
@@ -413,6 +417,7 @@
                 $done => 'Closed '.$row->closed_at->format('M j'),
                 $row->state === 'overdue' => 'Overdue since '.$row->due_on->format('M j'),
                 $row->state === 'not_started' => $row->due_on ? 'Due '.$row->due_on->format('M j, Y') : 'Not started',
+                $row->waiting_on === 'capsa' && $item->closesOnArchiveEntry() => 'With your CaPSA to publish',
                 $row->waiting_on === 'capsa' => 'With your CaPSA to check',
                 $row->waiting_on === 'title_review' => 'With your CaPSA to recommend a title',
                 $row->waiting_on === 'team' && (bool) $row->note => 'Sent back by your CaPSA',
@@ -433,6 +438,9 @@
             $byRecommendation = $item->closesOnTitleRecommendation();
             if ($byRecommendation) {
                 $closer = 'Closed when your CaPSA recommends one of your pre-proposal titles — nothing to upload';
+            }
+            if ($item->closesOnArchiveEntry()) {
+                $closer = 'Closes when your CaPSA publishes it in the Archive';
             }
             // Everything is handed in through Document Submission; a defense is not, nor the recommended title.
             // A line still waiting on an earlier one cannot be handed in yet, so
@@ -461,6 +469,9 @@
                 @endif
               </div>
               <div class="pt-item-who">{{ $closer }}</div>
+              @if ($item->closesOnArchiveEntry() && ! $done)
+                <a class="pt-file" href="{{ route('student.archive') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>Open it in Archive</a>
+              @endif
               @if ($row->file_id)
                 {{-- A signed paper opens as the file itself; a draft opens on Documents with its remarks. --}}
                 @if (in_array($item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))

@@ -165,9 +165,9 @@
 <div style="background:#fff;border:1.5px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
   <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
     <div>
-      <div style="font-size:13px;font-weight:700;color:var(--text)">Submit your Capstone Manuscript</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text)">Archive Entry</div>
       <div style="font-size:12px;color:var(--text3);margin-top:2px">
-        Your team has completed its capstone journey. Hand in the final manuscript and it goes into the archive once it has been reviewed.
+        Your title, abstract and proponents. It goes into the archive once your CaPSA publishes it.
       </div>
     </div>
     @if ($sub['existing'])
@@ -188,19 +188,23 @@
         @endif
       </div>
       @if ($sub['existing']->submission_status === \App\Models\ArchivedDocument::PENDING)
-        <div style="color:var(--text3);margin-top:4px">Your CaPSA or the admin has to approve it before it appears in the archive. Only one manuscript per team.</div>
+        <div style="color:var(--text3);margin-top:4px">Your CaPSA has to publish it before it appears in the archive. One entry per team.</div>
       @endif
     </div>
   @elseif (! $sub['isLeader'])
     {{-- Only the leader hands it in, so the rest of the team is told who to
          ask rather than shown a form that would refuse them. --}}
     <div style="margin-top:10px;font-size:12px;color:var(--text3)">
-      Your team leader submits the manuscript for the team.
+      Your team leader sends the Archive Entry for the team.
+    </div>
+  @elseif ($sub['closed'])
+    <div style="margin-top:10px;font-size:12px;color:var(--text3)">
+      Your CaPSA has closed the Archive Entry.
     </div>
   @else
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div style="font-size:12px;color:var(--text3);line-height:1.6">
-        Title, tags, school year and date are filled in for you. Just add the abstract.
+        Title and proponents are filled in for you. Type your abstract.
       </div>
       <button type="button" class="btn btn-primary" id="open-manuscript" onclick="openManuscriptModal()" style="padding:9px 16px;white-space:nowrap">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -211,15 +215,16 @@
 </div>
 @endif
 
-@if ($sub['team'] && $sub['isFinished'] && $sub['isLeader'] && ! $sub['existing'])
-{{-- The manuscript form. Title and tags come from the team's approved
-     proposal and can be edited; the school year and date are the system's. --}}
+@if ($sub['team'] && $sub['isFinished'] && $sub['isLeader'] && ! $sub['existing'] && ! $sub['closed'])
+{{-- The Archive Entry form. Title and tags come from the team's approved
+     proposal and can be edited; the abstract is typed, since it is not the
+     pre-proposal's; proponents, school year and date are the system's. --}}
 <div class="modal-overlay" id="manuscript-modal" onclick="if (event.target === this) closeManuscriptModal()">
   <div class="ms-card" role="dialog" aria-modal="true" aria-labelledby="ms-heading">
     <div class="ms-head">
       <div>
         <div class="ms-kicker">Capstone Archive</div>
-        <h2 id="ms-heading">Submit your Capstone Manuscript</h2>
+        <h2 id="ms-heading">Archive Entry</h2>
       </div>
       <button type="button" class="ms-x" aria-label="Close" onclick="closeManuscriptModal()">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -242,7 +247,7 @@
           <div><span>Program</span><b>{{ $sub['program'] ?: 'CCS' }}</b></div>
         </div>
 
-        <label class="ms-label" for="ms-title">Capstone Title <em>filled in from your approved title</em></label>
+        <label class="ms-label" for="ms-title">Capstone Title <em>filled in from your defended title</em></label>
         <input class="input" id="ms-title" name="title" value="{{ old('title', $sub['defaultTitle']) }}" maxlength="255" required />
 
         <label class="ms-label" for="ms-tag-input">Tags <em>from your proposal &middot; press Enter to add</em></label>
@@ -254,14 +259,16 @@
         </datalist>
         <div class="ms-hint">New tags become archive categories for the capstones after yours. Up to 10.</div>
 
+        <label class="ms-label" for="ms-proponents">Proponents</label>
+        <input class="input" id="ms-proponents" value="{{ $sub['authors'] }}" readonly />
+
         <label class="ms-label" for="ms-abstract">Abstract</label>
-        <textarea class="input" id="ms-abstract" name="abstract" required rows="8" placeholder="Paste the abstract of your final manuscript...">{{ old('abstract') }}</textarea>
-        <div class="ms-hint">Recorded as {{ $sub['authors'] }}.</div>
+        <textarea class="input" id="ms-abstract" name="abstract" required rows="8" placeholder="Type your abstract...">{{ old('abstract') }}</textarea>
       </div>
 
       <div class="ms-foot">
         <button type="button" class="btn" onclick="closeManuscriptModal()" style="background:#fff;border:1px solid var(--border);color:var(--text2)">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="ms-submit">Submit Manuscript</button>
+        <button type="submit" class="btn btn-primary" id="ms-submit">Send Archive Entry</button>
       </div>
     </form>
   </div>
@@ -471,7 +478,7 @@ function filterArchive() {
 }
 
 // ── Manuscript modal ──────────────────────────────────────────────────────
-@if ($sub['team'] && $sub['isFinished'] && $sub['isLeader'] && ! $sub['existing'])
+@if ($sub['team'] && $sub['isFinished'] && $sub['isLeader'] && ! $sub['existing'] && ! $sub['closed'])
 var MAX_TAGS = 10;
 var manuscriptTags = [];
 
@@ -548,7 +555,7 @@ function addManuscriptTag(raw) {
     if (input.value.trim()) { addManuscriptTag(input.value); input.value = ''; }
     var btn = document.getElementById('ms-submit');
     btn.disabled = true;
-    btn.textContent = 'Submitting…';
+    btn.textContent = 'Sending…';
   });
 
   var initialTags = @json(old('tags', $sub['defaultTags']));

@@ -40,6 +40,12 @@ class Deliverable extends Model
      */
     public const TITLE_RECOMMENDATION = 'pre_proposal_title_form';
 
+    /**
+     * The Archive Entry: title, abstract and proponents, typed on the archive
+     * page. The line closes when the CaPSA publishes it; nothing is uploaded.
+     */
+    public const ARCHIVE_ENTRY = 'archive_entry';
+
     protected $fillable = [
         'checklist_milestone_id',
         'template_key',
@@ -73,6 +79,12 @@ class Deliverable extends Model
     public function closesOnTitleRecommendation(): bool
     {
         return $this->template_key === self::TITLE_RECOMMENDATION;
+    }
+
+    /** Whether publishing the team's archive entry closes this line, not an upload. */
+    public function closesOnArchiveEntry(): bool
+    {
+        return $this->template_key === self::ARCHIVE_ENTRY;
     }
 
     /** What teams see: not archived, and not inside an archived milestone. */

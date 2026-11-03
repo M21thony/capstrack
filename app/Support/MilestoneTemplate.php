@@ -158,6 +158,28 @@ class MilestoneTemplate
         return self::addMilestones($checklist, self::capstone2Items(), $after);
     }
 
+    /**
+     * Put the Archive Entry milestone below a checklist that has Capstone 2
+     * from before it existed. Safe to run again, like appendCapstone2().
+     *
+     * @return int the milestones added
+     */
+    public static function appendArchiveEntry(Checklist $checklist): int
+    {
+        $has = fn (string $key) => $checklist->deliverables()->withTrashedParents()->withTrashed()
+            ->where('deliverables.template_key', $key)
+            ->exists();
+
+        if (! $has(self::CAPSTONE_2_MARKER) || $has(Deliverable::ARCHIVE_ENTRY)) {
+            return 0;
+        }
+
+        $after = (int) $checklist->milestones()->withTrashed()->max('position') + 1;
+        $lines = array_filter(self::capstone2Items(), fn ($line) => $line['template_key'] === Deliverable::ARCHIVE_ENTRY);
+
+        return self::addMilestones($checklist, $lines, $after);
+    }
+
     /** @return int the milestones added */
     private static function addMilestones(Checklist $checklist, array $items, int $from = 0): int
     {
@@ -239,7 +261,8 @@ class MilestoneTemplate
 
     /**
      * Capstone 2, in order: building the system, Chapter 4, Pre Oral
-     * Defense, Chapter 5, Final Oral Defense, and the final manuscript.
+     * Defense, Chapter 5, Final Oral Defense, the final manuscript, and the
+     * archive entry.
      *
      * System Development opens once Capstone 1 is complete. A chapter opens
      * together with the defense milestone above it, the way chapters run
@@ -279,6 +302,9 @@ class MilestoneTemplate
             ['template_key' => 'final_manuscript', 'title' => 'Final Manuscript', 'short' => 'Manuscript', 'phase' => 'Final Manuscript', 'kind' => $D, 'chapter' => 'final'],
             ['template_key' => 'editing_certificate', 'title' => 'Signed Certificate of Editing (Grammarian)', 'short' => 'Editing', 'phase' => 'Final Manuscript', 'kind' => $F],
             ['template_key' => 'approval_sheet', 'title' => 'Signed Approval Sheet', 'short' => 'Approval Sheet', 'phase' => 'Final Manuscript', 'kind' => $F],
+
+            // Its own milestone, so the CaPSA opens and closes it apart from the rest.
+            ['template_key' => Deliverable::ARCHIVE_ENTRY, 'title' => 'Archive Entry (Title, Abstract, Proponents)', 'short' => 'Archive Entry', 'phase' => 'Archive Entry', 'kind' => $C],
         ];
     }
 }

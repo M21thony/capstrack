@@ -386,6 +386,13 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->paper('editing_certificate');
         $this->paper('approval_sheet');
 
+        // The Archive Entry, sent by the leader and published by the CaPSA.
+        $this->actingAs($this->leader(), 'web')->post(route('student.archive.manuscript.submit'), [
+            'title' => 'A Tracker for Capstone Teams', 'abstract' => 'We built a tracker.',
+        ])->assertSessionHas('success');
+        ArchivedDocument::where('team_id', $this->team->team_id)->update(['submission_status' => ArchivedDocument::PUBLISHED]);
+        $this->assertDone(\App\Models\Deliverable::ARCHIVE_ENTRY);
+
         $progress = MilestoneProgress::forTeam($this->checklist->fresh(), $this->team->team_id);
         $open = $progress->items->reject(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
             ->map(fn ($row) => $row->item->template_key)->values()->all();

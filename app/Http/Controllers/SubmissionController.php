@@ -558,6 +558,7 @@ class SubmissionController extends Controller
             ->flatMap(fn ($ms) => $ms->items
                 ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
                     || $row->item->closesOnTitleRecommendation()
+                    || $row->item->closesOnArchiveEntry()
                     || in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
                 ->map(fn ($row) => (object) [
                     'id' => $row->item->id,

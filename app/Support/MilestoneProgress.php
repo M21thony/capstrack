@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\ArchivedDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstonePreProposal;
 use App\Models\Checklist;
@@ -102,6 +103,7 @@ class MilestoneProgress
         $defenses = self::defensesFor($teamIds, $deliverables);
         $checks = self::checksFor($teamIds, $deliverables);
         $titles = self::titlesFor($teamIds, $deliverables);
+        $archives = self::archivesFor($teamIds, $deliverables);
         $owed = ExpertEvaluations::owedForTeams($teamIds);
 
         $out = [];
@@ -119,6 +121,7 @@ class MilestoneProgress
                 $theirDefenses,
                 $checks->get($deliverable->id.'|'.$teamId),
                 $titles->get($teamId),
+                $archives->get($teamId),
             ));
 
             $out[$teamId] = self::summarise($rows, $owed[$teamId] ?? collect());
@@ -400,10 +403,12 @@ class MilestoneProgress
         Collection $defenses,
         ?DeliverableCheck $check,
         ?object $titles = null,
+        ?ArchivedDocument $archive = null,
     ): object {
         // A line with no date of its own falls due with its milestone.
         $due = $deliverable->due_date ?? $deliverable->milestone?->due_on;
         $byRecommendation = $deliverable->closesOnTitleRecommendation();
+        $byArchive = $deliverable->closesOnArchiveEntry();
 
         // Signed on the title the panel passed: before that pass, an upload or a check for it does not count.
         $awaitsDefense = $deliverable->template_key === TitleRevision::FINAL_TITLE_FORM
@@ -415,7 +420,7 @@ class MilestoneProgress
         }
 
         // Nothing is uploaded for a line the recommendation closes; a file sent for it before is not waited on.
-        $own = $byRecommendation ? collect() : self::uploadsForDeliverable($deliverable, $uploads);
+        $own = $byRecommendation || $byArchive ? collect() : self::uploadsForDeliverable($deliverable, $uploads);
 
         // A CLF approves a chapter draft, so the draft's reviews are what say
         // whether the adviser has signed off - and how many rounds it took.
@@ -430,15 +435,21 @@ class MilestoneProgress
         }
 
         $approvedAt = $myReviews->where('verdict', CapstoneDocumentReview::APPROVED)->max('verdict_at');
-        $submittedAt = $byRecommendation ? $titles?->submitted_at : $reviewed->min('created_at');
+        $submittedAt = match (true) {
+            $byRecommendation => $titles?->submitted_at,
+            $byArchive => $archive?->submitted_at,
+            default => $reviewed->min('created_at'),
+        };
 
-        [$closedAt, $started, $waitingOn, $changesRequested] = $byRecommendation
-            ? self::titleRecommendationState($titles, $check)
-            : match ($deliverable->kind) {
+        [$closedAt, $started, $waitingOn, $changesRequested] = match (true) {
+            $byRecommendation => self::titleRecommendationState($titles, $check),
+            $byArchive => self::archiveEntryState($archive, $check),
+            default => match ($deliverable->kind) {
                 Deliverable::DOCUMENT => self::documentState($own, $myReviews),
                 Deliverable::DEFENSE => self::defenseState($deliverable, $defenses),
                 default => self::checkedState($deliverable, $own, $reviewed, $myReviews, $approvedAt, $check),
-            };
+            },
+        };
 
         $common = [
             'item' => $deliverable,
@@ -545,6 +556,29 @@ class MilestoneProgress
 
         if ($titles?->in_review) {
             return [null, true, self::WAITING_ON_TITLE_REVIEW, false];
+        }
+
+        return [null, false, null, false];
+    }
+
+    /**
+     * [closedAt, started, waitingOn, changesRequested] for the Archive Entry:
+     * closed once the CaPSA publishes it. A check the CaPSA recorded on it
+     * still counts.
+     */
+    private static function archiveEntryState(?ArchivedDocument $archive, ?DeliverableCheck $check): array
+    {
+        if ($check?->status === DeliverableCheck::COMPLETE) {
+            return [$check->checked_at, true, null, false];
+        }
+
+        if ($archive?->submission_status === ArchivedDocument::PUBLISHED) {
+            // ponytail: no published_at column, so it counts as closed when sent; add one if the date matters.
+            return [$archive->submitted_at, true, null, false];
+        }
+
+        if ($archive) {
+            return [null, true, self::WAITING_ON_CAPSA, false];
         }
 
         return [null, false, null, false];
@@ -765,6 +799,23 @@ class MilestoneProgress
                 'in_review' => $proposals->contains(fn (CapstonePreProposal $p) => ! $p->retired_at
                     && ! $p->approved_status && $p->rejection_reason === null),
             ]);
+    }
+
+    /**
+     * Each team's own archive entry, for the line publishing it closes.
+     *
+     * @return Collection<int, ArchivedDocument> keyed by team id
+     */
+    private static function archivesFor(Collection $teamIds, Collection $deliverables): Collection
+    {
+        if (! $deliverables->contains(fn (Deliverable $d) => $d->closesOnArchiveEntry())) {
+            return collect();
+        }
+
+        return ArchivedDocument::whereIn('team_id', $teamIds->all())
+            ->whereNotNull('submitted_by')
+            ->get(['team_id', 'submitted_at', 'submission_status'])
+            ->keyBy('team_id');
     }
 
     /** @return Collection<string, DeliverableCheck> keyed "deliverable|team" */

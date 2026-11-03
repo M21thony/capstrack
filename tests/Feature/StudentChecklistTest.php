@@ -45,14 +45,14 @@ class StudentChecklistTest extends TestCase
         $this->get('/student/progress')
             ->assertOk()
             ->assertSee('Checklist Team')
-            ->assertSee('0 of 38 closed')
+            ->assertSee('0 of 39 closed')
             ->assertSee('Getting started')
             ->assertSee('Signed Project Team Assignment Form')
             ->assertSee('Chapter 1 Draft');
     }
 
-    /** No description on screen: it is not part of the milestone the system documents. */
-    public function test_a_milestone_shows_its_due_date_and_past_due_but_no_description(): void
+    /** The CaPSA's description shows under the milestone. */
+    public function test_a_milestone_shows_its_due_date_past_due_and_description(): void
     {
         $milestone = $this->checklist()->milestones()->where('name', 'Getting started')->first();
         $milestone->update([
@@ -62,7 +62,7 @@ class StudentChecklistTest extends TestCase
 
         $this->get('/student/progress')
             ->assertOk()
-            ->assertDontSee('Form your team and send the signed assignment form.')
+            ->assertSee('Form your team and send the signed assignment form.')
             ->assertSee('Due '.now()->subDays(2)->format('M j, Y'))
             ->assertSee('Past due');
 
@@ -77,7 +77,7 @@ class StudentChecklistTest extends TestCase
         $form = $this->line($this->checklist(), 'team_assignment_form');
         DeliverableCheck::create(['deliverable_id' => $form->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()->subDays(3)]);
 
-        $this->get('/student/progress')->assertOk()->assertSee('1 of 38 closed');
+        $this->get('/student/progress')->assertOk()->assertSee('1 of 39 closed');
     }
 
     /** The question a team has is who is holding a thing up. */
@@ -96,7 +96,7 @@ class StudentChecklistTest extends TestCase
             ->assertOk()
             ->assertSee('With your adviser')
             // and the draft is not closed until adviser and consultant approve it
-            ->assertSee('0 of 38 closed');
+            ->assertSee('0 of 39 closed');
     }
 
     public function test_a_paper_sent_back_shows_the_capsas_note(): void
@@ -122,7 +122,7 @@ class StudentChecklistTest extends TestCase
         $this->get('/student/progress')
             ->assertOk()
             ->assertDontSee('Signed (Noted) TD RSC')
-            ->assertSee('0 of 37 closed');
+            ->assertSee('0 of 38 closed');
     }
 
     public function test_a_team_with_no_checklist_is_told_so(): void

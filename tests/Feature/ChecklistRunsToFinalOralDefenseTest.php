@@ -80,7 +80,7 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
     {
         $this->assertSame(
             ['Getting started', 'Pre-proposal', 'Chapter 1', 'Chapter 2', 'Chapter 3', 'Title Defense',
-                'System Development', 'Chapter 4', 'Pre Oral Defense', 'Chapter 5', 'Final Oral Defense', 'Final Manuscript'],
+                'System Development', 'Chapter 4', 'Pre Oral Defense', 'Chapter 5', 'Final Oral Defense', 'Final Manuscript', 'Archive Entry'],
             $this->checklist->milestones->pluck('name')->all(),
         );
         $this->assertSame(
@@ -124,10 +124,10 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
             $this->assertContains($closed->state, MilestoneProgress::COMPLETE_STATES, $next->item->title.' did not close');
         }
 
-        $this->assertSame(38, count($order));
+        $this->assertSame(39, count($order));
         $this->assertSame(
             ['Getting started', 'Pre-proposal', 'Chapter 1', 'Chapter 2', 'Chapter 3', 'Title Defense',
-                'System Development', 'Chapter 4', 'Pre Oral Defense', 'Chapter 5', 'Final Oral Defense', 'Final Manuscript'],
+                'System Development', 'Chapter 4', 'Pre Oral Defense', 'Chapter 5', 'Final Oral Defense', 'Final Manuscript', 'Archive Entry'],
             array_values(array_unique($order)),
         );
         $this->assertSame(100, $this->progress()->percent);
@@ -152,13 +152,13 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
     {
         $old = $this->emptyChecklist(CapstoneExpert::factory()->create(['approved_status' => true]));
 
-        $this->assertSame(6, MilestoneTemplate::appendCapstone2($old));
+        $this->assertSame(7, MilestoneTemplate::appendCapstone2($old));
         $this->assertSame(0, MilestoneTemplate::appendCapstone2($old));
         $this->assertSame(['Capstone 1', 'System Development'], $old->milestones()->orderBy('position')->take(2)->pluck('name')->all());
 
         // The department checklist already carries it, so the migration adds nothing there.
         (require base_path('database/migrations/2026_09_24_085415_add_capstone_2_to_existing_checklists.php'))->up();
-        $this->assertSame(38, $this->checklist->deliverables()->count());
+        $this->assertSame(39, $this->checklist->deliverables()->count());
         $this->assertSame(1, $old->deliverables()->where('deliverables.template_key', 'final_oral_defense')->count());
     }
 }

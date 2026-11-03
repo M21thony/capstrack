@@ -443,6 +443,7 @@ function start(root) {
     const who = CAPSA ? 'you check' : 'the CaPSA checks';
     const signer = (r.role === 'consultant' ? t.consultant : t.adviser) || 'the ' + (r.role || 'adviser');
     if (r.by_recommendation) return `Closed when ${CAPSA ? 'you recommend' : 'the CaPSA recommends'} one of the team's titles`;
+    if (r.by_archive) return `Closes when ${CAPSA ? 'you publish' : 'the CaPSA publishes'} it in the Archive`;
     return {
       form: `Closed when ${who} the signed form`,
       approval: `Closed when ${who} the CLF signed by ${signer}`,

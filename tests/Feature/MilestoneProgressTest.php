@@ -297,12 +297,12 @@ class MilestoneProgressTest extends TestCase
     public function test_archived_deliverables_and_milestones_are_not_counted(): void
     {
         $checklist = $this->departmentChecklist($this->capsa);
-        $this->assertSame(38, MilestoneProgress::forTeam($checklist, $this->team->team_id)->total);
+        $this->assertSame(39, MilestoneProgress::forTeam($checklist, $this->team->team_id)->total);
 
         $this->line($checklist, 'td_rsc')->update(['archived_at' => now()]);
         $checklist->milestones()->where('name', 'Getting started')->update(['archived_at' => now()]);
 
-        $this->assertSame(38 - 1 - 5, MilestoneProgress::forTeam($checklist, $this->team->team_id)->total);
+        $this->assertSame(39 - 1 - 5, MilestoneProgress::forTeam($checklist, $this->team->team_id)->total);
     }
 
     public function test_the_department_checklist_has_the_papers_kinds(): void
@@ -315,7 +315,7 @@ class MilestoneProgressTest extends TestCase
         $this->assertSame(5 + 6, $byKind[Deliverable::APPROVAL]);
         $this->assertSame(4 + 3, $byKind[Deliverable::DOCUMENT]);
         $this->assertSame(2 + 2, $byKind[Deliverable::DEFENSE]);
-        $this->assertSame(1, $byKind[Deliverable::CUSTOM]);
+        $this->assertSame(1 + 1, $byKind[Deliverable::CUSTOM]);
     }
 
     public function test_many_teams_are_resolved_together(): void

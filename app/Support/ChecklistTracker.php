@@ -176,6 +176,7 @@ class ChecklistTracker
             'kind' => $item->kind,
             'role' => $item->role,
             'by_recommendation' => $item->closesOnTitleRecommendation(),
+            'by_archive' => $item->closesOnArchiveEntry(),
             'state' => $row->state,
             'waiting_on' => $row->waiting_on,
             'to_check' => self::toCheck($row),

@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\ArchivedDocTag;
 use App\Models\ArchivedDocument;
 use App\Models\CapstonePreProposal;
+use App\Models\Deliverable;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\Term;
 use App\Support\DefenseProgress;
+use App\Support\TeamChecklist;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -68,19 +70,23 @@ class ArchiveController extends Controller
         $team = $this->teamFor($student);
 
         if (! $team) {
-            return back()->with('error', 'You need a team before you can submit a manuscript.');
+            return back()->with('error', 'You need a team before you can send an archive entry.');
         }
 
         if ($team->leader_id !== $student->student_id) {
-            return back()->with('error', 'Only the team leader can submit the Capstone Manuscript.');
+            return back()->with('error', 'Only the team leader can send the Archive Entry.');
         }
 
         if (! app(DefenseProgress::class)->hasPassed($team, self::LAST_STAGE)) {
-            return back()->with('error', 'Your manuscript can be submitted once your team has passed the Final Oral Defense.');
+            return back()->with('error', 'Your Archive Entry can be sent once your team has passed the Final Oral Defense.');
+        }
+
+        if ($this->entryClosed($team)) {
+            return back()->with('error', 'Your CaPSA has closed the Archive Entry.');
         }
 
         if ($this->submissionFor($team->team_id)) {
-            return back()->with('error', 'Your team has already submitted its Capstone Manuscript.');
+            return back()->with('error', 'Your team has already sent its Archive Entry.');
         }
 
         $data = $request->validate([
@@ -107,7 +113,17 @@ class ArchiveController extends Controller
 
         $manuscript->tags()->sync($this->archiveTagIds($data['tags'] ?? []));
 
-        return back()->with('success', 'Manuscript submitted. It goes into the archive once your CaPSA or the admin has reviewed it.');
+        return back()->with('success', 'Archive Entry sent. It goes into the archive once your CaPSA publishes it.');
+    }
+
+    /** Whether the CaPSA has closed the Archive Entry milestone on the team's checklist. */
+    private function entryClosed(Team $team): bool
+    {
+        $line = app(TeamChecklist::class)->for($team)?->deliverables()
+            ->where('deliverables.template_key', Deliverable::ARCHIVE_ENTRY)
+            ->first();
+
+        return (bool) $line?->milestone?->isClosed();
     }
 
     /**
@@ -170,6 +186,7 @@ class ArchiveController extends Controller
             'isLeader' => $team !== null && $team->leader_id === $student->student_id,
             'isFinished' => $team !== null && app(DefenseProgress::class)->hasPassed($team, self::LAST_STAGE),
             'existing' => $team ? $this->submissionFor($team->team_id) : null,
+            'closed' => $team !== null && $this->entryClosed($team),
             'defaultTitle' => $team ? $this->titleFor($team) : '',
             'authors' => $team ? $this->authorsFor($team) : '',
             'year' => $year,
@@ -228,6 +245,7 @@ class ArchiveController extends Controller
             ->get()
             ->map(fn ($sy) => $sy->student)
             ->filter()
+            ->sortBy(fn (Student $member) => mb_strtolower(trim($member->l_name.' '.$member->f_name)))
             ->map(function (Student $member) {
                 $last = trim((string) $member->l_name);
                 $initial = Str::substr(trim((string) $member->f_name), 0, 1);
