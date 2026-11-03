@@ -125,16 +125,16 @@ class MilestonePagesTest extends TestCase
         $this->get(route('capsa.team_management.milestones.requirements.edit', $this->form))->assertForbidden();
     }
 
-    public function test_setup_offers_the_department_milestones_and_another_capsas_to_copy(): void
+    public function test_setup_offers_the_department_milestones_or_none_but_never_another_capsas(): void
     {
         $this->checklist->delete();
         $this->emptyChecklist($this->capsaFor(['BSIT-3B']));
 
         $this->get(route('capsa.team_management.milestones.setup', 'bsit'))
             ->assertOk()
-            ->assertSee('Set up BSIT milestones')
+            ->assertSee('Set up milestones')
             ->assertSee("Use the department's milestones", false)
-            ->assertSee("Copy another CaPSA's milestones", false)
+            ->assertDontSee("Copy another CaPSA's milestones", false)
             ->assertSee('Start empty');
     }
 

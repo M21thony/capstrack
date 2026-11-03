@@ -7,14 +7,7 @@
 @php
   $flag = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Defense"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/></svg>';
   // What teams would see for each choice, in named groups.
-  $lists = ['department' => $department];
-  foreach ($copies as $copy) {
-      $lists['copy-'.$copy->id] = collect([(object) ['name' => null, 'milestones' => $copy->milestones->map(fn ($milestone) => (object) [
-          'name' => $milestone->name,
-          'defense' => $milestone->deliverables->contains('kind', \App\Models\Deliverable::DEFENSE),
-      ])]]);
-  }
-  $lists['empty'] = collect();
+  $lists = ['department' => $department, 'empty' => collect()];
   $total = $department->sum(fn ($group) => $group->milestones->count());
 @endphp
 
@@ -38,11 +31,7 @@
     .tmx .su-opt > div > span{font-size:13px;color:var(--mut)}
     .tmx .su-opt:has(> input:checked){border-color:var(--accent);background:var(--accent-bg)}
     .tmx .su-opt:has(> input:checked) .k{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-    .tmx .su-opt > input:focus-visible,.tmx .su-who label:has(input:focus-visible),.tmx .su-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-    .tmx .su-who{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;align-items:flex-start;gap:6px;font-size:13px;color:var(--ink2)}
-    .tmx .su-who label{position:relative;display:flex;justify-content:space-between;gap:14px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer;margin:0;font-weight:400}
-    .tmx .su-opt:has(> input:checked) .su-who label:has(input:checked){border-color:var(--accent)}
-    .tmx .su-who input{position:absolute;opacity:0;pointer-events:none}
+    .tmx .su-opt > input:focus-visible,.tmx .su-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     .tmx .su-go{padding:0 18px 18px;display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap}
     .tmx .su-err{color:var(--red);font-size:13.5px;margin:0 18px 12px}
     .tmx .su-err:empty{display:none}
@@ -83,24 +72,6 @@
             <span class="k"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6M3 21h18"/></svg></span>
             <div><b>Use the department's milestones</b><span><span class="su-mono">{{ $total }}</span> milestones</span></div>
           </label>
-          @if ($copies->isNotEmpty())
-            {{-- A div, not a label: the CaPSAs below are labels of their own. --}}
-            <div class="su-opt" id="su-copy">
-              <input type="radio" name="from" value="copy" aria-labelledby="su-copy-b">
-              <span class="k"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/></svg></span>
-              <div><b id="su-copy-b">Copy another CaPSA's milestones</b><span>Names, dates and requirements</span>
-                <ul class="su-who" aria-label="Whose milestones to copy">
-                  @foreach ($copies as $copy)
-                    <li><label>
-                      <input type="radio" name="copy_of" value="{{ $copy->id }}" @checked($loop->first)>
-                      <span>{{ $copy->capsa?->name ?? 'Another CaPSA' }}</span>
-                      <span class="su-mono">{{ $copy->milestones->count() }} {{ \Illuminate\Support\Str::plural('milestone', $copy->milestones->count()) }}</span>
-                    </label></li>
-                  @endforeach
-                </ul>
-              </div>
-            </div>
-          @endif
           <label class="su-opt">
             <input type="radio" name="from" value="empty">
             <span class="k"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3" stroke-dasharray="3 3"/></svg></span>
@@ -110,7 +81,7 @@
       </fieldset>
       <p class="su-err" id="ml-err" role="alert"></p>
       <div class="su-go">
-        <button class="su-btn p" type="submit">Set up {{ $program }} milestones</button>
+        <button class="su-btn p" type="submit">Set up milestones</button>
       </div>
     </form>
 
@@ -140,32 +111,19 @@
     const button = form.querySelector('[type=submit]');
     const error = document.getElementById('ml-err');
     const chosen = () => form.querySelector('[name=from]:checked').value;
-    const copyOf = () => form.querySelector('[name=copy_of]:checked')?.value;
     const lists = document.querySelectorAll('[data-list]');
 
-    // Picking a CaPSA picks Copy; the preview follows whatever is picked.
-    const show = () => {
-      const key = chosen() === 'copy' ? 'copy-' + copyOf() : chosen();
+    // The preview follows whatever is picked.
+    form.addEventListener('change', () => {
       lists.forEach(list => {
-        list.hidden = list.dataset.list !== key;
+        list.hidden = list.dataset.list !== chosen();
         if (!list.hidden) { document.getElementById('su-n').textContent = list.dataset.count; }
       });
-    };
-    document.getElementById('su-copy')?.addEventListener('click', event => {
-      if (!event.target.closest('.su-who')) {
-        form.querySelector('[name=from][value=copy]').checked = true;
-        show();
-      }
-    });
-    form.addEventListener('change', event => {
-      if (event.target.name === 'copy_of') { form.querySelector('[name=from][value=copy]').checked = true; }
-      show();
     });
 
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const body = { program: @json($program) };
-      if (chosen() === 'copy') { body.copy_of = Number(copyOf()); }
       if (chosen() === 'empty') { body.empty = true; }
       error.textContent = '';
       button.disabled = true;

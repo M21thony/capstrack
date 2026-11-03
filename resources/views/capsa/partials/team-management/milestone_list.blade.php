@@ -137,7 +137,7 @@
         <b>{{ implode(', ', $programSections) ?: $program }} {{ $many ? 'have' : 'has' }} no milestones yet.</b>
         {{ $many ? 'Their' : 'Its' }} teams see nothing until you set them up.
       </div>
-      <a class="mlx-btn p sm" href="{{ route('capsa.team_management.milestones.setup', $program) }}">Set up {{ $program }} milestones</a>
+      <a class="mlx-btn p sm" href="{{ route('capsa.team_management.milestones.setup', $program) }}">Set up milestones</a>
     </div>
   @endforeach
 

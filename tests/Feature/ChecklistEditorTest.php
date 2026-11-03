@@ -36,15 +36,12 @@ class ChecklistEditorTest extends TestCase
     {
         $this->departmentChecklist($this->capsa, 'BSIT');
         $this->teamInSection('CapsTrack');
-        $other = CapstoneExpert::factory()->create(['approved_status' => true, 'sections' => ['BSIS-3B'], 'first_name' => 'Rina', 'last_name' => 'Castro']);
-        $this->departmentChecklist($other, 'BSIS');
 
         $this->getJson(route('capsa.checklists.index'))
             ->assertOk()
             ->assertJsonPath('checklists.0.program', 'BSIT')
             ->assertJsonPath('checklists.0.used_by', '1 team in BSIT-3A')
-            ->assertJsonPath('missing.0.program', 'BSIS')
-            ->assertJsonCount(1, 'missing.0.copies');
+            ->assertJsonPath('missing.0.program', 'BSIS');
     }
 
     public function test_a_checklist_starts_from_the_department_one_once_per_program(): void
@@ -55,21 +52,6 @@ class ChecklistEditorTest extends TestCase
 
         $this->postJson(route('capsa.checklists.store'), ['program' => 'BSIT'])->assertStatus(422);
         $this->postJson(route('capsa.checklists.store'), ['program' => 'BLIS'])->assertStatus(422);
-    }
-
-    public function test_a_checklist_can_be_copied_from_another_capsas(): void
-    {
-        $other = CapstoneExpert::factory()->create(['approved_status' => true, 'sections' => ['BSIS-3B']]);
-        $source = $this->emptyChecklist($other, 'BSIS', 'Requirements');
-        $this->addDeliverable($source, ['title' => 'Business Process Analysis', 'kind' => Deliverable::DOCUMENT]);
-        $this->addDeliverable($source, ['title' => 'Archived line', 'archived_at' => now()]);
-
-        $this->postJson(route('capsa.checklists.store'), ['program' => 'BSIS', 'copy_of' => $source->id])
-            ->assertCreated()
-            ->assertJsonPath('milestones.0.name', 'Requirements')
-            ->assertJsonCount(1, 'milestones.0.deliverables');
-
-        $this->assertSame(2, Checklist::count());
     }
 
     public function test_another_capsas_checklist_is_not_hers_to_open_or_change(): void

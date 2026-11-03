@@ -294,7 +294,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     }
   }
 
-  /** No checklist yet: start from the department's, or copy another CaPSA's. Nothing is created silently. */
+  /** No checklist yet: start from the department's. Nothing is created silently. */
   function createPanel() {
     const box = el('div', 'ms-create');
     box.append(
@@ -306,14 +306,6 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     missing.forEach(m => {
       const row = el('div', 'ms-create-row');
       row.append(el('b', '', m.program), btn(`Start from the ${m.program} department checklist`, 'ms-btn-gold', () => create({ program: m.program }), 'plus'));
-      if (m.copies.length) {
-        const select = el('select', 'ms-select');
-        select.setAttribute('aria-label', `Copy another CaPSA's ${m.program} checklist`);
-        select.append(new Option("Or copy another CaPSA's…", ''), ...m.copies.map(c => new Option(c.label, c.id)));
-        row.append(select, btn('Copy', '', () => {
-          if (select.value) create({ program: m.program, copy_of: Number(select.value) });
-        }, 'check'));
-      }
       box.append(row);
     });
 

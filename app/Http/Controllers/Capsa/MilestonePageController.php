@@ -136,10 +136,6 @@ class MilestonePageController extends Controller
                     ->map(fn ($lines, $phase) => (object) ['name' => $phase, 'defense' => $lines->contains('kind', Deliverable::DEFENSE)])
                     ->values(),
             ])->values(),
-            'copies' => Checklist::where('program', $program)
-                ->where('capsa_id', '!=', $capsa->expert_id)
-                ->with(['capsa', 'milestones' => fn ($query) => $query->whereNull('archived_at')->with('deliverables')])
-                ->get(),
             'trail' => $this->trail([['Set up '.$program, null]]),
         ]);
     }

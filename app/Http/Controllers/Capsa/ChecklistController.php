@@ -28,7 +28,7 @@ class ChecklistController extends Controller
         private SectionScope $sections,
     ) {}
 
-    /** Her checklists, and the programs she has none for yet with what she could start from. */
+    /** Her checklists, and the programs she has none for yet. */
     public function index(): JsonResponse
     {
         $capsa = $this->access->capsa();
@@ -39,26 +39,17 @@ class ChecklistController extends Controller
             'missing' => collect($capsa->handledPrograms())
                 ->diff($mine->pluck('program'))
                 ->values()
-                ->map(fn (string $program) => [
-                    'program' => $program,
-                    'copies' => Checklist::where('program', $program)
-                        ->where('capsa_id', '!=', $capsa->expert_id)
-                        ->with('capsa')
-                        ->get()
-                        ->map(fn (Checklist $c) => ['id' => $c->id, 'label' => ($c->capsa?->name ?? 'Another CaPSA').'’s '.$c->title])
-                        ->values(),
-                ]),
+                ->map(fn (string $program) => ['program' => $program]),
         ]);
     }
 
-    /** Start one from the department checklist, copy another CaPSA's for the same program, or start empty. */
+    /** Start one from the department checklist, or start empty. */
     public function store(Request $request): JsonResponse
     {
         $capsa = $this->access->capsa();
 
         $data = $request->validate([
             'program' => ['required', Rule::in($capsa->handledPrograms())],
-            'copy_of' => ['nullable', 'integer', 'exists:checklists,id'],
             'empty' => ['sometimes', 'boolean'],
         ]);
 
@@ -66,15 +57,7 @@ class ChecklistController extends Controller
             return response()->json(['message' => 'You already have a '.$data['program'].' checklist.'], 422);
         }
 
-        if (isset($data['copy_of'])) {
-            $source = Checklist::findOrFail($data['copy_of']);
-
-            if ($source->program !== $data['program']) {
-                return response()->json(['message' => 'That checklist is for '.$source->program.', not '.$data['program'].'.'], 422);
-            }
-
-            $checklist = $this->copy($source, $capsa->expert_id);
-        } elseif ($request->boolean('empty')) {
+        if ($request->boolean('empty')) {
             $checklist = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => $data['program'], 'title' => 'Capstone 1 Checklist']);
         } else {
             $checklist = MilestoneTemplate::createChecklist($capsa->expert_id, $data['program']);
@@ -186,29 +169,5 @@ class ChecklistController extends Controller
             ->count();
 
         return $count.' '.Str::plural('team', $count).' in '.$sections->implode(', ');
-    }
-
-    private function copy(Checklist $source, int $capsaId): Checklist
-    {
-        $checklist = Checklist::create(['capsa_id' => $capsaId, 'program' => $source->program, 'title' => $source->title]);
-
-        foreach ($source->milestones()->active()->with(['deliverables' => fn ($q) => $q->whereNull('archived_at')])->get() as $position => $milestone) {
-            $copy = $checklist->milestones()->create([
-                'name' => $milestone->name,
-                'description' => $milestone->description,
-                'due_on' => $milestone->due_on,
-                'position' => $position,
-                'requires_previous' => $milestone->requires_previous,
-                'opened_at' => in_array($milestone->name, MilestoneTemplate::OPEN_FROM_THE_START, true) ? now() : null,
-            ]);
-
-            foreach ($milestone->deliverables->values() as $at => $deliverable) {
-                $copy->deliverables()->create(
-                    $deliverable->only(['template_key', 'title', 'kind', 'role', 'chapter', 'defense_type', 'due_date']) + ['position' => $at],
-                );
-            }
-        }
-
-        return $checklist;
     }
 }

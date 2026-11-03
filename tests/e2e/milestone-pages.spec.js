@@ -82,7 +82,7 @@ const LIST = '/capsa/team-management?tab=milestone_list';
 test('setup: the preview follows the choice, and the department milestones are made', async ({ page }, testInfo) => {
   await as(page, `/__dev-login-expert/capsa?email=${CAPSA}`);
   await page.goto(LIST);
-  await page.getByRole('link', { name: 'Set up BSIT milestones' }).click();
+  await page.getByRole('link', { name: 'Set up milestones' }).click();
   await expect(page).toHaveURL(/milestones\/setup\/BSIT$/i);
 
   const count = page.locator('#su-n');
@@ -96,7 +96,7 @@ test('setup: the preview follows the choice, and the department milestones are m
   await page.getByText("Use the department's milestones", { exact: true }).click();
   await expect(count).toHaveText(department);
 
-  await page.getByRole('button', { name: 'Set up BSIT milestones' }).click();
+  await page.getByRole('button', { name: 'Set up milestones' }).click();
   await expect(page).toHaveURL(/tab=milestone_list/);
   await expect(page.locator('.mlx-name').first()).toBeVisible();
   await shot(page, testInfo, 'list-after-setup');
