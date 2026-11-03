@@ -295,14 +295,16 @@ class ExpertController extends Controller
                 $q->where('status', 'approved');
             }])
             ->get()
-            ->each(function ($expert) use ($teamTags) {
+            ->each(function ($expert) use ($teamTags, $studentProgram) {
                 $expert->slots_used = $expert->teamAssignments->count();
                 unset($expert->teamAssignments);
                 $fields = $expert->expertise->pluck('expertise_field')->filter()->all();
                 $expert->matched_tags = DefenseBoard::matchedTags($teamTags, $fields);
                 // The expert's own skills that cover a team tag, drawn gold on the card.
                 $expert->matching_fields = array_values(array_filter($fields, fn ($f) => DefenseBoard::matchedTags($teamTags, [$f]) !== []));
-                $expert->is_open = $expert->hasSetPrograms() && $expert->max_teams > 0 && $expert->slots_used < $expert->max_teams;
+                // Open the way applying sees it: a full cap for this team's program closes it too.
+                $expert->is_open = $expert->hasSetPrograms() && $expert->max_teams > 0
+                    && ! app(ExpertApplications::class)->fullAt($expert, $studentProgram);
             })
             ->sortBy([
                 fn ($a, $b) => count($b->matched_tags) <=> count($a->matched_tags),

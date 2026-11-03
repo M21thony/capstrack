@@ -86,7 +86,14 @@
       }
       $max = (int) ($expert->max_teams ?? 0);
       $used = (int) $expert->slots_used;
-      $isFull = $max > 0 && $used >= $max;
+      // Full the way applying finds it: their cap for this team's program
+      // counts, not only the total. The card shows whichever cap is tighter.
+      $isFull = (bool) app(\App\Support\ExpertApplications::class)->fullAt($expert, $studentProgram);
+      $programCap = $expert->slotsForProgram($studentProgram);
+      if ($programCap !== null) {
+        $programUsed = $expert->approvedTeamCountForProgram($studentProgram);
+        if ($max < 1 || $programCap - $programUsed < $max - $used) { [$max, $used] = [$programCap, $programUsed]; }
+      }
       $mine = $assignments->where('expert_id', $expert->expert_id);
       $hasPending = $mine->where('status', 'pending')->isNotEmpty();
       $roles = $expert->roles->pluck('role_name')->filter(fn ($r) => in_array($r, $roleNames, true))->values();
