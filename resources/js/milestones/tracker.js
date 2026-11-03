@@ -364,7 +364,7 @@ function start(root) {
 
       const dues = rows.map(r => r.due).filter(Boolean).sort();
       const [status, tone] = name in locked
-        ? ['Waits for ' + (locked[name] || 'the milestone before it'), '']
+        ? [locked[name] ? 'Waits for ' + locked[name] : 'Not open yet', '']
         : pc.overdue ? [pc.overdue + ' overdue', 'ms-t-red']
           : pc.check ? [pc.check + ' to check', 'ms-t-amb']
             : pc.total && pc.closed === pc.total ? ['Complete', 'ms-t-grn'] : ['', ''];

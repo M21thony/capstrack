@@ -49,16 +49,20 @@ trait BuildsChecklists
         return [$team, $leader];
     }
 
+    /** With every milestone already opened by the CaPSA. */
     protected function departmentChecklist(CapstoneExpert $capsa, string $program = 'BSIT'): Checklist
     {
-        return MilestoneTemplate::createChecklist($capsa->expert_id, $program);
+        $checklist = MilestoneTemplate::createChecklist($capsa->expert_id, $program);
+        $checklist->milestones()->update(['opened_at' => now()]);
+
+        return $checklist;
     }
 
     /** A checklist with one empty milestone, for deliverables added by hand. */
     protected function emptyChecklist(CapstoneExpert $capsa, string $program = 'BSIT', string $milestone = 'Capstone 1'): Checklist
     {
         $checklist = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => $program, 'title' => 'Capstone 1 Checklist']);
-        $checklist->milestones()->create(['name' => $milestone, 'position' => 0]);
+        $checklist->milestones()->create(['name' => $milestone, 'position' => 0, 'opened_at' => now()]);
 
         return $checklist;
     }

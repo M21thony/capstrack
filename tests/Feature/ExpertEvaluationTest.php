@@ -66,9 +66,9 @@ class ExpertEvaluationTest extends TestCase
         [$this->team, $this->leader] = $this->teamInSection('Alpha');
 
         $this->checklist = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => 'BSIT', 'title' => 'Capstone Checklist']);
-        $this->proposal = $this->checklist->milestones()->create(['name' => 'Pre-proposal', 'position' => 0]);
+        $this->proposal = $this->checklist->milestones()->create(['name' => 'Pre-proposal', 'position' => 0, 'opened_at' => now()]);
         $this->proposal->deliverables()->create(['title' => 'Pre-Proposal Oral Presentation', 'kind' => Deliverable::DEFENSE, 'defense_type' => DefenseOutcome::PRE_PROPOSAL, 'position' => 0]);
-        $this->chapters = $this->checklist->milestones()->create(['name' => 'Chapters', 'position' => 1, 'requires_previous' => true]);
+        $this->chapters = $this->checklist->milestones()->create(['name' => 'Chapters', 'position' => 1, 'requires_previous' => true, 'opened_at' => now()]);
         $this->chapters->deliverables()->create(['title' => 'Chapter 1 Form', 'kind' => Deliverable::FORM, 'position' => 0]);
 
         foreach (['adviser', 'consultant', 'grammarian'] as $roleName) {

@@ -10,6 +10,8 @@
   @endif
   @if ($m->isClosed())
     <span>Finished {{ $m->closed_at->format('M j, Y') }}</span>
+  @elseif (! $m->isOpened())
+    <span><x-tm-icon n="lock" s="12" /> Not open yet</span>
   @endif
   @if ($row->due_on)
     <span>Due {{ $row->due_on->format('M j, Y') }}</span>

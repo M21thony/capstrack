@@ -208,6 +208,24 @@ class ChecklistEditorTest extends TestCase
             ->assertJsonPath('due_on', null);
     }
 
+    public function test_the_capsa_opens_a_milestone_and_reopening_a_finished_one_keeps_it_open(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $milestone = $checklist->milestones()->first();
+        $milestone->update(['opened_at' => null]);
+
+        $this->patchJson(route('capsa.checklist_milestones.update', $milestone), ['opened' => true])
+            ->assertOk()
+            ->assertJsonPath('opened', true);
+
+        $milestone->update(['opened_at' => null]);
+        $this->patchJson(route('capsa.checklist_milestones.update', $milestone), ['closed' => true])->assertOk();
+        $this->patchJson(route('capsa.checklist_milestones.update', $milestone), ['closed' => false])
+            ->assertOk()
+            ->assertJsonPath('closed', false)
+            ->assertJsonPath('opened', true);
+    }
+
     public function test_archiving_hides_from_teams_until_restored(): void
     {
         [$team] = $this->teamInSection('CapsTrack');

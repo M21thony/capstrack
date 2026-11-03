@@ -89,12 +89,13 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
         );
     }
 
-    public function test_capstone_2_waits_for_capstone_1(): void
+    /** System Development has no lock of its own; the Final Oral Defense still waits for the defenses before it. */
+    public function test_only_the_final_oral_defense_waits_for_capstone_1(): void
     {
         $progress = $this->progress();
         $systemDevelopment = $progress->milestones->first(fn ($m) => $m->milestone->name === 'System Development');
 
-        $this->assertTrue($systemDevelopment->locked);
+        $this->assertFalse($systemDevelopment->locked);
         $this->assertTrue($progress->items->first(fn ($r) => $r->item->template_key === 'final_oral_defense')->locked);
         $this->assertNotEmpty($this->team->checklistBlockersFor('Final Oral Defense'));
     }

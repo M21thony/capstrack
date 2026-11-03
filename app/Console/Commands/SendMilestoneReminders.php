@@ -68,6 +68,7 @@ class SendMilestoneReminders extends Command
                 $due = $progress->items->filter(
                     fn ($row) => $row->due_on
                         && ! $row->milestone->isClosed()
+                        && $row->milestone->isOpened()
                         && $row->due_on->isSameDay($target)
                         && ! in_array($row->state, MilestoneProgress::COMPLETE_STATES, true)
                 )->values();

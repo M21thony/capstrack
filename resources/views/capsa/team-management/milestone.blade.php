@@ -21,9 +21,12 @@
     </div>
     <div class="ml-acts">
       <a class="ml-btn" href="{{ route('capsa.team_management.milestones.edit', $milestone) }}">Edit milestone</a>
-      @unless ($milestone->archived_at)
-        <button class="ml-btn" type="button" id="ml-close" data-closed="{{ $milestone->isClosed() ? 'false' : 'true' }}">{{ $milestone->isClosed() ? 'Reopen' : 'Mark finished' }}</button>
-      @endunless
+      @if ($milestone->archived_at)
+      @elseif (! $milestone->isOpened())
+        <button class="ml-btn ml-gold" type="button" id="ml-close" data-body='{"opened":true}'>Open to teams</button>
+      @else
+        <button class="ml-btn" type="button" id="ml-close" data-body='{"closed":{{ $milestone->isClosed() ? 'false' : 'true' }}}'>{{ $milestone->isClosed() ? 'Reopen' : 'Mark finished' }}</button>
+      @endif
     </div>
   </div>
 
@@ -71,7 +74,7 @@
     const button = event.currentTarget;
     button.disabled = true;
     try {
-      await mlSend(@json(route('capsa.checklist_milestones.update', $milestone)), 'PATCH', { closed: button.dataset.closed === 'true' });
+      await mlSend(@json(route('capsa.checklist_milestones.update', $milestone)), 'PATCH', JSON.parse(button.dataset.body));
       location.reload();
     } catch (error) {
       button.disabled = false;

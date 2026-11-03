@@ -372,6 +372,7 @@
               @elseif ($group->overdue)<span class="pt-pill r">{{ $group->overdue }} overdue</span>
               @elseif ($group->evaluations_owed->isNotEmpty())<span class="pt-pill y">Evaluate your {{ \App\Support\ExpertEvaluations::whom($group->evaluations_owed) }}</span>
               @elseif ($st === 'done')<span class="pt-pill g">Done</span>
+              @elseif ($group->not_open)<span class="pt-pill n">Not open yet</span>
               @elseif ($group->locked)<span class="pt-pill n">Locked</span>
               @elseif ($isNow)<span class="pt-pill y">You are here</span>@endif
             </span>
@@ -402,7 +403,11 @@
         @elseif ($group->locked && $group->requires)
           <div class="pt-gate">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            <div><b>Locked</b><span>Opens after {{ $group->requires }}.</span></div>
+            @if ($group->not_open)
+              <div><b>Not open yet</b></div>
+            @else
+              <div><b>Locked</b><span>Opens after {{ $group->requires }}.</span></div>
+            @endif
           </div>
         @endif
         @if ($group->description)

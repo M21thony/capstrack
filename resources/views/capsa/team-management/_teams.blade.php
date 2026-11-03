@@ -19,7 +19,7 @@
   $maxMembers = function (string $section) use (&$limits): int {
       return $limits[$section] ??= \App\Models\Team::maxMembers($section);
   };
-  $toneOf = fn ($word) => ['Completed' => 'd', 'Closed' => 'd', 'Overdue' => 'o', 'Past due' => 'o', 'In progress' => 'p', 'Locked' => 'k'][$word] ?? 'n';
+  $toneOf = fn ($word) => ['Completed' => 'd', 'Closed' => 'd', 'Overdue' => 'o', 'Past due' => 'o', 'In progress' => 'p', 'Locked' => 'k', 'Not open yet' => 'k'][$word] ?? 'n';
   $waitsBy = $todo->groupBy('teamId');
 
   // Said once, so the Status column and the Status filter cannot disagree.
@@ -182,7 +182,7 @@
     <span><span class="strip"><i class="s-p"></i></span>In progress</span>
     <span><span class="strip"><i class="s-o"></i></span>Overdue</span>
     <span><span class="strip"><i class="s-n"></i></span>Not started</span>
-    <span><span class="strip"><i class="s-k"></i></span>Locked until the one before is done</span>
+    <span><span class="strip"><i class="s-k"></i></span>Locked: defense before not passed, or not open yet</span>
   </div>
   <div class="foot"><span data-count>{{ $rows->count() }} {{ Str::plural('team', $rows->count()) }}</span><span class="tx-host"></span></div>
 </div>

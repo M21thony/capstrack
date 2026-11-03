@@ -153,16 +153,17 @@ class MilestoneProgress
      * The same items grouped into their milestones, in checklist order, each
      * with the gate worked out.
      *
-     * A gated milestone is locked until every milestone above it is complete.
-     * An ungated one opens together with the milestone above it, so chapters
-     * can run side by side behind one gate. Nothing stores that: it is read
-     * off the states here, so the grid, the team page and the student's
-     * upload all read one answer.
+     * The CaPSA opens each milestone for the whole section; one she has not
+     * opened is locked for every team. On top of that a gated milestone is
+     * locked for a team that has not passed the defense above it: no
+     * Pre-proposal Defense, no Title Defense; no Title Defense, no Pre Oral.
+     * Nothing else holds a team back, so a chapter opens on time even for a
+     * team still finishing the one before. It is read off the states here,
+     * so the grid, the team page and the student's upload all read one answer.
      *
-     * A milestone whose items are all done still holds the next gate shut
-     * while the leader still owes the expert evaluation for a defense it
-     * holds (ExpertEvaluations): evaluating the experts is the last step of
-     * passing a defense.
+     * A passed defense still holds the next gate shut while the leader owes
+     * the expert evaluation for it (ExpertEvaluations): evaluating the
+     * experts is the last step of passing a defense.
      *
      * Each item also carries its own lock (locked, waits_for): the milestone's,
      * or the order inside it - see itemWaitsFor().
@@ -171,18 +172,21 @@ class MilestoneProgress
      */
     private static function byMilestone(Collection $rows, Collection $owed): Collection
     {
-        $unfinished = [];
-        $above = null;
+        // What the last defense above still lacks, if anything.
+        $gate = null;
 
         return $rows
             ->groupBy(fn ($row) => $row->milestone->id)
-            ->map(function (Collection $items) use (&$unfinished, &$above, $owed) {
+            ->map(function (Collection $items) use (&$gate, $owed) {
                 $milestone = $items->first()->milestone;
                 $total = $items->count();
                 $completed = $items->whereIn('state', self::COMPLETE_STATES)->count();
-                $waitsFor = $milestone->requires_previous
-                    ? ($unfinished ? self::names($unfinished) : null)
-                    : $above;
+                $notOpen = ! $milestone->isOpened();
+                $waitsFor = match (true) {
+                    $notOpen => 'your CaPSA to open it',
+                    $milestone->requires_previous => $gate,
+                    default => null,
+                };
                 $locked = $waitsFor !== null;
                 $dueOn = $milestone->due_on ?? $items->pluck('due_on')->filter()->max();
                 // The defenses this milestone holds; once it is finished,
@@ -211,6 +215,7 @@ class MilestoneProgress
                     'overdue' => $items->where('state', self::OVERDUE)->count(),
                     'percent' => $total === 0 ? 0 : (int) round($completed / $total * 100),
                     'locked' => $locked,
+                    'not_open' => $notOpen,
                     // The milestone's own date when the CaPSA set one;
                     // otherwise the last thing due inside it.
                     'due_on' => $dueOn,
@@ -228,12 +233,15 @@ class MilestoneProgress
                     'evaluations_owed' => $evaluationsOwed,
                 ];
 
-                if ($completed < $total) {
-                    $unfinished[] = $milestone->name;
-                } elseif ($evaluationsOwed->isNotEmpty()) {
-                    $unfinished[] = 'the expert evaluation for '.$evaluationsOwed->pluck('stage')->unique()->implode(' and ');
+                foreach ($items->filter(fn ($row) => $row->item->kind === Deliverable::DEFENSE && $row->item->defense_type) as $row) {
+                    $stage = $row->item->defense_type;
+                    $evaluations = $owed->filter(fn ($e) => mb_strtolower($e->stage) === mb_strtolower($stage));
+                    $gate = match (true) {
+                        ! in_array($row->state, self::COMPLETE_STATES, true) => 'a passed '.$stage,
+                        $evaluations->isNotEmpty() => 'the expert evaluation for '.$stage,
+                        default => null,
+                    };
                 }
-                $above = $waitsFor;
 
                 return $summary;
             })
@@ -289,6 +297,10 @@ class MilestoneProgress
      */
     public static function milestoneState(object $summary): array
     {
+        if ($summary->not_open ?? false) {
+            return ['Not open yet', 'p-gray', 'lock'];
+        }
+
         if ($summary->locked) {
             return ['Locked', 'p-gray', 'lock'];
         }

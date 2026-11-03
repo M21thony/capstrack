@@ -19,7 +19,7 @@
   @if ($previous)
     <label class="ml-check">
       <input type="checkbox" name="requires_previous" @checked($milestone?->requires_previous)>
-      <span>Teams can start this only after they finish {{ $previous }}</span>
+      <span>Teams can start this only after they pass the defense in {{ $previous }}</span>
     </label>
   @endif
   @unless ($milestone)

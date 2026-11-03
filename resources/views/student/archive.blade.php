@@ -199,7 +199,7 @@
     </div>
   @elseif ($sub['closed'])
     <div style="margin-top:10px;font-size:12px;color:var(--text3)">
-      Your CaPSA has closed the Archive Entry.
+      {{ $sub['closed'] }}
     </div>
   @else
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">

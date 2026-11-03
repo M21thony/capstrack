@@ -340,7 +340,7 @@
                      red "missed" mark on every row: while it is locked the team
                      cannot hand anything in, so nothing here is theirs to miss. --}}
                 <div class="tp-gate"><x-tm-icon n="lock" s="16" />
-                  <span><b>Opens once {{ $selected->requires }} {{ Str::contains($selected->requires, ' and ') ? 'are' : 'is' }} complete.</b> Until then the team can't hand anything in here.</span></div>
+                  <span><b>{{ $selected->not_open ? 'Not open yet.' : 'Opens after '.$selected->requires.'.' }}</b> Until then the team can't hand anything in here.</span></div>
               @endif
 
               <ul class="tp-items">
@@ -348,7 +348,7 @@
                   @php
                     $short = ['done' => 'd', 'done_late' => 'l', 'handed_in' => 'h', 'overdue' => 'o'][$item->state] ?? 'n';
                     $word = ['d' => 'Done', 'l' => 'Done late', 'h' => 'Handed in', 'o' => 'Overdue', 'n' => 'Not started'][$short];
-                    $note = MilestoneProgress::itemNote($item, $item->locked, $item->waits_for);
+                    $note = $selected->not_open ? '' : MilestoneProgress::itemNote($item, $item->locked, $item->waits_for);
                     $steps = MilestoneProgress::steps($item->item->kind, $item->state, $item->waiting_on);
                     $stepsDone = collect($steps)->where('state', 'done')->count();
                   @endphp
@@ -367,7 +367,7 @@
                     </ol>
                     </div>
                     @if ($item->locked && $item->state !== 'handed_in')
-                      <span class="tp-state lk"><x-tm-icon n="lock" s="12" />Locked</span>
+                      <span class="tp-state lk"><x-tm-icon n="lock" s="12" />{{ $selected->not_open ? 'Not open yet' : 'Locked' }}</span>
                     @elseif ($asCapsa && $item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
                       {{-- A signed paper closes on the CaPSA's check, and the check
                            itself lives in the Milestones tracker. Once it is

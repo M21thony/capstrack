@@ -46,9 +46,10 @@ class ProgressController extends Controller
                     'closed' => $summary->completed,
                     'overdue' => $summary->overdue,
                     'dues' => $summary->items->pluck('due_on')->filter()->sort()->values(),
-                    // Shut behind an unfinished phase - or a finished one whose
-                    // experts the leader has not rated yet.
+                    // Not opened by the CaPSA yet, or shut until the defense before
+                    // it is passed and its experts rated.
                     'locked' => $summary->locked,
+                    'not_open' => $summary->not_open,
                     'requires' => $summary->requires,
                     'evaluations_owed' => $summary->evaluations_owed,
                 ])

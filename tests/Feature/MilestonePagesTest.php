@@ -61,12 +61,27 @@ class MilestonePagesTest extends TestCase
             ->assertSee(route('capsa.team_management.milestones.requirements.edit', $this->form), false);
     }
 
+    public function test_a_locked_milestone_names_the_defense_it_waits_for_not_the_one_above(): void
+    {
+        $defense = $this->checklist->milestones()->create(['name' => 'Final Oral Defense', 'position' => 1, 'opened_at' => now()]);
+        $defense->deliverables()->create(['title' => 'Final Oral Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Final Oral Defense', 'position' => 0]);
+        $this->checklist->milestones()->create(['name' => 'Final Manuscript', 'position' => 2, 'requires_previous' => true]);
+        $archive = $this->checklist->milestones()->create(['name' => 'Archive Entry', 'position' => 3, 'requires_previous' => true]);
+
+        $this->get(route('capsa.team_management.milestones.show', $archive))
+            ->assertOk()
+            ->assertSee('Opens after Final Oral Defense')
+            ->assertDontSee('Opens after Final Manuscript');
+    }
+
     public function test_the_forms_open_for_new_and_existing_milestones_and_requirements(): void
     {
+        $this->addDeliverable($this->checklist, ['title' => 'Title Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Title Defense']);
+
         $this->get(route('capsa.team_management.milestones.create', $this->checklist))
             ->assertOk()
             ->assertSee('New milestone')
-            ->assertSee('Teams can start this only after they finish Chapter 1-3 Submission')
+            ->assertSee('Teams can start this only after they pass the defense in Chapter 1-3 Submission')
             ->assertSee('It goes at the end of the list.');
 
         // Named once, in the top bar: the milestone, then Edit.

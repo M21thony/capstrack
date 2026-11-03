@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\CapstoneDocumentReview;
-use App\Models\CapstoneExpert;
 use App\Models\Checklist;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
@@ -16,9 +14,10 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * What a team may hand in when: a ticked milestone waits for everything
- * above it, an unticked one opens with the one above, and inside a milestone
- * a CLF waits for its draft and a defense for the papers before it.
+ * What a team may hand in when: a ticked milestone waits only for the
+ * defense above it to be passed, the chapters never wait for each other, and
+ * inside a milestone a CLF waits for its draft and a defense for the papers
+ * before it. An unopened milestone waits for the CaPSA.
  */
 class MilestoneOrderTest extends TestCase
 {
@@ -31,7 +30,7 @@ class MilestoneOrderTest extends TestCase
         $checklist = Checklist::create(['capsa_id' => $this->capsaFor()->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist']);
 
         $add = function (string $name, bool $gate, array $items) use ($checklist) {
-            $milestone = $checklist->milestones()->create(['name' => $name, 'position' => $checklist->milestones()->count(), 'requires_previous' => $gate]);
+            $milestone = $checklist->milestones()->create(['name' => $name, 'position' => $checklist->milestones()->count(), 'requires_previous' => $gate, 'opened_at' => now()]);
 
             return collect($items)->values()->map(fn ($item, $at) => $milestone->deliverables()->create($item + ['position' => $at]))->all();
         };
@@ -40,7 +39,7 @@ class MilestoneOrderTest extends TestCase
             ['title' => 'Pre-Proposal Oral Presentation', 'kind' => Deliverable::DEFENSE, 'defense_type' => DefenseOutcome::PRE_PROPOSAL],
             ['title' => 'Signed Final Project Title Form', 'kind' => Deliverable::FORM],
         ]);
-        [$draft1, $clf1] = $add('Chapter 1', true, [
+        [$draft1, $clf1] = $add('Chapter 1', false, [
             ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT, 'chapter' => '1'],
             ['title' => 'Signed CLF Approving Chapter 1', 'kind' => Deliverable::APPROVAL, 'role' => 'adviser', 'chapter' => '1'],
         ]);
@@ -56,33 +55,21 @@ class MilestoneOrderTest extends TestCase
 
         $waits = fn (Deliverable $d) => MilestoneProgress::forTeam($checklist, $team->team_id)->items->firstWhere('item.id', $d->id)->waits_for;
 
-        // Before the pre-proposal defense: its form waits for it, and everything below waits for Pre-proposal.
+        // Before the pre-proposal defense: its form waits for it, the
+        // chapters are open anyway, and Title Defense waits for the pass.
         $this->assertNull($waits($oral));
         $this->assertSame('Pre-Proposal Oral Presentation', $waits($titleForm));
-        $this->assertSame('Pre-proposal', $waits($draft1));
-        $this->assertSame('Pre-proposal', $waits($draft2), 'Chapter 2 opens with Chapter 1, so it waits for the same thing');
-        $this->assertSame('Pre-proposal, Chapter 1 and Chapter 2', $waits($recommend));
-
-        $this->pass($team, DefenseOutcome::PRE_PROPOSAL);
-        $this->check($team, $titleForm);
-
-        // Both chapters open at once; a chapter's CLF waits for its draft.
         $this->assertNull($waits($draft1));
-        $this->assertNull($waits($draft2));
+        $this->assertNull($waits($draft2), 'Chapter 2 opens even with Chapter 1 unfinished');
         $this->assertSame('Chapter 1 Draft', $waits($clf1));
-        $this->assertSame('Chapter 1 and Chapter 2', $waits($recommend));
+        $this->assertSame('a passed Pre-proposal Defense', $waits($recommend));
 
-        // Chapter 1's draft passes: its CLF opens.
-        $this->approve($this->upload($student, $draft1, now()->subDays(3)->toDateTimeString()));
-        $this->assertNull($waits($clf1));
-
-        // The chapters done: Title Defense opens, the defense waits for the
-        // papers above it, the manuscript for the defense.
-        $this->approve($this->upload($student, $draft2, now()->subDays(3)->toDateTimeString()));
-        $this->check($team, $clf1);
-
+        // Passed: Title Defense opens with the chapters still unfinished.
+        $this->pass($team, DefenseOutcome::PRE_PROPOSAL);
         $this->assertNull($waits($recommend));
         $this->assertNull($waits($notice));
+
+        // Inside it, the defense waits for the papers above it, the manuscript for the defense.
         $this->assertSame('Signed CLF Recommending for Title Defense and Signed Title Defense Hearing Notice', $waits($defense));
         $this->assertSame('Title Defense', $waits($manuscript));
 
@@ -91,18 +78,18 @@ class MilestoneOrderTest extends TestCase
         $this->assertNull($waits($defense));
     }
 
-    /** Both reviewers approve a draft. */
-    private function approve(int $fileId): void
+    public function test_a_milestone_the_capsa_has_not_opened_waits_for_her(): void
     {
-        $expert = CapstoneExpert::factory()->create(['approved_status' => true])->expert_id;
+        [$team] = $this->teamInSection('Waiting Team');
+        $checklist = Checklist::create(['capsa_id' => $this->capsaFor()->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist']);
+        $milestone = $checklist->milestones()->create(['name' => 'Chapter 1', 'position' => 0]);
+        $draft = $milestone->deliverables()->create(['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT, 'chapter' => '1', 'position' => 0]);
 
-        foreach (['adviser', 'consultant'] as $role) {
-            CapstoneDocumentReview::create([
-                'file_id' => $fileId, 'expert_id' => $expert, 'role' => $role,
-                'review_status' => CapstoneDocumentReview::REVIEWED,
-                'verdict' => CapstoneDocumentReview::APPROVED, 'verdict_at' => now()->subDay(),
-            ]);
-        }
+        $progress = MilestoneProgress::forTeam($checklist, $team->team_id);
+        $this->assertSame('your CaPSA to open it', $progress->items->firstWhere('item.id', $draft->id)->waits_for);
+
+        $milestone->update(['opened_at' => now()]);
+        $this->assertNull(MilestoneProgress::forTeam($checklist, $team->team_id)->items->firstWhere('item.id', $draft->id)->waits_for);
     }
 
     private function check(Team $team, Deliverable $deliverable): void

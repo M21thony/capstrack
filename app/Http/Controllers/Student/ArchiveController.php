@@ -81,8 +81,8 @@ class ArchiveController extends Controller
             return back()->with('error', 'Your Archive Entry can be sent once your team has passed the Final Oral Defense.');
         }
 
-        if ($this->entryClosed($team)) {
-            return back()->with('error', 'Your CaPSA has closed the Archive Entry.');
+        if ($shut = $this->entryShut($team)) {
+            return back()->with('error', $shut);
         }
 
         if ($this->submissionFor($team->team_id)) {
@@ -116,14 +116,19 @@ class ArchiveController extends Controller
         return back()->with('success', 'Archive Entry sent. It goes into the archive once your CaPSA publishes it.');
     }
 
-    /** Whether the CaPSA has closed the Archive Entry milestone on the team's checklist. */
-    private function entryClosed(Team $team): bool
+    /** Why the team can't send its Archive Entry yet or anymore, if the CaPSA hasn't opened it or has closed it. */
+    private function entryShut(Team $team): ?string
     {
-        $line = app(TeamChecklist::class)->for($team)?->deliverables()
+        $milestone = app(TeamChecklist::class)->for($team)?->deliverables()
             ->where('deliverables.template_key', Deliverable::ARCHIVE_ENTRY)
-            ->first();
+            ->first()?->milestone;
 
-        return (bool) $line?->milestone?->isClosed();
+        return match (true) {
+            ! $milestone => null,
+            $milestone->isClosed() => 'Your CaPSA has closed the Archive Entry.',
+            ! $milestone->isOpened() => 'Your CaPSA has not opened the Archive Entry yet.',
+            default => null,
+        };
     }
 
     /**
@@ -186,7 +191,7 @@ class ArchiveController extends Controller
             'isLeader' => $team !== null && $team->leader_id === $student->student_id,
             'isFinished' => $team !== null && app(DefenseProgress::class)->hasPassed($team, self::LAST_STAGE),
             'existing' => $team ? $this->submissionFor($team->team_id) : null,
-            'closed' => $team !== null && $this->entryClosed($team),
+            'closed' => $team ? $this->entryShut($team) : null,
             'defaultTitle' => $team ? $this->titleFor($team) : '',
             'authors' => $team ? $this->authorsFor($team) : '',
             'year' => $year,

@@ -37,8 +37,11 @@ class MilestoneTemplate
     /** A line only Capstone 2 has, to tell whether a checklist already carries it. */
     private const CAPSTONE_2_MARKER = 'pre_oral_defense';
 
-    /** The milestones that open only once everything above them is complete. */
-    private const GATES = ['Pre-proposal', 'Chapter 1', 'Title Defense', 'System Development', 'Pre Oral Defense', 'Final Oral Defense', 'Final Manuscript'];
+    /** The milestones a team cannot use until it has passed the defense above them. */
+    public const GATES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Final Manuscript', 'Archive Entry'];
+
+    /** The milestones open from the start; the CaPSA opens every other one. */
+    public const OPEN_FROM_THE_START = ['Getting started', 'Pre-proposal'];
 
     public static function all(): array
     {
@@ -189,9 +192,8 @@ class MilestoneTemplate
             $milestone = $checklist->milestones()->create([
                 'name' => $lines->first()['phase'],
                 'position' => $from + $at,
-                // Chapters open together once the pre-proposal is passed; Title
-                // Defense waits for all of them.
                 'requires_previous' => in_array($lines->first()['phase'], self::GATES, true),
+                'opened_at' => in_array($lines->first()['phase'], self::OPEN_FROM_THE_START, true) ? now() : null,
             ]);
 
             foreach ($lines->values() as $at => $line) {

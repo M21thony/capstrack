@@ -199,6 +199,7 @@ class ChecklistController extends Controller
                 'due_on' => $milestone->due_on,
                 'position' => $position,
                 'requires_previous' => $milestone->requires_previous,
+                'opened_at' => in_array($milestone->name, MilestoneTemplate::OPEN_FROM_THE_START, true) ? now() : null,
             ]);
 
             foreach ($milestone->deliverables->values() as $at => $deliverable) {

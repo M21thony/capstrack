@@ -63,8 +63,10 @@ class MilestonePageController extends Controller
         return view('capsa.team-management.milestone-form', [
             'checklist' => $checklist,
             'milestone' => null,
-            // A new one goes last, so it would wait for the last one teams see.
-            'previous' => $checklist->milestones()->active()->get()->last()?->name,
+            // A new one goes last, so it would wait for the last defense teams see.
+            'previous' => $checklist->milestones()->active()
+                ->whereHas('deliverables', fn ($query) => $query->where('kind', Deliverable::DEFENSE))
+                ->get()->last()?->name,
             'trail' => $this->trail([['New milestone', null]]),
         ]);
     }

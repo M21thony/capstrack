@@ -132,7 +132,10 @@ class ChecklistTracker
                     'past_due' => $summaries->where('past_due', true)->count(),
                 ];
 
-                $previous = $hidden ? $previous : $milestone->name;
+                // A locked milestone waits for the last defense above it.
+                if (! $hidden && $milestone->deliverables->contains('kind', Deliverable::DEFENSE)) {
+                    $previous = $milestone->name;
+                }
 
                 return $row;
             });
@@ -247,10 +250,11 @@ class ChecklistTracker
                     'rows' => isset($progress[$team->team_id])
                         ? $progress[$team->team_id]->items->map(fn ($row) => self::row($row, $team->team_id, $canCheck))->values()
                         : [],
-                    // Milestone name => the one it waits for, for each still locked.
+                    // Milestone name => what it waits for, for each still locked;
+                    // null for one the CaPSA has not opened yet.
                     'locked' => isset($progress[$team->team_id])
                         ? $progress[$team->team_id]->milestones->where('locked', true)
-                            ->mapWithKeys(fn ($m) => [$m->milestone->name => $m->requires])
+                            ->mapWithKeys(fn ($m) => [$m->milestone->name => $m->not_open ? null : $m->requires])
                         : [],
                 ];
             })->values(),

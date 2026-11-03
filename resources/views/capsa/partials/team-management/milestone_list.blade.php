@@ -90,6 +90,8 @@
                 <a class="ml-btn" href="{{ route('capsa.team_management.milestones.edit', $m) }}">Edit</a>
                 @if ($m->archived_at)
                   <button class="ml-btn" type="button" data-patch="{{ route('capsa.checklist_milestones.update', $m) }}" data-body='{"archived":false}'>Show to teams again</button>
+                @elseif (! $m->isOpened())
+                  <button class="ml-btn ml-gold" type="button" data-patch="{{ route('capsa.checklist_milestones.update', $m) }}" data-body='{"opened":true}'>Open to teams</button>
                 @else
                   <button class="ml-btn" type="button" data-patch="{{ route('capsa.checklist_milestones.update', $m) }}" data-body='{"closed":{{ $m->isClosed() ? 'false' : 'true' }}}'>{{ $m->isClosed() ? 'Reopen' : 'Mark finished' }}</button>
                 @endif

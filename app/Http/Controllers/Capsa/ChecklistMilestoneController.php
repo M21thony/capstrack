@@ -60,6 +60,7 @@ class ChecklistMilestoneController extends Controller
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'due_on' => ['sometimes', 'nullable', 'date', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
             'closed' => ['sometimes', 'boolean'],
+            'opened' => ['sometimes', 'boolean'],
         ]);
 
         if (isset($data['name'])) {
@@ -85,6 +86,13 @@ class ChecklistMilestoneController extends Controller
         // Closing twice keeps the first date: that is when it was closed.
         if (array_key_exists('closed', $data)) {
             $milestone->closed_at = $data['closed'] ? ($milestone->closed_at ?? now()) : null;
+            // A finished one was open, so Reopen leaves it open.
+            $milestone->opened_at ??= $milestone->closed_at;
+        }
+
+        // Opened by the CaPSA for the whole section; nothing opens it on its own.
+        if (array_key_exists('opened', $data)) {
+            $milestone->opened_at = $data['opened'] ? ($milestone->opened_at ?? now()) : null;
         }
 
         $milestone->save();
@@ -112,6 +120,7 @@ class ChecklistMilestoneController extends Controller
             'due_on' => $milestone->due_on?->toDateString(),
             'closed' => $milestone->isClosed(),
             'closed_at' => $milestone->closed_at?->toDateString(),
+            'opened' => $milestone->isOpened(),
         ];
     }
 }

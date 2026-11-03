@@ -58,7 +58,7 @@ test.beforeAll(() => {
     $capsa->forceFill(['tour_completed_at' => now()])->save();
     $role = Illuminate\\Support\\Facades\\DB::table('roles')->where('role_name', App\\Models\\CapstoneExpert::CAPSA_ROLE)->value('role_id');
     Illuminate\\Support\\Facades\\DB::table('expert_roles')->insertOrIgnore(['expert_id' => $capsa->expert_id, 'role_id' => $role]);
-    App\\Support\\MilestoneTemplate::createChecklist($capsa->expert_id, 'BSIT');
+    App\\Support\\MilestoneTemplate::createChecklist($capsa->expert_id, 'BSIT')->milestones()->update(['opened_at' => now()]);
     $members = collect(['${LEADER}' => ['Ana', 'Archer'], '${MEMBER}' => ['Ben', 'Bautista']])->map(fn ($n, $email) => tap(
       App\\Models\\Student::create(['email' => $email, 'f_name' => $n[0], 'l_name' => $n[1], 'course' => 'BSIT', 'year_section' => '4th · Z']),
       fn ($s) => $s->forceFill(['tutorial_completed_at' => now()])->save()));
@@ -123,15 +123,29 @@ test('the CaPSA publishes it and the line closes', async ({ page }) => {
   await expect(archiveLine(page).locator('a.pt-file')).toHaveCount(0);
 });
 
-test('a closed Archive Entry takes no new entry', async ({ page }) => {
-  php(`$team = App\\Models\\Team::where('team_name', '${TEAM}')->value('team_id');
+// Sets the Archive Entry milestone's dates, with the team's entry taken back out.
+const setArchiveMilestone = (fields) => php(`$team = App\\Models\\Team::where('team_name', '${TEAM}')->value('team_id');
     $capsa = App\\Models\\CapstoneExpert::where('email', '${CAPSA}')->value('expert_id');
     App\\Models\\ArchivedDocument::where('team_id', $team)->delete();
     App\\Models\\ChecklistMilestone::whereIn('checklist_id', App\\Models\\Checklist::where('capsa_id', $capsa)->pluck('id'))
-      ->where('name', 'Archive Entry')->update(['closed_at' => now()]);
+      ->where('name', 'Archive Entry')->update(${fields});
     echo '@@1';`);
+
+test('a closed Archive Entry takes no new entry', async ({ page }) => {
+  setArchiveMilestone(`['closed_at' => now()]`);
 
   await as(page, `/__dev-login-student/archive?email=${LEADER}`);
   await expect(page.getByText('Your CaPSA has closed the Archive Entry.')).toBeVisible();
   await expect(page.locator('#open-manuscript')).toHaveCount(0);
+});
+
+test('an Archive Entry the CaPSA has not opened takes no entry', async ({ page }) => {
+  setArchiveMilestone(`['closed_at' => null, 'opened_at' => null]`);
+
+  await as(page, `/__dev-login-student/archive?email=${LEADER}`);
+  await expect(page.getByText('Your CaPSA has not opened the Archive Entry yet.')).toBeVisible();
+  await expect(page.locator('#open-manuscript')).toHaveCount(0);
+
+  await as(page, `/__dev-login-student/progress?email=${LEADER}`);
+  await expect(page.locator('details.pt-group', { has: archiveLine(page) }).locator('summary')).toContainText('Not open yet');
 });
