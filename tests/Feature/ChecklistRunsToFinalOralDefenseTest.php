@@ -19,7 +19,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * One checklist from Getting started to Final Oral Defense: Capstone 2
+ * One checklist from the Pre-proposal Defense to Final Oral Defense: Capstone 2
  * carries on below Title Defense, and a team can work it top to bottom
  * without a line ever being stuck.
  */
@@ -86,8 +86,7 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
     public function test_the_department_checklist_carries_on_into_capstone_2(): void
     {
         $this->assertSame(
-            ['Getting started', 'Pre-proposal', 'Chapter 1', 'Chapter 2', 'Chapter 3', 'Title Defense',
-                'System Development', 'Chapter 4', 'Pre Oral Defense', 'Chapter 5', 'Final Oral Defense', 'Final Manuscript', 'Archive Entry'],
+            ['Pre-proposal Defense', 'Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Archive Entry'],
             $this->checklist->milestones->pluck('name')->all(),
         );
         $this->assertSame(
@@ -96,13 +95,11 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
         );
     }
 
-    /** System Development has no lock of its own; the Final Oral Defense still waits for the defenses before it. */
-    public function test_only_the_final_oral_defense_waits_for_capstone_1(): void
+    /** The Final Oral Defense waits for the defenses before it. */
+    public function test_the_final_oral_defense_waits_for_capstone_1(): void
     {
         $progress = $this->progress();
-        $systemDevelopment = $progress->milestones->first(fn ($m) => $m->milestone->name === 'System Development');
 
-        $this->assertFalse($systemDevelopment->locked);
         $this->assertTrue($progress->items->first(fn ($r) => $r->item->template_key === 'final_oral_defense')->locked);
         $this->assertNotEmpty($this->team->checklistBlockersFor('Final Oral Defense'));
     }
@@ -132,10 +129,9 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
             $this->assertContains($closed->state, MilestoneProgress::COMPLETE_STATES, $next->item->title.' did not close');
         }
 
-        $this->assertSame(39, count($order));
+        $this->assertSame(48, count($order));
         $this->assertSame(
-            ['Getting started', 'Pre-proposal', 'Chapter 1', 'Chapter 2', 'Chapter 3', 'Title Defense',
-                'System Development', 'Chapter 4', 'Pre Oral Defense', 'Chapter 5', 'Final Oral Defense', 'Final Manuscript', 'Archive Entry'],
+            ['Pre-proposal Defense', 'Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Archive Entry'],
             array_values(array_unique($order)),
         );
         $this->assertSame(100, $this->progress()->percent);
@@ -160,13 +156,13 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
     {
         $old = $this->emptyChecklist(CapstoneExpert::factory()->create(['approved_status' => true]));
 
-        $this->assertSame(7, MilestoneTemplate::appendCapstone2($old));
+        $this->assertSame(4, MilestoneTemplate::appendCapstone2($old));
         $this->assertSame(0, MilestoneTemplate::appendCapstone2($old));
-        $this->assertSame(['Capstone 1', 'System Development'], $old->milestones()->orderBy('position')->take(2)->pluck('name')->all());
+        $this->assertSame(['Capstone 1', 'Pre Oral Defense'], $old->milestones()->orderBy('position')->take(2)->pluck('name')->all());
 
         // The department checklist already carries it, so the migration adds nothing there.
         (require base_path('database/migrations/2026_09_24_085415_add_capstone_2_to_existing_checklists.php'))->up();
-        $this->assertSame(39, $this->checklist->deliverables()->count());
+        $this->assertSame(48, $this->checklist->deliverables()->count());
         $this->assertSame(1, $old->deliverables()->where('deliverables.template_key', 'final_oral_defense')->count());
     }
 }

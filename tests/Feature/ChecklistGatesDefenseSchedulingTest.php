@@ -97,7 +97,7 @@ class ChecklistGatesDefenseSchedulingTest extends TestCase
         DeliverableCheck::create(['deliverable_id' => $deliverable->id, 'team_id' => $team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()]);
     }
 
-    public function test_the_pre_proposal_waits_for_getting_started(): void
+    public function test_the_pre_proposal_waits_for_the_forms_above_it(): void
     {
         $team = $this->readyTeam('Alpha', DefenseOutcome::PRE_PROPOSAL);
         $checklist = $this->departmentChecklist($this->capsa);
@@ -109,7 +109,8 @@ class ChecklistGatesDefenseSchedulingTest extends TestCase
         // Named, but not in the way: Generate schedule still places the team.
         $this->assertArrayNotHasKey('Alpha', $this->notReady(DefenseOutcome::PRE_PROPOSAL)->all());
 
-        $checklist->milestones()->where('name', 'Getting started')->first()->deliverables
+        $checklist->milestones()->where('name', 'Pre-proposal Defense')->first()->deliverables
+            ->takeUntil(fn (Deliverable $d) => $d->kind === Deliverable::DEFENSE)
             ->each(fn (Deliverable $d) => $this->complete($d, $team));
 
         $this->assertArrayNotHasKey('Alpha', $this->owed(DefenseOutcome::PRE_PROPOSAL)->all());

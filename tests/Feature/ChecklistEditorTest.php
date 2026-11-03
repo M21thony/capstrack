@@ -48,7 +48,7 @@ class ChecklistEditorTest extends TestCase
     {
         $this->postJson(route('capsa.checklists.store'), ['program' => 'BSIT'])
             ->assertCreated()
-            ->assertJsonCount(13, 'milestones');
+            ->assertJsonCount(6, 'milestones');
 
         $this->postJson(route('capsa.checklists.store'), ['program' => 'BSIT'])->assertStatus(422);
         $this->postJson(route('capsa.checklists.store'), ['program' => 'BLIS'])->assertStatus(422);
@@ -61,7 +61,7 @@ class ChecklistEditorTest extends TestCase
         $this->getJson(route('capsa.checklists.show', $theirs))->assertForbidden();
         $this->postJson(route('capsa.checklists.milestones.store', $theirs), ['name' => 'Mine now'])->assertForbidden();
         $this->deleteJson(route('capsa.deliverables.destroy_many'), ['ids' => [$theirs->deliverables()->first()->id]])->assertForbidden();
-        $this->assertSame(39, $theirs->deliverables()->count());
+        $this->assertSame(48, $theirs->deliverables()->count());
     }
 
     public function test_a_drag_saves_the_whole_order_and_a_stale_one_is_refused(): void
@@ -229,16 +229,16 @@ class ChecklistEditorTest extends TestCase
     public function test_a_removed_milestone_and_deliverables_come_back_with_undo(): void
     {
         $checklist = $this->departmentChecklist($this->capsa);
-        $milestone = $checklist->milestones()->where('name', 'Chapter 1')->first();
+        $milestone = $checklist->milestones()->where('name', 'Public Presentation')->first();
         $form = $this->line($checklist, 'td_rsc');
 
         $this->deleteJson(route('capsa.checklist_milestones.destroy', $milestone))->assertOk();
         $this->deleteJson(route('capsa.deliverables.destroy_many'), ['ids' => [$form->id]])->assertOk();
-        $this->getJson(route('capsa.checklists.show', $checklist))->assertJsonCount(12, 'milestones');
+        $this->getJson(route('capsa.checklists.show', $checklist))->assertJsonCount(5, 'milestones');
 
         $this->putJson(route('capsa.removals.update'), ['milestones' => [$milestone->id], 'deliverables' => [$form->id]])->assertOk();
 
-        $this->assertSame(39, $checklist->deliverables()->count());
+        $this->assertSame(48, $checklist->deliverables()->count());
     }
 
     public function test_removed_things_are_purged_for_good_after_five_days(): void

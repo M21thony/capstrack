@@ -10,6 +10,7 @@ use App\Models\Checklist;
 use App\Models\DefenseSchedule;
 use App\Models\DefenseWindow;
 use App\Models\Deliverable;
+use App\Models\DeliverableCheck;
 use App\Models\EvaluationTemplate;
 use App\Models\ExpensePost;
 use App\Models\ExpertEvaluation;
@@ -36,7 +37,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * One team from Getting started to a passed Title Defense, every step taken
+ * One team from the Pre-proposal Defense to a passed Title Defense, every step taken
  * through the pages the people involved use: the students upload, the
  * adviser and consultant review, the CaPSA checks papers, recommends a
  * title, verifies fees and schedules, and the panel grades and decides.
@@ -246,7 +247,7 @@ class TeamReachesTitleDefenseTest extends TestCase
 
     /**
      * A document sent to everyone the upload pop-up offers for it; every
-     * reviewer on it approves.
+     * reviewer on it approves, then the CaPSA checks it.
      */
     private function reviewed(string $key): void
     {
@@ -260,6 +261,7 @@ class TeamReachesTitleDefenseTest extends TestCase
                 ->postJson(route('reviews.status.update', $review->review_id), ['review_status' => CapstoneDocumentReview::REVIEWED, 'verdict' => CapstoneDocumentReview::APPROVED])
                 ->assertOk();
         }
+        $this->capsaChecks($key);
         $this->assertDone($key);
     }
 
@@ -346,7 +348,7 @@ class TeamReachesTitleDefenseTest extends TestCase
 
     // ------------------------------------------------------------------
 
-    public function test_a_team_goes_from_getting_started_to_a_passed_title_defense(): void
+    public function test_a_team_goes_from_the_pre_proposal_to_a_passed_title_defense(): void
     {
         $this->reachTitleDefense();
 
@@ -362,29 +364,38 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->reviewed('revised_manuscript');
         $this->paper('td_rsc');
 
-        // Capstone 2: building the system, then Chapter 4 and the Pre Oral Defense.
-        $this->paper('c2_development_plan');
-        $this->capsaChecks('c2_system_demo');
-        $this->assertDone('c2_system_demo');
+        // Pre Oral Defense: the two prototypes, Chapters 4 and 5, the manuscript.
+        foreach (['prototype_60', 'prototype_80'] as $key) {
+            $this->capsaChecks($key);
+            $this->assertDone($key);
+        }
         $this->chapter(4);
+        $this->chapter(5);
+        $this->reviewed('pod_manuscript');
         $this->readyFor('pod');
         $this->feesPaid('Pre Oral Defense');
         $this->defense('Pre Oral Defense', '2027-08-16');
         $this->assertDone('pre_oral_defense');
         $this->paper('pod_rsc');
 
-        // Chapter 5 and the Final Oral Defense.
-        $this->chapter(5);
+        // Final Oral Defense, and everything handed in after it.
+        $this->reviewed('pod_revised_manuscript');
+        $this->reviewed('fod_manuscript');
+        $this->paper('capstone_fee_receipt');
         $this->readyFor('fod');
         $this->feesPaid('Final Oral Defense');
         $this->defense('Final Oral Defense', '2027-10-18');
         $this->assertDone('final_oral_defense');
-        $this->paper('fod_rsc');
-
-        // The Final Manuscript, edited and signed.
+        foreach (['fod_rsc', 'utilization_certificate', 'joint_affidavit', 'approval_sheet', 'editing_certificate'] as $key) {
+            $this->paper($key);
+        }
         $this->reviewed('final_manuscript');
-        $this->paper('editing_certificate');
-        $this->paper('approval_sheet');
+        $this->reviewed('acm_manuscript');
+        $this->capsaChecks('hardbound_manuscript');
+        $this->assertDone('hardbound_manuscript');
+
+        // Public Presentation.
+        $this->paper('participation_certificate');
 
         // The Archive Entry, sent by the leader and published by the CaPSA.
         $this->actingAs($this->leader(), 'web')->post(route('student.archive.manuscript.submit'), [
@@ -399,10 +410,10 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->assertSame([], $open, 'every line on the checklist is closed');
     }
 
-    /** From Getting started to a passed Title Defense, as the people involved do it. */
+    /** From the Pre-proposal Defense to a passed Title Defense, as the people involved do it. */
     private function reachTitleDefense(): void
     {
-        // Getting started: the signed forms.
+        // Pre-proposal Defense: the signed forms.
         foreach (['team_assignment_form', 'role_acceptance_adviser', 'role_acceptance_consultant', 'role_acceptance_grammarian'] as $key) {
             $this->paper($key);
         }
@@ -476,12 +487,14 @@ class TeamReachesTitleDefenseTest extends TestCase
         ]);
     }
 
-    /** Chapters 1, 2 and 5 go to the adviser and the CaPSA: the adviser's approval closes them. */
+    /** Chapters 1, 2 and 5 go to the adviser and the CaPSA: after the adviser's approval, the CaPSA's check closes them. */
     public function test_a_draft_not_sent_to_the_consultant_closes_on_the_advisers_approval(): void
     {
         $fileId = $this->onRecord($this->line('chapter_1_draft'));
         $this->review($fileId, 'adviser', CapstoneDocumentReview::APPROVED);
 
+        $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $this->state('chapter_1_draft')->waiting_on);
+        $this->checked('chapter_1_draft');
         $this->assertDone('chapter_1_draft');
     }
 
@@ -499,7 +512,15 @@ class TeamReachesTitleDefenseTest extends TestCase
         CapstoneDocumentReview::where('role', 'consultant')->update([
             'review_status' => CapstoneDocumentReview::REVIEWED, 'verdict' => CapstoneDocumentReview::APPROVED, 'verdict_at' => now(),
         ]);
+        $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $this->state('chapter_3_draft')->waiting_on);
+        $this->checked('chapter_3_draft');
         $this->assertDone('chapter_3_draft');
+    }
+
+    /** The CaPSA's check, straight in - the lock on the draft is not what these test. */
+    private function checked(string $key): void
+    {
+        DeliverableCheck::create(['deliverable_id' => $this->line($key)->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()]);
     }
 
     /** A draft on record for the line, straight in - the gates in front of it are not what these test. */

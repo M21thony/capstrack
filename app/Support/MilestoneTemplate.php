@@ -10,9 +10,11 @@ use App\Models\MilestoneItem;
 /**
  * The official checklists, as starting points.
  *
- * Capstone 1 is transcribed from the department's own CAPSTONE PROJECT 1
- * CHECKLIST - nineteen deliverables in the order they appear on the paper, so
- * a CaPSA can work down the screen and the sheet together. Applying a
+ * Each milestone is a phase of the department's TCP and its requirements are
+ * that phase's deliverables. Capstone 1 is transcribed from the department's
+ * own CAPSTONE PROJECT 1 CHECKLIST - nineteen deliverables in the order they
+ * appear on the paper, so a CaPSA can work down the screen and the sheet
+ * together. Applying a
  * template is a starting point, not a cage: every item can be renamed,
  * re-dated, reordered or removed afterwards, and a CaPSA can add their own.
  *
@@ -22,11 +24,8 @@ use App\Models\MilestoneItem;
  * orphan the work already recorded against it.
  *
  * Capstone 2 carries on in the same checklist below Title Defense, through
- * Pre Oral and Final Oral Defense to the final manuscript, so a team's
- * checklist runs without a break from Getting started to the end. Its lines
- * follow the shape of Capstone 1 (drafts and their CLFs, recommending CLFs,
- * a hearing notice, the defense, the RSC); the department has no paper for
- * it yet, so a CaPSA renames or removes whatever does not match theirs.
+ * Pre Oral and Final Oral Defense, the Public Presentation and the archive
+ * entry, so a team's checklist runs without a break from start to end.
  */
 class MilestoneTemplate
 {
@@ -35,13 +34,16 @@ class MilestoneTemplate
     public const CAPSTONE_2 = 'capstone_2';
 
     /** A line only Capstone 2 has, to tell whether a checklist already carries it. */
-    private const CAPSTONE_2_MARKER = 'pre_oral_defense';
+    public const CAPSTONE_2_MARKER = 'pre_oral_defense';
 
-    /** The milestones a team cannot use until it has passed the defense above them. */
-    public const GATES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Final Manuscript', 'Archive Entry'];
+    /**
+     * The milestones a team cannot use until it has passed the defense above
+     * them. Final Manuscript is an older checklist's name.
+     */
+    public const GATES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Final Manuscript', 'Archive Entry'];
 
-    /** The milestones open from the start; the CaPSA opens every other one. */
-    public const OPEN_FROM_THE_START = ['Getting started', 'Pre-proposal'];
+    /** The milestones open from the start, older checklists' names too; the CaPSA opens every other one. */
+    public const OPEN_FROM_THE_START = ['Pre-proposal Defense', 'Getting started', 'Pre-proposal'];
 
     public static function all(): array
     {
@@ -213,18 +215,17 @@ class MilestoneTemplate
     }
 
     /**
-     * CAPSTONE PROJECT 1 CHECKLIST, in order.
+     * CAPSTONE PROJECT 1 CHECKLIST, in order, under the TCP's two Capstone 1
+     * phases: the Pre-proposal Defense, then the Title Defense with the
+     * chapter drafts that lead up to it.
      *
-     * Beyond its title each line carries the phase it belongs to and a short
-     * label. Both exist for the grid, where nineteen columns only fit if the
-     * header stops repeating what the phase band above it already says -
-     * "Chapter 1 / Draft" rather than "Chapter 1 Draft" three times over.
+     * Beyond its title each line carries a short label for the grid, where
+     * the columns only fit if the header stops repeating what the milestone
+     * band above it already says.
      *
      * The paper pairs each chapter draft with the CLF approving it as two
      * separate lines, which is why a draft closes on being handed in and the
-     * approval is its own item. The Revised Proposal Manuscript is the one
-     * draft with no approval line after it; left as written rather than
-     * inventing one.
+     * approval is its own item.
      */
     private static function capstone1Items(): array
     {
@@ -234,24 +235,20 @@ class MilestoneTemplate
         $X = MilestoneItem::DEFENSE;
 
         return [
-            ['template_key' => 'team_assignment_form', 'title' => 'Signed Project Team Assignment Form', 'short' => 'Team Assignment', 'phase' => 'Getting started', 'kind' => $F],
-            ['template_key' => 'pre_proposal_title_form', 'title' => 'Recommended Pre-Proposal Title Form', 'short' => 'Pre-Proposal Title', 'phase' => 'Getting started', 'kind' => $F],
-            ['template_key' => 'role_acceptance_adviser', 'title' => 'Role Acceptance Form (Adviser/CaPA)', 'short' => 'Adviser', 'phase' => 'Getting started', 'kind' => $F],
-            ['template_key' => 'role_acceptance_consultant', 'title' => 'Role Acceptance Form (Consultant)', 'short' => 'Consultant', 'phase' => 'Getting started', 'kind' => $F],
-            ['template_key' => 'role_acceptance_grammarian', 'title' => 'Role Acceptance Form (Grammarian)', 'short' => 'Grammarian', 'phase' => 'Getting started', 'kind' => $F],
+            ['template_key' => 'team_assignment_form', 'title' => 'Signed Project Team Assignment Form', 'short' => 'Team Assignment', 'phase' => 'Pre-proposal Defense', 'kind' => $F],
+            ['template_key' => 'pre_proposal_title_form', 'title' => 'Recommended Pre-Proposal Title Form', 'short' => 'Pre-Proposal Title', 'phase' => 'Pre-proposal Defense', 'kind' => $F],
+            ['template_key' => 'role_acceptance_adviser', 'title' => 'Role Acceptance Form (Adviser/CaPA)', 'short' => 'Adviser', 'phase' => 'Pre-proposal Defense', 'kind' => $F],
+            ['template_key' => 'role_acceptance_consultant', 'title' => 'Role Acceptance Form (Consultant)', 'short' => 'Consultant', 'phase' => 'Pre-proposal Defense', 'kind' => $F],
+            ['template_key' => 'role_acceptance_grammarian', 'title' => 'Role Acceptance Form (Grammarian)', 'short' => 'Grammarian', 'phase' => 'Pre-proposal Defense', 'kind' => $F],
+            ['template_key' => 'pre_proposal_defense', 'title' => 'Pre-Proposal Oral Presentation', 'short' => 'Oral Defense', 'phase' => 'Pre-proposal Defense', 'kind' => $X, 'defense_type' => DefenseOutcome::PRE_PROPOSAL],
+            ['template_key' => 'final_title_form', 'title' => 'Signed Final Project Title Form', 'short' => 'Final Title', 'phase' => 'Pre-proposal Defense', 'kind' => $F],
 
-            ['template_key' => 'pre_proposal_defense', 'title' => 'Pre-Proposal Oral Presentation', 'short' => 'Oral Defense', 'phase' => 'Pre-proposal', 'kind' => $X, 'defense_type' => DefenseOutcome::PRE_PROPOSAL],
-            ['template_key' => 'final_title_form', 'title' => 'Signed Final Project Title Form', 'short' => 'Final Title', 'phase' => 'Pre-proposal', 'kind' => $F],
-
-            ['template_key' => 'chapter_1_draft', 'title' => 'Chapter 1 Draft', 'short' => 'Draft', 'phase' => 'Chapter 1', 'kind' => $D, 'chapter' => '1'],
-            ['template_key' => 'clf_chapter_1', 'title' => 'Signed CLF Approving Chapter 1 (CaPA/Adviser)', 'short' => 'Approved CLF', 'phase' => 'Chapter 1', 'kind' => $A, 'role' => 'adviser', 'chapter' => '1'],
-
-            ['template_key' => 'chapter_2_draft', 'title' => 'Chapter 2 Draft', 'short' => 'Draft', 'phase' => 'Chapter 2', 'kind' => $D, 'chapter' => '2'],
-            ['template_key' => 'clf_chapter_2', 'title' => 'Signed CLF Approving Chapter 2 (CaPA/Adviser)', 'short' => 'Approved CLF', 'phase' => 'Chapter 2', 'kind' => $A, 'role' => 'adviser', 'chapter' => '2'],
-
-            ['template_key' => 'chapter_3_draft', 'title' => 'Chapter 3 Draft', 'short' => 'Draft', 'phase' => 'Chapter 3', 'kind' => $D, 'chapter' => '3'],
-            ['template_key' => 'clf_chapter_3', 'title' => 'Signed CLF Approving Chapter 3 (CaPA/Adviser)', 'short' => 'Approved CLF', 'phase' => 'Chapter 3', 'kind' => $A, 'role' => 'adviser', 'chapter' => '3'],
-
+            ['template_key' => 'chapter_1_draft', 'title' => 'Chapter 1 Draft', 'short' => 'Ch 1 Draft', 'phase' => 'Title Defense', 'kind' => $D, 'chapter' => '1'],
+            ['template_key' => 'clf_chapter_1', 'title' => 'Signed CLF Approving Chapter 1 (CaPA/Adviser)', 'short' => 'Ch 1 CLF', 'phase' => 'Title Defense', 'kind' => $A, 'role' => 'adviser', 'chapter' => '1'],
+            ['template_key' => 'chapter_2_draft', 'title' => 'Chapter 2 Draft', 'short' => 'Ch 2 Draft', 'phase' => 'Title Defense', 'kind' => $D, 'chapter' => '2'],
+            ['template_key' => 'clf_chapter_2', 'title' => 'Signed CLF Approving Chapter 2 (CaPA/Adviser)', 'short' => 'Ch 2 CLF', 'phase' => 'Title Defense', 'kind' => $A, 'role' => 'adviser', 'chapter' => '2'],
+            ['template_key' => 'chapter_3_draft', 'title' => 'Chapter 3 Draft', 'short' => 'Ch 3 Draft', 'phase' => 'Title Defense', 'kind' => $D, 'chapter' => '3'],
+            ['template_key' => 'clf_chapter_3', 'title' => 'Signed CLF Approving Chapter 3 (CaPA/Adviser)', 'short' => 'Ch 3 CLF', 'phase' => 'Title Defense', 'kind' => $A, 'role' => 'adviser', 'chapter' => '3'],
             ['template_key' => 'clf_recommend_td_adviser', 'title' => 'Signed CLF Recommending for Title Defense (CaPA/Adviser)', 'short' => 'Adviser CLF', 'phase' => 'Title Defense', 'kind' => $A, 'role' => 'adviser'],
             ['template_key' => 'clf_recommend_td_consultant', 'title' => 'Signed CLF Recommending for Title Defense (Consultant)', 'short' => 'Consultant CLF', 'phase' => 'Title Defense', 'kind' => $A, 'role' => 'consultant'],
             ['template_key' => 'td_hearing_notice', 'title' => 'Signed Title Defense Hearing Notice', 'short' => 'Hearing Notice', 'phase' => 'Title Defense', 'kind' => $F],
@@ -262,14 +259,10 @@ class MilestoneTemplate
     }
 
     /**
-     * Capstone 2, in order: building the system, Chapter 4, Pre Oral
-     * Defense, Chapter 5, Final Oral Defense, the final manuscript, and the
-     * archive entry.
-     *
-     * System Development opens once Capstone 1 is complete. A chapter opens
-     * together with the defense milestone above it, the way chapters run
-     * beside each other in Capstone 1; each defense waits for everything
-     * above it, and its RSC for the defense.
+     * Capstone 2, in order, under the TCP's phases: the prototypes and the
+     * last two chapters up to the Pre Oral Defense, the Final Oral Defense
+     * and everything handed in after it, the Public Presentation, and the
+     * archive entry. Each waits for the defense above it.
      */
     private static function capstone2Items(): array
     {
@@ -280,30 +273,36 @@ class MilestoneTemplate
         $C = Deliverable::CUSTOM;
 
         return [
-            ['template_key' => 'c2_development_plan', 'title' => 'Signed Capstone 2 Development Plan', 'short' => 'Dev Plan', 'phase' => 'System Development', 'kind' => $F],
-            ['template_key' => 'c2_system_demo', 'title' => 'System Demonstration to the Adviser', 'short' => 'Demo', 'phase' => 'System Development', 'kind' => $C],
-
-            ['template_key' => 'chapter_4_draft', 'title' => 'Chapter 4 Draft', 'short' => 'Draft', 'phase' => 'Chapter 4', 'kind' => $D, 'chapter' => '4'],
-            ['template_key' => 'clf_chapter_4', 'title' => 'Signed CLF Approving Chapter 4 (CaPA/Adviser)', 'short' => 'Approved CLF', 'phase' => 'Chapter 4', 'kind' => $A, 'role' => 'adviser', 'chapter' => '4'],
-
+            ['template_key' => 'prototype_60', 'title' => '1st Prototype (60%)', 'short' => 'Prototype 60%', 'phase' => 'Pre Oral Defense', 'kind' => $C],
+            ['template_key' => 'prototype_80', 'title' => '2nd Prototype (80%)', 'short' => 'Prototype 80%', 'phase' => 'Pre Oral Defense', 'kind' => $C],
+            ['template_key' => 'chapter_4_draft', 'title' => 'Chapter 4 Draft', 'short' => 'Ch 4 Draft', 'phase' => 'Pre Oral Defense', 'kind' => $D, 'chapter' => '4'],
+            ['template_key' => 'clf_chapter_4', 'title' => 'Signed CLF Approving Chapter 4 (CaPA/Adviser)', 'short' => 'Ch 4 CLF', 'phase' => 'Pre Oral Defense', 'kind' => $A, 'role' => 'adviser', 'chapter' => '4'],
+            ['template_key' => 'chapter_5_draft', 'title' => 'Chapter 5 Draft', 'short' => 'Ch 5 Draft', 'phase' => 'Pre Oral Defense', 'kind' => $D, 'chapter' => '5'],
+            ['template_key' => 'clf_chapter_5', 'title' => 'Signed CLF Approving Chapter 5 (CaPA/Adviser)', 'short' => 'Ch 5 CLF', 'phase' => 'Pre Oral Defense', 'kind' => $A, 'role' => 'adviser', 'chapter' => '5'],
+            ['template_key' => 'pod_manuscript', 'title' => 'Pre Oral Defense Manuscript (Chapters 1-5)', 'short' => 'Manuscript', 'phase' => 'Pre Oral Defense', 'kind' => $D],
             ['template_key' => 'clf_recommend_pod_adviser', 'title' => 'Signed CLF Recommending for Pre Oral Defense (CaPA/Adviser)', 'short' => 'Adviser CLF', 'phase' => 'Pre Oral Defense', 'kind' => $A, 'role' => 'adviser'],
             ['template_key' => 'clf_recommend_pod_consultant', 'title' => 'Signed CLF Recommending for Pre Oral Defense (Consultant)', 'short' => 'Consultant CLF', 'phase' => 'Pre Oral Defense', 'kind' => $A, 'role' => 'consultant'],
             ['template_key' => 'pod_hearing_notice', 'title' => 'Signed Pre Oral Defense Hearing Notice', 'short' => 'Hearing Notice', 'phase' => 'Pre Oral Defense', 'kind' => $F],
             ['template_key' => self::CAPSTONE_2_MARKER, 'title' => 'Pre Oral Defense', 'short' => 'Defense', 'phase' => 'Pre Oral Defense', 'kind' => $X, 'defense_type' => 'Pre Oral Defense'],
             ['template_key' => 'pod_rsc', 'title' => 'Signed (Noted) POD RSC', 'short' => 'POD RSC', 'phase' => 'Pre Oral Defense', 'kind' => $F],
 
-            ['template_key' => 'chapter_5_draft', 'title' => 'Chapter 5 Draft', 'short' => 'Draft', 'phase' => 'Chapter 5', 'kind' => $D, 'chapter' => '5'],
-            ['template_key' => 'clf_chapter_5', 'title' => 'Signed CLF Approving Chapter 5 (CaPA/Adviser)', 'short' => 'Approved CLF', 'phase' => 'Chapter 5', 'kind' => $A, 'role' => 'adviser', 'chapter' => '5'],
-
+            ['template_key' => 'pod_revised_manuscript', 'title' => 'Revised Manuscript (per POD RSC)', 'short' => 'Revised', 'phase' => 'Final Oral Defense', 'kind' => $D],
+            ['template_key' => 'fod_manuscript', 'title' => 'Final Oral Defense Manuscript', 'short' => 'Manuscript', 'phase' => 'Final Oral Defense', 'kind' => $D],
+            ['template_key' => 'capstone_fee_receipt', 'title' => 'Thesis/Capstone Fee Receipt', 'short' => 'Fee Receipt', 'phase' => 'Final Oral Defense', 'kind' => $F],
             ['template_key' => 'clf_recommend_fod_adviser', 'title' => 'Signed CLF Recommending for Final Oral Defense (CaPA/Adviser)', 'short' => 'Adviser CLF', 'phase' => 'Final Oral Defense', 'kind' => $A, 'role' => 'adviser'],
             ['template_key' => 'clf_recommend_fod_consultant', 'title' => 'Signed CLF Recommending for Final Oral Defense (Consultant)', 'short' => 'Consultant CLF', 'phase' => 'Final Oral Defense', 'kind' => $A, 'role' => 'consultant'],
             ['template_key' => 'fod_hearing_notice', 'title' => 'Signed Final Oral Defense Hearing Notice', 'short' => 'Hearing Notice', 'phase' => 'Final Oral Defense', 'kind' => $F],
             ['template_key' => 'final_oral_defense', 'title' => 'Final Oral Defense', 'short' => 'Defense', 'phase' => 'Final Oral Defense', 'kind' => $X, 'defense_type' => 'Final Oral Defense'],
             ['template_key' => 'fod_rsc', 'title' => 'Signed (Noted) FOD RSC', 'short' => 'FOD RSC', 'phase' => 'Final Oral Defense', 'kind' => $F],
+            ['template_key' => 'utilization_certificate', 'title' => 'Signed Certificate of Utilization or Transfer', 'short' => 'Utilization', 'phase' => 'Final Oral Defense', 'kind' => $F],
+            ['template_key' => 'joint_affidavit', 'title' => 'Joint Affidavit of Undertaking', 'short' => 'Affidavit', 'phase' => 'Final Oral Defense', 'kind' => $F],
+            ['template_key' => 'approval_sheet', 'title' => 'Signed Approval Sheet', 'short' => 'Approval Sheet', 'phase' => 'Final Oral Defense', 'kind' => $F],
+            ['template_key' => 'editing_certificate', 'title' => "Grammarian's Certificate", 'short' => 'Grammarian', 'phase' => 'Final Oral Defense', 'kind' => $F],
+            ['template_key' => 'final_manuscript', 'title' => 'Final Manuscript', 'short' => 'Final', 'phase' => 'Final Oral Defense', 'kind' => $D, 'chapter' => 'final'],
+            ['template_key' => 'acm_manuscript', 'title' => 'ACM-Formatted Manuscript', 'short' => 'ACM', 'phase' => 'Final Oral Defense', 'kind' => $D],
+            ['template_key' => 'hardbound_manuscript', 'title' => 'Manuscript in Hardbound', 'short' => 'Hardbound', 'phase' => 'Final Oral Defense', 'kind' => $C],
 
-            ['template_key' => 'final_manuscript', 'title' => 'Final Manuscript', 'short' => 'Manuscript', 'phase' => 'Final Manuscript', 'kind' => $D, 'chapter' => 'final'],
-            ['template_key' => 'editing_certificate', 'title' => 'Signed Certificate of Editing (Grammarian)', 'short' => 'Editing', 'phase' => 'Final Manuscript', 'kind' => $F],
-            ['template_key' => 'approval_sheet', 'title' => 'Signed Approval Sheet', 'short' => 'Approval Sheet', 'phase' => 'Final Manuscript', 'kind' => $F],
+            ['template_key' => 'participation_certificate', 'title' => 'Certificate of Participation', 'short' => 'Participation', 'phase' => 'Public Presentation', 'kind' => $F],
 
             // Its own milestone, so the CaPSA opens and closes it apart from the rest.
             ['template_key' => Deliverable::ARCHIVE_ENTRY, 'title' => 'Archive Entry (Title, Abstract, Proponents)', 'short' => 'Archive Entry', 'phase' => 'Archive Entry', 'kind' => $C],

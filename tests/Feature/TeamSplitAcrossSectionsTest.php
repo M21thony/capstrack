@@ -85,7 +85,7 @@ class TeamSplitAcrossSectionsTest extends TestCase
         foreach ([$this->leader, $this->member] as $student) {
             $this->actingAs($student, 'web')->get(route('student.progress'))->assertOk()
                 ->assertSee('Team1')
-                ->assertSee('Getting started')
+                ->assertSee('Pre-proposal Defense')
                 ->assertDontSee('Your CaPSA has not set up a checklist for your team yet.');
         }
     }

@@ -122,7 +122,7 @@ class ChecklistTracker
                     // Numbered as teams see the list, which leaves hidden ones out.
                     'number' => $hidden ? null : ++$number,
                     'previous' => $previous,
-                    'capstone2' => $milestone->deliverables->contains(fn ($d) => str_starts_with((string) $d->template_key, 'c2_')),
+                    'capstone2' => $milestone->deliverables->contains(fn ($d) => str_starts_with((string) $d->template_key, 'c2_') || $d->template_key === MilestoneTemplate::CAPSTONE_2_MARKER),
                     'deliverables' => $milestone->deliverables->count(),
                     'due_on' => $milestone->due_on ?? $milestone->deliverables->pluck('due_date')->filter()->max(),
                     'teams' => $teams,

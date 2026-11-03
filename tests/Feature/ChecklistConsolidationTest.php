@@ -96,7 +96,7 @@ class ChecklistConsolidationTest extends TestCase
         $this->assertSame($this->capsa->expert_id, (int) $checklist->capsa_id);
         $this->assertSame('BSIT', $checklist->program);
         $this->assertSame(
-            ['Getting started', 'Pre-proposal', 'Chapter 1', 'Chapter 2', 'Chapter 3', 'Title Defense'],
+            ['Pre-proposal Defense', 'Title Defense'],
             $checklist->milestones->pluck('name')->all(),
         );
         $this->assertSame(19, $checklist->deliverables()->count());
@@ -120,7 +120,7 @@ class ChecklistConsolidationTest extends TestCase
         $this->artisan('checklists:consolidate', ['--apply' => true])->assertSuccessful();
 
         $this->assertSame(1, Checklist::count());
-        $this->assertSame(6, ChecklistMilestone::count());
+        $this->assertSame(2, ChecklistMilestone::count());
         $this->assertSame(19, Deliverable::count());
         $this->assertSame(1, DeliverableCheck::count());
     }
@@ -142,22 +142,22 @@ class ChecklistConsolidationTest extends TestCase
         $checklist = MilestoneTemplate::createChecklist($this->capsa->expert_id, 'BSIT');
 
         $this->assertSame('Capstone 1 Checklist', $checklist->title);
-        // Capstone 1's six milestones, and Capstone 2's seven after them, the last the Archive Entry.
-        $this->assertSame(13, $checklist->milestones()->count());
-        $this->assertSame(39, $checklist->deliverables()->count());
+        // Capstone 1's two milestones, and Capstone 2's four after them, the last the Archive Entry.
+        $this->assertSame(6, $checklist->milestones()->count());
+        $this->assertSame(48, $checklist->deliverables()->count());
         $this->assertSame('team_assignment_form', $checklist->milestones->first()->deliverables->first()->template_key);
     }
 
     public function test_archived_and_removed_rows_are_not_active(): void
     {
         $checklist = MilestoneTemplate::createChecklist($this->capsa->expert_id, 'BSIT');
-        [$gettingStarted, $preProposal, $chapter1] = $checklist->milestones->all();
+        [$preProposal, $titleDefense, $preOral] = $checklist->milestones->all();
 
-        $gettingStarted->update(['archived_at' => now()]);        // hides its 5 deliverables too
-        $preProposal->deliverables->first()->delete();              // removed
-        $chapter1->deliverables->first()->update(['archived_at' => now()]);
+        $preProposal->update(['archived_at' => now()]);             // hides its 7 deliverables too
+        $titleDefense->deliverables->first()->delete();             // removed
+        $preOral->deliverables->first()->update(['archived_at' => now()]);
 
-        $this->assertSame(12, ChecklistMilestone::active()->count());
-        $this->assertSame(39 - 5 - 1 - 1, Deliverable::active()->count());
+        $this->assertSame(5, ChecklistMilestone::active()->count());
+        $this->assertSame(48 - 7 - 1 - 1, Deliverable::active()->count());
     }
 }
