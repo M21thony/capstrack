@@ -19,14 +19,9 @@
   .ann-item { display:flex;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border);transition:background 0.12s; }
   .ann-item:last-child { border-bottom:none; }
   .ann-item:hover { background:var(--bg3); }
-  .ann-priority-bar { width:4px;border-radius:4px;flex-shrink:0;align-self:stretch; }
   .ann-content { flex:1;min-width:0; }
   .ann-header { display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px; }
   .ann-title { font-size:14px;font-weight:700;color:var(--text);line-height:1.3; }
-  .ann-meta-top { display:flex;align-items:center;gap:6px;flex-shrink:0; }
-  .ann-priority-tag { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;padding:1px 7px;border-radius:4px; }
-  .ann-priority-tag.important { background:rgba(217,119,6,0.1);color:#d97706; }
-  .ann-priority-tag.urgent { background:rgba(220,38,38,0.1);color:#dc2626; }
   .ann-body { font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
   .ann-footer { display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px; }
   .ann-sender { display:flex;align-items:center;gap:6px; }
@@ -47,7 +42,6 @@
 .ann-modal-box::-webkit-scrollbar{display:none}
   .ann-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;padding:4px;line-height:1}
   .ann-modal-close:hover{color:var(--text)}
-  .ann-modal-priority{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
   .ann-modal-title{font-size:17px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:12px}
   .ann-modal-body{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:16px;white-space:pre-wrap}
   .ann-modal-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:16px}
@@ -275,32 +269,20 @@
       <div class="ann-list">
         @foreach ($announcements as $announcement)
           @php
-            $priorityColor = match ($announcement->priority) {
-              'urgent' => '#dc2626',
-              'important' => '#d97706',
-              default => 'var(--text3)',
-            };
             $adminAvatar = $announcement->admin?->avatarUrl() ?? asset('images/default-avatar.jpg');
           @endphp
-           <div class="ann-item" data-priority="{{ $announcement->priority }}" onclick="openAnnModal(this)"
+           <div class="ann-item" onclick="openAnnModal(this)"
                 data-title="{{ $announcement->title }}"
                 data-body="{{ $announcement->body }}"
-                data-priority="{{ $announcement->priority }}"
                 data-admin-name="{{ $announcement->admin?->name ?? 'Admin' }}"
                 data-admin-avatar="{{ $adminAvatar }}"
                 data-date="{{ $announcement->created_at->format('M j, Y · g:i A') }}"
                 data-sections="{{ json_encode(array_values(array_filter(array_map(fn($ta) => str_starts_with((string) $ta, 'section:') ? substr((string) $ta, 8) : null, (array) $announcement->target_audience)))) }}"
                 data-team="{{ $announcement->team?->team_name ?? '' }}"
                 data-milestone-due="{{ $announcement->milestone?->due_date?->format('M j, Y') ?? '' }}">
-            <div class="ann-priority-bar" style="background:{{ $priorityColor }}"></div>
             <div class="ann-content">
               <div class="ann-header">
                 <div class="ann-title">{{ $announcement->title }}</div>
-                <div class="ann-meta-top">
-                  @if ($announcement->priority !== 'normal')
-                    <span class="ann-priority-tag {{ $announcement->priority }}">{{ ucfirst($announcement->priority) }}</span>
-                  @endif
-                </div>
               </div>
               @if ($announcement->milestone)
                 <div style="display:flex;align-items:center;gap:6px;margin:4px 0 6px;font-size:12px;flex-wrap:wrap">
@@ -345,7 +327,6 @@
     <div class="ann-modal-overlay" id="annModal" onclick="if(event.target===this)closeAnnModal()">
         <div class="ann-modal-box">
           <button class="ann-modal-close" onclick="closeAnnModal()">&times;</button>
-          <div class="ann-modal-priority" id="annModalPriority"></div>
           <div class="ann-modal-title" id="annModalTitle"></div>
           <div class="ann-modal-due" id="annModalDue" style="font-size:13px;color:var(--amber);font-weight:500;margin-bottom:10px;display:none"></div>
           <div class="ann-modal-body" id="annModalBody"></div>
@@ -533,11 +514,6 @@ function openAnnModal(el) {
   if (el.dataset.adminAvatar) avatar.src = el.dataset.adminAvatar;
   else avatar.removeAttribute('src');
 
-  var priority = el.dataset.priority;
-  var priorityEl = document.getElementById('annModalPriority');
-  var pColor = priority === 'urgent' ? '#dc2626' : priority === 'important' ? '#d97706' : 'var(--text3)';
-  priorityEl.textContent = priority === 'normal' ? '' : priority;
-  priorityEl.style.color = pColor;
 
   var dueEl = document.getElementById('annModalDue');
   if (el.dataset.milestoneDue) {

@@ -67,7 +67,7 @@ textarea.ann-input{resize:vertical;min-height:150px;line-height:1.5}
 .mention-item.active{background:var(--gold-soft);color:var(--gold-ink)}
 @media (max-width:900px){
   #real-content .content{display:block;overflow-y:auto}
-  .ann{grid-template-columns:1fr}
+  .ann{grid-template-columns:minmax(0,1fr)}
   .ann-writer{order:-1}
   .ann-feed{overflow:visible;padding-right:0}
 }
