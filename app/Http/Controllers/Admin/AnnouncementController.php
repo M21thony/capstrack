@@ -104,6 +104,7 @@ class AnnouncementController extends Controller
 
         $now = now();
         $audience = $data['target_audience'];
+        $poster = auth()->guard('expert')->user()?->name;
 
         // The students it reaches are the ones whose dashboard lists it - a
         // team it mentions, or the sections it is aimed at - so nobody gets
@@ -153,7 +154,8 @@ class AnnouncementController extends Controller
                 }
 
                 if ($row['type'] === 'announcement') {
-                    NotificationMailer::sendAnnouncement($student, $row['title'], $row['message'], $row['link']);
+                    // The bell keeps a 120-letter preview; the email gets it all.
+                    NotificationMailer::sendAnnouncement($student, $row['title'], $data['body'], $row['link'], $poster);
                 } else {
                     NotificationMailer::send($student, $row['type'], $row['title'], $row['message'], $row['link']);
                 }
@@ -165,13 +167,13 @@ class AnnouncementController extends Controller
             CapstoneExpert::where('approved_status', true)
                 ->where('expert_id', '!=', $announcement->admin_id)
                 ->get()
-                ->each(function (CapstoneExpert $expert) use ($data) {
+                ->each(function (CapstoneExpert $expert) use ($data, $poster) {
                     $summary = Str::limit(strip_tags($data['body']), 120);
 
                     Notifier::toExpert($expert, 'announcement', $data['title'], $summary, route('instructor.dashboard'));
 
                     if ($data['priority'] !== 'normal') {
-                        NotificationMailer::sendAnnouncement($expert, $data['title'], $summary, route('instructor.dashboard'));
+                        NotificationMailer::sendAnnouncement($expert, $data['title'], $data['body'], route('instructor.dashboard'), $poster);
                     }
                 });
         }

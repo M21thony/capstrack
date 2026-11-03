@@ -187,6 +187,30 @@ class AnnouncementRecipientsTest extends TestCase
         Mail::assertNotQueued(NotificationMail::class);
     }
 
+    public function test_the_email_has_the_whole_post_and_a_link_that_turns_these_emails_off(): void
+    {
+        $student = $this->student('A', 'Ana');
+        $body = str_repeat('Bring two printed copies of chapter 3. ', 8);
+
+        $this->announce(['priority' => 'important', 'body' => $body]);
+
+        $mail = null;
+        Mail::assertQueued(NotificationMail::class, function (NotificationMail $m) use (&$mail) {
+            return $mail = $m;
+        });
+        $this->assertSame(trim($body), trim($mail->body));
+        $this->assertSame($this->capsa->name, $mail->poster);
+        $this->assertSame('<'.$mail->offUrl.'>', $mail->headers()->text['List-Unsubscribe']);
+
+        // Opening the link only asks; a scanner that follows it changes nothing.
+        $this->get($mail->offUrl)->assertOk()->assertSee('Turn off announcement emails?');
+        $this->assertTrue($student->fresh()->wants('announcement', 'email'));
+
+        $this->post($mail->offUrl.'x')->assertForbidden();
+        $this->post($mail->offUrl)->assertOk()->assertSee('Announcement emails are off');
+        $this->assertFalse($student->fresh()->wants('announcement', 'email'));
+    }
+
     public function test_experts_are_notified_and_emailed_but_not_the_poster(): void
     {
         $expert = CapstoneExpert::factory()->create(['approved_status' => true]);

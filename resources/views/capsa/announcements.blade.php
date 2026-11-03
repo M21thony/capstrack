@@ -8,32 +8,71 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <style nonce="{{ Vite::cspNonce() }}">
-.target-group { display:flex;flex-wrap:wrap;gap:8px;margin-top:6px; }
-.target-opt { display:flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s ease;font-size:13px;font-weight:500;color:var(--text2);background:transparent;user-select:none; }
-.target-opt:hover { border-color:var(--accent);color:var(--accent); }
-.target-opt.active { border-color:var(--accent);background:rgba(79,70,229,0.06);color:var(--accent);font-weight:600; }
-.target-opt input { display:none; }
-.target-opt.disabled { opacity:0.4;cursor:not-allowed;pointer-events:none; }
+/* The feed scrolls in its own box; the page itself never does. */
+#real-content .content{display:flex;flex-direction:column;overflow:hidden}
+.ann{--ink:#1e2128;--ink-2:#4a5060;--ink-3:#656b7a;--line:#e0e2e8;--line-2:#c8cad4;--nav-2:#1e2028;--gold:#c9a82c;--gold-ink:#7d630e;--gold-soft:#faf6e8;--red:#b91c1c;
+  flex:1;min-height:0;width:100%;max-width:1360px;display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:16px;font-size:13px;color:var(--ink)}
+.ann [hidden]{display:none!important}
+.ann-list{display:flex;flex-direction:column;gap:10px;min-height:0}
+.ann-tools{display:flex;gap:8px;align-items:center;flex:none}
+.ann-tools .ann-input{width:auto}
+.ann-tools #ann-search{flex:1;min-width:0}
+.ann-feed{overflow-y:auto;overflow-x:hidden;min-height:0;display:flex;flex-direction:column;gap:10px;padding-right:22px}
+.ann-day{display:flex;flex-direction:column;gap:10px;flex:none}
+.ann-dayh{flex:none;display:flex;align-items:baseline;gap:8px;padding:6px 0 4px;font-size:14px;font-weight:700;color:var(--ink);border-bottom:2px solid var(--ink)}
+.ann-dayh span{font-size:12px;font-weight:500;color:var(--ink-3)}
+.ann-card{background:#fff;border:1px solid var(--line);border-radius:12px}
+.ann-post{flex:none;padding:13px 16px 12px}
+.ann-post .ann-title{margin:3px 0 2px;font-size:15px;font-weight:700;color:var(--ink)}
+.ann-meta{font-size:12px;color:var(--ink-3)}
+.ann-meta strong{color:var(--ink-2);font-weight:600}
+.ann-msg{margin-top:8px;white-space:pre-line;line-height:1.6;color:var(--ink-2);overflow-wrap:anywhere}
+.ann-mention{background:var(--gold-soft);color:var(--gold-ink);font-weight:600;border-radius:4px;padding:0 2px}
+.ann-acts{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
+.ann-empty{padding:40px 0;text-align:center;color:var(--ink-3)}
+.ann-btn{font:inherit;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink-2);cursor:pointer}
+.ann-btn:hover{border-color:var(--line-2);color:var(--ink)}
+.ann-btn:disabled{opacity:.6;cursor:default}
+.ann-btn.gold{background:var(--gold);border-color:var(--gold);color:#18191f}
+.ann-btn.gold:hover{background:#b5941f;border-color:#b5941f}
+.ann-btn.sm{padding:3px 10px;font-size:12px}
+.ann-btn.del{color:var(--red)}
+.ann-input{width:100%;font:inherit;font-size:13px;color:var(--ink);background:#fff;border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;outline:none}
+.ann-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,44,.12)}
+textarea.ann-input{resize:vertical;min-height:150px;line-height:1.5}
+.ann-select{position:relative;text-align:left;cursor:pointer;padding-right:28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ann-select::after{content:'';position:absolute;right:12px;top:50%;width:6px;height:6px;margin-top:-5px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);transform:rotate(45deg)}
+.ann-writer{display:flex;flex-direction:column;position:relative;align-self:start}
+.ann-wh{background:var(--nav-2);color:#fff;border-radius:11px 11px 0 0;padding:11px 16px;font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ann-wb{padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.ann-fl{font-size:12px;font-weight:600;color:var(--ink-2);margin-top:6px}
+.ann-warn{font-size:12px;background:#fdf2d6;color:#92400e;border-radius:8px;padding:7px 10px;margin-top:4px}
+.ann-note{font-size:12px;background:var(--gold-soft);color:var(--gold-ink);border-radius:8px;padding:7px 10px}
+.ann-wf{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.ann-mwrap,.ann-forwrap{position:relative}
+.ann-drop,.ann-mdrop{position:absolute;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.16);padding:6px;z-index:2147483001}
+.ann-drop{top:calc(100% + 4px)}
+.ann-drop.up{top:auto;bottom:calc(100% + 4px)}
+.ann-dl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding:8px 8px 3px}
+.ann-op{display:block;width:100%;text-align:left;font:inherit;font-size:13px;color:var(--ink);background:none;border:0;padding:7px 8px;border-radius:6px;cursor:pointer}
+.ann-op:hover{background:#f7f8fa}
+.ann-op.on{background:var(--gold-soft);font-weight:600}
+.ann-hr{height:1px;background:var(--line);margin:5px 4px}
+.ann-ck{display:flex;align-items:center;gap:9px;font-size:12.5px;padding:6px 8px;border-radius:6px;cursor:pointer}
+.ann-ck:hover{background:#f7f8fa}
+.ann-ck input{accent-color:var(--gold)}
+.ann-mdrop{bottom:calc(100% + 4px);max-height:180px;overflow-y:auto;display:none}
+.ann-mdrop.open{display:block}
+.mention-item{padding:7px 8px;border-radius:6px;font-weight:600;color:var(--ink-2);cursor:pointer}
+.mention-item.active{background:var(--gold-soft);color:var(--gold-ink)}
+@media (max-width:900px){
+  #real-content .content{display:block;overflow-y:auto}
+  .ann{grid-template-columns:1fr}
+  .ann-writer{order:-1}
+  .ann-feed{overflow:visible;padding-right:0}
+}
 
-/* @mention */
-.mention-wrapper { position:relative; }
-.mention-dropdown { position:absolute;bottom:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:100;display:none;margin-bottom:4px;scrollbar-width:none;-ms-overflow-style:none}
-.mention-dropdown::-webkit-scrollbar{display:none}
-.mention-dropdown.open { display:block; }
-.mention-item { padding:8px 12px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background .1s; }
-.mention-item:last-child { border-bottom:none;border-radius:0 0 10px 10px; }
-.mention-item:first-child { border-radius:10px 10px 0 0; }
-.mention-item:hover,.mention-item.active { background:rgba(79,70,229,0.06);color:var(--text); }
-.mention-item .m-sub { font-size:11px;color:var(--text3);font-weight:400;margin-left:6px; }
-
-.audience-badge { display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px; }
-.audience-badge.all { background:rgba(99,102,241,0.1);color:#6366f1; }
-.audience-badge.student { background:rgba(16,185,129,0.1);color:#059669; }
-.audience-badge.expert { background:rgba(245,158,11,0.1);color:#d97706; }
-.audience-badge.panel { background:rgba(147,51,234,0.1);color:#7c3aed; }
-.team-mention-badge { display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(59,130,246,0.1);color:#2563eb; }
-
-/* Simple modal */
+/* Delete confirmation */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{opacity:1;pointer-events:auto}
 .modal-box{background:#fff;border-radius:12px;padding:24px;max-width:360px;width:90%}
@@ -45,8 +84,6 @@
 .modal-btn-cancel:hover{background:#f9fafb}
 .modal-btn-danger{background:#d92d20;color:#fff}
 .modal-btn-danger:hover{background:#b42318}
-.card.inactive{opacity:0.55;border-color:var(--border2)}.card.inactive:hover{opacity:0.75}
-.badge-gray{background:var(--bg4);color:var(--text3)}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
   @include('partials.render-whole')
@@ -67,150 +104,151 @@
   </div>
 
   <div id="skeleton-content" class="sk-overlay">
-    <div class="ann-post-feed-grid" style="gap:16px;align-items:start">
+    <div class="ann-post-feed-grid" style="gap:16px;align-items:start;grid-template-columns:1fr 370px;max-width:1360px">
       <div class="card">
-        <div class="sk" style="width:120px;height:16px;border-radius:4px;margin-bottom:16px"></div>
-        <div class="sk" style="height:38px;border-radius:8px;margin-bottom:10px"></div>
-        <div class="sk" style="height:120px;border-radius:8px;margin-bottom:10px"></div>
-        <div class="sk" style="height:38px;border-radius:8px"></div>
+        <div class="sk" style="height:34px;border-radius:8px;margin-bottom:14px"></div>
+        <div class="sk" style="height:96px;border-radius:12px;margin-bottom:10px"></div>
+        <div class="sk" style="height:96px;border-radius:12px;margin-bottom:10px"></div>
+        <div class="sk" style="height:96px;border-radius:12px"></div>
       </div>
       <div class="card">
         <div class="sk" style="width:140px;height:16px;border-radius:4px;margin-bottom:16px"></div>
-        <div class="sk" style="height:72px;border-radius:10px;margin-bottom:10px"></div>
-        <div class="sk" style="height:72px;border-radius:10px;margin-bottom:10px"></div>
-        <div class="sk" style="height:72px;border-radius:10px"></div>
+        <div class="sk" style="height:38px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:150px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:38px;border-radius:8px"></div>
       </div>
     </div>
   </div>
 
+  @php
+    $me = auth('expert')->id();
+    $adminSections = array_values((array) $adminSections);
+
+    // Who a post went to, in the words the meta line uses.
+    $sentTo = function ($a) {
+        $aud = (array) $a->target_audience;
+        $secs = array_values(array_map(fn ($v) => substr($v, 8), array_filter($aud, fn ($v) => str_starts_with($v, 'section:') && $v !== 'section:all')));
+        $in = $secs ? ' in '.implode(', ', $secs) : '';
+        $all = in_array('all', $aud, true);
+        $stu = in_array('student', $aud, true);
+        $exp = in_array('panel', $aud, true) || in_array('expert', $aud, true);
+        $students = $a->team && ($all || $stu) ? '@'.$a->team->team_name : 'Students'.$in;
+
+        if ($all || ($stu && $exp)) {
+            return ($a->team || $secs) ? 'Experts and '.($a->team ? $students : 'students'.$in) : 'Everyone';
+        }
+
+        return $stu ? $students : ($exp ? 'Experts' : '');
+    };
+
+    $kinds = function ($a) use ($me) {
+        $aud = (array) $a->target_audience;
+        $k = [];
+        if ($a->admin_id == $me) $k[] = 'mine';
+        if (array_intersect(['all', 'student'], $aud)) $k[] = 'students';
+        if (array_intersect(['all', 'panel', 'expert'], $aud)) $k[] = 'experts';
+        if ($a->team_id) $k[] = 'team';
+        return $k;
+    };
+
+    $count = fn ($kind) => $announcements->filter(fn ($a) => in_array($kind, $kinds($a), true))->count();
+    $days = $announcements->groupBy(fn ($a) => $a->created_at->toDateString());
+  @endphp
+
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-    <div class="ann-post-feed-grid" style="gap:16px;align-items:start">
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="card" id="announcement-form-card">
-          <div class="card-header">
-            <span class="card-title">New Post</span>
-            <button onclick="resetForm()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Clear</button>
-          </div>
-
-          <div class="form-group">
-            <label class="label">Title</label>
-            <input class="input" id="ann-title" placeholder="e.g. Schedule for Title Defense" />
-          </div>
-          <div class="form-group">
-            <label class="label">Message</label>
-            <div class="mention-wrapper">
-              <textarea class="input" id="ann-message" style="min-height:220px" placeholder="Type your announcement here... Type @ to mention a team"></textarea>
-              <div class="mention-dropdown" id="mentionDropdown"></div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="label">Priority</label>
-            <select class="input" id="ann-priority">
-              <option value="normal">Normal</option>
-              <option value="important">Important</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="label">Send To</label>
-            <div class="target-group" id="targetGroup">
-              <label class="target-opt" data-value="all">
-                <input type="checkbox" value="all" /> All
-              </label>
-              <label class="target-opt" data-value="panel">
-                <input type="checkbox" value="panel" /> Panel
-              </label>
-              <label class="target-opt" data-value="expert">
-                <input type="checkbox" value="expert" /> Expert
-              </label>
-              <label class="target-opt" data-value="student" id="studentOpt">
-                <input type="checkbox" value="student" /> Student
-              </label>
-            </div>
-            <div id="sectionGroup" style="display:none;margin-top:8px;padding-left:8px;border-left:2px solid var(--border);">
-              <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">Sections</div>
-              <div class="target-group" id="sectionCheckboxes"></div>
-            </div>
-          </div>
-          <div id="annNotice" hidden style="margin-top:16px"></div>
-          <div style="display:flex;gap:8px;margin-top:16px">
-            <button class="btn" style="flex:1;justify-content:center;font-size:13px;background:var(--text);color:var(--navy-text);border:none" onclick="savePost()">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span id="ann-save-label">Post Announcement</span>
-            </button>
-            <button class="btn btn-ghost" style="font-size:13px" id="ann-cancel-btn" onclick="resetForm()">Cancel</button>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:12px;height:calc(100vh - 120px);height:calc(100dvh - 120px);overflow-y:auto">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px">
-          <span style="font-size:12px;color:var(--text3)">
-            @php $activeCount = $announcements->where('is_active', true)->count(); @endphp
-            {{ $activeCount }} active @if(!request()->query('show_all'))announcements @else(of {{ $announcements->count() }}) @endif
-          </span>
-          <a href="{{ request()->fullUrlWithQuery(['show_all' => request()->query('show_all') === '1' ? null : '1']) }}" class="btn btn-ghost" style="font-size:10px;padding:3px 10px">
-            {{ request()->query('show_all') === '1' ? 'Show Active Only' : 'Show All' }}
-          </a>
+    <div class="ann">
+      <div class="ann-list">
+        <div class="ann-tools">
+          <input class="ann-input" id="ann-search" type="search" placeholder="Search posts…" aria-label="Search posts">
+          <select class="ann-input" id="ann-show" aria-label="Show">
+            <option value="all">All posts ({{ $announcements->count() }})</option>
+            <option value="mine">Posted by me ({{ $count('mine') }})</option>
+            <optgroup label="Sent to">
+              <option value="students">Students ({{ $count('students') }})</option>
+              <option value="experts">Experts ({{ $count('experts') }})</option>
+              <option value="team">One team (@mention) ({{ $count('team') }})</option>
+            </optgroup>
+          </select>
         </div>
 
-        <div id="announcements-list" style="display:flex;flex-direction:column;gap:12px">
-        @forelse($announcements as $announcement)
-          @php $annMs = $announcement->milestone; @endphp
-          <div class="card announcement-card {{ $announcement->priority }} {{ $announcement->is_active ? '' : 'inactive' }}" data-id="{{ $announcement->id }}"
-            @if($annMs)
-            data-ms-title="{{ $annMs->title }}" data-ms-due="{{ $annMs->due_date?->format('Y-m-d') }}" data-ms-id="{{ $annMs->id }}"
-            @endif
-          >
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px" @if($annMs) onclick="openReviewModal(this)" style="cursor:pointer" @endif>
-              <div style="flex:1">
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
-                  @if ($annMs)
-                  <span class="badge" style="font-size:10px;background:rgba(139,92,246,0.15);color:#7c3aed">Milestone</span>
-                  @else
-                  <span class="badge {{ $announcement->priority === 'urgent' ? 'badge-red' : ($announcement->priority === 'important' ? 'badge-amber' : 'badge-gray') }}" style="font-size:10px">{{ ucfirst($announcement->priority) }}</span>
-                  @endif
-                  @if (!$announcement->is_active)
-                    <span class="badge" style="font-size:10px;background:var(--bg4);color:var(--text3)">Inactive</span>
-                  @endif
-                  @if ($announcement->target_audience)
-                    @foreach ((array) $announcement->target_audience as $ta)
-                      @if (str_starts_with($ta, 'section:'))
-                        <span class="audience-badge section-badge" data-value="{{ $ta }}" style="background:rgba(16,185,129,0.1);color:#059669;">{{ substr($ta, 8) }}</span>
-                      @else
-                        <span class="audience-badge {{ $ta }}" data-value="{{ $ta }}">{{ $ta }}</span>
-                      @endif
-                    @endforeach
-                  @endif
-                  @if ($announcement->team)
-                    <span class="team-mention-badge">@ {{ $announcement->team->team_name }}</span>
-                  @endif
-                </div>
-                <div class="ann-title" style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">{{ $announcement->title }}</div>
-                @if ($annMs && $annMs->due_date)
-                  <div style="font-size:12px;color:var(--amber);font-weight:500;margin-bottom:4px">
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:text-bottom;margin-right:2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    Due {{ $annMs->due_date->format('M j, Y') }}
-                  </div>
+        <div class="ann-feed" id="announcements-list">
+          @forelse ($days as $date => $posts)
+            @php
+              $d = $posts->first()->created_at;
+              $n = $posts->count().' '.\Illuminate\Support\Str::plural('post', $posts->count());
+              $sameYear = $d->year === now()->year;
+            @endphp
+            <div class="ann-day">
+              <div class="ann-dayh">
+                @if ($d->isToday() || $d->isYesterday())
+                  {{ $d->isToday() ? 'Today' : 'Yesterday' }} <span>{{ $d->format('D, M j') }} · {{ $n }}</span>
+                @else
+                  {{ $d->format($sameYear ? 'l, M j' : 'l, M j, Y') }} <span>{{ $n }}</span>
                 @endif
-                <div class="ann-body" style="font-size:12px;color:var(--text2);line-height:1.5">{{ $announcement->body }}</div>
               </div>
+              @foreach ($posts as $announcement)
+                @php
+                  $aud = array_values((array) $announcement->target_audience);
+                  $team = $announcement->team?->team_name;
+                  $to = $sentTo($announcement);
+                @endphp
+                <article class="ann-card ann-post announcement-card" data-id="{{ $announcement->id }}" data-audience='@json($aud)' data-team="{{ $team }}" data-mine="{{ $announcement->admin_id == $me ? 1 : 0 }}" data-today="{{ $d->isToday() ? 1 : 0 }}" data-kinds="{{ implode(' ', $kinds($announcement)) }}">
+                  <h3 class="ann-title">{{ $announcement->title }}</h3>
+                  <div class="ann-meta">@if ($to)To <strong>{{ $to }}</strong> · @endif{{ $announcement->created_at->format('g:i A') }} · by {{ $announcement->admin?->name ?? 'CaPSA' }}</div>
+                  <div class="ann-msg ann-body">@if ($team){!! str_replace(e('@'.$team), '<span class="ann-mention">'.e('@'.$team).'</span>', e($announcement->body)) !!}@else{{ $announcement->body }}@endif</div>
+                  <div class="ann-acts">
+                    <button type="button" class="ann-btn sm" onclick="editAnnouncement({{ $announcement->id }})">Edit</button>
+                    <button type="button" class="ann-btn sm del" onclick="deleteAnnouncement({{ $announcement->id }})">Delete</button>
+                  </div>
+                </article>
+              @endforeach
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border)">
-              <div style="font-size:11px;color:var(--text3)">Posted {{ $announcement->created_at->format('M j, Y') }}</div>
-              <div style="display:flex;gap:6px">
-                <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px" onclick="editAnnouncement({{ $announcement->id }})">Edit</button>
-                <button class="btn btn-danger" style="font-size:10px;padding:4px 10px" onclick="deleteAnnouncement({{ $announcement->id }})">Delete</button>
+          @empty
+            <div class="ann-empty">No announcements yet.</div>
+          @endforelse
+          <div class="ann-empty" id="ann-nomatch" hidden>No posts match.</div>
+        </div>
+      </div>
+
+      <section class="ann-card ann-writer" id="announcement-form-card">
+        <div class="ann-wh" id="ann-writer-head">New announcement</div>
+        <div class="ann-wb">
+          <label class="ann-fl" for="ann-title">Title</label>
+          <input class="ann-input" id="ann-title" maxlength="255" placeholder="e.g. Room change for Monday">
+
+          <label class="ann-fl" for="ann-message">Message</label>
+          <div class="ann-mwrap">
+            <textarea class="ann-input" id="ann-message" rows="7" placeholder="Write the announcement. Type @ to name one team."></textarea>
+            <div class="ann-mdrop" id="mentionDropdown"></div>
+          </div>
+          <div class="ann-note" id="ann-team-warn" hidden>Only <strong></strong> gets this.</div>
+
+          <span class="ann-fl" id="ann-for-label">For</span>
+          <div class="ann-forwrap" id="ann-forwrap">
+            <button type="button" class="ann-input ann-select" id="ann-for" aria-haspopup="true" aria-expanded="false" aria-labelledby="ann-for-label ann-for"><span></span></button>
+            <div class="ann-drop" id="ann-for-drop" hidden>
+              <div class="ann-dl">People</div>
+              <button type="button" class="ann-op" data-mode="all">Everyone</button>
+              <button type="button" class="ann-op" data-mode="expert">Experts</button>
+              <button type="button" class="ann-op" data-mode="student">Students</button>
+              <div id="ann-for-sections">
+                <div class="ann-hr"></div>
+                <div class="ann-dl">Only these sections</div>
+                @foreach ($adminSections as $section)
+                  <label class="ann-ck"><input type="checkbox" value="{{ $section }}"> {{ $section }}</label>
+                @endforeach
               </div>
             </div>
           </div>
-        @empty
-          <div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No announcements yet.</div>
-        @endforelse
+          <div class="ann-warn" id="ann-mail-warn" hidden><span></span> already got <strong></strong> today.</div>
+          <div id="annNotice" hidden style="margin-top:6px"></div>
         </div>
-      </div>
+        <div class="ann-wf">
+          <button type="button" class="ann-btn" onclick="cancelPost()">Cancel</button>
+          <button type="button" class="ann-btn gold" id="ann-post-btn" onclick="savePost()"><span id="ann-save-label">Post Announcement</span></button>
+        </div>
+      </section>
     </div>
   </div>
   </div>
@@ -229,183 +267,146 @@
   </div>
 </div>
 
-{{-- Milestone Review Modal --}}
-<div class="modal-overlay" id="review-modal" onclick="if(event.target===this)closeReviewModal()">
-  <div class="modal-box" style="max-width:560px;max-height:80vh;max-height:80dvh;overflow-y:auto">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
-      <div>
-        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px" id="review-post-title"></div>
-        <div style="font-size:11px;color:var(--text3)" id="review-post-meta"></div>
-      </div>
-      <button onclick="closeReviewModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:0;line-height:1">&times;</button>
-    </div>
-    <div style="font-size:12px;color:var(--text2);line-height:1.5;white-space:pre-wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)" id="review-post-body"></div>
-    <div id="review-submissions" style="display:flex;flex-direction:column;gap:14px"></div>
-  </div>
-</div>
-
 <script nonce="{{ Vite::cspNonce() }}">
 var teamsList = @json($teams);
 var adminSections = @json($adminSections);
-var milestoneSubmissions = @json($milestoneSubmissions);
 var editingId = null;
 var deleteId = null;
 
-// ---- Target Audience ----
-function renderSectionCheckboxes() {
-  var container = document.getElementById('sectionCheckboxes');
-  container.innerHTML = '';
-  if (!adminSections || adminSections.length === 0) return;
-  var allLabel = document.createElement('label');
-  allLabel.className = 'target-opt section-opt';
-  allLabel.dataset.value = 'section:all';
-  var allCb = document.createElement('input');
-  allCb.type = 'checkbox';
-  allCb.value = 'section:all';
-  allLabel.appendChild(allCb);
-  allLabel.appendChild(document.createTextNode(' All Sections'));
-  container.appendChild(allLabel);
-  adminSections.forEach(function(section) {
-    var label = document.createElement('label');
-    label.className = 'target-opt section-opt';
-    label.dataset.value = 'section:' + section;
-    var cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.value = 'section:' + section;
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode(' ' + section));
-    container.appendChild(label);
-  });
-}
+var titleInput = document.getElementById('ann-title');
+var mentionTextarea = document.getElementById('ann-message');
+var mentionDropdown = document.getElementById('mentionDropdown');
+var forWrap = document.getElementById('ann-forwrap');
+var forBtn = document.getElementById('ann-for');
+var forDrop = document.getElementById('ann-for-drop');
+var forSections = document.getElementById('ann-for-sections');
 
-function toggleSectionGroup() {
-  var studentCb = document.querySelector('#studentOpt input');
-  var sectionGroup = document.getElementById('sectionGroup');
-  if (studentCb.checked && adminSections && adminSections.length > 0) {
-    sectionGroup.style.display = 'block';
-  } else {
-    sectionGroup.style.display = 'none';
-    document.querySelectorAll('.section-opt input').forEach(function(cb) { cb.checked = false; cb.closest('.target-opt').classList.remove('active'); });
-    var allSectionCb = document.querySelector('.section-opt[data-value="section:all"] input');
-    if (allSectionCb) { allSectionCb.checked = false; allSectionCb.closest('.target-opt').classList.remove('active'); }
-  }
-}
-
-renderSectionCheckboxes();
-
-document.querySelectorAll('.target-opt input').forEach(function(cb) {
-  cb.addEventListener('change', function() {
-    if (this.value === 'all') {
-      if (this.checked) {
-        document.querySelectorAll('.target-opt input').forEach(function(other) {
-          if (other.value !== 'all') {
-            other.checked = false;
-            other.closest('.target-opt').classList.remove('active');
-          }
-        });
-        toggleSectionGroup();
-      }
-    } else {
-      var allCb = document.querySelector('.target-opt[data-value="all"] input');
-      if (allCb) {
-        allCb.checked = false;
-        allCb.closest('.target-opt').classList.remove('active');
-      }
-    }
-    this.closest('.target-opt').classList.toggle('active', this.checked);
-    if (this.value === 'student') toggleSectionGroup();
-    var individualValues = ['panel', 'expert', 'student'];
-    var allIndividualChecked = individualValues.every(function(v) {
-      var cb = document.querySelector('.target-opt[data-value="' + v + '"] input');
-      return cb && cb.checked;
-    });
-    if (allIndividualChecked) {
-      individualValues.forEach(function(v) {
-        var cb = document.querySelector('.target-opt[data-value="' + v + '"] input');
-        if (cb) { cb.checked = false; cb.closest('.target-opt').classList.remove('active'); }
-      });
-      var allCb = document.querySelector('.target-opt[data-value="all"] input');
-      if (allCb) { allCb.checked = true; allCb.closest('.target-opt').classList.add('active'); }
-      toggleSectionGroup();
-    }
-  });
-});
-
-document.getElementById('sectionCheckboxes').addEventListener('change', function(e) {
-  var cb = e.target;
-  if (cb.tagName !== 'INPUT' || cb.type !== 'checkbox') return;
-  cb.closest('.target-opt').classList.toggle('active', cb.checked);
-  if (cb.value === 'section:all') {
-    if (cb.checked) {
-      document.querySelectorAll('.section-opt input').forEach(function(other) {
-        if (other.value !== 'section:all') {
-          other.checked = true;
-          other.closest('.target-opt').classList.add('active');
-        }
-      });
-    }
-  } else {
-    var allCb = document.querySelector('.section-opt[data-value="section:all"] input');
-    if (allCb) {
-      allCb.checked = false;
-      allCb.closest('.target-opt').classList.remove('active');
-    }
-    var sectionOpts = document.querySelectorAll('.section-opt:not([data-value="section:all"]) input');
-    var allChecked = Array.from(sectionOpts).every(function(input) { return input.checked; });
-    if (allChecked && sectionOpts.length > 0) {
-      if (allCb) {
-        allCb.checked = true;
-        allCb.closest('.target-opt').classList.add('active');
-      }
-    }
-  }
-});
+// ---- Who it goes to ----
+// One of Everyone / Experts / Students, narrowed to some of the CaPSA's own
+// sections. With no section ticked the backend still sends to all of them,
+// so the last ticked section can't be unticked: what the menu shows is what
+// is sent.
+var audMode = 'student';
+var audSections = adminSections.slice();
 
 function getTargetAudience() {
-  var values = [];
-  document.querySelectorAll('.target-opt input:checked').forEach(function(cb) {
-    values.push(cb.value);
-  });
-  document.querySelectorAll('.section-opt input:checked').forEach(function(cb) {
-    if (cb.value === 'section:all') return;
-    if (values.indexOf(cb.value) === -1) values.push(cb.value);
-  });
-  return values;
+  // The expert dashboard reads 'panel', the bell and email read 'expert'.
+  if (audMode === 'expert') return ['panel', 'expert'];
+  return [audMode].concat(audSections.map(function(s) { return 'section:' + s; }));
 }
 
 function setTargetAudience(arr) {
-  document.querySelectorAll('.target-opt input').forEach(function(cb) {
-    var checked = arr.indexOf(cb.value) !== -1;
-    cb.checked = checked;
-    cb.closest('.target-opt').classList.toggle('active', checked);
+  var has = function(v) { return arr.indexOf(v) !== -1; };
+  var stu = has('student'), exp = has('panel') || has('expert');
+  audMode = has('all') || (stu && exp) ? 'all' : stu ? 'student' : exp ? 'expert' : 'all';
+  var picked = adminSections.filter(function(s) { return has('section:' + s); });
+  audSections = picked.length ? picked : adminSections.slice();
+  renderFor();
+}
+
+function renderFor() {
+  forDrop.querySelectorAll('[data-mode]').forEach(function(b) {
+    b.classList.toggle('on', b.dataset.mode === audMode);
   });
-  document.querySelectorAll('.section-opt input').forEach(function(cb) {
-    var checked = arr.indexOf(cb.value) !== -1;
-    cb.checked = checked;
-    cb.closest('.target-opt').classList.toggle('active', checked);
-  });
-  var sectionOpts = document.querySelectorAll('.section-opt:not([data-value="section:all"]) input');
-  var allSectionsChecked = Array.from(sectionOpts).every(function(input) { return input.checked; });
-  var allSectionCb = document.querySelector('.section-opt[data-value="section:all"] input');
-  if (allSectionsChecked && sectionOpts.length > 0 && allSectionCb) {
-    allSectionCb.checked = true;
-    allSectionCb.closest('.target-opt').classList.add('active');
+  forSections.hidden = audMode === 'expert' || adminSections.length === 0;
+  forSections.querySelectorAll('input').forEach(function(cb) { cb.checked = audSections.indexOf(cb.value) !== -1; });
+
+  var some = audSections.length < adminSections.length;
+  var inSecs = audSections.length ? ' in ' + audSections.join(', ') : '';
+  forBtn.firstChild.textContent = audMode === 'expert' ? 'Experts'
+    : audMode === 'student' ? 'Students' + inSecs
+    : some ? 'Experts and students' + inSecs : 'Everyone';
+  updateWarnings();
+}
+
+function openFor(open) {
+  forDrop.hidden = !open;
+  forBtn.setAttribute('aria-expanded', open);
+  forDrop.classList.remove('up');
+  if (open && forDrop.getBoundingClientRect().bottom > window.innerHeight - 8) forDrop.classList.add('up');
+}
+
+forBtn.addEventListener('click', function() { openFor(forDrop.hidden); });
+forDrop.querySelectorAll('[data-mode]').forEach(function(b) {
+  b.addEventListener('click', function() { audMode = b.dataset.mode; renderFor(); });
+});
+forSections.addEventListener('change', function(e) {
+  var picked = Array.prototype.filter.call(forSections.querySelectorAll('input'), function(cb) { return cb.checked; })
+    .map(function(cb) { return cb.value; });
+  if (picked.length === 0) { e.target.checked = true; return; }
+  audSections = picked;
+  renderFor();
+});
+document.addEventListener('click', function(e) {
+  if (!forDrop.hidden && !forWrap.contains(e.target)) openFor(false);
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape' || forDrop.hidden) return;
+  e.preventDefault();
+  openFor(false);
+  forBtn.focus();
+});
+
+// ---- Warnings ----
+// The team an @mention names. Matched against the team list rather than
+// read off the text: "@Bug Busters please submit" used to be taken as a
+// team called "Bug Busters please submit", so a mention anywhere but the
+// very end of the post was dropped. The longest name wins, so "@Code
+// Crafters 2" is not taken for "Code Crafters".
+function mentionedTeam(body) {
+  var lowerBody = body.toLowerCase();
+  var mentioned = teamsList
+    .filter(function(t) {
+      var at = lowerBody.indexOf('@' + t.team_name.toLowerCase());
+      if (at === -1) return false;
+      var next = lowerBody.charAt(at + 1 + t.team_name.length);
+      return next === '' || !/[a-z0-9_]/.test(next);
+    })
+    .sort(function(a, b) { return b.team_name.length - a.team_name.length; });
+  return mentioned.length ? mentioned[0] : null;
+}
+
+function joinNames(names) {
+  return names.length < 2 ? names.join('') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+}
+
+function updateWarnings() {
+  var team = audMode === 'expert' ? null : mentionedTeam(mentionTextarea.value);
+  var teamWarn = document.getElementById('ann-team-warn');
+  teamWarn.hidden = !team;
+  if (team) teamWarn.querySelector('strong').textContent = '@' + team.team_name;
+
+  // Today's student posts already sent to the chosen sections. A post with no
+  // section went to its poster's sections, which are only known for our own.
+  // ponytail: counts the posts on this page only, which is every active one.
+  var counts = {};
+  if (audMode !== 'expert' && !team) {
+    document.querySelectorAll('.announcement-card[data-today="1"]').forEach(function(card) {
+      if (String(card.dataset.id) === String(editingId) || card.dataset.team) return;
+      var aud = JSON.parse(card.dataset.audience || '[]');
+      if (aud.indexOf('all') === -1 && aud.indexOf('student') === -1) return;
+      var secs = aud.filter(function(v) { return v.indexOf('section:') === 0 && v !== 'section:all'; })
+        .map(function(v) { return v.slice(8); });
+      if (secs.length === 0) {
+        if (card.dataset.mine !== '1') return;
+        secs = adminSections;
+      }
+      secs.forEach(function(s) { if (audSections.indexOf(s) !== -1) counts[s] = (counts[s] || 0) + 1; });
+    });
   }
-  var studentChecked = arr.indexOf('student') !== -1;
-  var sectionGroup = document.getElementById('sectionGroup');
-  if (studentChecked && adminSections && adminSections.length > 0) {
-    sectionGroup.style.display = 'block';
-  } else {
-    sectionGroup.style.display = 'none';
-  }
+  var names = adminSections.filter(function(s) { return counts[s]; });
+  var most = names.reduce(function(m, s) { return Math.max(m, counts[s]); }, 0);
+  var mailWarn = document.getElementById('ann-mail-warn');
+  mailWarn.hidden = names.length === 0;
+  mailWarn.querySelector('span').textContent = joinNames(names);
+  mailWarn.querySelector('strong').textContent = most + ' announcement email' + (most === 1 ? '' : 's');
 }
 
 // ---- @mention ----
-var mentionTextarea = document.getElementById('ann-message');
-var mentionDropdown = document.getElementById('mentionDropdown');
 var mentionActiveIdx = -1;
 
 mentionTextarea.addEventListener('input', function() {
+  updateWarnings();
   var pos = this.selectionStart;
   var text = this.value;
   var before = text.substring(0, pos);
@@ -421,7 +422,7 @@ mentionTextarea.addEventListener('input', function() {
   }
   var filtered = teamsList.filter(function(t) { return t.team_name.toLowerCase().indexOf(query) !== -1; });
   if (filtered.length === 0) { closeMention(); return; }
-  showMention(filtered, atIdx);
+  showMention(filtered);
 });
 
 mentionTextarea.addEventListener('keydown', function(e) {
@@ -429,21 +430,20 @@ mentionTextarea.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowDown') { e.preventDefault(); moveMention(1); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); moveMention(-1); }
   else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); selectMention(); }
-  else if (e.key === 'Escape') { closeMention(); }
+  else if (e.key === 'Escape') { e.preventDefault(); closeMention(); }
 });
 
-function showMention(list, atIdx) {
+function showMention(list) {
   mentionDropdown.innerHTML = '';
   list.forEach(function(t, i) {
     var div = document.createElement('div');
     div.className = 'mention-item' + (i === 0 ? ' active' : '');
-    div.innerHTML = '<span>@' + t.team_name + '</span>';
-    div.dataset.id = t.team_id;
+    div.textContent = '@' + t.team_name;
     div.dataset.name = t.team_name;
     div.dataset.idx = i;
-    div.addEventListener('click', function() { mentionActiveIdx = parseInt(this.dataset.idx); selectMention(); });
+    div.addEventListener('mousedown', function(e) { e.preventDefault(); mentionActiveIdx = parseInt(this.dataset.idx); selectMention(); });
     div.addEventListener('mouseenter', function() {
-      document.querySelectorAll('.mention-item').forEach(function(el) { el.classList.remove('active'); });
+      mentionDropdown.querySelectorAll('.mention-item').forEach(function(el) { el.classList.remove('active'); });
       this.classList.add('active');
       mentionActiveIdx = parseInt(this.dataset.idx);
     });
@@ -469,14 +469,13 @@ function selectMention() {
   var text = mentionTextarea.value;
   var before = text.substring(0, pos);
   var after = text.substring(pos);
-  var atIdx = before.lastIndexOf('@');
-  var beforeAt = before.substring(0, atIdx);
+  var beforeAt = before.substring(0, before.lastIndexOf('@'));
   var insertion = '@' + name + ' ';
   mentionTextarea.value = beforeAt + insertion + after;
-  var newPos = beforeAt.length + insertion.length;
-  mentionTextarea.selectionStart = mentionTextarea.selectionEnd = newPos;
+  mentionTextarea.selectionStart = mentionTextarea.selectionEnd = beforeAt.length + insertion.length;
   closeMention();
   mentionTextarea.focus();
+  updateWarnings();
 }
 
 function closeMention() {
@@ -485,62 +484,66 @@ function closeMention() {
   mentionActiveIdx = -1;
 }
 
-// Close mention on blur
-mentionTextarea.addEventListener('blur', function() {
-  setTimeout(closeMention, 200);
-});
+mentionTextarea.addEventListener('blur', function() { setTimeout(closeMention, 150); });
+
+// ---- Feed: search and Show ----
+function applyFilter() {
+  var q = document.getElementById('ann-search').value.trim().toLowerCase();
+  var show = document.getElementById('ann-show').value;
+  var any = false;
+  document.querySelectorAll('.ann-day').forEach(function(day) {
+    var shown = 0;
+    day.querySelectorAll('.announcement-card').forEach(function(card) {
+      var text = (card.querySelector('.ann-title').textContent + ' ' + card.querySelector('.ann-body').textContent).toLowerCase();
+      var ok = (show === 'all' || card.dataset.kinds.split(' ').indexOf(show) !== -1) && (!q || text.indexOf(q) !== -1);
+      card.hidden = !ok;
+      if (ok) shown++;
+    });
+    day.hidden = shown === 0;
+    if (shown) any = true;
+  });
+  document.getElementById('ann-nomatch').hidden = any || !document.querySelector('.announcement-card');
+}
+document.getElementById('ann-search').addEventListener('input', applyFilter);
+document.getElementById('ann-show').addEventListener('change', applyFilter);
 
 // ---- Form ----
 function resetForm() {
-  document.getElementById('ann-title').value = '';
-  document.getElementById('ann-message').value = '';
-  document.getElementById('ann-priority').value = 'normal';
-  setTargetAudience(['all']);
-  document.getElementById('ann-save-label').textContent = 'Post Announcement';
-  document.getElementById('ann-cancel-btn').style.display = 'none';
+  titleInput.value = '';
+  mentionTextarea.value = '';
   editingId = null;
+  setTargetAudience(['student']);
+  document.getElementById('ann-writer-head').textContent = 'New announcement';
+  document.getElementById('ann-save-label').textContent = 'Post Announcement';
+}
+
+function cancelPost() {
+  resetForm();
+  if (window.formNotice) formNotice.clear('annNotice');
 }
 
 function savePost() {
-  var priority = document.getElementById('ann-priority').value;
-  var targetAudience = getTargetAudience();
-  var title = document.getElementById('ann-title').value.trim();
-  var body = document.getElementById('ann-message').value.trim();
+  var title = titleInput.value.trim();
+  var body = mentionTextarea.value.trim();
 
-  if (!title) { return; }
-  if (!body) { return; }
-  if (targetAudience.length === 0) {
-    formNotice('annNotice', {
-      tone: 'error',
-      title: 'Choose who this goes to',
-      body: 'Pick at least one audience under Send To. Your draft is kept.',
-    });
-    document.querySelector('#targetGroup input')?.focus();
+  if (!title || !body) {
+    formNotice('annNotice', { tone: 'error', title: !title ? 'Add a title' : 'Write the message' });
+    (!title ? titleInput : mentionTextarea).focus();
     return;
   }
   formNotice.clear('annNotice');
 
-  // The team an @mention names. Matched against the team list rather than
-  // read off the text: "@Bug Busters please submit" used to be taken as a
-  // team called "Bug Busters please submit", so a mention anywhere but the
-  // very end of the post was dropped. The longest name wins, so "@Code
-  // Crafters 2" is not taken for "Code Crafters".
-  var teamId = null;
-  var lowerBody = body.toLowerCase();
-  var mentioned = teamsList
-    .filter(function(t) {
-      var at = lowerBody.indexOf('@' + t.team_name.toLowerCase());
-      if (at === -1) return false;
-      var next = lowerBody.charAt(at + 1 + t.team_name.length);
-      return next === '' || !/[a-z0-9_]/.test(next);
-    })
-    .sort(function(a, b) { return b.team_name.length - a.team_name.length; });
-  if (mentioned.length) teamId = mentioned[0].team_id;
-
+  var team = mentionedTeam(body);
   var url = editingId ? '/api/admin/announcements/' + editingId : '/api/admin/announcements';
   var method = editingId ? 'PUT' : 'POST';
+  // Every post is emailed: the backend emails anything above normal.
+  var payload = { title: title, body: body, priority: 'important', target_audience: getTargetAudience(), team_id: team ? team.team_id : null };
 
-  var payload = { title: title, body: body, priority: priority, target_audience: targetAudience, team_id: teamId };
+  var btn = document.getElementById('ann-post-btn');
+  var label = document.getElementById('ann-save-label');
+  var idle = label.textContent;
+  btn.disabled = true;
+  label.textContent = editingId ? 'Saving…' : 'Posting…';
 
   fetch(url, {
     method: method,
@@ -559,6 +562,8 @@ function savePost() {
     })
     .then(function() { location.reload(); })
     .catch(function() {
+      btn.disabled = false;
+      label.textContent = idle;
       formNotice('annNotice', {
         tone: 'error',
         title: 'The post was not saved',
@@ -573,35 +578,18 @@ function editAnnouncement(id) {
   var card = document.querySelector('.announcement-card[data-id="' + id + '"]');
   if (!card) return;
 
-  var titleEl = card.querySelector('.ann-title');
-  var bodyEl = card.querySelector('.ann-body');
-  var badgeEl = card.querySelector('.badge');
-  var audienceEls = card.querySelectorAll('.audience-badge');
-  var teamMentionEl = card.querySelector('.team-mention-badge');
+  var body = card.querySelector('.ann-body').textContent;
+  var team = card.dataset.team;
+  if (team && body.indexOf('@' + team) === -1) body += ' @' + team;
 
-  document.getElementById('ann-title').value = titleEl ? titleEl.textContent : '';
-  document.getElementById('ann-message').value = bodyEl ? bodyEl.textContent : '';
-  // An old milestone post shows "Milestone" where the priority would be.
-  var priority = badgeEl ? badgeEl.textContent.toLowerCase().trim() : '';
-  document.getElementById('ann-priority').value = ['normal', 'important', 'urgent'].indexOf(priority) !== -1 ? priority : 'normal';
-
-  var audiences = [];
-  audienceEls.forEach(function(el) { audiences.push(el.dataset.value || el.textContent.trim().toLowerCase()); });
-  if (audiences.length === 0) audiences = ['all'];
-  setTargetAudience(audiences);
-
-  var teamName = teamMentionEl ? teamMentionEl.textContent.trim().replace(/^@\s*/, '') : '';
-  if (teamName && bodyEl) {
-    var bodyText = bodyEl.textContent;
-    if (bodyText.indexOf('@' + teamName) === -1) {
-      document.getElementById('ann-message').value = bodyText + ' @' + teamName;
-    }
-  }
-
-  document.getElementById('ann-save-label').textContent = 'Update Announcement';
-  document.getElementById('ann-cancel-btn').style.display = 'inline-flex';
+  titleInput.value = card.querySelector('.ann-title').textContent;
+  mentionTextarea.value = body;
   editingId = id;
-  document.getElementById('ann-title').scrollIntoView({ behavior: 'smooth' });
+  setTargetAudience(JSON.parse(card.dataset.audience || '[]'));
+  document.getElementById('ann-writer-head').textContent = 'Editing: ' + titleInput.value;
+  document.getElementById('ann-save-label').textContent = 'Save changes';
+  formNotice.clear('annNotice');
+  titleInput.focus();
 }
 
 function deleteAnnouncement(id) {
@@ -633,111 +621,13 @@ function confirmDelete() {
     .catch(function() {
       btn.textContent = 'Delete';
       btn.disabled = false;
+      closeConfirmModal();
       formNotice('annNotice', {
         tone: 'error',
         title: 'That announcement was not deleted',
         body: 'It is still posted. CapsTrack could not reach the server.',
       });
     });
-}
-
-// ---- Milestone Review Modal ----
-function openReviewModal(el) {
-  var card = el.closest('.announcement-card');
-  if (!card) return;
-  var msId = card.dataset.msId;
-  var msTitle = card.dataset.msTitle;
-  var due = card.dataset.msDue;
-  var annId = card.dataset.id;
-  var titleEl = card.querySelector('.ann-title');
-  var bodyEl = card.querySelector('.ann-body');
-
-  document.getElementById('review-post-title').textContent = msTitle || 'Milestone Post';
-  document.getElementById('review-post-meta').textContent = (due ? 'Due ' + due : '');
-  document.getElementById('review-post-body').textContent = bodyEl ? bodyEl.textContent.trim() : '';
-
-  var container = document.getElementById('review-submissions');
-  container.innerHTML = '';
-  var subs = msId && milestoneSubmissions[msId] ? milestoneSubmissions[msId] : [];
-  if (subs.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">No submissions yet.</div>';
-  } else {
-    subs.forEach(function(s) {
-      var div = document.createElement('div');
-      div.style.cssText = 'padding:10px 0;border-bottom:1px solid var(--border)';
-      if (subs.indexOf(s) === subs.length - 1) div.style.borderBottom = 'none';
-      var avatarHtml = s.student && s.student.avatar
-        ? '<img src="' + s.student.avatar + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0" />'
-        : '<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#18191f;flex-shrink:0">' + (s.student ? s.student.initials : '?') + '</div>';
-      var name = s.student ? s.student.f_name + ' ' + s.student.l_name : 'Unknown';
-      var team = s.team_name || 'Unknown Team';
-      var time = s.completed_at ? new Date(s.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      var verifiedBadge = s.is_verified
-        ? '<span style="font-size:11px;font-weight:600;color:var(--green);white-space:nowrap">&#10003; Verified</span>'
-        : '<span style="font-size:11px;font-weight:600;color:var(--amber);white-space:nowrap">Pending</span>';
-      var verifyBtn = s.is_verified ? '' :
-        '<button onclick="verifySubmission(' + annId + ', ' + s.submission_id + ', true)" style="font-size:11px;padding:5px 12px;border-radius:6px;border:none;background:var(--green);color:#fff;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">Mark as Verified</button>';
-      var imgHtml = s.file_url ? '<div style="margin-top:6px"><img src="' + s.file_url + '" style="max-width:200px;max-height:120px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="openSubmissionImage(\'' + s.file_url + '\')" /></div>' : '';
-      div.innerHTML =
-        '<div style="display:flex;align-items:center;gap:10px">' +
-          avatarHtml +
-          '<div style="flex:1;min-width:0;font-size:12px;color:var(--text);font-weight:500">' + name + ' <span style="font-weight:400;color:var(--text3)">&middot; ' + team + '</span>' + (time ? ' <span style="font-weight:400;color:var(--text3)">&middot; ' + time + '</span>' : '') + '</div>' +
-          verifiedBadge +
-          verifyBtn +
-        '</div>' +
-        imgHtml;
-      container.appendChild(div);
-    });
-  }
-  document.getElementById('review-modal').classList.add('open');
-}
-
-function verifySubmission(annId, submissionId, verified) {
-  fetch('/api/admin/announcements/' + annId + '/submissions/' + submissionId, {
-    method: 'PATCH',
-    headers: {
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({ verified: verified }),
-  })
-    // A refused change comes back as JSON too; only a 2xx is recorded.
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function() { location.reload(); })
-    .catch(function() {
-      formNotice('annNotice', {
-        tone: 'error',
-        title: 'The submission was not recorded',
-        body: 'Its milestone is unchanged. CapsTrack could not reach the server.',
-      });
-    });
-}
-
-function closeReviewModal() {
-  document.getElementById('review-modal').classList.remove('open');
-}
-
-function openSubmissionImage(url) {
-  var overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;cursor:pointer';
-  overlay.onclick = function() { overlay.remove(); };
-  var img = document.createElement('img');
-  img.src = url;
-  img.style.cssText = 'max-width:90vw;max-height:90vh;max-height:90dvh;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5)';
-  var closeBtn = document.createElement('button');
-  closeBtn.innerHTML = '&times;';
-  closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0';
-  closeBtn.onclick = function(e) { e.stopPropagation(); overlay.remove(); };
-  var wrapper = document.createElement('div');
-  wrapper.style.cssText = 'position:relative;display:inline-block';
-  wrapper.appendChild(img);
-  wrapper.appendChild(closeBtn);
-  overlay.appendChild(wrapper);
-  document.body.appendChild(overlay);
 }
 
 // Init

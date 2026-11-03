@@ -66,7 +66,7 @@ final class NotificationTypes
             'email' => true,
         ],
         'announcement' => [
-            'label' => 'A CaPSA posts an important or urgent announcement for experts',
+            'label' => 'A CaPSA posts an announcement for experts',
             'email' => true,
         ],
         'expert_slots_short' => [
@@ -167,7 +167,7 @@ final class NotificationTypes
             'web' => false,
         ],
         'announcement' => [
-            'label' => 'A CaPSA posts an important or urgent announcement',
+            'label' => 'A CaPSA posts an announcement',
             'email' => true,
             'web' => false,
         ],

@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ResourcesController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\StudentAccountsController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AnnouncementEmailOffController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AdminFinancialController;
 use App\Http\Controllers\AdminProfileController;
@@ -405,6 +406,12 @@ Route::post('/session/keep-alive', [IdleSessionController::class, 'keepAlive'])-
 Route::get('/session/expired', [IdleSessionController::class, 'expired'])->name('session.expired');
 Route::get('/team', [AuthController::class, 'team'])->name('team');
 Route::view('/privacy', 'privacy')->name('privacy');
+// The signed link in an announcement email. Gmail's Unsubscribe POSTs here
+// with no form token, so it skips the forgery check; the signature guards it.
+Route::match(['get', 'post'], '/email/announcements/off/{who}/{id}', AnnouncementEmailOffController::class)
+    ->middleware('signed')
+    ->withoutMiddleware(App\Http\Middleware\PreventRequestForgery::class)
+    ->name('announcements.email-off');
 Route::post('/login/google', [AuthController::class, 'initiateGoogleLogin'])->name('login.google.initiate');
 Route::get('/login/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('login.google.callback');
 Route::get('/login/google/mock', [AuthController::class, 'showMockLogin'])->name('login.google.mock');

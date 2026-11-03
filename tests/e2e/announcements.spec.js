@@ -55,10 +55,9 @@ async function asCapsa(page) {
   await expect(page.locator('#ann-title')).toBeVisible();
 }
 
-async function post(page, { title, body, audience, sections = [], priority = 'normal' }) {
+async function post(page, { title, body, audience, sections = [] }) {
   await page.fill('#ann-title', title);
   await page.fill('#ann-message', body);
-  await page.selectOption('#ann-priority', priority);
   await page.evaluate(({ audience, sections }) => setTargetAudience(audience.concat(sections.map((s) => 'section:' + s))), { audience, sections });
   const saved = page.waitForResponse((r) => r.url().includes('/api/admin/announcements') && r.request().method() === 'POST');
   await page.getByRole('button', { name: 'Post Announcement' }).click();

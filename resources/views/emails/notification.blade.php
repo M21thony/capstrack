@@ -2,36 +2,36 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $headline }}</title>
-    <style>
-        body { font-family: 'Roboto', Arial, sans-serif; color: #3c4043; line-height: 1.5; padding: 20px; }
-        .email-container { max-width: 600px; margin: auto; }
-        .header { margin-bottom: 30px; border-bottom: 1px solid #dadce0; padding-bottom: 20px; }
-        .logo { font-weight: bold; font-size: 20px; color: #1a73e8; }
-        h1 { font-size: 22px; color: #202124; margin-top: 0; }
-        .btn { background: #1a73e8; color: #ffffff !important; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin: 10px 0; }
-        .footer { margin-top: 40px; border-top: 1px solid #dadce0; padding-top: 20px; font-size: 12px; color: #70757a; }
-    </style>
 </head>
-<body>
-    <div class="email-container">
-        <div class="header"><div class="logo">CapsTrack</div></div>
+{{-- Styles are inline: several mail apps drop a <style> block. --}}
+<body style="margin:0;padding:24px 12px;background:#f2f3f5;font-family:'DM Sans',Arial,sans-serif;color:#1e2128;font-size:14px;line-height:1.55;">
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e0e2e8;border-radius:10px;">
+        <div style="background:#18191f;color:#ffffff;padding:14px 24px;font-weight:700;font-size:16px;border-bottom:3px solid #c9a82c;border-radius:10px 10px 0 0;">CapsTrack</div>
 
-        <h1>{{ $headline }}</h1>
-        <p>Hi {{ $recipientName }},</p>
-        @if ($body)
-            <p>{{ $body }}</p>
-        @endif
+        <div style="padding:22px 24px;">
+            @if ($poster)
+                <div style="font-size:12px;color:#656b7a;margin-bottom:6px;">From {{ $poster }}, CaPSA</div>
+            @endif
+            <h1 style="font-size:20px;line-height:1.3;margin:0 0 14px;color:#1e2128;">{{ $headline }}</h1>
+            <p style="margin:0 0 12px;">Hi {{ $recipientName }},</p>
+            @if ($body)
+                <p style="margin:0 0 12px;white-space:pre-line;">{{ $body }}</p>
+            @endif
 
-        @if ($url)
-            <a href="{{ $url }}" class="btn">Open in CapsTrack</a>
-        @endif
+            @if ($url)
+                <a href="{{ $url }}" style="display:inline-block;background:#c9a82c;color:#18191f;font-weight:700;padding:10px 18px;border-radius:8px;margin:6px 0 4px;text-decoration:none;">Open in CapsTrack</a>
+            @endif
+        </div>
 
-        <div class="footer">
-            <div class="logo" style="margin-bottom:10px;">CapsTrack</div>
-            © 2026 CSPC - College of Computer Studies <br>
-            This is a copy of a notification in your CapsTrack bell. You can choose which of these
-            emails you get under Notifications in your profile settings.
+        <div style="border-top:1px solid #e0e2e8;padding:14px 24px;font-size:12px;color:#656b7a;background:#f7f8fa;border-radius:0 0 10px 10px;">
+            @if ($offUrl)
+                <a href="{{ $offUrl }}" style="color:#1e2128;">Turn off announcement emails</a><br>
+            @else
+                Choose which emails you get under Notifications in your profile.<br>
+            @endif
+            CSPC · College of Computer Studies
         </div>
     </div>
 </body>

@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Support\NotificationTypes;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Sends the Google-mail copy of an important notification.
@@ -65,20 +66,25 @@ class NotificationMailer
 
     /**
      * Email without asking the type list, for callers that have already
-     * decided - an announcement, which is only mailed when it is important.
+     * decided - an announcement. It carries the poster's name and a signed
+     * one-click link that turns these emails off.
      */
-    public static function sendAnnouncement(Student|CapstoneExpert $person, string $title, ?string $message, ?string $link): void
+    public static function sendAnnouncement(Student|CapstoneExpert $person, string $title, ?string $message, ?string $link, ?string $from = null): void
     {
         try {
             if ($person->email && $person->wants('announcement', 'email')) {
-                self::queue($person, $title, $message, $link);
+                $offUrl = URL::signedRoute('announcements.email-off', [
+                    'who' => $person instanceof Student ? 'student' : 'expert',
+                    'id' => $person->getKey(),
+                ]);
+                self::queue($person, $title, $message, $link, $from, $offUrl);
             }
         } catch (\Throwable $e) {
             Log::error('Could not email an announcement', ['error' => $e->getMessage()]);
         }
     }
 
-    private static function queue(Student|CapstoneExpert $person, string $title, ?string $message, ?string $link): void
+    private static function queue(Student|CapstoneExpert $person, string $title, ?string $message, ?string $link, ?string $from = null, ?string $offUrl = null): void
     {
         Mail::to($person->email)->queue(new NotificationMail(
             $person instanceof Student ? $person->displayFirstName() : $person->name,
@@ -87,6 +93,8 @@ class NotificationMailer
             // shows it as plain text and lets the view do the escaping.
             $message === null ? null : html_entity_decode(strip_tags($message), ENT_QUOTES),
             $link ? url($link) : null,
+            $from,
+            $offUrl,
         ));
     }
 }
