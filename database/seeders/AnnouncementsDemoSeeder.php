@@ -52,19 +52,20 @@ class AnnouncementsDemoSeeder extends Seeder
             'is_admin' => false,
             'sections' => ['BSIT-3A', 'BSIT-3B'],
         ]);
+        $capsa->forceFill(['tour_completed_at' => now()])->save();
 
         $roleId = DB::table('roles')->where('role_name', CapstoneExpert::CAPSA_ROLE)->value('role_id')
             ?? DB::table('roles')->insertGetId(['role_name' => CapstoneExpert::CAPSA_ROLE, 'description' => 'Capstone Subject Adviser']);
         DB::table('expert_roles')->insertOrIgnore(['expert_id' => $capsa->expert_id, 'role_id' => $roleId]);
 
-        $students = collect(self::STUDENTS)->map(fn (array $who, string $email) => Student::create([
+        // Tours done, so the portal tour does not cover the pages under test.
+        $students = collect(self::STUDENTS)->map(fn (array $who, string $email) => tap(Student::create([
             'email' => $email,
             'f_name' => $who[0],
             'l_name' => 'Wright',
             'course' => 'BSIT',
             'year_section' => '3rd · '.$who[1],
-            'tutorial_completed_at' => now(),
-        ]));
+        ]), fn (Student $student) => $student->forceFill(['tutorial_completed_at' => now()])->save()));
 
         $ana = $students->get('pw-ann-ana@my.cspc.edu.ph');
         $team = Team::create([
@@ -79,7 +80,7 @@ class AnnouncementsDemoSeeder extends Seeder
     public static function clean(): void
     {
         $studentIds = Student::whereIn('email', array_keys(self::STUDENTS))->pluck('student_id');
-        $capsaId = CapstoneExpert::where('email', self::CAPSA)->value('expert_id');
+        $capsaId = CapstoneExpert::withTrashed()->where('email', self::CAPSA)->value('expert_id');
 
         Notification::whereIn('student_id', $studentIds)->delete();
         StudentSchoolYear::whereIn('student_id', $studentIds)->delete();
@@ -89,7 +90,7 @@ class AnnouncementsDemoSeeder extends Seeder
         if ($capsaId) {
             Announcement::where('admin_id', $capsaId)->delete();
             DB::table('expert_roles')->where('expert_id', $capsaId)->delete();
-            CapstoneExpert::where('expert_id', $capsaId)->delete();
+            CapstoneExpert::withTrashed()->where('expert_id', $capsaId)->forceDelete();
         }
     }
 }
