@@ -13,6 +13,11 @@ return new class extends Migration
 
     public function up(): void
     {
+        // Tests count on an empty expert table.
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
         if (DB::table('capstone_experts')->where('email', self::EMAIL)->exists()) {
             DB::table('capstone_experts')->where('email', self::EMAIL)
                 ->update(['is_admin' => true, 'approved_status' => true, 'deactivated_at' => null]);
