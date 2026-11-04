@@ -82,6 +82,8 @@
   .compose-card:hover .compose-plus{border-color:var(--accent3);color:var(--accent3)}
   .compose-title{font-size:14px;font-weight:600;color:var(--text)}
   .modal-tutorial.is-closed{background:var(--red-bg);border-color:rgba(220,38,38,.3);color:var(--red)}
+  /* A long post must not push the box past the top of the screen. */
+  #postModal .modal-card{max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto}
   .compose-sub{font-size:12px;color:var(--text3);margin-top:2px;line-height:1.4}
 
   /* ── Recruitment Grid ── */

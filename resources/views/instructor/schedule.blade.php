@@ -372,6 +372,8 @@ dialog.cm-panel .ga-title{font-size:20px}
 dialog.cm-panel .ga-foot{flex-wrap:wrap;padding:14px 24px 20px}
 dialog.cm-panel .ga-foot .ga-summary{flex:1 1 100%}
 dialog.cm-panel .ga-foot .btn{flex:1 1 0;min-height:46px;border-radius:12px}
+/* On a phone the panel is a bottom sheet: keep its cap, so the title stays on screen. */
+@media (max-width:768px){dialog.cm-panel .ga-modal{max-height:92vh;max-height:92dvh}}
 </style>
 
 <!-- ─── CANCELLATION DECISION ─────────────────────────────────────────────── -->
