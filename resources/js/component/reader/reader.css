@@ -121,7 +121,9 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-diffline{font-size:12.5px;line-height:1.6;color:#4a5060;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .rr-diffline del{background:#ffebe9;color:#82071e;border-radius:3px;padding:0 2px}
 .rr-diffline ins{background:#dafbe1;color:#116329;text-decoration:none;border-radius:3px;padding:0 2px}
-.rr-hl.rr-diff.del{background:#cf222e;box-shadow:none;mix-blend-mode:normal}
+/* Where words were taken out: the same underlined highlight as a new word, in red. */
+.rr-hl.rr-diff.del{background:rgba(207,34,46,.14);box-shadow:inset 0 -2px 0 #cf222e}
+.rr-hl.rr-diff.del.on{background:rgba(207,34,46,.3);outline:2px solid #cf222e}
 /* On the earlier version: what was taken out, crossed out in red. A line, not
    a fill, so it never passes for a "Must fix" remark and a remark under it
    still shows. A word's box runs from a font-size above its baseline to a

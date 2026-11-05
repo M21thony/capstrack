@@ -165,3 +165,14 @@ test("a line at the top of only a few pages is still compared", () => {
   assert.equal(kept.filter((t) => t === "results").length, 0);
   assert.equal(kept.length, 3000 + 4);
 });
+
+test("a removal is marked on the word that now follows it, as wide as that word", () => {
+  const words = layout(wordsOf("the system checks every paper before the adviser signs"));
+  words.forEach((w, i) => (w.rects = [{ top_position: 0.5, left_position: 0.05 * i, highlight_width: 0.04, highlight_height: 0.01 }]));
+  const after = words.filter((w) => w.raw !== "every" && w.raw !== "paper");
+
+  const { changes, marks } = compareVersions(words, after);
+
+  assert.deepEqual(changes.map((c) => c.kind), ["removed"]);
+  assert.deepEqual(marks[1], [{ id: 0, removed: true, rects: [words[5].rects[0]] }]);
+});

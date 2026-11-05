@@ -547,8 +547,9 @@ export async function compareFigures(oldPdf, newPdf, OPS, { onProgress = () => {
 /**
  * The changed spots of every figure on the pages of both versions:
  * { marks, oldMarks }, each by page number. A changed label in an edited
- * diagram is marked like a changed word: highlighted where it is, and a thin
- * bar on the other version where it was taken out or put in. A changed shape
+ * diagram is marked like a changed word: highlighted where it is, a thin bar
+ * on the earlier version where it was put in, and highlighted in red on this
+ * version where it was taken out. A changed shape
  * or arrow is not marked here: its own ink is coloured instead (tints). A
  * redone, new or removed diagram is boxed whole.
  */
@@ -561,7 +562,7 @@ export function figureMarks(figures) {
   };
   const whole = (ink) => onPage(ink, 1, { x: 0, y: 0, w: W, h: 1 });
   const add = (into, page, id, tone, label, rect) => (into[page] ||= []).push({ id, tone, label, rects: [rect] });
-  const spot = (into, page, id, rects, bar) => rects.length && (into[page] ||= []).push({ id, diff: true, ...(bar && { [bar]: true }), rects: bar ? rects.map((r) => ({ ...r, highlight_width: 0.003 })) : rects });
+  const spot = (into, page, id, rects, bar) => rects.length && (into[page] ||= []).push({ id, diff: true, ...(bar && { [bar]: true }), rects: bar === "inserted" ? rects.map((r) => ({ ...r, highlight_width: 0.003 })) : rects });
   const shown = ([x0, y0, x1, y1]) => ({ x: x0 / SHOW, y: y0 / SHOW, w: (x1 - x0) / SHOW, h: (y1 - y0) / SHOW });
   figures.forEach((f, i) => {
     const id = `f${i}`;

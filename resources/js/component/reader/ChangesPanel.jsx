@@ -526,7 +526,7 @@ export default function ChangesPanel({
         <h2>What changed <span className="rr-count">{changes.length}</span></h2>
       </div>
       <p className="rr-help">
-        Since <b>{base?.round}</b>. New and reworded words are underlined in green; a red mark shows where words were removed.
+        Since <b>{base?.round}</b>. New and reworded words are underlined in green; where words were removed is underlined in red.
       </p>
       <div className="rr-side-body">
         {message && diff.status !== "notext" ? (

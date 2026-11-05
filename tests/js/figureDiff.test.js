@@ -73,13 +73,13 @@ test("on this version, a spot follows the diagram when it was rescaled to line u
   assert.ok(Math.abs(marks[1][0].rects[0].left_position - (60 / 400 - 0.004)) < 0.001);
 });
 
-test("a spot is highlighted like a changed word, with a thin bar on the version it is missing from", () => {
+test("a spot is highlighted like a changed word: in red where it was taken out, a thin bar where it was put in", () => {
   const ink = { left: 0, top: 0, width: 1, height: 1 };
   const spot = { x: 10, y: 10, w: 20, h: 20 };
   const { marks, oldMarks } = figureMarks([{ kind: "small", spots: [spot, spot, spot], tones: ["removed", "added", "rewritten"], oldPage: 1, newPage: 1, oldInk: ink, newInk: ink, oldH: 400, newH: 400, fit: null }]);
   assert.deepEqual(oldMarks[1].map((m) => [m.diff, !!m.inserted, m.rects[0].highlight_width]), [[true, false, oldMarks[1][0].rects[0].highlight_width], [true, true, 0.003], [true, false, oldMarks[1][2].rects[0].highlight_width]]);
   assert.deepEqual(marks[1].map((m) => [m.diff, !!m.removed]), [[true, true], [true, false], [true, false]]);
-  assert.equal(marks[1][0].rects[0].highlight_width, 0.003);
+  assert.equal(marks[1][0].rects[0].highlight_width, marks[1][1].rects[0].highlight_width);
   assert.ok(marks[1][1].rects[0].highlight_width > 0.05);
   assert.equal(marks[1][0].label, undefined); // no "changed" / "+ added" tags
 });
