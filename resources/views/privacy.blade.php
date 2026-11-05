@@ -17,13 +17,13 @@
   <h1>Privacy Policy</h1>
   <p>Last updated: November 5, 2026</p>
 
-  <p>CapsTRACK is the capstone project tracking system of the CSPC College of Computer Studies, used by students, advisers, panel members and capstone coordinators (CaPSA). This page explains what personal information CapsTRACK collects, why, who can see it, and your rights under the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
+  <p>CapsTRACK is the capstone project tracking system of the CSPC College of Computer Studies, used by students, advisers, panel members and Capstone Subject Advisers (CaPSA). This page explains what personal information CapsTRACK collects, why, who can see it, and your rights under the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
 
   <h2>Information we collect</h2>
   <ul>
     <li><strong>Google account details:</strong> your name, email address, and profile picture, used to identify you and sign you in.</li>
-    <li><strong>Google Calendar (advisers, panel members and coordinators only):</strong> access is limited to calendar events. CapsTRACK adds consultation bookings and defense schedules to your calendar, updates them when they are rescheduled, and removes them when they are cancelled. Students are not asked for Calendar access.</li>
-    <li><strong>Google Drive (advisers, panel members and coordinators only):</strong> access is limited to files CapsTRACK itself creates or that you choose to open with it, used to store capstone documents. CapsTRACK cannot see any other files in your Drive. Students are not asked for Drive access.</li>
+    <li><strong>Google Calendar (advisers, panel members and CaPSA only):</strong> access is limited to calendar events. CapsTRACK adds consultation bookings and defense schedules to your calendar, updates them when they are rescheduled, and removes them when they are cancelled. Students are not asked for Calendar access.</li>
+    <li><strong>Google Drive (advisers, panel members and CaPSA only):</strong> access is limited to files CapsTRACK itself creates or that you choose to open with it, used to store capstone documents. CapsTRACK cannot see any other files in your Drive. Students are not asked for Drive access.</li>
     <li><strong>School records:</strong> student number, name, course, section, year level and school year, from the section list your CaPSA uploads, plus your field of expertise if you are an adviser or panel member.</li>
     <li><strong>Capstone work:</strong> team details, titles, submitted documents and diagrams, comments, defense schedules, grades, evaluations and team ratings.</li>
     <li><strong>Consultations:</strong> the bookings you make or accept, their topics and notes.</li>
