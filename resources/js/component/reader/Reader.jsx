@@ -142,7 +142,8 @@ const SIDES = [" up right", " up left", " down right", " down left"];
 /**
  * A remark's mark on a figure: its kind's icon, placed in whichever of the
  * spots around the box (or round the pinned point) has the least drawing
- * under it, so it never sits on what is being remarked on. Its comment shows
+ * under it, so it never sits on what is being remarked on, and joined by a
+ * thin line to a dot on the box's edge (or the point) so it is plain whose it is. Its comment shows
  * beside it while it is pointed at or picked, opening to the side with the
  * least drawing, and lets clicks through.
  */
@@ -186,12 +187,9 @@ function FigureMark({ kind, spots, on, onSelect, title, text, pin = false }) {
   const side = place.side || `${at.dy < 0 ? " up" : " down"}${at.dx < 0 ? " left" : " right"}`;
   return (
     <span ref={ref} className={`rr-fmark c-${kind}`} style={{ top: pct(at.top), left: pct(at.left), "--dx": `${at.dx}px`, "--dy": `${at.dy}px` }}>
-      {pin && (
-        <>
-          <svg className="rr-flead" aria-hidden="true"><line x1="0" y1="0" x2={at.dx} y2={at.dy} /></svg>
-          <span className="rr-fdot" aria-hidden="true" />
-        </>
-      )}
+      {/* A dot where it belongs - the pinned point, or the box's edge - and a thin line out to the icon. */}
+      <svg className="rr-flead" aria-hidden="true"><line x1="0" y1="0" x2={at.dx} y2={at.dy} /></svg>
+      <span className={`rr-fdot${pin ? "" : " edge"}`} aria-hidden="true" />
       <button type="button" className={`rr-markbtn${on ? " on" : ""}`} onClick={onSelect} aria-label={title}>
         <KindMark kind={kind} />
       </button>
@@ -215,13 +213,13 @@ const boxSpots = (b) => {
   const middle = (top + bottom) / 2;
   const centre = (left + right) / 2;
   const corners = [
-    { top, left: right, dx: 8, dy: -12 },
-    { top, left, dx: -8, dy: -12 },
-    { top: bottom, left: right, dx: 8, dy: 12 },
-    { top: bottom, left, dx: -8, dy: 12 },
+    { top, left: right, dx: 20, dy: -20 },
+    { top, left, dx: -20, dy: -20 },
+    { top: bottom, left: right, dx: 20, dy: 20 },
+    { top: bottom, left, dx: -20, dy: 20 },
   ];
-  const besideSides = [{ top: middle, left: right, dx: 16, dy: 0 }, { top: middle, left, dx: -16, dy: 0 }];
-  const besideEnds = [{ top, left: centre, dx: 0, dy: -16 }, { top: bottom, left: centre, dx: 0, dy: 16 }];
+  const besideSides = [{ top: middle, left: right, dx: 30, dy: 0 }, { top: middle, left, dx: -30, dy: 0 }];
+  const besideEnds = [{ top, left: centre, dx: 0, dy: -30 }, { top: bottom, left: centre, dx: 0, dy: 30 }];
   if (width < 0.025) return [...besideSides, ...corners, ...besideEnds];
   if (height < 0.025) return [...besideEnds, ...corners, ...besideSides];
   return [...corners, ...besideSides, ...besideEnds];

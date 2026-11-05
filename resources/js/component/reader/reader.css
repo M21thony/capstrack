@@ -217,6 +217,7 @@ a.rr-chip:hover{border-color:#e3d08f;background:#faf7ed;color:#23242b}
 .rr-mark.inline svg{width:12px;height:12px}
 /* A pin: a dot on the point, a thin line out to its mark. */
 .rr-fdot{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--kc,#18191f);border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.rr-fdot.edge{width:7px;height:7px;margin:-3.5px 0 0 -3.5px}
 .rr-fdot.pending{width:12px;height:12px;margin:-6px 0 0 -6px;background:#c9a82c;box-shadow:0 0 0 4px rgba(201,168,44,.3)}
 .rr-flead{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible}
 .rr-flead line{stroke:var(--kc,#18191f);stroke-width:1.5}
