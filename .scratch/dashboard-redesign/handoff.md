@@ -18,7 +18,7 @@ The sidebar (`student.partials.sidebar`) and the topbar (dark bar, page title, `
 ```
 ┌──────────────────────────── Welcome banner ────────────────────────────┐
 ├──────────── Capstone Progress (2 cols) ───────────┬── Quick Actions ───┤
-├─── Announcements ───┬─── Upcoming Deadlines ──────┼── On-track card ───┤
+├─── Announcements ───┬─── Upcoming Consultations ─┼── On-track card ───┤
 ├─── Your Team ───────┼─── Recent Activity ─────────┼── Resources ───────┤
 └─────────────────────┴─────────────────────────────┴────────────────────┘
 ```
@@ -39,7 +39,7 @@ All colours come from `resources/student-ui/styles.css`. Notes:
 
 ## Sections and their data
 
-Everything below except Upcoming Deadlines, Recent Activity and Resources already comes from `DashboardController::index`.
+Everything below except Upcoming Consultations, Recent Activity and Resources already comes from `DashboardController::index`.
 
 | # | Card | Shows | Source | Link |
 | --- | --- | --- | --- | --- |
@@ -47,7 +47,7 @@ Everything below except Upcoming Deadlines, Recent Activity and Resources alread
 | 2 | Capstone Progress | Ring and bar showing `$overallProgress`%; "{completed} of {total} requirements done"; a red **N Overdue** box (only when N > 0); **Next due** date and title | `$progress->completed`, `$progress->total`, `$overdueItems->count()`, `$nextItem->due_on`, `$nextItem->item->title` | View details → `student.progress` |
 | 3 | Quick Actions | 4 tiles | none | Submit → `student.submission`; View Documents → `student.documents`; Check Schedule → **open question 3**; View Progress → `student.progress` |
 | 4 | Announcements | The latest **3**, each with a title, a one-line excerpt (ellipsis) and a date. Gold dot = new, grey = older | `$announcements->take(3)` | View all → announcements list (**open question 4**) |
-| 5 | Upcoming Deadlines | The next **3** items not yet done that have a due date, each with a date, a title and a pill: **Today** (gold), "N days left" | **New:** `$progress->items`, without complete or overdue items, those with `due_on`, sorted by `due_on`, `take(3)`. This is the same filter as `$nextItem` without `->first()`. | View all → `student.progress` (the Progress Tracker lists every requirement with its due date; the app has no calendar outside Consultation) |
+| 5 | Upcoming Consultations | The team's next **3** booked consultations, each with a date tile (gold when it is today or tomorrow), "{expert name} · {Adviser / Consultant / Grammarian}", "{start} – {end} · {topics}", and a pill: **Today** / **Tomorrow** (gold), "In N days" | **New:** `ConsultationBooking::forTeam($teamId)->where('booking_status', 'scheduled')->whereDate('session_date', '>=', today())`, with `schedule.expert`, sorted by `session_date` then `schedule.start_time`, `take(3)`. Topics from `topicsLabel()`. The role comes from the team's expert assignment for that expert (`$myTeam->expertAssignments`). | View all → `student.consultation` |
 | 6 | On-track card | A trophy icon and a message | `$overdueItems` (see open question 1) | none |
 | 7 | Your Team | Team name, "Active team", up to 4 initials avatars, "{n} members · {section}"; **Manage team** button | `$myTeam`, `$teamMembers` | Manage team → `student.team` |
 | 8 | Recent Activity | The latest **3**, each with a coloured icon by type, text and "Nov 4 · 3:45 PM" | **New:** `Notification::where('student_id', …)->latest('created_at')->take(3)`, read ones included (the controller loads only unread now) | View all → notifications |
@@ -56,10 +56,15 @@ Everything below except Upcoming Deadlines, Recent Activity and Resources alread
 ### Empty states
 
 - **No team:** keep today's `NextStep` card (`App\Support\NextStep`) in place of rows 2–4, or above them. It already explains the next setup step.
-- **No checklist yet** (`$progress === null`): Capstone Progress shows the existing sentence "Your section's checklist is not set up yet…", and Upcoming Deadlines shows "No deadlines yet."
+- **No checklist yet** (`$progress === null`): Capstone Progress shows the existing sentence "Your section's checklist is not set up yet…", and the Overdue and Next due boxes are hidden.
 - **No overdue items:** hide the red box. The Next due box takes its place.
 - **Nothing in a list:** show one muted line inside the card, such as "No announcements yet." Keep the card height.
+- **No consultation booked:** "No consultation booked yet." and a gold outline button **Book a consultation** → `student.consultation`.
 - **No new resources:** hide the gold notice and show the 2 newest resources anyway.
+
+## Decided
+
+- **Upcoming Deadlines was dropped.** The Capstone Progress card already shows the overdue count and what is due next, and the app has no calendar outside Consultation. Upcoming Consultations took its place.
 
 ## Open questions
 
@@ -73,7 +78,7 @@ Everything below except Upcoming Deadlines, Recent Activity and Resources alread
 
 `tests/Feature/StudentDashboardTest.php` covers today's dashboard. Update it for the new sections, at least:
 
-- Upcoming Deadlines lists at most 3 open items with due dates, in date order, and leaves out completed and overdue items.
+- Upcoming Consultations lists at most 3 of the team's own `scheduled` bookings from today on, in date and time order, and leaves out cancelled, done and past bookings and other teams' bookings.
 - Recent Activity shows the student's own notifications only, read and unread.
 - The Resources notice counts only resources uploaded in the last week, and only those the student's program and section can see.
 - The Overdue box and the on-track message follow `$overdueItems`.

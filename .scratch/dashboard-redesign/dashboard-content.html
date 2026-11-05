@@ -82,14 +82,11 @@ svg{display:block}
 .db-ann-top time{font-size:12px;font-weight:400;color:var(--text2);white-space:nowrap}
 .db-clip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.db-timeline{position:relative;list-style:none;margin:0;padding:0 0 0 20px;display:flex;flex-direction:column;gap:7px}
-.db-timeline::before{content:"";position:absolute;left:4px;top:18px;bottom:18px;width:2px;background:var(--bg4)}
-.db-timeline li{position:relative;display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;background:var(--bg3);border:1px solid var(--bg4);font-size:13px}
-.db-timeline li::before{content:"";position:absolute;left:-20px;width:10px;height:10px;border-radius:50%;background:var(--accent2);box-shadow:0 0 0 3px var(--bg2)}
-.db-timeline li.later::before{background:var(--border2)}
-.db-timeline li.is-today{background:var(--accent-light);border-color:#ebe3c4}
-.db-timeline time{width:50px;font-weight:700}
-.db-timeline .what{flex:1;min-width:0}
+.db-date{width:38px;height:38px;flex-shrink:0;border-radius:9px;background:var(--bg3);border:1px solid var(--bg4);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14px;font-weight:700;line-height:1}
+.db-date small{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);margin-bottom:2px}
+.db-date.soon{background:var(--accent-light);border-color:#ebe3c4}
+.db-cons{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.db-cons b{font-size:13px;font-weight:600}
 
 /* ---------- on-track card ---------- */
 .db-track{position:relative;overflow:hidden;flex:1 1 250px;background:var(--navy-dark);border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;color:#fff}
@@ -231,16 +228,28 @@ svg{display:block}
     <section class="db-card">
       <div class="db-head">
         <h2 class="db-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          Upcoming Deadlines
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path d="M8 9h8M8 13h5"/></svg>
+          Upcoming Consultations
         </h2>
         <a class="db-more" href="#">View all</a>
       </div>
-      <ol class="db-timeline">
-        <li class="is-today"><time>Nov 5</time><span class="what">Chapter 1 Draft</span><span class="db-pill today">Today</span></li>
-        <li><time>Nov 7</time><span class="what">Pre-Proposal Submission</span><span class="db-pill">2 days left</span></li>
-        <li class="later"><time>Nov 12</time><span class="what">Document Revision</span><span class="db-pill">7 days left</span></li>
-      </ol>
+      <ul class="db-list">
+        <li>
+          <span class="db-date soon"><small>Nov</small>6</span>
+          <div class="db-cons"><b>Engr. R. Santos · Adviser</b><span class="db-meta db-clip">2:00 – 3:00 PM · Chapter 1 review</span></div>
+          <span class="db-pill today">Tomorrow</span>
+        </li>
+        <li>
+          <span class="db-date"><small>Nov</small>10</span>
+          <div class="db-cons"><b>Dr. L. Reyes · Grammarian</b><span class="db-meta db-clip">9:00 – 9:30 AM · Grammar check, Chapters 1–2</span></div>
+          <span class="db-pill">In 5 days</span>
+        </li>
+        <li>
+          <span class="db-date"><small>Nov</small>13</span>
+          <div class="db-cons"><b>Prof. M. Cruz · Consultant</b><span class="db-meta db-clip">1:00 – 2:00 PM · System design</span></div>
+          <span class="db-pill">In 8 days</span>
+        </li>
+      </ul>
     </section>
 
     <section class="db-track">
