@@ -36,6 +36,6 @@ class ExpertController extends Controller
             ]);
         }
 
-        return redirect('/');
+        return redirect()->route('login')->with('signed_out', true);
     }
 }

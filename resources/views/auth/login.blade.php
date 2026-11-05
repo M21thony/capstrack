@@ -268,6 +268,25 @@
 </div>
 @endif
 
+{{-- Shown on the first open of this page each visit, but not straight after
+     signing out (or being signed out by the idle timer). --}}
+<div class="modal-overlay fixed inset-0 z-[2900] flex items-center justify-center bg-navy/75 p-5 backdrop-blur-md" id="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title" hidden
+     data-skip="{{ session('signed_out') || session('session_expired') ? '1' : '' }}">
+    <div class="w-full max-w-[460px] rounded-2xl bg-white px-6 py-8 shadow-[0_30px_60px_rgba(0,0,0,0.35)] sm:px-8">
+        <h3 id="privacy-modal-title" class="m-0 mb-3 text-[17px] font-bold tracking-[-0.3px] text-[#1e2128]">Your data in CapsTrack</h3>
+        <p class="m-0 mb-3 text-[13px] leading-relaxed text-gray-600">
+            CapsTrack collects your CSPC Google account details (name, email, photo), your student or faculty records, and the documents, grades, consultations and payment receipts you add while using it.
+        </p>
+        <p class="m-0 mb-5 text-[13px] leading-relaxed text-gray-600">
+            It is used only to run the CCS capstone process and is handled under the Data Privacy Act of 2012 (RA 10173).
+        </p>
+        <div class="flex flex-col gap-2.5 sm:flex-row-reverse">
+            <button id="privacy-ok-btn" type="button" data-close class="min-h-11 flex-1 cursor-pointer rounded-[10px] border-none bg-[#1e2128] px-4 py-3 text-[13px] font-bold text-white transition-colors duration-150 hover:bg-black">I understand</button>
+            <a href="{{ route('privacy') }}" class="flex min-h-11 flex-1 items-center justify-center rounded-[10px] border border-line px-4 py-3 text-[13px] font-semibold text-ink no-underline hover:bg-sand">Read the privacy policy</a>
+        </div>
+    </div>
+</div>
+
 <script nonce="{{ Vite::cspNonce() }}">
 document.getElementById('google-login-form').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -329,6 +348,22 @@ document.getElementById('google-login-form').addEventListener('submit', function
     const forceOpenWhenWide = function () { if (wide.matches) { note.open = true; } };
     forceOpenWhenWide();
     wide.addEventListener('change', forceOpenWhenWide);
+})();
+
+(function () {
+    const modal = document.getElementById('privacy-modal');
+    const KEY = 'privacy-notice-seen';
+    const seen = function () { try { return sessionStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
+    const markSeen = function () { try { sessionStorage.setItem(KEY, '1'); } catch (e) {} };
+
+    if (modal.dataset.skip) { markSeen(); return; }
+    if (seen()) { return; }
+
+    modal.hidden = false;
+    document.getElementById('privacy-ok-btn').addEventListener('click', function () {
+        markSeen();
+        modal.hidden = true;
+    });
 })();
 
 const expertRemovedModal = document.getElementById('expert-removed-modal');

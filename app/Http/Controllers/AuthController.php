@@ -818,7 +818,7 @@ class AuthController extends Controller
             ]);
         }
 
-        return redirect('/');
+        return redirect()->route('login')->with('signed_out', true);
     }
 
     public function rejected(Request $request)
