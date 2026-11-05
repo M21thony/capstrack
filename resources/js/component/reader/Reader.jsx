@@ -142,8 +142,9 @@ const SIDES = [" up right", " up left", " down right", " down left"];
 /**
  * A remark's mark on a figure: its kind's icon, placed in whichever of the
  * spots around the box (or round the pinned point) has the least drawing
- * under it, so it never sits on what is being remarked on, and joined by a
- * thin line to a dot on the box's edge (or the point) so it is plain whose it is. Its comment shows
+ * under it - the icon and the line out to it both - so neither sits on what
+ * is being checked, and joined by that thin line to a dot on the box's edge
+ * (or the point) so it is plain whose it is. None of it takes clicks but the icon. Its comment shows
  * beside it while it is pointed at or picked, opening to the side with the
  * least drawing, and lets clicks through.
  */
@@ -158,11 +159,14 @@ function FigureMark({ kind, spots, on, onSelect, title, text, pin = false }) {
       const el = ref.current;
       const surface = surfaceOf(el?.closest(".rr-page"));
       const overlay = el?.offsetParent;
-      const ink = surface && overlay ? inkAt(surface, overlay, spots.map((s) => ({ ...s, x: s.dx - 14, y: s.dy - 14, w: 28, h: 28 }))) : null;
-      if (!ink) {
+      const icon = surface && overlay ? inkAt(surface, overlay, spots.map((s) => ({ ...s, x: s.dx - 14, y: s.dy - 14, w: 28, h: 28 }))) : null;
+      if (!icon) {
         if (tries++ < 20) timer = setTimeout(look, 150);
         return;
       }
+      // The line out to the icon counts too: the middle stretch of it, clear of the dot on the edge.
+      const line = inkAt(surface, overlay, spots.map((s) => ({ ...s, x: s.dx * 0.6 - 4, y: s.dy * 0.6 - 4, w: 8, h: 8 })));
+      const ink = icon.map((n, i) => n + (line?.[i] ?? 0));
       const spot = clearest(ink, 40);
       const at = spots[spot];
       const callout = el.querySelector(".rr-callout")?.getBoundingClientRect();
