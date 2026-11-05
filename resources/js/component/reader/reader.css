@@ -122,12 +122,13 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-diffline{font-size:12.5px;line-height:1.6;color:#4a5060;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .rr-diffline del{background:#ffebe9;color:#82071e;border-radius:3px;padding:0 2px}
 .rr-diffline ins{background:#dafbe1;color:#116329;text-decoration:none;border-radius:3px;padding:0 2px}
-/* Where words were taken out: the same underlined highlight as a new word, in red. */
-.rr-hl.rr-diff.del{background:rgba(207,34,46,.14);box-shadow:0 2px 0 #cf222e}
+/* Where words were taken out: a red underline with no tint, so inside a
+   "Must fix" remark it never blends into the remark's pink. */
+.rr-hl.rr-diff.del{background:none;box-shadow:0 3px 0 #cf222e}
 .rr-hl.rr-diff.del.on{background:rgba(207,34,46,.3);outline:2px solid #cf222e}
-/* On the earlier version: what was taken out, marked the same way as new
-   words but in red. The underline is what sets it apart from "Must fix". */
-.rr-hl.rr-diff.old{background:rgba(207,34,46,.14);box-shadow:0 2px 0 #cf222e}
+/* On the earlier version: what was taken out, underlined in red with no
+   tint. A fill always means a remark, so it never passes for "Must fix". */
+.rr-hl.rr-diff.old{background:none;box-shadow:0 3px 0 #cf222e}
 .rr-hl.rr-diff.old.on{background:rgba(207,34,46,.3);outline:2px solid #cf222e}
 .rr-hl.rr-diff.old.ins{background:#1a7f37;box-shadow:none;mix-blend-mode:normal}
 /* A changed spot inside a diagram: boxed, since a picture has no words to underline. */
