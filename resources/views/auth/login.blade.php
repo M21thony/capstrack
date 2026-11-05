@@ -272,17 +272,82 @@
      signing out (or being signed out by the idle timer). --}}
 <div class="modal-overlay fixed inset-0 z-[2900] flex items-center justify-center bg-navy/75 p-5 backdrop-blur-md" id="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title" hidden
      data-skip="{{ session('signed_out') || session('session_expired') ? '1' : '' }}">
-    <div class="w-full max-w-[460px] rounded-2xl bg-white px-6 py-8 shadow-[0_30px_60px_rgba(0,0,0,0.35)] sm:px-8">
-        <h3 id="privacy-modal-title" class="m-0 mb-3 text-[17px] font-bold tracking-[-0.3px] text-[#1e2128]">Your data in CapsTrack</h3>
-        <p class="m-0 mb-3 text-[13px] leading-relaxed text-gray-600">
-            CapsTrack collects your CSPC Google account details (name, email, photo), your student or faculty records, and the documents, grades, consultations and payment receipts you add while using it.
-        </p>
-        <p class="m-0 mb-5 text-[13px] leading-relaxed text-gray-600">
-            It is used only to run the CCS capstone process and is handled under the Data Privacy Act of 2012 (RA 10173).
-        </p>
-        <div class="flex flex-col gap-2.5 sm:flex-row-reverse">
-            <button id="privacy-ok-btn" type="button" data-close class="min-h-11 flex-1 cursor-pointer rounded-[10px] border-none bg-[#1e2128] px-4 py-3 text-[13px] font-bold text-white transition-colors duration-150 hover:bg-black">I understand</button>
-            <a href="{{ route('privacy') }}" class="flex min-h-11 flex-1 items-center justify-center rounded-[10px] border border-line px-4 py-3 text-[13px] font-semibold text-ink no-underline hover:bg-sand">Read the privacy policy</a>
+    <div class="flex h-[min(660px,100%)] w-full max-w-[940px] overflow-hidden rounded-2xl border border-gold/25 bg-[#161616] shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+        <aside class="hidden w-[220px] flex-none flex-col border-r border-white/10 bg-[#101010] px-3 py-6 md:flex">
+            <img src="{{ asset('images/brand/capstrack-logo-ui.svg') }}" alt="CapsTrack" class="mx-3 mb-8 block h-7 w-auto self-start"/>
+            <nav class="flex flex-col gap-1" aria-label="Privacy notice sections">
+                <button type="button" data-pp-jump="pp-collect" class="flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 text-left text-[13px] font-medium text-[#b8b8b2] transition-colors duration-150 hover:bg-white/5 hover:text-white data-[active]:bg-gold/15 data-[active]:text-gold"><svg viewBox="0 0 24 24" class="size-4 flex-none fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>Information We Collect</button>
+                <button type="button" data-pp-jump="pp-use" class="flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 text-left text-[13px] font-medium text-[#b8b8b2] transition-colors duration-150 hover:bg-white/5 hover:text-white data-[active]:bg-gold/15 data-[active]:text-gold"><svg viewBox="0 0 24 24" class="size-4 flex-none fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4"/></svg>How We Use It</button>
+                <button type="button" data-pp-jump="pp-protect" class="flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 text-left text-[13px] font-medium text-[#b8b8b2] transition-colors duration-150 hover:bg-white/5 hover:text-white data-[active]:bg-gold/15 data-[active]:text-gold"><svg viewBox="0 0 24 24" class="size-4 flex-none fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>Data Protection</button>
+                <button type="button" data-pp-jump="pp-rights" class="flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 text-left text-[13px] font-medium text-[#b8b8b2] transition-colors duration-150 hover:bg-white/5 hover:text-white data-[active]:bg-gold/15 data-[active]:text-gold"><svg viewBox="0 0 24 24" class="size-4 flex-none fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></svg>Your Rights</button>
+                <button type="button" data-pp-jump="pp-contact" class="flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 text-left text-[13px] font-medium text-[#b8b8b2] transition-colors duration-150 hover:bg-white/5 hover:text-white data-[active]:bg-gold/15 data-[active]:text-gold"><svg viewBox="0 0 24 24" class="size-4 flex-none fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><path d="M4 5h16v12H8l-4 3z"/></svg>Contact</button>
+            </nav>
+        </aside>
+        <div class="flex min-w-0 flex-1 flex-col">
+            <div class="flex items-center gap-4 border-b border-gold/40 px-5 py-5 sm:px-7">
+                <span class="flex size-12 flex-none items-center justify-center rounded-xl bg-gold/15 text-gold"><svg viewBox="0 0 24 24" class="size-7 fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6l7-3z"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9.5a2 2 0 0 1 4 0V11"/></svg></span>
+                <div>
+                    <h3 id="privacy-modal-title" class="m-0 text-[22px] font-bold text-white">Privacy Notice</h3>
+                    <p class="m-0 mt-0.5 text-[13px] text-[#9a9a94]">How CapsTrack handles your information</p>
+                </div>
+            </div>
+            <div class="relative flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-7" id="privacy-modal-body">
+                <p class="mt-0 text-[13px] leading-relaxed text-[#b8b8b2]"><strong class="text-white">Welcome to CapsTrack.</strong> CapsTrack is the capstone tracking system of the CSPC College of Computer Studies. Before you sign in, here is what it collects, why, and your rights under the Data Privacy Act of 2012 (RA 10173).</p>
+                <section id="pp-collect" class="flex gap-3">
+                    <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">1</span>
+                    <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
+                        <h4 class="m-0 mb-1 text-[14px] font-bold text-white">Information We Collect</h4>
+                        We collect only what the capstone process needs:<ul class="m-0 mt-1.5 list-disc space-y-1 pl-5"><li>Your CSPC Google account: name, email address and profile picture.</li><li>School records: student number, course, section, year level and school year.</li><li>Capstone work: team details, titles, documents, comments, schedules, grades and evaluations.</li><li>Consultation bookings and the payment receipts you submit.</li><li>Sign-in and activity records, kept for security.</li></ul>
+                    </div>
+                </section>
+                <section id="pp-use" class="flex gap-3">
+                    <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">2</span>
+                    <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
+                        <h4 class="m-0 mb-1 text-[14px] font-bold text-white">How We Use It</h4>
+                        Your information is used only to run CapsTrack:<ul class="m-0 mt-1.5 list-disc space-y-1 pl-5"><li>Signing you in and tracking your capstone progress.</li><li>Checking proposed titles for duplicates.</li><li>Scheduling consultations and defenses, and recording grades and payments.</li><li>Sending notices about your project by email or browser.</li></ul><p class="m-0 mt-1.5">It is never sold, used for advertising or shared outside the college&#039;s capstone program.</p>
+                    </div>
+                </section>
+                <section id="pp-see" class="flex gap-3">
+                    <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">3</span>
+                    <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
+                        <h4 class="m-0 mb-1 text-[14px] font-bold text-white">Who Can See It</h4>
+                        Students see their own team&#039;s records. Advisers and panel members see the teams assigned to them, and the CaPSA sees the sections they handle.
+                    </div>
+                </section>
+                <section id="pp-protect" class="flex gap-3">
+                    <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">4</span>
+                    <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
+                        <h4 class="m-0 mb-1 text-[14px] font-bold text-white">Data Protection</h4>
+                        Records and files are kept on servers run for the college, and title checks use an AI model hosted by the school. Only CSPC accounts approved by the college can sign in, and idle sessions end on their own.
+                    </div>
+                </section>
+                <section id="pp-rights" class="flex gap-3">
+                    <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">5</span>
+                    <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
+                        <h4 class="m-0 mb-1 text-[14px] font-bold text-white">Your Rights</h4>
+                        Under the Data Privacy Act of 2012 you may:<ul class="m-0 mt-1.5 list-disc space-y-1 pl-5"><li>Be informed about and access your personal information.</li><li>Have errors corrected, or object to its processing.</li><li>Have it erased or blocked.</li><li>File a complaint with the National Privacy Commission.</li></ul>
+                    </div>
+                </section>
+                <section id="pp-google" class="flex gap-3">
+                    <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">6</span>
+                    <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
+                        <h4 class="m-0 mb-1 text-[14px] font-bold text-white">Google Services</h4>
+                        Advisers, panel members and CaPSA may connect Google Calendar and Drive, limited to the events and files CapsTrack creates. Students are never asked for this access.
+                    </div>
+                </section>
+                <section id="pp-contact" class="flex gap-3">
+                    <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">7</span>
+                    <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
+                        <h4 class="m-0 mb-1 text-[14px] font-bold text-white">Contact</h4>
+                        To see, correct or delete your CapsTrack records, contact your CaPSA or the CSPC Data Protection Officer.
+                    </div>
+                </section>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 border-t border-white/10 px-5 py-3 sm:px-7">
+                <a href="{{ route('privacy') }}" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gold/50 px-4 text-[13px] font-semibold text-gold no-underline transition-colors duration-150 hover:bg-gold/10"><svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>Full policy</a>
+                <span class="hidden flex-1 text-center text-[12px] text-[#9a9a94] sm:block">Last updated: <span class="font-semibold text-gold">November 5, 2026</span></span>
+                <button id="privacy-ok-btn" type="button" data-close class="ml-auto inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border-none bg-gold px-5 text-[13px] font-bold text-navy transition-colors duration-150 hover:bg-gold-bright"><svg viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>I Understand</button>
+            </div>
         </div>
     </div>
 </div>
@@ -360,6 +425,15 @@ document.getElementById('google-login-form').addEventListener('submit', function
     if (seen()) { return; }
 
     modal.hidden = false;
+    // The side list jumps the notice to its section (the body is relative, so offsetTop is inside it).
+    const body = document.getElementById('privacy-modal-body');
+    modal.querySelectorAll('[data-pp-jump]').forEach(function (link, i, links) {
+        link.addEventListener('click', function () {
+            links.forEach(function (l) { l.removeAttribute('data-active'); });
+            link.setAttribute('data-active', '');
+            body.scrollTo({ top: document.getElementById(link.dataset.ppJump).offsetTop - 20, behavior: 'smooth' });
+        });
+    });
     document.getElementById('privacy-ok-btn').addEventListener('click', function () {
         markSeen();
         modal.hidden = true;
