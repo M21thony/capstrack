@@ -176,3 +176,24 @@ test("a removal is marked on the word that now follows it, as wide as that word"
   assert.deepEqual(changes.map((c) => c.kind), ["removed"]);
   assert.deepEqual(marks[1], [{ id: 0, removed: true, rects: [words[5].rects[0]] }]);
 });
+
+test("a removal before a word stored in pieces is marked as tall and wide as the whole word", () => {
+  const words = layout(wordsOf("submit the final CAPSTRACK report"));
+  words.forEach((w, i) => (w.rects = [{ top_position: 0.5, left_position: 0.1 * i, highlight_width: 0.08, highlight_height: 0.02 }]));
+  // Small caps: a big "C" and the smaller "APSTRACK" on the same baseline.
+  words[3].rects = [
+    { top_position: 0.5, left_position: 0.3, highlight_width: 0.01, highlight_height: 0.02 },
+    { top_position: 0.504, left_position: 0.31, highlight_width: 0.06, highlight_height: 0.016 },
+  ];
+  const after = words.filter((w) => w.raw !== "final");
+
+  const { marks } = compareVersions(words, after);
+
+  assert.equal(marks[1].length, 1);
+  assert.equal(marks[1][0].removed, true);
+  assert.deepEqual(marks[1][0].rects.length, 1);
+  const [r] = marks[1][0].rects;
+  assert.equal(r.top_position, 0.5);
+  assert.ok(Math.abs(r.highlight_height - 0.02) < 1e-9);
+  assert.ok(Math.abs(r.highlight_width - 0.07) < 1e-9);
+});

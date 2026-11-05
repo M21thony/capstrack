@@ -272,11 +272,12 @@ export function compareVersions(oldWords, newWords) {
     for (let j = b0; j < b1; j++) (byPage[newWords[j].page] ||= []).push(...newWords[j].rects);
     Object.entries(byPage).forEach(([page, rects]) => (marks[page] ||= []).push({ id, rects: mergeRectsByLine(rects) }));
     // A removal has no words of its own on the new version: the word that now
-    // follows it is marked like a new word, in red.
+    // follows it is marked like a new word, in red. Its pieces are joined the
+    // same way, so a small-caps word is as tall as a new one would be.
     const anchor = newWords[Math.min(b0, newWords.length - 1)];
     const first = anchor?.rects[0];
     if (b0 === b1 && first) {
-      (marks[anchor.page] ||= []).push({ id, removed: true, rects: [first] });
+      (marks[anchor.page] ||= []).push({ id, removed: true, rects: mergeRectsByLine(anchor.rects).slice(0, 1) });
     }
     // The same passage on the earlier version: its removed words, or a thin
     // mark where new words were put in.
