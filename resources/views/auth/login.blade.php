@@ -425,15 +425,36 @@ document.getElementById('google-login-form').addEventListener('submit', function
     if (seen()) { return; }
 
     modal.hidden = false;
-    // The side list jumps the notice to its section (the body is relative, so offsetTop is inside it).
+    // The side list jumps the notice to its section (the body is relative, so offsetTop is inside it),
+    // and lights up the section being read as the notice scrolls.
     const body = document.getElementById('privacy-modal-body');
-    modal.querySelectorAll('[data-pp-jump]').forEach(function (link, i, links) {
+    const links = Array.from(modal.querySelectorAll('[data-pp-jump]'));
+    const target = function (link) { return document.getElementById(link.dataset.ppJump); };
+    // A clicked item stays lit until the reader scrolls by hand - the last sections are too
+    // short to reach the top, so the scroll position alone would light Contact instead.
+    let picked = null;
+    ['wheel', 'touchstart', 'keydown'].forEach(function (type) {
+        body.addEventListener(type, function () { picked = null; }, { passive: true });
+    });
+    const highlight = function () {
+        let current = picked || links[0];
+        if (!picked) {
+            links.forEach(function (link) {
+                if (target(link).offsetTop - 30 <= body.scrollTop) { current = link; }
+            });
+            if (body.scrollTop + body.clientHeight >= body.scrollHeight - 2) { current = links[links.length - 1]; }
+        }
+        links.forEach(function (l) { l.toggleAttribute('data-active', l === current); });
+    };
+    links.forEach(function (link) {
         link.addEventListener('click', function () {
-            links.forEach(function (l) { l.removeAttribute('data-active'); });
-            link.setAttribute('data-active', '');
-            body.scrollTo({ top: document.getElementById(link.dataset.ppJump).offsetTop - 20, behavior: 'smooth' });
+            picked = link;
+            highlight();
+            body.scrollTo({ top: target(link).offsetTop - 20, behavior: 'smooth' });
         });
     });
+    body.addEventListener('scroll', highlight, { passive: true });
+    highlight();
     document.getElementById('privacy-ok-btn').addEventListener('click', function () {
         markSeen();
         modal.hidden = true;
