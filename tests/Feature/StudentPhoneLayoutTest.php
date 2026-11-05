@@ -198,21 +198,18 @@ class StudentPhoneLayoutTest extends TestCase
     }
 
     /**
-     * On a phone the how-to card was half the first screen of every page. It
-     * is a banner there, its steps folded behind "How it works".
+     * The how-to card that took the top of every page is gone; its guide is
+     * behind the ? beside the bell.
      */
-    public function test_the_how_to_card_is_a_banner_on_a_phone(): void
+    public function test_the_how_to_is_in_the_page_guide_not_a_card(): void
     {
         $this->actingAs($this->student())->get(route('student.dashboard'))
             ->assertOk()
-            ->assertSee('<button type="button" class="page-tutorial-more" aria-expanded="false" aria-controls="tutorial-steps-dashboard">How it works</button>', false)
-            ->assertSee('<ol class="page-tutorial-steps" id="tutorial-steps-dashboard">', false)
-            ->assertSee("more.setAttribute('aria-expanded', open ? 'true' : 'false');", false);
+            ->assertSee('id="pg-btn"', false)
+            ->assertSee('<h3 class="pg-title" id="pg-title">Dashboard</h3>', false)
+            ->assertDontSee('page-tutorial', false);
 
-        $css = File::get(resource_path('student-ui/Styles/shared-student.css'));
-        $this->assertStringContainsString('.page-tutorial-steps{display:none;margin-top:8px}', $css);
-        $this->assertStringContainsString('.page-tutorial.is-open .page-tutorial-steps{display:flex}', $css);
-        $this->assertStringNotContainsString("grid-column:1 / -1;\n    width:100%;\n    min-height:44px;", $css);
+        $this->assertStringNotContainsString('.page-tutorial', File::get(resource_path('student-ui/Styles/shared-student.css')));
     }
 
     /** A member's whole name on Financial Records, not "Christopher John Emmanuel …". */

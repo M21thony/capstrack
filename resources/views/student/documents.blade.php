@@ -232,7 +232,6 @@
   ></div>
 </div>
 @else
-    @include('student.partials.page-tutorial', ['page' => 'documents'])
     @php
         $icons = [
             'ok' => '<polyline points="20 6 9 17 4 12"/>',

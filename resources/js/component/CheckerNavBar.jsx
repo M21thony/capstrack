@@ -81,6 +81,13 @@ function CheckerNavbar({ ctx, status, verdict, saveState, onExport, onFinish, ve
       <button type="button" className="rr-btn gold" onClick={onFinish}>
         Apply Changes
       </button>
+      {/* The Page Guide's ?; its panel is the shared one the page includes. */}
+      {document.getElementById("pg") && (
+        <button type="button" className="rr-btn ghost pg-btn" id="pg-btn" aria-label="Page Guide for this page"
+          aria-expanded="false" aria-controls="pg" aria-keyshortcuts="?">
+          <span className="pg-q" aria-hidden="true">?</span>
+        </button>
+      )}
     </header>
   );
 }

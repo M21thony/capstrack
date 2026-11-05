@@ -1,8 +1,9 @@
 {{-- The guided tour, for every portal. The screen dims, one part of the
-     portal is outlined, and a short note with an arrow says what it is -
+     portal is outlined in gold, and a card beside it says what it is -
      pointing at the real thing, so a newcomer learns where it is and not just
      that it exists. Opens by itself once for a new account and never again;
-     there is no sidebar button to replay it.
+     there is no sidebar button to replay it. The Page Guide
+     (partials/page-guide) runs it with a page's own steps instead.
 
      Each portal's sidebar includes a small wrapper that works out its steps
      and passes:
@@ -32,13 +33,9 @@
      data-save-url="{{ $tourSaveUrl }}">
   <div class="gt-shield" data-tour="shield"></div>
   <div class="gt-spot" id="gt-spot" aria-hidden="true"></div>
-  <svg class="gt-arrow" id="gt-arrow" aria-hidden="true">
-    <path id="gt-arrow-line" />
-    <path id="gt-arrow-head" />
-  </svg>
 
   <div class="gt-note" id="gt-note" aria-live="polite">
-    <h2 class="gt-label" id="gt-label"></h2>
+    <h2 class="gt-label" id="gt-label"><span class="gt-bulb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg></span><span id="gt-label-text"></span></h2>
     <p class="gt-body" id="gt-body"></p>
     {{-- Always in the page (the script reads it); only shown on the send-off,
          and only for a portal that names a first step. --}}
@@ -47,12 +44,16 @@
       <span class="gt-next-up-title">{{ $tourNextLabel ?? '' }}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
     </a>
+    <div class="gt-foot" id="gt-foot">
+      <span id="gt-foot-count"></span>
+      <button type="button" data-tour="note-next">Next</button>
+    </div>
   </div>
 
   <div class="gt-bar">
-    <span class="gt-count" id="gt-count"></span>
+    <span class="gt-count" id="gt-count"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg><span id="gt-count-n"></span><span class="t" id="gt-count-t"></span></span>
     <button type="button" class="gt-pill gt-pill-ghost" data-tour="back">Back</button>
-    <button type="button" class="gt-pill gt-pill-ghost" data-tour="skip">Skip</button>
+    <button type="button" class="gt-pill gt-pill-ghost" data-tour="skip">Skip tour</button>
     <button type="button" class="gt-pill gt-pill-solid" data-tour="next">Next</button>
   </div>
 
@@ -65,16 +66,20 @@
   if (!tour) return;
 
   var steps = JSON.parse(document.getElementById('gt-steps').textContent);
+  var portalSteps = steps;
+  var pageTour = false;
   var tourKey = tour.getAttribute('data-tour-key') || 'student';
   var last = steps.length - 1;
   var spot = document.getElementById('gt-spot');
   var note = document.getElementById('gt-note');
-  var labelEl = document.getElementById('gt-label');
+  var labelEl = document.getElementById('gt-label-text');
   var bodyEl = document.getElementById('gt-body');
   var countEl = document.getElementById('gt-count');
-  var arrow = document.getElementById('gt-arrow');
-  var arrowLine = document.getElementById('gt-arrow-line');
-  var arrowHead = document.getElementById('gt-arrow-head');
+  var countNum = document.getElementById('gt-count-n');
+  var countLabel = document.getElementById('gt-count-t');
+  var foot = document.getElementById('gt-foot');
+  var footCount = document.getElementById('gt-foot-count');
+  var noteNext = tour.querySelector('[data-tour="note-next"]');
   var finishLink = tour.querySelector('[data-tour="finish-link"]');
   var backBtn = tour.querySelector('[data-tour="back"]');
   var skipBtn = tour.querySelector('[data-tour="skip"]');
@@ -84,6 +89,13 @@
   // The welcome and the send-off are not counted: step 1 is the first
   // thing actually pointed at.
   var pointed = steps.filter(function (s) { return s.target.length; }).length;
+
+  function useSteps(list, isPage) {
+    steps = list;
+    last = steps.length - 1;
+    pointed = steps.filter(function (s) { return s.target.length; }).length;
+    pageTour = isPage;
+  }
 
   var current = 0;
   var direction = 1;
@@ -163,17 +175,16 @@
   function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 
   /**
-   * Put the note where there is room for it, far enough from the outline
-   * that the arrow has space to curve, and draw the arrow from the note to
-   * the outline. Right of the target first - the sidebar is on the left, so
-   * that is nearly always free on a computer - then below, left, above.
+   * Put the card just beside the outline, where there is room for it.
+   * Right of the target first - the sidebar is on the left, so that is
+   * nearly always free on a computer - then below, left, above.
    */
   function layoutPointed(els) {
     var r = unionRect(els);
     var vw = window.innerWidth;
     var vh = window.innerHeight;
     var edge = 16;
-    var gap = isNarrow() ? 56 : 84;
+    var gap = isNarrow() ? 12 : 18;
     var reserve = bar.offsetHeight + 28;
 
     spot.style.left = r.left + 'px';
@@ -186,10 +197,10 @@
     var h = note.offsetHeight;
 
     var options = {
-      right: { x: r.right + gap, y: r.cy - h / 2 - 34, fits: r.right + gap + w <= vw - edge },
-      below: { x: r.cx + 24, y: r.bottom + gap, fits: r.bottom + gap + h <= vh - reserve },
-      left: { x: r.left - gap - w, y: r.cy - h / 2 - 34, fits: r.left - gap - w >= edge },
-      above: { x: r.cx + 24, y: r.top - gap - h, fits: r.top - gap - h >= edge }
+      right: { x: r.right + gap, y: r.cy - h / 2, fits: r.right + gap + w <= vw - edge },
+      below: { x: r.left, y: r.bottom + gap, fits: r.bottom + gap + h <= vh - reserve },
+      left: { x: r.left - gap - w, y: r.cy - h / 2, fits: r.left - gap - w >= edge },
+      above: { x: r.left, y: r.top - gap - h, fits: r.top - gap - h >= edge }
     };
     var side = ['right', 'below', 'left', 'above'].filter(function (s) { return options[s].fits; })[0] || 'below';
     var x = clamp(options[side].x, edge, vw - edge - w);
@@ -198,52 +209,6 @@
     note.style.left = x + 'px';
     note.style.top = y + 'px';
     note.setAttribute('data-side', side);
-
-    // From beside the heading to just short of the outline. It
-    // leaves the words and meets the target square-on, bending in between
-    // - the loose S of a note scribbled on top of a screenshot.
-    var labelMid = Math.min(14, h / 2); // the middle of the heading's first line
-    var bend = 34;
-    var start, end, c1, c2;
-    if (side === 'right') {
-      start = { x: x - 10, y: y + labelMid };
-      end = { x: r.right + 10, y: r.cy };
-      c1 = { x: start.x - bend, y: start.y };
-      c2 = { x: end.x + bend, y: end.y };
-    } else if (side === 'left') {
-      start = { x: x + w + 10, y: y + labelMid };
-      end = { x: r.left - 10, y: r.cy };
-      c1 = { x: start.x + bend, y: start.y };
-      c2 = { x: end.x - bend, y: end.y };
-    } else if (side === 'below') {
-      start = { x: x + 28, y: y - 10 };
-      end = { x: clamp(r.cx, r.left + 14, r.right - 14), y: r.bottom + 10 };
-      c1 = { x: start.x, y: start.y - bend };
-      c2 = { x: end.x, y: end.y + bend };
-    } else {
-      start = { x: x + 28, y: y + h + 10 };
-      end = { x: clamp(r.cx, r.left + 14, r.right - 14), y: r.top - 10 };
-      c1 = { x: start.x, y: start.y + bend };
-      c2 = { x: end.x, y: end.y - bend };
-    }
-
-    drawArrow(start, c1, c2, end);
-  }
-
-  function drawArrow(start, c1, c2, end) {
-    arrowLine.setAttribute('d', 'M' + start.x + ' ' + start.y + ' C' + c1.x + ' ' + c1.y + ' ' + c2.x + ' ' + c2.y + ' ' + end.x + ' ' + end.y);
-
-    // The head follows the curve's last direction, not the straight line.
-    var dx = end.x - c2.x;
-    var dy = end.y - c2.y;
-    var len = Math.sqrt(dx * dx + dy * dy) || 1;
-    dx /= len; dy /= len;
-    var size = 12;
-    var spread = 0.5;
-    var a = { x: end.x - size * (dx * Math.cos(spread) - dy * Math.sin(spread)), y: end.y - size * (dy * Math.cos(spread) + dx * Math.sin(spread)) };
-    var b = { x: end.x - size * (dx * Math.cos(spread) + dy * Math.sin(spread)), y: end.y - size * (dy * Math.cos(spread) - dx * Math.sin(spread)) };
-    arrowHead.setAttribute('d', 'M' + a.x + ' ' + a.y + ' L' + end.x + ' ' + end.y + ' L' + b.x + ' ' + b.y);
-    arrow.style.display = '';
   }
 
   function layoutCentered() {
@@ -253,7 +218,6 @@
     var reserve = bar.offsetHeight + 28;
     note.style.top = Math.max(16, (window.innerHeight - reserve - note.offsetHeight) / 2) + 'px';
     note.setAttribute('data-side', 'center');
-    arrow.style.display = 'none';
   }
 
   function layout() {
@@ -293,14 +257,18 @@
     labelEl.textContent = step.label;
     bodyEl.textContent = step.body;
     // Only a portal with a first step to send people to shows the link.
-    finishLink.hidden = current !== last || finishLink.getAttribute('data-has-next') !== '1';
+    finishLink.hidden = pageTour || current !== last || finishLink.getAttribute('data-has-next') !== '1';
 
     var number = steps.slice(0, current + 1).filter(function (s) { return s.target.length; }).length;
-    countEl.textContent = step.target.length ? number + ' / ' + pointed : '';
+    countEl.hidden = foot.hidden = !step.target.length;
+    countNum.textContent = 'Step ' + number + ' of ' + pointed;
+    countLabel.textContent = '• ' + step.label;
+    footCount.textContent = number + ' / ' + pointed;
 
     backBtn.hidden = current === 0;
     skipBtn.hidden = current === last;
-    nextBtn.textContent = current === 0 ? 'Start the tour' : current === last ? 'Done' : 'Next';
+    nextBtn.textContent = current === last ? 'Finish' : current === 0 && !step.target.length ? 'Start the tour' : 'Next';
+    noteNext.textContent = current === last ? 'Finish' : 'Next';
 
     var moved = openedForTarget;
     if (isNarrow()) {
@@ -334,7 +302,8 @@
   }
 
   function save() {
-    if (saved || tour.getAttribute('data-auto-open') !== '1') return;
+    // A page's tour from the Page Guide is not the first-login one.
+    if (pageTour || saved || tour.getAttribute('data-auto-open') !== '1') return;
     saved = true;
     try { sessionStorage.setItem('gt-done:' + tourKey, '1'); } catch (e) {}
     // keepalive: "Your first step" navigates away straight after this.
@@ -359,7 +328,7 @@
   function open() {
     loadFont();
     // Poppins arriving after the first layout changes how tall the note is;
-    // measure again once it has, so the arrow still starts beside the words.
+    // measure again once it has, so the card still sits beside the outline.
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function () { if (!tour.hidden) layout(); });
     }
@@ -378,6 +347,7 @@
     document.body.classList.remove('tour-open');
     setSidebar(false);
     if (returnFocus && returnFocus.focus) returnFocus.focus({ preventScroll: true });
+    if (pageTour) useSteps(portalSteps, false);
     release();
   }
 
@@ -421,6 +391,7 @@
   function back() { direction = -1; show(current - 1); }
 
   nextBtn.addEventListener('click', next);
+  noteNext.addEventListener('click', next);
   backBtn.addEventListener('click', back);
   skipBtn.addEventListener('click', close);
   finishLink.addEventListener('click', save);
@@ -462,9 +433,18 @@
     }
   });
 
-  window.openPortalTour = function () {
+  // With no steps, the portal's own tour; with a page's steps (the Page
+  // Guide's Start tour), those, leaving out any part this page is not
+  // showing right now.
+  window.openPortalTour = function (pageSteps) {
+    if (!tour.hidden) return;
     if (typeof closeSidebar === 'function') closeSidebar();
     openedSidebar = false;
+    if (Array.isArray(pageSteps)) {
+      var here = pageSteps.filter(function (s) { return targetsOf(s).length || (isNarrow() && inSidebarSelector(s)); });
+      if (!here.length) return;
+      useSteps(here, true);
+    }
     open();
   };
 

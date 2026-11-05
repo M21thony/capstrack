@@ -136,7 +136,6 @@
     </div>
   </div>
   <div class="content">
-    @include('student.partials.page-tutorial', ['page' => 'archive'])
     <div id="contentWrapper" style="position: relative;">
 <div id="skeleton-content" class="sk-overlay">
       <div class="row" style="margin-bottom:16px;gap:8px;flex-wrap:wrap">

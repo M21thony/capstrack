@@ -1,0 +1,68 @@
+/* The Page Guide: the ? beside the bell and the panel it opens. */
+.pg-btn{color:var(--accent);border-color:var(--accent)}
+.pg-q{font:700 19px/1 Poppins,sans-serif}
+
+.pg-scrim{position:fixed;inset:0;background:rgba(10,11,15,.35);z-index:2900}
+.pg{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--bg2);border-left:1px solid var(--border);
+    box-shadow:-12px 0 32px rgba(0,0,0,.14);z-index:2901;display:flex;flex-direction:column;color:var(--text);text-align:left}
+.pg[hidden],.pg-scrim[hidden],.pg [hidden]{display:none}
+
+.pg-head{display:flex;align-items:flex-start;gap:12px;padding:20px 20px 14px}
+.pg-ico{flex:none;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#1e2128;display:grid;place-items:center;font:700 22px/1 Poppins,sans-serif}
+.pg-h{margin:1px 0 2px;font:600 20px/1.2 Poppins,sans-serif;color:var(--text)}
+.pg-sub{margin:0;font-size:13.5px;color:var(--text2)}
+.pg-x{margin-left:auto;flex:none;width:36px;height:36px;border-radius:9px;border:0;background:none;cursor:pointer;color:var(--text2);display:grid;place-items:center}
+.pg-x:hover{background:var(--bg3)}
+.pg-x svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+
+.pg-body{flex:1;overflow:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:14px}
+.pg-body>*,.pg-here>*{flex-shrink:0}
+.pg-here,.pg-hits{display:flex;flex-direction:column;gap:14px}
+
+.pg-search{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border:1px solid var(--border2);border-radius:10px;color:var(--text3);background:var(--bg2)}
+.pg-search:focus-within{border-color:var(--accent)}
+.pg-search svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.pg-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;font-size:14.5px}
+
+.pg-card{border:1px solid var(--border);border-radius:12px;padding:16px}
+.pg-cur{background:var(--accent-light);border-color:#c9a82c40}
+.pg-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2)}
+.pg-title{margin:4px 0;font:600 21px/1.2 Poppins,sans-serif;color:var(--text)}
+.pg-cur p{margin:0;font-size:14px;line-height:1.5;color:var(--text2)}
+
+.pg-sec{margin:0 0 10px;font:600 16px Poppins,sans-serif;color:var(--text)}
+.pg-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;font-size:14.5px;line-height:1.45;color:var(--text2)}
+.pg-steps li{display:flex;gap:12px}
+.pg-steps b{color:var(--text)}
+.pg-n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#1e2128;font:700 12.5px/24px Poppins,sans-serif;text-align:center}
+
+.pg-tourc{background:var(--bg3)}
+.pg-tour-row{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.pg-play{flex:none;width:40px;height:40px;border-radius:50%;background:var(--navy-dark);color:var(--accent);display:grid;place-items:center}
+.pg-play svg,.pg-go svg{width:16px;height:16px;fill:currentColor}
+.pg-tour-h{margin:0;font:600 15.5px Poppins,sans-serif;color:var(--text)}
+.pg-tourc p{margin:2px 0 0;font-size:13.5px;color:var(--text2)}
+.pg-go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:44px;border:0;border-radius:10px;background:var(--accent);color:#1e2128;font:600 14.5px Poppins,sans-serif;cursor:pointer}
+.pg-go:hover{filter:brightness(.96)}
+
+.pg-rel a{display:flex;align-items:center;gap:8px;padding:6px 0;color:var(--accent2);font-size:14.5px;font-weight:600;text-decoration:none}
+.pg-rel a:hover{text-decoration:underline;text-underline-offset:3px}
+.pg-rel svg{flex:none;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+.pg-tip{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--accent-light);border:1px solid #c9a82c40;font-size:13.5px;line-height:1.45;color:var(--text2)}
+.pg-tip svg{flex:none;width:20px;height:20px;fill:none;stroke:var(--accent2);stroke-width:2;stroke-linecap:round}
+.pg-tip b{color:var(--text)}
+
+.pg-hits{gap:8px}
+.pg-hit{display:block;padding:12px 14px;border:1px solid var(--border);border-radius:12px;color:var(--text);text-decoration:none}
+.pg-hit:hover{border-color:var(--accent)}
+.pg-hit b{display:block;font:600 15px Poppins,sans-serif;color:var(--accent2)}
+.pg-hit span{display:block;margin-top:2px;font-size:13.5px;line-height:1.45;color:var(--text2)}
+.pg-none{margin:4px 0;font-size:14px;color:var(--text2)}
+
+.pg button:focus-visible,.pg a:focus-visible,.pg-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* The annotator carries none of the portal colours; it borrows the light ones. */
+body.pg-own-colours{--bg2:#fff;--bg3:#f7f8fa;--border:#e0e2e8;--border2:#c8cad4;--text:#1e2128;--text2:#4a5060;--text3:#656b7a;
+  --navy-dark:#18191f;--accent:#c9a82c;--accent2:#b5941f;--accent-light:#faf7ed}
+body.pg-own-colours .pg{font-family:"DM Sans","DM Sans Fallback",system-ui,sans-serif}

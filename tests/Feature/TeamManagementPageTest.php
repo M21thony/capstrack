@@ -122,12 +122,12 @@ class TeamManagementPageTest extends TestCase
         $this->actingAs($student, 'web');
         $data = TeamManagementPage::for($student);
 
-        // The app's shell (sidebar, bell, tutorial) is shared by every student
+        // The app's shell (sidebar and bell) is shared by every student
         // page and fetches its own data; only the Team page's own markup is
         // under test, so the shell renders empty here.
         $shell = sys_get_temp_dir().'/team-page-shell-'.getmypid();
         @mkdir($shell.'/student/partials', 0777, true);
-        foreach (['sidebar', 'notification-dropdown', 'page-tutorial'] as $partial) {
+        foreach (['sidebar', 'notification-dropdown'] as $partial) {
             file_put_contents("{$shell}/student/partials/{$partial}.blade.php", '');
         }
         View::getFinder()->prependLocation($shell);

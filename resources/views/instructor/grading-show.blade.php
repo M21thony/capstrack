@@ -396,6 +396,7 @@
       </div>
       <span class="gs-divider" aria-hidden="true"></span>
       <span class="gs-saved" id="saveStatus" role="status"><i aria-hidden="true"></i><span>{{ $saveText }}</span></span>
+      @include('partials.page-guide')
     </header>
 
     <div class="gs-alerts">
@@ -929,6 +930,10 @@ function score(c, s) {
   scores[c.id] = s;
   dirty = true;
   setStatus('Unsaved changes', true);
+  // Each pick is kept as a draft, so a refresh does not lose it. Not once
+  // submitted: that would quietly take the grade back out of the panel's.
+  clearTimeout(autoSave);
+  if (!submitted) autoSave = setTimeout(saveDraft, 600);
   const next = SECTIONS[c.sec].items.find(x => !has(x));
   if (next) {
     cur = ALL.indexOf(next);
@@ -1153,11 +1158,17 @@ function reloadOnReview() {
   refresh();
 })();
 
+let autoSave = null;
+let submitted = {{ Js::from($grade?->status === 'submitted') }};
+// One save at a time, in order: a draft still on its way never lands after a submit.
+let saving = Promise.resolve();
+
 function postGrade(url, method) {
+  clearTimeout(autoSave);
   showFormError('');
   setStatus('Saving…', true);
 
-  fetch(url, {
+  saving = saving.then(() => fetch(url, {
     method: method,
     credentials: 'same-origin',
     headers: {
@@ -1176,6 +1187,7 @@ function postGrade(url, method) {
       }
       dirty = false;
       if (data.data && data.data.status === 'submitted') {
+        submitted = true;
         setStatus('Submitted ' + clock());
         // The chair whose submission completes the panel stays to record
         // the decision; everyone else goes back to their teams.
@@ -1188,7 +1200,7 @@ function postGrade(url, method) {
     .catch(() => {
       setStatus('Not saved', true);
       showFormError('Network error. Nothing was saved.');
-    });
+    }));
 }
 
 function saveDraft() { postGrade(ROUTES.save, 'PUT'); }

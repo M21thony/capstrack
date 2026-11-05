@@ -261,7 +261,6 @@
     </div>
   </div>
   <div class="content">
-    @include('student.partials.page-tutorial', ['page' => 'team'])
 
     <div class="tm-toprow">
     <div class="tm-seg" role="tablist" aria-label="Team Management sections">

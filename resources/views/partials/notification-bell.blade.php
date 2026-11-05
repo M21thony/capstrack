@@ -94,6 +94,7 @@
 .notif-footer a:hover{background:var(--bg3);color:var(--text2)}
 </style>
 
+@include('partials.page-guide')
 <div class="notif-wrap" id="notif-wrap"
      data-vapid="{{ config('services.webpush.public_key') }}"
      data-subscribe="{{ route('instructor.push.subscribe') }}"

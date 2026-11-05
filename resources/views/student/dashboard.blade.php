@@ -110,7 +110,6 @@
     </div>
   </div>
   <div class="content">
-    @include('student.partials.page-tutorial', ['page' => 'dashboard'])
 
     {{-- Skeleton loader --}}
     <div id="contentWrapper" style="position: relative;">

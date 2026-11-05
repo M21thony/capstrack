@@ -195,7 +195,6 @@
     </div>
   </div>
   <div class="content">
-    @include('student.partials.page-tutorial', ['page' => 'progress'])
     <div id="contentWrapper" style="position: relative;">
 <div id="skeleton-content" class="sk-overlay">
       <div class="sk" style="height:150px;border-radius:16px;margin-bottom:16px"></div>

@@ -159,6 +159,10 @@
     updateAll();
   }, {capture: true, passive: true});
   addEventListener('resize', updateAll);
+  // A click or key that hides a box (the Privacy Notice's I Understand, Esc)
+  // takes its handle with it, instead of leaving it until the pointer moves.
+  document.addEventListener('click', updateAll);
+  document.addEventListener('keyup', updateAll);
   document.addEventListener('capsmodal:change', rehome);
 })();
 </script>
