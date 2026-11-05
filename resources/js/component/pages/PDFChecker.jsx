@@ -402,7 +402,7 @@ function PDFChecker({
   };
 
   const onMarkDown = (e, n) => {
-    if (mode === "text" || e.button !== 0 || e.target.closest(".rr-num, .rr-pin")) return;
+    if (mode === "text" || e.button !== 0 || e.target.closest(".rr-num, .rr-markbtn")) return;
     if (mode === "shape") { e.preventDefault(); pickShape(e, n); return; }
     if (adding) {
       if (n !== draft.pageNumber) { notify(`Boxes on one remark stay on one page. Draw on page ${draft.pageNumber}.`, { type: "error" }); return; }
@@ -776,7 +776,7 @@ function PDFChecker({
                         <div key={idx} className="rr-box pending" style={rectStyle(r)} />
                       ))}
                       {draft && !editing && draft.pageNumber === n && draft.type === "pin" && (
-                        <div className="rr-pin pending" style={{ top: `${draft.y_position * 100}%`, left: `${draft.x_position * 100}%` }}><span /></div>
+                        <span className="rr-fmark" style={{ top: `${draft.y_position * 100}%`, left: `${draft.x_position * 100}%` }}><span className="rr-fdot pending" /></span>
                       )}
                       {draft?.drawing && draft.pageNumber === n && (() => {
                         const r = draft.highlightRects[draft.highlightRects.length - 1];

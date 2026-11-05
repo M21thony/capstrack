@@ -64,9 +64,173 @@ export function Icon({ name }) {
 }
 
 /**
- * A page's remarks: the highlighted words with their number in the margin,
- * a box (or several) drawn over a figure with its number on the corner, or a
- * pin with the number on it.
+ * What a remark on a figure wears instead of a number: an icon for its kind,
+ * so the kinds differ by shape as well as by colour.
+ */
+const KIND_ICON = {
+  pink: (<><line x1="12" y1="6" x2="12" y2="13.5" /><line x1="12" y1="17.5" x2="12" y2="17.6" /></>),
+  yellow: (<><path d="M12 4.5 20.5 19h-17Z" /><line x1="12" y1="10" x2="12" y2="13.5" /><line x1="12" y1="16.3" x2="12" y2="16.4" /></>),
+  blue: <path d="M5 6h14v9h-8l-4 3.5V15H5Z" />,
+  orange: (<><polyline points="6 18 10.5 6 15 18" /><line x1="7.6" y1="14" x2="13.4" y2="14" /><line x1="16.5" y1="18" x2="19" y2="18" /></>),
+  green: <polyline points="5.5 12.5 10 17 18.5 7.5" />,
+};
+export function KindMark({ kind, inline = false }) {
+  return (
+    <span className={`rr-mark${inline ? " inline" : ""} c-${kind}`} aria-hidden="true">
+      <svg viewBox="0 0 24 24">{KIND_ICON[kind] || KIND_ICON.yellow}</svg>
+    </span>
+  );
+}
+
+/**
+ * How much of the drawing sits under each area, read from the page as drawn.
+ * An area is a rectangle (x, y, w, h in pixels) off a point on the page (top,
+ * left as fractions of it). One running off the page counts as full.
+ */
+function inkAt(surface, overlay, areas) {
+  const { shown, canvas } = surface;
+  const c = shown.getBoundingClientRect();
+  const o = overlay.getBoundingClientRect();
+  if (!c.width || !canvas.width) return null;
+  let ctx;
+  try { ctx = canvas.getContext("2d", { willReadFrequently: true }); } catch { return null; }
+  if (!ctx) return null;
+  const scale = canvas.width / c.width;
+  return areas.map(({ top, left, x, y, w, h }) => {
+    const x0 = o.left + left * o.width + x - c.left;
+    const y0 = o.top + top * o.height + y - c.top;
+    if (x0 < 0 || y0 < 0 || x0 + w > c.width || y0 + h > c.height) return Infinity;
+    let data;
+    try { data = ctx.getImageData(Math.round(x0 * scale), Math.round(y0 * scale), Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale))).data; } catch { return 0; }
+    let ink = 0;
+    for (let i = 0; i < data.length; i += 4) if (data[i] + data[i + 1] + data[i + 2] < 690) ink++;
+    return ink;
+  });
+}
+
+/**
+ * The page as drawn, to read its pixels: a PDF page's own canvas, or a
+ * diagram page's picture copied onto one (once per picture).
+ */
+const copies = new WeakMap();
+function surfaceOf(page) {
+  const canvas = page?.querySelector(".react-pdf__Page canvas, canvas");
+  if (canvas?.width) return { shown: canvas, canvas };
+  const img = page?.querySelector(".rr-diagram img");
+  if (!img?.complete || !img.naturalWidth) return null;
+  let copy = copies.get(img);
+  if (!copy || copy.src !== img.src) {
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    c.getContext("2d").drawImage(img, 0, 0);
+    copy = { src: img.src, canvas: c };
+    copies.set(img, copy);
+  }
+  return { shown: img, canvas: copy.canvas };
+}
+
+/** The first choice (they come in the order preferred) that is about as clear as the clearest. */
+const clearest = (ink, slack) => {
+  const least = Math.min(...ink);
+  return ink.findIndex((n) => n <= least + slack);
+};
+
+/** The four sides a comment can open to, off its mark. */
+const SIDES = [" up right", " up left", " down right", " down left"];
+
+/**
+ * A remark's mark on a figure: its kind's icon, placed in whichever of the
+ * spots around the box (or round the pinned point) has the least drawing
+ * under it, so it never sits on what is being remarked on. Its comment shows
+ * beside it while it is pointed at or picked, opening to the side with the
+ * least drawing, and lets clicks through.
+ */
+function FigureMark({ kind, spots, on, onSelect, title, text, pin = false }) {
+  const ref = useRef(null);
+  const [place, setPlace] = useState({ spot: 0, side: null });
+  const key = JSON.stringify(spots) + text;
+  useLayoutEffect(() => {
+    let tries = 0;
+    let timer;
+    const look = () => {
+      const el = ref.current;
+      const surface = surfaceOf(el?.closest(".rr-page"));
+      const overlay = el?.offsetParent;
+      const ink = surface && overlay ? inkAt(surface, overlay, spots.map((s) => ({ ...s, x: s.dx - 14, y: s.dy - 14, w: 28, h: 28 }))) : null;
+      if (!ink) {
+        if (tries++ < 20) timer = setTimeout(look, 150);
+        return;
+      }
+      const spot = clearest(ink, 40);
+      const at = spots[spot];
+      const callout = el.querySelector(".rr-callout")?.getBoundingClientRect();
+      let side = null;
+      if (callout?.width) {
+        const { width: w, height: h } = callout;
+        const away = `${at.dy < 0 ? " up" : " down"}${at.dx < 0 ? " left" : " right"}`;
+        const order = [away, ...SIDES.filter((x) => x !== away)];
+        const room = inkAt(surface, overlay, order.map((x) => ({
+          top: at.top, left: at.left, w, h,
+          x: x.includes("left") ? at.dx - 4 - w : at.dx + 4,
+          y: x.includes("up") ? at.dy - 14 - h : at.dy + 14,
+        })));
+        if (room) side = order[clearest(room, 60)];
+      }
+      setPlace({ spot, side });
+    };
+    look();
+    return () => clearTimeout(timer);
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const at = spots[place.spot] || spots[0];
+  const side = place.side || `${at.dy < 0 ? " up" : " down"}${at.dx < 0 ? " left" : " right"}`;
+  return (
+    <span ref={ref} className={`rr-fmark c-${kind}`} style={{ top: pct(at.top), left: pct(at.left), "--dx": `${at.dx}px`, "--dy": `${at.dy}px` }}>
+      {pin && (
+        <>
+          <svg className="rr-flead" aria-hidden="true"><line x1="0" y1="0" x2={at.dx} y2={at.dy} /></svg>
+          <span className="rr-fdot" aria-hidden="true" />
+        </>
+      )}
+      <button type="button" className={`rr-markbtn${on ? " on" : ""}`} onClick={onSelect} aria-label={title}>
+        <KindMark kind={kind} />
+      </button>
+      {text && <span className={`rr-callout${on ? " on" : ""}${side}`} aria-hidden="true">{text}</span>}
+    </span>
+  );
+}
+
+/**
+ * Where a box's mark may go, in the order preferred: just outside each
+ * corner, then beside the middle of each side. A thin one (an arrow, a line)
+ * tries beside its middle first, so the mark never sits by a shape it joins.
+ */
+const boxSpots = (b) => {
+  const top = Number(b.top_position);
+  const left = Number(b.left_position);
+  const width = Number(b.highlight_width);
+  const height = Number(b.highlight_height);
+  const right = left + width;
+  const bottom = top + height;
+  const middle = (top + bottom) / 2;
+  const centre = (left + right) / 2;
+  const corners = [
+    { top, left: right, dx: 8, dy: -12 },
+    { top, left, dx: -8, dy: -12 },
+    { top: bottom, left: right, dx: 8, dy: 12 },
+    { top: bottom, left, dx: -8, dy: 12 },
+  ];
+  const besideSides = [{ top: middle, left: right, dx: 16, dy: 0 }, { top: middle, left, dx: -16, dy: 0 }];
+  const besideEnds = [{ top, left: centre, dx: 0, dy: -16 }, { top: bottom, left: centre, dx: 0, dy: 16 }];
+  if (width < 0.025) return [...besideSides, ...corners, ...besideEnds];
+  if (height < 0.025) return [...besideEnds, ...corners, ...besideSides];
+  return [...corners, ...besideSides, ...besideEnds];
+};
+
+/**
+ * A page's remarks: the highlighted words with their number in the margin;
+ * on a figure, a box (or several) or a pin, marked with its kind's icon on
+ * the corner outside the box and its comment beside it.
  */
 export function Highlights({ remarks, numbers, selectedId, onSelect, clickable = false, override = null }) {
   return remarks.map((r) => {
@@ -77,11 +241,10 @@ export function Highlights({ remarks, numbers, selectedId, onSelect, clickable =
     const label = `Remark ${numbers[r.id]}: ${r.text}`;
     const title = `${KIND_LABEL[kind]}: ${r.text}`;
     if (r.type === "pin") {
-      return (
-        <button key={r.id} type="button" className={`rr-pin c-${kind}${on ? " on" : ""}`} style={{ top: pct(r.y_position), left: pct(r.x_position) }} onClick={select} aria-label={label} title={title}>
-          <span>{numbers[r.id]}</span>
-        </button>
-      );
+      const top = Number(r.y_position);
+      const left = Number(r.x_position);
+      const spots = [[22, -22], [-22, -22], [22, 22], [-22, 22]].map(([dx, dy]) => ({ top, left, dx, dy }));
+      return <FigureMark key={r.id} kind={kind} spots={spots} on={on} onSelect={select} title={title} text={r.text} pin />;
     }
     if (!rects.length) return null;
     const first = rects[0];
@@ -90,9 +253,7 @@ export function Highlights({ remarks, numbers, selectedId, onSelect, clickable =
         <React.Fragment key={r.id}>
           {/* A shape remark is just its number until picked, so outlines never pile up over crossing arrows. */}
           {(r.type === "box" || on || override?.id === r.id) && rects.map((rect, i) => <div key={i} className={`rr-box c-${kind}${on ? " on" : ""}`} style={rectStyle(rect)} />)}
-          <button type="button" className={`rr-num rr-boxn c-${kind}${on ? " on" : ""}`} style={{ top: pct(first.top_position), left: pct(first.left_position) }} onClick={select} aria-label={label} title={title}>
-            {numbers[r.id]}
-          </button>
+          <FigureMark kind={kind} spots={boxSpots(first)} on={on} onSelect={select} title={title} text={r.text} />
         </React.Fragment>
       );
     }
@@ -262,7 +423,7 @@ function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measur
       }}
     >
       <div className="rr-card-r1">
-        <span className="rr-no">{n}</span>
+        {isFigureRemark(r) ? <KindMark kind={kind} inline /> : <span className="rr-no">{n}</span>}
         {isFigureRemark(r)
           ? <span className="rr-tag fig">{{ pin: "Pin", shape: "Shape" }[r.type] || "Figure"}</span>
           : <span className="rr-tag">Highlighted text</span>}

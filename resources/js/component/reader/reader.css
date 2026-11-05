@@ -195,24 +195,38 @@ a.rr-chip:hover{border-color:#e3d08f;background:#faf7ed;color:#23242b}
 .rr-page.marking{cursor:crosshair;user-select:none;-webkit-user-select:none;touch-action:none}
 .rr-page.marking *{cursor:crosshair}
 .rr-page.pinning,.rr-page.pinning *{cursor:copy}
-.rr-page.marking .rr-num,.rr-page.marking .rr-pin{cursor:pointer}
+.rr-page.marking .rr-num,.rr-page.marking .rr-markbtn{cursor:pointer}
 .rr-page.marking .rr-hl.click{pointer-events:none}
 .rr-page.shaping,.rr-page.shaping *{cursor:pointer}
 .rr-box.hover{border:2px solid #c9a82c;background:rgba(201,168,44,.1);pointer-events:none}
 /* Red and green mean removed and added on a compared diagram, so remark outlines there are ink. */
-.rr-overlay.ink .rr-box,.rr-overlay.ink .rr-boxn,.rr-overlay.ink .rr-pin{--kc:#18191f}
+.rr-overlay.ink .rr-box,.rr-overlay.ink .rr-fmark{--kc:#18191f}
 .rr-box{position:absolute;border:2px solid var(--kc,#18191f);border-radius:3px;background:color-mix(in srgb,var(--kc,#18191f) 7%,transparent)}
 .rr-box.pending{border:2px dashed #18191f;background:rgba(201,168,44,.14)}
 /* A remark from the earlier version, shown where it is now: dashed, in its kind's colour. */
 .rr-box.shown{border-style:dashed}
 .rr-box.on{box-shadow:0 0 0 3px rgba(201,168,44,.55)}
-.rr-num.rr-boxn{transform:translate(-35%,-55%);background:#fff;border:2px solid var(--kc);color:#18191f;line-height:16px}
-.rr-num.rr-boxn.on{background:#c9a82c;border-color:#c9a82c}
-.rr-pin{position:absolute;width:26px;height:26px;margin:-31px 0 0 -13px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--kc,#18191f);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);pointer-events:auto;cursor:pointer;padding:0;display:grid;place-items:center}
-.rr-pin > span{transform:rotate(45deg);font:700 11px/1 "DM Sans","DM Sans Fallback",system-ui,sans-serif;color:#fff}
-.rr-pin.c-yellow > span,.rr-pin.c-green > span{color:#18191f}
-.rr-pin.pending{background:#c9a82c}
-.rr-pin.on{box-shadow:0 0 0 3px rgba(201,168,44,.65),0 1px 3px rgba(0,0,0,.4)}
+/* A figure remark's mark: its kind's icon, in the clearest spot just outside its box or beside its point. */
+.rr-fmark{position:absolute;width:0;height:0;pointer-events:none}
+.rr-markbtn{position:absolute;left:var(--dx);top:var(--dy);transform:translate(-50%,-50%);padding:0;border:0;background:none;cursor:pointer;pointer-events:auto;border-radius:50%;line-height:0}
+.rr-markbtn.on .rr-mark{box-shadow:0 0 0 3px rgba(201,168,44,.7),0 1px 3px rgba(0,0,0,.35)}
+.rr-mark{display:grid;place-items:center;width:24px;height:24px;box-sizing:border-box;border-radius:50%;background:var(--kc,#18191f);color:#fff;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.rr-mark svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.rr-mark.c-yellow{color:#18191f}
+.rr-mark.inline{width:20px;height:20px;border:0;box-shadow:none;flex:none}
+.rr-mark.inline svg{width:12px;height:12px}
+/* A pin: a dot on the point, a thin line out to its mark. */
+.rr-fdot{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--kc,#18191f);border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.rr-fdot.pending{width:12px;height:12px;margin:-6px 0 0 -6px;background:#c9a82c;box-shadow:0 0 0 4px rgba(201,168,44,.3)}
+.rr-flead{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible}
+.rr-flead line{stroke:var(--kc,#18191f);stroke-width:1.5}
+/* Its comment, beside the mark and away from the box; clicks go through it. */
+.rr-callout{position:absolute;left:var(--dx);top:var(--dy);z-index:4;width:max-content;max-width:220px;padding:6px 9px;background:#fff;border:1.5px solid var(--kc,#18191f);border-radius:8px;box-shadow:0 4px 14px rgba(24,25,31,.18);font:600 12px/1.35 "DM Sans","DM Sans Fallback",system-ui,sans-serif;color:#18191f;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .12s}
+.rr-callout.up.right{transform:translate(4px,calc(-100% - 14px))}
+.rr-callout.up.left{transform:translate(calc(-100% - 4px),calc(-100% - 14px))}
+.rr-callout.down.right{transform:translate(4px,14px)}
+.rr-callout.down.left{transform:translate(calc(-100% - 4px),14px)}
+.rr-callout.on,.rr-markbtn:hover + .rr-callout,.rr-markbtn:focus-visible + .rr-callout{opacity:1;visibility:visible}
 .rr-size{position:absolute;transform:translate(-100%,6px);font:600 10.5px/1 "DM Sans","DM Sans Fallback",system-ui,sans-serif;background:#18191f;color:#fff;padding:3px 6px;border-radius:4px;white-space:nowrap;pointer-events:none}
 .rr-tag.fig{background:#f5ecd0;color:#6b5410}
 .rr-crop{display:block;border:1px solid #e0e2e8;border-radius:4px;background:#fff}
