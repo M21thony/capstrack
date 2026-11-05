@@ -217,9 +217,6 @@ body{font-family:'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg);co
 
 /* PAGINATION */
 .pagination-container{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:20px}
-.pg-btn{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:0.2s}
-.pg-btn:hover{border-color:var(--accent);color:var(--accent)}
-.pg-btn.active{background:var(--accent);color:white;border-color:var(--accent);box-shadow:0 4px 10px var(--accent-glow)}
 .pg-arrow{width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);transition:0.2s}
 .pg-arrow:hover{color:var(--accent)}
 .pg-arrow svg{width:14px;height:14px}
@@ -349,7 +346,6 @@ body{font-family:'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg);co
 
   /* ── Pagination ── */
   .pagination-container{gap:6px!important;margin-top:16px!important}
-  .pg-btn{width:26px!important;height:26px!important;font-size:10px!important}
   .pg-arrow svg{width:12px!important;height:12px!important}
 
   /* ── Tutorial ── */
@@ -472,7 +468,6 @@ body{font-family:'DM Sans','DM Sans Fallback',sans-serif;background:var(--bg);co
 
   /* ── Pagination ── */
   .pagination-container{gap:4px!important;flex-wrap:wrap!important}
-  .pg-btn{width:24px!important;height:24px!important;font-size:9px!important;border-radius:6px!important}
 
   /* ── Tutorial ── */
   .tutorial-note{flex-direction:column!important;align-items:flex-start!important;gap:6px!important;padding:8px 0!important}
