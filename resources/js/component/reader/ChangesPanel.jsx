@@ -414,6 +414,11 @@ function Compare({ item, index, count, onStep, oldPdf, newPdf, picture, status, 
   const f = item ? finding(item, picture) : null;
   // "Not yet" puts the remark into this review only where it was found again.
   const carried = Boolean(item?.target && !item.target.before);
+  // Looking on another page only helps when the place shown is a guess: a
+  // figure, words that were not found, or words all taken out (then it is
+  // where the next word left is now). Words found are where they are.
+  const canPick = Boolean(item) && (isFigureRemark(item) || item.foundBy !== "words" || !item.quoteNow);
+  const shownPage = item ? item.target?.page ?? item.page_number : 1;
   const choose = (value) => {
     const unsets = status === value;
     onSet(value);
@@ -436,8 +441,8 @@ function Compare({ item, index, count, onStep, oldPdf, newPdf, picture, status, 
           <div className="rr-step-top">
             <h2 className="rr-step-n" id="rr-compare-title">Remark {index + 1} of {count}</h2>
             <span className="rr-step-bar" aria-hidden="true"><i style={{ width: `${((index + 1) / count) * 100}%` }} /></span>
-            <button type="button" className="rr-btn icon sm ghost" aria-label="Previous remark" disabled={index <= 0} onClick={() => onStep(-1)}><Icon name="left" /></button>
-            <button type="button" className="rr-btn icon sm ghost" aria-label="Next remark" disabled={index >= count - 1} onClick={() => onStep(1)}><Icon name="right" /></button>
+            <button type="button" className="rr-btn sm ghost" disabled={index <= 0} onClick={() => onStep(-1)}><Icon name="left" />Previous remark</button>
+            <button type="button" className="rr-btn sm ghost" disabled={index >= count - 1} onClick={() => onStep(1)}>Next remark<Icon name="right" /></button>
             <button type="button" className="rr-btn icon sm ghost" aria-label="Close" onClick={onClose}><Icon name="x" /></button>
           </div>
           <div className="rr-dlg">
@@ -454,19 +459,22 @@ function Compare({ item, index, count, onStep, oldPdf, newPdf, picture, status, 
                 <div className="rr-step-pic">{oldPdf && <FigureCrop pdf={oldPdf} remark={item} maxWidth={width} maxHeight={260} pad={0.04} />}</div>
               </div>
               <div className="rr-step-pane">
-                <h3>
-                  <span>This version</span>
-                  <span className="rr-pagepick">
-                    <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page before" disabled={looking || (item.target?.page ?? item.page_number) <= 1} onClick={() => onPage(-1)}><Icon name="left" /></button>
-                    {looking ? "looking…" : item.target ? `p.${item.target.page}` : "not found"}
-                    <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page after" disabled={looking || (item.target?.page ?? item.page_number) >= (newPdf?.numPages || 1)} onClick={() => onPage(1)}><Icon name="right" /></button>
-                  </span>
-                </h3>
+                <h3><span>This version</span><span>{looking ? "looking…" : item.target ? `p.${item.target.page}` : "not found"}</span></h3>
                 <div className="rr-step-pic">
                   {newPdf && item.target
                     ? <FigureCrop pdf={newPdf} remark={atTarget(item)} maxWidth={width} maxHeight={260} pad={0.04} pending />
-                    : <span className="rr-muted">Not found in this version. Use the arrows to look on another page.</span>}
+                    : <span className="rr-muted">Not found in this version.</span>}
                 </div>
+                {canPick && (
+                  <div className="rr-step-pick">
+                    <span>Not the right spot? Look on another page:</span>
+                    <span className="rr-pagepick">
+                      <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page before" disabled={looking || shownPage <= 1} onClick={() => onPage(-1)}><Icon name="left" /></button>
+                      p.{shownPage}
+                      <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page after" disabled={looking || shownPage >= (newPdf?.numPages || 1)} onClick={() => onPage(1)}><Icon name="right" /></button>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="rr-step-what">
