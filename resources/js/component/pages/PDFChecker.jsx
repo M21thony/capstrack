@@ -28,8 +28,12 @@ const NAV_KEYS = new Set([
 ]);
 const block = (e) => e.preventDefault();
 
-/** The kinds offered on the bar over selected words; the remark box still offers every kind. */
-const SELECTION_KINDS = KINDS.filter((k) => ["pink", "yellow", "blue"].includes(k.id));
+/**
+ * The kinds a new remark can be: on the bar over selected words and in the
+ * remark box. Format and Good are no longer offered; a remark saved as one
+ * keeps it, and shows it while being edited.
+ */
+const OFFERED_KINDS = KINDS.filter((k) => ["pink", "yellow", "blue"].includes(k.id));
 /** Half the bar's width, so it is kept inside the page column. */
 const SELBAR_HALF = 175;
 
@@ -329,6 +333,8 @@ function PDFChecker({
     const onFigure = d.type !== "text";
     const label = onFigure ? figureFor(figures, d.pageNumber, marksOf(d)) || "" : "";
     setDraft(d);
+    // After editing an older Format or Good remark, a new one starts as an offered kind.
+    setKind((k) => (OFFERED_KINDS.some((o) => o.id === k) ? k : "pink"));
     setText("");
     setSection("");
     setFigure(label);
@@ -792,7 +798,7 @@ function PDFChecker({
               onMouseDown={block}
             >
               <span className="rr-selbar-lbl">Add remark</span>
-              {SELECTION_KINDS.map((k) => (
+              {OFFERED_KINDS.map((k) => (
                 <button key={k.id} type="button" className="rr-kind" onClick={() => { setKind(k.id); startFromSelection(); }}>
                   <span className={`rr-sw c-${k.id}`} />{k.label}
                 </button>
@@ -817,7 +823,7 @@ function PDFChecker({
                 </div>
               )}
               <div className="rr-kinds" role="group" aria-label="Kind of remark">
-                {KINDS.map((k) => (
+                {(OFFERED_KINDS.some((k) => k.id === kind) ? OFFERED_KINDS : [...OFFERED_KINDS, KINDS.find((k) => k.id === kind)]).filter(Boolean).map((k) => (
                   <button key={k.id} type="button" className="rr-kind" aria-pressed={kind === k.id} onClick={() => setKind(k.id)}>
                     <span className={`rr-sw c-${k.id}`} />{k.label}
                   </button>
