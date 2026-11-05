@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\Finder\Finder;
 
 /**
  * Copy the files already in storage/app onto MinIO, once FILES_ON_S3=true
@@ -34,24 +34,29 @@ class CopyFilesToS3 extends Command
 
             $copied = $skipped = 0;
 
-            foreach (File::allFiles($root) as $file) {
+            // Walked one file at a time - the whole list of ~24k files alone
+            // would pass PHP's default 128MB.
+            foreach (Finder::create()->files()->in($root) as $file) {
                 $path = str_replace('\\', '/', $file->getRelativePathname());
 
-                if ($path === '.gitignore' || Storage::disk($disk)->exists($path)) {
+                if (Storage::disk($disk)->exists($path)) {
                     $skipped++;
 
                     continue;
                 }
 
                 $stream = fopen($file->getPathname(), 'r');
+                $written = $stream && Storage::disk($disk)->writeStream($path, $stream);
 
-                if (! Storage::disk($disk)->writeStream($path, $stream)) {
+                if ($stream) {
+                    fclose($stream);
+                }
+
+                if (! $written) {
                     $this->error("Could not copy {$path}");
 
                     return self::FAILURE;
                 }
-
-                fclose($stream);
                 $copied++;
             }
 
