@@ -582,7 +582,7 @@ export default function ChangesPanel({
                           <span className={`rr-tag ${f.tone || ""}`}>{f.tone === "del" ? "Removed" : f.tone ? "Changed" : r.target && !LOST.includes(r.foundBy) ? "No change" : "Not found"}</span>
                           <span className="rr-where">p.{r.page_number} on {base?.round}</span>
                         </div>
-                        {isFigureRemark(r) ? <b className="rr-figname">{figureTitle(r)}</b> : r.selectedText && <div className="rr-q">“{r.selectedText}”</div>}
+                        {isFigureRemark(r) && <b className="rr-figname">{figureTitle(r)}</b>}
                         <div className="rr-t">{r.text}</div>
                         <span className="rr-lbl"><span className={`rr-sw c-${kindOf(r.color)}`} />{KIND_LABEL[kindOf(r.color)]}</span>
                         <Finding f={f} />

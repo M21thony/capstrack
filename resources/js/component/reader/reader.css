@@ -151,10 +151,8 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-tab[aria-selected="true"]{color:#1e2128;border-bottom-color:#c9a82c}
 .rr-where{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rr-acts{display:flex;gap:2px;margin-left:auto;flex:none}
-.rr-q{font-family:"Times New Roman",Georgia,serif;font-style:italic;font-size:12.5px;color:#656b7a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid #c8cad4;padding-left:7px}
 .rr-t{font-size:13px;line-height:1.45;color:#1e2128;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
 .rr-card[aria-current="true"] .rr-t{display:block}
-.rr-card[aria-current="true"] .rr-q{white-space:normal}
 .rr-lbl{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:#4a5060}
 
 /* Student side: the reviewer's decision, and the document's other reviewers */

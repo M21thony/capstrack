@@ -292,7 +292,7 @@ function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measur
           </button>
           <div className="rr-cfig-t"><b>{figureTitle(r)}</b><span>{figureDetail(r)}</span></div>
         </div>
-      ) : r.selectedText && <div className="rr-q">“{r.selectedText}”</div>}
+      ) : null}
       <div className="rr-t">{r.text}</div>
       <span className="rr-lbl"><span className={`rr-sw c-${kind}`} />{KIND_LABEL[kind]}</span>
     </div>
