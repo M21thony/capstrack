@@ -744,7 +744,7 @@ function PDFChecker({
                     ))}
                     <div className={`rr-overlay${before || (drawing && showChanges && drawing.marked) ? " ink" : ""}`} contentEditable={false}>
                       {shownShape?.page === n && Boolean(shownShape.before) === before && shownShape.rects.map((r, idx) => (
-                        <div key={`s${idx}`} className="rr-box" style={rectStyle(r)} />
+                        <div key={`s${idx}`} className={`rr-box shown c-${kindOf(shownShape.color)}`} style={rectStyle(r)} />
                       ))}
                       {(marks[n] || []).map((m) => m.rects.map((r, idx) => (
                         <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
@@ -865,13 +865,12 @@ function PDFChecker({
           firstDiagramPage={(numPages ?? 0) + 1}
           shownShapeId={shownShape?.id}
           onOpenRevision={(r) => {
-            // A shape card outlines its shape on the page; clicking it again hides it.
-            if (r.type === "shape") {
-              const hide = shownShape?.id === r.id;
-              setShownShape(hide ? null : { id: r.id, ...r.target });
-              setBeforeView(!hide && Boolean(r.target.before));
-              if (hide) return;
-            }
+            // A card outlines its remark where it is now, and goes there; clicking it again hides it.
+            const hide = shownShape?.id === r.id;
+            const spot = r.target.rects?.length ? r.target.rects : [{ top_position: r.target.y - 0.012, left_position: r.target.x - 0.012, highlight_width: 0.024, highlight_height: 0.024 }];
+            setShownShape(hide ? null : { id: r.id, ...r.target, rects: spot, color: r.color });
+            setBeforeView(!hide && Boolean(r.target.before));
+            if (hide) return;
             col.goToRect(r.target.page, r.target.rects[0] || { top_position: r.target.y });
             onFocusChange?.({ id: `r${r.id}`, oldPage: r.page_number, oldRect: r.highlightRects[0] || { top_position: r.y_position } });
           }}

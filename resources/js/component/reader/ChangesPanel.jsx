@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { pdfjs } from "react-pdf";
 import { Icon, KIND_LABEL, PagedList, figureTitle, kindOf } from "./Reader";
-import FigureCrop, { regionPixels } from "./FigureCrop";
+import { regionPixels } from "./FigureCrop";
 import { boundsOf, isFigureRemark, marksOf, remarkFromServer } from "./figures";
 import { followShapes } from "./drawioDiff";
 import { shapeCell, shapeRects } from "./diagramPages";
@@ -343,15 +343,14 @@ const LOST = ["not found", "picked, not matched", "picked place"];
 /** What was found at a remark's place, in words. */
 function finding(r, picture, pending = false) {
   if (pending) return { tone: "", text: "Looking for this diagram by its picture…" };
-  if (!r.target) return { tone: "", text: "Could not find these words in this version. Use the page arrows in Compare to look for them, then decide." };
-  if (r.foundBy === "picked place") return { tone: "", text: "You picked this page, so the words were not checked. Compare the two pictures, then choose Fixed or Not yet." };
+  if (!r.target) return { tone: "", text: "Could not find these words in this version. Look for them on the page, then decide." };
   if (r.type === "shape") {
     if (!r.target) return { tone: "", text: "This diagram page is not in this version." };
     if (r.shapeStatus === "removed") return { tone: "del", text: "This shape was removed." };
     if (r.shapeStatus === "changed") return { tone: "mod", text: `Changed: ${r.shapeWhat.map((w) => SHAPE_CHANGE[w] || w).join(", ")}.`, removed: r.removedWords, added: r.addedWords };
     return { tone: "", text: "No change to this shape." };
   }
-  if (LOST.includes(r.foundBy)) return { tone: "", text: "Could not find this diagram in this version. Use the page arrows in Compare to look for it, then decide." };
+  if (LOST.includes(r.foundBy)) return { tone: "", text: "Could not find this diagram in this version. Look for it on the page, then decide." };
   if (!isFigureRemark(r)) {
     if (!r.changed) return { tone: "", text: "The quoted words did not change." };
     return { tone: "mod", text: "The quoted words changed.", removed: r.removedWords, added: r.addedWords };
@@ -386,123 +385,6 @@ function Verdict({ status, onSet, round }) {
   );
 }
 
-/**
- * The reviewer's remarks from the earlier version, one at a time: what was
- * flagged, the same spot now, what changed there, and whether it was fixed.
- * Choosing an answer goes on to the next remark; F and N choose, the arrow
- * keys step through them.
- */
-function Compare({ item, index, count, onStep, oldPdf, newPdf, picture, status, onSet, onClose, base, onPage, looking }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const d = ref.current;
-    if (item && d && !d.open) d.showModal();
-    if (!item && d?.open) d.close();
-  }, [item]);
-  // Stepping can disable the button that had the focus (Next, on the last
-  // remark), which drops the focus out of the box and the keys with it.
-  useEffect(() => {
-    const d = ref.current;
-    const focused = document.activeElement;
-    if (d?.open && (!d.contains(focused) || focused.disabled)) d.focus();
-  }, [index, status]);
-  // Each picture fills half the box: its width, less its padding, the gap and each pane's own edge.
-  const boxWidth = Math.min(900, (typeof window !== "undefined" ? window.innerWidth : 1000) * 0.94);
-  const width = Math.max(160, Math.floor((boxWidth - 40 - 12) / 2 - 20));
-  const round = base?.round || "Earlier version";
-  const kind = item ? kindOf(item.color) : "yellow";
-  const f = item ? finding(item, picture) : null;
-  // "Not yet" puts the remark into this review only where it was found again.
-  const carried = Boolean(item?.target && !item.target.before);
-  // Looking on another page only helps when the place shown is a guess: a
-  // figure, words that were not found, or words all taken out (then it is
-  // where the next word left is now). Words found are where they are.
-  const canPick = Boolean(item) && (isFigureRemark(item) || item.foundBy !== "words" || !item.quoteNow);
-  const shownPage = item ? item.target?.page ?? item.page_number : 1;
-  const choose = (value) => {
-    const unsets = status === value;
-    onSet(value);
-    if (unsets) return;
-    if (index < count - 1) onStep(1);
-    else onClose();
-  };
-  const onKey = (e) => {
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
-    const key = e.key.toLowerCase();
-    if (key === "f") { e.preventDefault(); choose("fixed"); }
-    else if (key === "n") { e.preventDefault(); choose("not_fixed"); }
-    else if (e.key === "ArrowRight" && index < count - 1) { e.preventDefault(); onStep(1); }
-    else if (e.key === "ArrowLeft" && index > 0) { e.preventDefault(); onStep(-1); }
-  };
-  return (
-    <dialog ref={ref} tabIndex={-1} className="rr-dialog rr-zoom rr-step" aria-labelledby="rr-compare-title" onClose={onClose} onKeyDown={onKey} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      {item && (
-        <>
-          <div className="rr-step-top">
-            <h2 className="rr-step-n" id="rr-compare-title">Remark {index + 1} of {count}</h2>
-            <span className="rr-step-bar" aria-hidden="true"><i style={{ width: `${((index + 1) / count) * 100}%` }} /></span>
-            <button type="button" className="rr-btn sm ghost" disabled={index <= 0} onClick={() => onStep(-1)}><Icon name="left" />Previous remark</button>
-            <button type="button" className="rr-btn sm ghost" disabled={index >= count - 1} onClick={() => onStep(1)}>Next remark<Icon name="right" /></button>
-            <button type="button" className="rr-btn icon sm ghost" aria-label="Close" onClick={onClose}><Icon name="x" /></button>
-          </div>
-          <div className="rr-dlg">
-            <div className={`rr-step-remark k-${kind}`}>
-              <span className="rr-lbl"><span className={`rr-sw c-${kind}`} />{KIND_LABEL[kind]} · p.{item.page_number} on {round}</span>
-              <b className="rr-step-text">{item.text}</b>
-              {isFigureRemark(item)
-                ? <span className="rr-step-quote">{figureTitle(item)}</span>
-                : item.selectedText && <span className="rr-step-quote">“{item.selectedText}”</span>}
-            </div>
-            <div className="rr-step-pair">
-              <div className="rr-step-pane">
-                <h3><span>{round}</span><span>p.{item.page_number}</span></h3>
-                <div className="rr-step-pic">{oldPdf && <FigureCrop pdf={oldPdf} remark={item} maxWidth={width} maxHeight={260} pad={0.04} />}</div>
-              </div>
-              <div className="rr-step-pane">
-                <h3><span>This version</span><span>{looking ? "looking…" : item.target ? `p.${item.target.page}` : "not found"}</span></h3>
-                <div className="rr-step-pic">
-                  {newPdf && item.target
-                    ? <FigureCrop pdf={newPdf} remark={atTarget(item)} maxWidth={width} maxHeight={260} pad={0.04} pending />
-                    : <span className="rr-muted">Not found in this version.</span>}
-                </div>
-                {canPick && (
-                  <div className="rr-step-pick">
-                    <span>Not the right spot? Look on another page:</span>
-                    <span className="rr-pagepick">
-                      <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page before" disabled={looking || shownPage <= 1} onClick={() => onPage(-1)}><Icon name="left" /></button>
-                      p.{shownPage}
-                      <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page after" disabled={looking || shownPage >= (newPdf?.numPages || 1)} onClick={() => onPage(1)}><Icon name="right" /></button>
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="rr-step-what">
-              {f.removed || f.added
-                ? <><b>What changed here</b>{f.removed && <del>{f.removed}</del>}{f.removed && f.added && <span aria-hidden="true">→</span>}{f.added && <ins>{f.added}</ins>}</>
-                : <span>{f.text}</span>}
-            </div>
-            <div className="rr-step-ask" role="group" aria-label="Was this fixed in this version?">
-              <button type="button" className="rr-step-choice fix" aria-pressed={status === "fixed"} onClick={() => choose("fixed")}>
-                <b>✓ Fixed</b><small>Nothing more is asked of the team for this remark.</small>
-              </button>
-              <button type="button" className="rr-step-choice not" aria-pressed={status === "not_fixed"} onClick={() => choose("not_fixed")}>
-                <b>✗ Not yet</b>
-                <small>{carried ? "Added to this review as “Still not fixed”, so it shows on the CLF." : "Its place in this version was not found, so it is not added to this review."}</small>
-              </button>
-            </div>
-          </div>
-          <div className="rr-step-foot">
-            <span>Choosing one goes on to the next remark</span>
-            <span><kbd>F</kbd> Fixed · <kbd>N</kbd> Not yet · <kbd>←</kbd> <kbd>→</kbd> other remarks</span>
-          </div>
-        </>
-      )}
-    </dialog>
-  );
-}
-
-
 const KIND = { added: ["Added", "add"], removed: ["Removed", "del"], reworded: ["Reworded", "mod"] };
 
 /**
@@ -520,13 +402,11 @@ export default function ChangesPanel({
   const changes = ready ? diff.changes : [];
   // Where the reviewer, or the picture search, put a remark instead.
   const [moved, setMoved] = useState({});
-  const [looking, setLooking] = useState(null);
   const shapes = useShapeRevision(base, diagramPages, firstDiagramPage);
   const revision = [...(diff.revision || []).map((r) => (moved[r.id]
     ? relocate(r, moved[r.id], diff)
     : isFigureRemark(r) && ["same place", "nearby text", "labels", "caption"].includes(r.foundBy) ? { ...r, unsettled: true } : r)), ...shapes];
   const [filter, setFilter] = useState("remarks");
-  const [comparing, setComparing] = useState(null);
   const [openFigure, setOpenFigure] = useState(null);
   const oldPdf = useEarlierPdf(revision.some((r) => r.type !== "shape") ? base?.file : null);
   const pictures = usePictureChecks(revision, oldPdf, pdf);
@@ -567,30 +447,9 @@ export default function ChangesPanel({
     return () => { alive = false; };
   }, [oldPdf, pdf, unplaced]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The reviewer points to another page: the diagram is looked for there.
-  const pickPage = async (r, step) => {
-    const page = (r.target?.page ?? r.page_number) + step;
-    // Back on the page where its words were found: that finding stands again,
-    // instead of the same place on the page with nothing checked.
-    const found = (diff.revision || []).find((x) => x.id === r.id);
-    if (!isFigureRemark(r) && found?.target && !LOST.includes(found.foundBy) && page === found.target.page) {
-      setMoved(({ [r.id]: _, ...rest }) => rest);
-      return;
-    }
-    setLooking(r.id);
-    const hit = isFigureRemark(r) && oldPdf && pdf ? await searchPages(r, oldPdf, pdf, [page]).catch(() => null) : null;
-    const missed = isFigureRemark(r) ? "picked, not matched" : "picked place";
-    setMoved((m) => ({ ...m, [r.id]: hit ? { page, dx: hit.dx, dy: hit.dy, how: "picked" } : { page, dx: 0, dy: 0, how: missed } }));
-    setLooking(null);
-  };
   const statusOf = (r) => (r.id in revisionStatus ? revisionStatus[r.id] : r.revision_status) || null;
   const fixed = revision.filter((r) => statusOf(r) === "fixed").length;
   const notFixed = revision.filter((r) => statusOf(r) === "not_fixed").length;
-  // Compare steps through every remark it can show; a shape is outlined on the drawing instead.
-  const queue = revision.filter((r) => r.type !== "shape");
-  const comparingIndex = comparing != null ? queue.findIndex((r) => r.id === comparing) : -1;
-  const comparingItem = comparingIndex >= 0 ? queue[comparingIndex] : null;
-  const checkOneByOne = () => setComparing((queue.find((r) => !statusOf(r)) || queue[0])?.id ?? null);
 
   const message = {
     idle: null,
@@ -696,7 +555,6 @@ export default function ChangesPanel({
                     <span className="rr-chip ok">{fixed} fixed</span>
                     <span className="rr-chip warn">{notFixed} not yet</span>
                     <span className="rr-chip">{revision.length - fixed - notFixed} to check</span>
-                    {queue.length > 0 && <button type="button" className="rr-btn sm tint rr-revgo" onClick={checkOneByOne}>Check one by one</button>}
                   </div>
                 )}
                 <PagedList
@@ -730,9 +588,7 @@ export default function ChangesPanel({
                         <Finding f={f} />
                         {r.target && <span className="rr-muted rr-foundby">{(FOUND_BY[r.foundBy] || FOUND_BY.words)(r)}</span>}
                         <div className="rr-row">
-                          {r.type === "shape"
-                            ? r.target && <span className="rr-muted">{shownShapeId === r.id ? "Outlined on the page" : "Click to outline it"}</span>
-                            : <button type="button" className="rr-btn sm" tabIndex={measuring ? -1 : 0} onClick={(e) => { e.stopPropagation(); setComparing(r.id); }}>Compare</button>}
+                          {r.target && <span className="rr-muted">{shownShapeId === r.id ? "Outlined on the page" : "Click to show it on the page"}</span>}
                           <span className="rr-spacer" />
                           <Verdict status={status} onSet={(v) => onRevision(r, v)} round={base?.round} />
                         </div>
@@ -745,21 +601,6 @@ export default function ChangesPanel({
           </>
         )}
       </div>
-      <Compare
-        item={comparingItem}
-        index={comparingIndex}
-        count={queue.length}
-        onStep={(step) => { const next = queue[comparingIndex + step]; if (next) setComparing(next.id); }}
-        oldPdf={oldPdf}
-        newPdf={pdf}
-        picture={comparingItem ? pictures[comparingItem.id] : null}
-        status={comparingItem ? statusOf(comparingItem) : null}
-        onSet={(v) => comparingItem && onRevision(comparingItem, v)}
-        onClose={() => setComparing(null)}
-        base={base}
-        onPage={(step) => comparingItem && pickPage(comparingItem, step)}
-        looking={comparingItem != null && looking === comparingItem.id}
-      />
       <FigureView figure={openFigure != null ? figureDiff.figures[openFigure] : null} base={base} onClose={() => setOpenFigure(null)} />
     </aside>
   );
