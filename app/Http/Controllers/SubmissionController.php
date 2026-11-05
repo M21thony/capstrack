@@ -433,7 +433,7 @@ class SubmissionController extends Controller
 
         foreach ($earlier as $document) {
             if ($document->file_path && Storage::disk('local')->exists($document->file_path)
-                && sha1_file(Storage::disk('local')->path($document->file_path)) === $hash) {
+                && sha1((string) Storage::disk('local')->get($document->file_path)) === $hash) {
                 return (int) $document->file_version;
             }
         }

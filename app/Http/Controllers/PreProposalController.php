@@ -225,7 +225,6 @@ class PreProposalController extends Controller
             'document' => 'required|file|mimes:pdf|max:20480',
         ]);
 
-        $path = null;
         // Matches OllamaSSHClient's own curl --max-time (300s) - these two
         // must move together, since PHP's own limit would otherwise fatal
         // the request before curl's timeout ever gets a chance to matter.
@@ -234,10 +233,7 @@ class PreProposalController extends Controller
         try {
             app(OllamaSSHClient::class)->warmup();
 
-            $path = $request->file('document')->store('temp-uploads');
-            $fullPath = Storage::path($path);
-
-            $pdfText = $this->service->extractPdfText($fullPath);
+            $pdfText = $this->service->extractPdfText($request->file('document')->getRealPath());
 
             if (empty(trim($pdfText))) {
                 throw new \Exception('Could not extract text from this PDF. Make sure it is not a scanned image without a text layer.');
@@ -299,8 +295,7 @@ class PreProposalController extends Controller
                 ], 422);
             }
 
-            $permanentPath = 'duplication-checks/'.basename($path);
-            Storage::move($path, $permanentPath);
+            $permanentPath = $request->file('document')->store('duplication-checks');
 
             $check = DuplicationCheck::create([
                 'student_s_y_id' => $studentSy->s_y_id,
@@ -326,10 +321,6 @@ class PreProposalController extends Controller
                 'highlight_words' => $this->service->extractHighlightWords($concepts),
             ]);
         } catch (\Throwable $e) {
-            if ($path) {
-                Storage::delete($path);
-            }
-
             Log::error('Pre-proposal duplication check failed', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

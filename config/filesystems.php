@@ -1,5 +1,22 @@
 <?php
 
+// FILES_ON_S3=true moves the two disks the app saves to ("local" for private
+// files, "public" for files anyone with the link may open) onto S3-compatible
+// storage such as MinIO, so the code that names them needs no change. Each
+// gets its own bucket: a public file is served from APP_URL/storage/..., and
+// a separate bucket keeps that address from ever reaching a private file.
+$s3 = [
+    'driver' => 's3',
+    'key' => env('AWS_ACCESS_KEY_ID'),
+    'secret' => env('AWS_SECRET_ACCESS_KEY'),
+    'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    'bucket' => env('AWS_BUCKET'),
+    'endpoint' => env('AWS_ENDPOINT'),
+    'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+    'throw' => false,
+    'report' => false,
+];
+
 return [
 
     /*
@@ -30,7 +47,7 @@ return [
 
     'disks' => [
 
-        'local' => [
+        'local' => env('FILES_ON_S3', false) ? $s3 : [
             'driver' => 'local',
             'root' => storage_path('app/private'),
             'serve' => true,
@@ -38,7 +55,10 @@ return [
             'report' => false,
         ],
 
-        'public' => [
+        'public' => env('FILES_ON_S3', false) ? [
+            'bucket' => env('AWS_PUBLIC_BUCKET'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+        ] + $s3 : [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
@@ -47,18 +67,7 @@ return [
             'report' => false,
         ],
 
-        's3' => [
-            'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-            'throw' => false,
-            'report' => false,
-        ],
+        's3' => $s3,
 
     ],
 

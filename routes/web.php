@@ -85,6 +85,17 @@ use App\Support\CapsaReports;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+
+// With files on MinIO there is no public/storage folder for nginx to serve,
+// so the same /storage/... links are answered here from the public bucket.
+if (config('filesystems.disks.public.driver') === 's3') {
+    Route::get('storage/{path}', function (string $path) {
+        abort_unless(Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path);
+    })->where('path', '.*');
+}
 
 // Same /admin URL and route-name space as before - only the middleware on
 // each sub-group changed, so no existing route('admin.xxx') link anywhere

@@ -64,7 +64,7 @@ class AnnouncementController extends Controller
             ->map(function ($items) {
                 return $items->map(fn ($sm) => [
                     'milestone_id' => $sm->milestone_id,
-                    'file_url' => $sm->file_path ? Storage::url($sm->file_path) : null,
+                    'file_url' => $sm->file_path ? Storage::disk('public')->url($sm->file_path) : null,
                     'completed_at' => $sm->completed_at?->toISOString(),
                     'submission_id' => $sm->id,
                     'is_verified' => $sm->is_verified,

@@ -6,7 +6,6 @@ use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class DuplicationController extends Controller
 {
@@ -23,8 +22,6 @@ class DuplicationController extends Controller
             'document' => 'required|file|mimes:pdf|max:20480',
         ]);
 
-        $path = null;
-
         // This chains warmup + up to ~4 more Ollama calls (concept
         // extraction, similarity search, instructor matching). PHP's
         // default max_execution_time (120s on this server) was never
@@ -40,9 +37,9 @@ class DuplicationController extends Controller
             // 0. Warm up Ollama — loads model into GPU before real requests
             app(OllamaSSHClient::class)->warmup();
 
-            // 1. Save uploaded PDF temporarily
-            $path = $request->file('document')->store('temp-uploads');
-            $fullPath = Storage::path($path);
+            // 1. Read the uploaded PDF where PHP left it - nothing is kept,
+            // and file storage may not be a disk on this server at all
+            $fullPath = $request->file('document')->getRealPath();
 
             // 2. Extract text from PDF
             $pdfText = $this->service->extractPdfText($fullPath);
@@ -70,9 +67,6 @@ class DuplicationController extends Controller
 
             // 5. Suggest instructors based on semantic expertise match
             $instructors = $this->service->suggestInstructors($concepts);
-
-            // 6. Clean up temp file
-            Storage::delete($path);
 
             // 7. Determine overall verdict from top match score
             // Only a judged match may set the verdict. An unassessed one
@@ -114,10 +108,6 @@ class DuplicationController extends Controller
             // Catching only \Exception let that escape uncaught straight to
             // Laravel's HTML error page, which the frontend can't parse as
             // JSON and reports as a generic "Server returned an error page".
-            if ($path) {
-                Storage::delete($path);
-            }
-
             Log::error('Duplication check failed', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

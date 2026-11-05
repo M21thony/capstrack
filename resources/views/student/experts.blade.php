@@ -156,7 +156,7 @@
       'message' => $a->message,
       'reason' => $a->rejection_reason,
       'proposalTitle' => $a->preProposal?->title,
-      'proposalFile' => $a->proposal_file ? \Illuminate\Support\Facades\Storage::url($a->proposal_file) : null,
+      'proposalFile' => $a->proposal_file ? \Illuminate\Support\Facades\Storage::disk('public')->url($a->proposal_file) : null,
       'sent' => $a->created_at?->format('M j, Y'),
     ]])->all();
 

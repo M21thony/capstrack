@@ -108,7 +108,7 @@ class RevisionCheck
         }
 
         if ($last && str_ends_with(strtolower($last->file_path), '.pdf') && Storage::disk('local')->exists($last->file_path)) {
-            $shared = self::shared(implode(' ', self::pages(Storage::disk('local')->path($last->file_path))), implode(' ', $pages));
+            $shared = self::shared(implode(' ', self::pagesOf((string) Storage::disk('local')->get($last->file_path))), implode(' ', $pages));
 
             if ($shared !== null && $shared < self::MIN_SHARED) {
                 $warnings[] = [
@@ -132,8 +132,18 @@ class RevisionCheck
     /** @return string[] each page's text, or none when the PDF cannot be read */
     public static function pages(string $path): array
     {
+        return self::pagesOf((string) @file_get_contents($path));
+    }
+
+    /**
+     * The same, from the PDF's bytes - a stored file may live off this server.
+     *
+     * @return string[]
+     */
+    public static function pagesOf(string $pdf): array
+    {
         try {
-            return array_map(fn ($page) => (string) $page->getText(), (new Parser)->parseFile($path)->getPages());
+            return array_map(fn ($page) => (string) $page->getText(), (new Parser)->parseContent($pdf)->getPages());
         } catch (Throwable) {
             return [];
         }
