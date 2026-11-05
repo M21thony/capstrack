@@ -99,6 +99,18 @@ export default function FigureCrop({ pdf, remark, maxWidth, maxHeight, pad, pend
       } else if (remark.type === "box" || remark.type === "shape") {
         if (pending) ctx.setLineDash([6 * dpr, 4 * dpr]);
         rects.forEach((r) => ctx.strokeRect(x(r.left_position), y(r.top_position), (r.highlight_width / crop.width) * canvas.width, (r.highlight_height / crop.height) * canvas.height));
+      } else if (pending) {
+        // Where the remark's words would be now: one dashed box round them in
+        // the remark's colour, not a fill, so it never reads as a blank or
+        // greyed-out spot, and the words inside stay easy to read.
+        ctx.strokeStyle = KIND_STROKE[remark.color] || KIND_STROKE.yellow;
+        ctx.setLineDash([6 * dpr, 4 * dpr]);
+        const p = 4 * dpr;
+        const left = Math.min(...rects.map((r) => x(r.left_position))) - p;
+        const top = Math.min(...rects.map((r) => y(r.top_position))) - p;
+        const right = Math.max(...rects.map((r) => x(r.left_position + r.highlight_width))) + p;
+        const bottom = Math.max(...rects.map((r) => y(r.top_position + r.highlight_height))) + p;
+        ctx.strokeRect(left, top, right - left, bottom - top);
       } else {
         ctx.globalAlpha = 0.3;
         ctx.fillStyle = colour;

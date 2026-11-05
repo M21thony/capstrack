@@ -344,7 +344,7 @@ const LOST = ["not found", "picked, not matched", "picked place"];
 function finding(r, picture, pending = false) {
   if (pending) return { tone: "", text: "Looking for this diagram by its picture…" };
   if (!r.target) return { tone: "", text: "Could not find these words in this version. Use the page arrows in Compare to look for them, then decide." };
-  if (r.foundBy === "picked place") return { tone: "", text: "The words could not be checked here. Look, then decide." };
+  if (r.foundBy === "picked place") return { tone: "", text: "You picked this page, so the words were not checked. Compare the two pictures, then choose Fixed or Not yet." };
   if (r.type === "shape") {
     if (!r.target) return { tone: "", text: "This diagram page is not in this version." };
     if (r.shapeStatus === "removed") return { tone: "del", text: "This shape was removed." };
@@ -402,18 +402,21 @@ function Compare({ item, oldPdf, newPdf, picture, status, onSet, onClose, base, 
           <div className="rr-zoom-head">
             <div>
               <h2 id="rr-compare-title">{isFigureRemark(item) ? figureTitle(item) : `“${item.selectedText || "Remark"}”`}</h2>
-              <p className="rr-muted">{item.text}</p>
+              <p className="rr-cmp-remark">
+                <span className="rr-lbl"><span className={`rr-sw c-${kindOf(item.color)}`} />Your remark · {KIND_LABEL[kindOf(item.color)]}</span>
+                <span>{item.text}</span>
+              </p>
             </div>
             <button type="button" className="rr-btn icon sm ghost" aria-label="Close" onClick={onClose}><Icon name="x" /></button>
           </div>
           <div className="rr-compare">
             <div>
-              <span className="rr-muted">{base?.round || "Earlier version"} · p.{item.page_number}</span>
+              <span className="rr-cmp-side"><b>{base?.round || "Earlier version"}</b>: where you left the remark · p.{item.page_number}</span>
               {oldPdf && <FigureCrop pdf={oldPdf} remark={item} maxWidth={width} maxHeight={300} pad={0.04} />}
             </div>
             <div>
-              <span className="rr-muted rr-pagepick">
-                This version ·
+              <span className="rr-cmp-side rr-pagepick">
+                <span><b>This version</b>: the same spot now ·</span>
                 <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page before" disabled={looking || (item.target?.page ?? item.page_number) <= 1} onClick={() => onPage(-1)}><Icon name="left" /></button>
                 {looking ? "looking…" : item.target ? `p.${item.target.page}` : "not found"}
                 <button type="button" className="rr-btn icon sm ghost" aria-label="Look on the page after" disabled={looking || (item.target?.page ?? item.page_number) >= (newPdf?.numPages || 1)} onClick={() => onPage(1)}><Icon name="right" /></button>
@@ -497,6 +500,13 @@ export default function ChangesPanel({
   // The reviewer points to another page: the diagram is looked for there.
   const pickPage = async (r, step) => {
     const page = (r.target?.page ?? r.page_number) + step;
+    // Back on the page where its words were found: that finding stands again,
+    // instead of the same place on the page with nothing checked.
+    const found = (diff.revision || []).find((x) => x.id === r.id);
+    if (!isFigureRemark(r) && found?.target && !LOST.includes(found.foundBy) && page === found.target.page) {
+      setMoved(({ [r.id]: _, ...rest }) => rest);
+      return;
+    }
     setLooking(r.id);
     const hit = isFigureRemark(r) && oldPdf && pdf ? await searchPages(r, oldPdf, pdf, [page]).catch(() => null) : null;
     const missed = isFigureRemark(r) ? "picked, not matched" : "picked place";
@@ -526,7 +536,7 @@ export default function ChangesPanel({
         <h2>What changed <span className="rr-count">{changes.length}</span></h2>
       </div>
       <p className="rr-help">
-        Since <b>{base?.round}</b>. New and reworded words are underlined in green; where words were removed is underlined in red.
+        Since <b>{base?.round}</b>. New and reworded words are highlighted in green; removed words are highlighted in red.
       </p>
       <div className="rr-side-body">
         {message && diff.status !== "notext" ? (

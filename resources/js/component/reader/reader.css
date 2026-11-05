@@ -51,7 +51,8 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-page:focus-visible{box-shadow:0 0 0 2px #c9a82c,0 1px 3px rgba(0,0,0,.12)}
 .rr-page .react-pdf__Page{position:relative}
 .rr-page .react-pdf__Page__canvas{display:block}
-.rr-page ::selection{background:rgba(201,168,44,.35)}
+/* A plain selection colour, so selected words never look like a remark already. */
+.rr-page ::selection{background:rgba(56,132,255,.22)}
 .rr-overlay{position:absolute;inset:0;pointer-events:none;z-index:3}
 .rr-hl{position:absolute;border-radius:2px;mix-blend-mode:multiply}
 .rr-hl.click{pointer-events:auto;cursor:pointer}
@@ -78,7 +79,12 @@ textarea.rr-input{min-height:64px;resize:none}
 
 /* The remark box, beside the words it is about */
 .rr-pop{position:absolute;z-index:30;width:300px;background:#fff;border:1px solid #e0e2e8;border-radius:12px;box-shadow:0 12px 32px rgba(24,25,31,.2);padding:10px;display:grid;gap:8px;cursor:auto}
-.rr-selbtn{position:absolute;z-index:30;transform:translateX(-100%);box-shadow:0 4px 12px rgba(24,25,31,.2)}
+/* Over selected words: pick the kind and the remark box opens with it. */
+.rr-selbar{position:absolute;z-index:30;transform:translate(-50%,-100%);display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #e0e2e8;border-radius:12px;padding:5px 6px;box-shadow:0 8px 24px rgba(24,25,31,.16);white-space:nowrap}
+.rr-selbar.below{transform:translate(-50%,0)}
+.rr-selbar::after{content:"";position:absolute;left:50%;bottom:-6px;width:10px;height:10px;background:#fff;border-right:1px solid #e0e2e8;border-bottom:1px solid #e0e2e8;transform:translateX(-50%) rotate(45deg)}
+.rr-selbar.below::after{bottom:auto;top:-6px;transform:translateX(-50%) rotate(225deg)}
+.rr-selbar-lbl{font-size:12px;font-weight:600;color:#656b7a;padding:0 4px 0 2px}
 .rr-pop::before{content:"";position:absolute;left:-7px;top:calc(var(--ay,24px) - 7px);width:12px;height:12px;background:#fff;border-left:1px solid #e0e2e8;border-bottom:1px solid #e0e2e8;transform:rotate(45deg)}
 .rr-pop.flip::before{left:auto;right:-7px;transform:rotate(-135deg)}
 .rr-pop.under::before{display:none}
@@ -230,6 +236,9 @@ select.rr-input{padding:4px 6px;min-height:30px;font-size:12.5px}
 .rr-zoom{width:min(1000px,94vw)}
 .rr-zoom-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .rr-zoom-head p{margin:2px 0 0}
+.rr-cmp-remark{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:13.5px;color:#23242b}
+.rr-cmp-side{font-size:12.5px;color:#4a5060}
+.rr-cmp-side b{color:#23242b}
 .rr-zoom-view{display:flex;justify-content:center;background:#f2f3f5;border-radius:8px;padding:12px}
 .rr-t-full{display:block}
 .rr-frow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;padding:9px 10px;border:1px solid #e0e2e8;border-radius:8px;cursor:pointer;flex:none;text-align:left;background:#fff}

@@ -28,6 +28,11 @@ const NAV_KEYS = new Set([
 ]);
 const block = (e) => e.preventDefault();
 
+/** The kinds offered on the bar over selected words; the remark box still offers every kind. */
+const SELECTION_KINDS = KINDS.filter((k) => ["pink", "yellow", "blue"].includes(k.id));
+/** Half the bar's width, so it is kept inside the page column. */
+const SELBAR_HALF = 175;
+
 /**
  * The text spot a drag at a point means, as [node, offset]: the words under it, or, beside
  * the words, the end of the nearest words on that line to its left (the start if none are).
@@ -627,7 +632,8 @@ function PDFChecker({
     window.addEventListener("mouseup", () => { window.removeEventListener("mousemove", follow); placeSelBtn(); }, { once: true });
   };
 
-  // Letting go of the mouse leaves the words selected; the remark starts from this button (or Enter).
+  // Letting go of the mouse leaves the words selected; a bar over them starts
+  // the remark with its kind already picked (or Enter, with the last kind used).
   const placeSelBtn = () => {
     const sel = window.getSelection();
     const canvas = col.canvasRef.current;
@@ -637,7 +643,12 @@ function PDFChecker({
     const last = rects[rects.length - 1];
     if (mode !== "text" || composingRef.current || !canvas || !last || !el?.closest(".rr-page")) return setSelBtn(null);
     const c = canvas.getBoundingClientRect();
-    setSelBtn({ left: last.right - c.left + canvas.scrollLeft, top: last.bottom - c.top + canvas.scrollTop + 6 });
+    const middle = (Math.min(...rects.map((r) => r.left)) + Math.max(...rects.map((r) => r.right))) / 2 - c.left + canvas.scrollLeft;
+    const left = Math.min(Math.max(middle, SELBAR_HALF + 8), Math.max(SELBAR_HALF + 8, canvas.scrollWidth - SELBAR_HALF - 8));
+    // Above the words, unless that would put it off the top of the view: then under them.
+    const above = rects[0].top - c.top + canvas.scrollTop - 10;
+    const below = above - canvas.scrollTop < 52;
+    setSelBtn({ left, top: below ? last.bottom - c.top + canvas.scrollTop + 10 : above, below });
   };
 
   const onPageKey = (e) => {
@@ -653,7 +664,7 @@ function PDFChecker({
   const where = draft ? (draft.type === "shape" ? `${shapeLabel(draft.shape_ref)} · page ${draft.pageNumber}` : draft.type === "pin" ? `Pin on page ${draft.pageNumber}` : `${draft.highlightRects.length > 1 ? `${draft.highlightRects.length} boxes` : "Box"} on page ${draft.pageNumber}`) : "";
   const zoomRemark = zoomId != null ? comments.find((c) => c.id === zoomId) : null;
   const hint = mode === "text"
-    ? (selecting ? "Click Add remark or press Enter · Shift+click changes where it ends" : "Select text to add a remark")
+    ? (selecting ? "Pick a kind above the words, or press Enter · Shift+click changes where it ends" : "Select text to add a remark")
     : adding ? `Draw another box on page ${draft?.pageNumber} · Esc when done` : HINTS[mode];
 
   return (
@@ -773,15 +784,20 @@ function PDFChecker({
           )}
 
           {selBtn && !composing && (
-            <button
-              type="button"
-              className="rr-btn gold sm rr-selbtn"
+            <div
+              className={`rr-selbar${selBtn.below ? " below" : ""}`}
+              role="toolbar"
+              aria-label="Add a remark"
               style={{ left: selBtn.left, top: selBtn.top }}
               onMouseDown={block}
-              onClick={startFromSelection}
             >
-              Add remark
-            </button>
+              <span className="rr-selbar-lbl">Add remark</span>
+              {SELECTION_KINDS.map((k) => (
+                <button key={k.id} type="button" className="rr-kind" onClick={() => { setKind(k.id); startFromSelection(); }}>
+                  <span className={`rr-sw c-${k.id}`} />{k.label}
+                </button>
+              ))}
+            </div>
           )}
 
           {composing && (
