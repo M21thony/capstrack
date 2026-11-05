@@ -379,7 +379,7 @@ function Finding({ f }) {
 
 function Verdict({ status, onSet, round }) {
   return (
-    <div className="rr-row rr-verdict" role="group" aria-label={`Was this fixed in ${round || "this version"}?`}>
+    <div className="rr-fixpick" role="group" aria-label={`Was this fixed in ${round || "this version"}?`}>
       <button type="button" className="rr-btn sm rr-fix" aria-pressed={status === "fixed"} onClick={(e) => { e.stopPropagation(); onSet("fixed"); }}>Fixed</button>
       <button type="button" className="rr-btn sm rr-notyet" aria-pressed={status === "not_fixed"} onClick={(e) => { e.stopPropagation(); onSet("not_fixed"); }}>Not yet</button>
     </div>
