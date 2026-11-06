@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CaPSA Dashboard Content</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="staff-dashboard.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="scale" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3.5 3.5 0 0 0 6 0L5 7ZM19 7l-3 7a3.5 3.5 0 0 0 6 0l-3-7Z"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></symbol>
+  <symbol id="team" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18.5 14.5c1.9.8 3 2.7 3 5.5"/></symbol>
+  <symbol id="cap" viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5Z"/><path d="M6 11v5c2 2 10 2 12 0v-5"/></symbol>
+  <symbol id="shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6Z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+  <symbol id="warn" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="chart" viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M6 16v-5M11 16V7M16 16v-8M21 16V4"/></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></symbol>
+  <symbol id="receipt" viewBox="0 0 24 24"><path d="M5 3v18l3-2 2 2 2-2 2 2 2-2 3 2V3l-3 2-2-2-2 2-2-2-2 2Z"/><path d="M9 10h6M9 14h6"/></symbol>
+  <symbol id="swap" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6 1.5 0 2.9.4 4 1.2"/><path d="M15 19h6M18 16l3 3-3 3"/></symbol>
+  <symbol id="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="pulse" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+  <symbol id="bolt" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7.5"/></symbol>
+  <symbol id="megaphone" viewBox="0 0 24 24"><path d="M3 11v3a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1Z"/><path d="M16 9a4 4 0 0 1 0 6"/></symbol>
+</svg>
+
+<main class="db">
+
+  <!-- 1. Banner -->
+  <section class="db-banner">
+    <div class="db-banner-text">
+      <span class="db-banner-badge"><svg class="i"><use href="#scale"/></svg></span>
+      <div>
+        <h1>Welcome back, <span>Prof. Cruz!</span></h1>
+        <p>CaPSA · BSIT · 6 sections</p>
+      </div>
+    </div>
+    <div class="db-banner-photo" aria-hidden="true"></div>
+    <div class="db-banner-year"><svg class="i"><use href="#cal"/></svg><div>Academic Year<b>S.Y. 2026–2027</b></div></div>
+  </section>
+
+  <!-- 2. Number tiles -->
+  <div class="db-tiles">
+    <a class="db-tile" href="#">
+      <span class="db-ico t-gold"><svg class="i"><use href="#team"/></svg></span>
+      <div class="db-tile-body"><b>32</b><span class="lab">Total Teams</span></div>
+    </a>
+    <a class="db-tile" href="#">
+      <span class="db-ico t-blue"><svg class="i"><use href="#cap"/></svg></span>
+      <div class="db-tile-body"><b>120</b><span class="lab">Total Students</span></div>
+    </a>
+    <a class="db-tile" href="#">
+      <span class="db-ico t-green"><svg class="i"><use href="#shield"/></svg></span>
+      <div class="db-tile-body"><b>78.1%</b><span class="lab">Coverage Rate</span><span class="db-bar"><span style="width:78.1%"></span></span></div>
+    </a>
+    <a class="db-tile alert" href="#issues">
+      <span class="db-ico t-red"><svg class="i"><use href="#warn"/></svg></span>
+      <div class="db-tile-body"><b>13</b><span class="lab">Pending Issues</span></div>
+    </a>
+  </div>
+
+  <!-- 3. Coverage + pending issues -->
+  <div class="db-row db-row-2 db-grow-a">
+    <section class="db-card">
+      <div class="db-head">
+        <h2 class="db-title"><svg class="i"><use href="#chart"/></svg>Team &amp; Expert Coverage</h2>
+        <a class="db-more" href="#">View details →</a>
+      </div>
+      <div class="db-split">
+        <div class="db-ring">
+          <svg viewBox="0 0 104 104" role="img" aria-label="25 of 32 teams fully covered, 78.1 percent">
+            <circle cx="52" cy="52" r="44" fill="none" stroke="#dc2626" stroke-width="11"/>
+            <circle cx="52" cy="52" r="44" fill="none" stroke="#16a34a" stroke-width="11" stroke-dasharray="215.9 276.5" transform="rotate(-90 52 52)"/>
+          </svg>
+          <div><b>78.1%</b>Coverage Rate</div>
+        </div>
+        <ul class="db-legend">
+          <li><i style="background:var(--green)"></i><span>Fully Covered</span><b>25</b></li>
+          <li><i style="background:var(--red)"></i><span>Missing Experts</span><b>7</b></li>
+          <li class="sub"><span>Adviser</span><b>30 / 32</b></li>
+          <li class="sub"><span>Consultant</span><b>29 / 32</b></li>
+          <li class="sub"><span>Grammarian</span><b>27 / 32</b></li>
+        </ul>
+        <div class="db-status short">
+          <svg class="i"><use href="#warn"/></svg>
+          Overall Status
+          <strong>Short</strong>
+          <em>BSIT · 2 advisers</em>
+        </div>
+      </div>
+    </section>
+
+    <section class="db-card" id="issues">
+      <div class="db-head">
+        <h2 class="db-title"><svg class="i"><use href="#warn"/></svg>Pending Issues</h2>
+        <span class="db-meta">13 Unresolved</span>
+      </div>
+      <ul class="db-list">
+        <li><a class="rowlink" href="#"><span class="db-ico t-red"><svg class="i"><use href="#team"/></svg></span><b class="db-issue-title">Insufficient Experts</b><span class="db-meta db-clip db-grow db-issue-detail">BSIT short by 2 advisers</span><span class="db-pill crit">Critical</span><svg class="i db-chev"><use href="#chev"/></svg></a></li>
+        <li><a class="rowlink" href="#"><span class="db-ico t-gold"><svg class="i"><use href="#team"/></svg></span><b class="db-issue-title">Unverified Teams</b><span class="db-meta db-clip db-grow db-issue-detail">3 teams awaiting verification</span><svg class="i db-chev"><use href="#chev"/></svg></a></li>
+        <li><a class="rowlink" href="#"><span class="db-ico t-gold"><svg class="i"><use href="#doc"/></svg></span><b class="db-issue-title">Titles Awaiting Review</b><span class="db-meta db-clip db-grow db-issue-detail">2 proposals need decisions</span><svg class="i db-chev"><use href="#chev"/></svg></a></li>
+        <li><a class="rowlink" href="#"><span class="db-ico t-gold"><svg class="i"><use href="#cal"/></svg></span><b class="db-issue-title">Unscheduled Defenses</b><span class="db-meta db-clip db-grow db-issue-detail">2 teams without a date</span><svg class="i db-chev"><use href="#chev"/></svg></a></li>
+        <li><a class="rowlink" href="#"><span class="db-ico t-gold"><svg class="i"><use href="#receipt"/></svg></span><b class="db-issue-title">Receipts to Check</b><span class="db-meta db-clip db-grow db-issue-detail">4 receipts uploaded</span><svg class="i db-chev"><use href="#chev"/></svg></a></li>
+        <li><a class="rowlink" href="#"><span class="db-ico t-gold"><svg class="i"><use href="#swap"/></svg></span><b class="db-issue-title">Member Requests</b><span class="db-meta db-clip db-grow db-issue-detail">1 member asking to leave</span><svg class="i db-chev"><use href="#chev"/></svg></a></li>
+      </ul>
+    </section>
+  </div>
+
+  <!-- 4. Deadlines, activity, quick actions -->
+  <div class="db-row db-row-3 db-grow-b">
+    <section class="db-card">
+      <div class="db-head">
+        <h2 class="db-title"><svg class="i"><use href="#cal"/></svg>Upcoming Deadlines</h2>
+        <a class="db-more" href="#">View all →</a>
+      </div>
+      <div class="db-tabs" role="tablist">
+        <button class="db-tab" role="tab" aria-selected="true" data-tab="defenses">Defenses</button>
+        <button class="db-tab" role="tab" aria-selected="false" data-tab="requirements">Requirements</button>
+      </div>
+      <ul class="db-list" data-panel="defenses">
+        <li><div class="db-stack"><span class="db-clip"><b>Team CodeSync</b> · Title Defense</span><time>Nov 9 · 9:00 AM</time></div><span class="db-pill today">In 3 days</span></li>
+        <li><div class="db-stack"><span class="db-clip"><b>Team PixelWorks</b> · Pre-Oral</span><time>Nov 12 · 1:00 PM</time></div><span class="db-pill">In 6 days</span></li>
+        <li><div class="db-stack"><span class="db-clip"><b>Team TechNova</b> · Final Oral</span><time>Nov 19 · 9:00 AM</time></div><span class="db-pill">In 13 days</span></li>
+      </ul>
+      <ul class="db-list" data-panel="requirements" hidden>
+        <li><div class="db-stack"><span class="db-clip"><b>Chapter 1 Draft</b> · 12 teams left</span><time>Nov 10</time></div><span class="db-pill today">In 4 days</span></li>
+        <li><div class="db-stack"><span class="db-clip"><b>Chapter 2 Draft</b> · 20 teams left</span><time>Nov 21</time></div><span class="db-pill">In 15 days</span></li>
+        <li><div class="db-stack"><span class="db-clip"><b>Final Report</b> · 32 teams left</span><time>Dec 4</time></div><span class="db-pill">In 28 days</span></li>
+      </ul>
+    </section>
+
+    <section class="db-card">
+      <div class="db-head">
+        <h2 class="db-title"><svg class="i"><use href="#pulse"/></svg>Recent Activity</h2>
+        <a class="db-more" href="#">View all →</a>
+      </div>
+      <ul class="db-list">
+        <li><span class="db-ico t-blue"><svg class="i"><use href="#doc"/></svg></span><span class="db-clip db-grow">Team ByteSized submitted their Pre-Proposal</span><time>Nov 5 · 3:24 PM</time></li>
+        <li><span class="db-ico t-green"><svg class="i"><use href="#check"/></svg></span><span class="db-clip db-grow">Dr. Reyes approved Team CodeSync</span><time>Nov 5 · 1:10 PM</time></li>
+        <li><span class="db-ico t-gold"><svg class="i"><use href="#megaphone"/></svg></span><span class="db-clip db-grow">New announcement: Capstone Guidelines</span><time>Nov 4 · 9:30 AM</time></li>
+        <li><span class="db-ico t-purple"><svg class="i"><use href="#cal"/></svg></span><span class="db-clip db-grow">Team InnovateX booked a defense date</span><time>Nov 4 · 8:12 AM</time></li>
+      </ul>
+    </section>
+
+    <section class="db-card db-qa-dark">
+      <div class="db-head">
+        <h2 class="db-title"><svg class="i"><use href="#bolt"/></svg>Quick Actions</h2>
+      </div>
+      <div class="db-qa-list">
+        <a class="db-qa-row" href="#"><svg class="i"><use href="#shield"/></svg>Check Coverage<svg class="i db-chev"><use href="#chev"/></svg></a>
+        <a class="db-qa-row" href="#"><svg class="i"><use href="#cal"/></svg>View Milestones<svg class="i db-chev"><use href="#chev"/></svg></a>
+        <a class="db-qa-row" href="#"><svg class="i"><use href="#team"/></svg>Manage Teams<svg class="i db-chev"><use href="#chev"/></svg></a>
+        <a class="db-qa-row" href="#"><svg class="i"><use href="#chart"/></svg>View Reports<svg class="i db-chev"><use href="#chev"/></svg></a>
+      </div>
+    </section>
+  </div>
+
+</main>
+<script>
+document.querySelectorAll('.db-tab').forEach(function (tab) {
+  tab.addEventListener('click', function () {
+    tab.parentNode.querySelectorAll('.db-tab').forEach(function (t) { t.setAttribute('aria-selected', t === tab); });
+    tab.closest('.db-card').querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.dataset.panel !== tab.dataset.tab; });
+  });
+});
+</script>
+</body>
+</html>
