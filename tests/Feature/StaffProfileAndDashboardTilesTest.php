@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
@@ -153,6 +154,18 @@ class StaffProfileAndDashboardTilesTest extends TestCase
 
         $html = $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertOk()->getContent();
         $this->assertMatchesRegularExpression('#<a class="sidebar-user sidebar-user-link" href="'.preg_quote(route('capsa.profile'), '#').'" aria-label="My profile"\s+aria-current="page"\s*>#', $html);
+    }
+
+    public function test_a_plain_admin_has_no_profile_page(): void
+    {
+        $admin = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]);
+
+        $this->assertFalse(Route::has('admin.profile'));
+
+        $html = $this->actingAs($admin, 'expert')->get(route('admin.dashboard'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('sidebar-user-link', $html);
+        $this->assertStringNotContainsString('Choose what you get notified about', $html);
+        $this->assertStringContainsString('<a href="'.route('admin.activitylog').'">Recent activity</a>', $html);
     }
 
     /** Over every page's own dimming layer, which Grading Rubrics keeps at 999. */

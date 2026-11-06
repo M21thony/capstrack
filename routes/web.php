@@ -117,8 +117,6 @@ $pagesBothRolesOpen = function () {
     Route::post('/rosters/experts', [ExpertRosterController::class, 'store'])->name('rosters.experts.store');
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
-    Route::put('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
     Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
     Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
 
@@ -203,11 +201,13 @@ Route::get('/admin/{path}', function (string $path) {
 // The CaPSA's surface. This used to sit under /admin with everything else,
 // which meant a CaPSA saw "admin" in the address of every page they opened -
 // including the ones an Admin cannot reach at all. The pages both roles open
-// (dashboard, profile, the expert list, the sections) live here too: the
+// (dashboard, the expert list, the sections) live here too: the
 // system is overwhelmingly the CaPSA's to run, so their reading of the URL is
 // the one that should be right.
 Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')->name('capsa.')->group(function () use ($pagesBothRolesOpen) {
     Route::middleware('expert.capsa')->group(function () {
+        Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
+        Route::put('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
         // Account Approval is gone: nobody applies for an account any more -
         // faculty come in on an uploaded list or are added by address - so its
         // queue was always empty. An old bookmark lands on Expert Management.

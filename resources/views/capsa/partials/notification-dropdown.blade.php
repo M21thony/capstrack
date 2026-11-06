@@ -10,6 +10,6 @@
   goes to it.
 --}}
 @include('partials.notification-bell', [
-  'bellSettingsUrl' => route('capsa.profile'),
-  'bellActivityUrl' => route('capsa.activitylog'),
+  'bellSettingsUrl' => auth('expert')->user()?->is_capsa ? route('capsa.profile') : null,
+  'bellActivityUrl' => route(auth('expert')->user()?->is_capsa ? 'capsa.activitylog' : 'admin.activitylog'),
 ])

@@ -13,7 +13,7 @@ import fs from 'node:fs';
  */
 
 const PAGES = {
-  admin: ['dashboard', 'analytics', 'activitylog', 'experts', 'students', 'settings', 'profile'],
+  admin: ['dashboard', 'analytics', 'activitylog', 'experts', 'students', 'settings'],
   capsa: ['dashboard', 'approval', 'activitylog', 'analytics', 'announcements', 'archive', 'defense-scheduling', 'defenses',
     'evaluations', 'evaluations/new', 'experts', 'financial', 'leave-requests', 'panel_assignment', 'reports', 'resources', 'rubric_management',
     'sections', 'team-management', 'team-rules', 'verify-teams', 'profile'],

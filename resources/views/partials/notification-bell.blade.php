@@ -152,10 +152,13 @@
   </div>
 
   {{-- CaPSA and instructor keep separate profile pages, so the caller says
-       which one this bell's settings live on. The CaPSA bell also keeps a way
-       through to Recent Activity, which is what it used to show. --}}
+       which one this bell's settings live on; an Admin has neither. The CaPSA
+       bell also keeps a way through to Recent Activity, which is what it used
+       to show. --}}
   <div class="notif-footer">
-    <a href="{{ $bellSettingsUrl }}#notifications">Choose what you get notified about</a>
+    @if ($bellSettingsUrl)
+      <a href="{{ $bellSettingsUrl }}#notifications">Choose what you get notified about</a>
+    @endif
     @isset ($bellActivityUrl)
       <a href="{{ $bellActivityUrl }}">Recent activity</a>
     @endisset
