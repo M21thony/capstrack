@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Models\ActivityLog;
 use App\Models\Announcement;
 use App\Models\CapstoneExpert;
+use App\Models\ConsultationBooking;
+use App\Models\ConsultationSchedule;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\GradingRubric;
+use App\Models\Notification;
 use App\Models\PanelGrade;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -104,8 +107,6 @@ class StudentDashboardTest extends TestCase
         $response->assertSee('Create or join a team');
         $response->assertDontSee('id="now-card"', false);
 
-        // Verify team name card shows "No Team" since current student doesn't have a team
-        $response->assertSee('Team (No Team)');
         $response->assertSee('Join a team to see members here.');
     }
 
@@ -166,14 +167,10 @@ class StudentDashboardTest extends TestCase
         $response->assertOk();
         $response->assertViewHas('myTeam');
 
-        // Team name should appear in the card header
-        $response->assertSee('Team (Team Omega)');
+        $response->assertSee('Team Omega');
 
         // The student's own name should appear in the team members list
         $response->assertSee($student->f_name);
-
-        // The activity feed left the dashboard: it said what happened, not what to do next.
-        $response->assertDontSee('Recent Activity');
     }
 
     public function test_student_sees_announcement_targeting_students_from_admin_with_matching_sections(): void
@@ -452,54 +449,34 @@ class StudentDashboardTest extends TestCase
             'status' => 'draft',
         ]);
 
-        $response = $this->actingAs($student, 'web')->get(route('student.dashboard'));
-
-        $response->assertOk();
-        $response->assertSee('Defense Results');
-        $response->assertSee('Pre-proposal Defense');
-        $response->assertSee('1 of 2 panelists graded');
-
         // No score yet. The team's mark is every panelist's total divided by
         // the size of the panel, so with one of two in there is nothing final
         // to show - and showing 80 here would have dropped to 70 the moment
         // the second panelist submitted.
-        $response->assertSee('Awaiting the rest of the panel');
-        $response->assertDontSee('80 pts');
-
-        $results = $response->viewData('defenseResults');
-        $this->assertCount(1, $results);
-        $this->assertEquals(1, $results->first()->submitted_count);
-        $this->assertEquals(2, $results->first()->assigned_count);
-        $this->assertNull($results->first()->average_score);
+        $schedule = $schedule->fresh();
+        $this->assertEquals(1, $schedule->gradesInCount());
+        $this->assertEquals(2, $schedule->panelSize());
+        $this->assertNull($schedule->panelAverage());
     }
 
     // The rule the panel actually uses: add every panelist's total, divide by
     // the panel.
     public function test_the_defense_score_is_the_panel_totals_divided_by_the_panel_size(): void
     {
-        [$student, $schedule, $panelists] = $this->makeGradedDefense([90, 81, 75]);
-
-        $response = $this->actingAs($student, 'web')->get(route('student.dashboard'));
-
-        $response->assertOk();
-        $response->assertSee('3 of 3 panelists graded');
+        [, $schedule] = $this->makeGradedDefense([90, 81, 75]);
 
         // (90 + 81 + 75) / 3
-        $this->assertEquals(82.0, $response->viewData('defenseResults')->first()->average_score);
-        $response->assertSee('82 pts');
+        $this->assertEquals(82.0, $schedule->fresh()->panelAverage());
     }
 
     // A panelist who never submits must not quietly raise the score by
     // shrinking the divisor.
     public function test_a_missing_panelist_leaves_the_score_unset_rather_than_raising_it(): void
     {
-        [$student] = $this->makeGradedDefense([90, 81], panelSize: 3);
+        [, $schedule] = $this->makeGradedDefense([90, 81], panelSize: 3);
 
-        $response = $this->actingAs($student, 'web')->get(route('student.dashboard'));
-
-        $response->assertOk();
-        $response->assertSee('2 of 3 panelists graded');
-        $this->assertNull($response->viewData('defenseResults')->first()->average_score);
+        $this->assertEquals(2, $schedule->fresh()->gradesInCount());
+        $this->assertNull($schedule->fresh()->panelAverage());
     }
 
     /**
@@ -563,25 +540,70 @@ class StudentDashboardTest extends TestCase
         return [$student, $schedule, $panelists];
     }
 
-    public function test_dashboard_shows_no_defense_results_for_team_with_no_schedule(): void
+    public function test_upcoming_consultations_are_the_teams_own_next_three_soonest_first(): void
     {
-        $student = Student::factory()->withCompleteProfile()->create([
-            'email' => 'nogrades.student@my.cspc.edu.ph',
-        ]);
+        [$student, $team] = $this->studentOnTeam();
+        $other = Team::create(['team_name' => 'Other Team', 'team_status' => 'Active']);
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $slot = ConsultationSchedule::create(['expert_id' => $expert->expert_id, 'available_date' => 'Monday', 'start_time' => '09:00:00', 'end_time' => '10:00:00', 'consultation_limit' => 9, 'is_available' => true]);
 
-        $team = Team::create(['team_name' => 'Team Fresh', 'team_status' => 'Active']);
-
-        StudentSchoolYear::create([
+        $book = fn ($teamId, $days, $status = 'scheduled') => ConsultationBooking::create([
             'student_id' => $student->student_id,
-            'team_id' => $team->team_id,
-            'program' => 'BSCS',
-            'student_status' => 'Active',
+            'team_id' => $teamId,
+            'schedule_id' => $slot->schedule_id,
+            'session_date' => today()->addDays($days),
+            'booking_status' => $status,
         ]);
+        $book($team->team_id, 9);
+        $book($team->team_id, 2);
+        $book($team->team_id, 0);
+        $book($team->team_id, 5);
+        $book($team->team_id, -1);
+        $book($team->team_id, 1, 'cancelled');
+        $book($other->team_id, 3);
 
-        $response = $this->actingAs($student, 'web')->get(route('student.dashboard'));
+        $days = $this->actingAs($student, 'web')->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('Today')
+            ->viewData('upcomingConsultations')->pluck('days')->all();
 
-        $response->assertOk();
-        $response->assertSee('No defense stages scheduled yet.');
+        $this->assertSame([0, 2, 5], $days);
+    }
+
+    public function test_recent_activity_is_the_students_own_read_ones_included(): void
+    {
+        [$student] = $this->studentOnTeam();
+        $classmate = Student::factory()->withCompleteProfile()->create();
+
+        Notification::create(['student_id' => $student->student_id, 'type' => 'team_verified', 'title' => 'Mine and read', 'message' => 'x', 'is_read' => true, 'created_at' => now()]);
+        Notification::create(['student_id' => $classmate->student_id, 'type' => 'team_verified', 'title' => 'Not mine', 'message' => 'x', 'created_at' => now()]);
+
+        $this->actingAs($student, 'web')->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('Mine and read')
+            ->assertDontSee('Not mine');
+    }
+
+    public function test_the_dashboard_links_to_pages_that_open(): void
+    {
+        [$student] = $this->studentOnTeam();
+
+        $dashboard = $this->actingAs($student, 'web')->get(route('student.dashboard'));
+
+        foreach (['student.duplication', 'student.documents', 'student.consultation', 'student.progress', 'student.team', 'student.resources'] as $route) {
+            $dashboard->assertSee('href="'.route($route).'"', false);
+            $this->actingAs($student, 'web')->get(route($route))->assertOk();
+        }
+    }
+
+    /** @return array{0: Student, 1: Team} */
+    private function studentOnTeam(): array
+    {
+        $student = Student::factory()->withCompleteProfile()->create();
+        $team = Team::create(['team_name' => 'Team Dash', 'team_status' => 'Active']);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id, 'program' => 'BSIT', 'student_status' => 'Active']);
+
+        return [$student, $team];
     }
 
     private function makeRubricId(): int

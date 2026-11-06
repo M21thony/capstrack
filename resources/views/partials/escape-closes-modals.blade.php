@@ -26,6 +26,7 @@
     '.profile-overlay',
     '.pp-modal-overlay',
     '.popover-overlay',
+    '.ann-modal-overlay',
   ].join(',');
 
   const isShowing = (el) => {
@@ -68,7 +69,7 @@
     // Its own close button knows what else to reset - a frame to empty, a
     // form to clear - so prefer that over hiding the box behind it.
     const closer = panel.querySelector(
-      '.pm-close-btn, .pp-x, .sheet-x, .ct-modal-close, [data-close], [aria-label="Close"]'
+      '.pm-close-btn, .pp-x, .sheet-x, .ct-modal-close, .ann-modal-close, [data-close], [aria-label="Close"]'
     );
 
     if (closer) {

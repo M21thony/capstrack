@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class ActivityLogController extends Controller
 {
-    protected array $allowedTypes = [
+    public const TYPES = [
         'team_joined',
         'team_left',
         'team_status_changed',
@@ -26,7 +26,7 @@ class ActivityLogController extends Controller
 
         $query = ActivityLog::with('student.currentTeam')
             ->when($visibleIds !== null, fn ($q) => $q->whereIn('student_id', $visibleIds))
-            ->whereIn('type', $this->allowedTypes)
+            ->whereIn('type', self::TYPES)
             ->latest('created_at');
 
         if ($search = $request->get('search')) {
@@ -58,7 +58,7 @@ class ActivityLogController extends Controller
 
         return view('capsa.activitylog', [
             'logs' => $logs,
-            'types' => collect($this->allowedTypes),
+            'types' => collect(self::TYPES),
             'logDataJson' => $logDataJson,
         ]);
     }

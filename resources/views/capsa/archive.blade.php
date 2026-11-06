@@ -94,13 +94,17 @@
     <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="page-title">Archived Capstone Management</div>
+    {{-- The dean reads the archive; the CaPSA keeps it (the write routes are CaPSA-only too). --}}
+    @php $viewOnly = request()->routeIs('admin.archive'); @endphp
+    <div class="page-title">{{ $viewOnly ? 'Archived Capstones' : 'Archived Capstone Management' }}</div>
     <div class="topbar-actions">
       @include('capsa.partials.notification-dropdown')
+      @unless ($viewOnly)
       <button class="btn btn-ghost-nav" id="topbar-action" onclick="showAddArchive()">
         <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span id="action-label">Add Capstone</span>
       </button>
+      @endunless
     </div>
   </div>
 
@@ -146,7 +150,7 @@
     {{-- Manuscripts teams handed in themselves. They wait here until somebody
          decides: publishing puts it in the archive, declining removes it and
          frees the team to hand in a corrected copy. --}}
-    @if ($pending->isNotEmpty())
+    @if ($pending->isNotEmpty() && ! $viewOnly)
     <div style="background:#fff;border:1.5px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <span style="font-size:13px;font-weight:600;color:var(--text)">Capstone Manuscripts Waiting for Review</span>
@@ -188,6 +192,7 @@
     </div>
     @endif
 
+    @unless ($viewOnly)
     <div id="add-archive-modal" style="display:none;background:#fff;border:1.5px solid var(--accent);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(201,150,12,0.12)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <span style="font-size:13px;font-weight:600;color:var(--text)">Add Archived Capstone</span>
@@ -238,6 +243,7 @@
         </div>
       </div>
     </div>
+    @endunless
 
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="arch-grid">
     @forelse($archives as $archive)
@@ -258,9 +264,13 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
           <span style="font-size:11px;color:var(--text3)">{{ $archive->program ?? 'N/A' }} — CCS</span>
           <span style="display:flex;gap:6px">
+            @unless ($viewOnly)
             <button class="btn" style="font-size:10px;padding:3px 10px" onclick="editTags({{ $archive->archived_id }}, @js($archive->title), @js($archive->tags->pluck('tag_id')->all()))">Tags</button>
+            @endunless
             <button class="btn btn-ghost arch-view" onclick="openAbstract({{ $archive->archived_id }})">View Abstract</button>
+            @unless ($viewOnly)
             <button class="btn btn-danger" style="font-size:10px;padding:3px 10px" onclick="deleteArchive({{ $archive->archived_id }})">Remove</button>
+            @endunless
           </span>
         </div>
       </div>

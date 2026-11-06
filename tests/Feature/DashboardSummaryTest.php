@@ -13,6 +13,7 @@ use App\Support\CapsaReports;
 use App\Support\DashboardStats;
 use App\Support\DefenseOutcome;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
@@ -51,18 +52,32 @@ class DashboardSummaryTest extends TestCase
 
         $response = $this->actingAs($capsa, 'expert')->get(route('capsa.dashboard'))->assertOk();
 
-        $response->assertSeeInOrder(['Your sections at a glance', 'Team Progress', 'Defense Results', 'Fee Collection', 'Experts and Sections', 'Waiting on you']);
-        $response->assertSee('Teams per section');
-        $response->assertSee('BSIT-3A');
+        $response->assertSeeInOrder(['Team &amp; Expert Coverage', 'Pending Issues', 'Upcoming Deadlines', 'Recent Activity', 'Quick Actions'], false);
 
         $stats = app(DashboardStats::class)->capsa($capsa, app(CapsaReports::class)->context($capsa, []));
         $this->assertSame(2, $stats['teams']);
         $this->assertSame(2, $stats['students']);
+        $this->assertSame(2, $stats['newTeams']);
+        $this->assertSame(2, $stats['newStudents']);
         $this->assertSame(1, collect($stats['coverage'])->firstWhere('label', 'Adviser')['have']);
         $this->assertSame(0, collect($stats['coverage'])->firstWhere('label', 'Grammarian')['have']);
         $this->assertSame([['label' => 'BSIT-3A', 'value' => 2]], $stats['bySection']);
         $this->assertCount(3, $stats['fees']);
         $this->assertSame(4, count($stats['defenses']['stages']));
+    }
+
+    public function test_a_team_older_than_thirty_days_is_not_counted_as_new(): void
+    {
+        $capsa = $this->capsaFor();
+        [$old] = $this->teamInSection('Alpha');
+        $this->teamInSection('Bravo');
+        DB::table('team')->where('team_id', $old->team_id)->update(['created_at' => now()->subDays(31)]);
+
+        $stats = app(DashboardStats::class)->capsa($capsa, app(CapsaReports::class)->context($capsa, []));
+
+        $this->assertSame(2, $stats['teams']);
+        $this->assertSame(1, $stats['newTeams']);
+        $this->assertSame(1, $stats['newStudents']);
     }
 
     public function test_an_admin_sees_the_whole_system(): void
@@ -72,19 +87,32 @@ class DashboardSummaryTest extends TestCase
         Student::factory()->withCompleteProfile()->create(['course' => 'Bachelor of Science in Computer Science']);
         Team::create(['team_name' => 'One', 'team_status' => 'Active', 'is_confirmed' => true]);
         Team::create(['team_name' => 'Two', 'team_status' => 'Active']);
-        CapstoneExpert::factory()->create(['approved_status' => false]);
 
         $response = $this->actingAs($admin, 'expert')->get(route('admin.dashboard'))->assertOk();
 
-        $response->assertSeeInOrder(['The whole system', 'Students by Program', 'Experts by Role', 'Defense Results', 'Money and Archive']);
-        $response->assertSee('waiting to be approved');
+        $response->assertSeeInOrder(['Students Overview', 'Experts by Role', 'Defense Results', 'Fees and Archive']);
 
         $stats = app(DashboardStats::class)->admin($admin);
         $this->assertSame(4, $stats['students']);
         $this->assertSame(2, $stats['teams']);
         $this->assertSame(1, $stats['verifiedTeams']);
-        $this->assertSame(1, $stats['awaitingApproval']);
-        $this->assertSame(['BSIT', 3], [$stats['byProgram'][0]['label'], $stats['byProgram'][0]['value']]);
+        $this->assertSame(4, $stats['active'] + $stats['inactive']);
+    }
+
+    /** The chart and the Students tile must agree: a deleted account's old row counts for neither. */
+    public function test_a_deleted_students_year_row_is_not_counted(): void
+    {
+        $admin = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]);
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        DB::statement('PRAGMA foreign_keys = OFF');
+        foreach ([$student->student_id, 999999] as $id) {
+            DB::table('student_s_y')->insert(['student_id' => $id, 'school_year' => '2026-2027']);
+        }
+
+        $stats = app(DashboardStats::class)->admin($admin);
+        $this->assertSame(1, $stats['active']);
+        $this->assertSame([['label' => '2026-2027', 'value' => 1]], $stats['studentsByYear']);
     }
 
     public function test_an_expert_sees_their_own_numbers_as_counts(): void
@@ -98,7 +126,7 @@ class DashboardSummaryTest extends TestCase
 
         $response = $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk();
 
-        $response->assertSeeInOrder(['Your work at a glance', 'Teams You Advise', 'Your Teams', 'Reviews, Consultations and Panels', 'Waiting on you']);
+        $response->assertSeeInOrder(['My Workload', 'Team Distribution', 'Consultations', 'Upcoming Tasks', 'Announcements', 'Recent Activity', 'Quick Access']);
         $response->assertSee('2 of 4 team slots used');
 
         $stats = app(DashboardStats::class)->expert($expert->fresh());
@@ -110,12 +138,37 @@ class DashboardSummaryTest extends TestCase
         $this->assertNull($stats['reviews']['percent']);
     }
 
+    /** A weekly slot has no date of its own: the booking's date is the one that counts. */
+    public function test_an_experts_consultations_go_by_the_date_booked(): void
+    {
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
+        [$team, $leader] = $this->teamInSection('Alpha');
+        $this->engage($team, $expert, 'adviser');
+
+        $slot = DB::table('consultation_schedule')->insertGetId([
+            'expert_id' => $expert->expert_id, 'available_date' => 'Monday', 'start_time' => '09:00:00', 'end_time' => '10:00:00',
+            'consultation_limit' => 1, 'is_available' => true, 'recur' => 'weekly', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        foreach ([now()->addDays(3), now()->subDays(3)] as $date) {
+            DB::table('consultation_booking')->insert([
+                'schedule_id' => $slot, 'team_id' => $team->team_id, 'student_id' => $leader->student_id,
+                'session_date' => $date->toDateString(), 'booking_status' => 'scheduled', 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk()
+            ->assertSee($team->team_name)
+            ->assertSee('In 3 days');
+
+        $this->assertSame(1, app(DashboardStats::class)->expert($expert->fresh())['consultations']['upcoming']);
+    }
+
     public function test_an_expert_with_nothing_yet_still_gets_a_dashboard(): void
     {
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'max_teams' => null]);
 
         $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk()
             ->assertSee('Team limit not set')
-            ->assertSee('Your work at a glance');
+            ->assertSee('My Workload');
     }
 }

@@ -11,6 +11,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\Notifier;
 use App\Support\DefenseBoard;
+use App\Support\FeeBoard;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -164,6 +165,32 @@ class AdminFinancialController extends Controller
             'message' => 'Verified '.$records->count().' '.($records->count() === 1 ? 'receipt' : 'receipts').'.'
                 .($skipped->isNotEmpty() ? ' '.$skipped->count().' with an OR number '.($skipped->count() === 1 ? 'needs' : 'need').' checking one by one.' : ''),
             'data' => ['verified' => $records->pluck('id')->values(), 'skipped' => $skipped->pluck('id')->values()],
+        ]);
+    }
+
+    /**
+     * Every verified receipt in this CaPSA's sections that has not gone yet.
+     * Sent receipts stay verified, and verified ones already cannot be changed.
+     */
+    public function sendToDean(FeeBoard $fees): JsonResponse
+    {
+        /** @var CapstoneExpert $capsa */
+        $capsa = auth('expert')->user();
+
+        $ids = collect($fees->forCapsa($capsa)['receipts'])
+            ->filter(fn (array $r) => $r['status'] === 'verified' && ! $r['sent'])
+            ->pluck('id');
+
+        if ($ids->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'There are no verified receipts left to send.'], 422);
+        }
+
+        FinancialRecord::whereIn('id', $ids)->update(['sent_to_dean_at' => now(), 'sent_to_dean_by' => $capsa->name]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sent '.$ids->count().' '.($ids->count() === 1 ? 'receipt' : 'receipts').' to the dean.',
+            'data' => ['on' => now()->format('M j, Y')],
         ]);
     }
 

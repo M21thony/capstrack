@@ -155,7 +155,7 @@ class ExpertCapacityTest extends TestCase
         $this->assertSame(0, Notification::where('expert_id', $capsa->expert_id)->where('type', 'expert_slots_short')->count());
     }
 
-    public function test_the_capsa_dashboard_shows_teams_against_expert_slots(): void
+    public function test_the_capsa_dashboard_says_which_experts_are_short(): void
     {
         $capsa = $this->capsaFor();
         $this->threeTeams();
@@ -165,6 +165,6 @@ class ExpertCapacityTest extends TestCase
 
         $this->actingAs($capsa, 'expert')->get(route('capsa.dashboard'))
             ->assertOk()
-            ->assertSeeInOrder(['Teams vs Experts', 'BSIT', 'Adviser', 'OK', 'Consultant', 'Short by 2', 'Grammarian', 'No limit', 'All roles', 'Waiting on you']);
+            ->assertSeeInOrder(['Team &amp; Expert Coverage', 'BSIT · 2 consultants', 'Insufficient Experts', 'BSIT · Short by 2 consultants'], false);
     }
 }

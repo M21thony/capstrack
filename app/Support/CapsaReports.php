@@ -346,6 +346,26 @@ class CapsaReports
         return $p->milestones->first(fn ($m) => $m->completed < $m->total)?->milestone->name ?? 'All done';
     }
 
+    /**
+     * The next checklist deadlines across these teams, soonest first, with how
+     * many teams still owe each one.
+     *
+     * @param  array<string, mixed>  $ctx
+     * @return list<array{title: string, due: \Illuminate\Support\Carbon, left: int}>
+     */
+    public function upcomingRequirements(array $ctx, int $limit = 3): array
+    {
+        $settled = [...MilestoneProgress::COMPLETE_STATES, MilestoneProgress::HANDED_IN];
+
+        return collect($this->progressFor($ctx))
+            ->flatMap(fn ($progress) => $progress->items)
+            ->filter(fn ($row) => $row->due_on && $row->due_on->gte(now()->startOfDay()) && ! in_array($row->state, $settled, true))
+            ->groupBy(fn ($row) => $row->item->title.'|'.$row->due_on->toDateString())
+            ->map(fn ($rows) => ['title' => $rows->first()->item->title, 'due' => $rows->first()->due_on, 'left' => $rows->count()])
+            ->sortBy(fn ($row) => $row['due']->timestamp)
+            ->take($limit)->values()->all();
+    }
+
     /** @return array<int, object> checklist progress by team id, worked out once per request */
     private function progressFor(array $ctx): array
     {

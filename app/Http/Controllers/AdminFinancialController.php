@@ -24,6 +24,12 @@ class AdminFinancialController extends Controller
         return view('capsa.financial', ['state' => $fees->forCapsa($capsa)]);
     }
 
+    /** The dean's page: what each section's CaPSA has sent so far. */
+    public function fees(FeeBoard $fees): View
+    {
+        return view('admin.fees', ['rows' => $fees->forDean()]);
+    }
+
     public function storeExpensePost(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -66,6 +72,10 @@ class AdminFinancialController extends Controller
     {
         $status = $request->validate(['status' => ['required', 'in:approved,rejected']])['status'];
         $by = auth('expert')->user()->name;
+
+        if ($financialRecord->sent_to_dean_at) {
+            return redirect()->back()->withErrors(['status' => 'This receipt was already sent to the dean and cannot be changed.']);
+        }
 
         if ($status === 'approved') {
             if ($financialRecord->receipt_number && ! $request->boolean('or_confirmed')) {

@@ -107,10 +107,10 @@ class PortalIconsTest extends TestCase
                 'data-icon="analytics"', 'Analytics',
                 'data-icon="history"', 'Activity Log',
             ], false)
-            // Stat cards, each with its own picture.
-            ->assertSeeInOrder(['data-icon="verified"', 'Teams to Verify', 'data-icon="file-check"', 'Titles to Review', 'data-icon="receipt"', 'Receipts to Check'], false)
-            // No defenses coming up, so that card shows its empty state's icon.
-            ->assertSeeInOrder(['data-icon="defense"', 'No defenses in the next two weeks.'], false)
+            // Tiles, each with its own picture.
+            ->assertSeeInOrder(['#i-team', 'Total Teams', '#i-cap', 'Total Students', '#i-shield', 'Coverage Rate', '#i-warn', 'Pending Issues'], false)
+            // No defenses coming up, so the Deadlines card says so.
+            ->assertSee('No defenses scheduled.')
             // The phone tab bar draws from the same set.
             ->assertSee(PortalIcons::paths('teams-manage'), false)
             ->getContent();
@@ -146,8 +146,8 @@ class PortalIconsTest extends TestCase
                 'data-icon="grading"', 'Team Grading',
                 'data-icon="consultation"', 'Schedule Management',
             ], false)
-            ->assertSeeInOrder(['data-icon="inbox"', 'Team Requests', 'data-icon="file-review"', 'Documents to Review', 'data-icon="grading"', 'Grades to Submit'], false)
-            ->assertSeeInOrder(['data-icon="announcement"', 'No announcements.'], false)
+            ->assertSeeInOrder(['#i-team', 'Assigned Teams', '#i-doc', 'Pending Reviews', '#i-checkc', 'Defenses Graded'], false)
+            ->assertSeeInOrder(['#i-megaphone', 'No announcements.'], false)
             ->assertSee(PortalIcons::paths('home'), false)
             ->getContent();
 

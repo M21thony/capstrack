@@ -141,7 +141,6 @@ class TeamApplicationsTabTest extends TestCase
         $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))
             ->assertOk()
             ->assertDontSee('Team Assignments')
-            ->assertDontSee('My Teams')
             ->assertSeeInOrder(['data-icon="team"', 'Teams', '<span class="nav-badge red">1</span>'], false);
 
         // Seen once Teams is opened.

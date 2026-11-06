@@ -8,7 +8,7 @@ The new content area for `resources/views/student/dashboard.blade.php`.
 
 | File | What it is |
 | --- | --- |
-| `dashboard-content.html` | The approved mockup, content area only. It is a static page with sample data: open it from this folder in a browser, and the banner photo loads from `public/images/bg-ccs.jpg`. Its CSS uses the app's own tokens and `db-` class names, so it can be lifted into the Blade view. |
+| `dashboard-content.html` | The approved mockup, content area only. It is a static page with sample data: open it from this folder in a browser, and the banner photo loads from `public/images/bg-ccs.jpg`. It uses `staff-dashboard.css`, the same stylesheet as the CaPSA and expert mockups, plus a short block for the parts only students have. |
 | `dashboard-content.png` | A screenshot of the HTML at 1220×800, the content area of a 1440×900 screen with the sidebar and topbar taken off. |
 
 The sidebar (`student.partials.sidebar`) and the topbar (dark bar, page title, `?` Page Guide, notification bell) **stay as they are**. Only what sits inside `.content` changes.
@@ -23,17 +23,17 @@ The sidebar (`student.partials.sidebar`) and the topbar (dark bar, page title, `
 └─────────────────────┴─────────────────────────────┴────────────────────┘
 ```
 
-- **Width 1100px and up:** a 3-column grid (`repeat(3, minmax(0, 1fr))`), with a 12px gap everywhere. Capstone Progress spans 2 columns, so the edges of every card line up.
+- **Width 1100px and up:** a 3-column grid (`repeat(3, minmax(0, 1fr))`), with a 12px gap between cards and 14px between rows. Capstone Progress spans 2 columns, so the edges of every card line up.
 - **One screen, no page scroll (width 1100px and up, height 640px and up):** the content area takes the screen height minus the topbar, `calc(100vh - 58px)`. The banner and the top row keep their natural height, and the two lower rows split what is left equally.
 - **No scroll bar inside a card.** The cards are `overflow: hidden`. Each list shows a fixed number of items and the **View all** link leads to the rest. Keep the item counts below, or the cards will clip.
-- **Under 1100px:** the cards wrap and the page scrolls as usual. **Under 760px:** the banner photo is hidden and Quick Actions becomes 2×2.
+- **Under 1100px:** the cards stack and the page scrolls as usual. **Under 760px:** the banner photo and school year box are hidden.
 
 ## Tokens
 
 All colours come from `resources/student-ui/styles.css`. Notes:
 
 - Secondary text uses `--text2` (`#4a5060`), not `--text3`, which is too light to read at 12px.
-- The gold for icons, the ring, the bar and the borders is `--accent2` (`#b5941f`). Gold link text is `--accent3` (`#8a6e10`). On the dark cards, the gold text is `#e6c75a`.
+- Icons are not gold; see "Icon colours" in `staff-handoff.md`. The gold for the ring, the bar and the borders is `--accent2` (`#b5941f`). Gold link text is `--accent3` (`#8a6e10`). On the dark cards, the gold text is `--accent` (`#c9a82c`).
 - The dark cards (banner, on-track card) use `--navy-dark`.
 - The font is DM Sans, already loaded through `css/fonts.css`. The mockup links Google Fonts only so that it can stand alone.
 
@@ -43,12 +43,12 @@ Everything below except Upcoming Consultations, Recent Activity and Resources al
 
 | # | Card | Shows | Source | Link |
 | --- | --- | --- | --- | --- |
-| 1 | Welcome banner | "Welcome back, {first name}!" and the campus photo | `auth()->user()`, `public/images/bg-ccs.jpg` | none |
+| 1 | Welcome banner | "Welcome back, {first name}!", the campus photo and the school year box | `auth()->user()`, `public/images/bg-ccs.jpg`, `Term::currentSchoolYear()` | none |
 | 2 | Capstone Progress | Ring and bar showing `$overallProgress`%; "{completed} of {total} requirements done"; a red **N Overdue** box (only when N > 0); **Next due** date and title | `$progress->completed`, `$progress->total`, `$overdueItems->count()`, `$nextItem->due_on`, `$nextItem->item->title` | View details → `student.progress` |
-| 3 | Quick Actions | 4 tiles | none | Submit → `student.submission`; View Documents → `student.documents`; Check Schedule → **open question 3**; View Progress → `student.progress` |
+| 3 | Quick Actions | 4 buttons, 2×2 | none | Submit → `student.submission`; View Documents → `student.documents`; Check Schedule → **open question 3**; View Progress → `student.progress` |
 | 4 | Announcements | The latest **3**, each with a title, a one-line excerpt (ellipsis) and a date. Gold dot = new, grey = older | `$announcements->take(3)` | View all → announcements list (**open question 4**) |
 | 5 | Upcoming Consultations | The team's next **3** booked consultations, each with a date tile (gold when it is today or tomorrow), "{expert name} · {Adviser / Consultant / Grammarian}", "{start} – {end} · {topics}", and a pill: **Today** / **Tomorrow** (gold), "In N days" | **New:** `ConsultationBooking::forTeam($teamId)->where('booking_status', 'scheduled')->whereDate('session_date', '>=', today())`, with `schedule.expert`, sorted by `session_date` then `schedule.start_time`, `take(3)`. Topics from `topicsLabel()`. The role comes from the team's expert assignment for that expert (`$myTeam->expertAssignments`). | View all → `student.consultation` |
-| 6 | On-track card | A trophy icon and a message | `$overdueItems` (see open question 1) | none |
+| 6 | On-track card | A raised fist icon and a message | `$overdueItems` (see open question 1) | none |
 | 7 | Your Team | Team name, "Active team", up to 4 initials avatars, "{n} members · {section}"; **Manage team** button | `$myTeam`, `$teamMembers` | Manage team → `student.team` |
 | 8 | Recent Activity | The latest **3**, each with a coloured icon by type, text and "Nov 4 · 3:45 PM" | **New:** `Notification::where('student_id', …)->latest('created_at')->take(3)`, read ones included (the controller loads only unread now) | View all → notifications |
 | 9 | Resources | A gold notice "Your CaPSA uploaded **N** new resources · {date}", then the newest **2** resources, each with a category pill (Forms, Lessons, Rubrics, Presentation, Other) | **New:** `StudentResources::files($student)`; "new" = `uploaded_at` within the last week, the same rule as `isNew` in `Student\ResourceController`. The category labels are the ones `Student\ResourceController` already maps. | View all → `student.resources`; an item → `student.resources.download` |

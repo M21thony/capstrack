@@ -2,24 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Student\ResourceController;
 use App\Models\Announcement;
+use App\Models\ConsultationBooking;
 use App\Models\DefenseSchedule;
 use App\Models\GradingRubric;
 use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\Term;
 use App\Support\AnnouncementAudience;
 use App\Support\MilestoneProgress;
 use App\Support\NextStep;
+use App\Support\StudentResources;
 use App\Support\StudentTeam;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, StudentResources $resources): View
     {
         /** @var Student $student */
         $student = auth()->user();
@@ -34,7 +39,6 @@ class DashboardController extends Controller
         $progress = $team?->checklistProgress();
 
         $announcements = $this->getAnnouncements($student);
-        $defenseResults = $this->getDefenseResults($teamId);
         $nextDefense = $teamId
             ? DefenseSchedule::where('team_id', $teamId)->where('schedule_date', '>=', now()->startOfDay())->orderBy('schedule_date')->first()
             : null;
@@ -49,6 +53,9 @@ class DashboardController extends Controller
             ->where('is_read', false)
             ->count();
 
+        $files = $resources->files($student)->get();
+        $newFiles = $files->filter(fn ($file) => $file->uploaded_at?->gt(now()->subWeek()));
+
         return view('student.dashboard', [
             'myTeam' => $myTeam,
             'nextStep' => NextStep::for($student),
@@ -56,7 +63,6 @@ class DashboardController extends Controller
             'teamMembers' => $teamMembers,
             'overallProgress' => $progress->percent ?? 0,
             'progress' => $progress,
-            'currentMilestone' => $progress ? $progress->milestones->first(fn ($m) => $m->completed < $m->total)?->milestone->name : null,
             'overdueItems' => $progress ? $progress->items->where('state', MilestoneProgress::OVERDUE)->sortBy('due_on')->values() : collect(),
             'nextItem' => $progress?->items
                 ->reject(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true) || $row->state === MilestoneProgress::OVERDUE)
@@ -69,42 +75,80 @@ class DashboardController extends Controller
             'announcements' => $announcements,
             'unreadNotifications' => $unreadNotifications,
             'unreadCount' => $unreadCount,
-            'defenseResults' => $defenseResults,
+            'schoolYear' => Term::currentSchoolYear(),
+            'section' => Student::computeSectionLabel($student->course, $student->year_section),
+            'upcomingConsultations' => $this->upcomingConsultations($teamId, $myTeam),
+            'recentActivity' => $this->recentActivity($student),
+            'recentResources' => $files->take(2)->map(fn ($file) => (object) [
+                'title' => $file->title ?: ($file->file_name ?: 'Untitled'),
+                'category' => ResourceController::categoryLabel($file->category),
+                // A file that cannot be downloaded opens on the Resources page instead.
+                'url' => $file->is_downloadable !== false && ($file->drive_file_id || $file->external_url)
+                    ? route('student.resources.download', $file)
+                    : route('student.resources'),
+            ]),
+            'newResourceCount' => $newFiles->count(),
+            'newResourceDate' => $newFiles->max('uploaded_at'),
         ]);
     }
 
-    // Only counts grades a panelist has actually submitted (not drafts) -
-    // a student never sees a panelist's in-progress working copy.
-    private function getDefenseResults(?int $teamId): Collection
+    // The team's next three booked sessions, soonest first.
+    private function upcomingConsultations(?int $teamId, ?Team $myTeam): Collection
     {
         if (! $teamId) {
             return collect();
         }
 
-        $schedules = DefenseSchedule::where('team_id', $teamId)->with('panels')->get();
+        $roles = $myTeam?->expertAssignments->pluck('engaged_role_name', 'expert_id') ?? collect();
 
-        if ($schedules->isEmpty()) {
-            return collect();
-        }
+        return ConsultationBooking::forTeam($teamId)
+            ->with('schedule.expert')
+            ->where('booking_status', 'scheduled')
+            ->whereDate('session_date', '>=', today())
+            ->get()
+            ->sortBy(fn (ConsultationBooking $booking) => [$booking->session_date->toDateString(), $booking->schedule?->start_time])
+            ->take(3)
+            ->map(function (ConsultationBooking $booking) use ($roles) {
+                $schedule = $booking->schedule;
 
-        $schedules->load('grades');
+                return (object) [
+                    'date' => $booking->session_date,
+                    'days' => (int) today()->diffInDays($booking->session_date),
+                    'who' => collect([$schedule?->expert?->name, $roles[$schedule?->expert_id] ?? null])->filter()->implode(' · '),
+                    'when' => collect([
+                        $schedule ? Carbon::parse($schedule->start_time)->format('g:i').' – '.Carbon::parse($schedule->end_time)->format('g:i A') : null,
+                        $booking->topicsLabel(),
+                    ])->filter()->implode(' · '),
+                ];
+            })
+            ->values();
+    }
 
-        return $schedules->map(function (DefenseSchedule $schedule) {
-            return (object) [
-                'defense_type' => $schedule->defense_type,
-                // A stage can be defended more than once. Both attempts are
-                // listed - a team should see their redefense - so the number
-                // is carried through to tell them apart.
-                'attempt' => (int) $schedule->attempt,
-                'schedule_date' => $schedule->schedule_date,
-                'end_date' => $schedule->end_date,
-                'assigned_count' => $schedule->panelSize(),
-                // Scored or abstained: either way that panelist is done.
-                'submitted_count' => $schedule->gradesInCount(),
-                // Null until every panelist has graded - see panelAverage().
-                'average_score' => $schedule->panelAverage(),
-            ];
-        })->sortBy(fn ($s) => [$s->schedule_date ?? now()->addYears(10), $s->attempt])->values();
+    // The student's own latest notifications, read ones included. The icon
+    // goes by kind: dates and announcements orange, done green, documents
+    // blue, everything about the team purple.
+    private function recentActivity(Student $student): Collection
+    {
+        return Notification::where('student_id', $student->student_id)
+            ->latest('created_at')
+            ->take(3)
+            ->get()
+            ->map(function (Notification $notification) {
+                [$tone, $icon] = match (true) {
+                    $notification->type === 'announcement' => ['orange', 'megaphone'],
+                    str_contains($notification->type, 'defense'), str_contains($notification->type, 'consultation') => ['orange', 'cal'],
+                    in_array($notification->type, ['team_verified', 'title_confirmation'], true) => ['green', 'check'],
+                    str_contains($notification->type, 'document'), str_contains($notification->type, 'paper') => ['blue', 'doc'],
+                    default => ['purple', 'team'],
+                };
+
+                return (object) [
+                    'text' => $notification->title ?: strip_tags((string) $notification->message),
+                    'at' => $notification->created_at,
+                    'tone' => $tone,
+                    'icon' => $icon,
+                ];
+            });
     }
 
     private function loadTeamData(Student $student, ?int $teamId): array

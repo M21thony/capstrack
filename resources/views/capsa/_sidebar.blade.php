@@ -282,8 +282,10 @@
     </a>
     @endif
 
-    @if ($isCapsa)
+    @if ($isCapsa || $isAdmin)
     <div class="nav-section">Records</div>
+    @endif
+    @if ($isCapsa)
     <a href="{{ route('capsa.financial') }}" class="nav-item {{ $currentRoute === 'capsa.financial' ? 'active' : '' }}">
       <x-portal-icon name="receipt" />
       Financial Records
@@ -291,13 +293,23 @@
         <span class="nav-badge red">{{ $badge($unseenPendingReceiptCount) }}</span>
       @endif
     </a>
-    <a href="{{ route('capsa.archive') }}" class="nav-item {{ $currentRoute === 'capsa.archive' ? 'active' : '' }}">
+    @endif
+    @if ($isAdmin)
+    <a href="{{ route('admin.fees') }}" class="nav-item {{ $currentRoute === 'admin.fees' ? 'active' : '' }}">
+      <x-portal-icon name="receipt" />
+      Fees
+    </a>
+    @endif
+    @if ($isCapsa || $isAdmin)
+    <a href="{{ route($isCapsa ? 'capsa.archive' : 'admin.archive') }}" class="nav-item {{ in_array($currentRoute, ['capsa.archive', 'admin.archive'], true) ? 'active' : '' }}">
       <x-portal-icon name="archive" />
       Archived Capstones
       @if ($archivedCount > 0)
         <span class="nav-badge">{{ $badge($archivedCount) }}</span>
       @endif
     </a>
+    @endif
+    @if ($isCapsa)
     <a href="{{ route('capsa.resources') }}" class="nav-item {{ $currentRoute === 'capsa.resources' ? 'active' : '' }}">
       <x-portal-icon name="book" />
       Templates &amp; Lessons

@@ -90,6 +90,7 @@ Route::middleware(['web', 'expert.auth'])
                 Route::get('/records', [AdminFinancialController::class, 'records'])->name('records');
                 // Verify several at once.
                 Route::patch('/records', [AdminFinancialController::class, 'updateMany'])->name('update-many');
+                Route::post('/records/sent-to-dean', [AdminFinancialController::class, 'sendToDean'])->name('send-to-dean');
                 Route::get('/records/{financialRecord}', [AdminFinancialController::class, 'record'])->name('record');
                 Route::patch('/records/{financialRecord}', [AdminFinancialController::class, 'update'])->name('update');
                 Route::get('/expense-posts', [AdminFinancialController::class, 'expensePosts'])->name('expense-posts');

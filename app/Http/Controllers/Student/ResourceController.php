@@ -204,7 +204,7 @@ class ResourceController extends Controller
         return $key === '' ? 'other' : $key;
     }
 
-    private static function categoryLabel(?string $category): string
+    public static function categoryLabel(?string $category): string
     {
         $key = self::categoryKey($category);
 

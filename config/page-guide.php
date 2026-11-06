@@ -217,27 +217,26 @@ return [
 
     'student.dashboard' => [
         'title' => 'Dashboard',
-        'summary' => 'Your home page: where your team stands, the latest announcements and what is due next.',
+        'summary' => 'Your home page: your progress, the latest announcements, your consultations and your team.',
         'steps' => [
-            ['Look at Where your team is', 'to see how much is done and what is overdue.'],
+            ['Look at Your Capstone Progress', 'to see how much is done and what is due next.'],
             ['Read the announcements', 'for defense dates and CCS updates.'],
-            ['Check your milestones', 'further down for what comes next.'],
+            ['Use Quick Actions', 'to go straight to the page you need.'],
         ],
         'tour' => [
-            ['Where your team is', 'How many requirements are done, the stage you are on, and what is overdue or waiting.', '#now-card'],
             ['Your next step', 'Takes you to the page for what your team should do next.', 'a.ns-go'],
-            ['Open Progress Tracker', 'Goes to Progress Tracker, where every requirement is listed.', '.now-link'],
+            ['Your Capstone Progress', 'How many requirements are done, what is overdue, and what is due next.', '.db-progress'],
+            ['Quick Actions', 'Shortcuts to the pages you use most.', '.db-qa-grid'],
             ['Announcements', 'News from your CaPSA and CCS.', '#announcements-card'],
             ['An announcement', 'Opens it in a popup so you can read all of it.', '.ann-item', 'one'],
-            ['Your experts and team', 'Your adviser, consultant and grammarian, and your teammates.', '.dash-grid-v3'],
-            ['Milestones', 'Every stage of your capstone, in order, with its requirements.', '.milestone-list'],
+            ['Your Team', 'Your teammates, and the way to Team Management.', '.db-team-top'],
         ],
         'related' => [
             'student.progress' => 'See your progress',
             'student.documents' => 'Submit a paper',
             'student.team' => 'Manage your team',
         ],
-        'tip' => 'Press a red overdue item to go straight to it.',
+        'tip' => 'Press an announcement to read all of it.',
     ],
 
     'student.experts' => [
@@ -593,22 +592,23 @@ return [
         'title' => 'Dashboard',
         'summary' => 'Your home page: your teams, what is waiting on you and what is coming up.',
         'steps' => [
-            ['Look at Your work at a glance', 'for your teams, reviews, consultations and defenses in numbers.'],
-            ['Check Waiting on you', 'for team requests, documents to review and grades to submit.'],
-            ['Read Coming up', 'for your next consultations and defenses.'],
+            ['Read the tiles', 'for your teams, reviews, graded defenses and consultations.'],
+            ['Check Upcoming Tasks', 'for what is waiting on you. Press a row to open it.'],
+            ['Read Consultations', 'for your next consultations and defenses.'],
         ],
         'tour' => [
-            ['Your work at a glance', 'Teams you advise, documents reviewed, consultations held and defenses graded.', '.dc-tiles'],
-            ['Your teams', 'Your team slots, teams per section, and your reviews, consultations and panels.', '.dc-grid.wide'],
-            ['Waiting on you', 'Team requests, documents to review and grades still to submit.', '.content .grid-3'],
-            ['Announcements and what is next', 'News for you, and your coming consultations and defenses.', '.content .grid-2'],
-            ['An announcement', 'Opens it in a popup so you can read all of it.', '.ann-item', 'one'],
+            ['Your work in numbers', 'Your teams, documents to review, defenses graded and consultations.', '.db-tiles'],
+            ['My workload', 'Your team slots and everything still on your plate.', '.db-x-work'],
+            ['Team distribution', 'Your teams per section.', '.db-x-team'],
+            ['Consultations, tasks and announcements', 'What is next, what is waiting on you, and the latest news.', '.db-xside'],
+            ['Recent activity', 'The latest things that happened to you.', '.db-x-act'],
+            ['Quick access', 'Shortcuts to the pages you open most.', '.db-x-quick'],
         ],
         'related' => [
             'instructor.teams' => 'See your teams',
             'instructor.grading' => 'Grade a defense',
         ],
-        'tip' => 'Press an announcement to read all of it.',
+        'tip' => 'Press a tile to open the page behind it.',
     ],
 
     'instructor.teams' => [
@@ -685,6 +685,17 @@ return [
     ],
 
     // Left the sidebar for To do's Completed (45b9e00f): its own guide stays, nothing links to it.
+    'instructor.notifications.page' => [
+        'title' => 'Notifications',
+        'search' => false,
+        'summary' => 'Everything you have been sent, newest first.',
+        'steps' => [
+            ['Read down the list', 'to see what came in. A dot marks one you have not opened.'],
+            ['Press a notification', 'to open what it is about.'],
+            ['Use Prev and Next', 'to go through older ones.'],
+        ],
+    ],
+
     'instructor.docreview' => [
         'title' => 'Document Review',
         'search' => false,
@@ -898,27 +909,26 @@ return [
 
     'capsa.dashboard' => [
         'title' => 'Dashboard',
-        'summary' => 'Your sections at a glance: teams, students, requirements, defenses and fees.',
+        'summary' => 'Your sections at a glance: what is waiting on you, what is coming up, and what just happened.',
         'steps' => [
             ['Read the tiles', 'for teams, students, requirements done and the defense pass rate.'],
-            ['Check Team Progress and Defense Results', 'to see where your teams stand.'],
-            ['Press a gold link', 'to open the full page behind a card.'],
+            ['Check Pending Issues', 'to see what is waiting on you.'],
+            ['Press View all', 'to open the full list behind a card.'],
         ],
         'tour' => [
-            ['Your sections in numbers', 'Teams, students, requirements done and the defense pass rate.', '.dash-tiles'],
-            ['Progress and defenses', 'Where your teams are, and how they did at each defense.', '.dc-grid.wide'],
-            ['See Team Progress', 'Opens the report on every team\'s progress.', 'a.dc-more[href*="progress"]'],
-            ['Open Analytics', 'Opens the charts behind these numbers.', 'a.dc-more[href*="analytics"]'],
-            ['Open Financial Records', 'Opens the receipts for your sections.', 'a.dc-more[href*="financial"]'],
-            ['Teams and experts', 'Teams per section, and how many expert slots are left.', '#teams-vs-experts'],
-            ['See each expert\'s slots', 'Opens the expert list report.', 'a.dc-more[href*="expert_list"]'],
+            ['Your sections in numbers', 'Teams, students, requirements done and the defense pass rate.', '.db-tiles'],
+            ['Team and expert coverage', 'How many teams have all their experts, and whether you are short of any.', '.db-row-2 .db-card'],
+            ['Pending issues', 'What is waiting on you. Press a row to open it.', '#issues'],
+            ['Upcoming deadlines', 'The next defenses and requirements.', '.db-tabs'],
+            ['Recent activity', 'The latest team changes in your sections.', '.db-row-3 .db-card:nth-child(2)'],
+            ['Quick actions', 'Shortcuts to the pages you open most.', '.db-qa-dark'],
         ],
         'related' => [
             'capsa.team_management' => 'Open Team Management',
             'capsa.defenses' => 'Schedule defenses',
             'capsa.analytics' => 'Open Analytics',
         ],
-        'tip' => 'Press a tile to open the list behind it.',
+        'tip' => 'Press a tile to open the page behind it.',
     ],
 
     'capsa.announcements' => [
@@ -1421,6 +1431,7 @@ return [
             ['Tick to pick', 'Tick members and a bar lets you verify them all at once, after you confirm.', '#c-all'],
             ['Receipts', 'Each member and their receipt. Click one to see it on the side.', '#c-rows'],
             ['Verify or send back', 'Verify accepts the receipt. Send back asks for your confirmation and returns it to the member.', '#c-insp'],
+            ['Send to Dean', 'Sends the verified receipts to the dean after you confirm. A sent receipt can no longer change.', '#c-send'],
         ],
         'related' => [
             'capsa.reports' => 'Get a report',
@@ -1589,25 +1600,62 @@ return [
         'summary' => 'The whole system: every section, every program.',
         'steps' => [
             ['Read the tiles', 'for students, teams, experts, CaPSAs and the archive.'],
-            ['Check Sections Without a CaPSA', 'and give each one a CaPSA.'],
+            ['Check Needs Attention', 'and fix each line.'],
             ['Read the cards', 'for students, experts, defenses and fees.'],
         ],
         'tour' => [
-            ['In numbers', 'Students, teams, experts, CaPSAs, sections without a CaPSA and archived capstones.', '.dash-tiles'],
-            ['A tile', 'Opens the list behind that number. Teams has no list to open.', 'a.stat-chip', 'one'],
-            ['Students and experts', 'Students by program and experts by role. An expert with two roles counts under each.', '.dc-grid.wide', 'one'],
-            ['Defense Results', 'How many teams pass each defense this school year.', '.card:has(a.dc-more)'],
-            ['Open Analytics', 'Opens Analytics, with the full numbers.', 'a.dc-more'],
-            ['Money and Archive', 'Fees collected, receipts verified, receipts waiting on a CaPSA, and archived capstones by year.', '.card:has(.dc-h)'],
-            ['Needs Attention', 'What is missing: the school year, experts waiting, or sections with no CaPSA.', '.dash-facts:has(.dash-link)'],
-            ['Fix it', 'Opens the page where you fix that line.', 'a.dash-link', 'one'],
+            ['In numbers', 'Students, teams, experts, CaPSAs, sections without a CaPSA and archived capstones.', '.ad-tiles'],
+            ['A tile', 'Opens the page behind that number.', '.ad-tiles a.db-tile', 'one'],
+            ['Students Overview', 'How many students are active, and how many each school year had.', '.ad-row-2 > .db-card:first-child'],
+            ['Experts by Role', 'How many experts hold each role. An expert with two roles counts under each.', '.ad-row-2 > .db-card:last-child'],
+            ['Defense Results', 'How many teams passed this school year.', '.ad-row-3 > .db-card:first-child'],
+            ['Fees and Archive', 'The fees CaPSAs have sent you, and archived capstones by year.', '.ad-row-3 > .db-card:last-child'],
+            ['View Details', 'Opens the page with the full numbers.', '.ad-row-3 a.db-btn-dark', 'one'],
+            ['Needs Attention', 'What is missing: the school year, sections with no CaPSA, or years with no uploads.', '.ad-attn'],
+            ['Fix it', 'Opens the page where you fix that line.', 'a.ad-chip', 'one'],
         ],
         'related' => [
             'admin.experts' => 'Manage CaPSAs',
             'admin.students' => 'See every student',
             'admin.settings' => 'Set the school year',
         ],
-        'tip' => 'Press a tile to open the list behind it.',
+        'tip' => 'Press a tile to open the page behind it.',
+    ],
+
+    'admin.fees' => [
+        'title' => 'Fees',
+        'summary' => 'The fees each section\'s CaPSA has sent you.',
+        'steps' => [
+            ['Read a row', 'for the amount and how many receipts it covers.'],
+            ['Check Status', 'to see which sections have not sent yet.'],
+        ],
+        'tour' => [
+            ['The sections', 'Every section, what it sent, when and who sent it. A CaPSA sends after verifying the receipts.', '.list-card'],
+        ],
+        'related' => [
+            'admin.archive' => 'Open Archived Capstones',
+        ],
+    ],
+
+    'admin.archive' => [
+        'title' => 'Archived Capstones',
+        'summary' => 'Every finished capstone, to read. CaPSAs add and remove them.',
+        'steps' => [
+            ['Search', 'by title, author or keyword.'],
+            ['Filter', 'by category or school year.'],
+            ['Press View Abstract', 'to read one.'],
+        ],
+        'tour' => [
+            ['Search', 'Find a capstone by title, author or keyword.', '#arch-search'],
+            ['Year', 'Shows one year.', '#arch-year'],
+            ['Category', 'Show one category at a time.', '#arch-tag'],
+            ['The capstones', 'Each finished capstone.', '#arch-grid'],
+            ['A title', 'Opens the capstone.', '.archive-title-text.is-link', 'one'],
+            ['View', 'Opens its abstract.', '.arch-view', 'one'],
+        ],
+        'related' => [
+            'admin.fees' => 'Open Fees',
+        ],
     ],
 
     'admin.experts' => [

@@ -20,6 +20,8 @@ const picked = new Set();
 const rec = (f, m) => R[`${f}:${m}`];
 const st = (f, m) => rec(f, m)?.status || 'none';
 const everyone = () => TEAMS.flatMap(t => t.members.map(m => m.id));
+// Verified and not with the dean yet, as [feeId, receipt].
+const unsent = () => Object.entries(R).filter(([, r]) => r.status === 'verified' && !r.sent).map(([key, r]) => [+key.split(':')[0], r]);
 const tally = (f, ids) => { const c = { pending: 0, verified: 0, sent_back: 0, none: 0 }; ids.forEach(m => c[st(f, m)]++); return c; };
 
 function visible() {
@@ -39,6 +41,8 @@ function render() {
     return;
   }
   const f = FEES.find(x => x.id === fee), all = everyone();
+  $('#c-send').disabled = !unsent().length;
+  $('#c-send-n').textContent = unsent().length;
   $('#c-fees').innerHTML = FEES.map(x => {
     const w = tally(x.id, all).pending;
     return `<button role="tab" data-fee="${x.id}" aria-selected="${x.id === fee}">${esc(x.stage)}${FEES.filter(y => y.stage === x.stage).length > 1 ? ` · ${esc(x.program)}` : ''}<span class="fx-count ${w ? 'fx-hot' : ''}">${w}</span></button>`;
@@ -107,7 +111,7 @@ function renderInspector() {
   el.innerHTML = head
     + `<button class="fx-insp-img" data-full="${esc(r.img)}" aria-label="Open full size"><img src="${esc(r.img)}" alt="${esc(NAME[m])}'s receipt"></button>
        ${orAlso}<dl class="fx-meta">${orRow}<dt>Status</dt><dd>${statusHtml(s)}</dd><dt>Amount due</dt><dd class="fx-num">${peso(f.amount)}</dd><dt>Uploaded</dt><dd class="fx-num">${esc(r.at || '—')}</dd>
-       ${s === 'verified' ? `<dt>Verified</dt><dd class="fx-num">${esc(r.on || '')}</dd>` : ''}${s === 'sent_back' ? `<dt>Reason</dt><dd style="color:var(--fx-bad)">${esc(r.reason)}</dd>` : ''}</dl>`
+       ${s === 'verified' ? `<dt>Verified</dt><dd class="fx-num">${esc(r.on || '')}</dd>` : ''}${r.sent ? `<dt>Sent to dean</dt><dd class="fx-num">${esc(r.sent)}</dd>` : ''}${s === 'sent_back' ? `<dt>Reason</dt><dd style="color:var(--fx-bad)">${esc(r.reason)}</dd>` : ''}</dl>`
     + decide;
   if (sendingBack) $('#c-reason').focus();
 }
@@ -248,6 +252,24 @@ document.addEventListener('keydown', async e => {
     await verifyOne(selected);
   }
   if (k === 'b' && selected && st(fee, selected) === 'pending') { e.preventDefault(); sendingBack = true; renderInspector(); }
+});
+$('#c-send').addEventListener('click', async () => {
+  const list = unsent(), total = list.reduce((sum, [id]) => sum + (FEES.find(x => x.id === id)?.amount ?? 0), 0);
+  const ok = await confirmSheet({
+    title: `Send ${list.length} verified ${list.length === 1 ? 'receipt' : 'receipts'} to the dean?`,
+    body: `${peso(total)} in total. A receipt cannot be changed once it is sent.`,
+    confirmLabel: 'Send to Dean',
+    cancelLabel: 'No',
+  });
+  if (!ok) return;
+  try {
+    const res = await send('POST', URLS.dean, {});
+    list.forEach(([, r]) => { r.sent = res.data.on; });
+    render();
+    toast(res.message);
+  } catch (e) {
+    await outcomeDialog({ tone: 'error', title: 'Nothing was sent', reason: e.message, body: 'The receipts are exactly as they were.', primaryLabel: 'Back to receipts' });
+  }
 });
 $('#c-new-fee').addEventListener('click', () => { $('#f-amount').value = ''; $('#f-note').value = ''; $('#fx-d-fee').showModal(); });
 $('#f-save').addEventListener('click', async () => {

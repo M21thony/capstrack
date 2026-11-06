@@ -99,8 +99,6 @@ class RoleNamesNotExpertTest extends TestCase
 
         $this->actingAs($leader, 'web')->get(route('student.dashboard'))
             ->assertOk()
-            ->assertSee("Your team's adviser, consultant and grammarian")
-            ->assertSee('No adviser, consultant or grammarian yet.')
             ->assertDontSee('Capstone Expert');
     }
 

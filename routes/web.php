@@ -148,9 +148,9 @@ $pagesBothRolesOpen = function () {
         return response()->json(['success' => true]);
     })->name('notifications.seen');
 };
-// Admin's own surface, and nothing else: naming a CaPSA, the student
-// accounts, and the system settings. Everything else an Admin can open is
-// shared with CaPSA and lives under /capsa with it.
+// Admin's own surface: naming a CaPSA, the student accounts, the system
+// settings, and the dean's read-only Fees and Archive. Everything else an
+// Admin can open is shared with CaPSA and lives under /capsa with it.
 Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () use ($pagesBothRolesOpen) {
 
     Route::middleware('expert.admin')->group(function () {
@@ -174,6 +174,9 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         // none yet - see App\Support\SectionCatalog.
         Route::post('/settings/sections', [AdminSettingsController::class, 'storeSections'])->name('settings.sections.store');
         Route::delete('/settings/sections', [AdminSettingsController::class, 'destroySection'])->name('settings.sections.destroy');
+        // The dean only reads these. The CaPSA sends the fees and keeps the archive.
+        Route::get('/fees', [AdminFinancialController::class, 'fees'])->name('fees');
+        Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
     });
 
     Route::middleware('expert.admin')->group($pagesBothRolesOpen);
@@ -315,7 +318,8 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
 
         // Archive/Announcements/Resources are academic-process content
         // (archived capstones, lesson templates, student-facing
-        // announcements) - CaPSA's territory, not Admin's.
+        // announcements) - CaPSA's to change. Admin reads the archive at
+        // admin.archive.
         Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
         Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
         Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
@@ -619,6 +623,7 @@ Route::prefix('instructor/notifications')
     ->name('instructor.notifications.')
     ->group(function () {
         Route::get('/', [ExpertNotificationController::class, 'index'])->name('index');
+        Route::get('/all', [ExpertNotificationController::class, 'page'])->name('page');
         Route::get('/count', [ExpertNotificationController::class, 'count'])->name('count');
         Route::put('/preferences', [ExpertNotificationController::class, 'preferences'])->name('preferences');
         Route::put('/seen', [ExpertNotificationController::class, 'markSeen'])->name('seen');

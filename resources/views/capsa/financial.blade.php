@@ -32,6 +32,7 @@
            'record' => route('api.admin.financial.update', '__ID__'),
            'records' => route('api.admin.financial.update-many'),
            'fees' => route('api.admin.financial.expense-posts.store'),
+           'dean' => route('api.admin.financial.send-to-dean'),
        ], JSON_UNESCAPED_SLASHES) }}">
 
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -45,7 +46,7 @@
     {{-- The page's name is in the top bar; the fees and New fee come first here. --}}
     <header class="fx-page-head">
       <div class="fx-tabs" role="tablist" aria-label="Fee" id="c-fees" @if (collect($state['fees'] ?? [])->isEmpty()) hidden @endif></div>
-      <div class="fx-actions"><button class="fx-btn" id="c-new-fee"><svg><use href="#fx-i-plus"/></svg>New fee</button></div>
+      <div class="fx-actions"><button class="fx-btn" id="c-send" disabled>Send to Dean<span class="fx-count" id="c-send-n">0</span></button><button class="fx-btn" id="c-new-fee"><svg><use href="#fx-i-plus"/></svg>New fee</button></div>
     </header>
 
     <div id="c-body" style="flex:1;min-height:0;display:flex;flex-direction:column">

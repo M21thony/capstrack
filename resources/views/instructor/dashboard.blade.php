@@ -7,6 +7,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
 <x-dashboard.styles />
+<link href="{{ \App\Support\PublicAsset::url('css/dashboard-redesign.css') }}" rel="stylesheet">
 <style nonce="{{ Vite::cspNonce() }}">
   .ann-list { display:flex;flex-direction:column;gap:0;max-height:320px;overflow-y:auto; }
   .ann-list::-webkit-scrollbar { width:4px; }
@@ -49,6 +50,7 @@
   @include('partials.render-whole')
 </head>
 <body>
+@include('partials.dashboard-sprite')
 @include('instructor.partials.sidebar', ['currentPage' => 'dashboard'])
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 @include('partials.welcome-modal')
@@ -86,43 +88,226 @@
   </div>
 
   <div id="real-content" style="display:none">
-  <div class="content">
-    @include('instructor.partials.dashboard-summary')
+  <div class="content db-page">
+    @php
+      $slots = $stats['slots'];
+      $slotPct = $slots['max'] ? min(100, (int) round($slots['used'] / $slots['max'] * 100)) : null;
+      $roles = collect($stats['byRole'])->filter(fn ($role) => $role['value'] > 0)->pluck('label');
+      $consultCount = $stats['consultations']['upcoming'];
 
-    {{-- What is waiting on this expert. Read-only counts: the sidebar and the
-         tab bar are the way to each page. Totals that ask nothing of them
-         (slots open, teams advised) went. --}}
-    <div class="grid-3" style="margin-bottom:16px">
-      <x-dashboard.stat-chip
-        value="{{ $pendingApplications + $titlesToApprove }}"
-        label="Team Requests" icon="inbox"
-        sub="{{ $titlesToApprove ? $titlesToApprove.' '.\Illuminate\Support\Str::plural('title', $titlesToApprove).' to approve' : ($pendingApplicationsNew ? $pendingApplicationsNew.' new this week' : 'Nothing waiting') }}"
-        color="var(--accent3)"
-      />
-      <x-dashboard.stat-chip
-        value="{{ $docsForReview }}"
-        label="Documents to Review" icon="file-review"
-        {{-- Waiting since it arrived. It used to read reviewed_at, which is null
-             on anything still waiting, so this rendered "Oldest: " and nothing. --}}
-        sub="{{ $oldestDocReview ? 'Oldest: waiting '.$oldestDocReview->created_at?->diffForHumans(null, true) : 'Nothing waiting' }}"
-        color="var(--red)"
-      />
-      <x-dashboard.stat-chip
-        value="{{ $gradesToSubmit }}"
-        label="Grades to Submit" icon="grading"
-        sub="{{ $gradesToSubmit ? 'Defenses you sat on' : 'All graded' }}"
-        color="var(--blue)"
-      />
-    </div>
+      // Team Distribution: four sections and the rest as Others, so the ring stays readable.
+      $sections = collect($stats['bySection']);
+      if ($sections->count() > 5) {
+          $sections = $sections->take(4)->push(['label' => 'Others', 'value' => $sections->slice(4)->sum('value')]);
+      }
+      $sectionTotal = $sections->sum('value');
+      $ringColours = ['#3b82f6', '#eab308', '#8b5cf6', '#16a34a', '#64748b'];
+      $ring = 2 * M_PI * 38;
+      $done = 0;
+      $slices = [];
+      foreach ($sections->values() as $i => $row) {
+          $length = $row['value'] / max(1, $sectionTotal) * $ring;
+          $middle = ($done + $length / 2) / 38;
+          $slices[] = $row + [
+              'colour' => $ringColours[$i],
+              'length' => round($length, 1),
+              'offset' => round(-$done, 1),
+              'x' => round(52 + 38 * sin($middle)),
+              'y' => round(52 - 38 * cos($middle) + 4),
+          ];
+          $done += $length;
+      }
+    @endphp
 
-    <div class="grid-2" style="margin-bottom:16px">
-      <x-dashboard.info-card
-        title="Announcements"
-        :badge="$announcements->isNotEmpty() ? $announcements->count() : null"
-        :badgeClass="'badge-accent'"
-        :empty="$announcements->isEmpty()"
-        emptyMessage="No announcements." emptyIcon="announcement"
-      >
+    <main class="db db-expert">
+      <section class="db-banner">
+        <div class="db-banner-text">
+          <div>
+            <h1>Good day, <span>{{ $expert->name }}!</span></h1>
+            <p>{{ $roles->push($stats['teams'].' '.\Illuminate\Support\Str::plural('team', $stats['teams']))->implode(' · ') }}</p>
+          </div>
+        </div>
+        <div class="db-banner-photo" aria-hidden="true"></div>
+        <div class="db-banner-year"><svg class="i c-orange"><use href="#i-cal"/></svg><div>Academic Year<b>S.Y. {{ str_replace('-', '–', $schoolYear) }}</b></div></div>
+      </section>
+
+      <div class="db-tiles">
+        <a class="db-tile tile-gold" href="{{ route('instructor.teams') }}">
+          <span class="db-ico t-purple"><svg class="i"><use href="#i-team"/></svg></span>
+          <div class="db-tile-body"><b>{{ $stats['teams'] }}</b><span class="lab">Assigned Teams</span></div>
+          <span class="db-tile-more">View Teams →</span>
+        </a>
+        <a class="db-tile tile-slate" href="{{ route('instructor.docreview') }}">
+          <span class="db-ico t-blue"><svg class="i"><use href="#i-doc"/></svg></span>
+          <div class="db-tile-body"><b>{{ $docsForReview }}</b><span class="lab">Pending Reviews</span></div>
+          <span class="db-tile-more">View Documents →</span>
+        </a>
+        <a class="db-tile tile-green" href="{{ route('instructor.grading') }}">
+          <span class="db-ico t-green"><svg class="i"><use href="#i-checkc"/></svg></span>
+          <div class="db-tile-body"><b>{{ $stats['panels']['graded'] }}</b><span class="lab">Defenses Graded</span></div>
+          <span class="db-tile-more">View Grading →</span>
+        </a>
+        <a class="db-tile tile-dark" href="{{ route('instructor.schedule') }}">
+          <span class="db-ico t-orange"><svg class="i"><use href="#i-cal"/></svg></span>
+          <div class="db-tile-body"><b>{{ $consultCount }}</b><span class="lab">Upcoming Consultations</span></div>
+          <span class="db-tile-more">View Schedule →</span>
+        </a>
+      </div>
+
+      <div class="db-xgrid">
+        <section class="db-card db-x-work">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-teal"><use href="#i-chart"/></svg>My Workload</h2>
+          </div>
+          <div class="db-split">
+            <div class="db-ring">
+              <svg viewBox="0 0 104 104" role="img" aria-label="{{ $slotPct === null ? 'Team limit not set' : "{$slots['used']} of {$slots['max']} team slots used, {$slotPct} percent" }}">
+                <circle cx="52" cy="52" r="44" fill="none" stroke="#eceef2" stroke-width="14"/>
+                @if ($slotPct)
+                  <circle cx="52" cy="52" r="44" fill="none" stroke="#16a34a" stroke-width="14" stroke-linecap="round" stroke-dasharray="{{ round($slotPct / 100 * 276.5, 1) }} 276.5" transform="rotate(-90 52 52)"/>
+                @endif
+              </svg>
+              <div><b>{{ $slotPct === null ? '—' : $slotPct.'%' }}</b>Slots Used</div>
+            </div>
+            <ul class="db-legend">
+              <li><i style="background:#16a34a"></i><span>{{ $slotPct === null ? 'Team limit not set' : 'Team Slots' }}</span><b>{{ $slotPct === null ? $slots['used'] : $slots['used'].' / '.$slots['max'] }}</b></li>
+              <li><i style="background:#3b82f6"></i><span>Pending Reviews</span><b>{{ $docsForReview }}</b></li>
+              <li><i style="background:#eab308"></i><span>Grades to Submit</span><b>{{ $gradesToSubmit }}</b></li>
+              <li><i style="background:#8b5cf6"></i><span>Consultations</span><b>{{ $consultCount }}</b></li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="db-card db-x-team">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-purple"><use href="#i-team"/></svg>Team Distribution</h2>
+            <a class="db-more" href="{{ route('instructor.teams') }}">View all →</a>
+          </div>
+          @if ($slices)
+            <div class="db-split">
+              <div class="db-ring">
+                <svg viewBox="0 0 104 104" role="img" aria-label="{{ collect($slices)->map(fn ($slice) => $slice['label'].' '.$slice['value'])->implode(', ') }}">
+                  @foreach ($slices as $slice)
+                    <circle cx="52" cy="52" r="38" fill="none" stroke="{{ $slice['colour'] }}" stroke-width="26" stroke-dasharray="{{ $slice['length'] }} {{ round($ring, 1) }}" stroke-dashoffset="{{ $slice['offset'] }}" transform="rotate(-90 52 52)"/>
+                  @endforeach
+                  <g fill="#fff" font-size="11" font-weight="700" text-anchor="middle">
+                    @foreach ($slices as $slice)
+                      <text x="{{ $slice['x'] }}" y="{{ $slice['y'] }}">{{ $slice['value'] }}</text>
+                    @endforeach
+                  </g>
+                </svg>
+                <div><b>{{ $sectionTotal }}</b>Teams</div>
+              </div>
+              <ul class="db-legend">
+                @foreach ($slices as $slice)
+                  <li><i style="background:{{ $slice['colour'] }}"></i><span>{{ $slice['label'] }}</span><b>{{ $slice['value'] }}</b></li>
+                @endforeach
+              </ul>
+            </div>
+          @else
+            <p class="db-empty">No teams yet.</p>
+          @endif
+        </section>
+
+        <div class="db-xside">
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-teal"><use href="#i-chat"/></svg>Consultations</h2>
+              <a class="db-more" href="{{ route('instructor.schedule') }}">View all →</a>
+            </div>
+            <ul class="db-list" style="--empty:{{ 3 - max(1, $upcoming->count()) }}">
+              @forelse ($upcoming as $item)
+                @php $days = (int) today()->diffInDays($item->when->copy()->startOfDay()); @endphp
+                <li>
+                  <div class="db-stack">
+                    <b class="db-clip">{{ $item->who }}</b>
+                    <span class="db-meta db-clip">{{ collect([$item->when->format('M j'), $item->timed ? $item->when->format('g:i A') : null, $item->what, $item->where])->filter()->implode(' · ') }}</span>
+                  </div>
+                  <span class="db-pill {{ $days < 2 ? 'today' : '' }}">{{ $days === 0 ? 'Today' : ($days === 1 ? 'Tomorrow' : "In {$days} days") }}</span>
+                </li>
+              @empty
+                <li class="db-empty">Nothing coming up.</li>
+              @endforelse
+            </ul>
+          </section>
+
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-green"><use href="#i-tasks"/></svg>Upcoming Tasks</h2>
+              <a class="db-more" href="{{ route('instructor.teams', ['tab' => 'applications']) }}">View all →</a>
+            </div>
+            <ul class="db-list" style="--empty:{{ 3 - max(1, count($tasks)) }}">
+              @forelse ($tasks as $task)
+                <li>
+                  <a class="rowlink" href="{{ $task['link'] }}">
+                    <span class="db-ico t-{{ $task['tint'] }}"><svg class="i"><use href="#i-{{ $task['icon'] }}"/></svg></span>
+                    <div class="db-stack"><b class="db-clip">{{ $task['title'] }}</b><span class="db-meta db-clip">{{ $task['meta'] }}</span></div>
+                  </a>
+                </li>
+              @empty
+                <li class="db-empty">Nothing is waiting on you.</li>
+              @endforelse
+            </ul>
+          </section>
+
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-orange"><use href="#i-megaphone"/></svg>Announcements</h2>
+              @if ($announcements->isNotEmpty())
+                <button type="button" class="db-more" onclick="document.getElementById('annListModal').classList.add('open')">View all →</button>
+              @endif
+            </div>
+            @if ($latest = $announcements->first())
+              <div class="db-notice" style="cursor:pointer" onclick="openAnnModal(document.querySelector('#annListModal .ann-item'))">
+                <div class="db-stack">
+                  <b class="db-clip">{{ $latest->title }}</b>
+                  <span class="db-meta db-clip">{{ $latest->body }}</span>
+                  <time>{{ $latest->created_at->format('M j') }}</time>
+                </div>
+              </div>
+            @else
+              <p class="db-empty">No announcements.</p>
+            @endif
+          </section>
+        </div>
+
+        <section class="db-card db-x-act">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-teal"><use href="#i-pulse"/></svg>Recent Activity</h2>
+          </div>
+          <ul class="db-list" style="--empty:{{ 4 - max(1, count($recentActivity)) }}">
+            @forelse ($recentActivity as $activity)
+              <li>
+                <span class="db-ico t-{{ $activity['tint'] }}"><svg class="i"><use href="#i-{{ $activity['icon'] }}"/></svg></span>
+                <div class="db-stack"><span class="db-clip">{{ $activity['text'] }}</span><time>{{ $activity['at'] }}</time></div>
+              </li>
+            @empty
+              <li class="db-empty">Nothing yet.</li>
+            @endforelse
+          </ul>
+        </section>
+
+        <section class="db-card db-x-quick">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-orange"><use href="#i-bolt"/></svg>Quick Access</h2>
+          </div>
+          <div class="db-qa-grid">
+            <a class="db-qa" href="{{ route('instructor.teams') }}"><svg class="i c-purple"><use href="#i-team"/></svg>My Teams</a>
+            <a class="db-qa" href="{{ route('instructor.docreview') }}"><svg class="i c-blue"><use href="#i-doc"/></svg>Documents</a>
+            <a class="db-qa" href="{{ route('instructor.schedule') }}"><svg class="i c-orange"><use href="#i-cal"/></svg>Schedule</a>
+            <a class="db-qa" href="{{ route('instructor.grading') }}"><svg class="i c-green"><use href="#i-check"/></svg>Grading</a>
+            <a class="db-qa" href="{{ route('instructor.evaluations') }}"><svg class="i c-orange"><use href="#i-star"/></svg>Evaluations</a>
+            <a class="db-qa" href="{{ route('instructor.profile') }}"><svg class="i c-purple"><use href="#i-user"/></svg>Profile</a>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    {{-- Every announcement, opened from View all --}}
+    <div class="ann-modal-overlay" id="annListModal" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="ann-modal-box">
+        <button class="ann-modal-close" onclick="document.getElementById('annListModal').classList.remove('open')">&times;</button>
+        <div class="ann-modal-title">Announcements</div>
         <div class="ann-list">
           @foreach ($announcements as $announcement)
             @php
@@ -177,7 +362,8 @@
             </div>
           @endforeach
         </div>
-      </x-dashboard.info-card>
+      </div>
+    </div>
 
       {{-- Announcement Modal --}}
       <div class="ann-modal-overlay" id="annModal" onclick="if(event.target===this)closeAnnModal()">
@@ -196,27 +382,6 @@
           </div>
         </div>
       </div>
-
-      <x-dashboard.info-card
-        title="Coming Up"
-        :empty="$upcoming->isEmpty()"
-        emptyMessage="No defenses or consultations coming up." emptyIcon="consultation"
-      >
-        <div class="gap-12">
-          @foreach ($upcoming as $item)
-            <div class="consult-card">
-              <div class="consult-header">
-                <div>
-                  <div class="consult-team">{{ $item->what }}{{ $item->who ? ' · '.$item->who : '' }}</div>
-                  <div class="consult-meta">{{ $item->when->format('D, M j') }}{{ $item->timed ? ' · '.$item->when->format('g:i A') : '' }}{{ $item->where ? ' · '.$item->where : '' }}</div>
-                </div>
-                <span class="badge {{ $item->tag === 'Consultation' ? 'badge-blue' : 'badge-gold' }}">{{ $item->tag }}</span>
-              </div>
-            </div>
-          @endforeach
-        </div>
-      </x-dashboard.info-card>
-    </div>
 
   </div>
   </div>

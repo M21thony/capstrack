@@ -53,6 +53,43 @@ class FeeBoard
         ];
     }
 
+    /**
+     * What the CaPSAs have sent the dean, one row per section. A section counts
+     * as sent once it has sent receipts and no verified receipt still held back.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function forDean(): array
+    {
+        // A blank expert covers every section, whatever the dean's own account covers.
+        ['teams' => $teams, 'sections' => $sections] = $this->board->teamsFor(new CapstoneExpert);
+
+        $sectionOf = $teams->mapWithKeys(fn (Team $team) => $this->members($team->schoolYears)
+            ->mapWithKeys(fn (array $member) => [$member['id'] => $sections[$team->team_id]]));
+
+        $verified = FinancialRecord::where('f_record_status', 'verified')
+            ->whereIn('expense_post_id', ExpensePost::whereIn('defense_type', DefenseBoard::PAID_STAGES)->pluck('id'))
+            ->whereIn('student_id', $sectionOf->keys())
+            ->get()
+            ->groupBy(fn (FinancialRecord $r) => $sectionOf[$r->student_id]);
+
+        return collect($sections)->unique()->sort()->values()->map(function (string $section) use ($verified) {
+            $all = $verified->get($section, collect());
+            $sent = $all->whereNotNull('sent_to_dean_at');
+            $last = $sent->sortByDesc('sent_to_dean_at')->first();
+
+            return [
+                'section' => $section,
+                'amount' => (float) $sent->sum('amount'),
+                'receipts' => $sent->count(),
+                'held' => $all->count() - $sent->count(),
+                'sent_on' => $last?->sent_to_dean_at->format('M j, Y'),
+                'sent_by' => $last?->sent_to_dean_by,
+                'is_sent' => $sent->isNotEmpty() && $all->count() === $sent->count(),
+            ];
+        })->all();
+    }
+
     /** @return array<string, mixed> what the student page draws */
     public function forStudent(Student $student): array
     {
@@ -143,6 +180,7 @@ class FeeBoard
                 'img' => $r->receipt_image ? asset('storage/'.$r->receipt_image) : null,
                 'at' => $r->uploaded_at?->format('M j, Y'),
                 'on' => $r->verified_at?->format('M j, Y'),
+                'sent' => $r->sent_to_dean_at?->format('M j, Y'),
                 'reason' => $r->rejection_reason,
                 'or' => $r->receipt_number,
                 'or_also' => $r->receipt_number

@@ -7,11 +7,12 @@
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
-<x-dashboard.styles />
+<link href="{{ \App\Support\PublicAsset::url('css/dashboard-redesign.css') }}" rel="stylesheet">
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
   @include('partials.render-whole')
 </head>
 <body>
+@include('partials.dashboard-sprite')
 
 @include('capsa._sidebar')
 @include('partials.welcome-modal')
@@ -41,235 +42,380 @@
     </div>
   </div>
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content">
-    <style nonce="{{ Vite::cspNonce() }}">
-      .dash-lead{font-size:13.5px;color:var(--text2);margin:0 0 12px}
-      .dash-lead b{color:var(--text)}
-      .dash-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
-      .dash-tiles .stat-chip.quiet .stat-n{color:var(--text3)!important}
-      /* Two across on a phone, as on the expert dashboard: one a row, the four
-         of them took the whole first screen. */
-      @media (max-width:480px){.dash-tiles{grid-template-columns:1fr 1fr;gap:10px}}
-      .dash-facts{display:flex;flex-direction:column;gap:8px}
-      .dash-fact{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:10px;background:var(--bg3);font-size:13.5px}
-      .dash-fact b{font-variant-numeric:tabular-nums}
-      .dash-fact.bad b{color:var(--red)}
-      .dash-link{display:inline-block;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--accent3);text-decoration:none}
-      .dash-link:hover{text-decoration:underline}
-      .dash-def{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}
-      .dash-def:first-child{border-top:0;padding-top:0}
-      .dash-def small{display:block;color:var(--text3);font-size:12px}
-      .dash-sec{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-      .dash-sec span{padding:3px 9px;border-radius:999px;background:var(--red-bg);color:var(--red);font-size:12px;font-weight:600}
-      .cap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-      .cap-table{width:100%;border-collapse:collapse;font-size:13.5px}
-      .cap-table caption{text-align:left;font-weight:700;padding:0 0 6px}
-      .cap-table th{text-align:left;font-size:12px;font-weight:600;color:var(--text3);padding:6px 8px;border-bottom:1px solid var(--border)}
-      .cap-table td{padding:7px 8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
-      .cap-table th:nth-child(2),.cap-table th:nth-child(3),.cap-table td:nth-child(2),.cap-table td:nth-child(3){text-align:right}
-      .cap-table tr.cap-all td{font-weight:600;border-bottom:0}
-      .cap-table .cap-ok{color:var(--green);font-weight:600}
-      .cap-table .cap-even{color:var(--amber);font-weight:600}
-      .cap-table .cap-short{color:var(--red);font-weight:700}
-    </style>
-
+  <div class="content {{ ($capsa || $admin) ? 'db-page' : '' }}">
     @if ($capsa && $stats['capsa'])
       @php
         $c = $stats['capsa'];
-        $d = $c['defenses'];
-        $p = $c['progress'];
-        $onTrack = $p['statuses'][0]['value'];
-        $cover = collect($c['coverage']);
-        $tile = fn ($n) => $n ? '' : 'quiet';
+        $coverageRate = $c['teams'] > 0 ? round($c['covered'] / $c['teams'] * 100, 1) : 0;
+        $openIssues = collect($capsa['issues'])->where('count', '>', 0);
+        $issueTotal = $openIssues->sum('count');
+        $inDays = function ($date) {
+            $days = (int) now()->startOfDay()->diffInDays($date->copy()->startOfDay());
+
+            return match ($days) { 0 => 'Today', 1 => 'Tomorrow', default => "In {$days} days" };
+        };
+        $activityIcon = [
+            'team_joined' => ['team', 't-purple'],
+            'team_left' => ['team', 't-red'],
+            'team_status_changed' => ['pulse', 't-blue'],
+            'team_confirmed' => ['check', 't-green'],
+            'team_verified' => ['check', 't-green'],
+            'expert_removed' => ['warn', 't-red'],
+        ];
       @endphp
-      <p class="dc-lead"><b>Your sections at a glance</b> · {{ $capsa['period'] }}</p>
-      <div class="dash-tiles">
-        <x-dashboard.stat-chip :href="route('capsa.team_management')" value="{{ $c['teams'] }}" label="Teams" icon="team" sub="{{ $c['verified'] }} verified · {{ $c['sections'] }} {{ \Illuminate\Support\Str::plural('section', $c['sections']) }}" color="var(--accent3)" />
-        <x-dashboard.stat-chip :href="route('capsa.sections')" value="{{ $c['students'] }}" label="Students" icon="student" sub="In your teams" color="var(--blue)" />
-        <x-dashboard.stat-chip :href="route('capsa.reports.show', 'progress')" value="{{ $p['percent'] === null ? '—' : $p['percent'].'%' }}" label="Requirements Done" icon="progress" sub="{{ $p['done'] }} of {{ $p['total'] }} checklist items" color="var(--green)" />
-        <x-dashboard.stat-chip :href="route('capsa.analytics')" value="{{ $d['kpis']['rate'] === null ? '—' : $d['kpis']['rate'].'%' }}" label="Defense Pass Rate" icon="defense" sub="{{ $d['kpis']['passed'] }} passed of {{ $d['kpis']['decided'] }} decided" color="var(--purple)" />
-      </div>
+      <main class="db db-capsa">
+        <section class="db-banner">
+          <div class="db-banner-text">
+            <div>
+              <h1>Welcome back, <span>{{ $viewer->name }}!</span></h1>
+              <p>CaPSA · {{ implode(' · ', $viewer->handledPrograms()) }} · {{ $c['sections'] }} {{ \Illuminate\Support\Str::plural('section', $c['sections']) }}</p>
+            </div>
+          </div>
+          <div class="db-banner-photo" aria-hidden="true"></div>
+          <div class="db-banner-year"><svg class="i c-orange"><use href="#i-cal"/></svg><div>Academic Year<b>S.Y. {{ str_replace('-', '–', $capsa['year']) }}</b></div></div>
+        </section>
 
-      <div class="dc-grid wide">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Team Progress</span></div>
-          <p class="dc-sub">Where the checklist stands for the teams in your sections.</p>
-          <x-dashboard.ring :percent="$p['percent']" title="{{ $p['done'] }} of {{ $p['total'] }} requirements done" sub="{{ $onTrack }} of {{ $c['teams'] }} {{ \Illuminate\Support\Str::plural('team', $c['teams']) }} on track" color="var(--green)" />
-          <div style="margin-top:16px"><x-dashboard.stack :parts="$p['statuses']" /></div>
-          @if ($p['milestones'])
-            <h4 class="dc-h" style="margin-top:18px">Teams at each milestone</h4>
-            <x-dashboard.bars :rows="$p['milestones']" color="var(--accent)" />
-          @endif
-          <a class="dc-more" href="{{ route('capsa.reports.show', 'progress') }}">See Team Progress →</a>
+        <div class="db-tiles">
+          <a class="db-tile tile-gold" href="{{ route('capsa.team_management', ['tab' => 'teams']) }}">
+            <span class="db-ico t-purple"><svg class="i"><use href="#i-team"/></svg></span>
+            <div class="db-tile-body"><b>{{ $c['teams'] }}</b><span class="lab">Total Teams</span></div>
+            <span class="db-delta {{ $c['newTeams'] ? 'up' : '' }}" title="New in the last 30 days">{{ $c['newTeams'] ? '↑ +'.$c['newTeams'] : '→ 0' }}</span>
+          </a>
+          <a class="db-tile tile-slate" href="{{ route('capsa.sections') }}">
+            <span class="db-ico t-blue"><svg class="i"><use href="#i-cap"/></svg></span>
+            <div class="db-tile-body"><b>{{ $c['students'] }}</b><span class="lab">Total Students</span></div>
+            <span class="db-delta {{ $c['newStudents'] ? 'up' : '' }}" title="New in the last 30 days">{{ $c['newStudents'] ? '↑ +'.$c['newStudents'] : '→ 0' }}</span>
+          </a>
+          <a class="db-tile tile-green" href="{{ route('capsa.reports.show', 'master') }}">
+            <span class="db-ico t-green"><svg class="i"><use href="#i-shield"/></svg></span>
+            <div class="db-tile-body"><b>{{ $coverageRate }}%</b><span class="lab">Coverage Rate</span><span class="db-bar"><span style="width:{{ $coverageRate }}%"></span></span></div>
+          </a>
+          <a class="db-tile alert" href="#issues">
+            <span class="db-ico t-red"><svg class="i"><use href="#i-warn"/></svg></span>
+            <div class="db-tile-body"><b>{{ $issueTotal }}</b><span class="lab">Pending Issues</span></div>
+            <span class="db-delta">→</span>
+          </a>
         </div>
 
-        <div class="card">
-          <div class="card-header"><span class="card-title">Defense Results</span></div>
-          <p class="dc-sub">S.Y. {{ $d['year'] }} · {{ $d['kpis']['teams'] }} {{ \Illuminate\Support\Str::plural('team', $d['kpis']['teams']) }}. The pass rate counts only teams that have been decided.</p>
-          <div class="dc-rows">
-            @foreach ($d['stages'] as $stage)
-              <div class="dc-row">
-                <div class="dc-row-head"><b>{{ $stage['stage'] }}</b><span>{{ $stage['rate'] === null ? 'No result yet' : $stage['rate'].'% pass' }} · {{ $stage['teams'] }} {{ \Illuminate\Support\Str::plural('team', $stage['teams']) }}</span></div>
-                <x-dashboard.stack :parts="$stage['parts']" :hide-zero="true" />
+        <div class="db-row db-row-2">
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-teal"><use href="#i-chart"/></svg>Team &amp; Expert Coverage</h2>
+              <a class="db-more" href="{{ route('capsa.reports.show', 'master') }}">View details →</a>
+            </div>
+            <div class="db-split">
+              <div class="db-ring">
+                <svg viewBox="0 0 104 104" role="img" aria-label="{{ $coverageRate }}% of teams have all three experts">
+                  <circle cx="52" cy="52" r="44" fill="none" stroke="{{ $c['teams'] > 0 ? '#dc2626' : 'var(--border)' }}" stroke-width="14"/>
+                  <circle cx="52" cy="52" r="44" fill="none" stroke="#16a34a" stroke-width="14" stroke-dasharray="{{ round($coverageRate / 100 * 276.5, 1) }} 276.5" transform="rotate(-90 52 52)"/>
+                </svg>
+                <div><b>{{ $coverageRate }}%</b>Coverage Rate</div>
               </div>
+              <ul class="db-legend">
+                <li><i style="background:var(--green)"></i><span>Fully Covered</span><b>{{ $c['covered'] }}</b></li>
+                <li><i style="background:var(--red)"></i><span>Missing Experts</span><b>{{ $c['teams'] - $c['covered'] }}</b></li>
+                @foreach ($c['coverage'] as $role)
+                  <li class="sub"><span>{{ $role['label'] }}</span><b>{{ $role['have'] }} / {{ $c['teams'] }}</b></li>
+                @endforeach
+              </ul>
+              @if ($capsa['status'])
+                @php $short = $capsa['status'] === \App\Support\ExpertCapacity::SHORT; @endphp
+                <div class="db-status {{ $short ? 'short' : ($capsa['status'] === \App\Support\ExpertCapacity::OK ? 'ok' : 'even') }}">
+                  <svg class="i"><use href="#i-{{ $short ? 'warn' : 'check' }}"/></svg>Overall Status<strong>{{ $capsa['status'] }}</strong>
+                  <em>{{ $short ? $capsa['shortage']['program'].' · '.$capsa['shortage']['who'] : implode(' · ', $viewer->handledPrograms()) }}</em>
+                </div>
+              @endif
+            </div>
+          </section>
+
+          <section class="db-card" id="issues">
+            <div class="db-head">
+              <h2 class="db-title red"><svg class="i c-red"><use href="#i-warn"/></svg>Pending Issues</h2>
+              <span class="db-meta db-grow" style="text-align:right">{{ $issueTotal }} Unresolved</span>
+              <button type="button" class="db-more" onclick="document.getElementById('issuesModal').showModal()">View all →</button>
+            </div>
+            @if ($openIssues->isEmpty())
+              <p class="db-empty">Nothing is waiting on you.</p>
+            @else
+              <ul class="db-list" style="--empty:{{ 4 - min(4, $openIssues->count()) }}">
+                @foreach ($openIssues->take(4) as $issue)
+                  <li><a class="rowlink" href="{{ $issue['href'] }}"><span class="db-ico db-issue-ico {{ $issue['tone'] }}"><svg class="i"><use href="#i-{{ $issue['icon'] }}"/></svg></span><div class="db-stack"><b class="db-clip">{{ $issue['label'] }}</b><span class="db-meta db-clip">{{ $issue['detail'] }}</span></div>@if ($issue['critical'] ?? false)<span class="db-pill crit">Critical</span>@endif<svg class="i db-chev"><use href="#i-chev"/></svg></a></li>
+                @endforeach
+              </ul>
+            @endif
+          </section>
+        </div>
+
+        <div class="db-row db-row-3">
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-orange"><use href="#i-cal"/></svg>Upcoming Deadlines</h2>
+              <a class="db-more" id="deadlines-more" href="{{ route('capsa.defenses') }}">View all →</a>
+            </div>
+            <div class="db-tabs" role="tablist">
+              <button class="db-tab" role="tab" aria-selected="true" data-tab="defenses" data-more="{{ route('capsa.defenses') }}">Defenses</button>
+              <button class="db-tab" role="tab" aria-selected="false" data-tab="requirements" data-more="{{ route('capsa.team_management', ['tab' => 'milestones']) }}">Requirements</button>
+            </div>
+            <ul class="db-list" data-panel="defenses" style="--empty:{{ 3 - max(1, count($capsa['defenses'])) }}">
+              @forelse ($capsa['defenses'] as $def)
+                <li><div class="db-stack"><span class="db-clip"><b>{{ $def->team?->team_name ?? 'A team' }}</b> · {{ $def->defense_type }}</span><time>{{ $def->schedule_date->format('M j') }}@if ($def->schedule_date->format('H:i') !== '00:00') · {{ $def->schedule_date->format('g:i A') }}@endif</time></div><span class="db-pill {{ $loop->first ? 'today' : '' }}">{{ $inDays($def->schedule_date) }}</span></li>
+              @empty
+                <li class="db-empty">No defenses scheduled.</li>
+              @endforelse
+            </ul>
+            <ul class="db-list" data-panel="requirements" style="--empty:{{ 3 - max(1, count($capsa['requirements'])) }}" hidden>
+              @forelse ($capsa['requirements'] as $req)
+                <li><div class="db-stack"><span class="db-clip"><b>{{ $req['title'] }}</b> · {{ $req['left'] }} {{ \Illuminate\Support\Str::plural('team', $req['left']) }} left</span><time>{{ $req['due']->format('M j') }}</time></div><span class="db-pill {{ $loop->first ? 'today' : '' }}">{{ $inDays($req['due']) }}</span></li>
+              @empty
+                <li class="db-empty">No due dates coming up.</li>
+              @endforelse
+            </ul>
+          </section>
+
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-teal"><use href="#i-pulse"/></svg>Recent Activity</h2>
+              <a class="db-more" href="{{ route('capsa.activitylog') }}">View all →</a>
+            </div>
+            <ul class="db-list" style="--empty:{{ 4 - max(1, count($capsa['activity'])) }}">
+              @forelse ($capsa['activity'] as $log)
+                @php [$icon, $tone] = $activityIcon[$log->type] ?? ['pulse', 't-blue']; @endphp
+                <li><span class="db-ico {{ $tone }}"><svg class="i"><use href="#i-{{ $icon }}"/></svg></span><span class="db-clip db-grow">{{ strip_tags($log->description) }}</span><time>{{ $log->created_at->format('M j · g:i A') }}</time></li>
+              @empty
+                <li class="db-empty">No activity yet.</li>
+              @endforelse
+            </ul>
+          </section>
+
+          <section class="db-card db-qa-dark">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-orange"><use href="#i-bolt"/></svg>Quick Actions</h2>
+            </div>
+            <div class="db-qa-list">
+              <a class="db-qa-row" href="{{ route('capsa.reports.show', 'master') }}"><svg class="i c-green"><use href="#i-shield"/></svg>Check Coverage<svg class="i db-chev"><use href="#i-chev"/></svg></a>
+              <a class="db-qa-row" href="{{ route('capsa.team_management', ['tab' => 'milestones']) }}"><svg class="i c-orange"><use href="#i-cal"/></svg>View Milestones<svg class="i db-chev"><use href="#i-chev"/></svg></a>
+              <a class="db-qa-row" href="{{ route('capsa.team_management', ['tab' => 'teams']) }}"><svg class="i c-purple"><use href="#i-team"/></svg>Manage Teams<svg class="i db-chev"><use href="#i-chev"/></svg></a>
+              <a class="db-qa-row" href="{{ route('capsa.reports') }}"><svg class="i c-teal"><use href="#i-chart"/></svg>View Reports<svg class="i db-chev"><use href="#i-chev"/></svg></a>
+            </div>
+          </section>
+        </div>
+
+        <dialog id="issuesModal" class="db-dialog">
+          <div class="db-head">
+            <h2 class="db-title red"><svg class="i c-red"><use href="#i-warn"/></svg>Pending Issues</h2>
+            <button type="button" class="db-more" onclick="this.closest('dialog').close()">Close</button>
+          </div>
+          <ul class="db-list">
+            @foreach ($capsa['issues'] as $issue)
+              <li><a class="rowlink" href="{{ $issue['href'] }}"><span class="db-ico db-issue-ico {{ $issue['tone'] }}"><svg class="i"><use href="#i-{{ $issue['icon'] }}"/></svg></span><div class="db-stack"><b class="db-clip">{{ $issue['label'] }}</b><span class="db-meta db-clip">{{ $issue['count'] ? $issue['detail'] : 'Nothing waiting' }}</span></div><svg class="i db-chev"><use href="#i-chev"/></svg></a></li>
             @endforeach
-          </div>
-          <a class="dc-more" href="{{ route('capsa.analytics') }}">Open Analytics →</a>
-        </div>
-      </div>
-
-      <div class="dc-grid wide">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Fee Collection</span></div>
-          <p class="dc-sub">Verified teams in your sections, by defense fee.</p>
-          <div class="dc-rows">
-            @foreach ($c['fees'] as $fee)
-              <div class="dc-row">
-                <div class="dc-row-head"><b>{{ $fee['stage'] }}</b><span>{{ $fee['posted'] ? $fee['collected'].' collected' : 'Fee not posted yet' }}</span></div>
-                @if ($fee['posted'] && $fee['teams'])
-                  <x-dashboard.stack :parts="$fee['parts']" :hide-zero="true" />
-                @else
-                  <div class="dc-empty" style="padding:6px 0">{{ $fee['posted'] ? 'No verified teams yet.' : 'Post the fee on Financial Records.' }}</div>
-                @endif
-              </div>
-            @endforeach
-          </div>
-          <a class="dc-more" href="{{ route('capsa.financial') }}">Open Financial Records →</a>
-        </div>
-
-        <div class="card">
-          <div class="card-header"><span class="card-title">Experts and Sections</span></div>
-          <p class="dc-sub">How many of your {{ $c['teams'] }} {{ \Illuminate\Support\Str::plural('team', $c['teams']) }} have each expert.</p>
-          <x-dashboard.bars :rows="$cover->map(fn ($r) => ['label' => $r['label'], 'value' => $r['have']])->all()" color="var(--blue)" />
-          <h4 class="dc-h" style="margin-top:18px">Teams per section</h4>
-          <x-dashboard.bars :rows="$c['bySection']" color="var(--accent)" empty="No teams in your sections yet." />
-        </div>
-      </div>
-
-      @if ($c['capacity'])
-        <div class="card" id="teams-vs-experts" style="margin-bottom:16px">
-          <div class="card-header"><span class="card-title">Teams vs Experts</span></div>
-          <p class="dc-sub">Teams in every section of your programs that still need each expert, against the slots experts have left. Checked every hour; you get a notice when a program runs short. Experts on study leave, or who have not set their slots, are not counted.</p>
-          <div class="cap-grid">
-            @foreach ($c['capacity'] as $program => $rows)
-              <table class="cap-table">
-                <caption>{{ $program }}</caption>
-                <thead><tr><th>Role</th><th>Teams needing</th><th>Free slots</th><th>Status</th></tr></thead>
-                <tbody>
-                  @foreach ($rows as $row)
-                    <tr class="{{ $row['role'] === 'all' ? 'cap-all' : '' }}">
-                      <td>{{ $row['label'] }}</td>
-                      <td>{{ $row['need'] }}</td>
-                      <td>{{ $row['free'] ?? 'No limit' }}</td>
-                      @if ($row['short'] > 0)
-                        <td class="cap-short">Short by {{ $row['short'] }}</td>
-                      @elseif ($row['status'] === \App\Support\ExpertCapacity::JUST_ENOUGH)
-                        <td class="cap-even">Just enough</td>
-                      @else
-                        <td class="cap-ok">OK</td>
-                      @endif
-                    </tr>
-                  @endforeach
-                </tbody>
-              </table>
-            @endforeach
-          </div>
-          <a class="dc-more" href="{{ route('capsa.reports.show', 'expert_list') }}">See each expert's slots →</a>
-        </div>
-      @endif
-
-      <p class="dc-lead" style="margin-top:6px"><b>Waiting on you</b></p>
-      <div class="dash-tiles">
-        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['toVerify']) }}" value="{{ $capsa['toVerify'] }}" label="Teams to Verify" icon="verified" sub="{{ $capsa['toVerify'] ? 'Complete, waiting for you' : 'Nothing waiting' }}" color="var(--amber)" />
-        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['titles']) }}" value="{{ $capsa['titles'] }}" label="Titles to Review" icon="file-check" sub="{{ $capsa['titles'] ? 'Turned in by teams' : 'Nothing waiting' }}" color="var(--accent3)" />
-        <x-dashboard.stat-chip :href="route('capsa.financial')" class="{{ $tile($capsa['receipts']) }}" value="{{ $capsa['receipts'] }}" label="Receipts to Check" icon="receipt" sub="{{ $capsa['receipts'] ? 'Sent in by team leaders' : 'Nothing waiting' }}" color="var(--green)" />
-        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['leaveRequests']) }}" value="{{ $capsa['leaveRequests'] }}" label="Member Requests" icon="user-clock" sub="{{ $capsa['leaveRequests'] ? 'Asking to leave or remove' : 'Nothing waiting' }}" color="var(--red)" />
-      </div>
-
-      <x-dashboard.info-card title="Defenses in the Next Two Weeks" :empty="$capsa['defenses']->isEmpty()" emptyMessage="No defenses in the next two weeks." emptyIcon="defense" style="margin-bottom:16px">
-        @foreach ($capsa['defenses'] as $def)
-          <div class="dash-def">
-            <span><b>{{ $def->team?->team_name ?? 'A team' }}</b><small>{{ $def->defense_type }}{{ $def->venue ? ' · '.$def->venue : '' }}</small></span>
-            <span style="text-align:right;white-space:nowrap">{{ $def->schedule_date->format('D, M j') }}@if ($def->schedule_date->format('H:i') !== '00:00')<small>{{ $def->schedule_date->format('g:i A') }}</small>@endif</span>
-          </div>
-        @endforeach
-      </x-dashboard.info-card>
+          </ul>
+        </dialog>
+      </main>
+      <script nonce="{{ Vite::cspNonce() }}">
+        document.querySelectorAll('.db-tab').forEach(function (tab) {
+          tab.addEventListener('click', function () {
+            tab.parentNode.querySelectorAll('.db-tab').forEach(function (t) { t.setAttribute('aria-selected', t === tab); });
+            tab.closest('.db-card').querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.dataset.panel !== tab.dataset.tab; });
+            document.getElementById('deadlines-more').href = tab.dataset.more;
+          });
+        });
+      </script>
     @endif
 
     @if ($admin && $stats['admin'])
       @php
         $a = $stats['admin'];
         $ad = $a['defenses'];
+        $k = $ad['kpis'];
         $fee = $a['fees'];
+
+        // Students per school year, drawn on a 0-100 box the plot stretches to fit.
+        $series = $a['studentsByYear'];
+        $years = count($series);
+        $step = max(10, (int) ceil(collect($series)->max('value') / 30) * 10);
+        $points = collect($series)->map(fn ($row, $i) => [
+            'x' => $years > 1 ? round($i / ($years - 1) * 100, 2) : 50,
+            'y' => round(100 - $row['value'] / ($step * 3) * 100, 2),
+            'value' => $row['value'],
+        ]);
+        $line = $points->map(fn ($p) => $p['x'].','.$p['y'])->implode(' ');
+        $last = $points->last();
+        $activePercent = $a['students'] > 0 ? (int) round($a['active'] / $a['students'] * 100) : 0;
+
+        $roleMax = collect($a['byRole'])->max('value') ?: 1;
+        $roleColors = ['var(--purple)', 'var(--blue)', 'var(--green)', 'var(--accent)'];
+        $yearMax = collect($a['archive']['years'])->max('value') ?: 1;
+
+        $uncovered = count($admin['uncovered']);
+        $many = fn (int $n, string $word) => $n.' '.\Illuminate\Support\Str::plural($word, $n);
+        $chips = array_values(array_filter([
+            ! $admin['schoolYear'] ? ['red', 'i-cal', 'School year', 'is not set', route('admin.settings')] : null,
+            $uncovered ? ['red', 'i-team-solid', $many($uncovered, 'Section'), 'with no CaPSA', route('admin.experts')] : null,
+            $admin['noSections'] ? ['orange', 'i-book-open', $many($admin['noSections'], 'Program'), 'with no sections', route('admin.settings')] : null,
+            $a['archive']['missing'] ? ['purple', 'i-cloud', $many($a['archive']['missing'], 'Year'), 'with no uploads', route('admin.archive')] : null,
+        ]));
       @endphp
-      <p class="dc-lead"><b>The whole system</b> · every section, every program</p>
-      <div class="dash-tiles">
-        <x-dashboard.stat-chip :href="route('admin.students')" value="{{ $a['students'] }}" label="Students" icon="student" sub="With accounts" color="var(--blue)" />
-        <x-dashboard.stat-chip value="{{ $a['teams'] }}" label="Teams" icon="team" sub="{{ $a['verifiedTeams'] }} verified" color="var(--accent3)" />
-        <x-dashboard.stat-chip :href="route('admin.experts')" value="{{ $a['experts'] }}" label="Experts" icon="expert" sub="{{ $a['awaitingApproval'] ? $a['awaitingApproval'].' waiting for approval' : 'Approved faculty' }}" color="var(--purple)" />
-        <x-dashboard.stat-chip :href="route('admin.experts')" value="{{ $admin['capsas'] }}" label="CaPSAs" icon="expert" sub="Running the subject" color="var(--green)" />
-        <x-dashboard.stat-chip :href="route('admin.experts')" value="{{ count($admin['uncovered']) }}" label="Sections Without a CaPSA" icon="section-list" sub="{{ count($admin['uncovered']) ? 'Nobody verifies these teams' : 'Every section is covered' }}" color="{{ count($admin['uncovered']) ? 'var(--red)' : 'var(--green)' }}" />
-        <x-dashboard.stat-chip :href="route('capsa.archive')" value="{{ $a['archive']['total'] }}" label="Archived Capstones" icon="archive" sub="Finished and published" color="var(--amber)" />
-      </div>
+      <main class="db db-admin">
 
-      <div class="dc-grid wide">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Students by Program</span></div>
-          <x-dashboard.bars :rows="$a['byProgram']" color="var(--blue)" empty="No students yet." />
+        <div class="ad-tiles">
+          <a class="db-tile tile-blue" href="{{ route('admin.students') }}">
+            <span class="db-ico t-blue"><svg class="i"><use href="#i-cap"/></svg></span>
+            <b>{{ $a['students'] }}</b><span class="ad-cap">Students</span><span class="ad-sub">With accounts</span>
+          </a>
+          <a class="db-tile tile-orange" href="{{ route('admin.analytics') }}">
+            <span class="db-ico t-orange"><svg class="i"><use href="#i-team-solid"/></svg></span>
+            <b>{{ $a['teams'] }}</b><span class="ad-cap">Teams</span><span class="ad-sub">{{ $a['verifiedTeams'] }} verified</span>
+          </a>
+          <a class="db-tile tile-purple" href="{{ route('admin.experts') }}">
+            <span class="db-ico t-purple"><svg class="i"><use href="#i-hall"/></svg></span>
+            <b>{{ $a['experts'] }}</b><span class="ad-cap">Experts</span><span class="ad-sub">Approved faculty</span>
+          </a>
+          <a class="db-tile tile-green" href="{{ route('admin.experts') }}">
+            <span class="db-ico t-green"><svg class="i"><use href="#i-shield"/></svg></span>
+            <b>{{ $admin['capsas'] }}</b><span class="ad-cap" style="text-transform:none">CAPSAs</span><span class="ad-sub">Running the subject</span>
+          </a>
+          <a class="db-tile tile-red" href="{{ route('admin.experts') }}">
+            <span class="db-ico t-red"><svg class="i"><use href="#i-doc"/></svg></span>
+            <b>{{ $uncovered }}</b><span class="ad-cap">Sections without<br>a CaPSA</span>
+          </a>
+          <a class="db-tile tile-gold" href="{{ route('admin.archive') }}">
+            <span class="db-ico t-gold"><svg class="i"><use href="#i-box"/></svg></span>
+            <b>{{ $a['archive']['total'] }}</b><span class="ad-cap">Archived Capstones</span><span class="ad-sub">Finished and published</span>
+          </a>
         </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Experts by Role</span></div>
-          <p class="dc-sub">An expert with two roles counts under each.</p>
-          <x-dashboard.bars :rows="$a['byRole']" color="var(--purple)" empty="No approved experts yet." />
-        </div>
-      </div>
 
-      <div class="dc-grid wide">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Defense Results</span></div>
-          <p class="dc-sub">S.Y. {{ $ad['year'] }} · {{ $ad['kpis']['teams'] }} {{ \Illuminate\Support\Str::plural('team', $ad['kpis']['teams']) }}, {{ $ad['kpis']['rate'] === null ? 'nothing decided yet' : $ad['kpis']['rate'].'% pass rate overall' }}.</p>
-          <div class="dc-rows">
-            @foreach ($ad['stages'] as $stage)
-              <div class="dc-row">
-                <div class="dc-row-head"><b>{{ $stage['stage'] }}</b><span>{{ $stage['rate'] === null ? 'No result yet' : $stage['rate'].'% pass' }} · {{ $stage['teams'] }} {{ \Illuminate\Support\Str::plural('team', $stage['teams']) }}</span></div>
-                <x-dashboard.stack :parts="$stage['parts']" :hide-zero="true" />
+        <div class="ad-row-2">
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-orange"><use href="#i-chart"/></svg>Students Overview</h2>
+            </div>
+            <div class="ad-over">
+              <div class="ad-donut">
+                <div class="ad-ring">
+                  <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--border)" stroke-width="3.4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--accent)" stroke-width="3.4" stroke-linecap="round" pathLength="100" stroke-dasharray="{{ $activePercent }} 100" transform="rotate(-90 18 18)"/></svg>
+                  <div><b>{{ $activePercent }}%</b>Active<br>Students</div>
+                </div>
+                <div class="ad-legend">
+                  <span><span class="ad-dot"></span>Active <b>{{ $a['active'] }}</b></span>
+                  <span><span class="ad-dot" style="background:var(--border2)"></span>Inactive <b>{{ $a['inactive'] }}</b></span>
+                </div>
               </div>
-            @endforeach
-          </div>
-          <a class="dc-more" href="{{ route('capsa.analytics') }}">Open Analytics →</a>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Money and Archive</span></div>
-          <div class="dash-facts">
-            <div class="dash-fact"><span>Fees collected (verified receipts)</span><b>₱{{ number_format($fee['collected'], 2) }}</b></div>
-            <div class="dash-fact"><span>Receipts verified</span><b>{{ $fee['verifiedCount'] }}</b></div>
-            <div class="dash-fact"><span>Receipts waiting on a CaPSA</span><b>{{ $fee['waiting'] }}</b></div>
-          </div>
-          <h4 class="dc-h" style="margin-top:18px">Archived capstones by year</h4>
-          <x-dashboard.bars :rows="$a['archive']['years']" color="var(--amber)" empty="Nothing archived yet." />
-        </div>
-      </div>
+              @if ($years)
+                <div class="ad-chart">
+                  <div class="ad-axis"><span>{{ $step * 3 }}</span><span>{{ $step * 2 }}</span><span>{{ $step }}</span><span>0</span></div>
+                  <div class="ad-plot">
+                    @if ($years > 1)
+                      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        <defs><linearGradient id="ad-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9a82c" stop-opacity=".32"/><stop offset="1" stop-color="#c9a82c" stop-opacity=".03"/></linearGradient></defs>
+                        <polygon fill="url(#ad-fade)" points="0,100 {{ $line }} 100,100"/>
+                        <polyline fill="none" stroke="#c9a82c" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ $line }}"/>
+                      </svg>
+                    @endif
+                    @foreach ($points as $p)
+                      <i style="left:{{ $p['x'] }}%;bottom:{{ 100 - $p['y'] }}%"></i>
+                    @endforeach
+                    <span class="ad-tip" style="bottom:{{ 100 - $last['y'] }}%;{{ $years > 1 ? 'right:-8px' : 'left:50%;margin-left:-14px' }}">{{ $last['value'] }}</span>
+                  </div>
+                  <div class="ad-months">@foreach ($series as $row)<span>{{ $row['label'] }}</span>@endforeach</div>
+                </div>
+              @else
+                <div class="ad-none">No students yet.</div>
+              @endif
+            </div>
+          </section>
 
-      @if ($admin['uncovered'] || ! $admin['schoolYear'] || $a['awaitingApproval'])
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-header"><span class="card-title">Needs Attention</span></div>
-          <div class="dash-facts">
-            @if (! $admin['schoolYear'])
-              <div class="dash-fact bad"><span>The current school year is not set. Uploads and reports are stamped with it.</span><a class="dash-link" style="margin:0" href="{{ route('admin.settings') }}">Set it →</a></div>
-            @endif
-            @if ($a['awaitingApproval'])
-              <div class="dash-fact"><span>{{ $a['awaitingApproval'] }} {{ \Illuminate\Support\Str::plural('expert', $a['awaitingApproval']) }} waiting to be approved.</span><a class="dash-link" style="margin:0" href="{{ route('admin.experts') }}">Review →</a></div>
-            @endif
-            @if ($admin['uncovered'])
-              <div class="dash-fact bad" style="display:block">
-                <span>{{ count($admin['uncovered']) }} {{ \Illuminate\Support\Str::plural('section', count($admin['uncovered'])) }} with no CaPSA. Their teams cannot be verified until someone covers them.</span>
-                <div class="dash-sec">@foreach (array_slice($admin['uncovered'], 0, 24) as $section)<span>{{ $section }}</span>@endforeach @if (count($admin['uncovered']) > 24)<span>+{{ count($admin['uncovered']) - 24 }} more</span>@endif</div>
-                <a class="dash-link" href="{{ route('admin.experts') }}">Make or update a CaPSA →</a>
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-purple"><use href="#i-team-solid"/></svg>Experts by Role</h2>
+              <a class="db-btn-dark" href="{{ route('admin.experts') }}">View Details →</a>
+            </div>
+            <div class="ad-experts">
+              <div class="ad-roles">
+                @forelse ($a['byRole'] as $i => $row)
+                  <div class="ad-role"><span>{{ $row['label'] }}</span><span class="ad-bar"><span style="width:{{ round($row['value'] / $roleMax * 100) }}%;background:{{ $roleColors[$i % 4] }}"></span></span><b>{{ $row['value'] }}</b></div>
+                @empty
+                  <div class="ad-none">No approved experts yet.</div>
+                @endforelse
               </div>
-            @endif
-          </div>
+              <div class="ad-people">
+                <svg viewBox="0 0 120 76" aria-hidden="true">
+                  <path d="M28 62a32 32 0 0 1 64 0Z" fill="#f3e3a6"/>
+                  <circle cx="30" cy="34" r="9" fill="#4a5060"/><path d="M12 76c0-16 8-26 18-26s18 10 18 26Z" fill="#4a5060"/>
+                  <circle cx="90" cy="34" r="9" fill="#4a5060"/><path d="M72 76c0-16 8-26 18-26s18 10 18 26Z" fill="#4a5060"/>
+                  <circle cx="68" cy="26" r="11" fill="#18191f"/><path d="M44 76c0-22 10-36 24-36s24 14 24 36Z" fill="#18191f"/>
+                  <circle cx="50" cy="40" r="9" fill="#c9a82c"/><path d="M32 76c0-14 8-24 18-24s18 10 18 24Z" fill="#c9a82c"/>
+                </svg>
+                Building a stronger academic community.
+              </div>
+            </div>
+          </section>
         </div>
-      @endif
+
+        <div class="ad-row-3">
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-gold"><use href="#i-shield"/></svg>Defense Results</h2>
+              <a class="db-btn-dark" href="{{ route('admin.analytics') }}">View Details →</a>
+            </div>
+            <div class="ad-sub-line">SY. {{ str_replace('-', '–', $ad['year']) }} • {{ $many($k['teams'], 'team') }}, {{ $k['rate'] === null ? 'nothing decided yet' : $k['rate'].'% pass rate overall' }}</div>
+            <div class="ad-def">
+              <div class="ad-ring small">
+                <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--border)" stroke-width="3.4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--green)" stroke-width="3.4" pathLength="100" stroke-dasharray="{{ $k['rate'] ?? 0 }} 100" transform="rotate(-90 18 18)"/></svg>
+                <div><b>{{ $k['rate'] === null ? '—' : $k['rate'].'%' }}</b>Pass Rate</div>
+              </div>
+              <div class="ad-kv">
+                <div><span><span class="ad-dot" style="background:var(--green)"></span>Passed</span><b>{{ $k['passed'] }}</b></div>
+                <div><span><span class="ad-dot" style="background:var(--border2)"></span>Not Scheduled</span><b>{{ $ad['unscheduled'] }}</b></div>
+              </div>
+              <div class="ad-title-res">
+                <h3>Title Results</h3>
+                <div class="ad-none">{{ $k['title_rate'] === null ? 'No result yet' : $k['title_rate'].'% pass' }}<br>({{ $many($k['title_teams'], 'team') }})</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="db-card">
+            <div class="db-head">
+              <h2 class="db-title"><svg class="i c-gold"><use href="#i-coins"/></svg>Fees and Archive</h2>
+              <a class="db-btn-dark" href="{{ route('admin.fees') }}">View Details →</a>
+            </div>
+            <div class="ad-money">
+              <div>
+                <div><span class="ad-amount">₱{{ number_format($fee['received'], 2) }}</span><span class="ad-note">Fees Received<br>from CaPSAs</span></div>
+              </div>
+              <div class="ad-receipts">
+                <div class="ad-receipt"><span class="db-ico t-green"><svg class="i" style="fill:none"><use href="#i-check"/></svg></span><span>Sections Sent<b>{{ $fee['sent'] }}</b></span></div>
+                <div class="ad-receipt"><span class="db-ico t-orange"><svg class="i" style="fill:none"><use href="#i-clock"/></svg></span><span>Sections Not Sent Yet<b>{{ $fee['notSent'] }}</b></span></div>
+              </div>
+              <div class="ad-years">
+                <h3>Archived Capstones by Year</h3>
+                @forelse ($a['archive']['years'] as $row)
+                  <div class="ad-year-row"><span>{{ $row['label'] }}</span><span class="ad-bar"><span style="width:{{ round($row['value'] / $yearMax * 100) }}%"></span></span><b>{{ $row['value'] }}</b></div>
+                @empty
+                  <div class="ad-none">Nothing archived yet.</div>
+                @endforelse
+              </div>
+            </div>
+          </section>
+        </div>
+
+        @if ($chips)
+          <section class="ad-attn">
+            <div class="ad-attn-main">
+              <svg class="i"><use href="#i-warn-dark"/></svg>
+              <div><b>Needs Attention</b><span>There are pending items that require your attention.</span></div>
+            </div>
+            <div class="ad-chips">
+              @foreach ($chips as [$tone, $icon, $count, $what, $href])
+                <a class="ad-chip {{ $tone }}" href="{{ $href }}"><svg class="i" @style(['fill:currentColor' => $icon === 'i-team-solid'])><use href="#{{ $icon }}"/></svg><div><b>{{ $count }}</b><span>{{ $what }}</span></div></a>
+              @endforeach
+            </div>
+            <a class="db-btn-dark" href="{{ $chips[0][4] }}">View All →</a>
+          </section>
+        @endif
+
+      </main>
     @endif
   </div>
   </div>

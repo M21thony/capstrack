@@ -33,6 +33,8 @@ class FinancialRecord extends Model
         'uploaded_at',
         'verified_at',
         'verified_by',
+        'sent_to_dean_at',
+        'sent_to_dean_by',
     ];
 
     protected function casts(): array
@@ -41,6 +43,7 @@ class FinancialRecord extends Model
             'amount' => 'decimal:2',
             'uploaded_at' => 'datetime',
             'verified_at' => 'datetime',
+            'sent_to_dean_at' => 'datetime',
         ];
     }
 

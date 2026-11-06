@@ -7,9 +7,9 @@ use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\ConsultationBooking;
 use App\Models\DefensePanel;
-use App\Models\FinancialRecord;
 use App\Models\PanelGrade;
 use App\Models\Role;
+use App\Models\Setting;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -32,7 +32,7 @@ final class DashboardStats
     /** Palette for the parts of a bar, used by the views: good, open, warning, bad, neutral. */
     public const TONES = ['ok' => '#1baf7a', 'info' => '#2a78d6', 'warn' => '#eda100', 'bad' => '#dc2626', 'none' => '#a5a9b4'];
 
-    public function __construct(private CapsaReports $reports, private DefenseAnalytics $defenses, private ExpertCapacity $capacity) {}
+    public function __construct(private CapsaReports $reports, private DefenseAnalytics $defenses, private ExpertCapacity $capacity, private FeeBoard $feeBoard) {}
 
     /**
      * A CaPSA's sections, the running term.
@@ -45,6 +45,11 @@ final class DashboardStats
         $teams = $ctx['teams'];
         $teamIds = $teams->pluck('team_id');
         $students = $ctx['records']->toBase()->only($teamIds->all())->flatten(1)->pluck('student_id')->unique()->count();
+
+        // Students carry no join date, so the new ones are the members of new teams.
+        $since = now()->subDays(30)->toDateTimeString();
+        $newTeams = $teams->filter(fn ($t) => $t->created_at >= $since);
+        $newStudents = $ctx['records']->toBase()->only($newTeams->pluck('team_id')->all())->flatten(1)->pluck('student_id')->unique()->count();
 
         $progress = collect($this->reports->build('progress', $ctx)['rows']);
         $statuses = $progress->countBy(fn ($r) => ($r['cells']['status'][3] ?? 0) < 0 ? 'Has overdue items' : $r['cells']['status'][1]);
@@ -67,7 +72,9 @@ final class DashboardStats
 
         return [
             'teams' => $teams->count(),
+            'newTeams' => $newTeams->count(),
             'students' => $students,
+            'newStudents' => $newStudents,
             'sections' => $bySection->count(),
             'verified' => $teams->where('is_confirmed', true)->count(),
             'progress' => [
@@ -84,6 +91,8 @@ final class DashboardStats
             'defenses' => $this->defenseSummary($capsa),
             'fees' => $this->feeSummary($ctx),
             'coverage' => $coverage,
+            'covered' => $master->filter(fn ($r) => collect(['adviser', 'consultant', 'grammarian'])
+                ->every(fn ($key) => ($r['cells'][$key] ?? CapsaReports::DASH) !== CapsaReports::DASH))->count(),
             'capacity' => $this->capacity->forPrograms($capsa->handledPrograms()),
             'bySection' => $bySection->map(fn ($n, $label) => ['label' => $label, 'value' => $n])->values()->all(),
         ];
@@ -100,31 +109,35 @@ final class DashboardStats
         $roles = $experts->flatMap(fn (CapstoneExpert $e) => $e->roles->pluck('role_name'))->countBy()
             ->mapWithKeys(fn ($n, $role) => [Role::labelFor($role) => $n])->sortDesc();
 
-        $byProgram = Student::query()->whereNotNull('course')->selectRaw('course, count(*) as n')->groupBy('course')->pluck('n', 'course')
-            ->reduce(function (array $carry, $n, $course) {
-                $program = Student::mapCourseToProgram((string) $course) ?? 'Other';
-                $carry[$program] = ($carry[$program] ?? 0) + $n;
+        // A student has one row per term; a year counts them once however many terms it had.
+        $perYear = StudentSchoolYear::withoutGlobalScope(StudentSchoolYear::ACTIVE_TERM_SCOPE)
+            ->whereNotNull('school_year')
+            ->whereIn('student_id', Student::select('student_id')) // rows can outlive a deleted account
+            ->selectRaw('school_year, count(distinct student_id) as n')
+            ->groupBy('school_year')->orderBy('school_year')->pluck('n', 'school_year');
 
-                return $carry;
-            }, []);
-        arsort($byProgram);
+        // Active means enrolled this school year.
+        $students = Student::count();
+        $year = Setting::get('current_school_year') ?: $perYear->keys()->last();
+        $active = (int) ($perYear[$year] ?? 0);
 
         $teams = Team::query();
-        $verified = FinancialRecord::where('f_record_status', 'verified');
+        $sections = collect($this->feeBoard->forDean());
 
         return [
-            'students' => Student::count(),
+            'students' => $students,
+            'active' => $active,
+            'inactive' => $students - $active,
+            'studentsByYear' => $perYear->map(fn ($n, $label) => ['label' => (string) $label, 'value' => (int) $n])->values()->all(),
             'teams' => (clone $teams)->count(),
             'verifiedTeams' => (clone $teams)->where('is_confirmed', true)->count(),
             'experts' => $experts->count(),
-            'awaitingApproval' => CapstoneExpert::where('approved_status', false)->whereNull('rejection_reason')->count(),
-            'byProgram' => collect($byProgram)->map(fn ($n, $label) => ['label' => $label, 'value' => $n])->values()->all(),
             'byRole' => $roles->map(fn ($n, $label) => ['label' => $label, 'value' => $n])->values()->all(),
             'defenses' => $this->defenseSummary($admin),
             'fees' => [
-                'verifiedCount' => (clone $verified)->count(),
-                'collected' => (float) (clone $verified)->sum('amount'),
-                'waiting' => FinancialRecord::where('f_record_status', 'pending')->count(),
+                'received' => (float) $sections->sum('amount'),
+                'sent' => $sections->where('is_sent', true)->count(),
+                'notSent' => $sections->where('is_sent', false)->count(),
             ],
             'archive' => $this->archiveSummary(),
         ];
@@ -182,7 +195,7 @@ final class DashboardStats
             ],
             'consultations' => [
                 'done' => (int) ($consults['done'] ?? 0),
-                'upcoming' => (int) ($consults['scheduled'] ?? 0),
+                'upcoming' => $bookings->where('booking_status', 'scheduled')->filter(fn ($booking) => $booking->session_date?->gte(today()))->count(),
                 'cancelled' => (int) ($consults['cancelled'] ?? 0),
                 'total' => $bookings->count(),
             ],
@@ -210,6 +223,11 @@ final class DashboardStats
         return [
             'year' => $built['filters']['school_year'] ?? $built['currentYear'],
             'kpis' => $built['kpis'],
+            // Only the stage a team is on counts: a new team is "not scheduled"
+            // at every stage, and adding those up would count it four times.
+            'unscheduled' => collect($built['teams'])
+                ->filter(fn ($team) => collect($team['stages'])->first(fn ($status) => $status !== 'passed') === 'not_scheduled')
+                ->count(),
             'stages' => collect($built['stages'])->map(fn (array $row, string $stage) => [
                 'stage' => DefenseAnalytics::SHORT[$stage] ?? $stage,
                 'teams' => $row['teams'],
@@ -253,15 +271,19 @@ final class DashboardStats
         })->all();
     }
 
-    /** @return array{total: int, years: list<array{label: string, value: int}>} */
+    /** @return array{total: int, years: list<array{label: string, value: int}>, missing: int} */
     private function archiveSummary(): array
     {
-        $rows = ArchivedDocument::query()->whereNotNull('academic_year')->selectRaw('academic_year, count(*) as n')
+        $rows = ArchivedDocument::published()->whereNotNull('academic_year')->selectRaw('academic_year, count(*) as n')
             ->groupBy('academic_year')->orderBy('academic_year')->pluck('n', 'academic_year');
+
+        // Years between the first and the last that have nothing published.
+        $years = $rows->keys()->map(fn ($year) => (int) $year)->unique();
 
         return [
             'total' => (int) $rows->sum(),
-            'years' => $rows->map(fn ($n, $year) => ['label' => (string) $year, 'value' => (int) $n])->values()->take(-6)->all(),
+            'years' => $rows->map(fn ($n, $year) => ['label' => (string) $year, 'value' => (int) $n])->values()->take(-4)->all(),
+            'missing' => $years->isEmpty() ? 0 : $years->max() - $years->min() + 1 - $years->count(),
         ];
     }
 }

@@ -208,4 +208,29 @@ class NotificationBellScopeTest extends TestCase
         // whether or not a dot is drawn.
         $this->assertStringNotContainsString('<div class="notif-dot">', $html);
     }
+    /** Tabs count what the bell holds, and See all lists only the person's own. */
+    public function test_the_panel_sorts_a_persons_own_notifications(): void
+    {
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $expert->roles()->attach(Role::firstOrCreate(['role_name' => 'adviser'])->role_id);
+        $other = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $note = fn ($owner, $type, $title) => Notification::create([
+            'expert_id' => $owner->expert_id, 'type' => $type, 'title' => $title,
+            'message' => 'Message', 'link' => '/instructor/docreview', 'created_at' => now(),
+        ]);
+        $note($expert, 'document_submitted', 'Paper in');
+        $note($expert, 'consultation_booked', 'Booked');
+        $note($other, 'document_submitted', 'Somebody elses paper');
+
+        $html = $this->actingAs($expert, 'expert')->get('/instructor/dashboard')->getContent();
+
+        $this->assertStringContainsString('data-filter="documents">Documents<span class="np-tab-n">1</span>', $html);
+        $this->assertStringContainsString('data-filter="consultations">Consultations<span class="np-tab-n">1</span>', $html);
+        $this->assertStringContainsString('Review →', $html);
+        $this->assertStringContainsString(route('instructor.notifications.page'), $html);
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.notifications.page'))->assertOk()
+            ->assertSee('Paper in')
+            ->assertDontSee('Somebody elses paper');
+    }
 }

@@ -25,18 +25,11 @@
 
   $bellUnread = $bellItems->where('is_read', false)->count();
 
-  // Every kind an expert can be sent, and the face it wears in the list.
-  $bellIcons = [
-    'expert_application' => ['rgba(124,58,237,0.12)', '#7c3aed', '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'],
-    'consultation_booked' => ['rgba(59,130,246,0.12)', '#3b82f6', '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>'],
-    'consultation_cancelled' => ['rgba(239,68,68,0.12)', '#ef4444', '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="14" y1="14" x2="10" y2="18"/><line x1="10" y1="14" x2="14" y2="18"/>'],
-    'consultation_reminder' => ['rgba(245,158,11,0.12)', '#f59e0b', '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>'],
-    'document_submitted' => ['rgba(22,163,74,0.12)', '#16a34a', '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'],
-    'paper_to_check' => ['rgba(59,130,246,0.12)', '#3b82f6', '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'],
-    'review_reminder' => ['rgba(249,115,22,0.12)', '#f97316', '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'],
-    'leave_request_received' => ['rgba(239,68,68,0.12)', '#ef4444', '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/>'],
-    'announcement' => ['rgba(249,115,22,0.12)', '#f97316', '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>'],
-    'expert_slots_short' => ['rgba(239,68,68,0.12)', '#ef4444', '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'],
+  $bellTabs = [
+    'all' => ['All', $bellItems->count()],
+    'unread' => ['Unread', $bellUnread],
+    'documents' => ['Documents', $bellItems->whereIn('type', ['document_submitted', 'paper_to_check', 'review_reminder'])->count()],
+    'consultations' => ['Consultations', $bellItems->whereIn('type', ['consultation_booked', 'consultation_cancelled', 'consultation_reminder'])->count()],
   ];
 @endphp
 
@@ -50,48 +43,57 @@
 .notif-btn{position:relative}
 .notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;line-height:1;padding:0 4px}
 
-.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;max-height:480px;background:var(--bg2,#fff);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04);z-index:9999;display:none;text-align:left}
-.notif-dropdown.open{display:block;animation:notifFadeIn .12s ease}
+.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;max-width:calc(100vw - 24px);max-height:calc(100vh - 82px);max-height:calc(100dvh - 82px);background:var(--bg2,#fff);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(24,25,31,0.18);z-index:9999;display:none;flex-direction:column;overflow:hidden;text-align:left}
+.notif-dropdown.open{display:flex;animation:notifFadeIn .12s ease}
 @keyframes notifFadeIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 
-.notif-dropdown-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border)}
-.notif-dropdown-title{font-size:14px;font-weight:700;color:var(--text)}
-.notif-mark-all-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:none;border-radius:6px;background:rgba(37,99,235,0.08);color:#2563eb;font-size:11px;font-weight:600;cursor:pointer;transition:background .12s}
-.notif-mark-all-btn:hover{background:rgba(37,99,235,0.15)}
+.notif-dropdown-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;flex-shrink:0}
+.notif-dropdown-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--text)}
+.notif-dropdown-title svg{width:18px;height:18px;color:#ea580c}
+.notif-mark-all-btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--accent3)}
+.notif-mark-all-btn svg{width:14px;height:14px;color:#16a34a}
+.notif-mark-all-btn:hover{text-decoration:underline}
 
-.notif-ask{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.notif-ask{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0}
+.notif-ask[hidden]{display:none}
 .notif-ask-t{font-size:12.5px;font-weight:700;color:var(--text)}
 .notif-ask-m{font-size:11px;color:var(--text3);margin-top:1px}
 .notif-ask-btn{flex-shrink:0;padding:6px 12px;border:none;border-radius:6px;background:#2563eb;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer}
 .notif-ask-btn:hover{background:#1d4ed8}
 
-.notif-list{max-height:360px;overflow-y:auto}
+.np-tabs{display:flex;gap:14px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.np-tab{all:unset;cursor:pointer;padding:9px 0 10px;margin-bottom:-1px;font-size:12px;font-weight:600;color:var(--text2);border-bottom:2px solid transparent}
+.np-tab[aria-selected=true]{color:var(--text);border-bottom-color:var(--accent2)}
+.np-tab:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+.np-tab-n{margin-left:4px;color:var(--text2);font-weight:500}
+
+.notif-list{overflow-y:auto;max-height:202px}
 .notif-list::-webkit-scrollbar{width:4px}
 .notif-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-.notif-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;text-decoration:none;transition:background .1s;border-bottom:1px solid var(--border);position:relative}
-.notif-item:last-child{border-bottom:none}
+.notif-item{position:relative;display:flex;align-items:center;gap:10px;padding:5px 16px 5px 20px;border-bottom:1px solid var(--bg4);text-decoration:none;cursor:pointer}
 .notif-item:hover{background:var(--bg3)}
-/* Anything not yet opened keeps a tint, so a full list still reads at a glance. */
-.notif-item.is-unread{background:rgba(37,99,235,0.05)}
-.notif-item.is-unread .notif-item-title{font-weight:700}
+/* Anything not yet opened keeps a dot, so a full list still reads at a glance. */
+.notif-item.is-unread::before{content:'';position:absolute;left:7px;top:12px;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.notif-item.is-unread[data-kind=announcement]::before{background:var(--accent2)}
 
-.notif-item-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.notif-item-icon svg{width:16px;height:16px}
+.notif-item-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-start}
+.notif-item-icon svg{width:19px;height:19px}
 
-.notif-item-body{flex:1;min-width:0}
-.notif-item-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;line-height:1.3}
-.notif-item-msg{font-size:12px;color:var(--text2);line-height:1.4}
-.notif-item-time{font-size:11px;color:var(--text3);margin-top:4px}
+.notif-item-body{flex:1;min-width:0;font-size:12px;color:var(--text2);line-height:1.35}
+.np-titlerow{display:flex;align-items:center;gap:6px}
+.notif-item-title{font-size:13px;font-weight:600;color:var(--text)}
+.np-tag{font-size:11px;font-weight:600;color:var(--accent3)}
+.notif-item-time{margin-top:1px}
+.np-go{flex-shrink:0;display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:8px;background:var(--bg4);color:var(--text);font-size:12px;font-weight:600}
+.np-go:hover{background:var(--border)}
+.np-chev{width:14px;height:14px;flex-shrink:0;color:var(--text3)}
 
-.notif-item::before{content:'';position:absolute;top:14px;left:0;width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent);opacity:0;transition:opacity .1s}
-.notif-item:hover::before{opacity:1}
-
-.notif-empty{padding:40px 18px;text-align:center;font-size:13px;color:var(--text3);display:flex;flex-direction:column;align-items:center}
-.notif-footer{display:flex;border-top:1px solid var(--border)}
-.notif-footer a{flex:1;padding:11px 8px;text-align:center;font-size:11.5px;font-weight:600;color:var(--text3);text-decoration:none}
-.notif-footer a + a{border-left:1px solid var(--border)}
-.notif-footer a:hover{background:var(--bg3);color:var(--text2)}
+.notif-empty,.np-empty{padding:28px 16px;text-align:center;font-size:13px;color:var(--text2)}
+.notif-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-top:1px solid var(--bg4);font-size:12px;font-weight:600;flex-shrink:0}
+.notif-footer a{color:var(--accent3);text-decoration:none}
+.notif-footer a:hover{text-decoration:underline}
+.notif-footer a:first-child:not(:last-child){color:var(--text2)}
 </style>
 
 @include('partials.page-guide')
@@ -108,10 +110,13 @@
 
 <div class="notif-dropdown" id="notif-dropdown">
   <div class="notif-dropdown-header">
-    <div class="notif-dropdown-title">Notifications</div>
+    <div class="notif-dropdown-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/></svg>
+      Notifications
+    </div>
     @if ($bellUnread > 0)
       <button class="notif-mark-all-btn" id="notif-mark-all-btn" type="button">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 6 9 17 4 12"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17 19 7.5"/></svg>
         <span>Mark all read</span>
       </button>
     @endif
@@ -128,40 +133,34 @@
     <button type="button" class="notif-ask-btn" id="notif-ask-btn">Turn on</button>
   </div>
 
-  <div class="notif-list">
-    @forelse ($bellItems as $n)
-      @php [$bg, $fg, $path] = $bellIcons[$n->type] ?? ['rgba(100,116,139,0.12)', '#64748b', '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>']; @endphp
-      <a href="{{ $n->link ?: '#' }}" class="notif-item {{ $n->is_read ? '' : 'is-unread' }}" data-id="{{ $n->id }}" data-type="{{ $n->type }}">
-        <div class="notif-item-icon" style="background:{{ $bg }};color:{{ $fg }}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $path !!}</svg>
-        </div>
-        <div class="notif-item-body">
-          <div class="notif-item-title">{{ $n->title }}</div>
-          {{-- Messages are written as HTML and escape their own values at
-               the source, the same way the student bell renders them. --}}
-          <div class="notif-item-msg">{!! $n->message !!}</div>
-          <div class="notif-item-time" data-at="{{ $n->created_at?->toIso8601String() }}">{{ $n->created_at?->diffForHumans() }}</div>
-        </div>
-      </a>
-    @empty
-      <div class="notif-empty">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.3;margin-bottom:8px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div>No notifications yet</div>
-      </div>
-    @endforelse
+  {{-- Tabs sort what the bell already holds, the latest 15. --}}
+  <div class="np-tabs" role="tablist">
+    @foreach ($bellTabs as $filter => [$label, $count])
+      <button type="button" class="np-tab" role="tab" aria-selected="{{ $filter === 'all' ? 'true' : 'false' }}" data-filter="{{ $filter }}">{{ $label }}<span class="np-tab-n">{{ $count }}</span></button>
+    @endforeach
   </div>
 
+  <div class="notif-list">
+    @forelse ($bellItems as $n)
+      @include('partials.notification-row')
+    @empty
+      <div class="notif-empty">No notifications here.</div>
+    @endforelse
+  </div>
+  @if ($bellItems->isNotEmpty())
+    <div class="np-empty" hidden>No notifications here.</div>
+  @endif
+
   {{-- CaPSA and instructor keep separate profile pages, so the caller says
-       which one this bell's settings live on; an Admin has neither. The CaPSA
-       bell also keeps a way through to Recent Activity, which is what it used
-       to show. --}}
+       which one this bell's settings live on. An Admin has neither, so their
+       bell keeps the way through to Recent Activity instead. --}}
   <div class="notif-footer">
     @if ($bellSettingsUrl)
-      <a href="{{ $bellSettingsUrl }}#notifications">Choose what you get notified about</a>
-    @endif
-    @isset ($bellActivityUrl)
+      <a href="{{ $bellSettingsUrl }}#notifications">Notification settings</a>
+    @elseif (isset($bellActivityUrl))
       <a href="{{ $bellActivityUrl }}">Recent activity</a>
-    @endisset
+    @endif
+    <a href="{{ route('instructor.notifications.page') }}">See all notifications →</a>
   </div>
 </div>
 </div>
@@ -189,6 +188,36 @@
     return fetch(url, { method: method, headers: { 'X-CSRF-TOKEN': csrf } });
   }
 
+  function fits(item, filter) {
+    if (filter === 'all') return true;
+    return filter === 'unread' ? item.classList.contains('is-unread') : item.dataset.kind === filter;
+  }
+
+  // Counts, the red dot and the open tab all follow what is in the panel now.
+  function refresh() {
+    var items = Array.prototype.slice.call(panel.querySelectorAll('.notif-item'));
+    panel.querySelectorAll('.np-tab').forEach(function (tab) {
+      var matching = items.filter(function (item) { return fits(item, tab.dataset.filter); });
+      tab.querySelector('.np-tab-n').textContent = matching.length;
+    });
+
+    var filter = panel.querySelector('.np-tab[aria-selected="true"]').dataset.filter;
+    var shown = 0;
+    items.forEach(function (item) {
+      var show = fits(item, filter);
+      item.style.display = show ? '' : 'none';
+      if (show) shown++;
+    });
+    var none = panel.querySelector('.np-empty');
+    if (none) none.hidden = shown > 0;
+
+    var unread = panel.querySelectorAll('.notif-item.is-unread').length;
+    var dot = wrap.querySelector('.notif-dot');
+    if (dot) { if (unread) { dot.textContent = unread > 9 ? '9+' : unread; } else { dot.remove(); } }
+    var markBtn = document.getElementById('notif-mark-all-btn');
+    if (markBtn && !unread) markBtn.remove();
+  }
+
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('#notif-btn');
     if (btn) {
@@ -205,34 +234,49 @@
       return;
     }
 
+    var tab = e.target.closest('.np-tab');
+    if (tab) {
+      panel.querySelectorAll('.np-tab').forEach(function (other) {
+        other.setAttribute('aria-selected', String(other === tab));
+      });
+      refresh();
+      return;
+    }
+
+    // The same rows are on the See all page, outside the panel.
+    var item = e.target.closest('.notif-item');
+
     if (!e.target.closest('#notif-dropdown')) {
       panel.classList.remove('open');
       var b = document.getElementById('notif-btn');
       if (b) b.setAttribute('aria-expanded', 'false');
-      return;
+      if (!item) return;
     }
 
     // Opening one marks it read, then goes where it points.
-    var item = e.target.closest('.notif-item');
     if (item) {
       e.preventDefault();
       var href = item.getAttribute('href');
       item.style.opacity = '0.5';
-      var go = function () { if (href && href !== '#') window.location.href = href; };
+      var go = function () {
+        document.querySelectorAll('.notif-item[data-id="' + item.dataset.id + '"]').forEach(function (el) {
+          el.classList.remove('is-unread');
+        });
+        item.style.opacity = '';
+        refresh();
+        if (href && href !== '#') window.location.href = href;
+      };
       post(base + '/' + item.dataset.id + '/read', 'PUT').then(go, go);
     }
   });
 
   document.addEventListener('click', function (e) {
-    var markBtn = e.target.closest('#notif-mark-all-btn');
-    if (!markBtn) return;
+    if (!e.target.closest('#notif-mark-all-btn')) return;
     post(base, 'PATCH').then(function () {
-      var dot = wrap.querySelector('.notif-dot');
-      if (dot) dot.remove();
-      markBtn.remove();
-      panel.querySelectorAll('.notif-item.is-unread').forEach(function (el) {
+      document.querySelectorAll('.notif-item.is-unread').forEach(function (el) {
         el.classList.remove('is-unread');
       });
+      refresh();
     });
   });
 

@@ -8,6 +8,7 @@
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite('resources/student-ui/Styles/dashboard.css')
 <x-dashboard.styles />
+<link href="{{ \App\Support\PublicAsset::url('css/dashboard-redesign.css') }}" rel="stylesheet">
 <style nonce="{{ Vite::cspNonce() }}">
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
@@ -49,27 +50,6 @@
   .ann-modal-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid var(--border)}
   .ann-modal-sender{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)}
   .ann-modal-date{font-size:12px;color:var(--text3)}
-/* Where your team is: progress on the left, what is next on the right. */
-.now-card .card-header{align-items:center}
-.now-link{font-size:12.5px;font-weight:600;color:var(--accent3,#8a6e10);text-decoration:none}
-.now-link:hover{text-decoration:underline}
-.now-empty{margin:0;font-size:13.5px;color:var(--text2)}
-.now-empty a{color:var(--accent3,#8a6e10);font-weight:600}
-.now-grid{display:grid;grid-template-columns:minmax(200px,1fr) 2fr;gap:24px;align-items:start}
-.now-pct{font-size:34px;font-weight:700;line-height:1;letter-spacing:-.02em;color:var(--text);font-variant-numeric:tabular-nums}
-.now-bar{height:8px;border-radius:4px;background:var(--bg4,#eceef2);overflow:hidden;margin:12px 0 8px}
-.now-bar span{display:block;height:100%;background:var(--accent,#c9a82c);border-radius:4px}
-.now-sub{font-size:12.5px;color:var(--text2)}
-.now-list{display:flex;flex-direction:column;gap:8px}
-.now-row{display:flex;gap:12px;align-items:baseline;padding:10px 12px;border-radius:10px;background:var(--bg3,#f7f8fa);font-size:13.5px;color:var(--text)}
-.now-row b{flex-shrink:0;min-width:120px;font-weight:700}
-.now-row span{color:var(--text2);min-width:0}
-.now-row.bad{background:rgba(220,38,38,.07)}
-.now-row.bad b{color:var(--red,#dc2626)}
-.now-row.ok b{color:var(--green,#16a34a)}
-.now-sheet{display:block;margin-top:4px;font-size:12.5px}
-.now-sheet a{color:var(--accent3,#8a6e10);font-weight:600}
-@media (max-width:760px){.now-grid{grid-template-columns:1fr}.now-row{flex-direction:column;gap:2px}.now-row b{min-width:0}}
 /* Your next step: the one setup step left, until the team has an adviser. */
 .ns-card{border:1px solid rgba(201,168,44,.35);border-left:5px solid var(--accent,#c9a82c);background:rgba(245,193,0,.06);border-radius:14px;padding:16px 18px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px}
 .ns-card.wait{border-color:rgba(22,163,74,.3);border-left-color:var(--green,#16a34a);background:rgba(22,163,74,.05)}
@@ -96,6 +76,7 @@
   @include('partials.render-whole')
 </head>
 <body>
+@include('partials.dashboard-sprite')
 @include('student.partials.sidebar')
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
@@ -109,7 +90,7 @@
       @include('student.partials.notification-dropdown')
     </div>
   </div>
-  <div class="content">
+  <div class="content db-page">
 
     {{-- Skeleton loader --}}
     <div id="contentWrapper" style="position: relative;">
@@ -175,152 +156,343 @@
 
     {{-- Content --}}
     <div id="real-content" style="opacity:0">
-    {{-- Until the team has an adviser: the one setup step left, and why.
-         See App\Support\NextStep. --}}
-    @if ($nextStep)
-      <section class="ns-card {{ $nextStep->waiting ? 'wait' : '' }}" id="next-step-card">
-        <div class="ns-lab">{{ $nextStep->waiting ? 'Nothing to do right now' : 'Your next step' }}</div>
-        <h3>{{ $nextStep->title }}</h3>
-        <p class="ns-why">{{ $nextStep->why }}</p>
-        @if ($nextStep->how)
-          <ol class="ns-how">
-            @foreach ($nextStep->how as $line)<li><span>{{ $line }}</span></li>@endforeach
-          </ol>
-        @endif
-        <a class="btn {{ $nextStep->waiting ? 'btn-ghost' : 'btn-primary' }} ns-go" href="{{ $nextStep->url }}">{{ $nextStep->button }}</a>
-        <ul class="ns-rows" aria-label="Where your team stands">
-          @foreach ($nextStep->rows as [$label, $state, $text])
-            <li class="{{ $state }}">
-              @switch($state)
-                @case('ok')<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16 9.5"/></svg>@break
-                @case('wait')<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 7 12 12 15 14"/></svg>@break
-                @case('lock')<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>@break
-                @default<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
-              @endswitch
-              <span class="k">{{ $label }}</span>
-              <span>{{ $text }}</span>
-            </li>
-          @endforeach
-        </ul>
-      </section>
-    @endif
+    @php
+      // What the announcement popup reads off a row, for the card and the View all list alike.
+      $annAttrs = fn ($announcement) => collect([
+        'title' => $announcement->title,
+        'body' => $announcement->body,
+        'admin-name' => $announcement->admin?->name ?? 'Admin',
+        'admin-avatar' => $announcement->admin?->avatarUrl() ?? asset('images/default-avatar.jpg'),
+        'date' => $announcement->created_at->format('M j, Y · g:i A'),
+        'sections' => json_encode(array_values(array_filter(array_map(fn ($ta) => str_starts_with((string) $ta, 'section:') ? substr((string) $ta, 8) : null, (array) $announcement->target_audience)))),
+        'team' => $announcement->team?->team_name ?? '',
+        'milestone-due' => $announcement->milestone?->due_date?->format('M j, Y') ?? '',
+      ])->map(fn ($value, $key) => 'data-'.$key.'="'.e($value).'"')->implode(' ');
+      $behind = $overdueItems->count();
+      $avatarColours = ['background:#b5941f;color:#18191f', 'background:#4a5060', 'background:#8a6e10', 'background:#18191f;color:var(--accent)'];
+    @endphp
 
-    {{-- What the team has to do next, from its section's checklist: the
-         one card worth reading first. Everything else on this page is
-         something that happened, not something to do. Without a team the
-         next-step card above already says so. --}}
-    @if ($myTeam)
-    <div class="card now-card" id="now-card" style="margin-bottom:16px">
-      <div class="card-header">
-        <span class="card-title">Where your team is</span>
-        @if ($progress)
-          <a class="now-link" href="{{ route('student.progress') }}">Open Progress Tracker →</a>
-        @endif
-      </div>
-      @if (! $progress)
-        <p class="now-empty">Your section's checklist is not set up yet. Your CaPSA adds it; it shows here once they do.</p>
-      @else
-        <div class="now-grid">
-          <div class="now-progress">
-            <div class="now-pct">{{ $overallProgress }}%</div>
-            <div class="now-bar"><span style="width:{{ $overallProgress }}%"></span></div>
-            <div class="now-sub">{{ $progress->completed }} of {{ $progress->total }} requirements done{{ $currentMilestone ? ' · now on '.$currentMilestone : '' }}</div>
-          </div>
-          <div class="now-list">
-            @if ($overdueItems->isNotEmpty())
-              <div class="now-row bad">
-                <b>{{ $overdueItems->count() }} overdue</b>
-                <span>{{ $overdueItems->take(2)->map(fn ($r) => $r->item->title)->implode(', ') }}{{ $overdueItems->count() > 2 ? ' and '.($overdueItems->count() - 2).' more' : '' }}</span>
-              </div>
-            @endif
-            @if ($nextItem)
-              <div class="now-row">
-                <b>Next due {{ \Carbon\Carbon::parse($nextItem->due_on)->format('M j') }}</b>
-                <span>{{ $nextItem->item->title }}</span>
-              </div>
-            @elseif ($overdueItems->isEmpty())
-              <div class="now-row ok"><b>Nothing due</b><span>You are on track.</span></div>
-            @endif
-            @if ($nextDefense)
-              <div class="now-row">
-                <b>{{ $nextDefense->defense_type }}</b>
-                <span>{{ $nextDefense->schedule_date->format('D, M j') }}@if ($nextDefense->schedule_date->format('H:i') !== '00:00') · {{ $nextDefense->schedule_date->format('g:i A') }}@endif{{ $nextDefense->venue ? ' · '.$nextDefense->venue : '' }}
-                  @if ($sheetReady)
-                    <span class="now-sheet">Print one rating sheet for each panelist and bring them, in case CapsTrack cannot be reached: <a href="{{ route('student.defense.sheet', [$nextDefense->defense_id, 'pdf']) }}">PDF</a> · <a href="{{ route('student.defense.sheet', [$nextDefense->defense_id, 'xlsx']) }}">Excel</a></span>
-                  @endif
-                </span>
-              </div>
-            @endif
+    {{-- A team still setting up, or one with a defense coming, has more to show than one screen holds. --}}
+    <main class="db db-student {{ $nextStep || $nextDefense ? 'db-auto' : '' }}">
+
+      <section class="db-banner">
+        <div class="db-banner-text">
+          <div>
+            <h1>Welcome back, <span>{{ auth()->user()->f_name }}!</span></h1>
+            <p>Let's keep going on your capstone journey.</p>
           </div>
         </div>
-      @endif
-    </div>
-    @endif
+        <div class="db-banner-photo" aria-hidden="true"></div>
+        <div class="db-banner-year"><svg class="i c-orange"><use href="#i-cal"/></svg><div>Academic Year<b>S.Y. {{ str_replace('-', '–', $schoolYear) }}</b></div></div>
+      </section>
 
-    <x-dashboard.info-card
-      id="announcements-card"
-      title="Announcements"
-      :badge="$announcements->isNotEmpty() ? $announcements->count() : null"
-      :badgeClass="'badge-accent'"
-      :empty="$announcements->isEmpty()"
-      emptyMessage="No announcements for your section." emptyIcon="announcement"
-    >
-      <div class="ann-list">
-        @foreach ($announcements as $announcement)
-          @php
-            $adminAvatar = $announcement->admin?->avatarUrl() ?? asset('images/default-avatar.jpg');
-          @endphp
-           <div class="ann-item" onclick="openAnnModal(this)"
-                data-title="{{ $announcement->title }}"
-                data-body="{{ $announcement->body }}"
-                data-admin-name="{{ $announcement->admin?->name ?? 'Admin' }}"
-                data-admin-avatar="{{ $adminAvatar }}"
-                data-date="{{ $announcement->created_at->format('M j, Y · g:i A') }}"
-                data-sections="{{ json_encode(array_values(array_filter(array_map(fn($ta) => str_starts_with((string) $ta, 'section:') ? substr((string) $ta, 8) : null, (array) $announcement->target_audience)))) }}"
-                data-team="{{ $announcement->team?->team_name ?? '' }}"
-                data-milestone-due="{{ $announcement->milestone?->due_date?->format('M j, Y') ?? '' }}">
-            <div class="ann-content">
-              <div class="ann-header">
-                <div class="ann-title">{{ $announcement->title }}</div>
+      {{-- Until the team has an adviser: the one setup step left, and why.
+           See App\Support\NextStep. --}}
+      @if ($nextStep)
+        <section class="ns-card {{ $nextStep->waiting ? 'wait' : '' }}" id="next-step-card">
+          <div class="ns-lab">{{ $nextStep->waiting ? 'Nothing to do right now' : 'Your next step' }}</div>
+          <h3>{{ $nextStep->title }}</h3>
+          <p class="ns-why">{{ $nextStep->why }}</p>
+          @if ($nextStep->how)
+            <ol class="ns-how">
+              @foreach ($nextStep->how as $line)<li><span>{{ $line }}</span></li>@endforeach
+            </ol>
+          @endif
+          <a class="btn {{ $nextStep->waiting ? 'btn-ghost' : 'btn-primary' }} ns-go" href="{{ $nextStep->url }}">{{ $nextStep->button }}</a>
+          <ul class="ns-rows" aria-label="Where your team stands">
+            @foreach ($nextStep->rows as [$label, $state, $text])
+              <li class="{{ $state }}">
+                @switch($state)
+                  @case('ok')<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16 9.5"/></svg>@break
+                  @case('wait')<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 7 12 12 15 14"/></svg>@break
+                  @case('lock')<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>@break
+                  @default<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
+                @endswitch
+                <span class="k">{{ $label }}</span>
+                <span>{{ $text }}</span>
+              </li>
+            @endforeach
+          </ul>
+        </section>
+      @endif
+
+      <div class="db-row db-row-top">
+        <section class="db-card db-progress">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-teal"><use href="#i-chart"/></svg>Your Capstone Progress</h2>
+            @if ($progress)
+              <a class="db-more" href="{{ route('student.progress') }}">View details →</a>
+            @endif
+          </div>
+          @if (! $myTeam)
+            <p class="db-empty">Join a team to see your progress here.</p>
+          @elseif (! $progress)
+            <p class="db-empty">Your section's checklist is not set up yet. Your CaPSA adds it; it shows here once they do.</p>
+          @else
+            <div class="db-progress-body">
+              <div class="db-ring-wrap">
+                <div class="db-ring">
+                  <svg width="76" height="76" viewBox="0 0 104 104" role="img" aria-label="{{ $overallProgress }} percent complete">
+                    <circle cx="52" cy="52" r="44" fill="none" stroke="#faf7ed" stroke-width="11"/>
+                    <circle cx="52" cy="52" r="44" fill="none" stroke="#b5941f" stroke-width="11" stroke-linecap="round" stroke-dasharray="{{ round(276.5 * $overallProgress / 100, 1) }} 276.5" transform="rotate(-90 52 52)"/>
+                  </svg>
+                  <span>{{ $overallProgress }}%</span>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div class="db-count"><b>{{ $progress->completed }}</b> of {{ $progress->total }} requirements done</div>
+                  <span class="db-bar"><span style="width:{{ $overallProgress }}%"></span></span>
+                </div>
               </div>
-              @if ($announcement->milestone)
-                <div style="display:flex;align-items:center;gap:6px;margin:4px 0 6px;font-size:12px;flex-wrap:wrap">
-                  <span class="ann-tag" style="background:rgba(139,92,246,0.15);color:#7c3aed">Milestone</span>
-                  @if ($announcement->milestone->due_date)
-                    <span style="color:var(--amber);font-weight:500">
-                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:text-bottom;margin-right:2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      Due {{ $announcement->milestone->due_date->format('M j, Y') }}
-                    </span>
-                  @endif
+              @if ($behind)
+                <div class="db-overdue">
+                  <b><svg class="i c-red"><use href="#i-warn"/></svg>{{ $behind }} Overdue</b>
+                  <span>Don't forget to complete your pending requirements.</span>
                 </div>
               @endif
-              <div class="ann-body">{{ $announcement->body }}</div>
-              <div class="ann-footer">
-                <div class="ann-sender">
-                  @if ($announcement->admin)
-                    <img class="ann-avatar" src="{{ $adminAvatar }}" alt="{{ $announcement->admin->name }}">
-                    <span class="ann-name">{{ $announcement->admin->name }}</span>
-                  @endif
+              @if ($nextItem)
+                <div class="db-nextdue">
+                  <svg class="i c-orange"><use href="#i-cal"/></svg>
+                  <div style="min-width:0">
+                    <div class="db-meta" style="font-weight:600">Next due</div>
+                    <strong>{{ \Carbon\Carbon::parse($nextItem->due_on)->format('M j, Y') }}</strong>
+                    <div class="db-meta db-clip">{{ $nextItem->item->title }}</div>
+                  </div>
                 </div>
-                <div class="ann-date">{{ $announcement->created_at->format('M j, Y · g:i A') }}</div>
-              </div>
-              @if ($announcement->target_audience || $announcement->team)
-                <div class="ann-tags">
-                  @foreach ((array) $announcement->target_audience as $ta)
-                    @if (str_starts_with($ta, 'section:'))
-                      <span class="ann-tag section">{{ substr($ta, 8) }}</span>
-                    @endif
-                  @endforeach
-                  @if ($announcement->team)
-                    <span class="ann-tag team">@ {{ $announcement->team->team_name }}</span>
-                  @endif
+              @elseif (! $behind)
+                <div class="db-nextdue">
+                  <svg class="i c-green"><use href="#i-check"/></svg>
+                  <div>
+                    <strong>Nothing due</strong>
+                    <div class="db-meta">You are on track.</div>
+                  </div>
                 </div>
               @endif
             </div>
+          @endif
+          @if ($nextDefense)
+            <div class="db-notice db-defense">
+              <svg class="i c-orange"><use href="#i-cal"/></svg>
+              <div style="flex:1;min-width:0">
+                <b>{{ $nextDefense->defense_type }} · {{ $nextDefense->schedule_date->format('D, M j') }}@if ($nextDefense->schedule_date->format('H:i') !== '00:00') · {{ $nextDefense->schedule_date->format('g:i A') }}@endif{{ $nextDefense->venue ? ' · '.$nextDefense->venue : '' }}</b>
+                @if ($sheetReady)
+                  <span>Print one rating sheet for each panelist and bring them, in case CapsTrack cannot be reached: <a href="{{ route('student.defense.sheet', [$nextDefense->defense_id, 'pdf']) }}">PDF</a> · <a href="{{ route('student.defense.sheet', [$nextDefense->defense_id, 'xlsx']) }}">Excel</a></span>
+                @endif
+              </div>
+            </div>
+          @endif
+        </section>
+
+        <section class="db-card">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-orange"><use href="#i-bolt"/></svg>Quick Actions</h2>
           </div>
-        @endforeach
+          <div class="db-qa-grid">
+            <a class="db-qa" href="{{ route('student.duplication') }}"><svg class="i c-blue"><use href="#i-send"/></svg>Submit Pre-Proposal</a>
+            <a class="db-qa" href="{{ route('student.documents') }}"><svg class="i c-blue"><use href="#i-doc"/></svg>View Documents</a>
+            <a class="db-qa" href="{{ route('student.consultation') }}"><svg class="i c-orange"><use href="#i-cal"/></svg>Check Schedule</a>
+            <a class="db-qa" href="{{ route('student.progress') }}"><svg class="i c-teal"><use href="#i-chart"/></svg>View Progress</a>
+          </div>
+        </section>
       </div>
-    </x-dashboard.info-card>
+
+      <div class="db-row db-row-fill">
+        <section class="db-card" id="announcements-card">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-orange"><use href="#i-megaphone"/></svg>Announcements</h2>
+            @if ($announcements->isNotEmpty())
+              <button type="button" class="db-more" onclick="document.getElementById('annListModal').classList.add('open')">View all</button>
+            @endif
+          </div>
+          @if ($announcements->isEmpty())
+            <p class="db-empty">No announcements for your section.</p>
+          @else
+            <ul class="db-list">
+              @foreach ($announcements->take(3) as $announcement)
+                <li class="ann-item db-ann-row" onclick="openAnnModal(this)" {!! $annAttrs($announcement) !!}>
+                  <span class="db-dot {{ $announcement->created_at->gt(now()->subWeek()) ? '' : 'read' }}"></span>
+                  <div class="db-ann">
+                    <div class="db-ann-top"><span class="ann-title db-clip">{{ $announcement->title }}</span><time>{{ $announcement->created_at->format('M j') }}</time></div>
+                    <span class="db-meta db-clip">{{ $announcement->body }}</span>
+                  </div>
+                </li>
+              @endforeach
+            </ul>
+          @endif
+        </section>
+
+        <section class="db-card">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-teal"><use href="#i-chat"/></svg>Upcoming Consultations</h2>
+            <a class="db-more" href="{{ route('student.consultation') }}">View all</a>
+          </div>
+          @if ($upcomingConsultations->isEmpty())
+            <p class="db-empty">No consultation booked yet.</p>
+            @if ($myTeam)
+              <a class="db-btn-dark" style="align-self:flex-start" href="{{ route('student.consultation') }}">Book a consultation</a>
+            @endif
+          @else
+            <ul class="db-list">
+              @foreach ($upcomingConsultations as $consultation)
+                <li>
+                  <span class="db-date {{ $consultation->days <= 1 ? 'soon' : '' }}"><small>{{ $consultation->date->format('M') }}</small>{{ $consultation->date->format('j') }}</span>
+                  <div class="db-cons"><b>{{ $consultation->who }}</b><span class="db-meta db-clip">{{ $consultation->when }}</span></div>
+                  <span class="db-pill {{ $consultation->days <= 1 ? 'today' : '' }}">{{ match ($consultation->days) { 0 => 'Today', 1 => 'Tomorrow', default => 'In '.$consultation->days.' days' } }}</span>
+                </li>
+              @endforeach
+            </ul>
+          @endif
+        </section>
+
+        <section class="db-track db-qa-dark">
+          <svg class="db-track-rings" aria-hidden="true" width="280" height="280" viewBox="0 0 280 280">
+            <circle cx="140" cy="140" r="56" fill="none" stroke="rgba(201,168,44,0.18)"/>
+            <circle cx="140" cy="140" r="88" fill="none" stroke="rgba(201,168,44,0.11)"/>
+            <circle cx="140" cy="140" r="120" fill="none" stroke="rgba(201,168,44,0.06)"/>
+          </svg>
+          <span class="db-track-badge">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12.5V8.5a1.5 1.5 0 0 1 3 0V11M9 11V7.5a1.5 1.5 0 0 1 3 0V11M12 11V7.5a1.5 1.5 0 0 1 3 0V11M15 11V8.5a1.5 1.5 0 0 1 3 0V14c0 2-.8 3.2-2 4v3.5H9V18c-2-.8-3-2.5-3-4.5v-1Z"/><path d="M6 12.5c0-.8.7-1.5 1.5-1.5H12a1.75 1.75 0 0 1 0 3.5h-1.5"/><path d="M12 3.5V1.8M6.8 4.3 5.800 3M17.2 4.3l1-1.3"/></svg>
+          </span>
+          <div>
+            @if ($behind)
+              <b>Let's catch up!</b>
+              <p>{{ $behind }} {{ Str::plural('requirement', $behind) }} overdue. Catch up to stay on track.</p>
+            @elseif ($myTeam)
+              <b>You're on the right track!</b>
+              <p>Keep pushing towards your defense.</p>
+            @else
+              <b>Let's get started!</b>
+              <p>Join a team to begin your capstone journey.</p>
+            @endif
+          </div>
+        </section>
+      </div>
+
+      <div class="db-row db-row-fill">
+        <section class="db-card">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-purple"><use href="#i-team"/></svg>Your Team</h2>
+          </div>
+          @if ($myTeam)
+            <div class="db-team-top">
+              <div>
+                <div class="db-team-name">{{ $myTeam->team_name }}</div>
+                <div class="db-active">Active team</div>
+              </div>
+              <a class="db-btn-dark" href="{{ route('student.team') }}">Manage team →</a>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="db-avatars">
+                @foreach ($teamMembers->take(4) as $member)
+                  <span style="{{ $avatarColours[$loop->index] }}" title="{{ $member->f_name }} {{ $member->l_name }}">{{ strtoupper(Str::substr($member->f_name ?? '', 0, 1).Str::substr($member->l_name ?? '', 0, 1)) }}</span>
+                @endforeach
+              </div>
+              <span class="db-meta">{{ $teamMembers->count() }} {{ Str::plural('member', $teamMembers->count()) }}{{ $section ? ' · '.$section : '' }}</span>
+            </div>
+          @else
+            <p class="db-empty">Join a team to see members here.</p>
+          @endif
+        </section>
+
+        <section class="db-card">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-teal"><use href="#i-pulse"/></svg>Recent Activity</h2>
+            @if ($recentActivity->isNotEmpty())
+              {{-- All of it lives in the bell; stopPropagation keeps this click from closing the panel again. --}}
+              <button type="button" class="db-more" onclick="event.stopPropagation();document.getElementById('notif-btn').click()">View all</button>
+            @endif
+          </div>
+          @if ($recentActivity->isEmpty())
+            <p class="db-empty">No activity yet.</p>
+          @else
+            <ul class="db-list">
+              @foreach ($recentActivity as $activity)
+                <li>
+                  <span class="db-ico t-{{ $activity->tone }}"><svg class="i"><use href="#i-{{ $activity->icon }}"/></svg></span>
+                  <span class="db-clip" style="flex:1;min-width:0;font-size:13px;font-weight:500">{{ $activity->text }}</span>
+                  <time class="db-meta" style="white-space:nowrap">{{ $activity->at->format('M j · g:i A') }}</time>
+                </li>
+              @endforeach
+            </ul>
+          @endif
+        </section>
+
+        <section class="db-card">
+          <div class="db-head">
+            <h2 class="db-title"><svg class="i c-blue"><use href="#i-book"/></svg>Resources</h2>
+            <a class="db-more" href="{{ route('student.resources') }}">View all</a>
+          </div>
+          @if ($newResourceCount)
+            <div class="db-notice">
+              <svg class="i c-orange"><use href="#i-megaphone"/></svg>
+              <b>Your CaPSA uploaded {{ $newResourceCount }} new {{ Str::plural('resource', $newResourceCount) }}</b>
+              <time class="db-meta">{{ $newResourceDate->format('M j') }}</time>
+            </div>
+          @endif
+          @forelse ($recentResources as $resource)
+            <a class="db-res" href="{{ $resource->url }}">
+              <svg class="i {{ $resource->category === 'Rubrics' ? 'c-green' : 'c-blue' }}"><use href="#i-{{ $resource->category === 'Rubrics' ? 'tasks' : 'doc' }}"/></svg>
+              <span class="db-clip">{{ $resource->title }}</span>
+              <span class="db-pill">{{ $resource->category }}</span>
+            </a>
+          @empty
+            <p class="db-empty">No resources yet.</p>
+          @endforelse
+        </section>
+      </div>
+    </main>
+
+    {{-- Every announcement, opened from View all --}}
+    <div class="ann-modal-overlay" id="annListModal" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="ann-modal-box">
+        <button class="ann-modal-close" onclick="document.getElementById('annListModal').classList.remove('open')">&times;</button>
+        <div class="ann-modal-title">Announcements</div>
+        <div class="ann-list">
+          @foreach ($announcements as $announcement)
+            @php $adminAvatar = $announcement->admin?->avatarUrl() ?? asset('images/default-avatar.jpg'); @endphp
+            <div class="ann-item" onclick="openAnnModal(this)" {!! $annAttrs($announcement) !!}>
+              <div class="ann-content">
+                <div class="ann-header">
+                  <div class="ann-title">{{ $announcement->title }}</div>
+                </div>
+                @if ($announcement->milestone)
+                  <div style="display:flex;align-items:center;gap:6px;margin:4px 0 6px;font-size:12px;flex-wrap:wrap">
+                    <span class="ann-tag" style="background:rgba(139,92,246,0.15);color:#7c3aed">Milestone</span>
+                    @if ($announcement->milestone->due_date)
+                      <span style="color:var(--amber);font-weight:500">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:text-bottom;margin-right:2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Due {{ $announcement->milestone->due_date->format('M j, Y') }}
+                      </span>
+                    @endif
+                  </div>
+                @endif
+                <div class="ann-body">{{ $announcement->body }}</div>
+                <div class="ann-footer">
+                  <div class="ann-sender">
+                    @if ($announcement->admin)
+                      <img class="ann-avatar" src="{{ $adminAvatar }}" alt="{{ $announcement->admin->name }}">
+                      <span class="ann-name">{{ $announcement->admin->name }}</span>
+                    @endif
+                  </div>
+                  <div class="ann-date">{{ $announcement->created_at->format('M j, Y · g:i A') }}</div>
+                </div>
+                @if ($announcement->target_audience || $announcement->team)
+                  <div class="ann-tags">
+                    @foreach ((array) $announcement->target_audience as $ta)
+                      @if (str_starts_with($ta, 'section:'))
+                        <span class="ann-tag section">{{ substr($ta, 8) }}</span>
+                      @endif
+                    @endforeach
+                    @if ($announcement->team)
+                      <span class="ann-tag team">@ {{ $announcement->team->team_name }}</span>
+                    @endif
+                  </div>
+                @endif
+              </div>
+            </div>
+          @endforeach
+        </div>
+      </div>
+    </div>
 
     {{-- Announcement Modal --}}
     <div class="ann-modal-overlay" id="annModal" onclick="if(event.target===this)closeAnnModal()">
@@ -338,105 +510,6 @@
           <div class="ann-modal-date" id="annModalDate"></div>
         </div>
       </div>
-    </div>
-
-    <div style="height:16px"></div>
-    <div class="dash-grid-v3">
-      <x-dashboard.info-card title="Your team's adviser, consultant and grammarian" :empty="!$myTeam || $myTeam->expertAssignments->isEmpty()" emptyMessage="No adviser, consultant or grammarian yet." emptyIcon="expert">
-        @if ($myTeam && $myTeam->expertAssignments->isNotEmpty())
-          @foreach ($myTeam->expertAssignments as $assignment)
-            @php
-              // role() is belongsToMany — always a collection, never a single model
-              $roleKey = strtolower($assignment->engaged_role_name ?? '');
-              $dotColor = match ($roleKey) { 'adviser' => 'var(--accent)', 'consultant' => '#3b82f6', 'grammarian' => '#9333ea', 'panel' => '#f59e0b', default => '#6b7280' };
-              $fgColor = match ($roleKey) { 'adviser' => 'var(--accent3)', 'consultant' => 'var(--blue)', 'grammarian' => 'var(--purple)', 'panel' => '#d97706', default => '#6b7280' };
-              $isApproved = $assignment->status === 'approved';
-            @endphp
-            <div class="history-item">
-              <div style="width:8px;height:8px;border-radius:50%;background:{{ $dotColor }};flex-shrink:0;"></div>
-              <div style="flex:1;min-width:0;">
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <span style="font-size:11px;font-weight:700;color:{{ $fgColor }};text-transform:uppercase;letter-spacing:0.3px;">{{ $assignment->engaged_role_name ?? 'Unknown' }}</span>
-                  <span style="font-size:9px;padding:1px 6px;border-radius:4px;background:{{ $isApproved ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)' }};color:{{ $isApproved ? '#059669' : '#d97706' }};font-weight:700;">{{ $isApproved ? 'Approved' : ucfirst($assignment->status) }}</span>
-                </div>
-                <div style="font-size:12px;font-weight:600;margin-top:1px;">{{ $assignment->expert?->name ?? 'Unassigned' }}</div>
-              </div>
-            </div>
-          @endforeach
-        @endif
-      </x-dashboard.info-card>
-
-      <x-dashboard.info-card title="Team ({{ $myTeam ? $myTeam->team_name : 'No Team' }})" :empty="$teamMembers->isEmpty()" emptyMessage="Join a team to see members here." emptyIcon="team">
-        @foreach ($teamMembers as $member)
-          @php $isLeader = isset($leaderStudentId) && $member->student_id === $leaderStudentId; @endphp
-          <div class="history-item">
-            <div class="member-dot" style="background:{{ $isLeader ? '#fbbf24' : ($member->student_id === auth()->id() ? 'var(--accent)' : 'var(--text3)') }}"></div>
-            <div>
-              <div style="font-size:12px;font-weight:600;">
-                {{ $member->f_name }} {{ $member->l_name }}
-                @if ($isLeader) <span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;margin-left:4px;">Leader</span> @endif
-                @if ($member->student_id === auth()->id()) <span style="color:var(--accent);font-size:10px;font-weight:normal;">(You)</span> @endif
-              </div>
-              <div style="font-size:10px;color:var(--text3);">{{ $member->student_number }} · {{ $member->course }}</div>
-            </div>
-          </div>
-        @endforeach
-      </x-dashboard.info-card>
-    </div>
-
-    <div style="margin-top:16px;margin-bottom:16px">
-    <x-dashboard.info-card
-      title="Defense Results"
-      :empty="$defenseResults->isEmpty()"
-      emptyMessage="No defense stages scheduled yet." emptyIcon="defense"
-    >
-      <div class="milestone-list">
-        @foreach ($defenseResults as $result)
-          @php
-            $allSubmitted = $result->submitted_count > 0 && $result->submitted_count >= $result->assigned_count;
-            $partialSubmitted = $result->submitted_count > 0 && ! $allSubmitted;
-          @endphp
-          <div class="m-item">
-            <div class="m-icon @if($allSubmitted) m-icon-done @elseif($partialSubmitted) m-icon-active @else m-icon-todo @endif">
-              @if ($allSubmitted)
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              @elseif ($partialSubmitted)
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              @else
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
-              @endif
-            </div>
-            <div class="m-body">
-              <div class="m-top">
-                <span class="m-title">{{ $result->defense_type }}@if(($result->attempt ?? 1) > 1) <span style="font-weight:500;color:var(--text3)">&middot; Redefense</span>@endif</span>
-                <span class="m-badge @if($allSubmitted) m-badge-done @elseif($partialSubmitted) m-badge-active @else m-badge-todo @endif">
-                  {{-- The score only appears once every panelist has graded:
-                       it is their totals divided by the size of the panel, so
-                       a partial one would read as final and then move. --}}
-                  @if($result->average_score !== null)
-                    {{ rtrim(rtrim(number_format($result->average_score, 2), '0'), '.') }} pts
-                  @elseif($partialSubmitted)
-                    Awaiting the rest of the panel
-                  @else
-                    Not graded yet
-                  @endif
-                </span>
-              </div>
-              <div style="font-size:11px;color:var(--text3);margin-top:2px">
-                {{ $result->submitted_count }} of {{ $result->assigned_count }} panelist{{ $result->assigned_count === 1 ? '' : 's' }} graded
-                @if($result->schedule_date)
-                  · {{ $result->schedule_date->format('M j, Y') }}
-                  @if($result->schedule_date->format('H:i') !== '00:00')
-                    {{ $result->schedule_date->format('g:i A') }}–{{ ($result->end_date ?? $result->schedule_date->copy()->addHours(2))->format('g:i A') }}
-                  @endif
-                @endif
-              </div>
-            </div>
-          </div>
-        @endforeach
-      </div>
-    </x-dashboard.info-card>
-
     </div>
 
     <div class="legal-credits">

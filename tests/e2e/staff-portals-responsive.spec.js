@@ -159,20 +159,19 @@ for (const [at, rowSel] of [['docreview', 'tr.dr-row'], ['grading', '.gl tbody t
   }
 }
 
-// The dashboard tiles: an expert's are counts only; a CaPSA's open the page
-// they name. Their addresses were written with the quotes inside them, and
-// every tile opened ".../%22http://...%22", a page that is not there.
-test('the expert dashboard tiles are counts, and a CaPSA tile opens its page', async ({ browser }) => {
+// The dashboard tiles open the page they name. Their addresses were once
+// written with the quotes inside them, and every tile opened
+// ".../%22http://...%22", a page that is not there.
+test('a dashboard tile opens its page', async ({ browser }) => {
   const { context, page } = await phone(browser, 1440, 900);
   await signIn(page, 'adviser');
   await page.waitForTimeout(600);
-  expect(await page.locator('.content a.stat-chip').count()).toBe(0);
-  expect(await page.locator('.content div.stat-chip').count()).toBeGreaterThanOrEqual(3);
+  expect(await page.locator('.db-expert a.db-tile').count()).toBe(4);
 
   await signIn(page, 'capsa');
   await page.waitForTimeout(600);
   await noTour(page);
-  const tile = page.locator('a.stat-chip').first();
+  const tile = page.locator('a.db-tile').first();
   const href = await tile.getAttribute('href');
   expect(href).not.toContain('"');
   const [response] = await Promise.all([page.waitForNavigation(), tile.click()]);

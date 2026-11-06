@@ -44,9 +44,13 @@ class DashboardsShowWhatIsWaitingTest extends TestCase
         $this->actingAs($capsa, 'expert')
             ->get(route('capsa.dashboard'))
             ->assertOk()
-            ->assertSee('Teams to Verify')
+            ->assertSee('Unverified Teams')
             ->assertDontSee('Capstones Submitted per Year')
-            ->assertViewHas('capsa', fn ($c) => $c['toVerify'] === 1 && $c['titles'] === 1 && $c['teamCount'] === 1)
+            ->assertViewHas('capsa', function ($c) {
+                $issues = collect($c['issues'])->keyBy('label');
+
+                return $issues['Unverified Teams']['count'] === 1 && $issues['Titles Awaiting Review']['count'] === 1;
+            })
             ->assertViewHas('admin', null);
     }
 
@@ -60,9 +64,18 @@ class DashboardsShowWhatIsWaitingTest extends TestCase
         $this->actingAs($admin, 'expert')
             ->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Sections Without a CaPSA')
-            ->assertSee('BSIT-3B')
+            ->assertSeeInOrder(['Needs Attention', '1 Section', 'with no CaPSA'])
             ->assertViewHas('admin', fn ($a) => $a['uncovered'] === ['BSIT-3B'] && $a['capsas'] === 1)
             ->assertViewHas('capsa', null);
+    }
+
+    public function test_someone_who_is_both_sees_both_dashboards(): void
+    {
+        SectionCatalog::store(['BSIT-3A']);
+        $both = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true, 'sections' => ['BSIT-3A']]);
+        $both->roles()->syncWithoutDetaching(Role::firstOrCreate(['role_name' => CapstoneExpert::CAPSA_ROLE])->role_id);
+
+        $this->actingAs($both->fresh(), 'expert')->get(route('admin.dashboard'))->assertOk()
+            ->assertSeeInOrder(['Team &amp; Expert Coverage', 'Students Overview'], false);
     }
 }

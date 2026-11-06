@@ -41,15 +41,14 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         return $capsa->fresh();
     }
 
-    public function test_the_expert_dashboard_tiles_are_counts_not_links(): void
+    public function test_the_expert_dashboard_tiles_open_the_page_behind_them(): void
     {
         $html = $this->actingAs($this->adviser(), 'expert')->get(route('instructor.dashboard'))->assertOk()->getContent();
 
-        // Four summary tiles, then the three that are waiting on the expert. All counts.
-        $this->assertSame(7, preg_match_all('#<div\s+class="stat-chip has-icon">#', $html));
-        $this->assertDoesNotMatchRegularExpression('#<a\s[^>]*class="stat-chip#', $html);
-        foreach (['Teams You Advise', 'Documents Reviewed', 'Consultations Held', 'Defenses Graded', 'Team Requests', 'Documents to Review', 'Grades to Submit'] as $label) {
-            $this->assertStringContainsString('<div class="stat-l">'.$label.'</div>', $html);
+        // Four tiles, each opening the page behind it.
+        $this->assertSame(4, preg_match_all('#<a\s+class="db-tile #', $html));
+        foreach (['Assigned Teams', 'Pending Reviews', 'Defenses Graded', 'Upcoming Consultations'] as $label) {
+            $this->assertStringContainsString('<span class="lab">'.$label.'</span>', $html);
         }
     }
 
@@ -62,8 +61,8 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $html = $this->actingAs($this->capsa(), 'expert')->get(route('capsa.dashboard'))->assertOk()->getContent();
 
         $this->assertStringNotContainsString('href=&quot;', $html);
-        $this->assertMatchesRegularExpression('#<a\s+href="'.preg_quote(route('capsa.team_management'), '#').'"\s+class="stat-chip#', $html);
-        $this->assertMatchesRegularExpression('#<a\s+href="'.preg_quote(route('capsa.financial'), '#').'"\s+class="stat-chip#', $html);
+        $this->assertStringContainsString('class="db-tile tile-gold" href="'.route('capsa.team_management', ['tab' => 'teams']).'"', $html);
+        $this->assertStringContainsString('class="db-tile tile-slate" href="'.route('capsa.sections').'"', $html);
     }
 
     public function test_the_section_field_upper_cases_as_it_is_typed(): void
