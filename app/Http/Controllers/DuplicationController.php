@@ -63,7 +63,7 @@ class DuplicationController extends Controller
             $concepts = $this->service->extractKeyConcepts($pdfText);
 
             // 4. Find top 10 semantically similar archived capstones
-            $matches = $this->service->findSimilarDocuments($concepts, 10);
+            $matches = $this->service->findSimilarDocuments($concepts, 10, null, $pdfText);
 
             // 5. Suggest instructors based on semantic expertise match
             $instructors = $this->service->suggestInstructors($concepts);

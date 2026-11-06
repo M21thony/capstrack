@@ -77,6 +77,13 @@ class ScoreWorkedOutTest extends TestCase
         return $this->actingAs($leader)->get(route('student.duplication.similar', [$check->id, 1]))->assertOk();
     }
 
+    public function test_the_page_says_when_the_exact_words_set_the_score(): void
+    {
+        $this->page(['score' => 100, 'embedding_score' => 99, 'judge_score' => 85, 'exact_score' => 100, 'assessed' => true, 'is_relevant' => true])
+            ->assertSee('Exact words')
+            ->assertSee('The exact words are used');
+    }
+
     public function test_the_meaning_match_is_kept_beside_the_judges_score(): void
     {
         $judged = $this->judgedWhenJudgeSays(['matches' => true, 'score' => 71]);

@@ -9,12 +9,21 @@ use App\Models\Role;
 use App\Models\StudentSchoolYear;
 use App\Models\Term;
 use App\Support\ResearchAgenda;
+use App\Support\RevisionCheck;
 use App\Support\SectionScope;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Smalot\PdfParser\Parser;
 
 class SimilarityService
 {
+    /**
+     * Below this, shared words may only be the pre-proposal form's own
+     * headings: two unrelated scans shared up to 30% that way, and two copies
+     * of one document 100%.
+     */
+    public const EXACT_WORDS_MIN = 50;
+
     public function __construct(private OllamaSSHClient $ollama) {}
 
     // ── 1. Extract raw text from uploaded PDF ─────────────────────────
@@ -589,8 +598,9 @@ PROMPT;
     // ── 3. TRUE RAG: embed query → cosine similarity → top N ──────────
     /**
      * @param  int|null  $excludeTeamId  The checking team, so its own recommended title is not a match.
+     * @param  string  $pdfText  The upload's text, for the exact-words check.
      */
-    public function findSimilarDocuments(array $concepts, int $topN = 10, ?int $excludeTeamId = null): array
+    public function findSimilarDocuments(array $concepts, int $topN = 10, ?int $excludeTeamId = null, string $pdfText = ''): array
     {
         // Build a rich text representation — strip stop words before embedding
         $rawQueryText = implode("\n", array_filter([
@@ -690,7 +700,7 @@ PROMPT;
         usort($topCandidates, fn ($a, $b) => $b['score'] <=> $a['score']);
 
         // ── Phase 4: Enrich top matches with AI-generated reasons ─────
-        $enriched = $this->enrichWithReasons($concepts, $topCandidates);
+        $enriched = $this->addExactWords($this->enrichWithReasons($concepts, $topCandidates), $pdfText);
 
         // Not stored with the match (see recommendedThisYear()).
         foreach ($enriched as $item) {
@@ -700,6 +710,54 @@ PROMPT;
         }
 
         return $enriched;
+    }
+
+    /**
+     * Meaning is only half of a duplicate: the judge has no notion of an
+     * identical file, and gave 85 to a PDF scanned against itself. So the
+     * words are counted as well, and the higher of the two is the score.
+     *
+     * A recommended title is compared by the PDF saved with it, since its
+     * form fields are often edited after the scan. An archive study has only
+     * its abstract.
+     *
+     * ponytail: archive rows keep no PDF, so copying from the body of an old
+     * manuscript goes uncaught; compare the file once the archive holds them.
+     */
+    private function addExactWords(array $matches, string $pdfText): array
+    {
+        foreach ($matches as &$match) {
+            $path = $match['pre_proposal_id']
+                ? CapstonePreProposal::find($match['pre_proposal_id'])?->duplicationCheck?->document_path
+                : null;
+            $theirs = $path && Storage::exists($path)
+                ? implode(' ', RevisionCheck::pagesOf((string) Storage::get($path)))
+                : (string) $match['document']->abstract;
+
+            $shared = RevisionCheck::shared($pdfText, $theirs);
+            $exact = $shared === null ? null : (int) floor($shared * 100);
+            $match['exact_score'] = $exact;
+
+            if ($exact === null || $exact < self::EXACT_WORDS_MIN) {
+                continue;
+            }
+
+            if (! $match['assessed'] || $exact > $match['score']) {
+                $match['score'] = $exact;
+                $match['assessed'] = true;
+            }
+
+            // The judge wrote this without knowing, and it still lists differences.
+            if ($exact === 100) {
+                $match['reason'] = 'Word for word the same text as yours.';
+                $match['differences'] = '';
+            }
+        }
+        unset($match);
+
+        usort($matches, fn ($a, $b) => $b['score'] <=> $a['score']);
+
+        return $matches;
     }
 
     /**

@@ -47,7 +47,10 @@
   // (SimilarityService::enrichWithReasons). Checks run before they were saved have neither.
   $emb = $match['embedding_score'] ?? null;
   $judge = $match['judge_score'] ?? null;
-  $read = $match['assessed'] ?? true;
+  $exact = $match['exact_score'] ?? null;
+  $exactUsed = $exact !== null && $exact >= SimilarityService::EXACT_WORDS_MIN && $exact === $score;
+  // An exact copy is scored even when the judge's call failed.
+  $read = ($match['assessed'] ?? true) && ! ($exactUsed && $judge === null);
   $same = $match['is_relevant'] ?? true;
   $contra = $read && ! $same && $judge !== null && $judge >= 55;
   $cut = $read && ($contra || ($judge === null && ! $same));
@@ -143,9 +146,26 @@
     <li>
       <span class="no">3</span>
       <div>
+        <b>Exact words</b>
+        <p>
+          @if ($exact === null)
+            Not compared. This check was run before it was added, or {{ $recommended ? 'their PDF' : 'the abstract' }} is too short.
+          @else
+            Your PDF and {{ $recommended ? 'their PDF' : 'the abstract' }} are compared three words at a time.
+          @endif
+          Under {{ SimilarityService::EXACT_WORDS_MIN }}% can be the form's own headings, so it is not used.
+        </p>
+      </div>
+      <span class="val">{{ $exact !== null ? $exact.'%' : '—' }}</span>
+    </li>
+    <li>
+      <span class="no">4</span>
+      <div>
         <b>Score shown</b>
         <p>
-          @if (! $read)
+          @if ($exactUsed)
+            The exact words are used, since they are the highest number.
+          @elseif (! $read)
             No score is shown for a title the judge did not read.
           @elseif ($cut)
             {{ $contra ? 'The judge said "not the same" but gave 55% or more, which contradicts itself.' : 'The judge said "not the same" and gave no number.' }}

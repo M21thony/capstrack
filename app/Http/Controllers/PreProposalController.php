@@ -248,7 +248,7 @@ class PreProposalController extends Controller
 
             $concepts = $this->service->extractKeyConcepts($pdfText);
             $matches = $this->service->findSimilarDocuments(
-                $concepts, 10, StudentSchoolYear::where('student_id', $request->user()->student_id)->value('team_id')
+                $concepts, 10, StudentSchoolYear::where('student_id', $request->user()->student_id)->value('team_id'), $pdfText
             );
             $instructors = $this->service->suggestInstructors($concepts);
 
@@ -274,9 +274,10 @@ class PreProposalController extends Controller
                 'recommended' => $m['recommended'] ?? null,
                 'pre_proposal_id' => $m['pre_proposal_id'] ?? null,
                 'score' => $m['score'],
-                // The two numbers the score is worked out from, for the match page.
+                // The numbers the score is worked out from, for the match page.
                 'embedding_score' => $m['embedding_score'] ?? null,
                 'judge_score' => $m['judge_score'] ?? null,
+                'exact_score' => $m['exact_score'] ?? null,
                 'reason' => $m['reason'],
                 'similarities' => $m['similarities'] ?? '',
                 'differences' => $m['differences'] ?? '',

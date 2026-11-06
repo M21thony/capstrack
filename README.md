@@ -234,6 +234,7 @@ There is no "rejected". A team that does not make it is one that runs out of its
 - **The AI does not approve or reject a title. The CaPSA decides.** The checker only informs that decision.
 - When Qwen judged a match, its own score is shown. Otherwise the embedding score is shown.
 - The embedding score is the cosine similarity converted to a percentage: `((cosine + 1) / 2) × 100`.
+- **Exact words are counted as well as meaning.** The upload is compared three words at a time with the PDF saved for a recommended or pending title, or with an archive study's abstract. At 50% or more, the exact-words number replaces the score if it is higher, so an identical PDF shows 100%. Below 50% it can be only the form's own headings, so it is shown but not used.
 
 ### Safeguards around the AI
 
