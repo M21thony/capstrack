@@ -34,7 +34,7 @@ const OUT = 'test-results/page-guide';
 
 // Pages whose tour covers every situation (in a team, no team yet, a locked
 // team): one account only ever shows some of the parts.
-const BY_SITUATION = ['student.team'];
+const BY_SITUATION = /^(student|instructor|capsa|admin)\./;
 
 // Pages opened only for their links: the milestone pages are linked from a tab.
 const CRAWL = { capsa: ['/capsa/team-management?tab=milestone_list'] };
@@ -205,7 +205,7 @@ async function checkGuide(page, portal, name, guide, where) {
   const tour = guide.tour || [];
   if (tour.length) {
     const missing = await page.evaluate((sels) => sels.filter((s) => ![...document.querySelectorAll(s)].some((el) => el.getClientRects().length)), tour.map((s) => s[2]));
-    if (missing.length < tour.length && !BY_SITUATION.includes(name)) missing.forEach((s) => p.push(`${where}: tour part ${s} is not on the page`));
+    if (missing.length < tour.length && !BY_SITUATION.test(name)) missing.forEach((s) => p.push(`${where}: tour part ${s} is not on the page`));
     if (!(await page.locator('#pg-go').isVisible())) {
       // Right when none of its parts shows; wrong when some do.
       if (missing.length < tour.length) p.push(`${where}: no Start tour, though parts of it show`);

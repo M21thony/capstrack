@@ -234,12 +234,14 @@
     else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
   });
 
-  // The open tab ('' for the page itself), and its tour.
+  // The open tab ('' for the page itself), and its tour. A tab that is a page
+  // of its own has no marked button: its address names it.
   function partNow() {
+    var named = new URLSearchParams(location.search).get('tab');
     return Object.keys(tabs).filter(function (name) {
       var b = document.querySelector(tabs[name].button);
       return b && b.getAttribute('aria-selected') === 'true';
-    })[0] || '';
+    })[0] || (tabs[named] ? named : '');
   }
   function keyOf(part) { return data.route + (part ? ':' + part : ''); }
   function markSeen(key) {
@@ -269,21 +271,53 @@
     if (!list.length || data.seen.indexOf(keyOf(part)) !== -1 || busy()) return true;
     return runTour(part);
   }
+  // Some parts load after the page does: tried until they are there.
+  function keepTrying(fn) {
+    var tries = 0;
+    (function attempt() {
+      if (!fn() && ++tries < 10) setTimeout(attempt, 300);
+    })();
+  }
+  // A tab that is a real link: the tour left the last page to go on here.
+  function comingFromTour() {
+    try {
+      var part = sessionStorage.getItem('pg-go-on');
+      sessionStorage.removeItem('pg-go-on');
+      return tabs[part] ? part : '';
+    } catch (e) { return ''; }
+  }
   if (typeof window.afterPortalTour === 'function') {
-    var start = function () { window.afterPortalTour(function () { setTimeout(function () { firstVisit(partNow()); }, 400); }); };
+    var start = function () {
+      window.afterPortalTour(function () {
+        setTimeout(function () {
+          var goOn = comingFromTour();
+          keepTrying(function () { return goOn ? runTour(goOn) : firstVisit(partNow()); });
+        }, 400);
+      });
+    };
     document.readyState === 'complete' ? start() : window.addEventListener('load', start, { once: true });
   }
   // A tab clicked, through the tour's outline or by hand: a running tour
   // goes on with that tab's steps; otherwise its first visit opens them.
+  // Read before the page reacts: a tab drawn again by its own click is gone from
+  // the page by the time the click gets back up here.
+  var clickedPart;
   document.addEventListener('click', function (e) {
-    var part = e.target.closest && Object.keys(tabs).filter(function (name) { return e.target.closest(tabs[name].button); })[0];
+    clickedPart = e.target.closest && Object.keys(tabs).filter(function (name) { return e.target.closest(tabs[name].button); })[0];
+  }, true);
+  document.addEventListener('click', function (e) {
+    var part = clickedPart;
     if (!part) return;
-    // A tab's first open loads its content: tried until its parts are there.
-    var tries = 0;
-    (function attempt() {
-      var ok = document.body.classList.contains('tour-open') ? runTour(part) : firstVisit(part);
-      if (!ok && ++tries < 10) setTimeout(attempt, 300);
-    })();
+    var touring = document.body.classList.contains('tour-open');
+    // A link nothing stopped is leaving this page: the next one takes over.
+    if (e.target.closest('a[href]') && !e.defaultPrevented) {
+      if (touring) {
+        markSeen(keyOf(partNow()));
+        try { sessionStorage.setItem('pg-go-on', part); } catch (err) {}
+      }
+      return;
+    }
+    keepTrying(function () { return touring ? runTour(part) : firstVisit(part); });
   });
   scrim.addEventListener('click', function () { close(); });
   document.getElementById('pg-x').addEventListener('click', function () { close(); });

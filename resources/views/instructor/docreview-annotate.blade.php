@@ -14,6 +14,7 @@
 @include('partials.escape-closes-modals')
 @include('partials.app-scrollbar')
 @include('partials.action-toast')
+@include('partials.portal-tour', ['tourPageOnly' => true, 'tourKey' => 'expert', 'tourAutoOpen' => false, 'tourSaveUrl' => route('instructor.tour.update')])
 @include('partials.page-guide', ['pgOwnButton' => false])
 </body>
 </html>

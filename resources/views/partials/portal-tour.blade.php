@@ -18,7 +18,8 @@
     $tourNextUrl = $tourNextUrl ?? null;
 @endphp
 
-@if ($tourSteps->isNotEmpty())
+{{-- $tourPageOnly: a page without a sidebar gets only the engine, for its page tour. --}}
+@if ($tourSteps->isNotEmpty() || ($tourPageOnly ?? false))
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/portal-tour.css') }}">
 @if ($tourAutoOpen)
   {{-- The site's own fonts (Poppins for the headings among them); the page
