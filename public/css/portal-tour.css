@@ -304,3 +304,9 @@ body.tour-open{
   .gt-spot,
   .gt-note{ transition:none; }
 }
+
+/* A tab in a page tour: its outline can be clicked, which opens it. */
+.gt.gt-can-click .gt-spot{
+  pointer-events:auto;
+  cursor:pointer;
+}

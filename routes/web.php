@@ -572,6 +572,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::redirect('/profile', '/student/personal-info/edit')->name('student.profile');
             // Finished or skipped the welcome tour; either way, done with it.
             Route::put('/tour', [PortalTourController::class, 'update'])->name('student.tour.update');
+            Route::put('/tour/page', [PortalTourController::class, 'page'])->name('student.tour.page');
         });
     });
 
@@ -609,6 +610,9 @@ Route::get('table-report/{token}', [ReportController::class, 'snapshot'])
 Route::put('instructor/tour', [App\Http\Controllers\Instructor\PortalTourController::class, 'update'])
     ->middleware(['expert.auth'])
     ->name('instructor.tour.update');
+Route::put('instructor/tour/page', [App\Http\Controllers\Instructor\PortalTourController::class, 'page'])
+    ->middleware(['expert.auth'])
+    ->name('instructor.tour.page');
 
 Route::prefix('instructor/notifications')
     ->middleware(['expert.auth', 'no.cache'])

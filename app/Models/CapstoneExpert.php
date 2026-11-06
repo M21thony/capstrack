@@ -119,6 +119,7 @@ class CapstoneExpert extends Authenticatable
         'last_seen_at' => 'datetime',
         'first_login_at' => 'datetime',
         'tour_completed_at' => 'datetime',
+        'page_tours_seen' => 'array',
     ];
 
     /** Whether the portal tour still opens by itself: not yet finished or skipped. */

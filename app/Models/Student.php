@@ -48,6 +48,7 @@ class Student extends Authenticatable
         return [
             'last_seen_at' => 'datetime',
             'tutorial_completed_at' => 'datetime',
+            'page_tours_seen' => 'array',
             'is_returnee' => 'boolean',
         ];
     }

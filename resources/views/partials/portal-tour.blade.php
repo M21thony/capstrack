@@ -99,6 +99,7 @@
 
   var current = 0;
   var direction = 1;
+  var onPageDone = null;
   var saved = false;
   var openedSidebar = false;
   var returnFocus = null;
@@ -115,7 +116,8 @@
         if (el.getClientRects().length) found.push(el);
       });
     });
-    return found;
+    // One button of a list (each row's Remove): only the first is outlined.
+    return step.one ? found.slice(0, 1) : found;
   }
 
   function inSidebar(els) {
@@ -265,6 +267,10 @@
     countLabel.textContent = '• ' + step.label;
     footCount.textContent = number + ' / ' + pointed;
 
+    // A tab in the tour can be clicked through its outline: the tab opens
+    // and the tour goes on with that tab's own steps.
+    tour.classList.toggle('gt-can-click', !!step.click && els.length > 0);
+
     backBtn.hidden = current === 0;
     skipBtn.hidden = current === last;
     nextBtn.textContent = current === last ? 'Finish' : current === 0 && !step.target.length ? 'Start the tour' : 'Next';
@@ -348,6 +354,7 @@
     setSidebar(false);
     if (returnFocus && returnFocus.focus) returnFocus.focus({ preventScroll: true });
     if (pageTour) useSteps(portalSteps, false);
+    pageDone();
     release();
   }
 
@@ -387,6 +394,13 @@
     else fn();
   };
 
+  // A page tour's "seen": called once, when it closes or gives way to a tab's.
+  function pageDone() {
+    var fn = onPageDone;
+    onPageDone = null;
+    if (fn) run(fn);
+  }
+
   function next() { direction = 1; current === last ? close() : show(current + 1); }
   function back() { direction = -1; show(current - 1); }
 
@@ -395,6 +409,10 @@
   backBtn.addEventListener('click', back);
   skipBtn.addEventListener('click', close);
   finishLink.addEventListener('click', save);
+  spot.addEventListener('click', function () {
+    var els = targetsOf(steps[current]);
+    if (steps[current].click && els.length) els[0].click();
+  });
   // Tapping the dimmed screen moves on, as a walkthrough usually does. Not
   // on the welcome or the send-off, where a stray tap would skip the one
   // thing on screen.
@@ -434,18 +452,32 @@
   });
 
   // With no steps, the portal's own tour; with a page's steps (the Page
-  // Guide's Start tour), those, leaving out any part this page is not
-  // showing right now.
-  window.openPortalTour = function (pageSteps) {
-    if (!tour.hidden) return;
+  // Guide), those, leaving out any part this page is not showing right now.
+  // onDone runs when that page tour closes. A page tour already running
+  // gives way to the new one (a tab clicked through its outline).
+  // Says whether it opened.
+  window.openPortalTour = function (pageSteps, onDone) {
+    var swap = !tour.hidden && pageTour && Array.isArray(pageSteps);
+    if (!tour.hidden && !swap) return false;
+    var here = null;
+    if (Array.isArray(pageSteps)) {
+      here = pageSteps.filter(function (s) { return targetsOf(s).length || (isNarrow() && inSidebarSelector(s)); });
+      if (!here.length) return false;
+    }
+    if (swap) {
+      pageDone();
+      useSteps(here, true);
+      onPageDone = onDone || null;
+      direction = 1;
+      show(0);
+      return true;
+    }
     if (typeof closeSidebar === 'function') closeSidebar();
     openedSidebar = false;
-    if (Array.isArray(pageSteps)) {
-      var here = pageSteps.filter(function (s) { return targetsOf(s).length || (isNarrow() && inSidebarSelector(s)); });
-      if (!here.length) return;
-      useSteps(here, true);
-    }
+    if (here) useSteps(here, true);
+    onPageDone = here ? onDone || null : null;
     open();
+    return true;
   };
 
   // The staff welcome ("Welcome to CapsTRACK!") is said first, and the tour

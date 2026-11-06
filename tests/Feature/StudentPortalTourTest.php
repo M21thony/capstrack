@@ -189,4 +189,21 @@ class StudentPortalTourTest extends TestCase
             $this->assertNotEmpty($step['target'], "Tour step '{$step['key']}' points at nothing.");
         }
     }
+
+    public function test_a_page_or_tab_tour_is_remembered_once_on_that_account_only(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create();
+        $other = Student::factory()->withCompleteProfile()->create();
+
+        foreach (['student.team', 'student.team', 'student.team:financial'] as $key) {
+            $this->actingAs($student, 'web')->putJson(route('student.tour.page'), ['key' => $key])
+                ->assertOk();
+        }
+
+        $this->assertSame(['student.team', 'student.team:financial'], $student->fresh()->page_tours_seen);
+        $this->assertEmpty($other->fresh()->page_tours_seen);
+
+        $this->actingAs($student, 'web')->putJson(route('student.tour.page'), ['key' => 'Not A Key!'])
+            ->assertUnprocessable();
+    }
 }

@@ -66,3 +66,11 @@
 body.pg-own-colours{--bg2:#fff;--bg3:#f7f8fa;--border:#e0e2e8;--border2:#c8cad4;--text:#1e2128;--text2:#4a5060;--text3:#656b7a;
   --navy-dark:#18191f;--accent:#c9a82c;--accent2:#b5941f;--accent-light:#faf7ed}
 body.pg-own-colours .pg{font-family:"DM Sans","DM Sans Fallback",system-ui,sans-serif}
+
+/* The ? menu: start the tour, or open the guide. */
+.pg-menu{position:fixed;z-index:2902;min-width:200px;padding:6px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.16);display:flex;flex-direction:column}
+.pg-menu[hidden]{display:none}
+.pg-menu button{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border:0;border-radius:8px;background:none;color:var(--text);font:500 14.5px Poppins,sans-serif;text-align:left;cursor:pointer}
+.pg-menu button:hover,.pg-menu button:focus-visible{background:var(--bg3);outline:0}
+.pg-menu svg{width:15px;height:15px;fill:var(--accent2)}
+.pg-menu .pg-q{width:15px;font-size:16px;text-align:center;color:var(--accent2)}

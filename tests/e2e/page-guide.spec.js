@@ -32,6 +32,10 @@ const SIGN_IN = {
 const SIZES = { desktop: { width: 1440, height: 900 }, phone: { width: 390, height: 844 } };
 const OUT = 'test-results/page-guide';
 
+// Pages whose tour covers every situation (in a team, no team yet, a locked
+// team): one account only ever shows some of the parts.
+const BY_SITUATION = ['student.team'];
+
 // Pages opened only for their links: the milestone pages are linked from a tab.
 const CRAWL = { capsa: ['/capsa/team-management?tab=milestone_list'] };
 
@@ -50,7 +54,7 @@ for (const portal of Object.keys(SIGN_IN)) {
 
   for (const [size, viewport] of Object.entries(SIZES)) {
     test(`${portal} pages, ${size}`, async ({ browser }) => {
-      test.setTimeout(names.length * 45_000);
+      test.setTimeout(names.length * 90_000);
       const context = await browser.newContext({ viewport, isMobile: size === 'phone', hasTouch: size === 'phone' });
       await context.route('**/*', (route) => (route.request().method() === 'GET' ? route.continue() : route.abort()));
       const page = await context.newPage();
@@ -76,7 +80,8 @@ for (const portal of Object.keys(SIGN_IN)) {
           await test.step(`${name} as ${login}`, async () => {
             errors.length = 0;
             await page.goto(url, { waitUntil: 'load' });
-            await page.waitForTimeout(400);
+            // The first-visit tour opens 400ms after load.
+            await page.waitForTimeout(1200);
             const where = `${name} (${size})`;
             const landed = new URL(page.url()).pathname;
             if (!pattern(ROUTES[name]).test(landed)) {
@@ -142,8 +147,12 @@ async function checkGuide(page, portal, name, guide, where) {
   const btn = page.locator('#pg-btn');
   if (!(await btn.isVisible())) return [`${where}: no ? button`];
 
-  // The panel: this page's own guide.
+  // The ? menu, then the panel: this page's own guide.
   await btn.click();
+  await expect(page.locator('#pg-menu')).toBeVisible();
+  if (await page.locator('#pg-menu-tour').isVisible() !== (guide.tour || []).length > 0) p.push(`${where}: Start page tour shows ${(guide.tour || []).length ? 'not ' : ''}though the page has ${(guide.tour || []).length ? 'a' : 'no'} tour`);
+  await shot('menu');
+  await page.click('#pg-menu-guide');
   const panel = page.locator('#pg');
   await expect(panel).toBeVisible();
   const title = (await page.textContent('#pg-title')).trim();
@@ -188,6 +197,7 @@ async function checkGuide(page, portal, name, guide, where) {
     if (await page.locator('dialog[open]').count()) {
       await page.keyboard.press('Escape');
       await btn.click();
+      await page.click('#pg-menu-guide');
     } else p.push(`${where}: ? key did not open it`);
   }
 
@@ -195,7 +205,7 @@ async function checkGuide(page, portal, name, guide, where) {
   const tour = guide.tour || [];
   if (tour.length) {
     const missing = await page.evaluate((sels) => sels.filter((s) => ![...document.querySelectorAll(s)].some((el) => el.getClientRects().length)), tour.map((s) => s[2]));
-    if (missing.length < tour.length) missing.forEach((s) => p.push(`${where}: tour part ${s} is not on the page`));
+    if (missing.length < tour.length && !BY_SITUATION.includes(name)) missing.forEach((s) => p.push(`${where}: tour part ${s} is not on the page`));
     if (!(await page.locator('#pg-go').isVisible())) {
       // Right when none of its parts shows; wrong when some do.
       if (missing.length < tour.length) p.push(`${where}: no Start tour, though parts of it show`);
@@ -215,6 +225,24 @@ async function checkGuide(page, portal, name, guide, where) {
     const want = tour.filter((s) => !missing.includes(s[2])).map((s) => s[0]);
     if (labels.join('|') !== want.join('|')) p.push(`${where}: tour went ${labels.join(' > ')} instead of ${want.join(' > ')}`);
     if (await page.locator('#portal-tour').isVisible()) p.push(`${where}: tour did not end`);
+    // Each tab: a click on it opens it and its own tour (never marked seen here, the PUT is stopped).
+    for (const [tab, t] of Object.entries(guide.tabs || {})) {
+      if (!(await page.locator(t.button).isVisible())) continue;
+      await page.click(t.button);
+      await page.locator('#portal-tour').waitFor({ state: 'visible', timeout: 6000 }).catch(() => {});
+      if (!(await page.locator('#portal-tour').isVisible())) { p.push(`${where}: clicking the ${tab} tab opened no tour`); continue; }
+      await page.waitForTimeout(450);
+      const tabMissing = await page.evaluate((sels) => sels.filter((s) => ![...document.querySelectorAll(s)].some((el) => el.getClientRects().length)), t.tour.map((s) => s[2]));
+      const got = [];
+      for (let i = 0; i < t.tour.length + 2 && await page.locator('#portal-tour').isVisible(); i++) {
+        await page.waitForTimeout(450);
+        got.push((await page.textContent('#gt-label-text')).trim());
+        if (i === 0) await shot(`tab-${tab}`);
+        await page.click('[data-tour="next"]');
+      }
+      const tabWant = t.tour.filter((s) => !tabMissing.includes(s[2])).map((s) => s[0]);
+      if (got.join('|') !== tabWant.join('|')) p.push(`${where}: ${tab} tab tour went ${got.join(' > ')} instead of ${tabWant.join(' > ')}`);
+    }
   } else {
     await page.keyboard.press('Escape');
   }

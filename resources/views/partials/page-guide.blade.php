@@ -30,9 +30,23 @@
         return $route && \Illuminate\Support\Str::startsWith($name, $pgPortals) && $route->parameterNames() === [] ? route($name) : null;
     };
 
-    $pgTour = collect($pg['tour'] ?? [])->values()->map(fn ($s, $i) => [
-        'key' => 'pg'.$i, 'label' => $s[0], 'body' => $s[1], 'target' => [$s[2]],
+    // A page's tour, and each of its tabs' ('tabs' => [name => ['button' =>
+    // the tab's selector, 'tour' => steps]]). A step on a tab's button can be
+    // clicked: the tab opens and the tour goes on with its steps.
+    $pgTabButtons = collect($pg['tabs'] ?? [])->pluck('button')->all();
+    $pgSteps = fn ($tour, $p) => collect($tour)->values()->map(fn ($s, $i) => [
+        'key' => $p.$i, 'label' => $s[0], 'body' => $s[1], 'target' => [$s[2]],
+        'click' => in_array($s[2], $pgTabButtons, true),
+        'one' => ($s[3] ?? null) === 'one',
     ]);
+    $pgTour = $pgSteps($pg['tour'] ?? [], 'pg');
+    $pgTabs = collect($pg['tabs'] ?? [])->map(fn ($t, $name) => ['button' => $t['button'], 'steps' => $pgSteps($t['tour'], 'pg-'.$name.'-')]);
+
+    // Which of these tours this account has finished or skipped: each opens
+    // by itself on the first visit only.
+    $pgAccount = $pgViewer ?? (str_starts_with($pgName, 'student.') ? auth()->user() : null);
+    $pgSeenUrl = $pgAccount ? route($pgViewer ? 'instructor.tour.page' : 'student.tour.page') : null;
+    $pgData = ['route' => $pgName, 'steps' => $pgTour, 'tabs' => (object) $pgTabs->all(), 'seen' => $pgAccount?->page_tours_seen ?? [], 'seenUrl' => $pgSeenUrl];
 
     $pgPages = collect($pgAll)
         ->map(fn ($g, $name) => ['url' => ($g['search'] ?? true) ? $pgUrl($name) : null, 'title' => $g['title'], 'summary' => $g['summary'],
@@ -131,7 +145,14 @@
   </div>
 </aside>
 
-<script type="application/json" id="pg-tour">@json($pgTour)</script>
+<div class="pg-menu" id="pg-menu" role="menu" aria-label="Page Guide" hidden>
+  @if ($pgTour->isNotEmpty())
+    <button type="button" role="menuitem" id="pg-menu-tour"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg> Start page tour</button>
+  @endif
+  <button type="button" role="menuitem" id="pg-menu-guide"><span class="pg-q" aria-hidden="true">?</span> Page guide</button>
+</div>
+
+<script type="application/json" id="pg-tour">@json($pgData)</script>
 <script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var panel = document.getElementById('pg');
@@ -148,7 +169,11 @@
   var here = document.getElementById('pg-here');
   var hits = document.getElementById('pg-hits');
   var none = document.getElementById('pg-none');
-  var steps = JSON.parse(document.getElementById('pg-tour').textContent);
+  var data = JSON.parse(document.getElementById('pg-tour').textContent);
+  var steps = data.steps;
+  var tabs = data.tabs || {};
+  var menu = document.getElementById('pg-menu');
+  document.body.appendChild(menu);
   var tourCard = document.getElementById('pg-tourc');
 
   function isOpen() { return !panel.hidden; }
@@ -172,18 +197,101 @@
     if (!keepFocus && btn()) btn().focus({ preventScroll: true });
   }
 
+  // The ? opens a small menu under it: the tour, or the guide.
+  function menuOpen() { return !menu.hidden; }
+  function hideMenu() { menu.hidden = true; if (btn()) btn().setAttribute('aria-expanded', 'false'); }
+  function showMenu() {
+    var r = btn().getBoundingClientRect();
+    menu.hidden = false;
+    menu.style.top = r.bottom + 8 + 'px';
+    menu.style.left = Math.max(8, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+    btn().setAttribute('aria-expanded', 'true');
+    menu.querySelector('button').focus({ preventScroll: true });
+  }
+
   document.addEventListener('click', function (e) {
-    if (!e.target.closest || !e.target.closest('#pg-btn')) return;
-    e.stopPropagation();
-    isOpen() ? close() : open();
+    if (!e.target.closest) return;
+    if (e.target.closest('#pg-btn')) {
+      e.stopPropagation();
+      if (isOpen()) close();
+      else if (menuOpen()) hideMenu();
+      else showMenu();
+      return;
+    }
+    if (menuOpen() && !menu.contains(e.target)) hideMenu();
   }, true);
+  document.getElementById('pg-menu-guide').addEventListener('click', function () { hideMenu(); open(); });
+  var menuTour = document.getElementById('pg-menu-tour');
+  if (menuTour) menuTour.addEventListener('click', function () {
+    hideMenu();
+    // Nothing of it on the page right now: the guide says what the page is instead.
+    if (!runTour(partNow())) open();
+  });
+  menu.addEventListener('keydown', function (e) {
+    var items = Array.prototype.slice.call(menu.querySelectorAll('button'));
+    var i = items.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hideMenu(); btn().focus({ preventScroll: true }); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
+  });
+
+  // The open tab ('' for the page itself), and its tour.
+  function partNow() {
+    return Object.keys(tabs).filter(function (name) {
+      var b = document.querySelector(tabs[name].button);
+      return b && b.getAttribute('aria-selected') === 'true';
+    })[0] || '';
+  }
+  function keyOf(part) { return data.route + (part ? ':' + part : ''); }
+  function markSeen(key) {
+    if (data.seen.indexOf(key) !== -1 || !data.seenUrl) return;
+    data.seen.push(key);
+    fetch(data.seenUrl, {
+      method: 'PUT',
+      keepalive: true,
+      headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: key })
+    }).catch(function () {});
+  }
+  function runTour(part) {
+    if (typeof window.openPortalTour !== 'function') return false;
+    var key = keyOf(part);
+    return window.openPortalTour(part ? tabs[part].steps : steps, function () { markSeen(key); });
+  }
+  // The first visit to the page, or to one of its tabs: its tour opens by
+  // itself, unless something else is already open over the page.
+  function busy() {
+    return isOpen() || menuOpen() || document.body.classList.contains('tour-open')
+      || !!document.querySelector('dialog[open], .modal-overlay.active, .modal-overlay.show, .modal.show');
+  }
+  function firstVisit(part) {
+    var list = part ? tabs[part].steps : steps;
+    // False only when it should open but its parts are not there yet.
+    if (!list.length || data.seen.indexOf(keyOf(part)) !== -1 || busy()) return true;
+    return runTour(part);
+  }
+  if (typeof window.afterPortalTour === 'function') {
+    var start = function () { window.afterPortalTour(function () { setTimeout(function () { firstVisit(partNow()); }, 400); }); };
+    document.readyState === 'complete' ? start() : window.addEventListener('load', start, { once: true });
+  }
+  // A tab clicked, through the tour's outline or by hand: a running tour
+  // goes on with that tab's steps; otherwise its first visit opens them.
+  document.addEventListener('click', function (e) {
+    var part = e.target.closest && Object.keys(tabs).filter(function (name) { return e.target.closest(tabs[name].button); })[0];
+    if (!part) return;
+    // A tab's first open loads its content: tried until its parts are there.
+    var tries = 0;
+    (function attempt() {
+      var ok = document.body.classList.contains('tour-open') ? runTour(part) : firstVisit(part);
+      if (!ok && ++tries < 10) setTimeout(attempt, 300);
+    })();
+  });
   scrim.addEventListener('click', function () { close(); });
   document.getElementById('pg-x').addEventListener('click', function () { close(); });
 
   var go = document.getElementById('pg-go');
   if (go) go.addEventListener('click', function () {
     close(true);
-    window.openPortalTour(steps);
+    runTour(partNow());
   });
 
   search.addEventListener('input', function () {
@@ -202,6 +310,7 @@
   // On window, so a page's own keys go first: Defenses already had ? for its shortcuts.
   window.addEventListener('keydown', function (e) {
     if (isOpen() && e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (menuOpen() && e.key === 'Escape') { e.preventDefault(); hideMenu(); return; }
     if (isOpen() && e.key === 'Tab') {
       var f = Array.prototype.filter.call(panel.querySelectorAll('button, a[href], input'), function (el) { return el.offsetParent !== null; });
       var first = f[0], end = f[f.length - 1];
