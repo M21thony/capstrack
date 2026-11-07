@@ -13,6 +13,8 @@ $s3 = [
     'bucket' => env('AWS_BUCKET'),
     'endpoint' => env('AWS_ENDPOINT'),
     'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+    // Hand big files over as they arrive; the default loads the whole file into memory first.
+    'stream_reads' => true,
     'throw' => false,
     'report' => false,
 ];
