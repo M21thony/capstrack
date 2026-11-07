@@ -83,7 +83,7 @@ class CapstoneDocument extends Model
     public function scopeExceptSignedPapers(Builder $query): Builder
     {
         return $query->where(fn (Builder $q) => $q->whereNull('capstone_documents.deliverable_id')
-            ->orWhereHas('deliverable', fn (Builder $line) => $line->whereNotIn('kind', Deliverable::CHECKED_BY_CAPSA)));
+            ->orWhereHas('deliverable', fn (Builder $line) => $line->whereNotIn('kind', [...Deliverable::CHECKED_BY_CAPSA, Deliverable::BLUEBOOK])));
     }
 
     /**

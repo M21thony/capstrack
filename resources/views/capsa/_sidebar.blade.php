@@ -299,6 +299,10 @@
       <x-portal-icon name="receipt" />
       Fees
     </a>
+    <a href="{{ route('admin.bluebook') }}" class="nav-item {{ str_starts_with($currentRoute, 'admin.bluebook') ? 'active' : '' }}">
+      <x-portal-icon name="book" />
+      Bluebook Clearance
+    </a>
     @endif
     @if ($isCapsa || $isAdmin)
     <a href="{{ route($isCapsa ? 'capsa.archive' : 'admin.archive') }}" class="nav-item {{ in_array($currentRoute, ['capsa.archive', 'admin.archive'], true) ? 'active' : '' }}">

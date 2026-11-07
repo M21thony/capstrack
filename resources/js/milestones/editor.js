@@ -19,6 +19,7 @@ const TYPES = [
   ['approval:consultant', 'Signed CLF · Consultant'],
   ['defense', 'Defense'],
   ['custom', 'Task'],
+  ['bluebook', "Dean's check"],
 ];
 const typeOf = d => d.kind === 'approval' ? 'approval:' + (d.role || 'adviser') : d.kind;
 const typeLabel = d => (TYPES.find(t => t[0] === typeOf(d)) || [null, d.kind])[1];

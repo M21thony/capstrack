@@ -40,10 +40,10 @@ class MilestoneTemplate
      * The milestones a team cannot use until it has passed the defense above
      * them. Final Manuscript is an older checklist's name.
      */
-    public const GATES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Final Manuscript', 'Archive Entry'];
+    public const GATES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Final Manuscript', 'Archive Entry', 'Bluebook Clearance'];
 
-    /** The milestones open from the start, older checklists' names too; the CaPSA opens every other one. */
-    public const OPEN_FROM_THE_START = ['Pre-proposal Defense', 'Getting started', 'Pre-proposal'];
+    /** The milestones open from the start, older checklists' names too; the CaPSA opens every other one. Bluebook is the dean's, so it opens on the Final Oral Defense pass, not the CaPSA. */
+    public const OPEN_FROM_THE_START = ['Pre-proposal Defense', 'Getting started', 'Pre-proposal', 'Bluebook Clearance'];
 
     public static function all(): array
     {
@@ -185,6 +185,22 @@ class MilestoneTemplate
         return self::addMilestones($checklist, $lines, $after);
     }
 
+    /** The Bluebook Clearance milestone for a Capstone 2 checklist from before it. Safe to run again. */
+    public static function appendBluebook(Checklist $checklist): int
+    {
+        $has = fn (string $key) => $checklist->deliverables()->withTrashedParents()->withTrashed()
+            ->where('deliverables.template_key', $key)
+            ->exists();
+
+        if (! $has(self::CAPSTONE_2_MARKER) || $has(Deliverable::BLUEBOOK_CLEARANCE)) {
+            return 0;
+        }
+
+        $after = (int) $checklist->milestones()->withTrashed()->max('position') + 1;
+
+        return self::addMilestones($checklist, self::bluebookItems(), $after);
+    }
+
     /** @return int the milestones added */
     private static function addMilestones(Checklist $checklist, array $items, int $from = 0): int
     {
@@ -306,6 +322,26 @@ class MilestoneTemplate
 
             // Its own milestone, so the CaPSA opens and closes it apart from the rest.
             ['template_key' => Deliverable::ARCHIVE_ENTRY, 'title' => 'Archive Entry (Title, Abstract, Proponents)', 'short' => 'Archive Entry', 'phase' => 'Archive Entry', 'kind' => $C],
+
+            ...self::bluebookItems(),
+        ];
+    }
+
+    /**
+     * What the dean's office checks before the bluebook. Courses differ, so a
+     * CaPSA edits these lines in the milestone editor; the clearance line
+     * stays last and closes when the dean clears the team.
+     */
+    private static function bluebookItems(): array
+    {
+        $B = Deliverable::BLUEBOOK;
+
+        return [
+            ['template_key' => 'bluebook_manuscript', 'title' => 'Final Manuscript', 'short' => 'Manuscript', 'phase' => 'Bluebook Clearance', 'kind' => $B],
+            ['template_key' => 'bluebook_approval_sheet', 'title' => 'Approval Sheet', 'short' => 'Approval Sheet', 'phase' => 'Bluebook Clearance', 'kind' => $B],
+            ['template_key' => 'bluebook_similarity', 'title' => 'Similarity Report', 'short' => 'Similarity', 'phase' => 'Bluebook Clearance', 'kind' => $B],
+            ['template_key' => 'bluebook_video', 'title' => 'System Demo Video', 'short' => 'Demo Video', 'phase' => 'Bluebook Clearance', 'kind' => $B],
+            ['template_key' => Deliverable::BLUEBOOK_CLEARANCE, 'title' => 'Bluebook Clearance', 'short' => 'Clearance', 'phase' => 'Bluebook Clearance', 'kind' => $B],
         ];
     }
 }

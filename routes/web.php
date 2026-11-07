@@ -13,6 +13,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AnnouncementEmailOffController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AdminFinancialController;
+use App\Http\Controllers\AdminBluebookController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminTeamVerificationController;
 use App\Http\Controllers\AuthController;
@@ -177,6 +178,14 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         // The dean only reads these. The CaPSA sends the fees and keeps the archive.
         Route::get('/fees', [AdminFinancialController::class, 'fees'])->name('fees');
         Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
+        // Bluebook Clearance: the dean checks each line, then clears the team.
+        Route::get('/bluebook', [AdminBluebookController::class, 'index'])->name('bluebook');
+        Route::get('/bluebook/files/{document}', [AdminBluebookController::class, 'file'])->name('bluebook.file');
+        Route::get('/bluebook/{team}', [AdminBluebookController::class, 'show'])->name('bluebook.show');
+        Route::post('/bluebook/{team}/clear', [AdminBluebookController::class, 'clear'])->name('bluebook.clear');
+        Route::get('/bluebook/{team}/slip', [AdminBluebookController::class, 'slip'])->name('bluebook.slip');
+        Route::put('/bluebook/{team}/{deliverable}', [AdminBluebookController::class, 'check'])->name('bluebook.check');
+        Route::delete('/bluebook/{team}/{deliverable}', [AdminBluebookController::class, 'undo'])->name('bluebook.undo');
     });
 
     Route::middleware('expert.admin')->group($pagesBothRolesOpen);
@@ -559,6 +568,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/consultation/cancel/{bookingId}', [StudentConsultationController::class, 'cancel'])->name('student.consultation.cancel');
             Route::get('/progress', [StudentProgressController::class, 'index'])->name('student.progress');
             Route::get('/defense-scores', [DefenseScoresController::class, 'index'])->name('student.defense-scores');
+            Route::get('/bluebook', [\App\Http\Controllers\Student\BluebookController::class, 'index'])->name('student.bluebook');
+            Route::post('/bluebook/{deliverable}', [\App\Http\Controllers\Student\BluebookController::class, 'store'])->name('student.bluebook.store');
+            Route::get('/bluebook/files/{document}', [\App\Http\Controllers\Student\BluebookController::class, 'file'])->name('student.bluebook.file');
             Route::patch('/progress/milestones', [StudentProgressController::class, 'markDone'])->name('student.progress.milestones.mark-done');
             Route::put('/progress/milestones/picture', [StudentProgressController::class, 'updatePicture'])->name('student.progress.milestones.update-picture');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');

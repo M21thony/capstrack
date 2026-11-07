@@ -107,7 +107,7 @@
       if (isDefense()) {
         Object.assign(body, { kind: 'defense', defense_type: field('defense_type').value });
       } else if (@json(! $deliverable || $defense)) {
-        body.kind = 'form';
+        body.kind = @json($milestone->deliverables()->where('kind', \App\Models\Deliverable::BLUEBOOK)->exists() ? \App\Models\Deliverable::BLUEBOOK : 'form');
       }
       error.textContent = '';
       button.disabled = true;

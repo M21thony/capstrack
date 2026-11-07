@@ -557,7 +557,7 @@ class SubmissionController extends Controller
 
         return $progress->milestones
             ->flatMap(fn ($ms) => $ms->items
-                ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
+                ->reject(fn ($row) => in_array($row->item->kind, [Deliverable::DEFENSE, Deliverable::BLUEBOOK], true)
                     || $row->item->closesOnTitleRecommendation()
                     || $row->item->closesOnArchiveEntry()
                     || in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))

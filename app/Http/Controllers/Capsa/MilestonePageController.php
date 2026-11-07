@@ -32,7 +32,7 @@ class MilestonePageController extends Controller
     {
         return match (true) {
             $deliverable->kind === Deliverable::DEFENSE => $deliverable->defense_type ?: 'Defense',
-            $deliverable->closesOnTitleRecommendation(), $deliverable->closesOnArchiveEntry() => null,
+            $deliverable->closesOnTitleRecommendation(), $deliverable->closesOnArchiveEntry(), $deliverable->closesOnBluebookClearance() => null,
             default => 'Upload file',
         };
     }

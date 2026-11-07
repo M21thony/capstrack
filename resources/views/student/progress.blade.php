@@ -425,6 +425,8 @@
                 $row->waiting_on === 'capsa' && $item->closesOnArchiveEntry() => 'With your CaPSA to publish',
                 $row->waiting_on === 'capsa' => 'With your CaPSA to check',
                 $row->waiting_on === 'title_review' => 'With your CaPSA to recommend a title',
+                $row->waiting_on === 'dean' => "With the Dean's Office to check",
+                $row->waiting_on === 'team' && $item->kind === 'bluebook' => "Sent back by the Dean's Office",
                 $row->waiting_on === 'team' && (bool) $row->note => 'Sent back by your CaPSA',
                 $row->waiting_on === 'team' => $ord(max(1, $row->revision)).' revision requested',
                 $row->waiting_on === 'signed_copy' => 'Approved — upload the signed copy',
@@ -439,6 +441,7 @@
                 'document' => 'Closed when your CaPSA checks it, after your adviser approves it',
                 'defense' => 'Closes when the panel records a pass',
                 'custom' => 'Ticked by your CaPSA',
+                'bluebook' => $item->closesOnBluebookClearance() ? "Closes when the Dean's Office clears your team" : "Checked by the Dean's Office",
             ][$item->kind] ?? '';
             $byRecommendation = $item->closesOnTitleRecommendation();
             if ($byRecommendation) {
@@ -450,7 +453,7 @@
             // Everything is handed in through Document Submission; a defense is not, nor the recommended title.
             // A line still waiting on an earlier one cannot be handed in yet, so
             // it offers no Upload that could only say so.
-            $canUpload = ! $done && ! $byRecommendation && ! $row->locked && $item->kind !== 'defense' && $item->kind !== 'custom'
+            $canUpload = ! $done && ! $byRecommendation && ! $row->locked && ! in_array($item->kind, ['defense', 'custom', 'bluebook'], true)
                 && (in_array($row->state, ['not_started', 'overdue'], true) || $row->changes_requested || $row->waiting_on === 'signed_copy');
             // A reviewer asks for changes on the chapter draft, so that is what the revision goes up as.
             $uploadFor = $item->kind === 'approval' && $row->changes_requested && ! $row->note
@@ -480,7 +483,9 @@
               @if ($item->closesOnArchiveEntry() && ! $done)
                 <a class="pt-file" href="{{ route('student.archive') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>Open it in Archive</a>
               @endif
-              @if ($row->file_id)
+              @if ($item->kind === 'bluebook' && ! $item->closesOnBluebookClearance() && ! $row->locked)
+                <a class="pt-file" href="{{ route('student.bluebook') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>Open it in Bluebook</a>
+              @elseif ($row->file_id)
                 {{-- A signed paper opens as the file itself; a draft opens on Documents with its remarks. --}}
                 @if (in_array($item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
                   <a class="pt-file" href="{{ route('student.documents.file', $row->file_id) }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>View the file you sent</a>

@@ -29,7 +29,10 @@ class Deliverable extends Model
 
     public const CUSTOM = 'custom';
 
-    public const KINDS = [self::FORM, self::DOCUMENT, self::APPROVAL, self::DEFENSE, self::CUSTOM];
+    /** A Bluebook requirement: a file or a Drive video link the dean's office checks, not the CaPSA. */
+    public const BLUEBOOK = 'bluebook';
+
+    public const KINDS = [self::FORM, self::DOCUMENT, self::APPROVAL, self::DEFENSE, self::CUSTOM, self::BLUEBOOK];
 
     /** The signed papers and tasks: sent as a scan, opened by the CaPSA as the file itself. */
     public const CHECKED_BY_CAPSA = [self::FORM, self::APPROVAL, self::CUSTOM];
@@ -48,6 +51,12 @@ class Deliverable extends Model
      * page. The line closes when the CaPSA publishes it; nothing is uploaded.
      */
     public const ARCHIVE_ENTRY = 'archive_entry';
+
+    /**
+     * The Bluebook Clearance itself: nothing is uploaded, it closes when the
+     * dean clears the team. Its check's id is the slip number.
+     */
+    public const BLUEBOOK_CLEARANCE = 'bluebook_clearance';
 
     protected $fillable = [
         'checklist_milestone_id',
@@ -89,6 +98,11 @@ class Deliverable extends Model
     public function closesOnArchiveEntry(): bool
     {
         return $this->template_key === self::ARCHIVE_ENTRY;
+    }
+
+    public function closesOnBluebookClearance(): bool
+    {
+        return $this->template_key === self::BLUEBOOK_CLEARANCE;
     }
 
     /** What teams see: not archived, and not inside an archived milestone. */

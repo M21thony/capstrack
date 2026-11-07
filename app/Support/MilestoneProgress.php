@@ -68,6 +68,9 @@ class MilestoneProgress
     /** A signed paper is uploaded and waits for the CaPSA's check. */
     public const WAITING_ON_CAPSA = 'capsa';
 
+    /** A Bluebook line: the dean's office checks it, so it is never in the CaPSA's queue. */
+    public const WAITING_ON_DEAN = 'dean';
+
     /** The adviser approved the draft; the team still has to upload the signed CLF. */
     public const WAITING_ON_SIGNED_COPY = 'signed_copy';
 
@@ -432,7 +435,9 @@ class MilestoneProgress
         }
 
         // Nothing is uploaded for a line the recommendation closes; a file sent for it before is not waited on.
-        $own = $byRecommendation || $byArchive ? collect() : self::uploadsForDeliverable($deliverable, $uploads);
+        $own = $byRecommendation || $byArchive || $deliverable->closesOnBluebookClearance()
+            ? collect()
+            : self::uploadsForDeliverable($deliverable, $uploads);
 
         // A CLF approves a chapter draft, so the draft's reviews are what say
         // whether the adviser has signed off - and how many rounds it took.
@@ -462,6 +467,10 @@ class MilestoneProgress
                 default => self::checkedState($deliverable, $own, $reviewed, $myReviews, $approvedAt, $check),
             },
         };
+
+        if ($deliverable->kind === Deliverable::BLUEBOOK && $waitingOn === self::WAITING_ON_CAPSA) {
+            $waitingOn = self::WAITING_ON_DEAN;
+        }
 
         $common = [
             'item' => $deliverable,
