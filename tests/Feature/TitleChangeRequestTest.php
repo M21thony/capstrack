@@ -139,10 +139,6 @@ class TitleChangeRequestTest extends TestCase
         $this->decide($change, 'decline', 'Keep it; the client is named in the scope.')->assertRedirect(route('instructor.teams', ['tab' => 'todo']));
         $this->assertSame(TitleChangeRequest::DECLINED, $change->fresh()->status);
         $this->assertSame(self::TITLE, $this->team->fresh()->project_title);
-
-        $this->actingAs($this->leader, 'web')->get(route('student.duplication'))
-            ->assertOk()
-            ->assertSee('Your adviser kept the title as it is: “Keep it; the client is named in the scope.”', false);
     }
 
     public function test_only_the_teams_adviser_decides(): void
@@ -198,17 +194,13 @@ class TitleChangeRequestTest extends TestCase
         $this->assertSame(0, TitleChangeRequest::count());
     }
 
-    public function test_both_pages_show_it(): void
+    public function test_the_adviser_sees_a_request_in_to_do(): void
     {
         $this->passed();
 
-        $this->actingAs($this->leader, 'web')->get(route('student.duplication'))
-            ->assertOk()->assertSee('Change part of your title')->assertSee('Send to Ada Adviser');
 
         $this->ask();
 
-        $this->actingAs($this->member, 'web')->get(route('student.duplication'))
-            ->assertOk()->assertSee('Waiting for Ada Adviser to approve changing your title to', false);
 
         // In the adviser's To do, with the title as it is and as it would be.
         $this->actingAs($this->adviser, 'expert')->get(route('instructor.teams', ['tab' => 'todo']))
@@ -232,7 +224,6 @@ class TitleChangeRequestTest extends TestCase
 
         $this->ask()->assertSessionHas('error', 'Your CaPSA has verified your Signed Final Project Title Form, so the title is final.');
         $this->assertSame(0, TitleChangeRequest::count());
-        $this->actingAs($this->leader, 'web')->get(route('student.duplication'))->assertOk()->assertDontSee('Change part of your title');
     }
 
     public function test_a_request_still_waiting_when_the_form_is_verified_cannot_be_approved(): void

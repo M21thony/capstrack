@@ -63,7 +63,6 @@
   padding-right: 4px;
 }
 
-
 .upload-zone.has-file { border-color: var(--primary, #5b5bd6); background: var(--bg3); }
 
 /* Your pre-proposals: one block per saved title, the card edge to edge. */
@@ -361,43 +360,6 @@
           @error('title')<div style="font-size:12px;color:var(--red);margin-top:6px">{{ $message }}</div>@enderror
         @else
           <div style="font-size:12.5px;color:var(--text3)">Current title: <b style="color:var(--text)">{{ $team->project_title }}</b>. Your team leader can revise it.</div>
-        @endif
-      </div>
-    @endif
-
-    @if ($canRequestTitleChange || $pendingTitleChange)
-      {{-- After a pass: part of the title changes only with the adviser's approval. --}}
-      <div class="card" id="title-change" style="margin-bottom:16px">
-        <div class="card-header"><span class="card-title">Change part of your title</span></div>
-        @if ($pendingTitleChange)
-          <div style="font-size:13px;color:var(--text2);line-height:1.6">
-            Waiting for {{ $adviserName ?: 'your adviser' }} to approve changing your title to
-            <b style="color:var(--text)">{{ $pendingTitleChange->new_title }}</b>.
-            Your title stays <b style="color:var(--text)">{{ $team->project_title }}</b> until then.
-          </div>
-        @else
-          <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px">
-            Your title passed as <b style="color:var(--text)">{{ $team->project_title }}</b>. If part of it has to change, ask {{ $adviserName ?: 'your adviser' }}. It changes only once they approve.
-          </div>
-          @if ($lastTitleChange && $lastTitleChange->status === \App\Models\TitleChangeRequest::DECLINED)
-            <div role="status" style="font-size:12.5px;color:var(--red);margin-bottom:10px">
-              Your adviser kept the title as it is{{ $lastTitleChange->adviser_note ? ': “'.$lastTitleChange->adviser_note.'”' : '.' }}
-            </div>
-          @endif
-          @if ($isLeader)
-            <form method="POST" action="{{ route('student.pre-proposal.title-change.store') }}" style="display:flex;flex-direction:column;gap:8px">
-              @csrf
-              <label for="tc-new" style="font-size:12.5px;font-weight:600">New title</label>
-              <input class="input" id="tc-new" name="new_title" value="{{ old('new_title', $team->project_title) }}" maxlength="255" required>
-              @error('new_title')<div style="font-size:12px;color:var(--red)">{{ $message }}</div>@enderror
-              <label for="tc-reason" style="font-size:12.5px;font-weight:600">Why it needs to change</label>
-              <textarea class="input" id="tc-reason" name="reason" rows="2" maxlength="500" required placeholder="For example: the Title Defense panel asked us to name the client.">{{ old('reason') }}</textarea>
-              @error('reason')<div style="font-size:12px;color:var(--red)">{{ $message }}</div>@enderror
-              <div><button class="btn btn-primary" type="submit">Send to {{ $adviserName ?: 'adviser' }}</button></div>
-            </form>
-          @else
-            <div style="font-size:12.5px;color:var(--text3)">Your team leader can ask for a change.</div>
-          @endif
         @endif
       </div>
     @endif

@@ -321,7 +321,6 @@ return [
         'tour' => [
             ['The result', 'Your closest match and how close it is to existing work.', '.scan-card'],
             ['Revise your title', 'Type the new wording and press Save revised title. Once the Signed Final Project Title Form is in, the title is final.', 'input[aria-label="Revised title"] + button'],
-            ['Change your title', 'Type the new title and your reason, then send it to your adviser. It changes only once they approve.', '#title-change'],
             ['Choose This One', 'Asks you to confirm, then makes this your team\'s title and drops the other one.', '[onclick^="confirmChooseTitle"]', 'one'],
             ['See what is similar', 'Opens the full report of this check.', '#full-report-btn'],
             ['Clear this result', 'Takes this result off the card.', '#clear-result-btn'],

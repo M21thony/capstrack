@@ -84,10 +84,6 @@ class PreProposalController extends Controller
             // be reworded until the final title form is in; a team sent back
             // for a new title sees the titles that were set aside.
             'canReviseTitle' => (bool) $team && TitleRevision::canRevise($team),
-            // Past that, a change to part of a passed title goes to the adviser.
-            'canRequestTitleChange' => (bool) $team && TitleRevision::whyNotRequestChange($team) === null,
-            'pendingTitleChange' => $team ? TitleRevision::pendingChange($team) : null,
-            'lastTitleChange' => $team ? TitleRevision::lastDecidedChange($team) : null,
             'needsNewTitle' => (bool) $team && TitleRevision::needsNewTitle($team),
             'retiredProposals' => $team ? $team->allPreProposals()->whereNotNull('retired_at')->get() : collect(),
             'awaitingAdviser' => $team ? TitleRevision::awaitingAdviser($team) : null,
