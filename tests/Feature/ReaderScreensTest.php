@@ -107,7 +107,7 @@ class ReaderScreensTest extends TestCase
         $this->actingAs($this->student, 'web')
             ->get(route('student.documents'))
             ->assertOk()
-            ->assertSee('Revision asked')
+            ->assertSee('Needs Revision')
             ->assertSee('Submit 2nd revision')
             ->assertSee("openSubmission('{$this->item->id}', this, {$fileId})", false);
 

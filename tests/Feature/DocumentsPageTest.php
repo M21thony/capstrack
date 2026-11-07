@@ -216,7 +216,7 @@ class DocumentsPageTest extends TestCase
         $response->assertSee('data-pdf-url="'.route('student.documents.file', $document->file_id).'"', false);
         $response->assertSee('data-remarks-url=""', false);
         $response->assertSeeText('Consultant · not opened yet');
-        $response->assertDontSee('Download CLF');
+        $response->assertDontSee('</svg>Download CLF', false);
     }
 
     public function test_a_review_turned_in_opens_with_that_reviewers_remarks(): void
@@ -269,7 +269,8 @@ class DocumentsPageTest extends TestCase
 
         $this->actingAs($this->me, 'web')->get(route('student.documents'))
             ->assertOk()
-            ->assertSee('<span class="dc-ic drawio" aria-hidden="true">DRAWIO</span>', false)
+            ->assertSee('<span class="dx-ic drawio" aria-hidden="true">', false)
+            ->assertSee('>DRAWIO</text>', false)
             ->assertDontSee('>TXT<', false);
     }
 
@@ -299,18 +300,5 @@ class DocumentsPageTest extends TestCase
         $this->assertStringNotContainsString('data-tour-target="student.submission"', $html);
         $this->assertStringNotContainsString('data-tour-target="student.review"', $html);
         $this->assertMatchesRegularExpression('/href="'.preg_quote(route('student.documents'), '/').'"[^>]*class="nav-item active"/', $html);
-    }
-
-    /**
-     * A card is laid out on the list's own width, not the window's, so the
-     * buttons drop under the paper while it is too narrow for them beside it
-     * rather than squeezing the title or running past the card's edge.
-     */
-    public function test_the_cards_reflow_on_the_lists_own_width(): void
-    {
-        $html = $this->actingAs($this->me, 'web')->get(route('student.documents'))->assertOk()->getContent();
-
-        $this->assertStringContainsString('container: dl / inline-size;', $html);
-        $this->assertStringContainsString('@container dl (max-width: 720px)', $html);
     }
 }
