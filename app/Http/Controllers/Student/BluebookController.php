@@ -34,7 +34,7 @@ class BluebookController extends Controller
         $request->validate([
             'file' => ['required_without:link', 'nullable', 'file', 'mimes:pdf,docx', 'max:25600'],
             'link' => ['required_without:file', 'nullable', 'url', 'max:500'],
-        ]);
+        ], ['required_without' => 'Choose a file or paste a Drive link.']);
 
         if ($request->hasFile('file')) {
             $name = $request->file('file')->getClientOriginalName();

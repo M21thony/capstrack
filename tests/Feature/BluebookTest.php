@@ -37,6 +37,7 @@ class BluebookTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertSame(MilestoneProgress::WAITING_ON_DEAN, $this->progressOf($checklist, $team, $paper)->waiting_on);
 
+        $this->post(route('student.bluebook.store', $video), [])->assertSessionHasErrors(['file' => 'Choose a file or paste a Drive link.']);
         $this->post(route('student.bluebook.store', $video), ['link' => 'https://youtube.com/watch?v=abc'])->assertSessionHasErrors('link');
         $this->post(route('student.bluebook.store', $video), ['link' => 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWx/view?usp=sharing'])
             ->assertSessionHasNoErrors();

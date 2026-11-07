@@ -31,6 +31,11 @@
     'documents' => ['Documents', $bellItems->whereIn('type', ['document_submitted', 'paper_to_check', 'review_reminder'])->count()],
     'consultations' => ['Consultations', $bellItems->whereIn('type', ['consultation_booked', 'consultation_cancelled', 'consultation_reminder'])->count()],
   ];
+
+  // The dean's office runs no consultations; an admin who also advises keeps the tab.
+  if ($bellExpert?->is_admin && ! $bellExpert->roles()->exists()) {
+    unset($bellTabs['consultations']);
+  }
 @endphp
 
 {{-- Before the markup, not after it: a style further down arrives after

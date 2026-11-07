@@ -435,6 +435,25 @@ return [
         ],
     ],
 
+    'student.bluebook' => [
+        'title' => 'Bluebook Clearance',
+        'summary' => 'The files your team sends the Dean\'s Office to be cleared for Bluebook.',
+        'steps' => [
+            ['Choose a PDF or DOCX', 'or paste a Google Drive link for a video.'],
+            ['Press Send', 'for each file.'],
+            ['Read the reason', 'on a file sent back, fix it and press Send again.'],
+        ],
+        'tour' => [
+            ['Your clearance', 'How many of your files the Dean\'s Office has accepted.', '.bs-head'],
+            ['The files', 'Each file the Dean\'s Office needs and where it stands.', '.bs-list'],
+            ['Send a file', 'Choose a PDF or DOCX, or paste a Drive link to a video, then press Send.', '.bs-form', 'one'],
+        ],
+        'related' => [
+            'student.documents' => 'Submit a paper',
+        ],
+        'tip' => 'Share the Drive video with anyone who has the link, or the Dean\'s Office cannot play it.',
+    ],
+
     'student.team' => [
         'title' => 'Team Management',
         'summary' => 'Where your team is formed, and where its members, panel and fees are kept.',
@@ -1633,6 +1652,47 @@ return [
         'related' => [
             'admin.archive' => 'Open Archived Capstones',
         ],
+    ],
+
+    'admin.bluebook' => [
+        'title' => 'Bluebook Clearance',
+        'summary' => 'The Bluebook files each team sends you, to check and clear.',
+        'steps' => [
+            ['Open Waiting for You', 'to see the teams with files to check.'],
+            ['Click a team', 'to check its files.'],
+        ],
+        'tour' => [
+            ['Where teams are', 'Not submitted, waiting for you, sent back, or cleared. Click one to list those teams.', '.bb-tiles'],
+            ['Filter', 'Show one program or section, or search a team.', '#bb-filter'],
+            ['Report and Excel', 'Print or download this list.', '#bb-tools'],
+            ['The teams', 'Click a team to check its files.', '.bb-scroll'],
+        ],
+        'related' => [
+            'admin.fees' => 'Open Fees',
+            'admin.archive' => 'Open Archived Capstones',
+        ],
+    ],
+
+    'admin.bluebook.show' => [
+        'title' => 'Bluebook Clearance',
+        'summary' => 'One team\'s Bluebook files: accept each one or send it back, then clear the team.',
+        'steps' => [
+            ['Pick a file', 'on the right.'],
+            ['Press Accept', 'or type a reason and press Send back.'],
+            ['Press Clear for Bluebook', 'once every file is accepted, and print the slip.'],
+        ],
+        'tour' => [
+            ['The team', 'Its title, section, members, and how many files you have accepted.', '.bb-head'],
+            ['Clear for Bluebook', 'Works once every file is accepted. It makes the clearance slip.', '#bb-clear'],
+            ['View Slip', 'Opens the slip to download or print.', '#bb-slip-open'],
+            ['The file', 'A PDF opens here, a video plays here, a DOCX can be downloaded.', '.bb-viewer'],
+            ['Accept or Send back', 'Send back needs a reason. The team is told and sends the file again. Undo takes back your answer.', '.bb-viewer .bb-foot'],
+            ['Submitted Files', 'Every file the team sent and where it stands. Click one to open it.', '.bb-side'],
+        ],
+        'related' => [
+            'admin.bluebook' => 'Back to every team',
+        ],
+        'tip' => 'Once a team is cleared, its answers can no longer be undone.',
     ],
 
     'admin.archive' => [
