@@ -17,10 +17,6 @@
 .bb-slip .bs-dl td{padding:2px 0;font-weight:600;font-size:12.5px}
 .bb-slip .bs-req th{height:26px;padding:0 8px;background:#f7f8fa;font-size:11px;font-weight:700;letter-spacing:.4px;text-align:left;text-transform:uppercase;color:#4a5060}
 .bb-slip .bs-req td{height:27px;padding:0 8px;border-bottom:1px solid #eceef2;font-size:12.5px}
-.bb-slip .bs-sign{margin-top:28px}
-.bb-slip .bs-sign td{width:45%;padding-top:4px;border-top:1px solid #18191f;font-size:12px;color:#4a5060}
-.bb-slip .bs-sign td.gap{width:10%;border:0}
-.bb-slip .bs-sign b{display:block;color:#1e2128;font-size:12.5px}
 </style>
 <div class="bb-slip">
   <table class="bs-top"><tr>
@@ -41,11 +37,6 @@
     @endforeach
     </tbody>
   </table>
-  <table class="bs-sign"><tr>
-    <td><b>{{ $row->bluebook->cleared_by ?? '—' }}</b>Dean</td>
-    <td class="gap"></td>
-    <td><b>{{ $adviser ?? '—' }}</b>Adviser</td>
-  </tr></table>
 </div>
 @if (! empty($pdf))
 </body></html>

@@ -7,7 +7,6 @@ use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
 use App\Models\Student;
 use App\Models\Team;
-use App\Models\TeamExpertAssignment;
 use App\Services\Notifier;
 use App\Support\Bluebook;
 use App\Support\MilestoneProgress;
@@ -60,7 +59,6 @@ class AdminBluebookController extends Controller
             'row' => $row,
             'line' => $line,
             'uploader' => $line?->file ? Student::find($line->file->student_id) : null,
-            'adviser' => $this->adviser($team),
         ]);
     }
 
@@ -128,7 +126,7 @@ class AdminBluebookController extends Controller
         $row = $this->row($team);
         abort_unless($row->bluebook->cleared, 404);
 
-        return Pdf::loadView('admin.bluebook-slip', ['row' => $row, 'adviser' => $this->adviser($team), 'pdf' => true])
+        return Pdf::loadView('admin.bluebook-slip', ['row' => $row, 'pdf' => true])
             ->setPaper('a4')
             ->download($row->bluebook->slip_no.'.pdf');
     }
@@ -152,15 +150,5 @@ class AdminBluebookController extends Controller
         abort_if($bluebook->cleared, 422);
 
         return $bluebook->lines->first(fn ($l) => (int) $l->item->id === (int) $deliverable->id) ?? abort(404);
-    }
-
-    private function adviser(Team $team): ?string
-    {
-        return TeamExpertAssignment::where('team_id', $team->team_id)
-            ->where('status', 'approved')
-            ->with(['expert', 'expertRole.role'])
-            ->get()
-            ->first(fn ($a) => $a->expert && $a->engaged_role_name === 'adviser')
-            ?->expert->name;
     }
 }
