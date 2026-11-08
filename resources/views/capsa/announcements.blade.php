@@ -11,7 +11,7 @@
 /* The feed scrolls in its own box; the page itself never does. */
 #real-content .content{display:flex;flex-direction:column;overflow:hidden}
 .ann{--ink:#1e2128;--ink-2:#4a5060;--ink-3:#656b7a;--line:#e0e2e8;--line-2:#c8cad4;--nav-2:#1e2028;--gold:#c9a82c;--gold-ink:#7d630e;--gold-soft:#faf6e8;--red:#b91c1c;
-  flex:1;min-height:0;width:100%;max-width:1360px;display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:16px;font-size:13px;color:var(--ink)}
+  flex:1;min-height:0;width:100%;display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:16px;font-size:13px;color:var(--ink)}
 .ann [hidden]{display:none!important}
 .ann-list{display:flex;flex-direction:column;gap:10px;min-height:0}
 .ann-tools{display:flex;gap:8px;align-items:center;flex:none}
@@ -104,7 +104,7 @@ textarea.ann-input{resize:vertical;min-height:150px;line-height:1.5}
   </div>
 
   <div id="skeleton-content" class="sk-overlay">
-    <div class="ann-post-feed-grid" style="gap:16px;align-items:start;grid-template-columns:1fr 370px;max-width:1360px">
+    <div class="ann-post-feed-grid" style="gap:16px;align-items:start;grid-template-columns:1fr 370px">
       <div class="card">
         <div class="sk" style="height:34px;border-radius:8px;margin-bottom:14px"></div>
         <div class="sk" style="height:96px;border-radius:12px;margin-bottom:10px"></div>

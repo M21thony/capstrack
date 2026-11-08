@@ -1292,7 +1292,7 @@ loadRubrics();
 .toast{border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
 
 /* ── LIST AND EDITOR ── */
-.mk{max-width:1360px;display:flex;flex-direction:column;gap:16px;height:100%;min-height:0}
+.mk{display:flex;flex-direction:column;gap:16px;height:100%;min-height:0}
 .mk *{box-sizing:border-box}
 .mk-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
 

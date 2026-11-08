@@ -12,7 +12,7 @@
   $student = auth()->user();
 @endphp
 <style nonce="{{ Vite::cspNonce() }}">
-  .trs { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; max-width: 1360px; }
+  .trs { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
   .trs-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; }
   .trs-card + .trs-card { margin-top: 16px; }
   .trs-ch { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

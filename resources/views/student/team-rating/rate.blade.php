@@ -30,7 +30,7 @@
 <x-dashboard.styles />
 @include('partials.render-whole')
 <style nonce="{{ Vite::cspNonce() }}">
-  .trr-page { max-width: 1360px; }
+
   .trr-crumb { font-size: 13px; color: var(--text3); margin-bottom: 14px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .trr-crumb a { color: var(--text2); text-decoration: none; font-weight: 500; }
   .trr-crumb a:hover { color: var(--accent3); text-decoration: underline; }

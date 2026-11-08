@@ -46,7 +46,7 @@
   .sd-crumb button{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--text2);cursor:pointer}
   .sd-crumb button:hover{text-decoration:underline}
   .sd-crumb u{margin:0 6px;color:var(--text2);text-decoration:none}
-  #stdDetail{max-width:1150px}
+
   .sd-profile{display:flex;align-items:center;gap:14px;padding:18px;margin-bottom:14px}
   .sd-profile .tk-av{width:46px;height:46px;font-size:18px}
   .sd-profile h2{font-size:21px;margin:0}

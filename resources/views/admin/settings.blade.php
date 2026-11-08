@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/table-kit.css') }}"/>
 <style nonce="{{ Vite::cspNonce() }}">
-  .st-page{max-width:1360px}
+
   .st-card{padding:0;overflow:hidden}
   .st-ic{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
   .st-h{display:flex;align-items:center;gap:10px;margin:0;font-size:15px;font-weight:700;color:var(--text)}

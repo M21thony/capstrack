@@ -33,7 +33,7 @@
 .dp input,.dp select,.dp textarea{font:inherit;color:inherit}
 .dp h1,.dp h2,.dp h3{text-wrap:balance;margin:0}
 .dp .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.dp .content{flex:1;min-height:0;padding:18px 28px;display:flex;flex-direction:column;gap:12px;max-width:1500px;width:100%}
+.dp .content{flex:1;min-height:0;padding:18px 28px;display:flex;flex-direction:column;gap:12px;width:100%}
 .dp .content > *{min-width:0}
 .dp .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:0;box-shadow:none}
 .dp .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;border-radius:10px;border:1px solid transparent;font-weight:700;font-size:13.5px;white-space:nowrap;text-decoration:none;line-height:1.2}

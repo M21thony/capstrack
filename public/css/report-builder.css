@@ -1,6 +1,6 @@
 /* Reports Home and Report builder. Everything sits under .rb so the sidebar and topbar keep their own look. */
 .content.rb{--ink:#1e2128;--muted:#667083;--line:#e0e2e8;--gold:#c7a727;--blue:#2563eb;
-  padding:16px 20px;overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:1360px;box-sizing:border-box;
+  padding:16px 20px;overflow:hidden;display:flex;flex-direction:column;width:100%;box-sizing:border-box;
   font-size:13px;line-height:1.5;color:var(--ink)}
 .rb *{box-sizing:border-box}
 .rb [hidden]{display:none!important}
@@ -102,14 +102,14 @@
 .rb .home-filter{padding:11px 14px;flex-shrink:0}
 .rb .home-filter .filters{padding:0;border:0}
 .rb .home-section{padding:12px 14px;display:flex;flex-direction:column;min-height:0}
-.rb .home-section.saved{flex:0 1 auto;min-height:105px;max-height:45%}
-.rb .home-section.tpl{flex:1;min-height:140px}
+.rb .home-section.saved{flex:1 1 0;min-height:150px}
+.rb .home-section.tpl{flex:0 1 auto;min-height:140px}
 .rb .section-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:9px;flex-shrink:0}
 .rb .section-heading .title-tools{gap:10px}
 .rb .section-heading input{width:240px;height:30px}
 .rb .icon-box{width:29px;height:29px;border-radius:8px;display:grid;place-items:center;background:#edf3ff;color:#2563eb;flex-shrink:0}
 .rb .icon-box.purple{background:#f3edff;color:#7c3aed}
-.rb .saved-rows{border:1px solid var(--line);border-radius:9px;overflow:auto;min-height:0}
+.rb .saved-rows{border:1px solid var(--line);border-radius:9px;overflow:auto;min-height:0;flex:1}
 .rb .saved-header,.rb .saved-row{display:grid;grid-template-columns:minmax(140px,2fr) 70px 85px 120px 150px;gap:14px;align-items:center;padding:7px 12px}
 .rb .saved-header{background:#f4f5f8;font-size:9px;color:#697284;letter-spacing:.6px;text-transform:uppercase;position:sticky;top:0;z-index:1}
 .rb .saved-row{border-top:1px solid #e9ebf0;font-size:11px}
