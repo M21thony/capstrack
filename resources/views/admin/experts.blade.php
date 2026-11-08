@@ -451,13 +451,8 @@
         <div class="page-head-text">
           <span class="page-count">{{ $experts->count() }}</span>
           <span class="page-count-noun">{{ Str::plural('CaPSA', $experts->count()) }}</span>
-          @if ($sectionsCovered)
-            <span class="page-count-noun">&middot; covering <strong>{{ $sectionsCovered }} of {{ $sectionsTotal }}</strong> {{ Str::plural('section', $sectionsTotal) }}</span>
-          @else
-            <span class="page-count-noun" style="color:var(--amber);font-weight:600">&middot; no sections covered yet</span>
-          @endif
+          <span class="page-count-noun">&middot; <strong>{{ $sectionsCovered }} of {{ $sectionsTotal }}</strong> {{ Str::plural('section', $sectionsTotal) }} assigned</span>
         </div>
-        <p class="tk-lede">Capstone Subject Advisers and the sections they run this term.</p>
       </div>
       {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
            into the system is the CaPSA's, from their own copy of this page,
@@ -477,22 +472,13 @@
         <div class="tk-alert-top">
           <span class="tk-alert-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
           <div class="tk-alert-text">
-            <h2 class="tk-alert-title" id="tkCovTitle">{{ $uncoveredSections->count() }} {{ Str::plural('section', $uncoveredSections->count()) }} {{ $uncoveredSections->count() === 1 ? 'has' : 'have' }} no CaPSA yet</h2>
-            <p class="tk-alert-sub">Their students can't be formed into teams until a CaPSA owns the section. Give {{ $uncoveredSections->count() === 1 ? 'it' : 'them' }} to one with Edit sections, or to a new CaPSA.</p>
+            <h2 class="tk-alert-title" id="tkCovTitle">{{ $uncoveredSections->count() }} {{ Str::plural('section', $uncoveredSections->count()) }} {{ $uncoveredSections->count() === 1 ? 'needs' : 'need' }} a CaPSA</h2>
+            <p class="tk-alert-sub">Assign a CaPSA so students in these sections can form teams.</p>
+            <p class="tk-alert-sub" style="display:flex;gap:18px;margin-top:10px;font-size:12px">
+              @foreach ($uncoveredByProgram as $programCode => $letters)<span title="{{ $letters->map(fn ($l) => $programCode.'-'.$l)->implode(', ') }}"><b>{{ $programCode }}</b> {{ $letters->count() }}</span>@endforeach
+            </p>
           </div>
-          <button type="button" class="tk-btn tk-btn-sm" id="tkCovToggle" aria-expanded="true" aria-controls="tkCovBody">Hide</button>
-          <button type="button" class="tk-btn tk-btn-sm tk-btn-pri" onclick="addCapsa()">Assign sections</button>
-        </div>
-        <div class="tk-alert-body tk-cov" id="tkCovBody">
-          @foreach ($uncoveredByProgram as $programCode => $letters)
-            <div class="tk-cov-row">
-              <span class="tk-prog">{{ $programCode }}</span>
-              <span class="tk-chips">
-                @foreach ($letters as $letter)<span class="tk-ghostsec" title="{{ $programCode }}-{{ $letter }}">{{ $letter }}</span>@endforeach
-              </span>
-              <span class="tk-cov-n">{{ $letters->count() }} {{ Str::plural('section', $letters->count()) }}</span>
-            </div>
-          @endforeach
+          <button type="button" class="tk-btn tk-btn-dark" onclick="assignSections()">Assign sections <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </div>
       </section>
     @endif
@@ -506,7 +492,13 @@
       ],
     ])
 
+    @php $awaitingCount = $experts->filter(fn ($e) => $e->first_login_at === null && $e->last_seen_at === null && ! $e->deactivated_at)->count(); @endphp
     <div class="card list-card">
+      <div style="display:flex;align-items:center;gap:9px;padding:18px 20px 0">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <h2 style="margin:0;font-size:15px">CaPSA directory</h2>
+        @if ($awaitingCount)<small style="margin-left:auto;font-size:12px;color:var(--text2)">{{ $awaitingCount }} awaiting first sign-in</small>@endif
+      </div>
       {{-- Look for someone, narrow the list: inside the card, so the controls
            belong to the table they change. --}}
       <div class="tk-toolbar">
@@ -520,8 +512,8 @@
           <span class="tk-vh">Search CaPSAs</span>
           <input class="input" id="experts-search-input" placeholder="Search by name, email or research area"/>
         </label>
-        @if ($programsHere->count() > 1)
-          <div class="tk-toolbar-end">
+        <div class="tk-toolbar-end">
+          @if ($programsHere->count() > 1)
             <label class="tk-vh" for="tkProgramFilter">Program</label>
             <select class="input tk-select" id="tkProgramFilter">
               <option value="">All programs</option>
@@ -529,18 +521,25 @@
                 <option value="{{ $programCode }}">{{ $programCode }}</option>
               @endforeach
             </select>
-          </div>
-        @endif
+          @endif
+          <label class="tk-vh" for="tkSigninFilter">Sign-in status</label>
+          <select class="input tk-select" id="tkSigninFilter">
+            <option value="">All sign-in statuses</option>
+            <option value="pending">Awaiting first sign-in</option>
+            <option value="signed">Signed in</option>
+          </select>
+        </div>
       </div>
 
       <div class="tk-scroll">
       <table class="table" data-export="CaPSA List" data-export-into="#tkExport">
         <thead>
           <tr>
-            <th style="width:38%">CaPSA</th>
-            <th style="width:24%">Sections handled</th>
-            <th class="tk-opt" style="width:28%">Research Areas</th>
-            <th style="width:172px;text-align:right"><span class="tk-vh">Action</span></th>
+            <th style="width:30%">CaPSA</th>
+            <th style="width:190px">Sign-in status</th>
+            <th style="width:22%">Sections handled</th>
+            <th class="tk-opt" style="width:22%">Research Areas</th>
+            <th style="width:190px;text-align:right"><span class="tk-vh">Action</span></th>
           </tr>
         </thead>
         <tbody>
@@ -612,7 +611,7 @@
           {{-- The filter reads these rather than picking through the cells:
                it used to find the status by counting columns, which is a
                thing that breaks the moment a column moves. --}}
-          <tr data-status="{{ $computedStatus }}"
+          <tr data-status="{{ $computedStatus }}" data-signin="{{ $awaiting ? 'pending' : 'signed' }}"
               @class(['cx-off' => $isOff])
               data-id="{{ $expert->expert_id }}"
               data-programs="{{ $mySections->map(fn ($s) => Str::before($s, '-'))->unique()->implode(' ') }}"
@@ -637,8 +636,6 @@
                     <span class="tk-name td-main">{{ $displayName }}</span>
                     @if ($isOff)
                       <span class="tk-pill tk-p-off">Deactivated</span>
-                    @elseif ($awaiting)
-                      <span class="tk-pill tk-p-amber" title="Name fills in when they first sign in">Awaiting first sign-in</span>
                     @endif
                   </span>
                   @if ($expert->name !== '')
@@ -656,6 +653,9 @@
                   </span>
                 </span>
               </div>
+            </td>
+            <td data-label="Sign-in status">
+              <span @class(['tk-pill', 'tk-p-amber' => $awaiting, 'tk-p-green' => ! $awaiting])><span class="tk-dot"></span>{{ $awaiting ? 'Awaiting first sign-in' : 'Signed in' }}</span>
             </td>
             {{-- Each section by its own name - BSIT-3A, the way the Section
                  List and every other screen writes it. --}}
@@ -692,7 +692,7 @@
             <td class="tk-ac" data-label="Action">
               <div class="tk-acts expert-actions">
                 @if ($expert->is_capsa)
-                  <button type="button" class="tk-btn tk-btn-sm" title="Edit sections"
+                  <button type="button" class="tk-btn tk-btn-sm tk-btn-dark" title="Edit sections"
                           onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span class="tk-lbl">Edit sections</span></button>
                 @endif
                 {{-- Taking a role away and switching an account off live in
@@ -739,7 +739,9 @@
       </div>
       <div class="tk-foot">
         <span id="tkShowing">Showing all <strong>{{ $experts->count() }}</strong> {{ Str::plural('CaPSA', $experts->count()) }}</span>
-        <span class="tk-tip" style="color:var(--text3)">Tick rows to deactivate several at once</span>
+        @if ($uncoveredSections->isNotEmpty())
+          <a href="#" onclick="assignSections(); return false;" style="color:var(--accent3,#9a7b14);font-weight:600">View {{ $uncoveredSections->count() }} unassigned {{ Str::plural('section', $uncoveredSections->count()) }} &rarr;</a>
+        @endif
       </div>
     </div>
 
@@ -749,6 +751,7 @@
     var searchInput = document.getElementById('experts-search-input');
     var statusFilter = document.getElementById('statusFilter');
     var programFilter = document.getElementById('tkProgramFilter');
+    var signinFilter = document.getElementById('tkSigninFilter');
     var showing = document.getElementById('tkShowing');
     var rows = document.querySelectorAll('table.table tbody tr');
     var total = rows.length;
@@ -772,7 +775,8 @@
           || (status === 'off' ? statusText === 'off' : statusText !== 'off');
         var matchProgram = !program || programs.includes(' ' + program + ' ');
 
-        var shown = matchSearch && matchStatus && matchProgram;
+        var signin = signinFilter.value;
+        var shown = matchSearch && matchStatus && matchProgram && (!signin || row.dataset.signin === signin);
         row.style.display = shown ? '' : 'none';
         if (shown) visible++;
       });
@@ -792,6 +796,7 @@
 
     if (searchInput) searchInput.addEventListener('input', filterRows);
     if (programFilter) programFilter.addEventListener('change', filterRows);
+    signinFilter.addEventListener('change', filterRows);
     if (statusFilter) {
       statusFilter.querySelectorAll('button').forEach(function (button) {
         button.addEventListener('click', function () {
@@ -801,23 +806,6 @@
           });
           filterRows();
         });
-      });
-    }
-
-    // The uncovered-sections list folds away once read, and stays folded.
-    var covToggle = document.getElementById('tkCovToggle');
-    var covBody = document.getElementById('tkCovBody');
-    if (covToggle && covBody) {
-      var setCov = function (open) {
-        covBody.hidden = !open;
-        covToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        covToggle.textContent = open ? 'Hide' : 'Show sections';
-      };
-      try { if (localStorage.getItem('tk.capsaCoverage') === 'hidden') { setCov(false); } } catch (e) {}
-      covToggle.addEventListener('click', function () {
-        var open = covBody.hidden;
-        setCov(open);
-        try { localStorage.setItem('tk.capsaCoverage', open ? 'shown' : 'hidden'); } catch (e) {}
       });
     }
   })();
@@ -946,6 +934,16 @@
         </p>
       </div>
       <p id="capsaEmailError" style="display:none;color:#dc2626;font-size:12px;margin:-6px 0 12px;text-align:left;"></p>
+    </div>
+
+    <div class="section-field" id="capsaPickFields" style="display:none">
+      <label class="ct-modal-label" for="capsaAssignee" style="margin-bottom:6px">Assign to</label>
+      <select id="capsaAssignee" class="ct-modal-input">
+        <option value="">Choose a CaPSA</option>
+        @foreach ($experts->filter(fn ($e) => $e->is_capsa && ! $e->deactivated_at) as $c)
+          <option value="{{ $c->expert_id }}" data-sections="{{ json_encode($c->sections ?? []) }}">{{ $c->name !== '' ? $c->name : $c->email }}</option>
+        @endforeach
+      </select>
     </div>
 
     <div class="section-field">
@@ -1160,7 +1158,25 @@ let capsaAdding = false;
  * cuts off their approval, panel, verification and financial access in
  * between, for a change that was never about their role.
  */
+/** Hand unassigned sections to a CaPSA picked here; saves like Edit sections. */
+function assignSections() {
+  const pick = document.getElementById('capsaAssignee');
+  pick.value = '';
+  editCapsaSections(null, '', []);
+  document.getElementById('capsaModalLead').textContent = 'Assign unassigned sections';
+  document.getElementById('capsaModalDesc').textContent = '';
+  document.getElementById('capsaPickFields').style.display = '';
+  pick.onchange = () => {
+    const opt = pick.selectedOptions[0];
+    capsaTargetExpertId = pick.value || null;
+    resetSectionPicker();
+    hideTakenSections(capsaTargetExpertId);
+    checkSections(pick.value ? JSON.parse(opt.dataset.sections) : []);
+  };
+}
+
 function editCapsaSections(expertId, expertName, current) {
+  document.getElementById('capsaPickFields').style.display = 'none';
   capsaTargetExpertId = expertId;
   capsaEditingSections = true;
   capsaAdding = false;
@@ -1202,6 +1218,7 @@ function checkSections(names) {
  * the sake of one person.
  */
 function addCapsa() {
+  document.getElementById('capsaPickFields').style.display = 'none';
   capsaTargetExpertId = null;
   capsaEditingSections = false;
   capsaAdding = true;
@@ -1225,6 +1242,7 @@ function addCapsa() {
 }
 
 function toggleCapsa(expertId, isCurrentlyCapsa, expertName) {
+  document.getElementById('capsaPickFields').style.display = 'none';
   capsaEditingSections = false;
   capsaAdding = false;
   document.getElementById('capsaNewFields').style.display = 'none';
@@ -1308,6 +1326,7 @@ capsaConfirmBtn.addEventListener('click', function () {
   }
 
   if (wasEditing) {
+    if (!capsaTargetExpertId) { restore(); showToast('Choose a CaPSA first.', 'error'); return; }
     saveCapsaSections(capsaTargetExpertId, sections, restore);
 
     return;

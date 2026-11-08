@@ -102,7 +102,7 @@ class AdminSectionsSettingTest extends TestCase
         ])->assertRedirect();
 
         $this->assertSame(['BSIS-3A', 'BSIS-3B', 'BSIT-3A', 'BSIT-3B'], SectionCatalog::defined());
-        $this->get(route('admin.settings'))->assertOk()->assertSee('Sections are added for 3rd year, where capstone starts.');
+        $this->get(route('admin.settings'))->assertOk()->assertSee('BSIS-3A');
     }
 
     /**
@@ -190,6 +190,11 @@ class AdminSectionsSettingTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame(['BSIT-4A', 'BSIT-4C'], SectionCatalog::defined());
+
+        $this->delete(route('admin.settings.sections.destroy'), ['section' => ['BSIT-4A', 'BSIT-4C']])
+            ->assertRedirect();
+
+        $this->assertSame([], SectionCatalog::defined());
     }
 
     /** Writing down the department's sections is Admin's, not a CaPSA's. */
@@ -235,7 +240,7 @@ class AdminSectionsSettingTest extends TestCase
         $response->assertOk();
         $response->assertSee('sec-prog">BSIT', false);
         $response->assertSee('4th year');
-        $response->assertSee('aria-label="Remove BSIT-4A"', false);
+        $response->assertSee('4A · 4B');
         $response->assertDontSee('>BSIT-4A<', false);
     }
 }

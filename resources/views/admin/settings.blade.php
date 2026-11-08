@@ -6,94 +6,67 @@
 <title>System Settings - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/table-kit.css') }}"/>
 <style nonce="{{ Vite::cspNonce() }}">
-  /* One panel, three rows. Each row says what it is on the left and holds its
-     controls on the right, so the page reads down one column. */
-  .set-panel{background:var(--bg2);border:1px solid var(--border);border-radius:14px}
-  .set-row{display:grid;grid-template-columns:300px minmax(0,1fr);gap:48px;padding:28px 32px}
-  .set-row + .set-row{border-top:1px solid var(--bg4)}
-  .set-row h2{margin:0 0 6px;font-size:16px;font-weight:700;color:var(--text)}
-  .set-row .set-degit sc{margin:0;font-size:13.5px;line-height:1.5;color:var(--text3)}
-  .set-label{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:8px}
-  .set-label span{font-weight:400;color:var(--text3)}
-  .set-field + .set-field{margin-top:22px}
-  .set-err{font-size:12px;color:var(--red);margin-top:6px}
-  .set-btn{height:44px;padding:0 20px;border-radius:9px;border:none;background:var(--accent);color:#18191f;
-           font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:background .12s}
-  .set-btn:hover{background:var(--accent2)}
-  .set-btn:disabled{background:var(--bg4);color:var(--text3);cursor:default}
-  .set-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .st-page{max-width:1360px}
+  .st-card{padding:0;overflow:hidden}
+  .st-ic{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .st-h{display:flex;align-items:center;gap:10px;margin:0;font-size:15px;font-weight:700;color:var(--text)}
+  .st-meta{font-size:12.5px;color:var(--text2)}
+  .st-err{font-size:12px;color:var(--red);margin:6px 0 0}
 
-  .sy-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .sy-input{width:220px;height:44px;box-sizing:border-box;padding:0 14px;border-radius:9px;
-            border:1.5px solid var(--border);background:var(--bg2);color:var(--text);
-            font-family:inherit;font-size:15px;font-weight:600}
-  .sy-input:focus{outline:none;border-color:var(--accent)}
-  .sy-hint{display:block;font-size:12.5px;color:var(--text3);margin-top:6px}
+  .sy-card{display:flex;align-items:center;gap:24px;padding:16px 22px;flex-wrap:wrap}
+  .sy-card .st-h{min-width:170px}
+  .sy-form{display:flex;gap:10px;align-items:center}
+  .sy-form .input{width:170px}
+  .sy-now{margin-left:auto}
+  .sy-now b{color:var(--text)}
 
-  /* Ticking a program is a click on the whole box, not on a 16px square. */
-  .opt-row{display:flex;flex-wrap:wrap;gap:8px}
-  .opt{display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 16px;box-sizing:border-box;
-       border:1.5px solid var(--border);border-radius:9px;cursor:pointer;font-size:14px;font-weight:600;
-       color:var(--text2);background:var(--bg2);transition:border-color .12s,background .12s,color .12s}
+  .st-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:14px;margin-top:14px;align-items:start}
+  .st-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+  .st-body{padding:18px 20px;display:grid;gap:16px}
+  .st-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--border)}
+  .st-label{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:7px;padding:0}
+
+  .opt-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .opt{display:flex;align-items:center;gap:9px;height:40px;padding:0 14px;box-sizing:border-box;
+       border:1.5px solid var(--border);border-radius:9px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);background:var(--bg2)}
   .opt:hover{border-color:var(--border2)}
-  .opt input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0}
+  .opt input{width:16px;height:16px;accent-color:var(--accent3);margin:0;cursor:pointer}
   .opt:has(input:checked){border-color:var(--accent);background:var(--accent-light);color:var(--accent3)}
   .opt:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+  .st-range{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .st-range .input{width:100%}
+  .st-range .input[readonly]{background:var(--bg3);color:var(--text2)}
 
-  /* A to Z as one joined strip. Click either end of the range; the letters
-     between fill in, so the range reads as one band. */
-  .letters{display:flex;width:100%;max-width:936px;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;box-sizing:border-box}
-  .letter{flex:1 1 0;min-width:0;height:40px;padding:0;border:none;border-right:1px solid var(--bg4);background:var(--bg2);
-          cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--text3);
-          transition:background .1s,color .1s}
-  .letter:last-child{border-right:none}
-  .letter:hover{background:var(--bg3);color:var(--text2)}
-  .letter.on{background:#f3e7b8;color:var(--accent3)}
-  .letter.edge{background:var(--accent);color:#18191f}
-  .letter:focus-visible{outline:2px solid var(--text);outline-offset:-3px}
-  .letter-said{font-size:12.5px;color:var(--text2);margin:9px 0 0}
-  .letter-said b{color:var(--text)}
+  .st-preview{border:1px solid var(--border);border-radius:10px;background:var(--bg3);padding:12px 14px;font-size:13px;color:var(--text2)}
+  .st-preview-h{display:flex;justify-content:space-between;margin-bottom:8px;font-size:12.5px}
+  .st-preview-h b{color:var(--text)}
+  .st-line{display:flex;justify-content:space-between;align-items:center;padding:4px 0;color:var(--text)}
+  .st-new{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--green-bg);color:var(--green)}
+  .st-new.none{background:rgba(180,83,9,0.08);color:#b45309}
+  .st-skip{margin:8px 0 0;color:#b45309;font-size:12.5px}
 
-  /* What the range will actually produce, before it is saved. */
-  .preview{padding:16px;border-radius:10px;background:var(--bg3);font-size:13px;color:var(--text3)}
-  .preview-title{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:10px}
-  .preview-list{display:flex;flex-wrap:wrap;gap:6px}
-  .sec-tag{display:inline-flex;align-items:center;height:30px;padding:0 11px;border-radius:7px;
-           border:1.5px dashed var(--accent);background:var(--bg2);color:var(--accent3);
-           font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
-  .sec-tag.more{border-style:solid;border-color:var(--border);color:var(--text2)}
+  .st-table td{padding:10px 16px;font-size:13.5px}
+  .st-table th{padding:10px 16px}
+  .st-table th:last-child,.st-table td:last-child{text-align:right}
+  .sec-prog{display:block;font-weight:700;color:var(--text)}
+  .sec-year{display:block;font-size:12px;color:var(--text3)}
+  .st-secs{color:var(--text2);word-spacing:2px}
+  .st-total{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+  .st-rm{background:none;border:0;padding:0;font:inherit;font-weight:700;color:var(--red);cursor:pointer}
+  .st-rm:hover{text-decoration:underline}
+  .st-chk{width:44px}
+  .st-chk input{width:16px;height:16px;margin:0;accent-color:var(--accent3);cursor:pointer;vertical-align:middle}
 
-  /* The list: a program and year once on the left, its sections beside it. */
-  .sec-group{display:grid;grid-template-columns:110px minmax(0,1fr);gap:16px;align-items:start;
-             padding:14px 0;border-bottom:1px solid var(--bg4)}
-  .sec-group:first-child{padding-top:0}
-  .sec-group:last-child{border-bottom:none;padding-bottom:0}
-  .sec-prog{display:block;font-size:14.5px;font-weight:700;color:var(--text);padding-top:7px}
-  .sec-year{display:block;font-size:12.5px;color:var(--text3);margin-top:2px}
-  .sec-list{display:flex;flex-wrap:wrap;gap:6px}
-  .sec-item{display:inline-flex;align-items:center;gap:2px;height:36px;padding:0 2px 0 12px;box-sizing:border-box;
-            border-radius:8px;background:var(--bg4);font-size:14px;font-weight:600;color:var(--text);
-            font-variant-numeric:tabular-nums}
-  .sec-item form{display:flex}
-  .sec-item button{width:32px;height:32px;border:none;background:none;padding:0;cursor:pointer;color:var(--text3);
-                   border-radius:6px;display:flex;align-items:center;justify-content:center}
-  .sec-item button:hover{color:var(--red);background:var(--red-bg)}
-  .sec-item button:focus-visible{outline:2px solid var(--accent);outline-offset:0}
-  .sec-item svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round}
-  .sec-empty{font-size:13px;color:var(--text3);padding:16px;text-align:center;
-             border:1px dashed var(--border);border-radius:10px}
+  .sd-crumb{font-size:13.5px;font-weight:700;margin:0 0 14px}
+  .sd-crumb button{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--text2);cursor:pointer}
+  .sd-crumb button:hover{text-decoration:underline}
+  .sd-crumb u{margin:0 6px;color:var(--text2);text-decoration:none}
+  .sd-tools{display:flex;align-items:center;gap:12px}
 
-  @media (max-width:900px){
-    .set-row{grid-template-columns:1fr;gap:16px;padding:22px 18px}
-    /* Too narrow for one strip: the letters wrap as separate keys. */
-    .letters{flex-wrap:wrap;gap:4px;border:none;border-radius:0;overflow:visible}
-    .letter{flex:0 0 36px;border:1.5px solid var(--border);border-radius:8px}
-    .letter.on{border-color:rgba(201,168,44,0.45)}
-    .letter.edge{border-color:var(--accent)}
-    .sec-group{grid-template-columns:1fr;gap:8px}
-    .sec-prog{padding-top:0}
-  }
+  @media (max-width:1100px){.st-grid{grid-template-columns:1fr}}
+  @media (max-width:700px){.opt-row{grid-template-columns:repeat(2,1fr)}.st-range{grid-template-columns:1fr}.sy-now{margin-left:0}}
 </style>
   @include('partials.render-whole')
 </head>
@@ -101,6 +74,24 @@
 
 @include('capsa._sidebar')
 @include('partials.sidebar-toggle')
+
+@php
+  $ordinal = fn ($y) => $y.([1 => 'st', 2 => 'nd', 3 => 'rd'][(int) $y] ?? 'th');
+  // Year, then program, then that program's labels - "BSIT-3A" read back as its parts.
+  $grouped = [];
+  foreach ($sections as $label) {
+      preg_match('/^([A-Z]+)-(\d+)/', $label, $m);
+      $grouped[(int) ($m[2] ?? 0)][$m[1] ?? $label][] = $label;
+  }
+  ksort($grouped);
+  $tabYears = array_unique(array_merge([3, 4], array_keys($grouped)));
+  sort($tabYears);
+  $programCount = count(array_unique(array_merge([], ...array_map('array_keys', array_values($grouped)))));
+@endphp
+
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="st-folder" viewBox="0 0 24 24"><path d="M3 7V4h7l3 3h8v13H3V7Z"/></symbol>
+</svg>
 
 <div class="main">
   <div class="topbar">
@@ -114,218 +105,259 @@
   </div>
 
   <div class="content">
+   <div class="st-page">
     @if (session('success'))
-      <div class="card" style="border-color:var(--green);background:var(--green-bg);margin-bottom:16px;padding:12px 16px;color:var(--green);font-size:13px">{{ session('success') }}</div>
+      <div class="card" style="border-color:var(--green);background:var(--green-bg);margin-bottom:14px;padding:12px 16px;color:var(--green);font-size:13px">{{ session('success') }}</div>
     @endif
 
-    <div class="set-panel">
-
-      <section class="set-row" aria-labelledby="sy-h">
-        <div>
-          <h2 id="sy-h">School year</h2>
-          <p class="set-desc">The year the whole system is working in.</p>
-        </div>
-        <form method="POST" action="{{ route('admin.settings.update') }}">
+    <div id="stMain">
+      <section class="card sy-card" aria-labelledby="sy-h">
+        <h2 class="st-h" id="sy-h"><svg class="st-ic" style="color:#d9480f" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18"/></svg>School year</h2>
+        <form class="sy-form" method="POST" action="{{ route('admin.settings.update') }}">
           @csrf
           @method('PUT')
-          <label class="set-label" for="current_school_year">School year</label>
-          <div class="sy-line">
-            <input class="sy-input" type="text" id="current_school_year" name="current_school_year" value="{{ old('current_school_year', $currentSchoolYear) }}" placeholder="2026-2027">
-            <button type="submit" class="set-btn">Save</button>
-          </div>
-          @error('current_school_year')
-            <div class="set-err">{{ $message }}</div>
-          @else
-            <span class="sy-hint">Written as 2026-2027.</span>
-          @enderror
+          <label class="tk-vh" for="current_school_year">School year</label>
+          <input class="input" type="text" id="current_school_year" name="current_school_year" value="{{ old('current_school_year', $currentSchoolYear) }}" placeholder="2026-2027">
+          <button type="submit" class="tk-btn tk-btn-dark">Save changes</button>
         </form>
+        <span class="st-meta sy-now">Current <b>{{ $currentSchoolYear ?: '—' }}</b></span>
       </section>
+      @error('current_school_year')<p class="st-err">{{ $message }}</p>@enderror
 
-      {{-- Sections had to be worked out from the students enrolled in them,
-           which is true once a term is running and useless before it: a fresh
-           system has no students, so it has no sections, so nobody can be made
-           a CaPSA over one - and a CaPSA is who uploads the students. --}}
-      <section class="set-row" aria-labelledby="add-h">
-        <div>
-          <h2 id="add-h">Add sections</h2>
-          <p class="set-desc">Sections are added for 3rd year, where capstone starts. 4th-year sections come from the student list, once a list or Year Promotion puts students in them.</p>
-        </div>
-        <form method="POST" action="{{ route('admin.settings.sections.store') }}" id="sectionForm">
-          @csrf
-
-          <fieldset class="set-field" style="border:none;margin:0;padding:0">
-            <legend class="set-label" style="padding:0">Programs</legend>
-            <div class="opt-row">
-              @foreach ($programs as $program)
-                <label class="opt"><input type="checkbox" name="programs[]" value="{{ $program }}" onchange="previewSections()">{{ $program }}</label>
-              @endforeach
-            </div>
-            @error('programs')<div class="set-err">{{ $message }}</div>@enderror
-          </fieldset>
-
-          <fieldset class="set-field" style="border:none;margin-top:22px;padding:0">
-            <legend class="set-label" style="padding:0">Letters <span>&middot; click the first and the last</span></legend>
-            {{-- A range is a thing you point at either end of, not a pair of
-                 lists you read twice. --}}
-            <div class="letters" id="letterStrip">
-              @foreach ($letters as $l)
-                <button type="button" class="letter" data-letter="{{ $l }}" onclick="pickLetter('{{ $l }}')">{{ $l }}</button>
-              @endforeach
-            </div>
-            <input type="hidden" name="from" id="fromLetter" value="A">
-            <input type="hidden" name="to" id="toLetter" value="D">
-            <p class="letter-said" id="letterSaid" aria-live="polite"></p>
-            @error('from')<div class="set-err">{{ $message }}</div>@enderror
-          </fieldset>
-
-          <div class="set-field preview" id="sectionPreview" aria-live="polite"></div>
-
-          <div class="set-field">
-            <button type="submit" class="set-btn" id="addSections">Add sections</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="set-row" aria-labelledby="list-h">
-        <div>
-          <h2 id="list-h">Sections</h2>
-          <p class="set-desc">{{ count($sections) }} listed.</p>
-        </div>
-        <div>
-          @if ($sections === [])
-            <div class="sec-empty">None yet. Add a range above &mdash; without at least one, Add CaPSA has nothing to assign.</div>
-          @else
-            {{-- Course, year and section read as three things, not as "BSIT-4A"
-                 two dozen times over: the course and the year are said once for
-                 the group, and its sections sit beside them. --}}
-            @php
-              $grouped = [];
-              foreach ($sections as $label) {
-                  preg_match('/^([A-Z]+)-(\d+)([A-Z]*)$/', $label, $m);
-                  $grouped[$m[1] ?? $label][$m[2] ?? ''][] = ['letter' => $m[3] ?? '', 'year' => $m[2] ?? '', 'label' => $label];
-              }
-            @endphp
-            @foreach ($grouped as $program => $byYear)
-              @foreach ($byYear as $year => $items)
-                <div class="sec-group">
-                  <div>
-                    <span class="sec-prog">{{ $program }}</span>
-                    <span class="sec-year">{{ $year }}{{ [1=>'st',2=>'nd',3=>'rd',4=>'th'][(int) $year] ?? 'th' }} year</span>
-                  </div>
-                  <div class="sec-list">
-                    @foreach ($items as $item)
-                      <span class="sec-item">{{ $item['year'] }}{{ $item['letter'] ?: '' }}
-                        <form method="POST" action="{{ route('admin.settings.sections.destroy') }}">
-                          @csrf @method('DELETE')
-                          <input type="hidden" name="section" value="{{ $item['label'] }}">
-                          <button type="submit" title="Remove {{ $item['label'] }}" aria-label="Remove {{ $item['label'] }}">
-                            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                          </button>
-                        </form>
-                      </span>
-                    @endforeach
-                  </div>
+      <div class="st-grid">
+        <section class="card st-card" aria-labelledby="add-h">
+          <header class="st-head">
+            <h2 class="st-h" id="add-h"><svg class="st-ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add sections</h2>
+            <span class="st-meta">{{ $ordinal($years[0]) }} year</span>
+          </header>
+          <form method="POST" action="{{ route('admin.settings.sections.store') }}" id="sectionForm" onreset="setTimeout(previewSections)">
+            @csrf
+            <div class="st-body">
+              <fieldset style="border:0;margin:0;padding:0">
+                <legend class="st-label">Programs</legend>
+                <div class="opt-row">
+                  @foreach ($programs as $program)
+                    <label class="opt"><input type="checkbox" name="programs[]" value="{{ $program }}" onchange="previewSections()">{{ $program }}</label>
+                  @endforeach
                 </div>
-              @endforeach
-            @endforeach
-          @endif
-        </div>
-      </section>
+                @error('programs')<p class="st-err">{{ $message }}</p>@enderror
+              </fieldset>
 
+              <div class="st-range">
+                <label><span class="st-label">Year level</span><input class="input" readonly value="{{ $ordinal($years[0]) }} year"></label>
+                <label><span class="st-label">From</span>
+                  <select class="input" name="from" id="fromLetter" onchange="previewSections()">
+                    @foreach ($letters as $l)<option @selected($l === 'A')>{{ $l }}</option>@endforeach
+                  </select>
+                </label>
+                <label><span class="st-label">To</span>
+                  <select class="input" name="to" id="toLetter" onchange="previewSections()">
+                    @foreach ($letters as $l)<option @selected($l === 'D')>{{ $l }}</option>@endforeach
+                  </select>
+                </label>
+              </div>
+              @error('from')<p class="st-err">{{ $message }}</p>@enderror
+
+              <div class="st-preview" id="sectionPreview" aria-live="polite"></div>
+            </div>
+            <footer class="st-foot">
+              <button type="reset" class="tk-btn tk-btn-ghost">Reset</button>
+              <button type="submit" class="tk-btn tk-btn-pri" id="addSections">Add sections</button>
+            </footer>
+          </form>
+        </section>
+
+        <section class="card st-card" aria-labelledby="list-h">
+          <header class="st-head">
+            <h2 class="st-h" id="list-h"><svg class="st-ic" style="color:#7c3aed"><use href="#st-folder"/></svg>Sections</h2>
+            <span class="st-meta">{{ count($sections) }} {{ Str::plural('section', count($sections)) }} · {{ $programCount }} {{ Str::plural('program', $programCount) }}</span>
+          </header>
+          <div class="tk-toolbar">
+            <div class="tk-tabs" role="tablist" aria-label="Year level">
+              @foreach ($tabYears as $y)
+                <button type="button" class="tk-tab" role="tab" data-year="{{ $y }}" aria-selected="{{ $y === 3 ? 'true' : 'false' }}" onclick="pickYear({{ $y }})">{{ $ordinal($y) }} year <span class="n">{{ count(array_merge([], ...array_values($grouped[$y] ?? []))) }}</span></button>
+              @endforeach
+            </div>
+            <label class="experts-search" style="margin-left:auto;flex:0 1 260px">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span class="tk-vh">Search program or section</span>
+              <input class="input" type="search" id="stSearch" placeholder="Search program or section" oninput="filterRows()">
+            </label>
+          </div>
+          <table class="table st-table">
+            <thead><tr><th style="width:22%">Program</th><th>Sections</th><th style="width:12%">Total</th><th style="width:110px"><span class="tk-vh">Actions</span></th></tr></thead>
+            <tbody>
+              @foreach ($grouped as $y => $byProgram)
+                @foreach ($byProgram as $program => $labels)
+                  <tr data-year="{{ $y }}" data-program="{{ $program }}" data-sections="{{ json_encode($labels) }}">
+                    <td><span class="sec-prog">{{ $program }}</span><span class="sec-year">{{ $ordinal($y) }} year</span></td>
+                    <td class="st-secs">{{ implode(' · ', array_map(fn ($s) => substr($s, strlen($program) + 1), $labels)) }}</td>
+                    <td class="st-total">{{ count($labels) }}</td>
+                    <td><button type="button" class="tk-btn tk-btn-sm tk-btn-dark" onclick="manage(this.closest('tr'))">Manage</button></td>
+                  </tr>
+                @endforeach
+              @endforeach
+              <tr id="stNone" hidden><td colspan="4" class="tk-empty">No sections here.</td></tr>
+            </tbody>
+          </table>
+          <div class="tk-foot"><span id="stShown"></span></div>
+        </section>
+      </div>
     </div>
+
+    <div id="stDetail" hidden>
+      <nav class="sd-crumb" aria-label="Breadcrumb"><button type="button" onclick="closeManage()">System Settings</button><u>›</u><span id="sdCrumb"></span></nav>
+      <section class="card st-card">
+        <header class="st-head">
+          <h2 class="st-h"><svg class="st-ic" style="color:#7c3aed"><use href="#st-folder"/></svg><span id="sdTitle"></span></h2>
+          <div class="sd-tools">
+            <span class="st-meta" id="sdCount">No sections selected</span>
+            <button type="button" class="tk-btn" id="sdRemove" disabled onclick="removeSections([].map.call(document.querySelectorAll('.sd-pick:checked'), function (c) { return c.value; }))">Remove selected</button>
+          </div>
+        </header>
+        <table class="table st-table">
+          <thead><tr><th class="st-chk"><input type="checkbox" id="sdAll" aria-label="Select all sections" onchange="var on = this.checked; document.querySelectorAll('.sd-pick').forEach(function (c) { c.checked = on; }); countPicked()"></th><th>Section</th><th>Year level</th><th><span class="tk-vh">Actions</span></th></tr></thead>
+          <tbody id="sdRows"></tbody>
+        </table>
+        <div class="tk-foot"><span id="sdFoot"></span></div>
+      </section>
+    </div>
+
+    <form id="removeForm" method="POST" action="{{ route('admin.settings.sections.destroy') }}" hidden>@csrf @method('DELETE')</form>
+   </div>
   </div>
 </div>
 
 <script nonce="{{ Vite::cspNonce() }}">
 var SECTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+var EXISTING = @json($sections);
+var START_YEAR = @json($years[0]);
+var year = 3;
 
-/** What the range would produce, shown before it is saved rather than after. */
+/** What the range would add, per program, with the ones already listed taken out. */
 function previewSections(){
-  var form = document.getElementById('sectionForm');
-  var box = document.getElementById('sectionPreview');
-
-  var programs = [].slice.call(form.querySelectorAll('input[name="programs[]"]:checked')).map(function (i) { return i.value; });
-  // 3rd year, where capstone starts; 4th-year sections come from the student list.
-  var years = @json($years);
+  var programs = [].map.call(document.querySelectorAll('input[name="programs[]"]:checked'), function (i) { return i.value; });
   var from = SECTION_LETTERS.indexOf(document.getElementById('fromLetter').value);
   var to = SECTION_LETTERS.indexOf(document.getElementById('toLetter').value);
-
-  if (from > to) { var swap = from; from = to; to = swap; }
-
+  var box = document.getElementById('sectionPreview');
   var button = document.getElementById('addSections');
+  var total = 0, skip = 0, lines = '';
 
-  if (!programs.length) {
-    box.innerHTML = 'Pick at least one program.';
+  if (!programs.length || from > to) {
+    box.innerHTML = from > to
+      ? '<span style="color:var(--red)">Choose an end letter after or equal to the start letter.</span>'
+      : '<span>Select at least one program.</span>';
     button.disabled = true;
     button.textContent = 'Add sections';
     return;
   }
 
-  var made = [];
   programs.forEach(function (p) {
-    years.forEach(function (y) {
-      for (var i = from; i <= to; i++) made.push(p + '-' + y + SECTION_LETTERS[i]);
+    var fresh = 0;
+    for (var i = from; i <= to; i++) EXISTING.indexOf(p + '-' + START_YEAR + SECTION_LETTERS[i]) === -1 ? fresh++ : skip++;
+    total += fresh;
+    lines += '<div class="st-line"><span><b>' + p + '</b> · ' + START_YEAR + SECTION_LETTERS[from]
+      + (to > from ? '–' + START_YEAR + SECTION_LETTERS[to] : '') + '</span>'
+      + '<span class="st-new' + (fresh ? '' : ' none') + '">' + fresh + ' new</span></div>';
+  });
+
+  var noun = ' section' + (total === 1 ? '' : 's');
+  box.innerHTML = '<div class="st-preview-h"><b>Preview</b><span>' + total + ' new' + noun + '</span></div>' + lines
+    + (skip ? '<p class="st-skip">' + skip + ' already listed, skipped.</p>' : '');
+  button.disabled = !total;
+  button.textContent = 'Add ' + total + noun;
+}
+
+function pickYear(y){
+  year = y;
+  document.querySelectorAll('.tk-tab').forEach(function (t) { t.setAttribute('aria-selected', String(+t.dataset.year === y)); });
+  filterRows();
+}
+
+function filterRows(){
+  var q = document.getElementById('stSearch').value.trim().toUpperCase();
+  var shown = 0;
+  document.querySelectorAll('tr[data-program]').forEach(function (r) {
+    var on = +r.dataset.year === year && (!q || r.dataset.sections.indexOf(q) !== -1 || r.textContent.toUpperCase().indexOf(q) !== -1);
+    r.hidden = !on;
+    shown += on;
+  });
+  document.getElementById('stNone').hidden = shown > 0;
+  document.getElementById('stShown').textContent = 'Showing ' + shown + ' program' + (shown === 1 ? '' : 's');
+}
+
+/** One program's sections on their own page, breadcrumb back to the list. */
+function manage(row){
+  var labels = JSON.parse(row.dataset.sections);
+  var yearText = row.querySelector('.sec-year').textContent;
+  document.getElementById('sdCrumb').textContent = row.dataset.program + ' sections';
+  document.getElementById('sdTitle').textContent = row.dataset.program + ' · ' + yearText;
+  document.getElementById('sdFoot').textContent = labels.length + ' section' + (labels.length === 1 ? '' : 's');
+  var tbody = document.getElementById('sdRows');
+  tbody.replaceChildren();
+  labels.forEach(function (s) {
+    var tr = tbody.insertRow();
+    tr.innerHTML = '<td class="st-chk"><input type="checkbox" class="sd-pick" onchange="countPicked()"></td><td></td><td></td>'
+      + '<td><button type="button" class="st-rm">Remove</button></td>';
+    var pick = tr.querySelector('.sd-pick');
+    pick.value = s;
+    pick.setAttribute('aria-label', 'Select ' + s);
+    tr.cells[1].textContent = s;
+    tr.cells[2].textContent = yearText;
+    tr.querySelector('.st-rm').setAttribute('aria-label', 'Remove ' + s);
+    tr.querySelector('.st-rm').onclick = function () { removeSections([s]); };
+  });
+  document.getElementById('sdAll').checked = false;
+  countPicked();
+  document.getElementById('stMain').hidden = true;
+  document.getElementById('stDetail').hidden = false;
+  openKey = row.dataset.year + row.dataset.program;
+}
+
+var openKey = null;
+function closeManage(){
+  document.getElementById('stDetail').hidden = true;
+  document.getElementById('stMain').hidden = false;
+  openKey = null;
+}
+
+function countPicked(){
+  var n = document.querySelectorAll('.sd-pick:checked').length;
+  document.getElementById('sdCount').textContent = n ? n + ' selected' : 'No sections selected';
+  document.getElementById('sdRemove').disabled = !n;
+}
+
+function removeSections(list){
+  confirmSheet({
+    title: list.length === 1 ? 'Remove ' + list[0] + '?' : 'Remove ' + list.length + ' sections?',
+    names: list.length > 1 ? list : [],
+    body: 'A removed section can be added again.',
+    confirmLabel: list.length === 1 ? 'Remove section' : 'Remove ' + list.length + ' sections',
+    danger: true,
+  }).then(function (yes) {
+    if (!yes) return;
+    var form = document.getElementById('removeForm');
+    list.forEach(function (s) {
+      var i = document.createElement('input');
+      i.type = 'hidden'; i.name = 'section[]'; i.value = s;
+      form.appendChild(i);
     });
+    try { if (openKey) sessionStorage.setItem('st-open', openKey); } catch (e) {}
+    form.submit();
   });
-
-  // Named, not counted, so the Admin sees exactly which labels will be added.
-  var shown = made.slice(0, 16).map(function (s) { return '<span class="sec-tag">' + s + '</span>'; }).join('');
-  box.innerHTML = '<span class="preview-title">Will add</span><div class="preview-list">'
-    + shown + (made.length > 16 ? '<span class="sec-tag more">+' + (made.length - 16) + ' more</span>' : '') + '</div>';
-  button.disabled = false;
-  button.textContent = 'Add ' + made.length + ' section' + (made.length === 1 ? '' : 's');
 }
 
-/**
- * Click one letter, then another. The first sets one end and the second the
- * other; a third click starts again, so there is no mode to be in and
- * nothing to reset.
- */
-var letterPending = null;
-
-function pickLetter(letter){
-  var fromEl = document.getElementById('fromLetter');
-  var toEl = document.getElementById('toLetter');
-
-  if (letterPending === null) {
-    letterPending = letter;
-    fromEl.value = letter;
-    toEl.value = letter;
-  } else {
-    var a = SECTION_LETTERS.indexOf(letterPending);
-    var b = SECTION_LETTERS.indexOf(letter);
-
-    fromEl.value = SECTION_LETTERS[Math.min(a, b)];
-    toEl.value = SECTION_LETTERS[Math.max(a, b)];
-    letterPending = null;
-  }
-
-  paintLetters();
-  previewSections();
-}
-
-function paintLetters(){
-  var from = SECTION_LETTERS.indexOf(document.getElementById('fromLetter').value);
-  var to = SECTION_LETTERS.indexOf(document.getElementById('toLetter').value);
-  var said = document.getElementById('letterSaid');
-
-  document.querySelectorAll('.letter').forEach(function (b) {
-    var i = SECTION_LETTERS.indexOf(b.dataset.letter);
-    b.classList.toggle('on', i >= from && i <= to);
-    b.classList.toggle('edge', i === from || i === to);
-    b.setAttribute('aria-pressed', i >= from && i <= to ? 'true' : 'false');
-  });
-
-  var n = to - from + 1;
-  said.innerHTML = from === to
-    ? 'Section <b>' + SECTION_LETTERS[from] + '</b> only.'
-      + (letterPending ? ' Click another letter for a range.' : '')
-    : '<b>' + SECTION_LETTERS[from] + '</b> through <b>' + SECTION_LETTERS[to] + '</b> \u2014 ' + n + ' sections each.';
-}
-
-paintLetters();
 previewSections();
+pickYear(3);
+(function () {
+  // Removing reloads the page; come back to the program that was open.
+  var open = null;
+  try { open = sessionStorage.getItem('st-open'); sessionStorage.removeItem('st-open'); } catch (e) {}
+  var row = open && [].find.call(document.querySelectorAll('tr[data-program]'), function (r) { return r.dataset.year + r.dataset.program === open; });
+  if (row) manage(row);
+})();
 </script>
+@include('partials.app-dialog')
 @include('partials.escape-closes-modals')
 @include('partials.app-scrollbar')
 </body>

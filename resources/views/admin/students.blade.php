@@ -42,6 +42,18 @@
   .ct-toast-msg{font-size:12px;color:#64748b;margin:2px 0 0}
   .ct-toast-close{background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;line-height:1;padding:0}
   @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+  .sd-crumb{font-size:13.5px;font-weight:700;margin:0 0 14px}
+  .sd-crumb button{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--text2);cursor:pointer}
+  .sd-crumb button:hover{text-decoration:underline}
+  .sd-crumb u{margin:0 6px;color:var(--text2);text-decoration:none}
+  #stdDetail .card{padding:0}
+  .sd-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--border)}
+  .sd-body{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:20px 22px}
+  .sd-body h3{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin:0 0 10px}
+  .sd-body dl{display:grid;grid-template-columns:120px 1fr;gap:9px 12px;margin:0;font-size:13.5px}
+  .sd-body dt{color:var(--text2)}
+  .sd-body dd{margin:0;font-weight:600;color:var(--text)}
+  @media (max-width:700px){.sd-body{grid-template-columns:1fr}}
 </style>
   @include('partials.render-whole')
 </head>
@@ -75,6 +87,10 @@
           fn ($v) => $v !== '' && $v !== null
       ));
       $tabs = ['' => 'All', 'with' => 'In a team', 'without' => 'No team'];
+      // Section ("BSIT-3A") => its CaPSA, built once - TeamChecklist::capsaFor
+      // is a query per call. Lowest id wins, as it does there.
+      $capsaOf = \App\Models\CapstoneExpert::whereNotNull('sections')->orderByDesc('expert_id')->get()
+          ->reduce(fn ($map, $c) => array_merge($map, array_fill_keys($c->sections ?? [], $c->name)), []);
     @endphp
     <div class="page-head">
       <div class="tk-head-text">
@@ -142,11 +158,12 @@
       <table class="table std-table" data-export="Student Accounts" data-export-into="#tkActions">
         <thead>
           <tr>
-            <th style="width:40%">Student</th>
-            <th class="tk-opt2" style="width:16%">Student no.</th>
-            <th style="width:16%">Section</th>
-            <th class="tk-opt" style="width:20%">Team</th>
-            <th style="width:64px"><span class="tk-vh">Actions</span></th>
+            <th style="width:32%">Student</th>
+            <th class="tk-opt2" style="width:14%">Student no.</th>
+            <th style="width:10%">Program</th>
+            <th style="width:10%">Section</th>
+            <th class="tk-opt">Team</th>
+            <th style="width:170px"><span class="tk-vh">Actions</span></th>
           </tr>
         </thead>
         <tbody>
@@ -178,19 +195,19 @@
                 </div>
               </td>
               <td class="tk-opt2" data-label="Student no."><span class="tk-num">{{ $student->student_number ?? '—' }}</span></td>
-              <td data-label="Section" title="{{ $student->course }}">
-                <span>
-                  @if ($program)
-                    <span class="tk-prog">{{ $program }}</span>
-                  @elseif ($student->course)
-                    <span class="tk-prog">{{ $student->course }}</span>
-                  @endif
-                  @if ($sectionShort !== '')
-                    <span class="tk-secsoft">{{ $sectionShort }}</span>
-                  @elseif (! $program && ! $student->course)
-                    <span class="tk-empty">&mdash;</span>
-                  @endif
-                </span>
+              <td data-label="Program" title="{{ $student->course }}">
+                @if ($program || $student->course)
+                  <span class="tk-prog">{{ $program ?: $student->course }}</span>
+                @else
+                  <span class="tk-empty">&mdash;</span>
+                @endif
+              </td>
+              <td data-label="Section">
+                @if ($sectionShort !== '')
+                  <span class="tk-secsoft">{{ $sectionShort }}</span>
+                @else
+                  <span class="tk-empty">&mdash;</span>
+                @endif
               </td>
               <td class="tk-opt" data-label="Team">
                 @if ($teamName)
@@ -204,6 +221,10 @@
                    thing here the loudest. --}}
               <td class="tk-ac" data-label="Actions">
                 <div class="tk-acts">
+                  <button type="button" class="tk-btn tk-btn-sm tk-btn-dark" onclick="showProfile(this)"
+                          data-num="{{ $student->student_number }}" data-prog="{{ $program ?: $student->course }}"
+                          data-year="{{ $year !== '' ? $year.' year' : '' }}" data-sec="{{ $program && $sectionShort !== '' ? $program.'-'.$sectionShort : $sectionShort }}"
+                          data-capsa="{{ $capsaOf[$program.'-'.$sectionShort] ?? '' }}" data-team="{{ $teamName ?? 'No team' }}">View profile</button>
                   <div class="rowmenu">
                     <button type="button" class="icon-btn rowmenu-btn" aria-expanded="false"
                             aria-label="Actions for {{ $fullName ?: $student->email }}">
@@ -238,7 +259,7 @@
                   $team === 'with' ? 'in a team' : ($team === 'without' ? 'without a team' : null),
               ])->filter();
             @endphp
-            <tr class="tk-note"><td colspan="5" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">
+            <tr class="tk-note"><td colspan="6"style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">
               @if ($lookedFor->isEmpty())
                 No student accounts yet.
               @else
@@ -254,6 +275,21 @@
       <div class="tk-foot">
         <span>Showing <strong>{{ $students->count() }}</strong> {{ Str::plural('student', $students->count()) }}</span>
       </div>
+    </div>
+
+    <div id="stdDetail" hidden>
+      <nav class="sd-crumb" aria-label="Breadcrumb"><button type="button" onclick="closeProfile()">Student Accounts</button><u>›</u><span id="sdName"></span></nav>
+      <section class="card">
+        <header class="sd-head"><div id="sdWho"></div><span class="tk-num" id="sd-num"></span></header>
+        <div class="sd-body">
+          <section><h3>Academic information</h3>
+            <dl><dt>Program</dt><dd id="sd-prog"></dd><dt>Year level</dt><dd id="sd-year"></dd><dt>Section</dt><dd id="sd-sec"></dd><dt>Managed by</dt><dd id="sd-capsa"></dd></dl>
+          </section>
+          <section><h3>Team membership</h3>
+            <dl><dt>Team</dt><dd id="sd-team"></dd></dl>
+          </section>
+        </div>
+      </section>
     </div>
   </div>
 </div>
@@ -299,6 +335,31 @@ async function copyEmail(button) {
   } catch (e) {
     showToast('Could not copy the address.', 'error');
   }
+}
+
+
+// ── PROFILE ────────────────────────────────────────────
+// Everything it shows is already on the row, so it swaps views in place;
+// the list stays loaded and Back returns to the same scroll spot.
+let listScroll = 0;
+function profileOpen(open) {
+  document.querySelector('.page-head').style.display = open ? 'none' : '';
+  document.querySelector('.list-card').style.display = open ? 'none' : '';
+  document.getElementById('stdDetail').hidden = !open;
+}
+function showProfile(btn) {
+  const row = btn.closest('tr');
+  listScroll = document.querySelector('.tk-scroll').scrollTop;
+  document.getElementById('sdWho').replaceChildren(row.querySelector('.tk-who').cloneNode(true));
+  document.getElementById('sdName').textContent = row.querySelector('.tk-name').textContent;
+  for (const k of ['num', 'prog', 'year', 'sec', 'capsa', 'team']) {
+    document.getElementById('sd-' + k).textContent = btn.dataset[k] || '—';
+  }
+  profileOpen(true);
+}
+function closeProfile() {
+  profileOpen(false);
+  document.querySelector('.tk-scroll').scrollTop = listScroll;
 }
 
 

@@ -79,16 +79,14 @@ class SettingsController extends Controller
             : $added.' section'.($added === 1 ? '' : 's').' added.');
     }
 
-    /** Remove one section from the list. It says nothing about the students in it. */
+    /** Remove one or more sections from the list. It says nothing about the students in them. */
     public function destroySection(Request $request): RedirectResponse
     {
-        $validated = $request->validate(['section' => ['required', 'string']]);
+        $validated = $request->validate(['section' => ['required'], 'section.*' => ['string']]);
+        $drop = (array) $validated['section'];
 
-        SectionCatalog::store(array_values(array_filter(
-            SectionCatalog::defined(),
-            fn ($s) => $s !== $validated['section']
-        )));
+        SectionCatalog::store(array_values(array_diff(SectionCatalog::defined(), $drop)));
 
-        return back()->with('success', $validated['section'].' removed.');
+        return back()->with('success', count($drop) === 1 ? $drop[0].' removed.' : count($drop).' sections removed.');
     }
 }

@@ -45,17 +45,33 @@
 
     {{-- The page's name is in the top bar; the fees and New fee come first here. --}}
     <header class="fx-page-head">
-      <div class="fx-tabs" role="tablist" aria-label="Fee" id="c-fees" @if (collect($state['fees'] ?? [])->isEmpty()) hidden @endif></div>
+      <nav class="fx-crumb" id="c-crumb" aria-label="Breadcrumb"></nav>
+      <div class="fx-tabs" role="tablist" aria-label="Fee" id="c-fees" hidden></div>
       <div class="fx-actions"><button class="fx-btn" id="c-send" disabled>Send to Dean<span class="fx-count" id="c-send-n">0</span></button><button class="fx-btn" id="c-new-fee"><svg><use href="#fx-i-plus"/></svg>New fee</button></div>
     </header>
+
+    {{-- Every section at once; Open section shows that section's receipts below. --}}
+    <div class="fx-over" id="c-over" hidden>
+      <div class="fx-stats" id="c-stats"></div>
+      <section class="fx-card" aria-label="Sections">
+        <div class="fx-card-head"><div class="fx-tabs" role="tablist" aria-label="Section status" id="c-over-tabs"></div><div class="fx-actions" id="c-over-tools"></div></div>
+        <div class="fx-toolbar"><label class="fx-field" style="display:flex;align-items:center;gap:6px;width:260px"><svg width="15" height="15" class="fx-muted"><use href="#fx-i-search"/></svg><input id="c-over-q" type="search" placeholder="Search section" aria-label="Search section" style="border:0;outline:0;width:100%;background:none"></label></div>
+        <div class="fx-scroll">
+          <table data-export="Fee submissions" data-export-into="#c-over-tools">
+            <colgroup><col><col style="width:150px"><col style="width:100px"><col style="width:100px"><col style="width:110px"><col style="width:140px"><col style="width:170px"><col style="width:150px"></colgroup>
+            <thead><tr><th>Section</th><th class="fx-r">Submitted total</th><th>Receipts</th><th>Checked</th><th>Forwarded</th><th>Latest upload</th><th>Status</th><th class="fx-r">Actions</th></tr></thead>
+            <tbody id="c-sec-rows"></tbody>
+          </table>
+        </div>
+        <div class="fx-foot" id="c-over-foot"></div>
+      </section>
+    </div>
 
     <div id="c-body" style="flex:1;min-height:0;display:flex;flex-direction:column">
       <div class="fx-summary">
         <span id="c-fee-line"></span>
         <div class="fx-bar" id="c-bar" aria-hidden="true"></div>
         <div class="fx-legend" id="c-legend"></div>
-        <span class="fx-grow"></span>
-        <span class="fx-muted" style="font-size:12.5px">Your sections: {{ ($state['sections'] ?? []) ? implode(', ', $state['sections']) : 'All sections' }}</span>
       </div>
       <div class="fx-split">
         <section class="fx-list" aria-label="Receipts">

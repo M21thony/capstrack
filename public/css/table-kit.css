@@ -39,6 +39,8 @@
 .tk-btn:disabled{opacity:.55;cursor:not-allowed}
 .tk-btn-pri{background:var(--accent);border-color:var(--accent);color:#18191f}
 .tk-btn-pri:hover{background:var(--accent2);border-color:var(--accent2);color:#18191f}
+.tk-btn-dark{background:#18191f;border-color:#18191f;color:#fff}
+.tk-btn-dark:hover{background:#2c2e36;border-color:#2c2e36;color:#fff}
 .tk-btn-ghost{background:transparent;border-color:transparent;color:var(--text2)}
 .tk-btn-ghost:hover{background:var(--bg4);border-color:transparent}
 .tk-btn-sm{height:32px;padding:0 11px;font-size:12.5px}

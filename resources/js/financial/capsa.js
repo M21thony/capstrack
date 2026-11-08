@@ -14,24 +14,68 @@ const R = S.receipts;
 const NAME = {}, TEAM_OF = {};
 TEAMS.forEach(t => t.members.forEach(m => { NAME[m.id] = m.name; TEAM_OF[m.id] = t; }));
 
-let fee = FEES[0]?.id ?? null, show = 'pending', selected = null, sendingBack = false;
+// section: null shows the overview of every section; a name shows its receipts.
+let fee = FEES[0]?.id ?? null, show = 'pending', selected = null, sendingBack = false, section = null, overShow = 'all';
 const picked = new Set();
+const SECTIONS = [...new Set([...S.sections, ...TEAMS.map(t => t.section)])].filter(Boolean).sort();
+// Overview states, in the order the list puts them: [status class, label].
+const STATE = { check: ['pending', 'To check'], fix: ['sent_back', 'Needs correction'], ready: ['verified', 'Ready to forward'], fwd: ['fwd', 'Forwarded'], none: ['none', 'No receipts'] };
 
 const rec = (f, m) => R[`${f}:${m}`];
 const st = (f, m) => rec(f, m)?.status || 'none';
-const everyone = () => TEAMS.flatMap(t => t.members.map(m => m.id));
+const everyone = () => TEAMS.filter(t => t.section === section).flatMap(t => t.members.map(m => m.id));
 // Verified and not with the dean yet, as [feeId, receipt].
 const unsent = () => Object.entries(R).filter(([, r]) => r.status === 'verified' && !r.sent).map(([key, r]) => [+key.split(':')[0], r]);
 const tally = (f, ids) => { const c = { pending: 0, verified: 0, sent_back: 0, none: 0 }; ids.forEach(m => c[st(f, m)]++); return c; };
 
 function visible() {
   const team = +$('#c-team').value, q = $('#c-search').value.toLowerCase();
-  return TEAMS.filter(t => !team || t.id === team)
+  return TEAMS.filter(t => t.section === section && (!team || t.id === team))
     .map(t => ({ t, ids: t.members.map(m => m.id).filter(m => (show === 'all' || st(fee, m) === show) && (!q || NAME[m].toLowerCase().includes(q))) }))
     .filter(g => g.ids.length);
 }
 
+// One line per section, every fee together. A receipt counts once, in the
+// furthest place it has reached: forwarded, checked, waiting or sent back.
+function sectionLine(name) {
+  const c = { name, n: 0, total: 0, at: '', last: 0, pending: 0, back: 0, ready: 0, fwd: 0, amt: { pending: 0, back: 0, ready: 0, fwd: 0 } };
+  TEAMS.filter(t => t.section === name).forEach(t => t.members.forEach(m => FEES.forEach(f => {
+    const r = rec(f.id, m.id);
+    if (!r) return;
+    const k = r.sent ? 'fwd' : r.status === 'verified' ? 'ready' : r.status === 'pending' ? 'pending' : 'back';
+    c[k]++; c.amt[k] += +f.amount; c.n++; c.total += +f.amount;
+    const when = Date.parse(r.at) || 0;
+    if (when > c.last) { c.last = when; c.at = r.at; }
+  })));
+  c.state = c.pending ? 'check' : c.back ? 'fix' : c.ready ? 'ready' : c.fwd ? 'fwd' : 'none';
+  return c;
+}
+
+function renderOver() {
+  const lines = SECTIONS.map(sectionLine), order = Object.keys(STATE), q = $('#c-over-q').value.trim().toLowerCase();
+  const sum = k => lines.reduce((a, l) => a + l[k], 0), amt = k => lines.reduce((a, l) => a + l.amt[k], 0);
+  $('#c-stats').innerHTML = [['pending', 'Receipts to check'], ['ready', 'Checked · ready to forward'], ['fwd', "Forwarded to Dean's Office"]]
+    .map(([k, l]) => `<div class="fx-stat"><div><b class="fx-num">${peso(amt(k))}</b><span>${l}</span></div><small>${sum(k)} ${sum(k) === 1 ? 'receipt' : 'receipts'}</small></div>`).join('');
+  $('#c-over-tabs').innerHTML = [['all', 'All'], ...order.map(k => [k, STATE[k][1]])]
+    .map(([k, l]) => `<button role="tab" data-over="${k}" aria-selected="${k === overShow}">${l}<span class="fx-count">${k === 'all' ? lines.length : lines.filter(x => x.state === k).length}</span></button>`).join('');
+  const shown = lines.filter(l => (overShow === 'all' || l.state === overShow) && l.name.toLowerCase().includes(q))
+    .sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state));
+  $('#c-sec-rows').innerHTML = shown.map(l => `<tr>
+      <td><strong>${esc(l.name)}</strong></td>
+      <td class="fx-num fx-r"><strong>${l.n ? peso(l.total) : '—'}</strong></td>
+      <td class="fx-num">${l.n}</td><td class="fx-num">${l.ready}</td><td class="fx-num">${l.fwd}</td>
+      <td class="fx-num">${esc(l.at || '—')}</td>
+      <td>${statusHtml(...STATE[l.state])}</td>
+      <td class="fx-r">${l.n ? `<button class="fx-btn fx-btn-dark" data-open="${esc(l.name)}">${l.state === 'fwd' ? 'View records' : 'Open section'}</button>` : '—'}</td></tr>`).join('')
+    || '<tr><td colspan="8" class="fx-empty">No sections match.</td></tr>';
+  $('#c-over-foot').innerHTML = `<span>${shown.length} of ${lines.length} sections</span><span>${sum('n')} ${sum('n') === 1 ? 'receipt' : 'receipts'} · ${peso(sum('total'))}</span>`;
+}
+
 function render() {
+  $('#c-crumb').innerHTML = section ? `<button type="button" data-back>All sections</button><span aria-hidden="true">›</span><b>${esc(section)}</b>` : '<b>All sections</b>';
+  $('#c-over').hidden = !fee || !!section;
+  $('#c-body').hidden = !!fee && !section;
+  $('#c-fees').hidden = !fee || !section;
   if (!fee) {
     $('#c-fees').innerHTML = '';
     // In the page's scrolling area, like the receipt list it stands in for,
@@ -40,9 +84,10 @@ function render() {
     $('#c-body').innerHTML = '<div class="fx-scroll"><div class="fx-empty">No defense fee yet. Create one with <b>New fee</b>: Title, Pre Oral or Final Oral Defense. Pre-proposal Defense has no fee.</div></div>';
     return;
   }
-  const f = FEES.find(x => x.id === fee), all = everyone();
   $('#c-send').disabled = !unsent().length;
   $('#c-send-n').textContent = unsent().length;
+  if (!section) { renderOver(); return; }
+  const f = FEES.find(x => x.id === fee), all = everyone();
   $('#c-fees').innerHTML = FEES.map(x => {
     const w = tally(x.id, all).pending;
     return `<button role="tab" data-fee="${x.id}" aria-selected="${x.id === fee}">${esc(x.stage)}${FEES.filter(y => y.stage === x.stage).length > 1 ? ` · ${esc(x.program)}` : ''}<span class="fx-count ${w ? 'fx-hot' : ''}">${w}</span></button>`;
@@ -242,7 +287,7 @@ $('#c-insp').addEventListener('click', async e => {
   }
 });
 document.addEventListener('keydown', async e => {
-  if (e.target.closest('input,textarea,select') || document.querySelector('dialog[open]') || !fee) return;
+  if (e.target.closest('input,textarea,select') || document.querySelector('dialog[open]') || !fee || !section) return;
   const k = e.key.toLowerCase();
   if (k === 'j' || e.key === 'ArrowDown') { e.preventDefault(); move(1); }
   if (k === 'k' || e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
@@ -289,8 +334,20 @@ $('#f-save').addEventListener('click', async () => {
   }
 });
 
-// The team filter and the programs a new fee can be for.
-$('#c-team').insertAdjacentHTML('beforeend', TEAMS.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join(''));
+$('#c-crumb').addEventListener('click', e => { if (e.target.closest('[data-back]')) { section = null; render(); } });
+$('#c-over-tabs').addEventListener('click', e => { const b = e.target.closest('[data-over]'); if (b) { overShow = b.dataset.over; renderOver(); } });
+$('#c-over-q').addEventListener('input', renderOver);
+$('#c-sec-rows').addEventListener('click', e => {
+  const b = e.target.closest('[data-open]');
+  if (!b) return;
+  section = b.dataset.open; picked.clear(); selected = null; $('#c-search').value = '';
+  // The team filter lists only this section's teams.
+  $('#c-team').innerHTML = '<option value="">All teams</option>' + TEAMS.filter(t => t.section === section).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  show = tally(fee, everyone()).pending ? 'pending' : 'all';
+  render();
+});
+
+// The programs a new fee can be for.
 const programs = [...new Set(S.sections.map(s => s.split('-')[0].toUpperCase()))].filter(p => ['BSIT', 'BSIS', 'BSCS', 'BLIS'].includes(p));
 $('#f-program').innerHTML = (programs.length ? programs : ['BSIT', 'BSIS', 'BSCS', 'BLIS']).map(p => `<option>${p}</option>`).join('');
 
