@@ -93,8 +93,13 @@
 .rb .check-grid label{margin:0;padding:8px 10px;border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;gap:9px;color:var(--ink)}
 .rb .check-grid input{accent-color:var(--gold);height:auto}
 .rb .preview-box{background:#f4f6f9;border:1px solid var(--line);padding:10px;border-radius:7px;font-size:12px;white-space:pre-line}
-.rb .home-options{display:flex;flex-direction:column;gap:8px}
-.rb .home-options button{justify-content:flex-start}
+.rb .chev{width:13px;height:13px;margin-left:6px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.rb [aria-expanded=true] > .chev{transform:rotate(180deg)}
+.rb .row-menu{position:fixed;top:0;right:auto;left:0}
+.rb .row-menu button{align-items:center;gap:10px}
+.rb .mi{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rb .mi.blue{color:#2563eb}
+.rb .mi.purple{color:#7c3aed}
 
 /* Home */
 .rb.home{gap:10px}

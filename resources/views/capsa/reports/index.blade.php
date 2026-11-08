@@ -82,6 +82,11 @@
         <div class="saved-header"><span>Table name</span><span>Rows</span><span>Columns</span><span class="updated-cell">Updated</span><span></span></div>
         <div id="saved-rows"></div>
       </div>
+      <div class="menu row-menu" id="row-menu" role="menu" hidden>
+        <button type="button" role="menuitem" id="rename-saved"><svg class="mi blue" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Rename table</button>
+        <button type="button" role="menuitem" id="duplicate-saved"><svg class="mi purple" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>Duplicate table</button>
+        <button type="button" role="menuitem" class="danger" id="delete-saved"><svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>Delete table</button>
+      </div>
     </section>
 
     <section class="card home-section tpl" aria-labelledby="tpl-title">
@@ -105,7 +110,7 @@
   var $ = RB.$, esc = RB.esc;
   var saved = @json($tables), templates = @json($templates), fields = @json($fields), openQuery = @json((object) $openQuery);
   var storeUrl = @json(route('capsa.reports.tables.store'));
-  var builderUrl = @json(route('capsa.reports.builder', '__ID__')), updateUrl = @json(route('capsa.reports.tables.update', '__ID__'));
+  var builderUrl = @json(route('capsa.reports.builder', '__ID__')), updateUrl = @json(route('capsa.reports.tables.update', '__ID__')), destroyUrl = @json(route('capsa.reports.tables.destroy', '__ID__'));
   var KIND = {students: 'Students', teams: 'Teams', experts: 'Experts'};
   var ICON = {
     Experts: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M17 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 5"/></svg>',
@@ -139,8 +144,35 @@
   $('saved-rows').addEventListener('click', function (e) {
     var open = e.target.closest('[data-open]'), opts = e.target.closest('[data-options]');
     if (open) location.href = openLink(open.dataset.open);
-    if (opts) tableOptions(+opts.dataset.options);
+    if (opts) menuTarget && menuTarget.btn === opts ? closeMenu() : openMenu(opts);
   });
+
+  // ⋯ opens a small menu under the button; fixed so the scrolling list can't clip it.
+  var menu = $('row-menu'), menuTarget = null;
+  function openMenu(btn) {
+    closeMenu();
+    menuTarget = {btn: btn, table: saved.find(function (s) { return s.id === +btn.dataset.options; })};
+    btn.setAttribute('aria-expanded', 'true');
+    menu.hidden = false;
+    var r = btn.getBoundingClientRect(), top = r.bottom + 5;
+    if (top + menu.offsetHeight > innerHeight - 8) top = r.top - menu.offsetHeight - 5;
+    menu.style.top = top + 'px';
+    menu.style.left = Math.max(8, r.right - menu.offsetWidth) + 'px';
+  }
+  function closeMenu() {
+    if (menuTarget) menuTarget.btn.setAttribute('aria-expanded', 'false');
+    menu.hidden = true; menuTarget = null;
+  }
+  function menuAction(id, fn) {
+    $(id).addEventListener('click', function () { var s = menuTarget.table; closeMenu(); fn(s); });
+  }
+  menuAction('rename-saved', function (s) { nameSaved(s, false); });
+  menuAction('duplicate-saved', function (s) { nameSaved(s, true); });
+  menuAction('delete-saved', deleteSaved);
+  document.addEventListener('click', function (e) { if (menuTarget && !e.target.closest('#row-menu, [data-options]')) closeMenu(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+  document.querySelector('.saved-rows').addEventListener('scroll', closeMenu);
+  addEventListener('resize', closeMenu);
 
   function create(template) {
     RB.openDialog(template ? 'Use ' + esc(template.name) : 'Create report',
@@ -161,11 +193,14 @@
     });
   }
 
-  function tableOptions(id) {
-    var s = saved.find(function (s) { return s.id === id; });
-    RB.openDialog(esc(s.name), '<div class="home-options"><button type="button" id="rename-saved">Rename table</button><button type="button" id="duplicate-saved">Duplicate table</button></div>', '<button type="button" data-close>Close</button>');
-    $('rename-saved').addEventListener('click', function () { nameSaved(s, false); });
-    $('duplicate-saved').addEventListener('click', function () { nameSaved(s, true); });
+  function deleteSaved(s) {
+    RB.openDialog('Delete saved table?', '<p>Delete “' + esc(s.name) + '”?</p>',
+      '<button type="button" data-close>Cancel</button><button type="button" class="danger" id="confirm-delete">Delete table</button>');
+    $('confirm-delete').addEventListener('click', function () {
+      RB.api('DELETE', destroyUrl.replace('__ID__', s.id)).then(function () {
+        saved.splice(saved.indexOf(s), 1); render(); RB.closeDialog(); RB.toast('Table deleted.');
+      }).catch(function (err) { RB.toast(err.message); });
+    });
   }
   function nameSaved(s, copy) {
     RB.openDialog(copy ? 'Duplicate table' : 'Rename table',

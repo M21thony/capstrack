@@ -59,7 +59,7 @@
         <div class="actions">
           <button id="save-table" disabled>Save changes</button>
           <div class="menu-wrap">
-            <button class="primary" id="export" aria-expanded="false">Export ⌄</button>
+            <button class="primary" id="export" aria-expanded="false">Export <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
             <div class="menu" id="export-menu" hidden>
               <button id="export-csv">Download CSV (Excel)</button>
               <button id="export-print">Print / Save as PDF</button>
@@ -75,7 +75,7 @@
         <button class="ghost small reset" id="reset-filters">Reset</button>
       </div>
       <div class="table-tools">
-        <button id="edit-columns" aria-expanded="false" aria-controls="column-editor">Edit columns ⌄</button>
+        <button id="edit-columns" aria-expanded="false" aria-controls="column-editor">Edit columns <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
         <label class="row-mode">Rows
           <select id="row-mode"><option value="students">Students</option><option value="teams">Teams (grouped)</option><option value="experts">Experts</option></select>
         </label>
@@ -316,7 +316,6 @@
   $('clear-selection').addEventListener('click', function () { selection.clear(); renderChips(); });
   function setEditor(open) {
     $('column-editor').hidden = !open;
-    $('edit-columns').textContent = open ? 'Edit columns ⌃' : 'Edit columns ⌄';
     $('edit-columns').setAttribute('aria-expanded', String(open));
     requestAnimationFrame(fitPageSize);
   }
