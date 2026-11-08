@@ -258,7 +258,14 @@
     }
 
     labelEl.textContent = step.label;
-    bodyEl.textContent = step.body;
+    // **words** in the copy show in bold; built as nodes, never as HTML.
+    bodyEl.textContent = '';
+    step.body.split(/\*\*(.+?)\*\*/).forEach(function (part, i) {
+      if (!part) return;
+      var node = i % 2 ? document.createElement('b') : document.createTextNode(part);
+      if (i % 2) node.textContent = part;
+      bodyEl.appendChild(node);
+    });
     // Only a portal with a first step to send people to shows the link.
     finishLink.hidden = pageTour || current !== last || finishLink.getAttribute('data-has-next') !== '1';
 
