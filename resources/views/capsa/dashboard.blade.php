@@ -230,17 +230,13 @@
         $k = $ad['kpis'];
         $fee = $a['fees'];
 
-        // Students per school year, drawn on a 0-100 box the plot stretches to fit.
+        // Students per school year as bars. The axis has three steps, each a round
+        // 1, 2 or 5 times a power of ten, the smallest whose top fits the tallest year.
         $series = $a['studentsByYear'];
         $years = count($series);
-        $step = max(10, (int) ceil(collect($series)->max('value') / 30) * 10);
-        $points = collect($series)->map(fn ($row, $i) => [
-            'x' => $years > 1 ? round($i / ($years - 1) * 100, 2) : 50,
-            'y' => round(100 - $row['value'] / ($step * 3) * 100, 2),
-            'value' => $row['value'],
-        ]);
-        $line = $points->map(fn ($p) => $p['x'].','.$p['y'])->implode(' ');
-        $last = $points->last();
+        $peak = max(1, (int) collect($series)->max('value'));
+        $mag = 10 ** max(0, (int) floor(log10($peak / 3)));
+        $step = collect([1, 2, 5, 10])->map(fn ($m) => $m * $mag)->first(fn ($s) => $s * 3 >= $peak);
         $activePercent = $a['students'] > 0 ? (int) round($a['active'] / $a['students'] * 100) : 0;
 
         $roleMax = collect($a['byRole'])->max('value') ?: 1;
@@ -305,17 +301,9 @@
                 <div class="ad-chart">
                   <div class="ad-axis"><span>{{ $step * 3 }}</span><span>{{ $step * 2 }}</span><span>{{ $step }}</span><span>0</span></div>
                   <div class="ad-plot">
-                    @if ($years > 1)
-                      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                        <defs><linearGradient id="ad-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9a82c" stop-opacity=".32"/><stop offset="1" stop-color="#c9a82c" stop-opacity=".03"/></linearGradient></defs>
-                        <polygon fill="url(#ad-fade)" points="0,100 {{ $line }} 100,100"/>
-                        <polyline fill="none" stroke="#c9a82c" stroke-width="2" vector-effect="non-scaling-stroke" points="{{ $line }}"/>
-                      </svg>
-                    @endif
-                    @foreach ($points as $p)
-                      <i style="left:{{ $p['x'] }}%;bottom:{{ 100 - $p['y'] }}%"></i>
+                    @foreach ($series as $row)
+                      <span class="ad-col"><b style="height:{{ round($row['value'] / ($step * 3) * 100, 2) }}%"><em>{{ $row['value'] }}</em></b></span>
                     @endforeach
-                    <span class="ad-tip" style="bottom:{{ 100 - $last['y'] }}%;{{ $years > 1 ? 'right:-8px' : 'left:50%;margin-left:-14px' }}">{{ $last['value'] }}</span>
                   </div>
                   <div class="ad-months">@foreach ($series as $row)<span>{{ $row['label'] }}</span>@endforeach</div>
                 </div>
