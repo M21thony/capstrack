@@ -70,6 +70,8 @@
 .fx-card{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--fx-surface);border:1px solid var(--fx-line);border-radius:10px;overflow:hidden}
 .fx-card-head{display:flex;align-items:flex-end;gap:12px;padding:0 20px;border-bottom:1px solid var(--fx-line)}
 .fx-card-head .fx-actions{padding:8px 0}
+/* Overview: dark table header, like the other admin lists. */
+.fx .fx-over thead th{background:var(--fx-primary);color:#fff;border-bottom-color:var(--fx-primary)}
 .fx-foot{display:flex;justify-content:space-between;padding:8px 20px;border-top:1px solid var(--fx-line);font-size:12.5px;color:var(--fx-muted)}
 .fx .fx-btn-dark{min-height:30px;background:var(--fx-primary);border-color:var(--fx-primary);color:#fff}
 .fx .fx-btn-dark:hover{background:#2e3240}

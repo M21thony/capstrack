@@ -171,8 +171,7 @@ class StudentGradesReportTest extends TestCase
         [, $theirs] = $this->teamInSection('Other', yearSection: '4th · A');
 
         $this->actingAs($capsa, 'expert')->get(route('capsa.reports'))->assertOk()
-            ->assertSee('Student Grades')
-            ->assertSee(route('capsa.reports.show', 'grades'), false);
+            ->assertSee('Student grades');
 
         $rows = $this->rows();
         $this->assertSame([$mine->student_number], array_column($rows, 'number'));

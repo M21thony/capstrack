@@ -53,6 +53,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // On every response: web pages, the API, files and the health check.
         $middleware->append(SecurityHeaders::class);
 
+        // A saved report's column separators are " · ", ", ", a new line: trimming would ruin them.
+        // The controller trims the table name itself. By path: this runs before the route is known.
+        $middleware->trimStrings(except: [fn (Request $request) => $request->is('capsa/reports/tables*')]);
+
         // Local only: where each request's time went, in the browser's Network > Timing.
         $middleware->prepend(ServerTiming::class);
 

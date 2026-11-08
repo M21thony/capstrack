@@ -36,9 +36,7 @@ class ReportsTest extends TestCase
         $this->actingAs($capsa, 'expert')
             ->get(route('capsa.reports'))
             ->assertOk()
-            ->assertSeeInOrder(['Team Progress', 'Team Master List', 'Defense Results', 'Fee Collection', 'Expert Load', 'Defense Schedule'])
-            ->assertSee(route('capsa.reports.show', 'experts'), false)
-            ->assertViewHas('teamCount', 1);
+            ->assertSeeInOrder(['Team progress', 'Team master list', 'Defense results', 'Fee collection', 'Expert load', 'Defense schedule']);
 
         // A report's breadcrumb leads back to the list.
         $this->get(route('capsa.reports.show', 'progress'))

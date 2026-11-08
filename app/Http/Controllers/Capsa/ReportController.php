@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Capsa;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\TableReportController;
+use App\Models\ReportTable;
 use App\Support\CapsaReports;
 use App\Support\SectionScope;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -53,15 +54,11 @@ class ReportController extends Controller
 
         return view('capsa.reports.index', [
             'ctx' => $ctx,
-            'groups' => collect(CapsaReports::GROUPS)->map(fn ($keys) => array_map(fn ($key) => [
-                'key' => $key,
-                'name' => CapsaReports::REPORTS[$key][0],
-                'about' => CapsaReports::REPORTS[$key][1],
-                'extra' => $this->reports->extraFilters($key, $ctx),
-            ], $keys))->all(),
-            'period' => $this->periodQuery($ctx),
-            'teamCount' => $ctx['teams']->count(),
-            'sectionCount' => $ctx['teams']->map(fn ($t) => $ctx['teamSections'][$t->team_id])->unique()->count(),
+            'tables' => ReportTable::where('expert_id', auth('expert')->id())->latest('updated_at')->get()->map->toClient()->values(),
+            'templates' => ReportTable::TEMPLATES,
+            'fields' => ReportTable::FIELDS,
+            // A saved table keeps its own period unless Home's filters were set.
+            'openQuery' => $request->only(['year', 'term', 'program', 'section']),
         ]);
     }
 

@@ -11,8 +11,8 @@
 <style nonce="{{ Vite::cspNonce() }}">
   .fe-ic{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
   .fe-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-  .fe-stat{display:flex;align-items:center;gap:14px;padding:14px 18px}
-  .fe-stat-ic{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;background:#eef2ff;color:#2563eb;flex:none}
+  .fe-stat{display:flex;align-items:center;gap:12px;padding:10px 16px}
+  .fe-stat-ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:#eef2ff;color:#2563eb;flex:none}
   .fe-stat b{display:block;font-size:20px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
   .fe-stat span{font-size:12.5px;color:var(--text2)}
   .fe-stat .fe-side{margin-left:auto;text-align:right;font-size:12px;color:var(--text2)}
@@ -42,7 +42,7 @@
 
   .fe-table-card{margin-top:14px}
   .fe-table td{padding:10px 16px;font-size:13.5px}
-  .fe-table th{padding:10px 16px}
+  .fe-table th{padding:10px 16px;background:var(--navy-dark);color:#d4d6de}
   .fe-table .fe-num{text-align:right;font-variant-numeric:tabular-nums}
   .fe-pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--bg3);color:var(--text2)}
   .fe-pill::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}

@@ -7,43 +7,15 @@
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/report-builder.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 @include('capsa.reports._styles')
-<style nonce="{{ Vite::cspNonce() }}">
-.rp-period{padding:16px 20px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 16px;align-items:end}
-.rp-period-foot{grid-column:1/-1;margin:0;font-size:13px;color:var(--text3)}
-.rp-period-foot b{color:var(--text)}
-.rp-list{overflow:hidden}
-.rp-list table{width:100%;border-collapse:collapse;font-size:13.5px}
-.rp-list thead th{padding:11px 16px;background:var(--navy-dark);font-size:11px;font-weight:600;color:#d4d6de;letter-spacing:.06em;text-transform:uppercase;text-align:left}
-.rp-list td{padding:12px 16px;border-bottom:1px solid var(--bg4);vertical-align:middle}
-.rp-list tr.grp td{background:var(--bg3);font-weight:700;font-size:12.5px;padding:9px 16px}
-.rp-list .nm{font-weight:600;white-space:nowrap}
-.rp-list .ab{color:var(--text2)}
-.rp-list .none{color:var(--text3)}
-.rp-list .rp-select{width:180px}
-.rp-list .acts{display:flex;gap:8px;justify-content:flex-end}
-@media (max-width:980px){.rp-period{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:760px){
-  .rp-list thead{display:none}
-  .rp-list tbody tr{display:grid;gap:8px;padding:14px 16px;border-bottom:1px solid var(--bg4)}
-  .rp-list tbody tr.grp{padding:0;border:0}
-  .rp-list td{padding:0;border:0}
-  .rp-list tr.grp td{padding:9px 16px}
-  .rp-list td.ex:has(.none){display:none}
-  .rp-list .rp-select{width:100%}
-  .rp-list .acts{display:grid;grid-template-columns:2fr 1fr 1fr}
-}
-</style>
   @include('partials.render-whole')
 </head>
 <body>
 
 @include('capsa._sidebar')
 @include('partials.sidebar-toggle')
-@php
-  $table = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>';
-@endphp
 <div class="main">
   <div class="topbar">
     <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
@@ -56,96 +28,73 @@
   </div>
 
   <div id="skeleton-content" class="sk-overlay">
-    <div class="sk" style="height:110px;border-radius:10px;margin-bottom:16px"></div>
+    <div class="sk" style="height:90px;border-radius:10px;margin-bottom:12px"></div>
     <div class="sk" style="height:420px;border-radius:10px"></div>
   </div>
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content rp">
-    <form method="GET" action="{{ route('capsa.reports') }}" class="rp-card rp-period" id="period" aria-label="Report period">
-      <label class="rp-field">School year
-        <select name="year" data-resets-term>
-          @foreach ($ctx['years'] as $y)
-            <option value="{{ $y }}" @selected($y === $ctx['year'])>{{ $y }}{{ $y === $ctx['thisYear'] ? ' (current)' : '' }}</option>
-          @endforeach
-        </select>
-      </label>
-      <label class="rp-field">Semester
-        <select name="term">
-          @foreach ($ctx['termOptions'] as $v => $label)
-            <option value="{{ $v }}" @selected((string) $v === $ctx['term'])>{{ $label }}</option>
-          @endforeach
-        </select>
-      </label>
-      <label class="rp-field">Program
-        <select name="program" @disabled(count($ctx['programOptions']) === 1)>
-          @foreach ($ctx['programOptions'] as $v => $label)
-            <option value="{{ $v }}" @selected((string) $v === $ctx['program'])>{{ $label }}</option>
-          @endforeach
-        </select>
-      </label>
-      <label class="rp-field">Section
-        <select name="section">
-          @foreach ($ctx['sectionOptions'] as $v => $label)
-            <option value="{{ $v }}" @selected((string) $v === $ctx['section'])>{{ $label }}</option>
-          @endforeach
-        </select>
-      </label>
-      <p class="rp-period-foot">Every report below uses this period: <b>{{ $teamCount }} {{ \Illuminate\Support\Str::plural('team', $teamCount) }}</b> in <b>{{ $sectionCount }} {{ \Illuminate\Support\Str::plural('section', $sectionCount) }}</b>.
-        <noscript><button type="submit" class="rp-btn">Apply</button></noscript></p>
+  <div class="content rb home">
+    <div class="heading"><h1>Reports</h1><button class="primary" id="create-report">＋ Create report</button></div>
+
+    <form method="GET" action="{{ route('capsa.reports') }}" class="card home-filter" id="period" aria-label="Report period and scope">
+      <div class="filters">
+        <label><span>School year</span>
+          <select name="year" id="home-year" data-resets-term>
+            @foreach ($ctx['years'] as $y)
+              <option value="{{ $y }}" @selected($y === $ctx['year'])>{{ $y }}{{ $y === $ctx['thisYear'] ? ' (current)' : '' }}</option>
+            @endforeach
+          </select>
+        </label>
+        <label><span>Semester</span>
+          <select name="term" id="home-term">
+            @foreach ($ctx['termOptions'] as $v => $label)
+              <option value="{{ $v }}" @selected((string) $v === $ctx['term'])>{{ $label }}</option>
+            @endforeach
+          </select>
+        </label>
+        <label><span>Program</span>
+          <select name="program" id="home-program" @disabled(count($ctx['programOptions']) === 1)>
+            @foreach ($ctx['programOptions'] as $v => $label)
+              <option value="{{ $v }}" @selected((string) $v === $ctx['program'])>{{ $label }}</option>
+            @endforeach
+          </select>
+        </label>
+        <label><span>Section</span>
+          <select name="section" id="home-section">
+            @foreach ($ctx['sectionOptions'] as $v => $label)
+              <option value="{{ $v }}" @selected((string) $v === $ctx['section'])>{{ $label }}</option>
+            @endforeach
+          </select>
+        </label>
+        <noscript><button type="submit">Apply</button></noscript>
+      </div>
     </form>
 
-    {{-- One form per report; the controls in its row join it through form="". --}}
-    <div hidden>
-    @foreach (collect($groups)->flatten(1) as $r)
-      <form method="GET" action="{{ route('capsa.reports.show', $r['key']) }}" id="f-{{ $r['key'] }}">
-        @foreach ($period as $k => $v)
-          <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-        @endforeach
-      </form>
-    @endforeach
-    </div>
-
-    <section class="rp-card rp-list" aria-label="Reports">
-      <table>
-        <thead><tr>
-          <th scope="col" style="width:190px">Report</th>
-          <th scope="col">What's in it</th>
-          <th scope="col" style="width:212px">Filter</th>
-          <th scope="col" style="width:250px;text-align:right">Get it</th>
-        </tr></thead>
-        <tbody>
-          @foreach ($groups as $group => $reports)
-            <tr class="grp"><td colspan="4">{{ $group }}</td></tr>
-            @foreach ($reports as $r)
-              <tr>
-                <td class="nm">{{ $r['name'] }}</td>
-                <td class="ab">{{ $r['about'] }}</td>
-                <td class="ex">
-                  @forelse ($r['extra'] as $field => [$label, $options])
-                    <select name="{{ $field }}" form="f-{{ $r['key'] }}" class="rp-select" aria-label="{{ $r['name'] }}: {{ $label }}">
-                      @foreach ($options as $v => $text)
-                        <option value="{{ $v }}" @selected($v === $ctx[$field])>{{ $text }}</option>
-                      @endforeach
-                    </select>
-                  @empty
-                    <span class="none">—</span>
-                  @endforelse
-                </td>
-                <td>
-                  <div class="acts">
-                    <button type="submit" form="f-{{ $r['key'] }}" class="rp-btn dark">{!! $table !!}Open</button>
-                    <button type="submit" form="f-{{ $r['key'] }}" name="download" value="pdf" class="rp-btn gold" aria-label="Download {{ $r['name'] }} as PDF">PDF</button>
-                    <button type="submit" form="f-{{ $r['key'] }}" name="download" value="xlsx" class="rp-btn" aria-label="Download {{ $r['name'] }} as Excel">Excel</button>
-                  </div>
-                </td>
-              </tr>
-            @endforeach
-          @endforeach
-        </tbody>
-      </table>
+    <section class="card home-section saved" aria-labelledby="saved-title">
+      <div class="section-heading">
+        <div class="title-tools">
+          <span class="icon-box"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg></span>
+          <h2 id="saved-title">Your saved tables</h2>
+        </div>
+        <input id="find-table" type="search" placeholder="Find a saved table" aria-label="Find a saved table">
+      </div>
+      <div class="saved-rows">
+        <div class="saved-header"><span>Table name</span><span>Rows</span><span>Columns</span><span class="updated-cell">Updated</span><span></span></div>
+        <div id="saved-rows"></div>
+      </div>
     </section>
-    <p class="rp-note">Open shows the report as a table you can sort, search and merge. PDF and Excel download it straight away, with the college header and the period on top.</p>
+
+    <section class="card home-section tpl" aria-labelledby="tpl-title">
+      <div class="section-heading">
+        <div class="title-tools">
+          <span class="icon-box purple"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5Z"/><path d="M15 3v5h4M8 12h8M8 16h6"/></svg></span>
+          <h2 id="tpl-title">Start from a template</h2>
+        </div>
+      </div>
+      <div class="template-grid" id="templates"></div>
+    </section>
+
+    @include('capsa.reports._rb')
   </div>
   </div>
 </div>
@@ -153,14 +102,109 @@
 @include('capsa.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
 <script nonce="{{ Vite::cspNonce() }}">
 (function () {
-  var form = document.getElementById('period');
+  var $ = RB.$, esc = RB.esc;
+  var saved = @json($tables), templates = @json($templates), fields = @json($fields), openQuery = @json((object) $openQuery);
+  var storeUrl = @json(route('capsa.reports.tables.store'));
+  var builderUrl = @json(route('capsa.reports.builder', '__ID__')), updateUrl = @json(route('capsa.reports.tables.update', '__ID__'));
+  var KIND = {students: 'Students', teams: 'Teams', experts: 'Experts'};
+  var ICON = {
+    Experts: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M17 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 5"/></svg>',
+    Students: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5Z"/><path d="M6 12v6c4 3 8 3 12 0v-6M22 9v8"/></svg>',
+    other: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5Z"/><path d="M15 3v5h4M8 12h8M8 16h6"/></svg>'
+  };
+
+  // Home's period picks win over a table's saved one only when Home's filters were set.
+  function openLink(id) {
+    var url = builderUrl.replace('__ID__', id), q = new URLSearchParams(openQuery).toString();
+    return q ? url + '?' + q : url;
+  }
+  function unique(name) {
+    var candidate = name, n = 2;
+    while (saved.some(function (s) { return s.name.toLowerCase() === candidate.toLowerCase(); })) candidate = name + ' (' + (n++) + ')';
+    return candidate;
+  }
+  function updated(s) { var d = new Date(s.updated); return isNaN(d) ? '' : d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'}); }
+
+  function render() {
+    var query = $('find-table').value.toLowerCase();
+    var rows = saved.filter(function (s) { return s.name.toLowerCase().indexOf(query) !== -1; });
+    $('saved-rows').innerHTML = rows.map(function (s) {
+      return '<div class="saved-row"><span class="saved-name"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg><span>' + esc(s.name) + '</span></span>'
+        + '<span class="kind-cell">' + KIND[s.mode] + '</span><span class="count-cell">' + s.columns.length + ' columns</span>'
+        + '<span class="muted updated-cell">' + esc(updated(s)) + '</span>'
+        + '<div class="row-actions"><button type="button" class="small" data-open="' + s.id + '">Open builder</button>'
+        + '<button type="button" class="small ghost" data-options="' + s.id + '" aria-label="Options for ' + esc(s.name) + '">⋯</button></div></div>';
+    }).join('') || '<div class="empty-home">' + (saved.length ? 'No saved tables match your search.' : 'No saved tables yet.') + '</div>';
+  }
+  $('saved-rows').addEventListener('click', function (e) {
+    var open = e.target.closest('[data-open]'), opts = e.target.closest('[data-options]');
+    if (open) location.href = openLink(open.dataset.open);
+    if (opts) tableOptions(+opts.dataset.options);
+  });
+
+  function create(template) {
+    RB.openDialog(template ? 'Use ' + esc(template.name) : 'Create report',
+      '<label>Report name<input id="report-name" maxlength="70" value="' + esc(unique(template ? template.name : 'Untitled report')) + '"></label>'
+      + '<label>Starting layout<select id="starting-template"><option value="blank">Custom table — basic fields</option>'
+      + templates.map(function (t) { return '<option value="' + t.key + '"' + (template && t.key === template.key ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('') + '</select></label>',
+      '<button type="button" data-close>Cancel</button><button type="button" class="primary" id="create-and-open">Create &amp; open builder</button>');
+    $('create-and-open').addEventListener('click', function () {
+      var btn = this, name = $('report-name').value.trim();
+      if (!name) return $('report-name').focus();
+      var t = templates.find(function (t) { return t.key === $('starting-template').value; });
+      var filters = {};
+      ['year', 'term', 'program', 'section'].forEach(function (k) { var el = $('period').elements[k]; if (el && !el.disabled) filters[k] = el.value; });
+      btn.disabled = true;
+      RB.api('POST', storeUrl, {name: name, mode: t ? t.mode : 'students', columns: RB.columns(t ? t.fields : ['id', 'student', 'team', 'course', 'section'], fields), filters: filters})
+        .then(function (d) { location.href = d.url; })
+        .catch(function (err) { btn.disabled = false; RB.toast(err.message); });
+    });
+  }
+
+  function tableOptions(id) {
+    var s = saved.find(function (s) { return s.id === id; });
+    RB.openDialog(esc(s.name), '<div class="home-options"><button type="button" id="rename-saved">Rename table</button><button type="button" id="duplicate-saved">Duplicate table</button></div>', '<button type="button" data-close>Close</button>');
+    $('rename-saved').addEventListener('click', function () { nameSaved(s, false); });
+    $('duplicate-saved').addEventListener('click', function () { nameSaved(s, true); });
+  }
+  function nameSaved(s, copy) {
+    RB.openDialog(copy ? 'Duplicate table' : 'Rename table',
+      '<label>Table name<input id="saved-name" maxlength="70" value="' + esc(copy ? unique(s.name + ' — copy') : s.name) + '"></label>',
+      '<button type="button" data-close>Cancel</button><button type="button" class="primary" id="apply-name">' + (copy ? 'Duplicate' : 'Rename') + '</button>');
+    $('apply-name').addEventListener('click', function () {
+      var name = $('saved-name').value.trim();
+      if (!name) return $('saved-name').focus();
+      var call = copy
+        ? RB.api('POST', storeUrl, {name: name, mode: s.mode, columns: s.columns, filters: s.filters})
+        : RB.api('PUT', updateUrl.replace('__ID__', s.id), {name: name});
+      call.then(function (d) {
+        if (copy) saved.unshift(d.table); else saved[saved.indexOf(s)] = d.table;
+        render(); RB.closeDialog(); RB.toast(copy ? 'Table duplicated.' : 'Table renamed.');
+      }).catch(function (err) { RB.toast(err.message); });
+    });
+  }
+
+  $('templates').innerHTML = templates.map(function (t, i) {
+    return '<button type="button" class="template" data-template="' + t.key + '"><span class="icon-box' + (i % 2 ? ' purple' : '') + '">' + (ICON[t.group] || ICON.other) + '</span>'
+      + '<span class="template-copy"><span class="category">' + esc(t.group) + '</span><strong>' + esc(t.name) + '</strong><span class="description">' + esc(t.description) + '</span></span>'
+      + '<span class="chevron" aria-hidden="true">›</span></button>';
+  }).join('');
+  $('templates').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-template]');
+    if (b) create(templates.find(function (t) { return t.key === b.dataset.template; }));
+  });
+  $('create-report').addEventListener('click', function () { create(null); });
+  $('find-table').addEventListener('input', render);
+
+  var form = $('period');
   form.querySelectorAll('select').forEach(function (select) {
     select.addEventListener('change', function () {
       // Another year has other semesters: let it open on its own running one.
-      if (select.hasAttribute('data-resets-term')) form.querySelector('[name="term"]').disabled = true;
+      if (select.hasAttribute('data-resets-term')) form.elements.term.disabled = true;
       form.submit();
     });
   });
+  render();
 })();
 </script>
 @include('partials.escape-closes-modals')

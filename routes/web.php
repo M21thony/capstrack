@@ -28,6 +28,7 @@ use App\Http\Controllers\Capsa\ExpertRemovalRequestController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
 use App\Http\Controllers\Capsa\MilestonePageController;
 use App\Http\Controllers\Capsa\RemovalController;
+use App\Http\Controllers\Capsa\ReportBuilderController;
 use App\Http\Controllers\Capsa\ReportController;
 use App\Http\Controllers\Capsa\SectionProgressController;
 use App\Http\Controllers\Capsa\StudentController as CapsaStudentController;
@@ -298,6 +299,11 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // Reports: pick a period, open a report as a table, download it as a PDF or Excel sheet.
         Route::get('/reports', [ReportController::class, 'index'])->name('reports');
         Route::get('/reports/section/{section}', [ReportController::class, 'section'])->name('reports.section');
+        Route::get('/reports/builder/{table}', [ReportBuilderController::class, 'show'])->name('reports.builder');
+        Route::get('/reports/data', [ReportBuilderController::class, 'data'])->name('reports.data');
+        Route::post('/reports/tables', [ReportBuilderController::class, 'store'])->name('reports.tables.store');
+        Route::put('/reports/tables/{table}', [ReportBuilderController::class, 'update'])->name('reports.tables.update');
+        Route::delete('/reports/tables/{table}', [ReportBuilderController::class, 'destroy'])->name('reports.tables.destroy');
         Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show')
             ->whereIn('report', array_keys(CapsaReports::REPORTS));
         // The file a team uploaded for a line, opened by the CaPSA to check it.

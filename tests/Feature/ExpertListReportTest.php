@@ -162,6 +162,6 @@ class ExpertListReportTest extends TestCase
     {
         $this->actingAs($this->capsaFor(), 'expert')->get(route('capsa.reports'))
             ->assertOk()
-            ->assertSee('Expert List');
+            ->assertSee('Expert list');
     }
 }

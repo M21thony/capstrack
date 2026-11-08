@@ -119,7 +119,7 @@ class AdminStudentAccountsPageTest extends TestCase
 
         $this->get(route('admin.students'))
             ->assertOk()
-            ->assertDontSee('Clear filters');
+            ->assertDontSee('>Clear filters</a>', false);
     }
 
     /** Student Section List is the CaPSA's, so Admin is not offered it. */

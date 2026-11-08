@@ -48,7 +48,7 @@
   .st-skip{margin:8px 0 0;color:#b45309;font-size:12.5px}
 
   .st-table td{padding:10px 16px;font-size:13.5px}
-  .st-table th{padding:10px 16px}
+  .st-table th{padding:10px 16px;background:var(--navy-dark);color:#d4d6de}
   .st-table th:last-child,.st-table td:last-child{text-align:right}
   .sec-prog{display:block;font-weight:700;color:var(--text)}
   .sec-year{display:block;font-size:12px;color:var(--text3)}

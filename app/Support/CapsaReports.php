@@ -384,6 +384,105 @@ class CapsaReports
         return $this->progressCache = $out;
     }
 
+    // ----------------------------------------------------------------- builder
+
+    /**
+     * The report builder's rows: one per student of the teams in scope, every
+     * field plain text. A team's defense is its latest one; the fee and receipt
+     * are that defense's (the Title Defense fee before any is held).
+     *
+     * @return list<array<string, string>>
+     */
+    public function builderRows(array $ctx): array
+    {
+        $teams = $ctx['teams'];
+        $progress = $this->progressFor($ctx);
+        $assignments = $this->approvedAssignments($teams->pluck('team_id')->all())->groupBy('team_id');
+        $order = array_flip(DefenseBoard::STAGES);
+        $defenses = DefenseSchedule::whereIn('team_id', $teams->pluck('team_id'))->with(['panels.expert', 'grades'])->get()
+            ->sortByDesc(fn ($s) => ($order[$s->defense_type] ?? -1) * 1000 + (int) $s->attempt)
+            ->unique('team_id')->keyBy('team_id');
+        $posts = ExpensePost::whereIn('defense_type', DefenseBoard::PAID_STAGES)->whereIn('course', $ctx['programs'])
+            ->orderByDesc('is_active')->orderByDesc('id')->get()
+            ->unique(fn ($p) => $p->course.'|'.$p->defense_type)->keyBy(fn ($p) => $p->course.'|'.$p->defense_type);
+
+        $students = $teams->mapWithKeys(fn (Team $team) => [$team->team_id => $ctx['records']->get($team->team_id, collect())
+            ->map(fn ($sy) => $sy->student)->filter()->unique('student_id')
+            ->sortBy(fn ($s) => [(int) $s->student_id !== (int) $team->leader_id, mb_strtolower($s->l_name.' '.$s->f_name)])->values()]);
+        $receipts = $this->feeBoard->receipts($posts->pluck('id'), $students->flatten()->pluck('student_id'));
+
+        $rows = [];
+        foreach ($teams as $team) {
+            $label = $ctx['teamSections'][$team->team_id] ?? SectionScope::UNASSIGNED;
+            $program = $label === SectionScope::UNASSIGNED ? '' : TeamChecklist::programOf($label);
+            $roles = $this->rolesOf($assignments->get($team->team_id, collect()));
+            $p = $progress[$team->team_id] ?? null;
+            $s = $defenses->get($team->team_id);
+            $average = $s?->panelAverage();
+            $stage = $s && in_array($s->defense_type, DefenseBoard::PAID_STAGES, true) ? $s->defense_type : DefenseBoard::PAID_STAGES[0];
+            $base = [
+                'team' => $team->team_name,
+                'section' => $this->sectionName($ctx, $team),
+                'capa' => $roles['adviser'] ?? self::DASH,
+                'consultant' => $roles['consultant'] ?? self::DASH,
+                'grammarian' => $roles['grammarian'] ?? self::DASH,
+                'title' => $team->project_title ?: self::DASH,
+                'progress' => ! $team->is_confirmed ? 'Not verified' : ($p && $p->total > 0 ? $this->currentMilestone($p) : self::DASH),
+                'completed' => $p && $p->total > 0 ? $p->completed.' of '.$p->total : self::DASH,
+                'overdue' => (string) ($p->overdue ?? 0),
+                'defense' => $s?->defense_type ?? self::DASH,
+                'score' => $average === null ? self::DASH : DefenseScores::format($average),
+                'verdict' => $s ? ($s->outcome ? DefenseOutcome::label($s->outcome, $s->defense_type) : 'No result yet') : self::DASH,
+                'date' => $s?->schedule_date?->format('M j, Y') ?? self::DASH,
+                'time' => $s?->schedule_date ? $s->schedule_date->format('g:i A').($s->end_date ? ' – '.$s->end_date->format('g:i A') : '') : self::DASH,
+                'room' => $s?->venue ?: self::DASH,
+                'panel' => $s ? ($s->panels->map(fn ($x) => $x->expert?->name)->filter()->implode(', ') ?: self::DASH) : self::DASH,
+            ];
+
+            foreach ($students[$team->team_id] as $st) {
+                $course = $program ?: (string) $st->course;
+                $post = $posts->get($course.'|'.$stage);
+                $status = $post ? ($receipts[$post->id.':'.$st->student_id]['status'] ?? null) : null;
+                $n = $st->yearNumber();
+                $rows[] = $base + [
+                    'id' => (string) ($st->student_number ?: self::DASH),
+                    'student' => trim($st->f_name.' '.$st->l_name),
+                    'course' => $course ?: self::DASH,
+                    'year' => $n ? ([1 => '1st', 2 => '2nd', 3 => '3rd'][$n] ?? $n.'th').' year' : self::DASH,
+                    'fee' => number_format($status === 'verified' ? (float) $post->amount : 0, 2, '.', ''),
+                    'receiptstatus' => ! $post ? 'No fee' : match ($status) {
+                        'verified' => 'Verified', 'pending' => 'Waiting', 'sent_back' => 'Sent back', default => 'Not uploaded',
+                    },
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * The builder's expert rows: one per expert, team and role (adviser,
+     * consultant, grammarian), with how many of these teams the expert has.
+     *
+     * @return list<array<string, string>>
+     */
+    public function expertRows(array $ctx): array
+    {
+        $rows = collect();
+        foreach ($this->approvedAssignments($ctx['teams']->pluck('team_id')->all()) as $a) {
+            if (! ($key = $this->roleKey($a)) || ! $a->expert || ! $a->team) {
+                continue;
+            }
+            $label = $ctx['teamSections'][$a->team_id] ?? SectionScope::UNASSIGNED;
+            $rows->push(['eid' => $a->expert_id, 'expert' => $a->expert->name, 'role' => self::ROLES[$key], 'team' => $a->team->team_name,
+                'course' => $label === SectionScope::UNASSIGNED ? self::DASH : TeamChecklist::programOf($label), 'section' => $this->sectionName($ctx, $a->team)]);
+        }
+        $load = $rows->groupBy('eid')->map(fn ($g) => $g->unique('team')->count());
+
+        return $rows->sortBy(fn ($r) => [mb_strtolower($r['expert']), $r['role'], mb_strtolower($r['team'])])
+            ->map(fn ($r) => collect($r)->except('eid')->all() + ['load' => (string) $load[$r['eid']]])->values()->all();
+    }
+
     // ------------------------------------------------------------------ master
 
     private function master(array $ctx): array
