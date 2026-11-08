@@ -81,9 +81,14 @@
 
     list.innerHTML = items.map(function (p, i) {
       return '<button type="button" class="lookup-row' + (i === active ? ' on' : '') + '" data-i="' + i + '">'
+        + (p.avatar
+          ? '<img class="lookup-ava" src="' + esc(p.avatar) + '" alt="" referrerpolicy="no-referrer">'
+          : '<span class="lookup-ava">' + esc(p.initials) + '</span>')
+        + '<span class="lookup-text">'
         + '<span class="lookup-name">' + esc(p.name) + '</span>'
         + '<span class="lookup-mail">' + esc(p.email) + '</span>'
         + '<span class="lookup-detail">' + esc(p.detail) + '</span>'
+        + '</span>'
         + '</button>';
     }).join('');
     list.hidden = false;

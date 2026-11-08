@@ -67,13 +67,15 @@ class FeeBoard
         $sectionOf = $teams->mapWithKeys(fn (Team $team) => $this->members($team->schoolYears)
             ->mapWithKeys(fn (array $member) => [$member['id'] => $sections[$team->team_id]]));
 
+        $stageOf = ExpensePost::whereIn('defense_type', DefenseBoard::PAID_STAGES)->pluck('defense_type', 'id');
+
         $verified = FinancialRecord::where('f_record_status', 'verified')
-            ->whereIn('expense_post_id', ExpensePost::whereIn('defense_type', DefenseBoard::PAID_STAGES)->pluck('id'))
+            ->whereIn('expense_post_id', $stageOf->keys())
             ->whereIn('student_id', $sectionOf->keys())
             ->get()
             ->groupBy(fn (FinancialRecord $r) => $sectionOf[$r->student_id]);
 
-        return collect($sections)->unique()->sort()->values()->map(function (string $section) use ($verified) {
+        return collect($sections)->unique()->sort()->values()->map(function (string $section) use ($verified, $stageOf) {
             $all = $verified->get($section, collect());
             $sent = $all->whereNotNull('sent_to_dean_at');
             $last = $sent->sortByDesc('sent_to_dean_at')->first();
@@ -81,6 +83,8 @@ class FeeBoard
             return [
                 'section' => $section,
                 'amount' => (float) $sent->sum('amount'),
+                // Forwarded amount per defense, so the dean sees Title vs Pre Oral vs Final Oral.
+                'stages' => $sent->groupBy(fn (FinancialRecord $r) => $stageOf[$r->expense_post_id])->map(fn ($g) => (float) $g->sum('amount'))->all(),
                 'receipts' => $sent->count(),
                 'held' => $all->count() - $sent->count(),
                 'sent_on' => $last?->sent_to_dean_at->format('M j, Y'),

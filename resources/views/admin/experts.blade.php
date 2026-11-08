@@ -1461,7 +1461,7 @@ function toggleGroup(header) {
 
 function toggleGroupAll(checkbox) {
   const group = checkbox.closest('.section-group');
-  group.querySelectorAll('.section-opt input').forEach(cb => { cb.checked = checkbox.checked; });
+  group.querySelectorAll('.section-opt:not([data-taken="1"]) input').forEach(cb => { cb.checked = checkbox.checked; });
   if (checkbox.checked) group.classList.add('open'); // see what you just picked, don't leave it collapsed
   checkbox.indeterminate = false;
   updateAllSectionCounts();
@@ -1469,8 +1469,8 @@ function toggleGroupAll(checkbox) {
 
 function onSectionChange(input) {
   const group = input.closest('.section-group');
-  const boxes = group.querySelectorAll('.section-opt input');
-  const checkedCount = group.querySelectorAll('.section-opt input:checked').length;
+  const boxes = group.querySelectorAll('.section-opt:not([data-taken="1"]) input');
+  const checkedCount = group.querySelectorAll('.section-opt:not([data-taken="1"]) input:checked').length;
   const groupAll = group.querySelector('.group-all');
   groupAll.checked = checkedCount === boxes.length;
   groupAll.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
@@ -1480,8 +1480,8 @@ function onSectionChange(input) {
 function updateAllSectionCounts() {
   let grandTotal = 0, grandChecked = 0;
   document.querySelectorAll('#sectionList .section-group').forEach(group => {
-    const boxes = group.querySelectorAll('.section-opt input');
-    const checked = group.querySelectorAll('.section-opt input:checked').length;
+    const boxes = group.querySelectorAll('.section-opt:not([data-taken="1"]) input');
+    const checked = group.querySelectorAll('.section-opt:not([data-taken="1"]) input:checked').length;
     group.querySelector('.group-count').textContent = checked + '/' + boxes.length;
     group.classList.toggle('all-selected', checked > 0 && checked === boxes.length);
     grandTotal += boxes.length;
@@ -1515,7 +1515,7 @@ function removeSelectedSection(name) {
 }
 
 function selectAllSections() {
-  document.querySelectorAll('#sectionList .section-opt input').forEach(cb => { cb.checked = true; });
+  document.querySelectorAll('#sectionList .section-opt:not([data-taken="1"]) input').forEach(cb => { cb.checked = true; });
   document.querySelectorAll('#sectionList .group-all').forEach(cb => { cb.checked = true; cb.indeterminate = false; });
   updateAllSectionCounts();
 }

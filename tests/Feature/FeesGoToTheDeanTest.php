@@ -100,6 +100,7 @@ class FeesGoToTheDeanTest extends TestCase
 
         $this->assertTrue($rows['BSIT-3A']['is_sent']);
         $this->assertSame(500.0, $rows['BSIT-3A']['amount']);
+        $this->assertSame(['Title Defense' => 500.0], $rows['BSIT-3A']['stages']);
         $this->assertSame('Ms. CaPSA', $rows['BSIT-3A']['sent_by']);
 
         $this->assertFalse($rows['BSIT-3B']['is_sent']);

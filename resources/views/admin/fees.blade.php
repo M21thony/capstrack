@@ -19,7 +19,7 @@
   .fe-bar{display:block;height:4px;width:90px;border-radius:2px;background:var(--bg3);margin-top:6px;overflow:hidden}
   .fe-bar i{display:block;height:100%;background:var(--green)}
 
-  .fe-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px;margin-top:14px}
+  .fe-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
   .fe-card{padding:0;overflow:hidden;display:flex;flex-direction:column}
   .fe-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border)}
   .fe-head h2{display:flex;align-items:center;gap:10px;margin:0;font-size:15px;font-weight:700;color:var(--text)}
@@ -67,6 +67,10 @@
   $byProgram = $rows->groupBy(fn ($r) => strtok($r['section'], '-'))->map->sum('amount')->sortDesc();
   $top = max($byProgram->max() ?: 0, 1);
   $colors = ['BSIT' => '#2563eb', 'BSCS' => '#7c3aed', 'BSIS' => '#0d9488', 'BLIS' => '#ea580c'];
+  // Pre-proposal Defense has no fee, so only the three paid defenses show.
+  $byStage = collect(\App\Support\DefenseBoard::PAID_STAGES)->mapWithKeys(fn ($s) => [$s => $rows->sum(fn ($r) => $r['stages'][$s] ?? 0)]);
+  $stageTop = max($byStage->max() ?: 0, 1);
+  $stageColors = ['Title Defense' => '#0ea5e9', 'Pre Oral Defense' => '#f59e0b', 'Final Oral Defense' => '#16a34a'];
 @endphp
 
 <div class="main">
@@ -99,6 +103,17 @@
     </div>
 
     <div class="fe-grid">
+      <section class="card fe-card" aria-labelledby="fe-def">
+        <header class="fe-head"><h2 id="fe-def"><svg class="fe-ic" style="color:#0ea5e9" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Forwarded fees by defense</h2></header>
+        <dl class="fe-bars" style="grid-template-columns:130px 1fr">
+          @foreach ($byStage as $stage => $amount)
+            <dt>{{ $stage }}</dt>
+            <dd><i style="width:{{ $amount / $stageTop * 70 }}%;background:{{ $stageColors[$stage] }}"></i>₱{{ number_format($amount) }}</dd>
+          @endforeach
+        </dl>
+        <div class="fe-foot"><span>3 defenses</span><b>₱{{ number_format($byStage->sum()) }}</b></div>
+      </section>
+
       <section class="card fe-card" aria-labelledby="fe-prog">
         <header class="fe-head"><h2 id="fe-prog"><svg class="fe-ic" style="color:#2563eb" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-6M22 20H2"/></svg>Forwarded fees by program</h2></header>
         <dl class="fe-bars">

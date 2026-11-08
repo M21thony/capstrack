@@ -69,6 +69,8 @@ class DirectoryController extends Controller
                 return [
                     'email' => $expert->email,
                     'name' => trim($expert->first_name.' '.$expert->last_name),
+                    'avatar' => $expert->hasAvatarImage() ? $expert->avatarUrl() : '',
+                    'initials' => $expert->avatarInitials(),
                     // What they already are, so adding someone who is already
                     // an adviser is visibly a no-op rather than a surprise.
                     'detail' => $roles
@@ -93,6 +95,8 @@ class DirectoryController extends Controller
             ->map(fn (Student $student) => [
                 'email' => $student->email,
                 'name' => trim($student->f_name.' '.$student->l_name),
+                'avatar' => $student->avatarUrl(),
+                'initials' => $student->avatarInitials(),
                 // The pieces a form has separate boxes for. Picking somebody
                 // who was removed from a section should fill in what is
                 // already known about them, leaving only the section to say.
