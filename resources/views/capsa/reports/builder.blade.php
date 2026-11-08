@@ -121,7 +121,7 @@
     destroy: @json(route('capsa.reports.tables.destroy', '__ID__'))
   };
   var FILTERS = ['year', 'term', 'program', 'section'];
-  var EXPERT_KEYS = ['expert', 'role', 'load', 'team', 'course', 'section'];
+  var EXPERT_KEYS = ['expert', 'email', 'role', 'load', 'team', 'course', 'section'];
   var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
   var url = function (k, id) { return URLS[k].replace('__ID__', id); };
 
@@ -197,7 +197,7 @@
   function value(row, c) { return c.sources.map(function (k) { return row[k] == null || row[k] === '' ? '—' : row[k]; }).join(c.separator); }
   function fieldKeys() {
     var keys = Object.keys(fields);
-    return state.mode === 'experts' ? EXPERT_KEYS : keys.filter(function (k) { return ['expert', 'role', 'load'].indexOf(k) === -1; });
+    return state.mode === 'experts' ? EXPERT_KEYS : keys.filter(function (k) { return ['expert', 'email', 'role', 'load'].indexOf(k) === -1; });
   }
 
   // ---- render -------------------------------------------------------------

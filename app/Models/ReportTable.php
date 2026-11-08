@@ -21,9 +21,10 @@ class ReportTable extends Model
         'capa' => 'CaPA', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'title' => 'Project title',
         'year' => 'Year level', 'progress' => 'Progress', 'completed' => 'Requirements completed', 'overdue' => 'Overdue items',
         'defense' => 'Defense type', 'score' => 'Panel average', 'verdict' => 'Verdict',
-        'date' => 'Defense date', 'time' => 'Defense time', 'room' => 'Room', 'panel' => 'Panel members',
-        'fee' => 'Fee amount (PHP)', 'receiptstatus' => 'Receipt status',
-        'expert' => 'Expert', 'role' => 'Expert role', 'load' => 'Teams assigned',
+        'titlegrade' => 'Title Defense grade', 'pregrade' => 'Pre-oral grade', 'finalgrade' => 'Final grade', 'avggrade' => 'Average grade',
+        'date' => 'Defense date', 'time' => 'Defense time', 'room' => 'Room', 'chair' => 'Panel chair', 'panel' => 'Panel members',
+        'fee' => 'Fee amount (PHP)', 'receiptstatus' => 'Receipt status', 'paid' => 'Members paid',
+        'expert' => 'Expert', 'email' => 'Email', 'role' => 'Expert role', 'load' => 'Teams assigned',
     ];
 
     /** Starting layouts on Reports Home. */
@@ -32,10 +33,10 @@ class ReportTable extends Model
         ['key' => 'master', 'name' => 'Team master list', 'group' => 'Teams', 'description' => 'Teams, members, project titles, and assigned experts.', 'mode' => 'teams', 'fields' => ['team', 'course', 'section', 'student', 'title', 'capa', 'consultant', 'grammarian']],
         ['key' => 'results', 'name' => 'Defense results', 'group' => 'Defenses', 'description' => 'Defense type, team verdicts, and panel scores.', 'mode' => 'teams', 'fields' => ['team', 'course', 'section', 'defense', 'score', 'verdict']],
         ['key' => 'fees', 'name' => 'Fee collection', 'group' => 'Teams', 'description' => 'Student receipts, checked amounts, and collection status.', 'mode' => 'students', 'fields' => ['id', 'student', 'team', 'course', 'section', 'fee', 'receiptstatus']],
-        ['key' => 'grades', 'name' => 'Student grades', 'group' => 'Students', 'description' => 'Student IDs, names, and recorded defense grades.', 'mode' => 'students', 'fields' => ['id', 'student', 'course', 'section', 'team', 'defense', 'score']],
+        ['key' => 'grades', 'name' => 'Student grades', 'group' => 'Students', 'description' => 'Student IDs, names, and recorded defense grades.', 'mode' => 'students', 'fields' => ['id', 'student', 'course', 'section', 'team', 'titlegrade', 'pregrade', 'finalgrade', 'avggrade']],
         ['key' => 'load', 'name' => 'Expert load', 'group' => 'Experts', 'description' => 'Assigned team counts for each expert and role.', 'mode' => 'experts', 'fields' => ['expert', 'role', 'load', 'team', 'course']],
-        ['key' => 'experts', 'name' => 'Expert list', 'group' => 'Experts', 'description' => 'Expert names, roles, and assigned teams.', 'mode' => 'experts', 'fields' => ['expert', 'role', 'team', 'course', 'section']],
-        ['key' => 'schedule', 'name' => 'Defense schedule', 'group' => 'Defenses', 'description' => 'Defense dates, times, rooms, and panel members.', 'mode' => 'teams', 'fields' => ['team', 'course', 'section', 'defense', 'date', 'time', 'room', 'panel']],
+        ['key' => 'experts', 'name' => 'Expert list', 'group' => 'Experts', 'description' => 'Expert names, roles, and assigned teams.', 'mode' => 'experts', 'fields' => ['expert', 'email', 'role', 'team', 'course', 'section']],
+        ['key' => 'schedule', 'name' => 'Defense schedule', 'group' => 'Defenses', 'description' => 'Defense dates, times, rooms, and panel members.', 'mode' => 'teams', 'fields' => ['team', 'course', 'section', 'defense', 'date', 'time', 'room', 'chair', 'panel']],
     ];
 
     /** A Home/Builder-ready copy: what the page's script works with. */

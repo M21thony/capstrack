@@ -410,6 +410,8 @@ class CapsaReports
             ->map(fn ($sy) => $sy->student)->filter()->unique('student_id')
             ->sortBy(fn ($s) => [(int) $s->student_id !== (int) $team->leader_id, mb_strtolower($s->l_name.' '.$s->f_name)])->values()]);
         $receipts = $this->feeBoard->receipts($posts->pluck('id'), $students->flatten()->pluck('student_id'));
+        $byStage = collect(self::GRADED_STAGES)->map(fn ($stage) => $this->schedulesFor($teams, $stage)->load('grades.rubric'));
+        $text = fn ($cell) => is_array($cell) ? $cell[1] : $cell;
 
         $rows = [];
         foreach ($teams as $team) {
@@ -437,12 +439,28 @@ class CapsaReports
                 'time' => $s?->schedule_date ? $s->schedule_date->format('g:i A').($s->end_date ? ' – '.$s->end_date->format('g:i A') : '') : self::DASH,
                 'room' => $s?->venue ?: self::DASH,
                 'panel' => $s ? ($s->panels->map(fn ($x) => $x->expert?->name)->filter()->implode(', ') ?: self::DASH) : self::DASH,
+                'chair' => $s?->panels->firstWhere('panel_role', 'Panel Chair')?->expert?->name ?? self::DASH,
+            ];
+            $held = $byStage->map(fn ($schedules) => $schedules->get($team->team_id));
+            $shares = $held->map(fn ($h) => $this->scoreShare($h))->filter(fn ($p) => $p !== null);
+            $base += [
+                'titlegrade' => $text($this->scoreCell($held['title'])),
+                'pregrade' => $text($this->scoreCell($held['pod'])),
+                'finalgrade' => $text($this->scoreCell($held['fod'])),
+                'avggrade' => $shares->isEmpty() ? self::DASH : DefenseScores::format(round($shares->avg(), 2)).'%',
             ];
 
-            foreach ($students[$team->team_id] as $st) {
+            $statuses = $students[$team->team_id]->map(function ($st) use ($program, $posts, $stage, $receipts) {
+                $post = $posts->get(($program ?: (string) $st->course).'|'.$stage);
+
+                return $post ? ($receipts[$post->id.':'.$st->student_id]['status'] ?? null) : null;
+            });
+            $base['paid'] = $statuses->isEmpty() ? self::DASH : $statuses->filter(fn ($x) => $x === 'verified')->count().' of '.$statuses->count();
+
+            foreach ($students[$team->team_id] as $i => $st) {
                 $course = $program ?: (string) $st->course;
                 $post = $posts->get($course.'|'.$stage);
-                $status = $post ? ($receipts[$post->id.':'.$st->student_id]['status'] ?? null) : null;
+                $status = $statuses[$i];
                 $n = $st->yearNumber();
                 $rows[] = $base + [
                     'id' => (string) ($st->student_number ?: self::DASH),
@@ -474,7 +492,7 @@ class CapsaReports
                 continue;
             }
             $label = $ctx['teamSections'][$a->team_id] ?? SectionScope::UNASSIGNED;
-            $rows->push(['eid' => $a->expert_id, 'expert' => $a->expert->name, 'role' => self::ROLES[$key], 'team' => $a->team->team_name,
+            $rows->push(['eid' => $a->expert_id, 'expert' => $a->expert->name, 'email' => $a->expert->email ?: self::DASH, 'role' => self::ROLES[$key], 'team' => $a->team->team_name,
                 'course' => $label === SectionScope::UNASSIGNED ? self::DASH : TeamChecklist::programOf($label), 'section' => $this->sectionName($ctx, $a->team)]);
         }
         $load = $rows->groupBy('eid')->map(fn ($g) => $g->unique('team')->count());

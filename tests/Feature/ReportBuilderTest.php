@@ -68,7 +68,7 @@ class ReportBuilderTest extends TestCase
         $this->teamInSection('Outsider', yearSection: '4th · A');
 
         $json = $this->actingAs($capsa, 'expert')->getJson(route('capsa.reports.data'))
-            ->assertOk()->assertJsonStructure(['rows', 'expertRows', 'options' => ['year', 'term', 'program', 'section'], 'filters'])
+            ->assertOk()->assertJsonStructure(['rows' => ['*' => ['titlegrade', 'pregrade', 'finalgrade', 'avggrade', 'chair', 'paid']], 'expertRows', 'options' => ['year', 'term', 'program', 'section'], 'filters'])
             ->getContent();
 
         $this->assertStringContainsString('Alpha', $json);
