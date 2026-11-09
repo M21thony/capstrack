@@ -458,12 +458,6 @@ class PreProposalController extends Controller
                 ->exists();
     }
 
-    /** SDG goals and tags are saved as lists; the page reads them as a line. */
-    private function asText(mixed $value): ?string
-    {
-        return is_array($value) ? implode(', ', $value) : $value;
-    }
-
     /**
      * GET /pre-proposal/duplication-checks/{check} - one title's report.
      *
@@ -490,9 +484,10 @@ class PreProposalController extends Controller
             'Problem statement' => $proposal?->problem_statement ?? ($concepts['problem_statement'] ?? null),
             'Proposed solution' => $proposal?->proposed_solution ?? ($concepts['proposed_solution'] ?? null),
             'Scope' => $proposal?->scope ?? ($concepts['scope'] ?? null),
-            'Limitations' => $proposal?->limitations ?? ($concepts['limitations'] ?? null),
+            // Read out of the PDF, the limitations run on into the form's SDM and sign-off lines.
+            'Limitations' => preg_replace('/\s*Software Development Methodology.*$/s', '', (string) ($proposal?->limitations ?? ($concepts['limitations'] ?? ''))),
             'Development method' => $proposal?->sdm ?? ($concepts['sdm'] ?? null),
-            'Tags' => $this->asText($proposal?->tags),
+            'Tags' => is_array($proposal?->tags) ? implode("\n", $proposal->tags) : $proposal?->tags,
         ];
 
         // Applying belongs to the one title that cleared review and was then

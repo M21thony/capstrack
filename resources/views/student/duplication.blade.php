@@ -1697,7 +1697,7 @@ function renderResult(data, fileName, onLoad) {
   if (checkIdEl) checkIdEl.value = data.duplication_check_id;
 
   const clearBtn = document.getElementById('clear-result-btn');
-  if (clearBtn) clearBtn.style.display = 'inline-flex';
+  if (clearBtn) clearBtn.style.display = 'grid';
 
   // Said calmly: the percentage keeps its colour, the words say what it
   // means (the same bands as App\Support\SimilarityBand).

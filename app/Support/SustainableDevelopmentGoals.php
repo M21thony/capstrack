@@ -35,7 +35,8 @@ class SustainableDevelopmentGoals
         }
 
         // Split before each "SDG n", not on commas: a goal's own name can hold one.
-        $parts = preg_split('/,\s*(?=SDG\s*\d)/i', (string) $goals);
+        // Read out of a PDF, the goals can come with only a space between them.
+        $parts = preg_split('/,?\s+(?=SDG\s*\d)/i', (string) $goals);
 
         return array_values(array_filter(array_map('trim', $parts), fn ($goal) => $goal !== ''));
     }

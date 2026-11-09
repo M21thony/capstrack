@@ -162,11 +162,32 @@
     </button>
   </div>
   <div class="rp-dialog-b">
-    @foreach ($fields as $label => $value)
-      <div class="field">
-        <div class="k">{{ $label }}</div>
-        <div class="v">{{ $value }}</div>
+    @php($tagged = ['SDG', 'Research agenda and priority areas', 'Development method', 'Tags'])
+    @if (array_intersect_key($fields, array_flip($tagged)))
+      <div class="rf-facts">
+        @foreach (array_intersect_key($fields, array_flip($tagged)) as $label => $value)
+          <div class="rf-fact">
+            <div class="rf-k">{{ $label }}</div>
+            <div class="rf-tags">
+              @foreach (explode("\n", $value) as $tag)
+                @if (trim($tag) !== '')<span>{{ trim($tag) }}</span>@endif
+              @endforeach
+            </div>
+          </div>
+        @endforeach
       </div>
+    @endif
+    @foreach (array_diff_key($fields, array_flip($tagged)) as $label => $value)
+      <section class="rf-sec">
+        <h3 class="rf-h">{{ $label }}</h3>
+        @if ($label === 'Limitations' && count($items = preg_split('/(?<=\.)\s+(?=[A-Z])/', trim($value))) > 1)
+          <ul class="rf-list">
+            @foreach ($items as $item)<li>{{ $item }}</li>@endforeach
+          </ul>
+        @else
+          <p class="rf-p">{{ $value }}</p>
+        @endif
+      </section>
     @endforeach
   </div>
 </dialog>

@@ -352,13 +352,24 @@
 .rp-expert-who .x{font-size:11.5px;color:var(--primary,#3f55b5);margin-top:2px;line-height:1.45}
 .rp-expert-who .r{font-size:11.5px;color:var(--text3);margin-top:3px;line-height:1.45}
 
-.rp-dialog{border:0;border-radius:16px;padding:0;width:min(720px,calc(100vw - 32px));max-height:min(86vh,900px);max-height:min(86dvh,900px);box-shadow:0 24px 60px rgba(0,0,0,.28)}
+.rp-dialog{margin:auto;border:0;border-radius:16px;padding:0;width:min(820px,calc(100vw - 32px));max-height:min(86vh,900px);max-height:min(86dvh,900px);box-shadow:0 24px 60px rgba(0,0,0,.28)}
 .rp-dialog::backdrop{background:rgba(15,16,22,.55)}
 .rp-dialog-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 22px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff}
 .rp-dialog-h .k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3)}
 .rp-dialog-h h2{margin:3px 0 0;font-size:16px;line-height:1.4;color:var(--text)}
 .rp-x{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text3);cursor:pointer}
 .rp-x svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2}
-.rp-dialog-b{padding:6px 22px 22px}
+.rp-dialog-b{padding:16px 24px 24px}
+.rf-facts{display:grid;gap:12px;padding:14px 16px;border-radius:12px;background:#f6f7fb;border:1px solid var(--border);margin-bottom:6px}
+.rf-k{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.rf-tags{display:flex;flex-wrap:wrap;gap:6px}
+.rf-tags span{padding:4px 10px;border-radius:7px;font-size:12.5px;font-weight:500;line-height:1.35;background:#fff;border:1px solid #dfe3f0;color:#2d3a7a}
+.rf-sec{padding:16px 0 0}
+.rf-sec+.rf-sec{border-top:1px solid var(--border);margin-top:16px}
+.rf-h{display:flex;align-items:center;gap:8px;margin:0 0 7px;font-size:13.5px;font-weight:700;color:var(--text)}
+.rf-h::before{content:"";width:4px;height:15px;border-radius:2px;background:#c9a82c}
+.rf-p{margin:0;font-size:14px;line-height:1.7;color:#2b2f3a;white-space:pre-line}
+.rf-list{margin:0;padding-left:20px;font-size:14px;line-height:1.7;color:#2b2f3a}
+.rf-list li+li{margin-top:4px}
 .ty-note[hidden]{display:none}
 </style>
