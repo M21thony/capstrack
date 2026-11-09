@@ -212,7 +212,11 @@
                   @endif
                 </dl>
                 <div class="rs-acts">
-                  @if ($item['previewUrl'] || $item['openUrl'])
+                  @if ($item['kind'] === 'rubric')
+                    {{-- The app's own PDF window (pdf-viewer.js, loaded by the student sidebar). --}}
+                    <button type="button" class="rs-btn" data-pdf-view="{{ $item['previewUrl'] }}"
+                      data-pdf-title="{{ $item['title'] }}" data-pdf-meta="{{ $meta }}" data-pdf-download="{{ $item['downloadUrl'] }}">View</button>
+                  @elseif ($item['previewUrl'] || $item['openUrl'])
                     <button type="button" class="rs-btn" data-view
                       data-title="{{ $item['title'] }}" data-meta="{{ $meta }}" data-icon="{{ $icon }}" data-label="{{ $item['kind'] === 'rubric' ? 'RUB' : $item['type'] }}"
                       data-desc="{{ $item['description'] }}" data-preview="{{ $item['previewUrl'] }}" data-open="{{ $item['openUrl'] }}" data-download="{{ $item['downloadUrl'] }}">View</button>

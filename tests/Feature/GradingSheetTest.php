@@ -11,6 +11,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Support\GradingSheet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
@@ -132,6 +133,26 @@ class GradingSheetTest extends TestCase
         $ws->setCellValue($scoreCells[0], 18);
         $ws->setCellValue($scoreCells[1], 7);
         $this->assertEquals(25, $ws->getCell($total)->getCalculatedValue());
+    }
+
+    /** The Resources page's rubric, once the team is scheduled for that stage, names its title and panel. */
+    public function test_the_resources_rubric_names_the_teams_panel(): void
+    {
+        $member = CapstoneExpert::factory()->create(['approved_status' => true, 'first_name' => 'Jose', 'last_name' => 'Reyes']);
+        DefensePanel::create(['defense_id' => $this->defense->defense_id, 'expert_id' => $member->expert_id, 'panel_role' => 'Panel Member 1', 'created_at' => now()]);
+
+        $sheet = null;
+        View::composer('instructor.pdf.grading-sheet', function ($view) use (&$sheet) {
+            $sheet = $view->getData()['sheet'];
+        });
+
+        $this->actingAs($this->student, 'web')->get(route('student.resources.rubric', 'title-defense'))
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+
+        $this->assertSame('Clinic Queue System', $sheet['title']);
+        $this->assertSame('Team1', $sheet['team']);
+        $this->assertSame('Jose Reyes', $sheet['signatures']['Panel Member 1']);
+        $this->assertSame('Rosa Villanueva', $sheet['signatures']['Panel Chair']);
     }
 
     /** Another team's defense is not found, the same as one that does not exist. */

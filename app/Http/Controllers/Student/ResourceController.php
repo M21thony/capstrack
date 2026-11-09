@@ -127,8 +127,9 @@ class ResourceController extends Controller
      * The blank rubric for a defense stage, as the department's own form.
      *
      * The one for the student's program, else the stage's rubric for every
-     * program - whichever their panel grades with. ?view=1 shows it in the
-     * page instead of saving it.
+     * program - whichever their panel grades with. Filled in with the team's
+     * title and panel once the team has that defense scheduled. ?view=1 shows
+     * it in the page instead of saving it.
      */
     public function rubric(Request $request, string $stage, GradingSheet $sheets): Response
     {
@@ -140,7 +141,14 @@ class ResourceController extends Controller
 
         $disposition = $request->boolean('view') ? 'inline' : 'attachment';
 
-        return response(self::pdf($sheets->blank($row['rubric'], $row['stage'])), 200, [
+        // Once the team is scheduled for this stage, the sheet carries its title, team and panel.
+        $teamId = StudentTeam::idFor($student);
+        $defense = $teamId
+            ? DefenseSchedule::where('team_id', $teamId)->where('defense_type', $row['stage'])->latest('defense_id')->first()
+            : null;
+        $sheet = $defense ? $sheets->for($defense, $row['rubric']) : $sheets->blank($row['rubric'], $row['stage']);
+
+        return response(self::pdf($sheet), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => $disposition.'; filename="'.$row['stage'].' Rubric.pdf"',
         ]);
