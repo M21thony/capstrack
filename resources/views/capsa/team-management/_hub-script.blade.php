@@ -273,19 +273,19 @@
       (b.dataset.read === 'title' ? readTitle : readApplication)(b.dataset.readId);
     });
 
-    /* Teams: quick views, search, status and role hide rows here and now. */
+    /* Teams: quick views, search, program, section and role hide rows here and now. */
     const table = document.getElementById('tm-teams');
-    const box = document.getElementById('tm-q'), status = document.getElementById('tm-st');
+    const box = document.getElementById('tm-q'), prog = document.getElementById('tm-prog'), secSel = document.getElementById('tm-sec');
     let quick = 'all', role = 'all';
     const rowsOf = () => [...table.querySelectorAll('tbody tr[data-href]')];
     const QUICK = { all: () => true, mine: r => r.dataset.mine === '1', you: r => r.dataset.needs === '1', behind: r => r.dataset.behind === '1' };
 
     const apply = () => {
-      const q = box.value.trim().toLowerCase(), st = status.value;
+      const q = box.value.trim().toLowerCase(), p = prog.value, s = secSel.value;
       let shown = 0;
       rowsOf().forEach(r => {
-        r.hidden = !((QUICK[quick] || QUICK.all)(r) && r.dataset.q.includes(q) && (!st || r.dataset.st === st)
-          && (role === 'all' || r.dataset.role === role));
+        r.hidden = !((QUICK[quick] || QUICK.all)(r) && r.dataset.q.includes(q) && (!p || r.dataset.prog === p)
+          && (!s || r.dataset.sec === s) && (role === 'all' || r.dataset.role === role));
         shown += r.hidden ? 0 : 1;
       });
       const total = rowsOf().length, none = table.querySelector('.tm-none');
@@ -293,7 +293,7 @@
       table.querySelector('[data-count]').textContent = shown === total
         ? total + (total === 1 ? ' team' : ' teams')
         : 'Showing ' + shown + ' of ' + total + ' teams';
-      const filtered = q || st || quick !== 'all' || role !== 'all';
+      const filtered = q || p || s || quick !== 'all' || role !== 'all';
       hub.querySelectorAll('.tools [data-clear]').forEach(b => { b.hidden = !filtered; });
     };
     const setQuick = key => {
@@ -308,10 +308,20 @@
       apply();
     });
     box.oninput = apply;
-    status.onchange = apply;
+    // A section picked on page load limits the rows the server sent; leaving it is a page load.
+    const reload = v => { location.search = '?tab=teams' + (v ? '&section=' + encodeURIComponent(v) : ''); };
+    prog.onchange = () => {
+      [...secSel.options].forEach(o => { o.hidden = !!o.value && !!prog.value && o.dataset.prog !== prog.value; });
+      if (secSel.selectedOptions[0].hidden) { secSel.value = ''; }
+      if (secSel.dataset.server && secSel.value !== secSel.dataset.server) { return reload(secSel.value); }
+      apply();
+    };
+    secSel.onchange = () => secSel.dataset.server ? reload(secSel.value) : apply();
     hub.addEventListener('click', e => {
       if (!e.target.closest('[data-clear]')) { return; }
-      box.value = ''; status.value = ''; role = 'all';
+      if (secSel.dataset.server) { return reload(''); }
+      box.value = ''; prog.value = ''; secSel.value = ''; role = 'all';
+      [...secSel.options].forEach(o => { o.hidden = false; });
       hub.querySelectorAll('[data-role]').forEach(x => x.setAttribute('aria-pressed', x.dataset.role === 'all'));
       setQuick('all');
     });

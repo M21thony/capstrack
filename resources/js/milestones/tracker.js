@@ -104,6 +104,7 @@ function start(root) {
 
   function render() {
     redraw(root, () => { root.replaceChildren(); draw(); }, S);
+    root.querySelectorAll('table[data-export]').forEach(t => window.txPlace?.(t));
   }
 
   function draw() {
@@ -112,7 +113,7 @@ function start(root) {
     // Team Management, so hers names the tracker and links to its set-up.
     if (CAPSA) {
       const top = el('div', 'ms-top');
-      top.append(el('h2', 'ms-h', 'Milestones'), el('span', 'ms-spacer'));
+      top.append(el('h2', 'ms-h', 'Milestone tracker'), el('span', 'ms-spacer'));
       if (URLS.manage) {
         const manage = el('a', 'ms-btn', 'Manage milestones');
         manage.href = URLS.manage;
@@ -120,7 +121,6 @@ function start(root) {
       }
       root.append(top);
     }
-    root.append(sectionTabs());
 
     if (!d) {
       root.append(el('div', 'ms-panel ms-empty', CAPSA
@@ -147,23 +147,32 @@ function start(root) {
 
   // ── Sections ──────────────────────────────────────────────────────────
 
-  function sectionTabs() {
-    const nav = el('nav', 'ms-secs');
-    nav.setAttribute('aria-label', 'Sections');
+  /** Program and section pickers; the program one only when there is more than one. */
+  function pickers() {
+    const secs = overview.sections || [];
+    const progOf = name => name.split('-')[0];
+    const mine = progOf(S.data.section);
+    const select = (label, options, onChange) => {
+      const s = el('select', 'ms-sel');
+      s.setAttribute('aria-label', label);
+      s.dataset.key = 'pick:' + label;
+      options.forEach(([value, text]) => {
+        const o = el('option', '', text);
+        o.value = value;
+        s.append(o);
+      });
+      s.addEventListener('change', () => { S.focusKey = s.dataset.key; onChange(s.value); });
+      return s;
+    };
 
-    (overview.sections || []).forEach(s => {
-      const b = el('button', 'ms-sec', s.name);
-      b.type = 'button';
-      b.dataset.key = 'sec:' + s.name;
-      if (s.name === S.data?.section) b.setAttribute('aria-current', 'true');
-      b.append(el('small', '', String(s.teams)));
-      if (CAPSA && s.to_check) b.append(el('small', 'ms-sec-check', `${s.to_check} to check`));
-      b.setAttribute('aria-label', `${s.name}, ${plural(s.teams, 'team')}` + (CAPSA && s.to_check ? `, ${plural(s.to_check, 'signed paper')} to check` : ''));
-      b.addEventListener('click', () => loadSection(s.name));
-      nav.append(b);
-    });
+    const programs = [...new Set(secs.map(s => progOf(s.name)))];
+    const prog = select('Program', programs.map(p => [p, p]), p => loadSection(secs.find(s => progOf(s.name) === p).name));
+    prog.value = mine;
+    const sec = select('Section', secs.filter(s => progOf(s.name) === mine)
+      .map(s => [s.name, s.name + (CAPSA && s.to_check ? ` · ${s.to_check} to check` : '')]), loadSection);
+    sec.value = S.data.section;
 
-    return nav;
+    return programs.length > 1 ? [prog, sec] : [sec];
   }
 
   async function loadSection(name) {
@@ -190,6 +199,9 @@ function start(root) {
 
   function noChecklist(d) {
     const box = el('div', 'ms-panel ms-empty');
+    const picks = el('div', 'ms-picks-row');
+    picks.append(...pickers());
+    box.append(picks);
     const program = d.section.split('-')[0];
     box.append(el('p', '', `There are no ${program} milestones yet, so the teams in ${d.section} have nothing to track.`));
     if (CAPSA && URLS.setup) {
@@ -250,7 +262,7 @@ function start(root) {
     search.dataset.key = 'search';
     search.setAttribute('aria-label', 'Find a team');
     search.addEventListener('input', () => { S.q = search.value; S.focusKey = 'search'; render(); });
-    head.append(tabs, el('span', 'ms-spacer'), search);
+    head.append(tabs, el('span', 'ms-spacer'), search, ...pickers());
 
     const shown = (groups.find(([key]) => key === S.filter) || groups[0])[2]
       .filter(x => x.t.name.toLowerCase().includes(S.q.toLowerCase()))
@@ -259,9 +271,12 @@ function start(root) {
     const scroll = el('div', 'ms-scroll');
     scroll.dataset.scroll = 'track:' + d.section;
     if (shown.length) {
-      const table = el('table', 'ms-table');
+      const table = el('table', 'ms-table ms-ttable');
+      table.dataset.export = 'Milestone tracker';
+      table.dataset.exportInto = '#ms-tracker .ms-tx';
       const labels = table.createTHead().insertRow();
-      ['Team', 'Now on', 'Progress', 'Milestones done', 'Late', ''].forEach(label => {
+      ['Team', 'Current milestone', 'Requirements checked', 'Milestones completed',
+        ...(CAPSA ? ['Papers to check'] : []), 'Overdue requirements', 'Action'].forEach(label => {
         const th = el('th', '', label);
         th.scope = 'col';
         labels.append(th);
@@ -273,7 +288,9 @@ function start(root) {
       scroll.append(el('div', 'ms-empty', d.teams.length ? 'No teams here.' : 'No teams in this section yet.'));
     }
 
-    panel.append(head, scroll, el('div', 'ms-panel-foot', 'Late counts the milestones with a requirement past its due date. Click a team to see all of its milestones and requirements.'));
+    const foot = el('div', 'ms-panel-foot ms-foot-row');
+    foot.append(el('span', '', `Showing ${shown.length} of ${plural(d.teams.length, 'team')}`), el('span', 'ms-tx'));
+    panel.append(head, scroll, foot);
     return panel;
   }
 
@@ -286,39 +303,56 @@ function start(root) {
     name.type = 'button';
     name.dataset.key = 'team-' + d.section + ':' + x.t.id;
     name.addEventListener('click', () => openTeam(x.t));
-    const team = el('td');
-    team.append(name);
+    const cell = (label, ...kids) => {
+      const td = el('td');
+      td.dataset.label = label;
+      td.append(...kids);
+      return td;
+    };
 
-    const now = el('td');
-    if (x.current) {
-      now.append(x.current.name, el('small', 'ms-tsub', `${x.current.closed} of ${plural(x.current.total, 'requirement')} done`));
-    } else {
-      now.append(x.blocks.length ? 'All done' : 'Nothing to do yet');
-    }
+    // One element, so a phone's label-beside-value card keeps both lines together.
+    const now = el('span', '', x.current ? x.current.name : (x.blocks.length ? 'All completed' : 'Nothing to do yet'));
+    if (x.current) now.append(el('small', 'ms-tsub', `${x.current.closed} of ${plural(x.current.total, 'requirement')} checked`));
 
-    const late = el('td');
-    if (x.overdue) {
-      const count = el('span', 'ms-late', x.overdue + ' late');
-      count.title = x.late.map(b => b.name).join(', ');
-      late.append(count, el('small', 'ms-tsub', x.late.slice(0, 2).map(b => b.name).join(', ') + (x.overdue > 2 ? ` and ${x.overdue - 2} more` : '')));
-    } else {
-      late.append(el('span', 'ms-hint', 'None'));
-    }
+    const late = x.all.overdue ? el('span', 'ms-late', String(x.all.overdue)) : el('span', 'ms-hint', '—');
+    if (x.overdue) late.title = 'In ' + x.late.map(b => b.name).join(', ');
 
-    const act = el('td', 'ms-tact');
+    const papers = [el('span', 'ms-hint', '—')];
     if (x.check) {
       const first = x.t.rows.find(r => r.to_check && r.file_url);
       const check = el('button', 'ms-tcheck', 'Check ' + plural(x.check, 'paper'));
       check.type = 'button';
       check.addEventListener('click', () => (first ? openCheck(first, x.t) : openTeam(x.t)));
-      act.append(check);
+      papers[0] = check;
     }
 
-    const bar = el('td');
-    bar.append(progress(x.all));
+    const open = btn('Open team', '', () => openTeam(x.t));
+    const act = cell('Action', open);
+    act.className = 'ms-tact';
 
-    row.append(team, now, bar, el('td', '', `${x.done} of ${x.blocks.length}`), late, act);
+    row.append(
+      cell('Team', name, el('small', 'ms-secchip', d.section)),
+      cell('Current milestone', now),
+      cell('Requirements checked', meter(x.all.closed, x.all.total, 'checked')),
+      cell('Milestones completed', meter(x.done, x.blocks.length, 'completed')),
+      ...(CAPSA ? [cell('Papers to check', ...papers)] : []),
+      cell('Overdue requirements', late),
+      act,
+    );
     return row;
+  }
+
+  /** A bar with "x / n word" beside it; the bar is just the number drawn. */
+  function meter(n, total, word) {
+    const wrap = el('div', 'ms-meter');
+    const track = el('div', 'ms-track');
+    track.setAttribute('role', 'img');
+    track.setAttribute('aria-label', `${n} of ${total} ${word}`);
+    const done = el('i', 'ms-track-done');
+    done.style.width = (total ? Math.round(n / total * 100) : 0) + '%';
+    track.append(done);
+    wrap.append(track, el('small', '', `${n} / ${total} ${word}`));
+    return wrap;
   }
 
   // ── One team's page ───────────────────────────────────────────────────

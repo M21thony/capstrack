@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Checklist;
 use App\Models\ChecklistMilestone;
 use App\Models\Deliverable;
-use App\Models\Team;
 use App\Support\ChecklistAccess;
 use App\Support\ChecklistTracker;
 use App\Support\DefenseBoard;
-use App\Support\MilestoneProgress;
 use App\Support\MilestoneTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -37,6 +35,18 @@ class MilestonePageController extends Controller
         };
     }
 
+    /** The icon a requirement shows, by how it is handed in. Its kind doubles as the colour class. */
+    public static function iconOf(Deliverable $deliverable): string
+    {
+        return match ($deliverable->kind) {
+            Deliverable::DOCUMENT => 'upload',
+            Deliverable::APPROVAL => 'sign',
+            Deliverable::DEFENSE => 'present',
+            Deliverable::BLUEBOOK => 'book',
+            default => 'clip',
+        };
+    }
+
     public function __construct(private ChecklistAccess $access, private ChecklistTracker $tracker) {}
 
     /** One milestone and its requirements, with how many teams finished each. */
@@ -44,21 +54,11 @@ class MilestonePageController extends Controller
     {
         $this->access->milestone($milestone);
         $board = $this->boardOf($milestone->checklist);
-        $rows = collect($board['progress'] ?? [])
-            ->flatMap(fn ($team, $teamId) => $team->items->map(fn ($row) => [$teamId, $row]))
-            ->filter(fn ($pair) => (int) $pair[1]->item->checklist_milestone_id === $milestone->id);
-        $late = $rows->filter(fn ($pair) => $pair[1]->state === MilestoneProgress::OVERDUE);
-        $names = Team::whereIn('team_id', $late->pluck(0)->unique())->pluck('team_name', 'team_id');
 
+        // Setup only; team progress lives in the tracker.
         return view('capsa.team-management.milestone', [
             'milestone' => $milestone,
             'row' => $board['milestones']->first(fn ($row) => $row->milestone->id === $milestone->id),
-            'teams' => $board['teams'],
-            'done' => $board['done'],
-            // Hand-ins waiting on her check, by requirement id.
-            'toCheck' => $rows->filter(fn ($pair) => ChecklistTracker::toCheck($pair[1]))->countBy(fn ($pair) => $pair[1]->item->id)->all(),
-            'late' => $late->map(fn ($pair) => [$names[$pair[0]] ?? 'A team', $pair[1]->item->title])
-                ->sortBy(0)->values(),
             // Hidden ones too, labelled, so they can be shown again.
             'requirements' => $milestone->deliverables()->get(),
             'order' => self::orderOf($milestone->checklist),
@@ -77,7 +77,8 @@ class MilestonePageController extends Controller
             'previous' => $checklist->milestones()->active()
                 ->whereHas('deliverables', fn ($query) => $query->where('kind', Deliverable::DEFENSE))
                 ->get()->last()?->name,
-            'place' => ($count = $checklist->milestones()->active()->count() + 1).' of '.$count,
+            'order' => self::orderOf($checklist),
+            'active' => $checklist->milestones()->active()->pluck('id')->all(),
             'trail' => $this->trail([['New milestone', null]]),
         ]);
     }
@@ -91,8 +92,9 @@ class MilestonePageController extends Controller
             'checklist' => $milestone->checklist,
             'milestone' => $milestone,
             'previous' => $row?->previous,
+            'order' => self::orderOf($milestone->checklist),
             // Numbered as teams see the list; a hidden one has no place in it.
-            'place' => $row?->number ? $row->number.' of '.$milestone->checklist->milestones()->active()->count() : 'Hidden from teams',
+            'active' => $milestone->checklist->milestones()->active()->pluck('id')->all(),
             'trail' => $this->trail([
                 [$milestone->name, route('capsa.team_management.milestones.show', $milestone)],
                 ['Edit', null],
@@ -163,6 +165,7 @@ class MilestonePageController extends Controller
             'deliverable' => $deliverable,
             'defense' => $deliverable?->kind === Deliverable::DEFENSE,
             'stages' => DefenseBoard::STAGES,
+            'order' => self::orderOf($milestone->checklist),
             'trail' => $this->trail([
                 [$milestone->name, route('capsa.team_management.milestones.show', $milestone)],
                 [$deliverable ? 'Edit requirement' : 'Add requirement', null],

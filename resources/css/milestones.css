@@ -79,7 +79,34 @@
 .ms-choice[aria-selected="true"] small { color: rgba(255,255,255,.65); }
 
 /* ── Tracker ─────────────────────────────────────────────────────────── */
-.ms-app { height: var(--ms-h, 70vh);height: var(--ms-h, 70dvh); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; font-size: 13.5px; line-height: 1.5; }
+.ms-app { height: var(--ms-h, 70vh);height: var(--ms-h, 70dvh); display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; line-height: 1.5; }
+.ms-app > .ms-panel { flex: 1; }
+
+/* Program and section, as plain selects in the panel head. */
+.ms-app .ms-sel { border: 1px solid var(--border2); border-radius: 8px; padding: 4px 8px; min-height: 31px; background: var(--bg2); color: var(--text); font-size: 12.5px; font-weight: 600; max-width: 100%; }
+.ms-picks-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.ms-secchip { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: var(--bg4); color: var(--text2); font-size: 11px; font-weight: 600; vertical-align: 1px; }
+.ms-meter { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ms-meter small { font-size: 12px; color: var(--text2); }
+.ms-app .ms-meter .ms-track { width: 90px; height: 7px; }
+.ms-foot-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ms-foot-row .ms-tx { margin-left: auto; }
+/* The prototype's charcoal header, white text. */
+.ms-app .ms-ttable th { background: var(--navy-dark, #18191f); color: #fff; border-bottom: 0; white-space: nowrap; }
+
+@media (max-width: 820px) {
+  .ms-app .ms-ttable thead { display: none; }
+  .ms-app .ms-ttable, .ms-app .ms-ttable tbody, .ms-app .ms-ttable tr, .ms-app .ms-ttable td { display: block; width: 100%; }
+  .ms-app .ms-ttable tr { border-bottom: 1px solid var(--border); padding: 8px 12px; }
+  .ms-app .ms-ttable td { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 3px 0; border: 0; text-align: right; }
+  .ms-app .ms-ttable td::before { content: attr(data-label); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text3); font-weight: 600; text-align: left; flex: none; }
+  .ms-app .ms-ttable td[data-label="Team"] { justify-content: flex-start; text-align: left; flex-wrap: wrap; }
+  .ms-app .ms-ttable td[data-label="Team"]::before { display: none; }
+  .ms-app .ms-ttable td.ms-tact { justify-content: flex-end; padding-top: 6px; }
+  .ms-app .ms-ttable td.ms-tact::before { display: none; }
+  .ms-app .ms-ttable .ms-tsub { display: block; }
+  .ms-search { width: 100%; }
+}
 .ms-top { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
 .ms-h { font-size: 19.5px; margin: 0; letter-spacing: -.01em; font-weight: 600; }
 
@@ -287,4 +314,14 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .ms-chevi { transition: none; }
+}
+
+/* Beat the Team Management page's own table and link rules. */
+.ms-app .ms-ttable { min-width: 0; }
+.ms-app .ms-ttable td { padding: 9px 14px; font-size: 13px; }
+.ms-app .ms-ttable th { padding: 9px 14px; font-size: 10.5px; letter-spacing: .06em; }
+.ms-app a.ms-btn { text-decoration: none; }
+.ms-app .ms-tname { font-weight: 700; font-size: 14px; color: var(--text); }
+@media (max-width: 820px) {
+  .ms-app .ms-ttable td { padding: 3px 0; }
 }

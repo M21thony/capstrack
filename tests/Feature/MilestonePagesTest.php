@@ -48,7 +48,7 @@ class MilestonePagesTest extends TestCase
         $this->actingAs($this->capsa, 'expert');
     }
 
-    public function test_a_milestone_page_lists_its_requirements_with_how_many_teams_are_done(): void
+    public function test_a_milestone_page_lists_its_requirements_without_team_progress(): void
     {
         $this->get(route('capsa.team_management.milestones.show', $this->milestone))
             ->assertOk()
@@ -57,7 +57,7 @@ class MilestonePagesTest extends TestCase
             ->assertSee('Edit milestone')
             ->assertSee('Mark finished')
             ->assertSee('Signed endorsement form')
-            ->assertSee('Upload file')->assertSee('1<span class="ms-mut"> of 2 done', false)
+            ->assertSee('Upload file')->assertDontSee('of 2 done')
             ->assertSee('Old draft')
             ->assertSee('Hidden from teams')
             ->assertSee(route('capsa.team_management.milestones.requirements.create', $this->milestone), false)
@@ -84,10 +84,10 @@ class MilestonePagesTest extends TestCase
         $this->get(route('capsa.team_management.milestones.create', $this->checklist))
             ->assertOk()
             ->assertSee('New milestone')
-            ->assertSee('Teams can start this only after they pass the defense in Chapter 1-3 Submission')
+            ->assertSee('Start only after the team passes the defense in Chapter 1-3 Submission')
             ->assertSee('Description')
-            ->assertSee('Place in the list')
-            ->assertSee('value="2 of 2"', false);
+            ->assertSee('Position')
+            ->assertSee('<option value="2" selected>', false);
 
         // Named once, in the top bar: the milestone, then Edit.
         $this->get(route('capsa.team_management.milestones.edit', $this->milestone))
@@ -96,9 +96,9 @@ class MilestonePagesTest extends TestCase
             ->assertDontSee('<h1 class="ml-title">', false)
             ->assertSee('value="Chapter 1-3 Submission"', false)
             ->assertSee('Hide from teams')
-            ->assertSee('value="1 of 1"', false)
+            ->assertSee('<option value="1" selected>', false)
             ->assertSee('Delete milestone')
-            ->assertDontSee('Teams can start this only after');
+            ->assertDontSee('Start only after');
 
         $this->get(route('capsa.team_management.milestones.requirements.create', $this->milestone))
             ->assertOk()
@@ -214,16 +214,16 @@ class MilestonePagesTest extends TestCase
         $defense = $this->addDeliverable($this->checklist, ['title' => 'Oral', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Pre Oral Defense']);
 
         $this->get(route('capsa.team_management.milestones.show', $this->milestone))
-            ->assertSee('Pre Oral Defense')->assertSee('0<span class="ms-mut"> of 2 done', false);
+            ->assertSee('Pre Oral Defense')->assertSee('3 requirements');
 
         $this->get(route('capsa.team_management.milestones.requirements.edit', $defense))
             ->assertOk()
-            ->assertSee('value="defense" checked', false)
+            ->assertSee('value="defense" selected', false)
             ->assertSee('<option selected>Pre Oral Defense</option>', false)
             ->assertDontSee('hidden >Which defense', false);
 
         $this->get(route('capsa.team_management.milestones.requirements.edit', $this->form))
-            ->assertSee('value="upload" checked', false)
+            ->assertSee('value="upload" selected', false)
             ->assertSee('hidden >Which defense', false);
     }
 

@@ -44,7 +44,6 @@ class TeamManagementController extends Controller
     public const HUB_TABS = ['todo', 'applications', 'teams', 'milestone_list', 'team_ratings'];
 
     /** How the milestones list can be ordered. The first is the default. */
-    public const MILESTONE_SORTS = ['order' => 'Checklist order', 'due' => 'Due date', 'percent' => 'Most complete', 'name' => 'Name'];
 
     /**
      * The tabs that became pages of their own.
@@ -393,26 +392,8 @@ class TeamManagementController extends Controller
 
     private function milestoneList(Request $request, array $capsaSections): array
     {
-        $state = in_array($request->query('state'), ['finished', 'closed'], true) ? 'finished' : 'open';
-        $sort = array_key_exists((string) $request->query('sort'), self::MILESTONE_SORTS) ? $request->query('sort') : 'order';
-
         $boards = collect(app(ChecklistTracker::class)->milestoneList($capsaSections))
-            ->map(function (array $board) use ($state, $sort) {
-                [$finished, $open] = $board['milestones']->partition(fn ($row) => $row->milestone->isClosed() || $row->milestone->archived_at);
-                $shown = $state === 'finished' ? $finished : $open;
-
-                $board['open_count'] = $open->count();
-                $board['finished_count'] = $finished->count();
-                $board['order'] = MilestonePageController::orderOf($board['checklist']);
-                $board['shown'] = (match ($sort) {
-                    'percent' => $shown->sortByDesc('percent'),
-                    'name' => $shown->sortBy(fn ($row) => mb_strtolower($row->milestone->name)),
-                    'due' => $shown->sortBy(fn ($row) => $row->due_on?->toDateString() ?? '9999-12-31'),
-                    default => $shown,
-                })->values();
-
-                return $board;
-            });
+            ->map(fn (array $board) => $board + ['order' => MilestonePageController::orderOf($board['checklist'])]);
 
         /** @var CapstoneExpert $capsa */
         $capsa = auth('expert')->user();
@@ -420,9 +401,6 @@ class TeamManagementController extends Controller
 
         return [
             'boards' => $boards,
-            'state' => $state,
-            'sort' => $sort,
-            'sorts' => self::MILESTONE_SORTS,
             // The programs she handles with no checklist of her own yet, each
             // with the sections of it she has.
             'setups' => collect($capsa->handledPrograms())

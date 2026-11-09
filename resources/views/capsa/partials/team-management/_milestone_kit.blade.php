@@ -1,8 +1,39 @@
 {{-- What the milestone list and the milestone pages share: their look, one
      way to save through the JSON endpoints, and drag to reorder. --}}
 <style nonce="{{ Vite::cspNonce() }}">
-  .ml-page{max-width:980px}
-  .ml-form{max-width:560px}
+  /* The add/edit forms: a dialog-style card. */
+  .tmx .mdg{width:min(560px,100%);margin:8px auto 0;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,.08);box-sizing:border-box;color:var(--ink)}
+  .tmx .mdg-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .tmx .mdg-h h1{flex:1;margin:0;font-size:17px;font-weight:700;color:var(--ink)}
+  .tmx .mdg-h small{display:block;font-size:12.5px;font-weight:500;color:var(--mut)}
+  .tmx a.mdg-x{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:var(--mut);text-decoration:none}
+  .tmx a.mdg-x:hover{background:var(--tint);color:var(--ink)}
+  .tmx .mdg-b{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+  .tmx .mdg-f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--ink);margin:0;min-width:0}
+  .tmx .mdg-f[hidden]{display:none}
+  .tmx .mdg-f i{font-style:normal;font-weight:500;color:var(--mut)}
+  .tmx .mdg-in{min-height:36px;border:1px solid var(--line2);border-radius:7px;padding:0 11px;font-family:inherit;font-size:14px;font-weight:400;color:var(--ink);background:var(--card);width:100%;box-sizing:border-box}
+  .tmx textarea.mdg-in{padding:9px 11px;line-height:1.5;resize:vertical;min-height:84px}
+  .tmx .mdg-in:focus-visible,.tmx .mdg-chk input:focus-visible,.tmx .mdg-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .tmx .mdg-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .tmx .mdg-chk{display:flex;gap:10px;align-items:center;font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer;margin:0}
+  .tmx .mdg-chk input{width:17px;height:17px;margin:0;accent-color:var(--accent);flex:none}
+  .tmx .mdg-err{color:var(--red);font-size:13px;margin:0}
+  .tmx .mdg-err:empty{display:none}
+  .tmx .mdg-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--line)}
+  .tmx .mdg-foot .grow{flex:1}
+  .tmx .mdg-btn{min-height:36px;padding:0 14px;border-radius:7px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font-family:inherit;font-size:13.5px;font-weight:600;display:inline-flex;gap:6px;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+  .tmx .mdg-btn:hover:not([disabled]){border-color:var(--ink2);color:var(--ink)}
+  .tmx .mdg-btn[disabled]{opacity:.6;cursor:default}
+  .tmx .mdg-btn.p{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+  .tmx .mdg-btn.p:hover:not([disabled]){filter:brightness(1.06);color:var(--on-accent)}
+  .tmx .mdg-btn.q{border-color:transparent;background:transparent;color:var(--ink2);padding:0 6px}
+  .tmx .mdg-btn.danger{border-color:transparent;background:transparent;color:var(--red);padding:0 6px}
+  @media (max-width:640px){
+    .tmx .mdg{margin-top:0}
+    .tmx .mdg-h,.tmx .mdg-b,.tmx .mdg-foot{padding-left:16px;padding-right:16px}
+    .tmx .mdg-row{grid-template-columns:minmax(0,1fr)}
+  }
   .ml-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
   .ml-title{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin:0}
   .ml-sub{font-size:13px;color:var(--text3);margin-top:3px;max-width:62ch;line-height:1.5}

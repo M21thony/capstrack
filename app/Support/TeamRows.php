@@ -245,12 +245,15 @@ class TeamRows
             ->join('capstone_documents as d', 'd.file_id', '=', 'r.file_id')
             ->join('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
             ->leftJoin('deliverables as dl', 'dl.id', '=', 'd.deliverable_id')
+            ->leftJoin('checklist_milestones as cm', 'cm.id', '=', 'dl.checklist_milestone_id')
             ->where('r.expert_id', $viewerId)
             ->whereIn('sy.team_id', $teamIds)
             ->orderByDesc('d.created_at')
             ->get([
                 'r.review_id',
                 'r.review_status',
+                'r.verdict',
+                'cm.name as milestone_name',
                 'r.reviewed_at',
                 'r.role',
                 'd.file_name',

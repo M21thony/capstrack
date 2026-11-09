@@ -110,7 +110,7 @@ class TeamHubTest extends TestCase
             ->assertSee('href="'.route('capsa.team_management.title', [$team->team_id, $first->id]).'">Review titles', false)
             ->assertSee('1 to do')
             // The same team in Teams says what it is waiting for.
-            ->assertSee('To do: Review 2 titles');
+            ->assertSee('<span class="nx tm-what">Review 2 titles</span>', false);
     }
 
     public function test_a_leave_request_is_decided_from_to_do(): void
@@ -229,7 +229,7 @@ class TeamHubTest extends TestCase
             ->assertSee('Teams')
             ->assertDontSee('My Teams')
             ->assertSee($proposal->title)
-            ->assertSee('once the CaPSA recommends')
+            ->assertSee('<span class="pill p-amber">Waiting</span>', false)
             // Reviewing titles and verifying are the CaPSA's.
             ->assertDontSee(route('capsa.team_management.title', [$team->team_id, $proposal->id]), false)
             ->assertDontSee('Verify team')

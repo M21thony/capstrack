@@ -172,16 +172,13 @@ class CapsaTeamManagementTest extends TestCase
         $response = $this->get(route('capsa.team_management', ['tab' => 'teams']));
 
         $response->assertOk();
-        // One block per requirement-bearing milestone, and a line saying how far along.
-        $response->assertSee('aria-label="0 of 1 milestones complete"', false);
+        // One bar for every requirement across the milestones, and how far along.
+        $response->assertSee('aria-label="2 of 4 requirements checked"', false);
         $response->assertSee('1 overdue');
     }
 
-    /**
-     * The team page draws only the requirements that fit the window; the
-     * rest sit behind "See all", which opens the team in the tracker.
-     */
-    public function test_the_team_page_links_a_milestones_requirements_to_the_tracker(): void
+    /** Every requirement of the milestone is listed, in its own scrolling box. */
+    public function test_the_team_page_lists_every_requirement_of_a_milestone(): void
     {
         $capsa = $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team Long Milestone');
@@ -195,9 +192,9 @@ class CapsaTeamManagementTest extends TestCase
 
         $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
 
-        $response->assertSee('data-tp-more="7" hidden', false);
-        $response->assertSee('See all 7 requirements');
-        $response->assertSee(e(route('capsa.team_management', ['tab' => 'milestones', 'section' => self::SECTION, 'team' => $team->team_id])), false);
+        $response->assertSeeInOrder(['Deliverable 0', 'Deliverable 6']);
+        $response->assertSee('0 / 7 checked');
+        $response->assertDontSee('See all 7 requirements');
     }
 
     /**
@@ -259,9 +256,7 @@ class CapsaTeamManagementTest extends TestCase
         $response->assertOk();
         // The filled seat names the role the team engaged them AS, not every
         // role they hold; the two empty seats say which role is still open.
-        $response->assertSeeInOrder([$expert->name, 'Consultant', 'No grammarian yet']);
-        $response->assertSee('No adviser yet');
-        $response->assertDontSee('<small>Adviser</small>', false);
+        $response->assertSeeInOrder(['<small>Adviser</small>', 'Not assigned', '<small>Consultant</small>', e($expert->name), '<small>Grammarian</small>', 'Not assigned'], false);
     }
 
     // Two approved titles is the state that otherwise looks like an
@@ -370,13 +365,13 @@ class CapsaTeamManagementTest extends TestCase
         $this->addProposal($older, $olderSy, 1)->update(['submitted_at' => now()->subDays(2)]);
 
         $html = $this->get(route('capsa.team_management'))->assertOk()->getContent();
-        $teams = substr($html, strpos($html, 'id="tm-teams"'), strpos($html, 'class="legend"') - strpos($html, 'id="tm-teams"'));
+        $teams = substr($html, strpos($html, 'id="tm-teams"'), strpos($html, 'class="tm-none"') - strpos($html, 'id="tm-teams"'));
 
         $this->assertLessThan(strpos($teams, 'Team Older'), strpos($teams, 'Team Fresh'));
         $this->assertLessThan(strpos($teams, 'Team Quiet'), strpos($teams, 'Team Older'));
 
-        $this->assertSame(2, substr_count($teams, 'class="wait"'));
-        $this->assertStringContainsString('To do: Review 1 title', $teams);
+        $this->assertSame(2, substr_count($teams, 'class="nx tm-what"'));
+        $this->assertStringContainsString('Review 1 title', $teams);
         // To do says how long each has waited, and marks only today's as new.
         $this->assertStringContainsString('2 days ago', $html);
         $this->assertSame(1, substr_count($html, 'class="new" aria-label="New"'));
@@ -427,7 +422,8 @@ class CapsaTeamManagementTest extends TestCase
         $response = $this->get(route('capsa.team_management.show', $team->team_id));
 
         $response->assertOk();
-        $response->assertSee('2 waiting');
+        // The Titles tab counts the ones still waiting, not all three.
+        $response->assertSee('<span class="tp-badge alert">2</span>', false);
     }
 
     /**
@@ -541,11 +537,10 @@ class CapsaTeamManagementTest extends TestCase
 
         $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
 
-        $response->assertSeeInOrder(['Experts', 'Panel', 'Lara Santos']);
-        // No stage label beside it; the stage is already in Progress and Next.
-        $response->assertSee('id="tp-pan">Panel</h3>', false);
+        // The panel sits with the experts, after the three seats.
+        $response->assertSeeInOrder(['id="tp-exp">Experts</h3>', '<small>Grammarian</small>', 'Lara Santos'], false);
         $response->assertSee('<span class="you">You</span> · Panel Chair', false);
-        $response->assertSeeInOrder(['Lara Santos', 'Panelist']);
+        $response->assertSeeInOrder(['<small>Panelist</small>', '<b>Lara Santos</b>'], false);
     }
 
     /** Previous and Next walk every team in her sections, and wrap around. */
@@ -597,7 +592,7 @@ class CapsaTeamManagementTest extends TestCase
             ->assertDontSee('Waiting on you');
     }
 
-    /** Untitled: the titles open first in the card under Progress, beside Activity. */
+    /** Untitled: the Titles tab opens first. */
     public function test_an_untitled_team_shows_its_titles_on_the_team_page(): void
     {
         $this->makeCapsaWithSections();
@@ -606,13 +601,13 @@ class CapsaTeamManagementTest extends TestCase
 
         $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
 
-        $response->assertSee('data-tp-pane="tp-titles" aria-pressed="true"', false);
+        $response->assertSee('data-tp-tab="titles"', false);
+        $response->assertSee('open(location.hash.slice(1) || "titles");', false);
         $response->assertSee($proposal->title);
-        $response->assertSee('data-tp-pane="tp-activity"', false);
-        $response->assertDontSee('data-tp-pane="tp-papers"', false);
+        $response->assertSee('data-tp-tab="activity"', false);
     }
 
-    /** Titled: Papers and Activity share one card, Papers open first. */
+    /** Titled: no Titles tab, Requirements open first. */
     public function test_a_titled_team_shows_papers_and_activity_as_tabs(): void
     {
         $this->makeCapsaWithSections();
@@ -620,9 +615,10 @@ class CapsaTeamManagementTest extends TestCase
 
         $response = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk();
 
-        $response->assertSee('data-tp-pane="tp-papers" aria-pressed="true"', false);
-        $response->assertSee('<div class="tp-pane" id="tp-activity" hidden>', false);
-        $response->assertDontSee('data-tp-pane="tp-titles"', false);
+        $response->assertSee('data-tp-tab="papers"', false);
+        $response->assertSee('id="tp-activity" role="tabpanel"', false);
+        $response->assertSee('open(location.hash.slice(1) || "requirements");', false);
+        $response->assertDontSee('data-tp-tab="titles"', false);
     }
 
     /** Activity is read off the records: files sent, titles turned in, the day it was formed. */

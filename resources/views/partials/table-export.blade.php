@@ -273,7 +273,11 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
 
   // Above the table, or beside the outermost thing that holds only the table
   // (its card), so the buttons sit over it instead of inside a scroller.
+  // A table drawn later by a script calls this itself; once per table.
+  window.txPlace = place;
   function place(table) {
+    if (table.__tx) { return; }
+    table.__tx = true;
     var into = table.getAttribute('data-export-into');
     var host = into ? document.querySelector(into) : null;
     var bar = buttonsFor(table);
