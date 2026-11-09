@@ -133,6 +133,9 @@ class ProfileController extends Controller
             'name.middle_name' => ['nullable', 'string', 'max:50'],
             'name.last_name' => ['required_with:name', 'string', 'max:50'],
             'name.suffix' => ['nullable', 'string', 'max:50'],
+            // Everyone else's first and last name are Google's, but Google has
+            // no middle name, so that one is theirs to type.
+            'middle_name' => ['nullable', 'string', 'max:50'],
             'panel_strengths' => ['sometimes', 'array'],
             'panel_strengths.*' => ['in:'.implode(',', array_keys(CapstoneExpert::STRENGTHS))],
         ]);
@@ -218,7 +221,12 @@ class ProfileController extends Controller
 
         $name = $expert->is_staff && $request->has('name')
             ? collect($validated['name'])->only(['first_name', 'middle_name', 'last_name', 'suffix'])->map(fn ($part) => filled($part) ? trim($part) : null)->all()
-            : [];
+            : ($request->exists('middle_name') ? ['middle_name' => $validated['middle_name'] ?? null] : []);
+
+        // Only the initial is kept, as a capital letter; the name adds the dot when shown.
+        if (array_key_exists('middle_name', $name) && filled($name['middle_name'])) {
+            $name['middle_name'] = mb_strtoupper(mb_substr(trim($name['middle_name']), 0, 1));
+        }
 
         // Only when sent, like the degree; kept in the STRENGTHS order.
         $strengths = $request->exists('panel_strengths')

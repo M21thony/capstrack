@@ -48,6 +48,7 @@
   .pp-name-form input{height:36px;border:1px solid var(--border2);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;color:var(--text);background:var(--bg2)}
   .pp-name-form input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
   .pp-name-form[hidden],.pp-id-main[hidden]{display:none}
+  .pp-name-form input[readonly]{color:var(--text3);cursor:not-allowed}
   .pp-id-secs{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:5px;font-size:12px;color:var(--text3)}
   .pp-id-secs b{padding:2px 8px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:11.5px}
 
@@ -210,7 +211,7 @@
         <img class="pp-id-photo" src="{{ $expert->avatarUrl() }}" alt="" title="Your photo comes from your Google account" onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}'">
         <div class="pp-id-main" id="pp-id-view">
           <div class="pp-name">
-            <h1 id="pp-who">{{ collect([$expert->first_name, $expert->middle_name, $expert->last_name])->filter()->implode(' ') }}{{ $expert->suffix ? ' '.$expert->suffix : '' }}</h1><span class="pp-comma">,</span>
+            <h1 id="pp-who">{{ collect([$expert->first_name, $expert->middle_name ? mb_substr($expert->middle_name, 0, 1).'.' : null, $expert->last_name])->filter()->implode(' ') }}{{ $expert->suffix ? ' '.$expert->suffix : '' }}</h1><span class="pp-comma">,</span>
             <label for="pp-degree" class="pp-sr">Degree shown after your name</label>
             @include('partials.degree-select', [
                 'id' => 'pp-degree',
@@ -221,14 +222,14 @@
           </div>
           <div class="pp-id-mail">{{ $expert->email }} <span class="pp-chair" id="pp-chair" aria-live="polite"></span></div>
         </div>
-        @if ($canEditName)
-          <div class="pp-name-form" id="pp-name-form" hidden>
-            <label>First name<input id="pp-first" autocomplete="given-name" maxlength="50"></label>
-            <label>Middle name<input id="pp-middle" autocomplete="additional-name" maxlength="50" placeholder="Optional"></label>
-            <label>Last name<input id="pp-last" autocomplete="family-name" maxlength="50"></label>
-            <label>Suffix<input id="pp-suffix" maxlength="50" placeholder="e.g. Jr."></label>
-          </div>
-        @endif
+        {{-- Only a CaPSA or Admin edits the whole name; everyone else's first
+             and last name come from Google, which has no middle name. --}}
+        <div class="pp-name-form" id="pp-name-form" hidden>
+          <label>First name<input id="pp-first" autocomplete="given-name" maxlength="50" @readonly(! $canEditName) @if (! $canEditName) title="From your Google account" @endif></label>
+          <label>Middle initial<input id="pp-middle" maxlength="1" placeholder="e.g. S"></label>
+          <label>Last name<input id="pp-last" autocomplete="family-name" maxlength="50" @readonly(! $canEditName) @if (! $canEditName) title="From your Google account" @endif></label>
+          <label>Suffix<input id="pp-suffix" maxlength="50" placeholder="e.g. Jr." @readonly(! $canEditName) @if (! $canEditName) title="Set by the administrator" @endif></label>
+        </div>
         <div class="pp-id-roles">
           <div class="pp-id-chips">
             @forelse ($expert->roles as $role)
@@ -250,9 +251,7 @@
           @endif
           <span class="pp-id-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>{{ $capsaSections !== null ? 'Roles and sections are set by the administrator' : 'Roles are set by the administrator' }}</span>
         </div>
-        @if ($canEditName)
-          <button type="button" class="btn btn-ghost pp-id-edit" id="pp-name-btn" aria-pressed="false" aria-controls="pp-name-form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit name</span></button>
-        @endif
+        <button type="button" class="btn btn-ghost pp-id-edit" id="pp-name-btn" aria-pressed="false" aria-controls="pp-name-form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit name</span></button>
       </header>
 
       <div class="pp-cols">
@@ -388,7 +387,7 @@ function closeSidebar() {
 
   var CAN_EDIT_NAME = @json($canEditName);
   var saved = {
-    name: CAN_EDIT_NAME ? @json($nameParts) : null,
+    name: @json($nameParts),
     degree: @json($expert->degree_title ?? ''),
     programs: PROGRAMS.reduce(function (o, p) { o[p] = 0; return o; }, {}),
     areas: @json((object) $researchAreas),
@@ -515,9 +514,8 @@ function closeSidebar() {
 
   var editingName = false;
   function renderName() {
-    if (!CAN_EDIT_NAME) return;
     var n = state.name;
-    el('pp-who').textContent = [n.first, n.middle, n.last].filter(function (x) { return x && x.trim(); }).join(' ') + (n.suffix && n.suffix.trim() ? ' ' + n.suffix.trim() : '');
+    el('pp-who').textContent = [n.first, n.middle && n.middle.trim() ? n.middle.trim().charAt(0).toUpperCase() + '.' : '', n.last].filter(function (x) { return x && x.trim(); }).join(' ') + (n.suffix && n.suffix.trim() ? ' ' + n.suffix.trim() : '');
     el('pp-name-form').hidden = !editingName;
     el('pp-id-view').hidden = editingName;
     el('pp-name-btn').setAttribute('aria-pressed', editingName ? 'true' : 'false');
@@ -547,16 +545,14 @@ function closeSidebar() {
 
   function renderAll() { renderPrograms(); renderAreas(); renderDegree(); renderName(); renderStrengths(); renderEmail(); renderSaveBar(); }
 
-  if (CAN_EDIT_NAME) {
-    el('pp-name-btn').addEventListener('click', function () {
-      editingName = !editingName;
-      renderName();
-      if (editingName) el('pp-first').focus();
-    });
-    [['pp-first', 'first'], ['pp-middle', 'middle'], ['pp-last', 'last'], ['pp-suffix', 'suffix']].forEach(function (f) {
-      el(f[0]).addEventListener('input', function (e) { state.name[f[1]] = e.target.value; changed(); renderName(); });
-    });
-  }
+  el('pp-name-btn').addEventListener('click', function () {
+    editingName = !editingName;
+    renderName();
+    if (editingName) el(CAN_EDIT_NAME ? 'pp-first' : 'pp-middle').focus();
+  });
+  [['pp-first', 'first'], ['pp-middle', 'middle'], ['pp-last', 'last'], ['pp-suffix', 'suffix']].forEach(function (f) {
+    el(f[0]).addEventListener('input', function (e) { state.name[f[1]] = e.target.value; changed(); renderName(); });
+  });
 
   document.querySelectorAll('.pp-prog input').forEach(function (box) {
     var p = box.closest('.pp-prog').dataset.program;
@@ -637,6 +633,8 @@ function closeSidebar() {
         var body = { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null, panel_strengths: state.strengths };
         if (CAN_EDIT_NAME) {
           body.name = { first_name: state.name.first, middle_name: state.name.middle, last_name: state.name.last, suffix: state.name.suffix };
+        } else {
+          body.middle_name = state.name.middle;
         }
         var json = await put(@json(route('instructor.profile.update')), body);
         if (json.expertise_by_side) {

@@ -47,6 +47,28 @@ class InstructorProfileTest extends TestCase
         $this->assertSame(5, $expert->slotsForProgram('BSIS'));
     }
 
+    /** Google has no middle name, so every expert types their initial; the rest of the name stays Google's. */
+    public function test_an_expert_sets_their_own_middle_name_only(): void
+    {
+        $expert = $this->makeExpert();
+        $expert->update(['first_name' => 'Kenn', 'last_name' => 'Aurillas', 'is_staff' => false]);
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
+            ->assertSee('Edit name')->assertSee('id="pp-first" autocomplete="given-name" maxlength="50" readonly', false);
+
+        $this->actingAs($expert, 'expert')->putJson(route('instructor.profile.update'), [
+            'program_slots' => ['BSIT' => 1], 'expertise' => [],
+            'middle_name' => ' s ',
+            'name' => ['first_name' => 'Someone', 'middle_name' => 'X', 'last_name' => 'Else'],
+        ])->assertOk();
+
+        $expert = $expert->fresh();
+        $this->assertSame('S', $expert->middle_name);
+        $this->assertSame('Kenn', $expert->first_name);
+        $this->assertSame('Aurillas', $expert->last_name);
+        $this->assertStringStartsWith('Kenn S. Aurillas', $expert->name);
+    }
+
     // Programs they take no teams from are dropped rather than stored as
     // zero, so "accepts BSIS?" has one answer, not two spellings of no.
     public function test_programs_with_no_slots_are_not_recorded(): void

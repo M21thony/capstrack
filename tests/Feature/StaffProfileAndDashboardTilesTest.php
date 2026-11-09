@@ -118,7 +118,7 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertRedirect(route('instructor.profile'));
     }
 
-    /** A CaPSA who advises edits their own name on the one profile; an ordinary expert cannot. */
+    /** A CaPSA who advises edits their own name on the one profile; an ordinary expert only their middle name. */
     public function test_only_a_capsa_or_admin_edits_their_name_on_the_profile(): void
     {
         $capsa = $this->capsa(alsoAdviser: true);
@@ -139,7 +139,7 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $this->assertSame($name, [$adviser->fresh()->first_name, $adviser->fresh()->last_name]);
 
         $this->actingAs($adviser, 'expert')->get(route('instructor.profile'))->assertOk()
-            ->assertDontSee('id="pp-name-btn"', false)
+            ->assertSee('id="pp-last" autocomplete="family-name" maxlength="50" readonly', false)
             ->assertDontSee('CaPSA of')
             ->assertDontSee('id="pp-folders-h"', false);
     }
