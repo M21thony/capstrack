@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\NotificationMail;
 use App\Models\CapstoneExpert;
 use App\Models\ConsultationSchedule;
 use App\Models\Notification;
@@ -17,6 +18,7 @@ use App\Support\TeamApplications;
 use App\Support\TeamTodo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
@@ -101,6 +103,18 @@ class MeetFirstTest extends TestCase
         $n = Notification::where('student_id', $this->leader->student_id)->where('type', 'expert_meet_first')->first();
         $this->assertNotNull($n);
         $this->assertStringContainsString('Bring your scope', $n->message);
+    }
+
+    /** Asking to meet and accepting both reach the leader by email, not only the bell. */
+    public function test_meet_first_and_accept_email_the_leader(): void
+    {
+        Mail::fake();
+
+        $this->ask(['reason' => 'Bring your scope and the problem statement.'])->assertOk();
+        Mail::assertQueued(NotificationMail::class, fn (NotificationMail $m) => $m->hasTo($this->leader->email) && $m->headline === 'Your Expert Wants to Meet First');
+
+        $this->ask(['status' => 'approved'])->assertOk()->assertJson(['success' => true]);
+        Mail::assertQueued(NotificationMail::class, fn (NotificationMail $m) => $m->hasTo($this->leader->email) && $m->headline === 'Expert Request Accepted');
     }
 
     /** A note too short to tell the team anything, or asking twice, is refused. */

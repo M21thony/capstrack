@@ -132,7 +132,7 @@ final class NotificationTypes
             'web' => false,
         ],
         'expert_rejected' => [
-            'label' => 'An expert turns down our request',
+            'label' => 'An expert answers our request (accepts, asks to meet first or turns it down)',
             'email' => true,
             'web' => false,
         ],
@@ -212,6 +212,8 @@ final class NotificationTypes
         'expert_removed' => 'expert_removal',
         'expert_removal_approved' => 'expert_removal',
         'expert_removal_declined' => 'expert_removal',
+        'expert_accepted' => 'expert_rejected',
+        'expert_meet_first' => 'expert_rejected',
     ];
 
     public static function for(string $audience): array

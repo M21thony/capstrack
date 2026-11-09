@@ -126,6 +126,10 @@ class AssignmentController extends Controller
                 $assignment->update(['status' => 'approved']);
             });
 
+            if ($leader) {
+                Notification::create(['student_id' => $leader->student_id, 'type' => 'expert_accepted', 'title' => 'Expert Request Accepted', 'message' => $expert->name." accepted your team's request.", 'link' => route('student.experts'), 'is_read' => false, 'created_at' => now()]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Team request approved successfully.',
