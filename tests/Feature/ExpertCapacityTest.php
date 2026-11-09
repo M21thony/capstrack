@@ -167,4 +167,24 @@ class ExpertCapacityTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder(['Team &amp; Expert Coverage', 'BSIT · 2 consultants', 'Insufficient Experts', 'BSIT · Short by 2 consultants'], false);
     }
+
+    public function test_the_coverage_tab_lists_what_each_team_still_needs_and_the_dashboard_links_to_it(): void
+    {
+        $capsa = $this->capsaFor();
+        [$alpha, $bravo] = $this->threeTeams();
+        $adviser = $this->expert('adviser', '5 - BSIT', 5);
+        $this->assign($alpha, $adviser, 'adviser');
+
+        $missing = app(ExpertCapacity::class)->teamsMissing(['BSIT']);
+        $this->assertSame(['consultant', 'grammarian'], $missing[$alpha->team_id]['missing']);
+        $this->assertSame(['adviser', 'consultant', 'grammarian'], $missing[$bravo->team_id]['missing']);
+
+        $this->actingAs($capsa, 'expert')->get(route('capsa.experts', ['tab' => 'coverage']))
+            ->assertOk()
+            ->assertSee('aria-selected="true">Expert coverage', false)
+            ->assertSee('1 of 9 assignments filled');
+
+        $this->actingAs($capsa, 'expert')->get(route('capsa.dashboard'))
+            ->assertSee(route('capsa.experts', ['tab' => 'coverage']), false);
+    }
 }

@@ -74,6 +74,26 @@ final class ExpertCapacity
     }
 
     /**
+     * This term's teams in these programs, each with the roles it still needs -
+     * the same "needs" forPrograms() counts, team by team.
+     *
+     * @param  list<string>  $programs
+     * @return array<int, array{program: string, missing: list<string>}>
+     */
+    public function teamsMissing(array $programs): array
+    {
+        $teamPrograms = array_filter($this->teamPrograms(), fn ($p) => in_array($p, $programs, true));
+        $filled = $this->filledRoles(array_keys($teamPrograms));
+        $out = [];
+
+        foreach ($teamPrograms as $teamId => $program) {
+            $out[$teamId] = ['program' => $program, 'missing' => array_values(array_diff(array_keys(self::ROLES), $filled[$teamId] ?? []))];
+        }
+
+        return $out;
+    }
+
+    /**
      * The shortages in plain words, one line each - what the CaPSA's notice says.
      *
      * @param  array<string, list<array{role: string, label: string, need: int, free: int|null, short: int, status: string}>>  $capacity

@@ -101,7 +101,7 @@
           <section class="db-card">
             <div class="db-head">
               <h2 class="db-title"><svg class="i c-teal"><use href="#i-chart"/></svg>Team &amp; Expert Coverage</h2>
-              <a class="db-more" href="{{ route('capsa.reports.show', 'master') }}">View details →</a>
+              <a class="db-more" href="{{ route('capsa.experts', ['tab' => 'coverage']) }}">View details →</a>
             </div>
             <div class="db-split">
               <div class="db-ring">
@@ -192,7 +192,7 @@
               <h2 class="db-title"><svg class="i c-orange"><use href="#i-bolt"/></svg>Quick Actions</h2>
             </div>
             <div class="db-qa-list">
-              <a class="db-qa-row" href="{{ route('capsa.reports.show', 'master') }}"><svg class="i c-green"><use href="#i-shield"/></svg>Check Coverage<svg class="i db-chev"><use href="#i-chev"/></svg></a>
+              <a class="db-qa-row" href="{{ route('capsa.experts', ['tab' => 'coverage']) }}"><svg class="i c-green"><use href="#i-shield"/></svg>Check Coverage<svg class="i db-chev"><use href="#i-chev"/></svg></a>
               <a class="db-qa-row" href="{{ route('capsa.team_management', ['tab' => 'milestones']) }}"><svg class="i c-orange"><use href="#i-cal"/></svg>View Milestones<svg class="i db-chev"><use href="#i-chev"/></svg></a>
               <a class="db-qa-row" href="{{ route('capsa.team_management', ['tab' => 'teams']) }}"><svg class="i c-purple"><use href="#i-team"/></svg>Manage Teams<svg class="i db-chev"><use href="#i-chev"/></svg></a>
               <a class="db-qa-row" href="{{ route('capsa.reports') }}"><svg class="i c-teal"><use href="#i-chart"/></svg>View Reports<svg class="i db-chev"><use href="#i-chev"/></svg></a>

@@ -371,7 +371,11 @@
   </div>
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content list-page tk">
+  <nav class="page-tabs" aria-label="Expert Management views">
+    <button type="button" data-tab="experts" aria-selected="{{ $tab === 'experts' ? 'true' : 'false' }}">Experts</button>
+    <button type="button" data-tab="coverage" aria-selected="{{ $tab === 'coverage' ? 'true' : 'false' }}">Expert coverage</button>
+  </nav>
+  <div class="content list-page tk" id="experts-pane" @if ($tab === 'coverage') hidden @endif>
     @php
       $viewerId = (int) auth('expert')->id();
       // The mix, not just the total: how many of each role you have is the
@@ -764,6 +768,266 @@
   }
 </script>
   </div>
+@php
+  $covRoles = \App\Support\ExpertCapacity::ROLES;
+  $teamCount = collect($coverageTeams)->countBy('program');
+  $covPrograms = collect($coverage)->filter(fn ($rows, $p) => ($teamCount[$p] ?? 0) > 0);
+  $roleRow = fn ($rows, $role) => collect($rows)->firstWhere('role', $role);
+  // Chip for one need against its open slots: tone, mark, words.
+  $chip = function (int $need, ?int $free) {
+      if ($free === null) return ['gray', '✓', 'No limit'];
+      $balance = $free - $need;
+      if ($balance < 0) return ['red', '!', 'Short by '.(-$balance)];
+      if ($balance > 0) return ['blue', 'ⓘ', $balance.' spare '.($balance === 1 ? 'slot' : 'slots')];
+      return ['green', '✓', $need === 0 ? 'Covered' : 'Sufficient'];
+  };
+  $openText = fn (?int $free) => $free === null ? 'no limit' : $free.' open';
+  $totalTeams = count($coverageTeams);
+  $missingTotal = collect($coverageTeams)->sum(fn ($t) => count($t['missing']));
+  $shorts = [];
+  foreach ($covPrograms as $p => $rows) {
+      foreach ($rows as $r) {
+          if ($r['role'] !== 'all' && $r['short'] > 0) $shorts[] = ['program' => $p, 'role' => $r['role'], 'label' => $r['label'], 'count' => $r['short']];
+      }
+  }
+  $allShort = $covPrograms->map(fn ($rows) => $roleRow($rows, 'all')['short'])->filter();
+  $roleTotals = collect($covRoles)->map(function ($label, $role) use ($covPrograms, $roleRow, $teamCount, $shorts) {
+      $rows = $covPrograms->map(fn ($rows) => $roleRow($rows, $role));
+      $required = $covPrograms->keys()->sum(fn ($p) => $teamCount[$p]);
+      $needed = $rows->sum('need');
+      return [
+          'label' => $label,
+          'required' => $required,
+          'needed' => $needed,
+          'assigned' => $required - $needed,
+          'free' => $rows->contains(fn ($r) => $r['free'] === null) ? null : $rows->sum('free'),
+          'short' => collect($shorts)->where('role', $role),
+      ];
+  });
+@endphp
+  <div class="content cov" id="coverage-pane" @if ($tab !== 'coverage') hidden @endif>
+<style nonce="{{ Vite::cspNonce() }}">
+  #real-content > [hidden],.cov [hidden]{display:none!important}
+  .page-tabs{display:flex;gap:29px;border-bottom:1px solid var(--border,#dfe3eb);height:49px;flex-shrink:0;margin:0 26px}
+  .page-tabs button{background:transparent;border:0;border-bottom:2px solid transparent;padding:0 8px;color:#647087;font-size:14px;cursor:pointer;font-family:inherit}
+  .page-tabs button[aria-selected=true]{border-bottom-color:#c7a727;color:#151c28;font-weight:600}
+  .cov{display:flex;flex-direction:column;gap:14px;overflow:hidden;min-height:0}
+  .cov-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .cov .metrics{display:flex;align-items:center;gap:26px;font-size:14px;color:#151c28}
+  .cov .metric{display:flex;align-items:center;gap:8px}
+  .cov .metric:first-child{font-weight:600}
+  .cov .metric svg{color:#25853d;width:23px;height:23px}
+  .cov .metric+.metric{border-left:1px solid #c4cbd7;padding-left:26px}
+  .cov .notice{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 15px;border:1px solid #ebc86a;border-radius:9px;background:#fff6e2;flex-shrink:0}
+  .cov .notice-main{display:flex;align-items:center;gap:9px;font-weight:600;font-size:13.5px}
+  .cov .notice-main svg{color:#bc8505;flex-shrink:0}
+  .cov .notice.good{background:#edf7ef;border-color:#c8e1cd}
+  .cov .notice.good svg{color:#25853d}
+  .cov .panel{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border,#dfe3eb);border-radius:11px;background:var(--bg2,#fff)}
+  .cov .panel-head{padding:13px 17px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .cov .panel-head h2{font-size:18px;margin:0;font-weight:700}
+  .cov .panel-head .tk-actions{display:flex;gap:8px}
+  .cov .panel-toolbar{padding:0 16px 10px}
+  .cov .segments{display:inline-flex;gap:2px;padding:3px;border-radius:8px;background:#eceef3}
+  .cov .segments button{border:1px solid transparent;background:transparent;padding:5px 13px;font-size:12px;border-radius:6px;cursor:pointer;color:#4a5468;font-family:inherit}
+  .cov .segments button[aria-pressed=true]{background:#fff;border-color:#e0e3e9;box-shadow:0 1px 3px #25304c10;font-weight:600;color:#151c28}
+  .cov .table-scroll{flex:1;min-height:0;overflow:auto;padding:0 14px}
+  .cov .table-scroll table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:13px}
+  .cov .table-scroll thead th{position:sticky;top:0;z-index:1;background:#1d2028;color:#f1f3f7;padding:10px 15px;font-size:12px;font-weight:600;text-align:center}
+  .cov .table-scroll thead th:first-child{border-top-left-radius:6px;text-align:left}
+  .cov .table-scroll thead th:last-child{border-top-right-radius:6px}
+  .cov .table-scroll td{border-bottom:1px solid #e5e9f0;padding:14px 15px;text-align:center;vertical-align:middle}
+  .cov .table-scroll td:first-child{text-align:left}
+  .cov .program-name{font-weight:700;font-size:15px}
+  .cov .program-name small{display:none}
+  .cov .role-name{font-weight:600}
+  .cov .has-shortage td:first-child{border-left:4px solid #c63838;padding-left:11px}
+  .cov .cell-status{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:7px;font-size:12px;font-weight:600;border:0;cursor:pointer;font-family:inherit}
+  .cov .cell-status.green{background:#e7f5e8;color:#187b32}
+  .cov .cell-status.red{background:#ffe8e9;color:#b6242c}
+  .cov .cell-status.blue{background:#e5efff;color:#245bbc}
+  .cov .cell-status.gray{background:#eef0f5;color:#657186}
+  .cov .cell-detail{display:block;color:#657186;font-size:11px;margin-top:4px}
+  .cov .empty{padding:30px;text-align:center;color:#657186}
+  .cov .panel-foot{padding:10px 17px;border-top:1px solid var(--border,#dfe3eb);display:flex;justify-content:flex-end;align-items:center;background:#fcfcfd}
+  #cov-dialog{margin:auto;width:min(780px,calc(100vw - 24px));max-height:calc(100vh - 40px);border:0;border-radius:12px;padding:0;box-shadow:0 20px 50px #0003}
+  #cov-dialog[open]{display:flex;flex-direction:column}
+  #cov-dialog::backdrop{background:#0f172a66}
+  #cov-dialog .dialog-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid #e5e9f0}
+  #cov-dialog .dialog-head h2{font-size:17px;margin:0}
+  #cov-dialog .dialog-x{border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:#657186}
+  #cov-dialog .dialog-body{overflow:auto;padding:12px 18px;min-height:0}
+  #cov-dialog table{width:100%;border-collapse:collapse;font-size:13px}
+  #cov-dialog th{text-align:left;font-size:12px;color:#657186;padding:8px 10px;border-bottom:1px solid #e5e9f0;position:sticky;top:0;background:#fff}
+  #cov-dialog td{padding:9px 10px;border-bottom:1px solid #eef1f5}
+  #cov-dialog td:first-child{font-weight:600}
+  #cov-dialog .dialog-foot{display:flex;justify-content:flex-end;padding:12px 18px;border-top:1px solid #e5e9f0}
+  @media (max-width:1100px){.page-tabs{margin:0 16px}}
+  @media (max-height:540px){.cov .metrics{display:none}}
+  @media (max-width:650px){
+    .page-tabs{margin:0 12px;height:43px;gap:18px}
+    .page-tabs button{font-size:13px}
+    .cov .metrics{flex-wrap:wrap;gap:10px}
+    .cov .metric+.metric{border-left:0;padding-left:0}
+    .cov .notice{flex-wrap:wrap}
+    .cov .table-scroll colgroup,.cov .table-scroll thead{display:none}
+    .cov .table-scroll table,.cov .table-scroll tbody{display:block}
+    .cov .table-scroll tr{display:block;border:1px solid var(--border,#dfe3eb);border-radius:7px;margin-bottom:9px;overflow:hidden}
+    .cov .table-scroll td{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;text-align:left}
+    .cov .table-scroll td:before{content:attr(data-label);font-size:11px;color:#657186}
+    .cov .table-scroll td:first-child{display:block;background:#f7f8fa}
+    .cov .table-scroll td:first-child:before{content:none}
+    .cov .has-shortage td:first-child{padding-left:8px}
+    .cov .matrix-team-count{display:none!important}
+    .cov .program-name small{display:inline;font-weight:400;font-size:12px;color:#657186;margin-left:6px}
+    .cov .coverage-value{display:flex;flex-direction:column;align-items:flex-end}
+  }
+</style>
+    @if ($totalTeams)
+      <div class="cov-top">
+        <div class="metrics">
+          <div class="metric"><x-tm-icon n="users" s="23" /><span>{{ $totalTeams }} {{ $totalTeams === 1 ? 'team' : 'teams' }} across {{ $covPrograms->keys()->join(', ', ' and ') }}</span></div>
+          <div class="metric"><x-tm-icon n="check" s="23" /><span>{{ $totalTeams * 3 - $missingTotal }} of {{ $totalTeams * 3 }} assignments filled</span></div>
+        </div>
+      </div>
+      @if ($shorts)
+        @php
+          $first = $shorts[0];
+          $same = collect($shorts)->where('role', $first['role']);
+          $msg = count($shorts) > $same->count()
+              ? count($shorts).' program and role combinations need more slots'
+              : $same->map(fn ($s) => "{$s['program']} needs {$s['count']} more {$s['label']} ".($s['count'] === 1 ? 'slot' : 'slots'))->join(' · ');
+        @endphp
+        <div class="notice"><div class="notice-main"><x-tm-icon n="warn" s="18" /><span>{{ $msg }}</span></div>
+          <button type="button" class="tk-btn tk-btn-pri" data-cov-add="{{ $first['role'] }}"><x-tm-icon n="plus" s="15" /> Add {{ strtolower($first['label']) }}s</button></div>
+      @elseif ($allShort->isNotEmpty())
+        <div class="notice"><div class="notice-main"><x-tm-icon n="warn" s="18" /><span>{{ $allShort->map(fn ($n, $p) => "{$p} needs {$n} more expert ".($n === 1 ? 'slot' : 'slots').' in all')->join(' · ') }}</span></div>
+          <button type="button" class="tk-btn tk-btn-pri" data-cov-add=""><x-tm-icon n="plus" s="15" /> Add experts</button></div>
+      @else
+        <div class="notice good"><div class="notice-main"><x-tm-icon n="check" s="18" /><span>Available expert capacity covers the remaining assignments in this scope.</span></div></div>
+      @endif
+    @endif
+
+    <section class="panel" aria-label="Expert coverage results">
+      <header class="panel-head">
+        <h2 id="cov-title">Coverage by program</h2>
+        <div class="tk-actions" id="cov-actions-program"></div>
+        <div class="tk-actions" id="cov-actions-role" hidden></div>
+      </header>
+      <div class="panel-toolbar"><div class="segments" aria-label="Coverage view">
+        <button type="button" data-cov-view="program" aria-pressed="true">By program</button>
+        <button type="button" data-cov-view="role" aria-pressed="false">By role</button>
+      </div></div>
+      <div class="table-scroll" tabindex="0" aria-label="Scrollable expert coverage table">
+        @if (! $totalTeams)
+          <div class="empty">No teams this term.</div>
+        @else
+          <table data-cov="program" data-export="Expert coverage by program" data-export-into="#cov-actions-program">
+            <colgroup><col style="width:16%"><col style="width:12%"><col style="width:24%"><col style="width:24%"><col style="width:24%"></colgroup>
+            <thead><tr><th>Program</th><th>Teams</th>@foreach ($covRoles as $label)<th>{{ $label }}</th>@endforeach</tr></thead>
+            <tbody>
+              @foreach ($covPrograms as $p => $rows)
+                <tr class="{{ collect($rows)->contains(fn ($r) => $r['role'] !== 'all' && $r['short'] > 0) ? 'has-shortage' : '' }}">
+                  <td><span class="program-name">{{ $p }}<small>{{ $teamCount[$p] }} {{ $teamCount[$p] === 1 ? 'team' : 'teams' }}</small></span></td>
+                  <td class="matrix-team-count">{{ $teamCount[$p] }}</td>
+                  @foreach ($covRoles as $role => $label)
+                    @php $r = $roleRow($rows, $role); [$tone, $mark, $text] = $chip($r['need'], $r['free']); @endphp
+                    <td data-label="{{ $label }}"><span class="coverage-value"><button type="button" class="cell-status {{ $tone }}" data-cov-teams data-program="{{ $p }}" data-role="{{ $role }}">{{ $mark }} {{ $text }}</button><span class="cell-detail">{{ $r['need'] }} needed · {{ $openText($r['free']) }}</span></span></td>
+                  @endforeach
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+          <table data-cov="role" data-export="Expert coverage by role" data-export-into="#cov-actions-role" hidden>
+            <colgroup><col style="width:25%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:23%"></colgroup>
+            <thead><tr><th>Expert role</th><th>Required</th><th>Assigned</th><th>Still needed</th><th>Open slots</th><th>Result</th></tr></thead>
+            <tbody>
+              @foreach ($roleTotals as $role => $t)
+                @php
+                  [$tone, $mark, $text] = $t['short']->isNotEmpty() ? ['red', '!', 'Short by '.$t['short']->sum('count')] : $chip($t['needed'], $t['free']);
+                @endphp
+                <tr class="{{ $tone === 'red' ? 'has-shortage' : '' }}">
+                  <td class="role-name">{{ $t['label'] }}</td>
+                  <td data-label="Required">{{ $t['required'] }}</td>
+                  <td data-label="Assigned">{{ $t['assigned'] }}</td>
+                  <td data-label="Still needed">{{ $t['needed'] }}</td>
+                  <td data-label="Open slots">{{ $t['free'] ?? 'No limit' }}</td>
+                  <td data-label="Result"><span class="coverage-value"><button type="button" class="cell-status {{ $tone }}" data-cov-teams data-program="" data-role="{{ $role }}">{{ $mark }} {{ $text }}</button>@if ($t['short']->isNotEmpty())<span class="cell-detail">{{ $t['short']->map(fn ($s) => $s['program'].' '.$s['count'])->join(' · ') }}</span>@endif</span></td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        @endif
+      </div>
+      @if ($totalTeams)
+        <footer class="panel-foot"><button type="button" class="tk-btn tk-btn-ghost" data-cov-teams data-program="" data-role="">View teams needing experts</button></footer>
+      @endif
+    </section>
+
+    <dialog id="cov-dialog" aria-labelledby="cov-dialog-title">
+      <header class="dialog-head"><h2 id="cov-dialog-title"></h2><button type="button" class="dialog-x" data-cov-close aria-label="Close dialog">×</button></header>
+      <div class="dialog-body" id="cov-dialog-body"></div>
+      <footer class="dialog-foot"><button type="button" class="tk-btn tk-btn-ghost" data-cov-close>Close</button></footer>
+    </dialog>
+  </div>
+<script nonce="{{ Vite::cspNonce() }}">
+(function () {
+  var teams = @json($coverageTeams);
+  var labels = @json($covRoles);
+  var panes = { experts: document.getElementById('experts-pane'), coverage: document.getElementById('coverage-pane') };
+
+  document.querySelectorAll('.page-tabs [data-tab]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var tab = btn.dataset.tab;
+      document.querySelectorAll('.page-tabs [data-tab]').forEach(function (b) { b.setAttribute('aria-selected', String(b === btn)); });
+      Object.keys(panes).forEach(function (k) { panes[k].hidden = k !== tab; });
+      var url = new URL(location.href);
+      if (tab === 'coverage') url.searchParams.set('tab', 'coverage'); else url.searchParams.delete('tab');
+      history.replaceState(null, '', url);
+    });
+  });
+
+  document.querySelectorAll('[data-cov-view]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var view = btn.dataset.covView;
+      document.querySelectorAll('[data-cov-view]').forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+      document.querySelectorAll('#coverage-pane table[data-cov]').forEach(function (t) { t.hidden = t.dataset.cov !== view; });
+      document.getElementById('cov-actions-program').hidden = view !== 'program';
+      document.getElementById('cov-actions-role').hidden = view !== 'role';
+      document.getElementById('cov-title').textContent = 'Coverage by ' + view;
+    });
+  });
+
+  var dialog = document.getElementById('cov-dialog');
+  var esc = function (s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
+  document.querySelectorAll('[data-cov-teams]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var program = btn.dataset.program, role = btn.dataset.role, label = labels[role];
+      var rows = [];
+      teams.forEach(function (t) {
+        if (program && t.program !== program) return;
+        var missing = t.missing.filter(function (m) { return !role || m === role; });
+        if (missing.length) rows.push('<tr><td>' + esc(t.name) + '</td><td>' + esc(t.program) + '</td><td>' + esc(t.section) + '</td><td>' + esc(missing.map(function (m) { return labels[m]; }).join(', ')) + '</td></tr>');
+      });
+      document.getElementById('cov-dialog-title').textContent = program ? program + ' teams needing ' + (label || 'experts') : (label ? 'Teams needing ' + label : 'Teams needing experts');
+      document.getElementById('cov-dialog-body').innerHTML = rows.length
+        ? '<table><thead><tr><th>Team</th><th>Program</th><th>Section</th><th>Missing expert role</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>'
+        : '<div class="empty">All assignments in this scope are filled.</div>';
+      dialog.showModal();
+    });
+  });
+  document.querySelectorAll('[data-cov-close]').forEach(function (b) { b.addEventListener('click', function () { dialog.close(); }); });
+  dialog.addEventListener('click', function (e) { if (e.target === dialog) dialog.close(); });
+
+  document.querySelectorAll('[data-cov-add]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openAddExpertModal();
+      var box = btn.dataset.covAdd && document.querySelector('.ae-role input[value="' + btn.dataset.covAdd + '"]');
+      if (box) box.checked = true;
+    });
+  });
+})();
+</script>
   </div><!-- /real-content -->
 </div>
 

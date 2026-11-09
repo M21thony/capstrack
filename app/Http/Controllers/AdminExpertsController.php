@@ -6,7 +6,9 @@ use App\Models\CapstoneExpert;
 use App\Models\ExpertExpertise;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Support\ExpertCapacity;
 use App\Support\SectionCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -91,7 +93,29 @@ class AdminExpertsController extends Controller
             )
         )->all();
 
+        // The Expert coverage tab: the same counts as the dashboard's card,
+        // plus each team still missing a role so the chips can list them.
+        $coverage = [];
+        $coverageTeams = [];
+
+        if ($isCapsaOnly) {
+            $capacity = app(ExpertCapacity::class);
+            $programs = $viewer->handledPrograms();
+            $coverage = $capacity->forPrograms($programs);
+            $missing = $capacity->teamsMissing($programs);
+            $coverageTeams = Team::whereIn('team_id', array_keys($missing))->orderBy('team_name')->get()
+                ->map(fn (Team $team) => [
+                    'name' => $team->team_name,
+                    'section' => $team->section(),
+                    'program' => $missing[$team->team_id]['program'],
+                    'missing' => $missing[$team->team_id]['missing'],
+                ])->values()->all();
+        }
+
         return view($isCapsaOnly ? 'capsa.experts' : 'admin.experts', [
+            'coverage' => $coverage,
+            'coverageTeams' => $coverageTeams,
+            'tab' => request('tab') === 'coverage' ? 'coverage' : 'experts',
             'experts' => $experts,
             'groupedSections' => $groupedSections,
             'laterSections' => $laterSections,
