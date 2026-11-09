@@ -960,15 +960,27 @@ PROMPT;
 
         $worthJudging = [];
 
+        $archiveJudged = 0;
+
         foreach ($topCandidates as $position => $item) {
-            if (count($worthJudging) >= $limit) {
-                break;
+            // This year's titles (at most 5) are always judged, outside the
+            // limit: one school year can't hold the same title twice, and an
+            // unjudged one sat in the list as "not assessed" on every scan.
+            if (! empty($item['recommended'])) {
+                $worthJudging[$position] = $this->buildJudgePrompt($concepts, $item['document'], $item['score']);
+
+                continue;
+            }
+
+            if ($archiveJudged >= $limit) {
+                continue;
             }
 
             // The top one is always explained, however it scored: a check
             // that says nothing about its own best match is not much of a
             // check.
             if ($position === 0 || $item['score'] >= $floor) {
+                $archiveJudged++;
                 $worthJudging[$position] = $this->buildJudgePrompt($concepts, $item['document'], $item['score']);
             }
         }

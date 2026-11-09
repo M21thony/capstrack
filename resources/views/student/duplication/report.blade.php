@@ -57,7 +57,7 @@
       <b class="rp-band sim-{{ $band }}">{{ SimilarityBand::BANDS[$band] }}</b>
       <span>{{ $when }} &middot; {{ $standing }}</span>
     </div>
-    @if ($top = reset($thisYear))
+    @if (($top = reset($thisYear)) && SimilarityBand::scoreOf($top) >= SimilarityBand::SOME)
       <div class="ty-note">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <span><b>{{ str_starts_with($top['recommended'], 'Pending') ? 'Pending this year' : 'Recommended this year' }}:</b> {{ $top['title'] ?? '' }}@if (str_contains($top['recommended'], ' — ')) ({{ Str::after($top['recommended'], ' — ') }})@endif is {{ SimilarityBand::scoreOf($top) }}% close to yours.</span>

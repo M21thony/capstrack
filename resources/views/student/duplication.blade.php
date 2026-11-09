@@ -1788,9 +1788,11 @@ function renderResult(data, fileName, onLoad) {
       .join('');
 
   const tyNote = document.getElementById('ty-note');
-  tyNote.hidden = !thisYear.length;
-  if (thisYear.length) {
-    const top = thisYear[0][0];
+  // Only a scored, real overlap is worth the red line; 31% is not a warning.
+  const top = thisYear.length ? thisYear[0][0] : null;
+  const tyWarn = !!top && top.assessed !== false && ['close', 'some'].includes(simBand(top.score));
+  tyNote.hidden = !tyWarn;
+  if (tyWarn) {
     const section = (top.recommended || '').split(' — ')[1];
     tyNote.querySelector('span').innerHTML = '<b>Recommended this year:</b> ' + escapeHtml(top.title)
       + (section ? ' (' + escapeHtml(section) + ')' : '') + ' is ' + Number(top.score) + '% close to yours.';

@@ -137,6 +137,20 @@ class RecommendedTitlesInDuplicationTest extends TestCase
         $this->assertNull($proposal->fresh()->embedding, 'a revised title is read again');
     }
 
+    /** Ranked below the judge's top 4, this year's title still gets a real score, not "not assessed". */
+    public function test_this_years_title_is_judged_even_outside_the_top_four(): void
+    {
+        $this->ollama->shouldReceive('embed')->andReturn(array_fill(0, 8, 0.5));
+        $theirs = $this->proposal($this->team('B'), 'Barangay Records System');
+        // Close (85%) but below all five archive documents (100%).
+        CapstonePreProposal::whereKey($theirs->id)->update(['embedding' => json_encode([0.5, 0.5, 0.5, 0.5, 0, 0, 0, 0])]);
+
+        $match = collect($this->check($this->team('A')))->firstWhere('recommended');
+
+        $this->assertTrue($match['assessed']);
+        $this->assertSame(80, $match['score']);
+    }
+
     /** This year's titles no longer take archive places: the archive keeps its top 10 beside them. */
     public function test_the_archive_keeps_its_top_ten_beside_this_years_titles(): void
     {
