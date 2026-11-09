@@ -7,21 +7,28 @@ use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\GradingRubric;
 use App\Models\PanelGrade;
+use App\Models\Student;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
-use App\Support\DefenseOutcome;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Panel comment 13: the panel graded on paper. Whoever records the decision
- * types each panelist's total off their sheet; each panelist still sees it
- * and can replace it with their own until the decision is recorded.
+ * The panel grades on paper. The section's CaPSA types each sheet's total on
+ * Team Management's Grades tab and attaches the signed sheets as one PDF; the
+ * Panel Chair sets who grades (Individual, Joint, Mixed) from Grading setup.
  */
 class PaperGradesTest extends TestCase
 {
     use RefreshDatabase;
 
     private DefenseSchedule $defense;
+
+    private Team $team;
+
+    private CapstoneExpert $capsa;
 
     private int $criterionId;
 
@@ -31,13 +38,24 @@ class PaperGradesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Storage::fake('local');
 
-        $team = Team::create(['team_name' => 'Paper Team', 'project_title' => 'Ink and Sheets']);
-        $this->defense = DefenseSchedule::create([
-            'team_id' => $team->team_id,
-            'defense_type' => 'Pre-proposal Defense',
-            'schedule_date' => now()->subHour(),
+        $leader = Student::factory()->withCompleteProfile()->create([
+            'email' => 'leader.paper@my.cspc.edu.ph',
+            'course' => 'Bachelor of Science in Information Technology',
+            'year_section' => '3rd · A',
         ]);
+        $this->team = Team::create([
+            'team_name' => 'Paper Team', 'project_title' => 'Ink and Sheets',
+            'team_status' => 'Active', 'leader_id' => $leader->student_id, 'member_count' => 5,
+        ]);
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $this->team->team_id]);
+
+        $this->capsa = $this->makeCapsa(CapstoneExpert::factory()->create([
+            'approved_status' => true, 'sections' => ['BSIT-3A'], 'first_name' => 'Cap', 'last_name' => 'Sa',
+        ]));
+
+        $this->defense = $this->defenseFor($this->team);
 
         foreach (['chair' => 'Panel Chair', 'one' => 'Panel Member 1', 'two' => 'Panel Member 2'] as $key => $role) {
             $expert = CapstoneExpert::create([
@@ -46,12 +64,7 @@ class PaperGradesTest extends TestCase
                 'last_name' => 'Panelist',
                 'approved_status' => true,
             ]);
-            DefensePanel::create([
-                'defense_id' => $this->defense->defense_id,
-                'expert_id' => $expert->expert_id,
-                'panel_role' => $role,
-                'created_at' => now(),
-            ]);
+            $this->seat($this->defense, $expert, $role);
             $this->panel[$key] = $expert;
         }
 
@@ -74,26 +87,54 @@ class PaperGradesTest extends TestCase
         ])->criterion_id;
     }
 
+    private function defenseFor(Team $team): DefenseSchedule
+    {
+        return DefenseSchedule::create([
+            'team_id' => $team->team_id,
+            'defense_type' => 'Pre-proposal Defense',
+            'schedule_date' => now()->subHour(),
+        ]);
+    }
+
+    private function seat(DefenseSchedule $defense, CapstoneExpert $expert, string $role): void
+    {
+        DefensePanel::create([
+            'defense_id' => $defense->defense_id,
+            'expert_id' => $expert->expert_id,
+            'panel_role' => $role,
+            'created_at' => now(),
+        ]);
+    }
+
     private function id(string $who): int
     {
         return (int) $this->panel[$who]->expert_id;
     }
 
-    private function url(string $suffix = ''): string
-    {
-        return '/instructor/grading/'.$this->defense->defense_id.$suffix;
-    }
-
-    /** @param  array<string, float|int>  $totals */
-    private function paper(string $by, array $totals, ?string $outcome = null)
+    /** @param  array<string, float|int|null>  $totals */
+    private function encode(array $totals, bool $submit = false)
     {
         $keyed = [];
         foreach ($totals as $who => $total) {
             $keyed[$this->id($who)] = $total;
         }
 
-        return $this->actingAs($this->panel[$by], 'expert')
-            ->postJson($this->url('/paper'), ['totals' => $keyed, 'outcome' => $outcome]);
+        return $this->actingAs($this->capsa, 'expert')
+            ->postJson('/capsa/grades/'.$this->defense->defense_id, ['totals' => $keyed, 'submit' => $submit]);
+    }
+
+    private function attachSheet()
+    {
+        return $this->actingAs($this->capsa, 'expert')->post('/capsa/grades/'.$this->defense->defense_id.'/sheet', [
+            'sheet' => UploadedFile::fake()->create('sheets.pdf', 50, 'application/pdf'),
+        ], ['Accept' => 'application/json']);
+    }
+
+    /** A panelist scores and submits on their own laptop. */
+    private function submitOwn(string $who, DefenseSchedule $defense, int $score)
+    {
+        return $this->actingAs($this->panel[$who], 'expert')
+            ->patchJson('/instructor/grading/'.$defense->defense_id, ['scores' => [$this->criterionId => $score], 'remarks' => 'Tighten chapter 2.']);
     }
 
     private function gradeOf(string $who): ?PanelGrade
@@ -101,108 +142,123 @@ class PaperGradesTest extends TestCase
         return PanelGrade::where('defense_id', $this->defense->defense_id)->where('expert_id', $this->id($who))->first();
     }
 
-    public function test_the_chair_types_every_total_and_they_count_as_turned_in(): void
+    public function test_capsa_saves_drafts_then_submits_once_the_signed_sheets_are_attached(): void
     {
-        $this->paper('chair', ['chair' => 90, 'one' => 80, 'two' => 85.5])
-            ->assertOk()->assertJson(['success' => true, 'message' => 'Grades saved from paper.']);
+        $this->encode(['chair' => 90, 'one' => 90])->assertOk()->assertJson(['message' => 'Drafts saved.']);
+        $this->assertSame(PanelGrade::DRAFT, $this->gradeOf('one')->status);
+        $this->assertNull($this->gradeOf('two'));
+        $this->assertFalse($this->defense->fresh()->allGradesIn());
 
-        foreach (['chair' => 90, 'one' => 80, 'two' => 85.5] as $who => $total) {
+        $this->encode(['chair' => 90, 'one' => 90, 'two' => 84], true)
+            ->assertStatus(422)->assertJson(['message' => 'Attach the signed grade sheets PDF first.']);
+
+        $this->attachSheet()->assertOk()->assertJson(['success' => true]);
+        $this->encode(['chair' => 90, 'one' => 90], true)
+            ->assertStatus(422)->assertJson(['message' => 'Type every total before submitting.']);
+
+        $this->encode(['chair' => 90, 'one' => 90, 'two' => 84], true)->assertOk();
+
+        foreach (['chair' => 90, 'one' => 90, 'two' => 84] as $who => $total) {
             $grade = $this->gradeOf($who);
             $this->assertSame(PanelGrade::SUBMITTED, $grade->status);
             $this->assertEquals($total, (float) $grade->total_score);
-            $this->assertSame('Entered from paper by Chair Panelist (Panel Chair).', $grade->remarks);
             $this->assertTrue($grade->isFromPaper());
         }
-
-        $defense = $this->defense->fresh();
-        $this->assertTrue($defense->allGradesIn());
-        $this->assertSame(85.17, $defense->panelAverage());
-        $this->assertNull($defense->outcome);
+        $this->assertEquals(88, $this->defense->fresh()->panelAverage());
+        // The chair still records the decision.
+        $this->assertNull($this->defense->fresh()->outcome);
     }
 
-    public function test_only_whoever_records_the_decision_sees_the_form_and_can_save(): void
+    public function test_a_total_out_of_range_saves_nothing(): void
     {
-        $this->actingAs($this->panel['chair'], 'expert')->get($this->url())->assertOk()
-            ->assertSee('Enter from paper sheets')
-            ->assertSee('class="gs-paper-score" data-id="'.$this->id('two').'"', false)
-            ->assertSee('Entered from paper by Chair Panelist (Panel Chair)');
-
-        $this->actingAs($this->panel['one'], 'expert')->get($this->url())->assertOk()
-            ->assertDontSee('id="gs-paper"', false);
-
-        $this->paper('one', ['chair' => 90, 'one' => 80, 'two' => 85])
-            ->assertForbidden()->assertJson(['message' => 'Only the Panel Chair enters grades from paper.']);
-
-        $this->assertSame(0, PanelGrade::count());
-    }
-
-    public function test_a_total_out_of_range_or_missing_saves_nothing(): void
-    {
-        $this->paper('chair', ['chair' => 90, 'one' => 120, 'two' => 85])
+        $this->encode(['chair' => 120])
             ->assertStatus(422)->assertJson(['message' => "A total cannot be more than the rubric's 100."]);
-
-        $this->paper('chair', ['chair' => 90, 'one' => -5, 'two' => 85])->assertStatus(422);
-
-        $this->paper('chair', ['chair' => 90, 'one' => 80])
-            ->assertStatus(422)->assertJson(['message' => "Type every panelist's total."]);
-
-        $this->paper('chair', ['chair' => 90, 'one' => 80, 'two' => 85], 'made_up')->assertStatus(422);
+        $this->encode(['chair' => -5])->assertStatus(422);
 
         $this->assertSame(0, PanelGrade::count());
     }
 
-    public function test_a_grade_already_turned_in_is_left_alone_and_a_join_is_cleared(): void
+    public function test_a_grade_the_panelist_turned_in_is_never_typed_over(): void
     {
-        // Member 1 scored on their own laptop; Member 2 was joined to the chair's grade.
-        $this->actingAs($this->panel['one'], 'expert')
-            ->patchJson($this->url(), ['scores' => [$this->criterionId => 80], 'remarks' => 'Tighten chapter 2.'])->assertOk();
-        $this->actingAs($this->panel['chair'], 'expert')
-            ->putJson($this->url('/grader'), ['grader_id' => $this->id('chair'), 'joined' => [$this->id('two')]])->assertOk();
-        $this->assertTrue($this->gradeOf('two')->isJoined());
+        $this->submitOwn('one', $this->defense, 80)->assertOk();
 
-        $this->actingAs($this->panel['chair'], 'expert')->get($this->url())->assertOk()
-            ->assertSee('data-own="80"', false)->assertSee('turned in')
-            ->assertDontSee('class="gs-paper-score" data-id="'.$this->id('one').'"', false);
-
-        // A total typed for Member 1 is ignored: theirs is already in.
-        $this->paper('chair', ['chair' => 92, 'one' => 10, 'two' => 70])->assertOk();
+        $this->attachSheet()->assertOk();
+        $this->encode(['chair' => 92, 'one' => 10, 'two' => 70], true)->assertOk();
 
         $one = $this->gradeOf('one');
         $this->assertEquals(80, (float) $one->total_score);
         $this->assertSame('Tighten chapter 2.', $one->remarks);
-
-        $two = $this->gradeOf('two');
-        $this->assertFalse($two->isJoined());
-        $this->assertEquals(70, (float) $two->total_score);
-        $this->assertTrue($two->isFromPaper());
         $this->assertSame(80.67, $this->defense->fresh()->panelAverage());
     }
 
-    public function test_a_panelist_can_correct_theirs_and_the_decision_can_ride_along(): void
+    public function test_a_joint_grade_is_typed_once_and_counts_for_everyone(): void
     {
-        $this->paper('chair', ['chair' => 90, 'one' => 80, 'two' => 85])->assertOk();
+        $this->actingAs($this->panel['chair'], 'expert')->putJson('/instructor/grading/setup', [
+            'defense_ids' => [$this->defense->defense_id], 'method' => 'joint', 'recorder' => 'Panel Chair',
+        ])->assertOk()->assertJsonPath('data.updated', 1);
 
-        // Member 1 sees who typed it, with an empty remarks box, and replaces it.
-        $this->actingAs($this->panel['one'], 'expert')->get($this->url())->assertOk()
-            ->assertSee('<b>Entered from paper by Chair Panelist (Panel Chair).</b> Total 80 / 100.', false)
-            ->assertSee('placeholder="What should the team fix, and what worked?"></textarea>', false);
-        $this->actingAs($this->panel['one'], 'expert')
-            ->patchJson($this->url(), ['scores' => [$this->criterionId => 100], 'remarks' => 'Strong scope.'])->assertOk();
-        $this->assertFalse($this->gradeOf('one')->isFromPaper());
+        $this->attachSheet()->assertOk();
+        $this->encode(['chair' => 86], true)->assertOk();
 
-        // The chair saves again with the decision: Member 1's own grade stays.
-        $this->paper('chair', ['chair' => 90, 'two' => 85], 'passed')
-            ->assertOk()->assertJson(['message' => 'Grades saved from paper. Outcome recorded: '.DefenseOutcome::label('passed', 'Pre-proposal Defense').'.']);
+        foreach (['chair', 'one', 'two'] as $who) {
+            $this->assertEquals(86, (float) $this->gradeOf($who)->total_score, $who);
+        }
+        $this->assertEquals(86, $this->defense->fresh()->panelAverage());
+    }
 
-        $defense = $this->defense->fresh();
-        $this->assertSame('passed', $defense->outcome);
-        $this->assertSame($this->id('chair'), (int) $defense->outcome_recorded_by);
-        $this->assertEquals(100, (float) $this->gradeOf('one')->total_score);
-        $this->assertSame(91.67, $defense->panelAverage());
+    public function test_a_capsa_outside_the_section_cannot_touch_the_grades(): void
+    {
+        $other = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'sections' => ['BSCS-1A']]));
 
-        // Decided: the form is gone and nothing more is typed in.
-        $this->actingAs($this->panel['chair'], 'expert')->get($this->url())->assertOk()->assertDontSee('id="gs-paper"', false);
-        $this->paper('chair', ['chair' => 50, 'two' => 50])
-            ->assertStatus(422)->assertJson(['message' => 'The panel has already recorded its decision for this defense.']);
+        $this->actingAs($other, 'expert')
+            ->postJson('/capsa/grades/'.$this->defense->defense_id, ['totals' => [$this->id('chair') => 90]])
+            ->assertForbidden();
+        $this->actingAs($other, 'expert')
+            ->getJson('/capsa/grades/'.$this->defense->defense_id.'/sheet')->assertForbidden();
+
+        $this->assertSame(0, PanelGrade::count());
+    }
+
+    public function test_the_signed_sheets_must_be_a_pdf_and_can_be_opened(): void
+    {
+        $this->actingAs($this->capsa, 'expert')->post('/capsa/grades/'.$this->defense->defense_id.'/sheet', [
+            'sheet' => UploadedFile::fake()->create('sheets.docx', 50, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+        ], ['Accept' => 'application/json'])->assertStatus(422)->assertJson(['message' => 'The signed sheets have to be one PDF.']);
+
+        $this->attachSheet()->assertOk();
+        $path = $this->defense->fresh()->signed_sheets_path;
+        Storage::disk('local')->assertExists($path);
+
+        $this->actingAs($this->capsa, 'expert')->get('/capsa/grades/'.$this->defense->defense_id.'/sheet')
+            ->assertOk()->assertHeader('Content-Type', 'application/pdf');
+
+        // Replacing it removes the old file.
+        $this->attachSheet()->assertOk();
+        Storage::disk('local')->assertMissing($path);
+    }
+
+    public function test_only_the_chair_sets_up_grading_and_started_teams_are_skipped(): void
+    {
+        // A second defense the same chair also chairs, where grading has already started.
+        $started = $this->defenseFor(Team::create(['team_name' => 'Started Team', 'project_title' => 'Already Going']));
+        $this->seat($started, $this->panel['chair'], 'Panel Chair');
+        $this->seat($started, $this->panel['one'], 'Panel Member 1');
+        $this->seat($started, $this->panel['two'], 'Panel Member 2');
+        $this->submitOwn('one', $started, 80)->assertOk();
+
+        $this->actingAs($this->panel['one'], 'expert')->putJson('/instructor/grading/setup', [
+            'defense_ids' => [$this->defense->defense_id], 'method' => 'joint', 'recorder' => 'Panel Chair',
+        ])->assertStatus(422)->assertJsonPath('data.skipped.0.reason', 'You do not chair this defense.');
+
+        $this->actingAs($this->panel['chair'], 'expert')->putJson('/instructor/grading/setup', [
+            'defense_ids' => [$this->defense->defense_id, $started->defense_id],
+            'method' => 'mixed', 'shared' => ['Panel Chair', 'Panel Member 1'], 'recorder' => 'Panel Member 1',
+        ])->assertOk()
+            ->assertJsonPath('data.updated', 1)
+            ->assertJsonPath('data.skipped.0.reason', 'Grading has already started.');
+
+        // Mixed: Member 1 grades for the chair; Member 2 grades alone.
+        $this->assertSame($this->id('one'), (int) $this->gradeOf('chair')->graded_by_expert_id);
+        $this->assertNull($this->gradeOf('two')?->graded_by_expert_id);
     }
 }

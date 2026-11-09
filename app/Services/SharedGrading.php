@@ -83,7 +83,7 @@ class SharedGrading
 
     /**
      * Set who grades: one panelist for those in $joinIds, or - with no grader -
-     * everyone on their own again. Anyone on the panel may set it.
+     * everyone on their own again. The Panel Chair sets it (the controller checks).
      *
      * @param  list<int>  $joinIds
      * @return string|null why it was refused, or null when done
@@ -244,6 +244,29 @@ class SharedGrading
                 );
             }
         }
+    }
+
+    /**
+     * Individual (everyone on their own), Joint (one grade for the whole
+     * panel) or Mixed (one grade for some, the rest on their own).
+     *
+     * @param  array{grader: int|null, joined: list<int>}  $arrangement
+     */
+    public static function method(array $arrangement, int $panelSize): string
+    {
+        if ($arrangement['grader'] === null) {
+            return 'individual';
+        }
+
+        return count($arrangement['joined']) >= $panelSize - 1 ? 'joint' : 'mixed';
+    }
+
+    /** Someone has a total in or turned in: the method is locked from Grade Setup. */
+    public function started(DefenseSchedule $defense): bool
+    {
+        return PanelGrade::where('defense_id', $defense->defense_id)
+            ->where(fn ($q) => $q->whereIn('status', [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED])->orWhereNotNull('total_score'))
+            ->exists();
     }
 
     /**

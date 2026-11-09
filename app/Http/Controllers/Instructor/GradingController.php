@@ -99,7 +99,14 @@ class GradingController extends Controller
                 'status' => $grade?->status ?? 'not_started',
                 'total_score' => $grade?->total_score,
                 // Who grades for whom - the "Who grades?" dialog's data.
-                'who' => $this->shared->dialog($current, (int) $expert->expert_id),
+                'who' => $who = $this->shared->dialog($current, (int) $expert->expert_id),
+                'method' => SharedGrading::method($who, count($who['panel'])),
+                // Who types the shared grade this panelist is part of, if any.
+                'recorder' => $who['grader'] !== null && ($who['grader'] === (int) $expert->expert_id || in_array((int) $expert->expert_id, $who['joined'], true))
+                    ? ($who['grader'] === (int) $expert->expert_id ? 'You' : collect($who['panel'])->firstWhere('id', $who['grader'])['name'] ?? 'A panelist')
+                    : null,
+                'chair' => $current->isChairedBy((int) $expert->expert_id),
+                'started' => $this->shared->started($current),
                 'decided' => $current->hasOutcome(),
             ];
         })->values();
@@ -251,8 +258,6 @@ class GradingController extends Controller
             'isChair' => $panel->panel_role === 'Panel Chair',
             // The chair records the decision - or whoever grades for the chair.
             'canRecord' => $canRecord,
-            // The paper sheets' totals, typed in by whoever records the decision.
-            'paperSeats' => $canRecord && ! $defense->hasOutcome() ? $this->paperSeats($defense) : collect(),
             'who' => $who,
             // Who this panelist grades for, when they grade for the panel.
             'gradingFor' => $who['grader'] === (int) $expert->expert_id
@@ -579,130 +584,99 @@ class GradingController extends Controller
         ]);
     }
 
+    /** The panel seats Grade Setup names, in the sheet's order. */
+    private const SETUP_SEATS = ['Panel Chair', 'Panel Member 1', 'Panel Member 2'];
+
     /**
-     * POST /grading/{defense}/paper - the panel graded on paper: whoever
-     * records the decision types each panelist's total off their sheet.
-     *
-     * A seat its panelist already turned in is left alone. Every other seat
-     * is saved as submitted, marked "Entered from paper by ..." so the
-     * panelist sees who typed it and can still replace it with their own
-     * until the decision is recorded. The decision is optional here.
+     * PUT /grading/setup - Grade Setup: the Panel Chair sets who grades on many
+     * defenses at once. Individual, Joint (the recorder grades for the panel)
+     * or Mixed (the recorder grades for one other seat, the third on their own).
+     * A defense the chair does not chair, already decided, or with grading
+     * started is left as it is and listed back.
      */
-    public function paper(Request $request, DefenseSchedule $defense, DefenseOutcomeRecorder $recorder): JsonResponse
+    public function setup(Request $request): JsonResponse
     {
-        $panel = $this->panelFor($defense);
-
-        /** @var CapstoneExpert $by */
-        $by = auth()->guard('expert')->user();
-
-        if (! $this->shared->canRecordOutcome($defense, (int) $by->expert_id)) {
-            return response()->json(['success' => false, 'message' => 'Only the Panel Chair enters grades from paper.'], 403);
-        }
-
-        if ($defense->hasOutcome()) {
-            return response()->json(['success' => false, 'message' => 'The panel has already recorded its decision for this defense.'], 422);
-        }
-
-        $rubric = $this->rubricFor($defense);
-
-        if (! $rubric) {
-            return response()->json(['success' => false, 'message' => 'No active rubric is configured for this defense stage.'], 422);
-        }
-
         $validator = Validator::make($request->all(), [
-            'totals' => ['required', 'array'],
-            'totals.*' => ['required', 'numeric', 'min:0', 'max:'.(float) $rubric->total_points],
-            'outcome' => ['nullable', 'string'],
+            'defense_ids' => ['required', 'array', 'min:1'],
+            'defense_ids.*' => ['integer'],
+            'method' => ['required', 'in:individual,joint,mixed'],
+            'shared' => ['exclude_unless:method,mixed', 'required', 'array', 'size:2'],
+            'shared.*' => ['distinct', 'in:'.implode(',', self::SETUP_SEATS)],
+            'recorder' => ['exclude_if:method,individual', 'required', 'in:'.implode(',', self::SETUP_SEATS)],
         ], [
-            'totals.required' => 'Type every panelist\'s total.',
-            'totals.*.max' => 'A total cannot be more than the rubric\'s '.(float) $rubric->total_points.'.',
+            'defense_ids.required' => 'Pick at least one team.',
+            'shared.size' => 'Pick exactly two seats for the shared grade.',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
         }
 
-        $validated = $validator->validated();
-        $outcome = $validated['outcome'] ?? null;
+        $v = $validator->validated();
 
-        if ($outcome !== null && ! DefenseOutcome::allowedForStage($defense->defense_type, $outcome)) {
-            return response()->json(['success' => false, 'message' => 'That is not a possible outcome for a '.$defense->defense_type.'.'], 422);
+        if ($v['method'] === 'mixed' && ! in_array($v['recorder'], $v['shared'], true)) {
+            return response()->json(['success' => false, 'message' => 'The recorder has to be one of the two shared seats.'], 422);
         }
 
-        $open = $this->paperSeats($defense)->reject(fn ($seat) => $seat->own);
+        /** @var CapstoneExpert $me */
+        $me = auth()->guard('expert')->user();
+        $updated = 0;
+        $skipped = [];
 
-        if ($open->contains(fn ($seat) => ! isset($validated['totals'][$seat->id]))) {
-            return response()->json(['success' => false, 'message' => 'Type every panelist\'s total.'], 422);
+        $defenses = DefenseSchedule::with(['panels', 'team'])->whereIn('defense_id', $v['defense_ids'])->get();
+
+        foreach ($defenses as $defense) {
+            $team = $defense->team?->team_name ?? 'A team';
+            $seats = $defense->panels->mapWithKeys(fn (DefensePanel $p) => [$p->panel_role => (int) $p->expert_id]);
+            $rubric = $this->rubricFor($defense);
+
+            $why = match (true) {
+                ! $defense->isChairedBy((int) $me->expert_id) => 'You do not chair this defense.',
+                $defense->hasOutcome() => 'The decision is already recorded.',
+                $this->shared->started($defense) => 'Grading has already started.',
+                $v['method'] !== 'individual' && ! $seats->has($v['recorder']) => 'No '.$v['recorder'].' on this panel.',
+                $v['method'] === 'mixed' && collect($v['shared'])->contains(fn ($seat) => ! $seats->has($seat)) => 'The shared seats are not both on this panel.',
+                ! $rubric => 'No active rubric for this stage.',
+                default => null,
+            };
+
+            if ($why === null) {
+                $graderId = $v['method'] === 'individual' ? null : $seats[$v['recorder']];
+                $joined = match ($v['method']) {
+                    'individual' => [],
+                    'joint' => $seats->values()->all(),
+                    'mixed' => collect($v['shared'])->map(fn ($seat) => $seats[$seat])->all(),
+                };
+                $why = $this->shared->assign($defense, $me, $graderId, $joined, $rubric);
+            }
+
+            if ($why === null) {
+                $updated++;
+            } else {
+                $skipped[] = ['team' => $team, 'reason' => $why];
+            }
         }
-
-        foreach ($open as $seat) {
-            PanelGrade::updateOrCreate(
-                ['defense_id' => $defense->defense_id, 'expert_id' => $seat->id],
-                [
-                    // Typed from their own sheet, so no longer a copy of anyone's.
-                    'graded_by_expert_id' => null,
-                    'joined_at' => null,
-                    'joined_set_by' => null,
-                    'rubric_id' => $rubric->rubric_id,
-                    'scores' => [],
-                    'total_score' => (float) $validated['totals'][$seat->id],
-                    'verdict' => null,
-                    'remarks' => PanelGrade::FROM_PAPER.$by->name.' ('.$panel->panel_role.').',
-                    'status' => PanelGrade::SUBMITTED,
-                    'submitted_at' => now(),
-                ]
-            );
-        }
-
-        if ($outcome === null) {
-            return response()->json(['success' => true, 'message' => 'Grades saved from paper.']);
-        }
-
-        $defense->unsetRelation('grades')->unsetRelation('panels');
-        $result = $recorder->record($defense, $outcome, $by, null);
 
         return response()->json([
-            'success' => true,
-            'message' => 'Grades saved from paper. Outcome recorded: '.DefenseOutcome::label($outcome, $defense->defense_type).'.',
-            'data' => ['outcome' => $result['schedule']->outcome],
-        ]);
-    }
-
-    /**
-     * Each panel seat for the paper form, chair first: `own` when the
-     * panelist turned in their own grade (or abstained), which the form shows
-     * but does not overwrite.
-     */
-    private function paperSeats(DefenseSchedule $defense): \Illuminate\Support\Collection
-    {
-        $grades = $defense->grades()->get()->keyBy(fn (PanelGrade $g) => (int) $g->expert_id);
-
-        return DefensePanel::where('defense_id', $defense->defense_id)->with('expert')->get()
-            ->sortBy(fn (DefensePanel $p) => $p->panel_role === 'Panel Chair' ? '0' : '1'.$p->panel_role)
-            ->map(function (DefensePanel $p) use ($grades) {
-                $grade = $grades->get((int) $p->expert_id);
-                $own = $grade && ! $grade->isFromPaper()
-                    && in_array($grade->status, [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED], true);
-
-                return (object) [
-                    'id' => (int) $p->expert_id,
-                    'name' => $p->expert?->name ?? $p->panel_role,
-                    'role' => $p->panel_role,
-                    'own' => $own,
-                    'abstained' => (bool) $grade?->isAbstained(),
-                    'total' => $grade && ($own || $grade->isFromPaper()) && $grade->total_score !== null ? (float) $grade->total_score : null,
-                ];
-            })
-            ->values();
+            'success' => $updated > 0,
+            'message' => $updated > 0
+                ? 'Grade setup saved for '.$updated.' '.($updated === 1 ? 'team' : 'teams').'.'
+                : 'No team was changed.',
+            'data' => ['updated' => $updated, 'skipped' => $skipped],
+        ], $updated > 0 ? 200 : 422);
     }
 
     /**
      * PUT /grading/{defense}/grader - who grades: one panelist for the others
-     * named, or (no grader) everyone on their own. Anyone on the panel sets it.
+     * named, or (no grader) everyone on their own. Only the Panel Chair sets it.
      */
     public function setGrader(Request $request, DefenseSchedule $defense): JsonResponse
     {
         $this->panelFor($defense);
+
+        if (! $defense->isChairedBy((int) auth()->guard('expert')->id())) {
+            return response()->json(['success' => false, 'message' => 'Only the Panel Chair sets who grades.'], 403);
+        }
 
         $validator = Validator::make($request->all(), [
             'grader_id' => ['nullable', 'integer'],

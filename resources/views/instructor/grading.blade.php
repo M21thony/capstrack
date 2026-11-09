@@ -36,36 +36,69 @@
   .gl-go{font:inherit;font-size:12px;font-weight:600;border-radius:6px;padding:6px 12px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);text-decoration:none;white-space:nowrap}
   .gl-go.primary{background:var(--accent);border-color:var(--accent);color:#18191f}
   .gl-empty{padding:40px 16px;text-align:center;color:var(--text3);font-size:13px}
-  .gl-who{font:inherit;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:0 10px;min-height:34px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;white-space:nowrap;max-width:100%}
-  .gl-who:hover{border-color:var(--border2)}
-  .gl-who.static{border-color:transparent;background:none;cursor:default;padding:0}
-  .gl-who svg{width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-  .gl-who-av{width:20px;height:20px;border-radius:50%;background:#18191f;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 
-  /* A phone gets one card per defense instead of a six-column row: the team
-     on top, what and when under it, and the button across the bottom. */
+  .gl-sel{width:36px}
+  .gl-sel input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+  .gl-method b{display:block;font-size:13px}
+  .gl-method small{display:block;color:var(--text3);font-size:12px}
+  .gl-setup{font:inherit;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:5px 12px;min-height:30px;border:1px solid #18191f;background:#18191f;color:#fff;cursor:pointer}
+  .gl-setup svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Grade Setup */
+  .su{border:0;border-radius:12px;padding:0;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 48px);margin:auto;background:var(--bg2);color:var(--text);box-shadow:0 20px 50px rgba(0,0,0,.25)}
+  .su::backdrop{background:rgba(15,16,20,.45)}
+  .su form{display:flex;flex-direction:column;max-height:calc(100dvh - 48px)}
+  .su-h{padding:14px 18px;border-bottom:1px solid var(--border)}
+  .su-h b{font-size:15px}
+  .su-h p{margin:2px 0 0;font-size:12.5px;color:var(--text3)}
+  .su-b{padding:12px 18px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+  .su-b h3{margin:0 0 6px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+  .su-seg{display:flex;gap:4px}
+  .su-seg button{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:999px;padding:4px 12px;cursor:pointer;min-height:30px}
+  .su-seg button[aria-pressed="true"]{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
+  .su-teams{margin-top:8px;border:1px solid var(--border);border-radius:8px;max-height:150px;overflow:auto}
+  .su-team{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border)}
+  .su-team:last-child{border-bottom:0}
+  .su-team span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .su-team small{color:var(--text3);font-size:11.5px}
+  .su-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .su-card{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--border);border-radius:8px;padding:9px 10px;cursor:pointer}
+  .su-card:has(input:checked){border-color:var(--accent);background:var(--accent-light)}
+  .su-card input{margin-top:2px;accent-color:var(--accent)}
+  .su-card b{display:block;font-size:13px}
+  .su-card small{display:block;font-size:11.5px;color:var(--text3)}
+  .su-seats{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}
+  .su-seats label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .su-seats input{accent-color:var(--accent)}
+  .su select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--border2);border-radius:6px;background:var(--bg2);color:var(--text);min-width:200px}
+  .su-impact{font-size:12.5px;color:var(--text2);background:var(--bg3);border-radius:8px;padding:8px 10px}
+  .su-err{font-size:12.5px;color:var(--red)}
+  .su-err ul{margin:4px 0 0;padding-left:18px}
+  .su-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border)}
+  .su-f button{font:inherit;font-size:13px;font-weight:600;border-radius:6px;padding:7px 14px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer}
+  .su-f button.p{background:#18191f;border-color:#18191f;color:#fff}
+  .su-f button:disabled{opacity:.45;cursor:not-allowed}
+  @media (max-width:560px){.su-cards{grid-template-columns:1fr}}
+
+  /* Phones and tablets get one card per defense instead of a seven-column
+     row: the tick box and team on top, the rest under it, the button last. */
   @media (max-width:700px){
     .gl-filter{margin-left:0;width:100%}
     .gl-filter button{flex:1}
   }
-  /* A tablet too - the six columns are wider than its screen, and the time
-     came out a word a line with the Grade button off the edge - laid out
-     across (below). */
   @media (max-width:1024px){
     .gl{max-height:none;overflow:visible}
     .gl-scroll{overflow:visible}
     .gl table,.gl tbody{display:block}
     .gl thead{display:none}
-    .gl tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:14px;border-bottom:1px solid var(--border)}
+    .gl tbody tr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 12px;padding:14px;border-bottom:1px solid var(--border)}
     .gl tbody tr:last-of-type{border-bottom:0}
     .gl tbody tr:hover td{background:none}
-    .gl td{display:block;padding:0;border:0;font-size:12.5px;min-width:0}
-    .gl td:nth-child(1){grid-column:1 / -1}
-    .gl td:nth-child(2){grid-column:1}
-    .gl td:nth-child(3){grid-column:2;text-align:right;color:var(--text3);font-size:12px}
-    .gl td:nth-child(4){grid-column:1 / -1}
-    .gl td:nth-child(5){grid-column:1 / -1;color:var(--text2)}
-    .gl td:nth-child(6){grid-column:1}
+    .gl td{display:block;padding:0;border:0;font-size:12.5px;min-width:0;width:auto}
+    .gl td:nth-child(1){grid-column:1;grid-row:1}
+    .gl td:nth-child(2){grid-column:2;grid-row:1}
+    .gl td:nth-child(3){grid-column:3;grid-row:1;text-align:right;color:var(--text3);font-size:12px}
+    .gl td:nth-child(4),.gl td:nth-child(5),.gl td:nth-child(6){grid-column:2 / -1}
     .gl td:nth-child(7){grid-column:1 / -1;text-align:left!important}
     .gl-team small{max-width:none;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
     .gl-go{display:block;text-align:center;padding:10px 12px;font-size:13px}
@@ -73,16 +106,14 @@
     /* display:grid above would otherwise show rows the filter hid. */
     .gl tbody tr[hidden]{display:none}
   }
-  /* The team on the left; what and when, your seat and grade beside it; the
-     button at the end. */
   @media (min-width:701px) and (max-width:1024px){
-    .gl tbody tr{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto auto auto;align-items:center;gap:6px 18px;padding:14px 16px}
+    .gl tbody tr{grid-template-columns:auto minmax(0,1.3fr) minmax(0,1fr) auto auto;align-items:center;gap:6px 18px;padding:14px 16px}
     .gl td:nth-child(1){grid-column:1;grid-row:1 / span 2}
-    .gl td:nth-child(2){grid-column:2;grid-row:1}
-    .gl td:nth-child(5){grid-column:2;grid-row:2;font-size:12px}
-    .gl td:nth-child(3){grid-column:3;grid-row:1}
-    .gl td:nth-child(6){grid-column:3;grid-row:2;text-align:right}
-    .gl td:nth-child(4){grid-column:4;grid-row:1 / span 2}
+    .gl td:nth-child(2){grid-column:2;grid-row:1 / span 2}
+    .gl td:nth-child(3){grid-column:3;grid-row:1;text-align:left}
+    .gl td:nth-child(5){grid-column:3;grid-row:2}
+    .gl td:nth-child(4){grid-column:4;grid-row:1}
+    .gl td:nth-child(6){grid-column:4;grid-row:2}
     .gl td:nth-child(7){grid-column:5;grid-row:1 / span 2;text-align:right!important}
     .gl-go{display:inline-block}
   }
@@ -122,6 +153,10 @@
       </div>
     @endif
 
+    @php
+      $chaired = $rows->where('chair', true);
+      $methodLabel = ['individual' => 'Individual', 'joint' => 'Joint', 'mixed' => 'Mixed'];
+    @endphp
     @if($rows->isEmpty())
       <div style="text-align:center;padding:64px 24px">
         <div style="margin-bottom:16px;opacity:0.3">
@@ -141,10 +176,13 @@
             <button type="button" data-show="todo" aria-pressed="false">To grade</button>
             <button type="button" data-show="done" aria-pressed="false">Done</button>
           </div>
+          @if ($chaired->isNotEmpty())
+            <button type="button" class="gl-setup" id="gl-setup-open"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Grading setup</button>
+          @endif
         </div>
         <div class="gl-scroll">
           <table data-export="Grading">
-            <thead><tr><th>Team</th><th>Defense</th><th>Your seat</th><th>Who grades</th><th>When</th><th>Your grade</th><th></th></tr></thead>
+            <thead><tr><th class="gl-sel">Select</th><th>Team &amp; defense</th><th>Schedule</th><th>Your role</th><th>Method</th><th>Your grading</th><th>Action</th></tr></thead>
             <tbody id="grading-tbody">
               @foreach($rows as $row)
                 @php
@@ -153,39 +191,18 @@
                   $done = in_array($row->status, ['submitted', 'abstained'], true);
                   $isRedefense = ($row->attempt ?? 1) > 1;
                 @endphp
+                @php $locked = $row->decided ? 'Decided' : ($row->started ? 'Grading started' : null); @endphp
                 <tr data-state="{{ $done ? 'done' : 'todo' }}">
+                  <td class="gl-sel">
+                    @if ($row->chair && ! $locked)
+                      <input type="checkbox" data-select="{{ $row->defense_id }}" aria-label="Select {{ $row->team_name }}">
+                    @endif
+                  </td>
                   <td>
                     <div class="gl-team">
                       <span class="gl-av" aria-hidden="true">{{ strtoupper(substr($row->team_name, 0, 2)) }}</span>
-                      <span style="min-width:0"><b>{{ $row->team_name }}</b><small title="{{ $row->project_title }}">{{ $row->project_title ?? 'No title set' }}</small></span>
+                      <span style="min-width:0"><b>{{ $row->team_name }}</b><small title="{{ $row->project_title }}">{{ $row->project_title ?? 'No title set' }}</small><small>{{ $row->defense_type }}@if($isRedefense) · Redefense @endif</small></span>
                     </div>
-                  </td>
-                  <td>
-                    {{ $row->defense_type }}
-                    <div style="margin-top:2px">
-                      @if($isRedefense)
-                        <span class="badge badge-amber" style="font-size:10px">Redefense</span>
-                      @else
-                        <span class="badge badge-gray" style="font-size:10px">Defense</span>
-                      @endif
-                    </div>
-                  </td>
-                  <td>{{ $row->panel_role }}</td>
-                  <td>
-                    @php
-                      $who = $row->who;
-                      $graderRow = collect($who['panel'])->firstWhere('id', $who['grader']);
-                      $whoLabel = $graderRow ? ($graderRow['id'] === $who['me'] ? 'You' : $graderRow['name']) : 'Everyone';
-                    @endphp
-                    @if ($row->decided)
-                      <span class="gl-who static">@if ($graderRow)<span class="gl-who-av">{{ $graderRow['initials'] }}</span>@endif{{ $whoLabel }}</span>
-                    @else
-                      <button type="button" class="gl-who" data-who='@json($who)' aria-label="Who grades {{ $row->team_name }}: {{ $whoLabel }}. Change">
-                        @if ($graderRow)<span class="gl-who-av">{{ $graderRow['initials'] }}</span>@endif
-                        {{ $whoLabel }}
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-                      </button>
-                    @endif
                   </td>
                   <td class="gl-num">
                     {{ $row->schedule_date->format('M j, Y') }}
@@ -195,6 +212,15 @@
                       @endif
                       {{ $row->venue }}
                     </div>
+                  </td>
+                  <td>{{ $row->panel_role }}</td>
+                  <td class="gl-method">
+                    <b>{{ $methodLabel[$row->method] ?? 'Individual' }}</b>
+                    @if ($row->recorder)
+                      <small>Recorder: {{ $row->recorder }}</small>
+                    @elseif ($row->method !== 'individual')
+                      <small>You grade on your own</small>
+                    @endif
                   </td>
                   <td>
                     @if($row->joined && ! $done)
@@ -224,12 +250,135 @@
 </div>
 
 @include('instructor.partials.skeleton-toggle')
-@include('instructor.partials.who-grades-dialog')
+@if ($chaired->isNotEmpty())
+<dialog class="su" id="su" aria-labelledby="su-title">
+  <form method="dialog">
+    <div class="su-h"><b id="su-title">Grading setup</b><p>Set the grading method for teams you chair.</p></div>
+    <div class="su-b">
+      <section>
+        <h3>Apply to</h3>
+        <div class="su-seg" role="group" aria-label="Apply to">
+          <button type="button" data-scope="all" aria-pressed="true">My chaired teams</button>
+          <button type="button" data-scope="selected" aria-pressed="false">Selected teams</button>
+        </div>
+        <div class="su-teams" id="su-teams"></div>
+      </section>
+      <section>
+        <h3>Grading method</h3>
+        <div class="su-cards">
+          <label class="su-card"><input type="radio" name="method" value="individual" checked><span><b>Individual</b><small>3 separate rubrics</small></span></label>
+          <label class="su-card"><input type="radio" name="method" value="joint"><span><b>Joint</b><small>1 agreed rubric</small></span></label>
+          <label class="su-card"><input type="radio" name="method" value="mixed"><span><b>Mixed</b><small>2 shared + 1 individual</small></span></label>
+        </div>
+      </section>
+      <section id="su-shared" hidden>
+        <h3>Shared rubric group</h3>
+        <div class="su-seats">
+          @foreach (['Panel Chair', 'Panel Member 1', 'Panel Member 2'] as $seat)
+            <label><input type="checkbox" name="shared" value="{{ $seat }}" @checked($seat !== 'Panel Member 2')> {{ $seat }}</label>
+          @endforeach
+        </div>
+      </section>
+      <section id="su-rec" hidden>
+        <h3>Recorder</h3>
+        <select id="su-recorder" aria-label="Recorder"></select>
+      </section>
+      <div class="su-impact" id="su-impact"></div>
+      <div class="su-err" id="su-err" hidden></div>
+    </div>
+    <div class="su-f">
+      <button type="button" id="su-cancel">Cancel</button>
+      <button type="button" class="p" id="su-apply">Apply</button>
+    </div>
+  </form>
+</dialog>
+<script type="application/json" id="su-data">{!! Js::encode($chaired->map(fn ($r) => ['id' => $r->defense_id, 'team' => $r->team_name, 'type' => $r->defense_type, 'method' => $methodLabel[$r->method] ?? 'Individual', 'locked' => $r->decided ? 'Decided' : ($r->started ? 'Grading started' : null)])->values()) !!}</script>
+@endif
 
 <script nonce="{{ Vite::cspNonce() }}">
-document.querySelectorAll('.gl-who[data-who]').forEach(function (b) {
-  b.addEventListener('click', function () { openWhoGrades(JSON.parse(b.dataset.who)); });
-});
+/* Grade Setup: the Panel Chair sets who grades on many defenses at once. */
+(function () {
+  var dlg = document.getElementById('su');
+  if (!dlg) return;
+  var teams = JSON.parse(document.getElementById('su-data').textContent);
+  var SEATS = ['Panel Chair', 'Panel Member 1', 'Panel Member 2'];
+  var scope = 'all', done = false;
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+  var selected = function () { return Array.from(document.querySelectorAll('[data-select]:checked')).map(function (c) { return +c.dataset.select; }); };
+  var method = function () { return dlg.querySelector('[name=method]:checked').value; };
+  var shared = function () { return Array.from(dlg.querySelectorAll('[name=shared]:checked')).map(function (c) { return c.value; }); };
+  var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : many); };
+
+  function inScope() {
+    var sel = selected();
+    return teams.filter(function (t) { return scope === 'all' || sel.indexOf(t.id) !== -1; });
+  }
+
+  function render() {
+    var m = method(), list = inScope(), open = list.filter(function (t) { return !t.locked; });
+    dlg.querySelectorAll('[data-scope]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.scope === scope); });
+    $('su-teams').innerHTML = list.length ? list.map(function (t) {
+      return '<div class="su-team"><span><b>' + esc(t.team) + '</b> <small>' + esc(t.type) + ' · now ' + esc(t.method) + '</small></span>'
+        + (t.locked
+          ? '<span class="badge badge-gray" style="font-size:10px">Locked · ' + esc(t.locked) + '</span>'
+          : '<span class="badge badge-green" style="font-size:10px">Available</span>') + '</div>';
+    }).join('') : '<div class="su-team"><small>Tick teams in the list first.</small></div>';
+
+    $('su-shared').hidden = m !== 'mixed';
+    $('su-rec').hidden = m === 'individual';
+    var seats = m === 'mixed' ? shared() : SEATS;
+    var keep = $('su-recorder').value;
+    $('su-recorder').innerHTML = seats.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('');
+    if (seats.indexOf(keep) !== -1) $('su-recorder').value = keep;
+
+    var mixedOk = m !== 'mixed' || shared().length === 2;
+    var locked = list.length - open.length;
+    $('su-impact').textContent = !mixedOk ? 'Pick exactly two seats for the shared grade.'
+      : plural(open.length, 'team', 'teams') + ' will change.' + (locked ? ' ' + plural(locked, 'locked team stays', 'locked teams stay') + ' as before.' : '');
+    $('su-apply').disabled = !open.length || !mixedOk;
+    $('su-apply').textContent = 'Apply to ' + plural(open.length, 'team', 'teams');
+  }
+
+  $('gl-setup-open').addEventListener('click', function () {
+    scope = selected().length ? 'selected' : 'all';
+    done = false;
+    $('su-err').hidden = true;
+    $('su-apply').hidden = false;
+    $('su-cancel').textContent = 'Cancel';
+    render();
+    dlg.showModal();
+  });
+  dlg.querySelectorAll('[data-scope]').forEach(function (b) { b.addEventListener('click', function () { scope = b.dataset.scope; render(); }); });
+  dlg.addEventListener('change', render);
+  dlg.addEventListener('close', function () { if (done) location.reload(); });
+  $('su-cancel').addEventListener('click', function () { dlg.close(); });
+
+  $('su-apply').addEventListener('click', function () {
+    var m = method();
+    var body = { defense_ids: inScope().filter(function (t) { return !t.locked; }).map(function (t) { return t.id; }), method: m };
+    if (m === 'mixed') body.shared = shared();
+    if (m !== 'individual') body.recorder = $('su-recorder').value;
+    $('su-apply').disabled = true;
+    fetch(@json(route('instructor.grading.setup')), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      var skipped = (res.data && res.data.skipped) || [];
+      if (res.success && !skipped.length) { location.reload(); return; }
+      done = !!res.success;
+      $('su-err').hidden = false;
+      $('su-err').innerHTML = esc(res.message || 'Something went wrong.')
+        + (skipped.length ? '<ul>' + skipped.map(function (s) { return '<li><b>' + esc(s.team) + '</b>: ' + esc(s.reason) + '</li>'; }).join('') + '</ul>' : '');
+      if (done) { $('su-apply').hidden = true; $('su-cancel').textContent = 'Done'; } else { render(); }
+    }).catch(function () {
+      $('su-err').hidden = false;
+      $('su-err').textContent = 'Could not save. Check your connection and try again.';
+      render();
+    });
+  });
+})();
 
 document.querySelectorAll('.gl-filter button').forEach(function (b) {
   b.addEventListener('click', function () {

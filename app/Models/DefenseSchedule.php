@@ -28,6 +28,7 @@ class DefenseSchedule extends Model
         'capa_answer',
         'capa_answered_at',
         'capa_answered_by',
+        'signed_sheets_path',
     ];
 
     protected $casts = [

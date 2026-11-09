@@ -246,6 +246,10 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::post('/team-ratings/{form}/items', [App\Http\Controllers\Capsa\TeamRatingController::class, 'addItems'])->name('team_ratings.items');
         Route::patch('/team-ratings/{form}', [App\Http\Controllers\Capsa\TeamRatingController::class, 'update'])->name('team_ratings.update');
         Route::post('/team-ratings/{form}/reminders', [App\Http\Controllers\Capsa\TeamRatingController::class, 'remind'])->name('team_ratings.remind');
+        // Team Management's Grades tab: totals typed from the paper sheets.
+        Route::post('/grades/{defense}', [App\Http\Controllers\Capsa\GradesController::class, 'encode'])->name('grades.encode');
+        Route::post('/grades/{defense}/sheet', [App\Http\Controllers\Capsa\GradesController::class, 'uploadSheet'])->name('grades.sheet.upload');
+        Route::get('/grades/{defense}/sheet', [App\Http\Controllers\Capsa\GradesController::class, 'sheet'])->name('grades.sheet');
         // Manage milestones: a page per milestone and a page per form. Before
         // the {team} pages, so "milestones" is never read as a team.
         Route::get('/team-management/milestones/setup/{program}', [MilestonePageController::class, 'setup'])->name('team_management.milestones.setup');
@@ -379,11 +383,11 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::view('/schedule', 'instructor.schedule')->name('schedule');
     Route::get('/grading', [GradingController::class, 'index'])->name('grading');
     Route::get('/grading/team-defenses', [GradingController::class, 'teamDefenses'])->name('grading.team-defenses');
+    Route::put('/grading/setup', [GradingController::class, 'setup'])->name('grading.setup');
     Route::get('/grading/{defense}', [GradingController::class, 'show'])->name('grading.show');
     Route::put('/grading/{defense}', [GradingController::class, 'save'])->name('grading.save');
     Route::patch('/grading/{defense}', [GradingController::class, 'submit'])->name('grading.submit');
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
-    Route::post('/grading/{defense}/paper', [GradingController::class, 'paper'])->name('grading.paper');
     Route::post('/grading/{defense}/abstain', [GradingController::class, 'abstain'])->name('grading.abstain');
     Route::delete('/grading/{defense}/abstain', [GradingController::class, 'withdrawAbstention'])->name('grading.abstain.withdraw');
     Route::put('/grading/{defense}/grader', [GradingController::class, 'setGrader'])->name('grading.grader');

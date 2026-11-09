@@ -80,6 +80,8 @@
 @if (in_array($tab, ['todo', 'applications', 'teams'], true) && ($allSections !== [] || $rows->isNotEmpty()))
   @include('partials.pdf-viewer')
   @include('capsa.team-management._hub-script')
+@elseif ($tab === 'grades')
+  @include('partials.pdf-viewer')
 @endif
 
 @include('partials.escape-closes-modals')

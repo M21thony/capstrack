@@ -285,23 +285,6 @@
   .abstain-count{margin-top:4px;font-size:11.5px;color:var(--text3)}
 
   /* ── A phone: one criterion at a time ── */
-  .gs-one{display:none}
-  /* Enter from paper sheets: the chair types each panelist's total. */
-  .gs-paper table{width:100%;border-collapse:collapse;font-size:12.5px}
-  .gs-paper td{padding:5px 0;border-top:1px solid var(--border);vertical-align:middle}
-  .gs-paper tr:first-child td{border-top:0}
-  .gs-paper td small{display:block;color:var(--text3);font-size:11px}
-  .gs-paper td.v{text-align:right;white-space:nowrap;color:var(--text2);font-variant-numeric:tabular-nums}
-  .gs-paper td.v b{color:var(--text)}
-  .gs-paper input{font:inherit;width:62px;min-height:30px;padding:0 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);text-align:right}
-  .gs-paper input.err{border-color:var(--red);background:var(--red-bg)}
-  .gs-paper-avg{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;padding-top:8px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text2)}
-  .gs-paper-avg b{color:var(--text);font-size:15px;font-variant-numeric:tabular-nums}
-  .gs-paper-verdict{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-  .gs-paper-verdict button{font:inherit;font-size:12px;font-weight:600;padding:0 9px;min-height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer}
-  .gs-paper-verdict button[aria-pressed="true"]{background:#18191f;border-color:#18191f;color:#fff}
-  .gs-paper .hint{margin:8px 0 10px;font-size:11.5px;line-height:1.45;color:var(--text3)}
-  .gs-paper .gs-btn{width:100%;justify-content:center}
   @media (min-width: 769px) and (max-width: 1024px){
     .gs-burger{display:flex}
   }
@@ -419,43 +402,11 @@
     <div class="gs-body" id="gs-sheet-body">
       <section class="gs-card gs-main" id="gs-sheet-area" aria-live="polite"></section>
       <aside class="gs-aside" aria-label="Summary">
-        @if ($paperSeats->where('own', false)->isNotEmpty())
-          {{-- Graded on paper: whoever records the decision types each
-               panelist's total off their sheet. A seat already turned in
-               is shown, not typed over. --}}
-          <section class="gs-card gs-paper" id="gs-paper">
-            <h3>Enter from paper sheets <span>· out of {{ $fmt($rubric->total_points) }}</span></h3>
-            <table>
-              @foreach ($paperSeats as $seat)
-                <tr>
-                  <td>{{ $seat->name }}<small>{{ $seat->role }}</small></td>
-                  <td class="v">
-                    @if ($seat->abstained)
-                      Abstained
-                    @elseif ($seat->own)
-                      <b data-own="{{ $seat->total }}">{{ $fmt($seat->total) }}</b> turned in
-                    @else
-                      <input type="number" class="gs-paper-score" data-id="{{ $seat->id }}" min="0" max="{{ (float) $rubric->total_points }}" step="0.5" value="{{ $seat->total }}" aria-label="{{ $seat->name }}'s total">
-                    @endif
-                  </td>
-                </tr>
-              @endforeach
-            </table>
-            <div class="gs-paper-avg"><span>Panel average<span id="gs-paper-left"></span></span><b id="gs-paper-avg">—</b></div>
-            <div class="gs-paper-verdict" role="group" aria-label="Panel decision, optional">
-              @foreach ($outcomeOptions as $option)
-                <button type="button" data-outcome="{{ $option }}" aria-pressed="false">{{ \App\Support\DefenseOutcome::label($option, $defense->defense_type) }}</button>
-              @endforeach
-            </div>
-            <p class="hint">Saved as &ldquo;Entered from paper by {{ auth('expert')->user()?->name }} ({{ $panelRole }})&rdquo;. Each panelist still sees their score and can correct it until the decision is recorded. Pick the decision only when it's final.</p>
-            <button type="button" class="gs-btn gs-btn-dark" id="gs-paper-save" disabled>Save grades</button>
-          </section>
-        @endif
         @if ($isGrader)
           <section class="gs-card gs-shared">
             <div class="gs-shared-head">
               <h3>Grading for the panel</h3>
-              @unless ($defense->hasOutcome())
+              @unless ($defense->hasOutcome() || ! $isChair)
                 <button type="button" class="gs-link" id="gs-who-change">Change</button>
               @endunless
             </div>
@@ -464,7 +415,7 @@
               @foreach ($who['panel'] as $p)
                 @continue($p['id'] === $who['me'])
                 @php $on = in_array($p['id'], $who['joined'], true); @endphp
-                <button type="button" class="gs-shared-chip {{ $on ? 'on' : '' }}" data-id="{{ $p['id'] }}" aria-pressed="{{ $on ? 'true' : 'false' }}" @disabled($p['turnedIn'] || $defense->hasOutcome()) title="{{ $p['turnedIn'] ? 'Already turned in a grade of their own' : ($on ? 'Take '.$p['name'].' out' : 'Grade for '.$p['name'].' too') }}">
+                <button type="button" class="gs-shared-chip {{ $on ? 'on' : '' }}" data-id="{{ $p['id'] }}" aria-pressed="{{ $on ? 'true' : 'false' }}" @disabled($p['turnedIn'] || $defense->hasOutcome() || ! $isChair) title="{{ $p['turnedIn'] ? 'Already turned in a grade of their own' : ($on ? 'Take '.$p['name'].' out' : 'Grade for '.$p['name'].' too') }}">
                   @if ($on)<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>@endif
                   {{ $p['name'] }}
                 </button>
@@ -601,12 +552,10 @@
 <script nonce="{{ Vite::cspNonce() }}">
 const SECTIONS = {{ Js::from($sections) }};
 const scores = {{ Js::from((object) $savedScores->all()) }};
-const RUBRIC_TOTAL = {{ (float) $rubric->total_points }};
 const ROUTES = {
   save: '{{ route('instructor.grading.save', $defense->defense_id) }}',
   submit: '{{ route('instructor.grading.submit', $defense->defense_id) }}',
   outcome: '{{ route('instructor.grading.outcome', $defense->defense_id) }}',
-  paper: '{{ route('instructor.grading.paper', $defense->defense_id) }}',
   abstain: '{{ route('instructor.grading.abstain', $defense->defense_id) }}',
   list: '{{ route('instructor.grading') }}',
 };
@@ -1097,66 +1046,6 @@ function reloadOnReview() {
   url.searchParams.set('step', 'review');
   location.href = url.toString();
 }
-
-// Graded on paper: each panelist's total typed off their sheet, the decision
-// optional. The average counts the totals already turned in, not abstentions.
-(function paperEntry() {
-  const card = $('gs-paper');
-  if (!card) return;
-  const inputs = [...card.querySelectorAll('.gs-paper-score')];
-  const own = [...card.querySelectorAll('[data-own]')].map(b => +b.dataset.own);
-  const verdicts = [...card.querySelectorAll('[data-outcome]')];
-  const save = $('gs-paper-save');
-  let outcome = null;
-
-  function refresh() {
-    const typed = [];
-    let ok = true;
-    inputs.forEach(i => {
-      const v = i.value.trim();
-      const bad = v !== '' && !(+v >= 0 && +v <= RUBRIC_TOTAL);
-      i.classList.toggle('err', bad);
-      if (bad) ok = false; else if (v !== '') typed.push(+v);
-    });
-    const left = inputs.length - typed.length;
-    const all = own.concat(typed);
-    $('gs-paper-avg').textContent = ok && left === 0 && all.length ? (all.reduce((a, b) => a + b, 0) / all.length).toFixed(2) : '—';
-    $('gs-paper-left').textContent = left ? ' · ' + left + ' of ' + inputs.length + ' still to type' : '';
-    save.disabled = !ok || left > 0;
-  }
-
-  inputs.forEach(i => i.addEventListener('input', refresh));
-  verdicts.forEach(b => b.addEventListener('click', () => {
-    outcome = outcome === b.dataset.outcome ? null : b.dataset.outcome;
-    verdicts.forEach(x => x.setAttribute('aria-pressed', String(x.dataset.outcome === outcome)));
-  }));
-
-  save.addEventListener('click', () => {
-    const totals = {};
-    inputs.forEach(i => { totals[i.dataset.id] = +i.value; });
-    const reset = () => { save.disabled = false; save.textContent = 'Save grades'; };
-    save.disabled = true;
-    save.textContent = 'Saving…';
-    fetch(ROUTES.paper, {
-      method: 'POST',
-      headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ totals: totals, outcome: outcome }),
-    })
-      .then(r => r.json())
-      .then(res => {
-        if (!res.success) { showFormError(res.message || 'Could not save the grades.'); reset(); return; }
-        dirty = false;
-        location.reload();
-      })
-      .catch(() => { showFormError('Could not reach the server.'); reset(); });
-  });
-
-  refresh();
-})();
 
 let autoSave = null;
 let submitted = {{ Js::from($grade?->status === 'submitted') }};

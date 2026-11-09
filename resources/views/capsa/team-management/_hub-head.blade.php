@@ -20,8 +20,9 @@
     'milestone_list' => $capsaPortal ? ['Milestones', null] : null,
     // How many are open for students right now; none open shows no number.
     'team_ratings' => $capsaPortal ? ['Team Ratings', ($counts['team_ratings'] ?? 0) ?: null] : null,
+    'grades' => $capsaPortal ? ['Grades', null] : null,
   ]);
-  $pageTabs = ['milestone_list', 'team_ratings'];
+  $pageTabs = ['milestone_list', 'team_ratings', 'grades'];
 @endphp
 
 <div class="hub-head">

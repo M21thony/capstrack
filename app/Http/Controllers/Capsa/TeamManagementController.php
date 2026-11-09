@@ -9,10 +9,13 @@ use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\Checklist;
 use App\Models\DefenseSchedule;
+use App\Models\DefenseWindow;
+use App\Models\GradingRubric;
 use App\Models\ExpertRemovalRequest;
 use App\Models\MemberLeaveRequest;
 use App\Models\Team;
 use App\Models\TeamRatingForm;
+use App\Services\SharedGrading;
 use App\Support\ChecklistTracker;
 use App\Support\DefenseScores;
 use App\Support\PreProposalPayload;
@@ -38,10 +41,10 @@ class TeamManagementController extends Controller
 {
     use ShowsTeamPage;
 
-    public const TABS = ['todo', 'applications', 'teams', 'pre_proposals', 'verification', 'papers', 'milestones', 'milestone_list', 'team_ratings', 'leave_requests', 'rules'];
+    public const TABS = ['todo', 'applications', 'teams', 'pre_proposals', 'verification', 'papers', 'milestones', 'milestone_list', 'team_ratings', 'grades', 'leave_requests', 'rules'];
 
     /** The tabs along the top of the list. The first is the default. */
-    public const HUB_TABS = ['todo', 'applications', 'teams', 'milestone_list', 'team_ratings'];
+    public const HUB_TABS = ['todo', 'applications', 'teams', 'milestone_list', 'team_ratings', 'grades'];
 
     /** How the milestones list can be ordered. The first is the default. */
 
@@ -105,6 +108,7 @@ class TeamManagementController extends Controller
                 'leave_requests' => app(LeaveRequestController::class)->pageData($capsa),
                 'milestone_list' => $this->milestoneList($request, $capsaSections),
                 'team_ratings' => $this->teamRatings($capsa),
+                'grades' => $this->grades($rows->where('inSections', true)),
                 default => [],
             },
             // Team rules is a small menu under its own button on the list,
@@ -387,6 +391,67 @@ class TeamManagementController extends Controller
                 ->get(),
             'used' => $used,
             'sections' => $capsa->sections ?? [],
+        ];
+    }
+
+    /**
+     * The Grades tab: every dated defense of the teams in her sections, each
+     * with the records to type off the paper sheets (one per shared grade or
+     * panelist on their own), the signed sheets PDF, and the panel's average
+     * once everyone is in. The defense windows give the stage filter its dates.
+     *
+     * @param  Collection<int, object>  $rows
+     */
+    private function grades(Collection $rows): array
+    {
+        $sections = $rows->mapWithKeys(fn ($row) => [$row->team->team_id => $row->section]);
+        $rubrics = [];
+
+        $defenses = DefenseSchedule::with(['team', 'panels.expert', 'grades'])
+            ->whereIn('team_id', $sections->keys())
+            ->whereNotNull('schedule_date')
+            ->get()
+            ->map(function (DefenseSchedule $defense) use ($sections, &$rubrics) {
+                $program = $defense->team?->program();
+                $max = $rubrics[$defense->defense_type.'|'.$program] ??= GradingRubric::forStage($defense->defense_type, $program)?->total_points;
+                $records = GradesController::records($defense);
+                $panelSize = $defense->panels->count();
+                $grader = collect($records)->first(fn ($r) => count($r['roles']) > 1);
+                $method = SharedGrading::method(
+                    ['grader' => $grader ? $grader['id'] : null, 'joined' => $grader ? array_slice($grader['roles'], 1) : []],
+                    $panelSize,
+                );
+                $in = $defense->gradesInCount();
+
+                return (object) [
+                    'id' => $defense->defense_id,
+                    'team' => $defense->team?->team_name ?? 'Unknown team',
+                    'title' => $defense->team?->project_title,
+                    'section' => $sections[$defense->team_id] ?? '',
+                    'type' => $defense->defense_type,
+                    'attempt' => max(1, (int) $defense->attempt),
+                    'date' => $defense->schedule_date,
+                    'venue' => $defense->venue,
+                    'method' => $method,
+                    'recorder' => $grader ? $grader['names'][0] : null,
+                    'records' => $records,
+                    'max' => $max !== null ? (float) $max : null,
+                    'sheet' => $defense->signed_sheets_path ? route('capsa.grades.sheet', $defense->defense_id) : null,
+                    'average' => $defense->panelAverage(),
+                    'in' => $in,
+                    'panelSize' => $panelSize,
+                    'decided' => $defense->hasOutcome(),
+                    'outcome' => $defense->hasOutcome() ? $defense->outcomeLabel() : null,
+                ];
+            })
+            // Still open first, then by date.
+            ->sortBy(fn ($d) => ($d->decided ? '1' : '0').$d->date->format('YmdHi'))
+            ->values();
+
+        return [
+            'defenses' => $defenses,
+            'windows' => DefenseWindow::all()->keyBy('defense_type'),
+            'stages' => $defenses->pluck('type')->unique()->values(),
         ];
     }
 

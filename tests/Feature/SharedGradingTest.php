@@ -135,7 +135,7 @@ class SharedGradingTest extends TestCase
 
     public function test_a_split_panel_averages_every_panelist(): void
     {
-        $this->setGrader('one', 'one', ['chair'])->assertOk();
+        $this->setGrader('chair', 'one', ['chair'])->assertOk();
 
         $this->grade('one', 80)->assertOk();
         $this->grade('two', 70)->assertOk();
@@ -213,7 +213,7 @@ class SharedGradingTest extends TestCase
         $this->setGrader('chair', 'one', ['chair', 'two'])->assertOk();
         $this->grade('one', 80)->assertOk();
 
-        $this->setGrader('two', null)->assertOk()->assertJsonPath('data.grader', null);
+        $this->setGrader('chair', null)->assertOk()->assertJsonPath('data.grader', null);
 
         foreach (['chair', 'two'] as $who) {
             $own = $this->gradeOf($who);
@@ -255,7 +255,7 @@ class SharedGradingTest extends TestCase
 
     public function test_the_grader_records_the_decision_when_grading_for_the_chair(): void
     {
-        $this->setGrader('two', 'one', ['chair', 'two'])->assertOk();
+        $this->setGrader('chair', 'one', ['chair', 'two'])->assertOk();
 
         $this->grade('one', 80)->assertOk()->assertJsonPath('data.can_record_outcome', true);
 
@@ -270,7 +270,7 @@ class SharedGradingTest extends TestCase
 
     public function test_a_grader_not_grading_for_the_chair_cannot_record_the_decision(): void
     {
-        $this->setGrader('one', 'one', ['two'])->assertOk();
+        $this->setGrader('chair', 'one', ['two'])->assertOk();
         $this->grade('one', 80)->assertOk();
         $this->grade('chair', 70)->assertOk();
 
@@ -291,7 +291,7 @@ class SharedGradingTest extends TestCase
         $this->setGrader('chair', 'one', ['two'])->assertStatus(422);
     }
 
-    public function test_only_the_panel_sets_who_grades(): void
+    public function test_only_the_panel_chair_sets_who_grades(): void
     {
         $outsider = CapstoneExpert::create([
             'email' => 'outsider@gmail.com', 'first_name' => 'Out', 'last_name' => 'Sider', 'approved_status' => true,
@@ -301,6 +301,9 @@ class SharedGradingTest extends TestCase
             'grader_id' => $this->id('one'),
             'joined' => [$this->id('two')],
         ])->assertForbidden();
+
+        $this->setGrader('one', 'one', ['two'])->assertForbidden();
+        $this->assertNull($this->gradeOf('two'));
 
         $this->actingAs($this->panel['chair'], 'expert')->putJson($this->url('/grader'), [
             'grader_id' => $this->id('one'),
