@@ -58,6 +58,11 @@ class SubmissionRecipients
     {
         $formatOnly = [self::OPTIONAL, 'review if asked'];
 
+        // The CaPSA chose who gets this line: all of them, every time.
+        if ($chosen = $item?->sendsTo()) {
+            return array_fill_keys(array_values(array_intersect(self::ROLES, $chosen)), [self::ON, null]);
+        }
+
         return match (self::chapterKey($item)) {
             '1', '2' => ['adviser' => [self::ON, null], 'subject_adviser' => [self::ON, null]],
             '3' => ['adviser' => [self::ON, null], 'consultant' => [self::ON, null], 'subject_adviser' => $formatOnly],
@@ -142,7 +147,7 @@ class SubmissionRecipients
                 continue;
             }
 
-            if ($plan['locked'] || in_array($person['role'], $asked, true)) {
+            if ($plan['locked'] || $item?->sendsTo() || in_array($person['role'], $asked, true)) {
                 $chosen[$person['role']] = $person['expert_ids'];
             }
         }

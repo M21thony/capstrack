@@ -11,6 +11,10 @@
   $count = count($siblings) + ($deliverable ? 0 : 1);
   $at = $deliverable ? array_search($deliverable->id, $siblings) + 1 : $count;
   $role = $deliverable?->kind === \App\Models\Deliverable::APPROVAL ? $deliverable->role : '';
+  $bluebook = $milestone->deliverables()->where('kind', \App\Models\Deliverable::BLUEBOOK)->exists();
+  // Who the uploads go to, all of whom must approve; a bluebook line, the title recommendation and the archive entry keep their own way.
+  $canSend = ! $bluebook && ! in_array($deliverable?->template_key, [\App\Models\Deliverable::TITLE_RECOMMENDATION, \App\Models\Deliverable::ARCHIVE_ENTRY], true);
+  $sendTo = $deliverable?->recipients ?? [];
 @endphp
 
 @push('head')
@@ -52,6 +56,15 @@
         </select>
       </label>
     </div>
+    @if ($canSend)
+      <div class="mdg-f" id="ml-send" @if ($defense || $role) hidden @endif><span>Send to <i>(all must approve)</i></span>
+        <div class="mdg-chks">
+          @foreach (\App\Support\SubmissionRecipients::LABELS as $value => $label)
+            <label class="mdg-chk"><input type="checkbox" name="recipients" value="{{ $value }}" @checked(in_array($value, $sendTo, true))> {{ $label }}</label>
+          @endforeach
+        </div>
+      </div>
+    @endif
     <div class="mdg-row">
       <label class="mdg-f">Due date
         <input class="mdg-in" type="date" name="due_date" value="{{ $deliverable?->due_date?->toDateString() }}">
@@ -64,6 +77,9 @@
         </select>
       </label>
     </div>
+    @if ($deliverable && ! $defense)
+      <label class="mdg-chk"><input type="checkbox" name="closed" @checked($deliverable->closed_at)> Closed — no team can upload to it</label>
+    @endif
     <p class="mdg-err" id="ml-err" role="alert"></p>
   </div>
   <div class="mdg-foot">
@@ -88,9 +104,13 @@
     const back = @json($back);
     const isDefense = () => field('type').value === 'defense';
 
+    const send = document.getElementById('ml-send');
+    const showSend = () => { if (send) { send.hidden = isDefense() || !!field('role').value; } };
+    field('role').addEventListener('change', showSend);
     field('type').addEventListener('change', () => {
       document.getElementById('ml-stage').hidden = !isDefense();
       document.getElementById('ml-role').hidden = isDefense();
+      showSend();
     });
 
     // Moves this requirement to the chosen place; the order endpoint wants the whole checklist.
@@ -120,7 +140,13 @@
         Object.assign(body, { kind: 'approval', role: field('role').value });
       } else if (@json(! $deliverable || $defense || $role)) {
         // An upload keeps its own routing (draft, form) unless it is new or changes type.
-        body.kind = @json($milestone->deliverables()->where('kind', \App\Models\Deliverable::BLUEBOOK)->exists() ? \App\Models\Deliverable::BLUEBOOK : 'form');
+        body.kind = @json($bluebook ? \App\Models\Deliverable::BLUEBOOK : 'form');
+      }
+      if (send && !send.hidden) {
+        body.recipients = [...send.querySelectorAll('input:checked')].map(box => box.value);
+      }
+      if (field('closed')) {
+        body.closed = field('closed').checked;
       }
       error.textContent = '';
       button.disabled = true;

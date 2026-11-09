@@ -8,6 +8,7 @@ use App\Models\Deliverable;
 use App\Services\Notifier;
 use App\Support\ChecklistAccess;
 use App\Support\DefenseBoard;
+use App\Support\SubmissionRecipients;
 use App\Support\TeamChecklist;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,6 +44,8 @@ class DeliverableController extends Controller
             'defense_type' => ['nullable', Rule::in(DefenseBoard::STAGES)],
             'instructions' => ['nullable', 'string', 'max:5000'],
             'due_date' => ['nullable', ...self::DATE_RULE],
+            'recipients' => ['nullable', 'array'],
+            'recipients.*' => [Rule::in(SubmissionRecipients::ROLES)],
         ], self::DATE_MESSAGES);
 
         $next = (int) $milestone->deliverables()->withTrashed()->max('position') + 1;
@@ -54,6 +57,7 @@ class DeliverableController extends Controller
             'defense_type' => $data['kind'] === Deliverable::DEFENSE ? ($data['defense_type'] ?? null) : null,
             'instructions' => $data['instructions'] ?? null,
             'due_date' => $data['due_date'] ?? null,
+            'recipients' => ($data['recipients'] ?? null) ?: null,
             'position' => $next + $i,
         ]));
 
@@ -200,6 +204,9 @@ class DeliverableController extends Controller
             'instructions' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'due_date' => ['sometimes', 'nullable', ...self::DATE_RULE],
             'archived' => ['sometimes', 'boolean'],
+            'recipients' => ['sometimes', 'nullable', 'array'],
+            'recipients.*' => [Rule::in(SubmissionRecipients::ROLES)],
+            'closed' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -218,6 +225,14 @@ class DeliverableController extends Controller
 
         if (array_key_exists('archived', $data)) {
             $out['archived_at'] = $data['archived'] ? now() : null;
+        }
+
+        if (array_key_exists('recipients', $data)) {
+            $out['recipients'] = $data['recipients'] ?: null;
+        }
+
+        if (array_key_exists('closed', $data)) {
+            $out['closed_at'] = $data['closed'] ? now() : null;
         }
 
         return $out;

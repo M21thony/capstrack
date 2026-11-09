@@ -70,13 +70,33 @@ class Deliverable extends Model
         'due_date',
         'position',
         'archived_at',
+        'recipients',
+        'closed_at',
     ];
 
     protected $casts = [
         'due_date' => 'date',
         'position' => 'integer',
         'archived_at' => 'datetime',
+        'recipients' => 'array',
+        'closed_at' => 'datetime',
     ];
+
+    /**
+     * The roles the CaPSA chose for this line's uploads, every one of whom
+     * must approve; null keeps the usual people (SubmissionRecipients::rulesFor).
+     * A signed CLF, a defense and the special lines keep their own rules.
+     *
+     * @return array<int, string>|null
+     */
+    public function sendsTo(): ?array
+    {
+        $special = in_array($this->template_key, [self::TITLE_RECOMMENDATION, self::ARCHIVE_ENTRY, self::BLUEBOOK_CLEARANCE], true);
+
+        return $this->recipients && ! $special && in_array($this->kind, [self::FORM, self::DOCUMENT, self::CUSTOM], true)
+            ? array_values($this->recipients)
+            : null;
+    }
 
     public function milestone()
     {

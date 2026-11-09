@@ -13,6 +13,7 @@ use App\Models\Deliverable;
 use App\Models\PdfRemark;
 use App\Models\Student;
 use App\Models\Team;
+use App\Support\MilestoneProgress;
 use App\Support\SubmissionRecipients;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -337,5 +338,38 @@ class SubmissionGoesToTest extends TestCase
     {
         $this->assertSame('CaPSA', StudentReviewController::roleLabel('subject_adviser'));
         $this->assertSame('Panelist', StudentReviewController::roleLabel('panel'));
+    }
+
+    public function test_the_capsas_chosen_people_all_get_it_and_all_must_approve(): void
+    {
+        $line = $this->addDeliverable($this->checklist, ['title' => 'Signed form', 'kind' => Deliverable::FORM, 'recipients' => ['adviser', 'grammarian']]);
+        $verdict = fn (string $role, string $verdict) => CapstoneDocumentReview::where('role', $role)->latest('review_id')->first()
+            ->update(['review_status' => CapstoneDocumentReview::REVIEWED, 'verdict' => $verdict, 'verdict_at' => now()]);
+        $state = fn () => $this->progressOf($this->checklist, $this->team, $line);
+
+        $this->send($line, [])->assertOk();
+        $this->assertSame(['adviser:'.$this->experts['adviser']->expert_id, 'grammarian:'.$this->experts['grammarian']->expert_id], $this->reviewsOfLatest());
+        $this->assertSame('adviser', $state()->waiting_on);
+
+        $verdict('adviser', CapstoneDocumentReview::APPROVED);
+        $this->assertSame('grammarian', $state()->waiting_on);
+
+        $verdict('grammarian', CapstoneDocumentReview::NEEDS_REVISION);
+        $this->assertSame(MilestoneProgress::WAITING_ON_TEAM, $state()->waiting_on);
+
+        $this->travel(1)->minutes();
+        $this->send($line, [], 'a revision')->assertOk();
+        $verdict('adviser', CapstoneDocumentReview::APPROVED);
+        $this->assertSame('grammarian', $state()->waiting_on);
+        $verdict('grammarian', CapstoneDocumentReview::APPROVED);
+        $this->assertSame(MilestoneProgress::DONE, $state()->state);
+    }
+
+    public function test_a_requirement_the_capsa_closed_takes_no_uploads(): void
+    {
+        $line = $this->addDeliverable($this->checklist, ['title' => 'Signed form', 'kind' => Deliverable::FORM, 'closed_at' => now()]);
+
+        $this->send($line, [])->assertStatus(422);
+        $this->assertSame(0, CapstoneDocument::count());
     }
 }

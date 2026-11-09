@@ -430,7 +430,8 @@
                 $row->waiting_on === 'team' && (bool) $row->note => 'Sent back by your CaPSA',
                 $row->waiting_on === 'team' => $ord(max(1, $row->revision)).' revision requested',
                 $row->waiting_on === 'signed_copy' => 'Approved — upload the signed copy',
-                in_array($row->waiting_on, ['adviser', 'consultant'], true) => 'With your '.$row->waiting_on,
+                in_array($row->waiting_on, ['adviser', 'consultant', 'grammarian', 'panel'], true) => 'With your '.$row->waiting_on,
+                $row->waiting_on === 'subject_adviser' => 'With your CaPSA to approve',
                 $row->waiting_on === 'redefense' => 'Re-defense needed — the panel asked for another defense',
                 $item->kind === 'defense' && $row->revision > 0 => 'Re-defense scheduled',
                 default => 'Scheduled',
@@ -453,7 +454,7 @@
             // Everything is handed in through Document Submission; a defense is not, nor the recommended title.
             // A line still waiting on an earlier one cannot be handed in yet, so
             // it offers no Upload that could only say so.
-            $canUpload = ! $done && ! $byRecommendation && ! $row->locked && ! in_array($item->kind, ['defense', 'custom', 'bluebook'], true)
+            $canUpload = ! $done && ! $item->closed_at && ! $byRecommendation && ! $row->locked &&! in_array($item->kind, ['defense', 'custom', 'bluebook'], true)
                 && (in_array($row->state, ['not_started', 'overdue'], true) || $row->changes_requested || $row->waiting_on === 'signed_copy');
             // A reviewer asks for changes on the chapter draft, so that is what the revision goes up as.
             $uploadFor = $item->kind === 'approval' && $row->changes_requested && ! $row->note

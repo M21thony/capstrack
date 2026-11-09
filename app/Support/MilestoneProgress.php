@@ -337,6 +337,7 @@ class MilestoneProgress
                 $item->waiting_on === self::WAITING_ON_TEAM => 'Waiting on the revised version',
                 $item->waiting_on === self::WAITING_ON_SIGNED_COPY => 'Waiting on the signed copy',
                 $item->waiting_on === self::WAITING_ON_CAPSA => 'Waiting on your check',
+                $item->waiting_on === 'subject_adviser' => 'Waiting on your approval',
                 $item->waiting_on === self::WAITING_ON_REDEFENSE => 'Waiting on the next defense date',
                 $item->waiting_on === self::WAITING_ON_TITLE_REVIEW => 'Waiting on your title recommendation',
                 $item->item->kind === Deliverable::DEFENSE => 'Scheduled',
@@ -461,6 +462,7 @@ class MilestoneProgress
         [$closedAt, $started, $waitingOn, $changesRequested] = match (true) {
             $byRecommendation => self::titleRecommendationState($titles, $check),
             $byArchive => self::archiveEntryState($archive, $check),
+            (bool) $deliverable->sendsTo() => self::recipientsState($deliverable->sendsTo(), $own, $myReviews, $check),
             default => match ($deliverable->kind) {
                 Deliverable::DOCUMENT => self::documentState($own, $myReviews, $check),
                 Deliverable::DEFENSE => self::defenseState($deliverable, $defenses),
@@ -603,6 +605,57 @@ class MilestoneProgress
         }
 
         return [null, false, null, false];
+    }
+
+    /**
+     * [closedAt, started, waitingOn, changesRequested] for a document. It
+     * runs the whole cycle - handed in, reviewed, revised, approved - and is
+     * done only once the adviser's latest verdict is approved, and the
+     * [closedAt, started, waitingOn, changesRequested] for a line whose
+     * uploads go to the people the CaPSA chose: done once every one of them
+     * approved the latest upload. One asking for changes sends it back. The
+     * CaPSA's own check still closes it, as on any line.
+     *
+     * @param  array<int, string>  $roles
+     */
+    private static function recipientsState(array $roles, Collection $own, Collection $reviews, ?DeliverableCheck $check): array
+    {
+        if ($own->isEmpty()) {
+            return [null, false, null, false];
+        }
+
+        if ($check?->status === DeliverableCheck::COMPLETE) {
+            return [$check->checked_at, true, null, false];
+        }
+
+        if ($check?->status === DeliverableCheck::SENT_BACK
+            && Carbon::parse($own->max('created_at'))->lte($check->checked_at)) {
+            return [null, true, self::WAITING_ON_TEAM, true];
+        }
+
+        $latest = $reviews->whereNotNull('verdict_at')->sortBy('verdict_at')->last();
+
+        if ($latest && $latest->verdict === CapstoneDocumentReview::NEEDS_REVISION
+            && ! $own->contains(fn ($upload) => $upload->created_at > $latest->verdict_at)) {
+            return [null, true, self::WAITING_ON_TEAM, true];
+        }
+
+        // Everyone the latest upload went to, panelists one by one. A role
+        // with nobody to send to (no grammarian yet) has nobody to wait on.
+        $onLatest = $reviews->where('file_id', $own->last()->file_id);
+
+        foreach ($roles as $role) {
+            if ($onLatest->where('role', $role)->contains(fn ($r) => $r->verdict !== CapstoneDocumentReview::APPROVED)) {
+                return [null, true, $role, false];
+            }
+        }
+
+        // Nobody to send it to at all: only the CaPSA's check can close it.
+        if ($onLatest->isEmpty()) {
+            return [null, true, self::WAITING_ON_CAPSA, false];
+        }
+
+        return [$onLatest->max('verdict_at'), true, null, false];
     }
 
     /**

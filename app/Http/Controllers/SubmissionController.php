@@ -103,13 +103,20 @@ class SubmissionController extends Controller
                     'message' => $item->title." can't be handed in yet: it waits for ".$gate->waits_for.'.',
                 ], 422);
             }
+
+            if ($item->closed_at) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $item->title.' is closed. Your CaPSA no longer takes uploads for it.',
+                ], 422);
+            }
         }
 
         // A signed paper - a form, or a CLF signed by hand - is checked by the
         // CaPSA, not reviewed, so it needs no recipient and a phone photo of
         // it is as good as a scan. Anything else goes to a reviewer's
         // annotator, which reads documents.
-        $isPaper = $item && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
+        $isPaper = $item && ! $item->sendsTo() && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
         $allowed = $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', 'doc', 'docx', 'ppt', 'pptx', ...self::DIAGRAM_TYPES];
 
         if ($item && ! in_array($originalExt, $allowed, true)) {
@@ -352,7 +359,7 @@ class SubmissionController extends Controller
             return response()->json(['message' => $item->title." can't be handed in yet: it waits for ".$line->waits_for.'.'], 422);
         }
 
-        $isPaper = $item && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
+        $isPaper = $item && ! $item->sendsTo() && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
         $last = $item ? CapstoneDocument::ofTeam($teamId)->where('deliverable_id', $item->id)->orderByDesc('file_version')->first() : null;
         $version = ($last?->file_version ?? 0) + 1;
         // A revision of a file for no line: the upload it revises.

@@ -18,6 +18,7 @@
   .tmx .mdg-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .tmx .mdg-chk{display:flex;gap:10px;align-items:center;font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer;margin:0}
   .tmx .mdg-chk input{width:17px;height:17px;margin:0;accent-color:var(--accent);flex:none}
+  .tmx .mdg-chks{display:flex;flex-wrap:wrap;gap:8px 18px}
   .tmx .mdg-err{color:var(--red);font-size:13px;margin:0}
   .tmx .mdg-err:empty{display:none}
   .tmx .mdg-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--line)}
