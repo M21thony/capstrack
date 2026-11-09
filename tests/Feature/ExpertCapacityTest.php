@@ -185,6 +185,6 @@ class ExpertCapacityTest extends TestCase
             ->assertSee('1 of 9 assignments filled');
 
         $this->actingAs($capsa, 'expert')->get(route('capsa.dashboard'))
-            ->assertSee(route('capsa.experts', ['tab' => 'coverage']), false);
+            ->assertSee('<a class="db-tile tile-green" href="'.route('capsa.experts', ['tab' => 'coverage']).'">', false);
     }
 }

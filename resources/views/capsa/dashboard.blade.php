@@ -86,7 +86,7 @@
             <div class="db-tile-body"><b>{{ $c['students'] }}</b><span class="lab">Total Students</span></div>
             <span class="db-delta {{ $c['newStudents'] ? 'up' : '' }}" title="New in the last 30 days">{{ $c['newStudents'] ? '↑ +'.$c['newStudents'] : '→ 0' }}</span>
           </a>
-          <a class="db-tile tile-green" href="{{ route('capsa.reports.show', 'master') }}">
+          <a class="db-tile tile-green" href="{{ route('capsa.experts', ['tab' => 'coverage']) }}">
             <span class="db-ico t-green"><svg class="i"><use href="#i-shield"/></svg></span>
             <div class="db-tile-body"><b>{{ $coverageRate }}%</b><span class="lab">Coverage Rate</span><span class="db-bar"><span style="width:{{ $coverageRate }}%"></span></span></div>
           </a>
