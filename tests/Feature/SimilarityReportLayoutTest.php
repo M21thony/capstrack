@@ -68,13 +68,9 @@ class SimilarityReportLayoutTest extends TestCase
             ->assertSee('aria-label="Breadcrumb"', false)
             ->assertSee('Similarity Report')
             // The team's title leads their own column, not only the header.
-            ->assertSeeInOrder(['Pre-proposal content', 'Title', self::TITLE, 'SDG', 'SDG 3 – Good Health and Well-being'])
-            ->assertSee('<span class="rp-pc sim-close">75', false)
-            ->assertSee('Close to existing work')
-            ->assertSee('<b class="sim-close">1</b> close', false)
-            ->assertSee('<b class="sim-some">1</b> some overlap', false)
-            ->assertSee('<b class="sim-little">1</b> little overlap', false)
-            ->assertSee('<b class="sim-some">50%</b>', false)
+            ->assertSeeInOrder(['Your pre-proposal', self::TITLE, 'SDG 3 – Good Health and Well-being'])
+            ->assertSee('<span class="band band-close">75% closest assessed match</span>', false)
+            ->assertSee('<span class="band band-some">50%</span>', false)
             ->assertDontSee('Highly similar')
             ->assertDontSee('class="scalebar', false)
             ->assertDontSee('class="scrolls', false);
@@ -90,12 +86,12 @@ class SimilarityReportLayoutTest extends TestCase
             ->assertSeeInOrder(['id="rp-full"', 'Research agenda and priority areas', 'Health informatics', 'Limitations', 'Web only.'], false);
     }
 
-    public function test_more_than_three_goals_fold_into_a_more_button(): void
+    public function test_every_goal_shows_on_the_report(): void
     {
         $check = $this->report(['sdg_goals' => 'SDG 1 – No Poverty, SDG 3 – Good Health and Well-being, SDG 4 – Quality Education, SDG 9 – Industry, Innovation and Infrastructure, SDG 16 – Peace, Justice and Strong Institutions']);
 
         $this->actingAs($this->leader)->get(route('student.duplication.report', $check->id))
-            ->assertSee('+2 more');
+            ->assertSeeInOrder(['SDG 1 – No Poverty', 'SDG 9 – Industry, Innovation and Infrastructure', 'SDG 16 – Peace, Justice and Strong Institutions']);
     }
 
     public function test_the_bands(): void
@@ -108,8 +104,8 @@ class SimilarityReportLayoutTest extends TestCase
         $this->assertSame(['close' => 1, 'some' => 0, 'little' => 0], SimilarityBand::counts([['score' => 80], ['score' => 90, 'assessed' => false]]));
     }
 
-    /** More suggestions do not mean more rows: three full cards at a time, with arrows for the rest. */
-    public function test_many_suggested_experts_page_three_at_a_time(): void
+    /** The suggested experts wait behind one button and open in a window, advisers first. */
+    public function test_suggested_experts_open_in_a_window(): void
     {
         $check = $this->report();
         $suggested = [];
@@ -119,15 +115,11 @@ class SimilarityReportLayoutTest extends TestCase
         }
         $check->update(['instructors_suggested' => $suggested]);
 
-        $html = $this->actingAs($this->leader)->get(route('student.duplication.report', $check->id))
-            ->assertSee('1&ndash;3 of 4', false)
-            ->assertSee('aria-label="Next experts"', false)
+        $this->actingAs($this->leader)->get(route('student.duplication.report', $check->id))
+            ->assertSee('Experts <span class="pc-n">4</span>', false)
+            ->assertSee('id="rp-sx-dlg"', false)
             ->assertDontSee('<details', false)
-            // Advisers first; the fourth card waits behind the arrow, whole.
-            ->assertSeeInOrder(['Mark Balilla, MIT', 'Kenn Aurillas', 'Ian Tumambing', 'Maria Santos'])
-            ->getContent();
-
-        $this->assertSame(1, preg_match_all('/class="rp-card-slot"\s+hidden/', $html));
+            ->assertSeeInOrder(['Mark Balilla, MIT', 'Kenn Aurillas', 'Ian Tumambing', 'Maria Santos']);
     }
 
     public function test_three_or_fewer_experts_need_no_arrows(): void
@@ -151,10 +143,8 @@ class SimilarityReportLayoutTest extends TestCase
         ]);
 
         $this->actingAs($this->leader)->get(route('student.duplication.report', $check->id))
-            ->assertSee('This School Year (1)')
-            ->assertSee('Top 10 from the Archive')
-            ->assertSeeText('1 from this year')
-            ->assertSeeInOrder(['This School Year', 'ClinicQueue', 'BSIT 3B', 'Top 10 from the Archive', 'Archive One', 'Archive Two'])
+            ->assertSee('1 recommended this year')
+            ->assertSeeInOrder(['Recommended this year <span class="pc-n">1</span>', 'Top 10 archived <span class="pc-n">2</span>', 'ClinicQueue', 'BSIT 3B', 'Archive One', 'Archive Two'], false)
             ->assertSee(route('student.duplication.similar', [$check->id, 2]), false)
             ->assertSee(route('student.duplication.similar', [$check->id, 3]), false);
     }
@@ -181,7 +171,7 @@ class SimilarityReportLayoutTest extends TestCase
             ->assertSee('This year 1 of 1')
             ->assertSee('BSIT 3B')
             ->assertSeeInOrder(['Patients wait in long lines.', 'An online queue.', 'One clinic.'])
-            ->assertSee('Back to all 2 matches')
+            ->assertSee('Back to report')
             ->assertDontSee('What your team wrote');
 
         // An archive match saved without its abstract still opens, saying so.

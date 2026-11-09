@@ -21,13 +21,6 @@
 .verdict .doc .t{font-size:15px;font-weight:600;letter-spacing:-.2px;line-height:1.35;color:var(--text)}
 .verdict .doc .m{font-size:11.5px;color:var(--text3);margin-top:3px}
 
-/* One line only: 65% and above counts as close. Below it the checker says
-   nothing, because recommending or rejecting a title is the CaPSA's call. */
-.stateline{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px}
-/* Its display above would otherwise beat [hidden]. */
-.stateline[hidden]{display:none}
-.s-red{background:var(--red-bg);color:var(--red)}
-.s-grey{background:var(--bg4);color:var(--text2)}
 .scalebar{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--bg4);min-width:200px;flex:1}
 .scalebar i{display:block;height:100%}
 .scalekeys{display:flex;gap:14px;font-size:10.5px;color:var(--text3);margin-top:6px;flex-wrap:wrap}
@@ -64,15 +57,51 @@
 .golink:focus-visible{outline:2px solid var(--accent3);outline-offset:3px;border-radius:2px}
 .golink svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
 
-/* ── the match page: the two documents side by side ─────────────── */
-.vs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media (max-width:860px){.vs{grid-template-columns:1fr}}
-.vs .col{border:1px solid var(--border);border-radius:12px;background:var(--bg2);padding:14px 16px}
-.vs .col.mine{border-color:rgba(201,168,44,.5);background:#fffdf6}
-.vs .who{font-size:10px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--text3);margin-bottom:7px}
-.vs .col.mine .who{color:var(--accent3)}
-.vs h3{font-size:14px;font-weight:600;line-height:1.4;letter-spacing:-.15px;color:var(--text);margin:0}
-.vs .sub{font-size:11.5px;color:var(--text2);margin-top:4px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+/* ── the match page: header, then the two documents side by side ── */
+.sm-pos{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3)}
+.pbtn.sm-ic{padding:8px 9px}
+.card.sm-head{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:14px 20px;margin-bottom:14px}
+.sm-score{text-align:center;min-width:72px}
+.sm-score .bigscore{font-size:34px}
+.sm-score small{display:block;font-size:11px;color:var(--text3);margin-top:4px}
+.sm-doc{flex:1;min-width:230px}
+.sm-title{margin:0;font-size:16px;font-weight:700;line-height:1.35;color:var(--text)}
+.sm-meta{font-size:12px;color:var(--text3);margin-top:5px}
+.card.sm-card{padding:0;display:flex;flex-direction:column;min-width:0}
+.sm-card>.pc-tabs{padding-top:6px}
+.sm-panel[hidden]{display:none}
+.sm-why{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));border-bottom:1px solid var(--border)}
+.sm-why>div{display:flex;gap:10px;padding:12px 18px}
+.sm-why svg{width:16px;height:16px;flex-shrink:0;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.sm-why b{display:block;font-size:12.5px;font-weight:700;color:var(--text)}
+.sm-why p{margin:3px 0 0;font-size:12.5px;line-height:1.5;color:var(--text2)}
+.sm-vs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0}
+.sm-col{display:flex;flex-direction:column;min-width:0;min-height:0}
+.sm-col+.sm-col{border-left:1px solid var(--border)}
+.sm-colh{padding:14px 18px 12px;border-bottom:1px solid var(--border)}
+.sm-who{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3)}
+.sm-colh h3{margin:5px 0 0;font-size:13.5px;font-weight:700;line-height:1.4;color:var(--text)}
+.sm-by{font-size:11.5px;color:var(--text3);margin-top:4px}
+.sm-colb{padding:0 18px 16px}
+.sm-colb .field{margin-top:14px}
+.sm-colb .field .v{font-size:13px;line-height:1.7}
+.sm-how{padding:14px 18px}
+@media (min-width:1101px) and (min-height:680px){
+  .content:has(> .sm-card){display:flex;flex-direction:column;overflow:hidden}
+  .content:has(> .sm-card)>*{flex-shrink:0}
+  .content:has(> .sm-card) .sys-credits{display:none}
+  .content>.sm-card{flex:1 1 0;min-height:0}
+  .sm-panel{flex:1;min-height:0;display:flex;flex-direction:column}
+  .sm-vs{flex:1}
+  .sm-colb,.sm-how{flex:1;min-height:0;overflow-y:auto}
+}
+@media (max-width:1100px),(max-height:679px){
+  .sm-colb{max-height:420px;overflow-y:auto}
+}
+@media (max-width:860px){
+  .sm-vs{grid-template-columns:minmax(0,1fr)}
+  .sm-col+.sm-col{border-left:0;border-top:1px solid var(--border)}
+}
 
 .field{margin-top:11px}
 .field .k{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
@@ -81,30 +110,16 @@
 
 /* Words that appear in both documents, matched literally rather than by
    the AI. */
-.vs mark,.field mark{background:rgba(201,168,44,.34);color:var(--text);font-weight:600;border-radius:3px;padding:0 2px}
+.sm-col mark,.field mark{background:rgba(201,168,44,.34);color:var(--text);font-weight:600;border-radius:3px;padding:0 2px}
 
 /* Titles other sections had recommended this year. */
 .ty-tag{display:inline-block;padding:1px 7px;border-radius:999px;background:var(--red,#c62828);color:#fff;font-size:10px;font-weight:600;margin-right:4px;letter-spacing:0;text-transform:none}
-.vs .who .ty-tag{vertical-align:1px}
+.sm-who .ty-tag{vertical-align:1px}
 .ty-note{display:flex;gap:7px;align-items:flex-start;margin-top:5px;font-size:12px;line-height:1.45;color:var(--red,#c62828)}
 .ty-note svg{width:14px;height:14px;flex-shrink:0;margin-top:2px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .ty-note b{font-weight:600}
 
-/* ── similarities · differences · what to do ────────────────────── */
-.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin-top:14px}
-.box{border:1px solid var(--border);border-radius:9px;padding:10px 12px;background:var(--bg2)}
-.box h3{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin:0 0 5px;display:flex;align-items:center;gap:6px}
-.box h3 svg{width:12px;height:12px;fill:none;stroke-width:2.4}
-.box p{font-size:12.5px;color:var(--text2);line-height:1.55;margin:0}
-.box-sim h3{color:var(--red)} .box-sim h3 svg{stroke:var(--red)}
-.box-dif h3{color:var(--green)} .box-dif h3 svg{stroke:var(--green)}
-.box-sug{background:var(--accent-light);border-color:rgba(201,168,44,.42)}
-.box-sug h3{color:var(--accent3)} .box-sug h3 svg{stroke:var(--accent3)}
-.box-sug p{color:var(--text)}
-
 /* ── how the score is worked out ─────────────────────────────────── */
-.card.how{padding:12px 16px;margin-bottom:14px}
-.how h2{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin:0 0 8px}
 .how ol.steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .how .steps li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:start}
 .how .steps li.skip{opacity:.6}
@@ -204,83 +219,131 @@
 .band-some{background:#eef1f6;color:#3d4a63}
 .band-little,.band-none{background:var(--bg4);color:var(--text2)}
 
-.card.rp-head{display:flex;align-items:center;gap:16px;padding:10px 16px;margin-bottom:10px;flex-wrap:wrap}
-.rp-back{width:38px;height:38px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;color:var(--text)}
-.rp-back:hover{border-color:var(--border2)}
-.rp-back:focus-visible,.rp-row:focus-visible,.rp-read:focus-visible,.rp-more:focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
-.rp-back svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4}
-.rp-score{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
-.rp-pc{font-size:32px;font-weight:700;letter-spacing:-1px;line-height:1;font-variant-numeric:tabular-nums}
-.rp-pc small{font-size:18px}
-.rp-cap{font-size:10.5px;color:var(--text3);margin-top:3px}
+/* The check page: header, the document and submission on the left, the results table on the right. */
+.pc-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.pc-h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.3px;color:var(--text)}
+.pc-sub{font-size:12.5px;color:var(--text3);margin-top:3px}
+.pc-head-btns{display:flex;gap:8px;flex-wrap:wrap}
+.pc-n{display:inline-grid;place-items:center;min-width:20px;height:18px;padding:0 6px;border-radius:999px;background:var(--bg4);color:var(--text2);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;box-sizing:border-box}
+.pc-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px;align-items:start}
+.pc-left{display:flex;flex-direction:column;gap:14px;min-height:0}
+.pc-card{padding:16px 18px}
+.pc-card-h{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13.5px;font-weight:700;color:var(--text)}
+.pc-card-h svg{width:15px;height:15px;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.pc-file{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);cursor:pointer;margin-bottom:8px}
+.pc-file:hover{border-color:var(--border2)}
+.pc-file.has-file{border-color:var(--accent,#c9a82c);background:#fffbeb}
+.pc-file-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#fdecec;flex-shrink:0}
+.pc-file-ic svg{width:15px;height:15px;fill:none;stroke:#c62828;stroke-width:2.2}
+.pc-file-t{min-width:0;display:flex;flex-direction:column}
+.pc-file-t b{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-file-t small{font-size:10.5px;color:var(--text3)}
+.pc-btn{width:100%;display:inline-flex;align-items:center;justify-content:center;gap:7px;font:inherit;font-size:12.5px;font-weight:600;padding:8px 12px;border-radius:9px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;margin-bottom:8px}
+.pc-btn:hover{border-color:var(--border2)}
+.pc-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.3}
+.pc-btn.pc-gold{background:var(--accent,#c9a82c);border-color:var(--accent,#c9a82c);color:#18191f}
+.pc-btn.pc-gold:hover{filter:brightness(.96)}
+.pc-btn:disabled{opacity:.55;cursor:not-allowed}
+.pc-btn:focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
+.pc-locked{font-size:11.5px;color:var(--text2);line-height:1.5;padding:8px 10px;border-radius:8px;background:var(--bg3);margin-bottom:8px}
+.pc-latest{border-top:1px solid var(--border);padding-top:12px;margin-top:4px}
+.pc-k{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.pc-empty{font-size:12px;color:var(--text3)}
+.pc-score{display:flex;align-items:center;gap:9px}
+.pc-score .bigscore{font-size:30px}
+.pc-x{margin-left:auto;width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text3);cursor:pointer}
+.pc-x:hover{color:var(--red);border-color:var(--red)}
+.pc-x svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.3}
+.pc-doc{font-size:12.5px;font-weight:600;color:var(--text);margin-top:8px;line-height:1.4}
+.pc-meta{font-size:11.5px;color:var(--text3);margin-top:2px;line-height:1.45}
+#sc-result .golink{margin-top:9px}
+.pc-linkbtn{background:none;border-top:0;border-left:0;border-right:0;font-family:inherit;cursor:pointer;margin-top:10px}
+
+.pc-results{display:flex;flex-direction:column;padding:16px 0 0;min-height:420px}
+.pc-results>.pc-card-h{padding:0 18px}
+.pc-tabs{display:flex;gap:18px;padding:0 18px;border-bottom:1px solid var(--border)}
+.pc-tabs button{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:12.5px;font-weight:600;color:var(--text3);background:none;border:0;border-bottom:2px solid transparent;padding:8px 0 9px;margin-bottom:-1px;cursor:pointer}
+.pc-tabs button:hover{color:var(--text)}
+.pc-tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent,#c9a82c)}
+.pc-tabs button[aria-selected="true"] .pc-n{background:#fdf3e2;color:#8a5300}
+.pc-tabs button:focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
+.pc-thead,.pc-row{display:grid;grid-template-columns:minmax(0,1fr) 92px 96px;gap:12px;align-items:center;padding:0 18px}
+.pc-thead{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);padding-top:9px;padding-bottom:9px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.pc-thead span:not(:first-child),.pc-row>:not(:first-child){justify-self:center}
+.pc-rows{flex:1 1 0;min-height:0;overflow-y:auto}
+.pc-row{padding-top:10px;padding-bottom:10px;border-top:1px solid var(--border);text-decoration:none;color:inherit;transition:background .15s}
+.pc-row:first-child{border-top:0}
+.pc-row:hover{background:var(--bg3)}
+.pc-row:focus-visible{outline:2px solid var(--accent3);outline-offset:-2px}
+.pc-what{min-width:0}
+.pc-what b{display:block;font-size:12.5px;font-weight:600;line-height:1.4;color:var(--text)}
+.pc-what small{display:block;font-size:11px;color:var(--text3);margin-top:2px}
+.pc-what .wy{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-cmp{display:inline-flex;align-items:center;font-size:12px;font-weight:600;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:5px 12px;background:#fff}
+.pc-row:hover .pc-cmp{border-color:var(--accent,#c9a82c)}
+.pc-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 18px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
+.pc-dlg{margin:auto}
+.pc-dlg .rp-dialog-b{padding:0}
+.pc-dlg #instructor-list{padding:14px 18px}
+
+/* One screen on a laptop: the results scroll inside their card, the page itself never does. */
+@media (min-width:1101px) and (min-height:680px){
+  .content:has(> .pc-grid){display:flex;flex-direction:column;overflow:hidden}
+  .content:has(> .pc-grid)>*{flex-shrink:0}
+  .content>.pc-grid{flex:1 1 0;min-height:0;align-items:stretch}
+  .content>.pc-grid>*{min-height:0}
+  .content>.pc-grid .pc-left{overflow-y:auto}
+  .content:has(> .pc-grid) .sys-credits{display:none}
+}
+@media (max-width:1100px),(max-height:679px){
+  .pc-results{max-height:640px}
+}
+@media (max-width:860px){
+  .pc-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  .pc-thead,.pc-row{grid-template-columns:minmax(0,1fr) 64px;padding-left:14px;padding-right:14px}
+  .pc-thead span:last-child,.pc-row .pc-cmp{display:none}
+}
+
+/* ── the report page: the team's words beside the results table ─── */
+.card.rp-head{display:flex;align-items:center;gap:16px;padding:14px 18px;margin-bottom:14px;flex-wrap:wrap}
 .rp-doc{flex:1;min-width:240px}
-.rp-title{margin:0;font-size:15.5px;font-weight:600;line-height:1.35;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.rp-meta{display:flex;align-items:center;flex-wrap:wrap;gap:2px 8px;margin-top:4px;font-size:12px;color:var(--text3);min-width:0}
-.rp-band{font-size:12px;font-weight:600;white-space:nowrap}
-.rp-meta>.rp-band+span::before{content:"·";margin-right:8px;color:var(--text3)}
-.rp-counts{display:flex;gap:4px 14px;flex-wrap:wrap;flex-shrink:0}
-.rp-n{font-size:12px;color:var(--text2);white-space:nowrap}
-.rp-n b{font-size:14px;font-weight:700;margin-right:2px;font-variant-numeric:tabular-nums}
-.rp-n.ty,.rp-n.ty b{color:var(--red,#c62828)}
-
-.rp-grid{display:grid;grid-template-columns:440px minmax(0,1fr);gap:14px;align-items:stretch}
-@media (max-width:1100px){.rp-grid{grid-template-columns:minmax(0,1fr)}}
-.rp-grid>.card{padding:0;display:flex;flex-direction:column;min-width:0;overflow:hidden}
-.rp-card-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:10px 18px}
-.rp-card-h h2,.rp-experts h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
-.rp-card-h span{font-size:11.5px;color:var(--text3)}
-
-.rp-mine{background:var(--accent-light,#faf7ed)!important;border-color:rgba(201,168,44,.45)!important}
-.rp-mine .rp-card-h{border-bottom:1px solid rgba(201,168,44,.35)}
-.rp-body{padding:10px 18px;display:flex;flex-direction:column;gap:8px}
-.rp-field .k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
-.rp-v-title{font-size:14px;font-weight:600;line-height:1.4;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.rp-v{font-size:12.5px;line-height:1.55;color:var(--text);display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
-.rp-sdgs{display:flex;flex-wrap:wrap;gap:4px}
-.rp-sdgs span,.rp-more{padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:500;background:#eef1fb;color:#33449a}
-.rp-more{border:1px solid #c9d2f0;background:#fff;font-family:inherit;cursor:pointer}
-.rp-foot{margin-top:auto;padding:10px 18px 14px;border-top:1px solid rgba(201,168,44,.35)}
-.rp-read{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border:1px solid #d9c98f;border-radius:9px;background:#fff;color:var(--accent3,#8a6e10);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
-.rp-read svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2}
-
-.rp-list .rp-card-h{border-bottom:1px solid var(--border)}
-.rp-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:center;min-height:46px;padding:4px 18px;box-sizing:border-box;border-top:1px solid var(--border);text-decoration:none;color:inherit;transition:background .15s}
-.rp-row:first-of-type{border-top:none}
-.rp-row:hover{background:var(--bg3)}
-.rp-rank b{display:block;font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
-.rp-what{min-width:0}
-.rp-what b,.rp-what small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rp-what b{font-size:13px;font-weight:600;color:var(--text)}
-.rp-what small{font-size:11.5px;color:var(--text2);margin-top:2px}
-.rp-what small span{color:var(--text3)}
-
-/* The two lists beside the team's own words: this year's recommended titles over the archive. */
-.rp-col{display:flex;flex-direction:column;gap:14px;min-width:0}
-.rp-col>.card{padding:0;display:flex;flex-direction:column;min-width:0;overflow:hidden}
-.rp-ty{box-shadow:inset 3px 0 0 var(--red,#c62828)}
-.rp-ty .rp-card-h h2{display:inline-flex;align-items:center;gap:7px;color:var(--red,#c62828)}
-.rp-ty .rp-card-h h2 svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-.rp-ty .rp-row:hover{background:var(--red-bg,#fdecec)}
-.rp-what small .rp-sec{color:var(--red,#c62828);font-weight:600}
-
-.card.rp-experts{margin-top:10px;padding:10px 14px 12px}
-.rp-experts-h{display:flex;align-items:baseline;gap:14px;margin:0 4px 8px;min-width:0}
-.rp-experts-h h2{margin:0;flex-shrink:0}
-.rp-experts-h .dup-apply-note{margin:0;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rp-title{margin:0;font-size:15.5px;font-weight:700;line-height:1.35;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rp-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:12px;color:var(--text3)}
+.rp-doc .ty-note{margin-top:6px}
+.rp-acts{display:flex;gap:8px;flex-shrink:0}
+.rp-acts .pc-btn{width:auto;margin:0;padding:8px 16px}
+.rp-grid{display:grid;grid-template-columns:330px minmax(0,1fr);gap:14px;align-items:start}
+.rp-mine{padding:16px 0 0;display:flex;flex-direction:column;min-width:0}
+.rp-mine>.pc-card-h{padding:0 18px 12px;margin:0;border-bottom:1px solid var(--border)}
+.rp-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+.rp-v-title{font-size:13.5px;font-weight:600;line-height:1.4;color:var(--text)}
+.rp-field .k{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.rp-v{font-size:12.5px;line-height:1.6;color:var(--text2);white-space:pre-line}
+.rp-sdgs{display:flex;flex-wrap:wrap;gap:5px}
+.rp-sdgs span{padding:2px 9px;border-radius:6px;font-size:11.5px;font-weight:500;background:#eef1fb;color:#33449a}
+.rp-foot{padding:12px 18px;border-top:1px solid var(--border)}
+.rp-foot .pc-btn{margin:0}
+.pc-what small.rp-sec{color:var(--red,#c62828);font-weight:600}
+.rp-sx{display:flex;flex-direction:column;gap:10px;padding:14px 18px}
+.rp-sx .dup-apply-note{margin:0}
+@media (min-width:1101px) and (min-height:680px){
+  .content:has(> .rp-grid){display:flex;flex-direction:column;overflow:hidden}
+  .content:has(> .rp-grid)>*{flex-shrink:0}
+  .content:has(> .rp-grid) .sys-credits{display:none}
+  .content>.rp-grid{flex:1 1 0;min-height:0;align-items:stretch}
+  .content>.rp-grid>*{min-height:0}
+  .rp-body{flex:1;min-height:0;overflow-y:auto}
+}
+@media (max-width:1100px),(max-height:679px){
+  .rp-body{max-height:420px;overflow-y:auto}
+}
+@media (max-width:860px){
+  .rp-grid{grid-template-columns:minmax(0,1fr)}
+}
 .dup-apply-btn.rp-lock{padding:6px 8px}
 .rp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.rp-experts-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.rp-card-slot{display:flex;min-width:0}
-.rp-card-slot[hidden]{display:none}
-.rp-card-slot>.rp-expert{flex:1}
-.rp-pager{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
-.rp-pager-count{font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums;margin-right:4px}
-.rp-page-btn{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer}
-.rp-page-btn:hover:not(:disabled){border-color:var(--border2)}
-.rp-page-btn:disabled{opacity:.4;cursor:default}
-.rp-page-btn:focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
-.rp-page-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4}
-@media (max-width:1100px){.rp-experts-grid{grid-template-columns:minmax(0,1fr)}}
 .rp-expert{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border:1px solid var(--border);border-radius:12px;min-width:0}
 .rp-expert-who{flex:1;min-width:0}
 /* Shown whole: a name, field or reason cut off with "…" left the team
@@ -288,24 +351,6 @@
 .rp-expert-who .n{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35}
 .rp-expert-who .x{font-size:11.5px;color:var(--primary,#3f55b5);margin-top:2px;line-height:1.45}
 .rp-expert-who .r{font-size:11.5px;color:var(--text3);margin-top:3px;line-height:1.45}
-
-/* One screen on a laptop: the page stops growing, and long lists scroll inside their own card. */
-@media (min-width:1101px) and (min-height:680px){
-  .content:has(> .rp-grid){display:flex;flex-direction:column;overflow:hidden}
-  .content:has(> .rp-grid)>*{flex-shrink:0}
-  /* One screen has no end to put the credits at; they would take the lists' room. */
-  .content:has(> .rp-grid)>.sys-credits{display:none}
-  .content>.rp-grid{flex:1 1 0;min-height:0;grid-template-rows:minmax(0,1fr)}
-  .rp-mine .rp-body{flex:1;min-height:0;overflow-y:auto}
-  .rp-col{min-height:0}
-  .rp-col>.rp-ty{flex-shrink:0}
-  .rp-col>.card:last-child{flex:1;min-height:0;overflow-y:auto}
-  .rp-col>.card:last-child .rp-card-h{position:sticky;top:0;z-index:1;background:var(--card,#fff)}
-  .card.rp-head{padding:8px 16px;margin-bottom:8px}
-  .card.rp-experts{margin-top:8px;padding:8px 14px 10px}
-  .rp-expert{padding:8px 12px}
-  .rp-expert-who .x,.rp-expert-who .r{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
-}
 
 .rp-dialog{border:0;border-radius:16px;padding:0;width:min(720px,calc(100vw - 32px));max-height:min(86vh,900px);max-height:min(86dvh,900px);box-shadow:0 24px 60px rgba(0,0,0,.28)}
 .rp-dialog::backdrop{background:rgba(15,16,22,.55)}
@@ -315,40 +360,5 @@
 .rp-x{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text3);cursor:pointer}
 .rp-x svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2}
 .rp-dialog-b{padding:6px 22px 22px}
-
-/* ── the scan card on the Pre-Proposal page ─────────────────────── */
-/* Empty until a scan: no bar, and no warning showing before anything
-   has been checked. After one, the same calm words as the report. */
-.scan-card{align-items:center}
-.sc-empty,.sc-result{display:flex;align-items:center;gap:18px;flex:1;min-width:0;flex-wrap:wrap}
-.sc-empty[hidden],.sc-result[hidden]{display:none}
-.sc-empty-ic{width:52px;height:52px;flex-shrink:0;border:2px dashed var(--border2);border-radius:12px;display:grid;place-items:center;color:var(--text3)}
-.sc-empty-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
-.sc-score{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
-.sc-score .bigscore{font-size:38px}
-.sc-cap{font-size:10.5px;color:var(--text3);margin-top:4px}
-.sc-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
-.sc-counts{display:inline-flex;gap:4px 12px;flex-wrap:wrap}
-
-/* The pre-proposal page's middle column: this year's recommended titles over the archive. */
-.dup-midcol{display:flex;flex-direction:column;gap:14px;min-height:0;min-width:0}
-.dup-midcol>.dup-mid{flex:1;min-height:0}
-.ty-card{flex-shrink:0;box-shadow:inset 3px 0 0 var(--red,#c62828)}
-.ty-card[hidden]{display:none}
-.ty-card .card-title{display:inline-flex;align-items:center;gap:7px;color:var(--red,#c62828)}
-.ty-card .card-title svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-.ty-card .mrow:hover{background:var(--red-bg,#fdecec)}
 .ty-note[hidden]{display:none}
-/* The check's verdict kept to a few short lines, so the note above fits without pushing the lists down. */
-.card.verdict.scan-card{padding:10px 16px;gap:14px}
-.scan-card .sc-result{gap:14px}
-.scan-card .sc-score .bigscore{font-size:30px}
-.scan-card .sc-cap{margin-top:2px}
-.scan-card .sc-line{margin-bottom:2px;gap:5px}
-.scan-card .doc .t{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.scan-card .doc .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.scan-card .ty-note{margin-top:3px;font-size:11.5px}
-.scan-card .sc-line .band{font-size:10.5px;padding:2px 7px}
-@media (max-width:900px){.scan-card .doc .t,.scan-card .doc .m{white-space:normal}}
-.scan-card .doc .m b{font-weight:600;color:var(--text)}
 </style>

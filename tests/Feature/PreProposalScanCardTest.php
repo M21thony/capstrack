@@ -26,7 +26,7 @@ class PreProposalScanCardTest extends TestCase
         $this->actingAs($leader)->get(route('student.duplication'))
             ->assertOk()
             ->assertSee('No document checked yet')
-            ->assertSee('<div class="sc-result" id="sc-result" hidden>', false)
+            ->assertSee('<div id="sc-result" hidden>', false)
             ->assertDontSee('Highly similar')
             ->assertDontSee('class="scalebar', false);
     }

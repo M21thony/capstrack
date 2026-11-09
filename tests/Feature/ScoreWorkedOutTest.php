@@ -139,7 +139,7 @@ class ScoreWorkedOutTest extends TestCase
     public function test_the_match_page_shows_the_three_steps_with_this_titles_numbers_and_the_sources(): void
     {
         $this->page(['score' => 74, 'embedding_score' => 81, 'judge_score' => 74, 'assessed' => true, 'is_relevant' => true])
-            ->assertSee('How this score is worked out')
+            ->assertSee('Score explanation')
             ->assertSeeInOrder(['Meaning match', '(0.62 + 1) ÷ 2 × 100 = 81%', 'AI judge', 'same kind of study', '74%', 'Score shown', "The judge's score is used."], false)
             ->assertSee('Salton, G., &amp; McGill, M. J. (1983)', false)
             ->assertSee('Sentence-BERT')

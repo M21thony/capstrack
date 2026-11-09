@@ -1,15 +1,8 @@
 {{--
-  One saved title's Similarity Report.
-
-  This used to be a modal built from a hidden copy of itself sitting further
-  down the pre-proposal page, so the report could not be reloaded, linked,
-  printed or shown to an adviser, and was gone the moment the page closed. It
-  is a page with an address now, laid out the way the CaPSA's copy is, so both
-  sides read the same thing.
-
-  It fits one laptop screen: the team's words beside what came back, the
-  suggested experts underneath, and nothing scrolling inside anything. A
-  shorter screen scrolls the page itself, once.
+  One saved title's Similarity Report: the team's words on the left, the
+  same results table as the check page on the right, and the suggested
+  experts behind a button. It fits one laptop screen; a shorter screen
+  scrolls the page itself, once.
 --}}
 @extends('student.duplication.layout')
 
@@ -25,8 +18,8 @@
   $band = SimilarityBand::of($score);
 
   $when = $proposal?->submitted_at
-      ? 'turned in '.Carbon::parse($proposal->submitted_at)->format('j M Y')
-      : 'checked '.($check->created_at?->format('j M Y') ?? 'earlier');
+      ? 'Turned in '.Carbon::parse($proposal->submitted_at)->format('j M Y')
+      : 'Checked '.($check->created_at?->format('j M Y') ?? 'earlier');
 
   $standing = match (true) {
       ! $proposal => 'not saved as a pre-proposal',
@@ -35,26 +28,21 @@
       (bool) $proposal->submitted_at => 'awaiting review',
       default => 'draft',
   };
+
+  $suggested = collect($check->suggestionsForDisplay())->sortBy(fn ($i) => ['Adviser' => 0, 'Consultant' => 1][$i['role_label'] ?? ''] ?? 2)->values();
 @endphp
 
 <nav class="dup-crumb" aria-label="Breadcrumb">
-  <a href="{{ route('student.duplication') }}">Pre-Proposal</a>
+  <a href="{{ route('student.duplication') }}">Pre-proposal</a>
   <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-  <span class="here" aria-current="page">Similarity Report</span>
+  <span class="here" aria-current="page">Similarity report</span>
 </nav>
 
 <section class="card rp-head" aria-label="Result">
-  <a class="rp-back" href="{{ route('student.duplication') }}" aria-label="Back to your pre-proposals" title="Back to your pre-proposals">
-    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-  </a>
-  <div class="rp-score">
-    <span class="rp-pc sim-{{ $band }}">{{ $score ?? '—' }}@if ($score !== null)<small>%</small>@endif</span>
-    <span class="rp-cap">closest match</span>
-  </div>
   <div class="rp-doc">
     <h1 class="rp-title" title="{{ $title }}">{{ $title }}</h1>
     <div class="rp-meta">
-      <b class="rp-band sim-{{ $band }}">{{ SimilarityBand::BANDS[$band] }}</b>
+      <span class="band band-{{ $band }}">{{ $score === null ? 'Not scored' : $score.'% closest assessed match' }}</span>
       <span>{{ $when }} &middot; {{ $standing }}</span>
     </div>
     @if (($top = reset($thisYear)) && SimilarityBand::scoreOf($top) >= SimilarityBand::SOME)
@@ -64,43 +52,32 @@
       </div>
     @endif
   </div>
-  <div class="rp-counts" aria-label="How close the matches are">
-    @if ($thisYear)
-      <span class="rp-n ty"><b>{{ count($thisYear) }}</b> from this year</span>
+  <div class="rp-acts">
+    @if ($suggested->isNotEmpty())
+      <button type="button" class="pc-btn" onclick="openDlg('rp-sx-dlg')">
+        <svg viewBox="0 0 24 24" style="stroke:#0f766e"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Experts <span class="pc-n">{{ $suggested->count() }}</span>
+      </button>
     @endif
-    <span class="rp-n"><b class="sim-close">{{ $bands['close'] }}</b> close</span>
-    <span class="rp-n"><b class="sim-some">{{ $bands['some'] }}</b> some overlap</span>
-    <span class="rp-n"><b class="sim-little">{{ $bands['little'] }}</b> little overlap</span>
+    @if ($proposal && $check->document_path)
+      <a class="pc-btn pc-gold" href="{{ route('student.pre-proposal.document', $proposal->id) }}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Open PDF
+      </a>
+    @endif
   </div>
-  @if ($proposal && $check->document_path)
-    <a class="pbtn" href="{{ route('student.pre-proposal.document', $proposal->id) }}" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Your PDF
-    </a>
-  @endif
 </section>
 
 <div class="rp-grid">
   <section class="card rp-mine" aria-labelledby="rp-mine-h">
-    <div class="rp-card-h">
-      <h2 id="rp-mine-h">Pre-proposal content</h2>
-    </div>
+    <h2 class="pc-card-h" id="rp-mine-h"><svg viewBox="0 0 24 24" style="stroke:#c62828"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>Your pre-proposal</h2>
     <div class="rp-body">
-      <div class="rp-field">
-        <div class="k">Title</div>
-        <div class="rp-v-title" title="{{ $title }}">{{ $title }}</div>
-      </div>
+      <div class="rp-v-title">{{ $title }}</div>
       @if ($sdgs)
-        <div class="rp-field">
-          <div class="k">SDG</div>
-          <div class="rp-sdgs">
-            @foreach (array_slice($sdgs, 0, 3) as $sdg)
-              <span>{{ $sdg }}</span>
-            @endforeach
-            @if (count($sdgs) > 3)
-              <button type="button" class="rp-more" onclick="openFullPreProposal()">+{{ count($sdgs) - 3 }} more</button>
-            @endif
-          </div>
+        <div class="rp-sdgs">
+          @foreach ($sdgs as $sdg)
+            <span>{{ $sdg }}</span>
+          @endforeach
         </div>
       @endif
       @forelse ($lead as $label => $value)
@@ -116,82 +93,71 @@
     </div>
     @if ($fields)
       <div class="rp-foot">
-        <button type="button" class="rp-read" onclick="openFullPreProposal()">
+        <button type="button" class="pc-btn" onclick="openFullPreProposal()">
           <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-          Read the full pre-proposal
+          Read full pre-proposal
         </button>
       </div>
     @endif
   </section>
 
-  <div class="rp-col">
-    @if ($thisYear)
-      <section class="card rp-list rp-ty" aria-labelledby="rp-ty-h">
-        <div class="rp-card-h">
-          <h2 id="rp-ty-h"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>This School Year ({{ count($thisYear) }})</h2>
-        </div>
-        @foreach ($thisYear as $i => $m)
-          @include('student.duplication._report-row', ['sub' => Str::after($m['recommended'], ' — ').(str_starts_with($m['recommended'], 'Pending') ? ' · Pending, not yet decided' : ''), 'subClass' => 'rp-sec'])
-        @endforeach
-      </section>
-    @endif
-    <section class="card rp-list" aria-labelledby="rp-list-h">
-      <div class="rp-card-h">
-        <h2 id="rp-list-h">Top 10 from the Archive</h2>
-      </div>
+  <section class="card pc-results" aria-labelledby="pc-res-h">
+    <h2 class="pc-card-h" id="pc-res-h"><svg viewBox="0 0 24 24" style="stroke:#7c3aed"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Similarity results</h2>
+    <div class="pc-tabs" role="tablist">
+      <button type="button" role="tab" id="tab-ty" aria-selected="false" aria-controls="ty-list" onclick="showTab('ty')">Recommended this year <span class="pc-n">{{ count($thisYear) }}</span></button>
+      <button type="button" role="tab" id="tab-ar" aria-selected="true" aria-controls="matches-list" onclick="showTab('ar')">Top 10 archived <span class="pc-n">{{ count($archive) }}</span></button>
+    </div>
+    <div class="pc-thead" aria-hidden="true"><span>Study</span><span>Similarity</span><span>Action</span></div>
+    <div class="pc-rows" id="ty-list" role="tabpanel" aria-labelledby="tab-ty" hidden>
+      @forelse ($thisYear as $i => $m)
+        @include('student.duplication._report-row', ['sub' => Str::after($m['recommended'], ' — ').(str_starts_with($m['recommended'], 'Pending') ? ' · Pending, not yet decided' : ''), 'subClass' => 'rp-sec'])
+      @empty
+        <div class="dup-none">No recommended titles from this year came back.</div>
+      @endforelse
+    </div>
+    <div class="pc-rows" id="matches-list" role="tabpanel" aria-labelledby="tab-ar">
       @forelse ($archive as $i => $m)
         @include('student.duplication._report-row', ['sub' => ($m['academic_year'] ?? 'N/A').(! empty($m['program']) ? ' · '.$m['program'] : ''), 'subClass' => null])
       @empty
         <div class="dup-none">Nothing in the archive came back for this title.</div>
       @endforelse
-    </section>
-  </div>
-</div>
-
-@if (count($check->instructors_suggested ?? []))
-  <section class="card rp-experts" aria-labelledby="rp-experts-h">
-    @php
-      // Three full cards at a time, advisers first. A card for every
-      // suggestion wrapped onto more rows and pushed the page past the fold;
-      // paging keeps the section one row tall with nothing cut off or folded.
-      $suggested = collect($check->suggestionsForDisplay())->sortBy(fn ($i) => ['Adviser' => 0, 'Consultant' => 1][$i['role_label'] ?? ''] ?? 2)->values();
-      $perPage = 3;
-    @endphp
-    <div class="rp-experts-h">
-      <h2 id="rp-experts-h">Suggested experts</h2>
-      @unless ($applyOpen)
-        <div class="dup-apply-note" title="{{ $applyLockReason }}">{{ $applyLockReason }}</div>
-      @endunless
-      @if ($suggested->count() > $perPage)
-        <div class="rp-pager" data-per-page="{{ $perPage }}" data-total="{{ $suggested->count() }}">
-          <span class="rp-pager-count" aria-live="polite">1&ndash;{{ $perPage }} of {{ $suggested->count() }}</span>
-          <button type="button" class="rp-page-btn" data-step="-1" aria-label="Previous experts" disabled>
-            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button type="button" class="rp-page-btn" data-step="1" aria-label="Next experts">
-            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-      @endif
     </div>
-    <div class="rp-experts-grid" id="rp-experts-grid">
-      @foreach ($suggested as $n => $i)
-        <div class="rp-card-slot" @if ($n >= $perPage) hidden @endif>
-          @include('student.duplication._expert', ['i' => $i])
-        </div>
-      @endforeach
+    <div class="pc-foot">
+      <span id="match-count" data-ty="{{ count($thisYear) }} recommended this year" data-ar="{{ count($archive) }} archived matches">{{ count($archive) }} archived matches</span>
+      <a class="golink" href="{{ route('student.duplication') }}"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg> Back to check</a>
     </div>
   </section>
+</div>
+
+@if ($suggested->isNotEmpty())
+  <dialog class="rp-dialog pc-dlg" id="rp-sx-dlg" aria-labelledby="rp-sx-h">
+    <div class="rp-dialog-h">
+      <h2 id="rp-sx-h">Suggested experts</h2>
+      <button type="button" class="rp-x" aria-label="Close" onclick="this.closest('dialog').close()">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="rp-dialog-b">
+      <div class="rp-sx">
+        @unless ($applyOpen)
+          <div class="dup-apply-note" title="{{ $applyLockReason }}">{{ $applyLockReason }}</div>
+        @endunless
+        @foreach ($suggested as $i)
+          @include('student.duplication._expert', ['i' => $i])
+        @endforeach
+      </div>
+    </div>
+  </dialog>
 @endif
 
-{{-- Everything the team wrote, for when three lines of each is not enough. --}}
+{{-- Everything the team wrote, for when the left card is not enough. --}}
 <dialog class="rp-dialog" id="rp-full" aria-labelledby="rp-full-h">
   <div class="rp-dialog-h">
     <div>
       <div class="k">Pre-proposal content</div>
       <h2 id="rp-full-h">{{ $title }}</h2>
     </div>
-    <button type="button" class="rp-x" aria-label="Close" onclick="document.getElementById('rp-full').close()">
+    <button type="button" class="rp-x" aria-label="Close" onclick="this.closest('dialog').close()">
       <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
   </div>
@@ -206,31 +172,21 @@
 </dialog>
 
 <script nonce="{{ Vite::cspNonce() }}">
-// Suggested experts, three at a time.
-(function () {
-  var pager = document.querySelector('.rp-pager');
-  if (!pager) return;
-  var per = +pager.dataset.perPage, total = +pager.dataset.total, start = 0;
-  var slots = document.querySelectorAll('#rp-experts-grid .rp-card-slot');
-  var count = pager.querySelector('.rp-pager-count');
-  var prev = pager.querySelector('[data-step="-1"]'), next = pager.querySelector('[data-step="1"]');
-  pager.addEventListener('click', function (e) {
-    var btn = e.target.closest('.rp-page-btn');
-    if (!btn || btn.disabled) return;
-    start = Math.min(Math.max(0, start + (+btn.dataset.step) * per), Math.floor((total - 1) / per) * per);
-    slots.forEach(function (slot, n) { slot.hidden = n < start || n >= start + per; });
-    count.textContent = (start + 1) + '\u2013' + Math.min(start + per, total) + ' of ' + total;
-    prev.disabled = start === 0;
-    next.disabled = start + per >= total;
-  });
-})();
-
-function openFullPreProposal() {
-  var d = document.getElementById('rp-full');
+function openDlg(id) {
+  var d = document.getElementById(id);
   if (d && !d.open) d.showModal();
 }
-document.getElementById('rp-full').addEventListener('click', function (e) {
-  if (e.target === this) this.close();
+function openFullPreProposal() { openDlg('rp-full'); }
+document.querySelectorAll('dialog').forEach(function (d) {
+  d.addEventListener('click', function (e) { if (e.target === d) d.close(); });
 });
+function showTab(which) {
+  var ty = which === 'ty', c = document.getElementById('match-count');
+  document.getElementById('tab-ty').setAttribute('aria-selected', ty);
+  document.getElementById('tab-ar').setAttribute('aria-selected', !ty);
+  document.getElementById('ty-list').hidden = !ty;
+  document.getElementById('matches-list').hidden = ty;
+  c.textContent = ty ? c.dataset.ty : c.dataset.ar;
+}
 </script>
 @endsection

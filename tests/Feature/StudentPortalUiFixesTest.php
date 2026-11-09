@@ -35,7 +35,7 @@ class StudentPortalUiFixesTest extends TestCase
         $this->actingAs($this->leader())->get(route('student.duplication'))
             ->assertOk()
             ->assertSee('No document checked yet')
-            ->assertSee('<div class="sc-result" id="sc-result" hidden>', false)
+            ->assertSee('<div id="sc-result" hidden>', false)
             ->assertDontSee('id="result-badge"', false)
             ->assertDontSee('Highly similar');
     }

@@ -10,64 +10,10 @@
 <style nonce="{{ Vite::cspNonce() }}">
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.dup-layout {
-  display: grid;
-  grid-template-columns: 320px 1fr 280px;
-  gap: 14px;
-  /* Measured directly via Playwright at a 1440x900 viewport rather than
-     estimated: .dup-layout's real top offset is 222px and .content has
-     26px of bottom padding, so 900 - 222 - 26 = 652px is the exact
-     height that reaches the bottom with no overflow and no dead gap -
-     hence a 248px offset (900 - 652). This holds at other viewport
-     heights too since it's a flat pixel offset, not a hardcoded height. */
-  height: calc(100vh - 248px);height: calc(100dvh - 248px);
-  min-height: 480px;
-}
-
-/* A small laptop: the check and the two lists side by side, your pre-proposals underneath. */
-@media (max-width: 1280px) and (min-width: 901px) {
-  .dup-layout { grid-template-columns: 280px minmax(0, 1fr); grid-template-rows: minmax(480px, calc(100dvh - 248px)) auto; height: auto; }
-  .dup-portrait { grid-column: 1 / -1; }
-}
-
-/* A phone has room for one column: the check, then the matches, then the
-   expert, one under the other, each as tall as it needs. */
-@media (max-width: 900px) {
-  .dup-layout { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 0; }
-  .dup-layout > * { min-height: 0; }
-  #matches-panel { min-height: 280px; }
-}
-
-.dup-left {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  overflow: hidden;
-}
-
-.dup-mid {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.dup-portrait {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.matches-scroll {
-  overflow-y: auto;
-  flex: 1;
-  padding-right: 4px;
-}
-
-.upload-zone.has-file { border-color: var(--primary, #5b5bd6); background: var(--bg3); }
 
 /* Your pre-proposals: one block per saved title, the card edge to edge. */
 .pp-card{padding:0}
-.pp-card>.card-header{padding:24px 24px 14px;margin:0;border-bottom:1px solid var(--border)}
+
 .pp{padding:11px 24px;border-top:1px solid var(--border)}
 .pp:first-child{border-top:none}
 .pp-line{display:flex;gap:8px;align-items:flex-start}
@@ -153,7 +99,7 @@
 @media (prefers-reduced-motion: reduce) { .pp-pill span { transition: none; } }
 
 /* Turn-in bar at the foot of the Your Pre-Proposals card. */
-.pp-submit-bar { flex-shrink: 0; margin-top: auto; border-top: 1px solid var(--border); padding: 13px 24px; background: var(--bg3); border-radius: 0 0 14px 14px; }
+
 .pp-submit-q { font-size: 12px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; }
 .pp-submit-rejected { padding: 9px 11px; border-radius: 8px; background: var(--red-bg, rgba(220,38,38,.07)); color: var(--text); }
 .pp-submit-rejected b { color: var(--red); }
@@ -389,129 +335,177 @@
       </div>
     @endif
 
-    {{-- The one number a team came here to see, said calmly. It used to sit
-         beside a red and green bar with "Highly similar" showing before any
-         scan had run, which read as a verdict already given. Now it is empty
-         until a scan, then gives the closest match (its percentage keeps its
-         colour), how many matches are close, some or little overlap, and
-         what the closest ones share. Recommending a title is still the
-         CaPSA's call, not a number's. --}}
-    <div class="card verdict scan-card">
-      <div class="sc-empty" id="sc-empty">
-        <span class="sc-empty-ic" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        </span>
-        <div class="doc">
-          <div class="t">No document checked yet</div>
-          <div class="m">Upload your pre-proposal PDF to see which archived capstones are close to it, and what they share.</div>
-        </div>
+    <div class="pc-head">
+      <div>
+        <h1 class="pc-h1">Pre-proposal similarity check</h1>
+        <div class="pc-sub">Compare your document with recommended proposals and archived capstones.</div>
       </div>
-      <div class="sc-result" id="sc-result" hidden>
-        <div class="sc-score">
-          <div class="bigscore" id="sim-pct"></div>
-          <div class="sc-cap">closest match</div>
-        </div>
-        <div class="doc">
-          <div class="sc-line">
-            <span class="band" id="sc-band"></span>
-            <span class="sc-counts" id="sc-counts"></span>
-          </div>
-          <div class="t" id="doc-title"></div>
-          <div class="m" id="doc-meta"></div>
-          <div class="ty-note" id="ty-note" hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span></span></div>
-        </div>
-        <a class="pbtn" id="full-report-btn" style="display:none;flex-shrink:0" href="#">
-          See what is similar
-          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-        </a>
-        {{-- The result survives a reload now, which is the point - and means
-             there has to be a way to be rid of it. A panel that cannot be
-             dismissed is its own kind of stuck. --}}
-        <button type="button" class="btn" id="clear-result-btn" title="Clear this result" aria-label="Clear this result"
-                style="display:none;flex-shrink:0;padding:6px 10px" onclick="clearScanResult()">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <div class="pc-head-btns">
+        <button type="button" class="pbtn" onclick="openDlg('pp-list-dlg')">
+          <svg viewBox="0 0 24 24" style="stroke:#3f55b5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          My pre-proposals <span class="pc-n">{{ $proposals->count() }}</span>
+        </button>
+        <button type="button" class="pbtn" onclick="openDlg('sx-dlg')">
+          <svg viewBox="0 0 24 24" style="stroke:#0f766e"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Suggested experts <span class="pc-n" id="sx-count">0</span>
         </button>
       </div>
     </div>
 
-    <div class="dup-layout">
-      <div class="dup-left">
-        <div class="card" style="flex-shrink:0">
-          <div class="card-header"><span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Check Document</span></div>
+    <div class="pc-grid">
+      <div class="pc-left">
+        <section class="card pc-card" aria-labelledby="pc-doc-h">
+          <h2 class="pc-card-h" id="pc-doc-h"><svg viewBox="0 0 24 24" style="stroke:#3f55b5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Document to check</h2>
+          {{-- The checker is always open, turned in or not; saving into the set is what stays shut. --}}
+          <form class="duplication-form" onsubmit="return false;">
+            <label class="pc-file" id="upload-zone" for="file-input">
+              <span class="pc-file-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+              <span class="pc-file-t"><b id="upload-label">No file chosen</b><small>PDF only</small></span>
+            </label>
+            <input type="file" id="file-input" accept="application/pdf" hidden onchange="handleFileSelected()" />
+            <button type="button" class="pc-btn" onclick="document.getElementById('file-input').click()">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span id="pc-file-btn">Choose file</span>
+            </button>
+            <button type="button" class="pc-btn pc-gold" id="check-btn" onclick="runCheck()">Run similarity check</button>
+          </form>
 
-          {{-- The checker itself is always open. Running a title past the
-               archive tells a team whether it has been done before, and that
-               is worth knowing whether or not their set is turned in - it
-               used to disappear the moment they submitted, taking the tool
-               away exactly when they had a rejection to answer. Saving a
-               result into the submitted set is the part that stays shut. --}}
-            <form class="duplication-form" onsubmit="return false;">
-              <div class="upload-zone" id="upload-zone" style="margin-bottom:10px;cursor:pointer;padding:22px 14px;border:1.5px dashed var(--border2,var(--border));background:var(--bg3)" onclick="document.getElementById('file-input').click()">
-                <div class="upload-icon" style="margin-bottom:8px">
-                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--text3)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                </div>
-                <div style="font-size:12px;color:var(--text2);font-weight:500;margin-bottom:2px" id="upload-label">Drop a PDF or click to browse</div>
-                <div style="font-size:10px;color:var(--text3)">PDF format only</div>
-                <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="handleFileSelected()" />
+          @if ($canSubmitMore)
+            <button type="button" class="pc-btn pc-gold" id="open-pp-form-btn" style="display:none" onclick="openPpFormModal()">
+              Complete pre-proposal details &rarr;
+            </button>
+          @else
+            <div id="pp-locked-note" class="pc-locked" style="display:none">
+              Your titles are turned in, so this check is for your own reading &mdash;
+              it has not been added to them. Unsubmit first if you want to keep it.
+            </div>
+          @endif
+
+          <div class="pc-latest">
+            <div class="pc-k">Latest check</div>
+            <div id="sc-empty" class="pc-empty">No document checked yet.</div>
+            <div id="sc-result" hidden>
+              <div class="pc-score">
+                <span class="bigscore" id="sim-pct"></span>
+                <span class="band" id="sc-band"></span>
+                {{-- The result survives a reload, so there has to be a way to be rid of it. --}}
+                <button type="button" class="pc-x" id="clear-result-btn" title="Clear this result" aria-label="Clear this result" style="display:none" onclick="clearScanResult()">
+                  <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               </div>
-              <button type="button" class="btn btn-primary" style="width:100%;justify-content:center" id="check-btn" onclick="runCheck()">
-                Run Similarity Check
-              </button>
-            </form>
+              <div class="pc-doc" id="doc-title"></div>
+              <div class="pc-meta" id="doc-meta"></div>
+              <div class="ty-note" id="ty-note" hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span></span></div>
+              <a class="golink" id="full-report-btn" style="display:none" href="#">
+                Open similarity report
+                <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+              </a>
+            </div>
+          </div>
+        </section>
 
-            @if ($canSubmitMore)
-              <button type="button" class="btn btn-primary" id="open-pp-form-btn" style="display:none;width:100%;justify-content:center;margin-top:10px" onclick="openPpFormModal()">
-                Complete Pre-Proposal Details &rarr;
-              </button>
+        {{-- Turning in, the way Google Classroom does it: saving a title keeps
+             a draft, and this is the separate act that hands the set to your
+             CaPSA. The titles to send are ticked in My pre-proposals. --}}
+        <section class="card pc-card pp-submit-bar" aria-labelledby="pc-sub-h">
+          <h2 class="pc-card-h" id="pc-sub-h"><svg viewBox="0 0 24 24" style="stroke:#16a34a"><polyline points="20 6 9 17 4 12"/></svg>Your submission</h2>
+          @if ($turnedIn)
+            <div class="pp-submit-state">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <div>
+                <div class="pp-submit-state-title">Submitted for checking</div>
+                @if ($turnedInAt)
+                  <div class="pp-submit-state-sub">{{ \Illuminate\Support\Carbon::parse($turnedInAt)->format('M j, Y \a\t g:i A') }}</div>
+                @endif
+              </div>
+            </div>
+
+            @if ($isLeader && ! $reviewStarted)
+              <form method="POST" action="{{ route('student.pre-proposal.submit') }}">
+                @method('PATCH')
+                <input type="hidden" name="status" value="draft">
+                @csrf
+                <button type="submit" class="btn pp-btn-unsubmit">Unsubmit</button>
+              </form>
+              <div class="pp-submit-note">You can still take this back until your CaPSA starts reviewing.</div>
+            @elseif ($isLeader)
+              <div class="pp-submit-note">Your CaPSA has started reviewing, so this can no longer be unsubmitted.</div>
             @else
-              <div id="pp-locked-note" style="display:none;margin-top:10px;font-size:11.5px;color:var(--text2);background:var(--bg3);border:1px dashed var(--border);border-radius:8px;padding:10px 12px;line-height:1.5">
-                Your titles are turned in, so this check is for your own reading &mdash;
-                it has not been added to them. Unsubmit first if you want to keep it.
+              <div class="pp-submit-note">Your team leader submitted these for checking.</div>
+            @endif
+          @else
+            @if ($allRejected)
+              <div class="pp-submit-q pp-submit-rejected" role="status">
+                <b>Your CaPSA did not recommend any of these titles.</b>
+                Save new titles{{ $isLeader ? ', then submit them for checking again' : ' - your team leader submits them' }}. You can remove the rejected ones.
               </div>
             @endif
-
-          <div style="margin-top:10px;padding:8px;background:var(--bg3);border-radius:8px;font-size:10px;color:var(--text3);line-height:1.5">
-            Powered by Qwen 2.5 + nomic-embed-text · Local AI · Results may vary
-          </div>
-        </div>
-
-        <div class="card" id="instructor-card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
-          <div class="card-header" style="flex-shrink:0"><span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Suggested Experts</span></div>
-          <div id="instructor-list" style="overflow-y:auto;flex:1">
-            <div style="font-size:12px;color:var(--text3);text-align:center;padding:20px 0">Run a check to see suggestions</div>
-          </div>
-        </div>
+            @if (! $isLeader)
+              <div class="pp-submit-note">Only your team leader can submit these for checking.</div>
+            @elseif ($canTurnIn)
+              <div class="pp-submit-q" id="pp-submit-note">
+                <b>{{ $draftCount === 1 ? 'Your title is ticked.' : 'All '.$draftCount.' of your titles are ticked.' }}</b>
+                You can take them back until your CaPSA starts reviewing.
+              </div>
+              {{-- Turning in fewer than the suggested number is a decision, not
+                   an error, so it is asked about once rather than forbidden. --}}
+              <form method="POST" action="{{ route('student.pre-proposal.submit') }}"
+                    id="pp-submit-form"
+                    onsubmit="return confirmSubmitCount(event)"
+                    data-recommended="{{ $recommendedProposals }}">
+                @method('PATCH')
+                <input type="hidden" name="status" value="submitted">
+                {{-- Says a selection was sent, so unticking everything is
+                     told apart from sending nothing. --}}
+                <input type="hidden" name="choose" value="1">
+                @csrf
+                <button type="submit" class="btn btn-primary pp-btn-submit" id="pp-submit-btn">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+                  Submit for Checking
+                </button>
+              </form>
+            @else
+              <div class="pp-submit-note">{{ $allRejected ? 'Save a new title to submit.' : 'Save a pre-proposal title first.' }}</div>
+            @endif
+          @endif
+          <button type="button" class="golink pc-linkbtn" onclick="openDlg('pp-list-dlg')">
+            Open my proposals
+            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </section>
       </div>
 
-      <div class="dup-midcol">
-      {{-- Titles other sections recommended this year: two teams can't share one. --}}
-      <div class="card ty-card" id="ty-card" hidden>
-        <div class="card-header" style="flex-shrink:0">
-          <span class="card-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Recommended This Year <span id="ty-count">(0)</span></span></span>
-          <span style="font-size:11px;color:var(--text3)">recommended to other teams</span>
+      <section class="card pc-results" aria-labelledby="pc-res-h">
+        <h2 class="pc-card-h" id="pc-res-h"><svg viewBox="0 0 24 24" style="stroke:#7c3aed"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Similarity results</h2>
+        <div class="pc-tabs" role="tablist">
+          <button type="button" role="tab" id="tab-ty" aria-selected="false" aria-controls="ty-list" onclick="showTab('ty')">Recommended this year <span class="pc-n" id="ty-count">0</span></button>
+          <button type="button" role="tab" id="tab-ar" aria-selected="true" aria-controls="matches-list" onclick="showTab('ar')">Top 10 archived <span class="pc-n" id="ar-count">0</span></button>
         </div>
-        <div class="dup-rows" id="ty-list"></div>
-      </div>
-      <div class="card dup-mid" id="matches-panel">
-        <div class="card-header" style="flex-shrink:0">
-          <span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Top 10 from the Archive</span>
-          <span style="font-size:11px;color:var(--text3)" id="match-count"></span>
+        <div class="pc-thead" aria-hidden="true"><span>Study</span><span>Similarity</span><span>Action</span></div>
+        <div class="pc-rows" id="ty-list" role="tabpanel" aria-labelledby="tab-ty" hidden>
+          <div class="dup-none">No recommended titles from this year came back.</div>
         </div>
-        <div class="matches-scroll dup-rows" id="matches-list">
-          <div style="font-size:12px;color:var(--text3);text-align:center;padding:40px 0">No matches yet</div>
+        <div class="pc-rows" id="matches-list" role="tabpanel" aria-labelledby="tab-ar">
+          <div class="dup-none">Run a check to see matches.</div>
         </div>
-      </div>
-      </div>
+        <div class="pc-foot">
+          <span id="match-count"></span>
+          <a class="golink" id="pc-report-link" href="#" hidden>Open report <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </div>
+      </section>
+    </div>
 
-      <div class="card dup-portrait pp-card">
-        <div class="card-header" style="flex-shrink:0;flex-direction:column;align-items:flex-start;gap:2px">
-          <span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Your Pre-Proposals</span>
-          <span style="font-size:11px;color:var(--text3);font-weight:400">
-            {{ $proposals->count() }} {{ $turnedIn ? 'turned in' : 'saved' }}
-            &middot; {{ $proposals->where('status', 'approved')->count() }} recommended
-          </span>
+    <dialog class="rp-dialog pc-dlg" id="pp-list-dlg" aria-labelledby="pp-list-h">
+      <div class="rp-dialog-h">
+        <div>
+          <div class="k">{{ $proposals->count() }} saved &middot; {{ $proposals->where('status', 'approved')->count() }} recommended</div>
+          <h2 id="pp-list-h">My pre-proposals</h2>
         </div>
-        <div style="overflow-y:auto;flex:1">
+        <button type="button" class="rp-x" aria-label="Close" onclick="this.closest('dialog').close()">
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="rp-dialog-b pp-card">
           @if ($proposals->isEmpty())
             <div style="font-size:12px;color:var(--text3);text-align:center;padding:20px 10px">
               No pre-proposals saved yet — run a check and save your first one.
@@ -595,75 +589,20 @@
               </div>
             @endforeach
           @endif
-        </div>
-
-        {{-- Turning in, the way Google Classroom does it: saving a title keeps
-             a draft, and this is the separate act that hands the set to your
-             CaPSA. Before this existed, saving the third title silently put
-             the team under review. --}}
-        <div class="pp-submit-bar">
-          @if ($turnedIn)
-            <div class="pp-submit-state">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <div>
-                <div class="pp-submit-state-title">Submitted for checking</div>
-                @if ($turnedInAt)
-                  <div class="pp-submit-state-sub">{{ \Illuminate\Support\Carbon::parse($turnedInAt)->format('M j, Y \a\t g:i A') }}</div>
-                @endif
-              </div>
-            </div>
-
-            @if ($isLeader && ! $reviewStarted)
-              <form method="POST" action="{{ route('student.pre-proposal.submit') }}">
-                @method('PATCH')
-                <input type="hidden" name="status" value="draft">
-                @csrf
-                <button type="submit" class="btn pp-btn-unsubmit">Unsubmit</button>
-              </form>
-              <div class="pp-submit-note">You can still take this back until your CaPSA starts reviewing.</div>
-            @elseif ($isLeader)
-              <div class="pp-submit-note">Your CaPSA has started reviewing, so this can no longer be unsubmitted.</div>
-            @else
-              <div class="pp-submit-note">Your team leader submitted these for checking.</div>
-            @endif
-          @else
-            @if ($allRejected)
-              <div class="pp-submit-q pp-submit-rejected" role="status">
-                <b>Your CaPSA did not recommend any of these titles.</b>
-                Save new titles{{ $isLeader ? ', then submit them for checking again' : ' - your team leader submits them' }}. You can remove the rejected ones.
-              </div>
-            @endif
-            @if (! $isLeader)
-              <div class="pp-submit-note">Only your team leader can submit these for checking.</div>
-            @elseif ($canTurnIn)
-              <div class="pp-submit-q" id="pp-submit-note">
-                <b>{{ $draftCount === 1 ? 'Your title is ticked.' : 'All '.$draftCount.' of your titles are ticked.' }}</b>
-                You can take them back until your CaPSA starts reviewing.
-              </div>
-              {{-- Turning in fewer than the suggested number is a decision, not
-                   an error, so it is asked about once rather than forbidden. --}}
-              <form method="POST" action="{{ route('student.pre-proposal.submit') }}"
-                    id="pp-submit-form"
-                    onsubmit="return confirmSubmitCount(event)"
-                    data-recommended="{{ $recommendedProposals }}">
-                @method('PATCH')
-                <input type="hidden" name="status" value="submitted">
-                {{-- Says a selection was sent, so unticking everything is
-                     told apart from sending nothing. --}}
-                <input type="hidden" name="choose" value="1">
-                @csrf
-                <button type="submit" class="btn btn-primary pp-btn-submit" id="pp-submit-btn">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
-                  Submit for Checking
-                </button>
-              </form>
-            @else
-              <div class="pp-submit-note">{{ $allRejected ? 'Save a new title to submit.' : 'Save a pre-proposal title first.' }}</div>
-            @endif
-          @endif
-        </div>
       </div>
-    </div>
+    </dialog>
+
+    <dialog class="rp-dialog pc-dlg" id="sx-dlg" aria-labelledby="sx-h">
+      <div class="rp-dialog-h">
+        <h2 id="sx-h">Suggested experts</h2>
+        <button type="button" class="rp-x" aria-label="Close" onclick="this.closest('dialog').close()">
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="rp-dialog-b" id="instructor-list">
+        <div class="dup-none">Run a check to see suggestions.</div>
+      </div>
+    </dialog>
 
     @if ($canSubmitMore)
       @php
@@ -1541,6 +1480,7 @@ function handleFileSelected() {
 
   document.getElementById('upload-zone').classList.add('has-file');
   document.getElementById('upload-label').textContent = fileInput.files[0].name;
+  document.getElementById('pc-file-btn').textContent = 'Change file';
 }
 
 async function runCheck() {
@@ -1779,14 +1719,6 @@ function renderResult(data, fileName, onLoad) {
   const thisYear = indexed.filter(([m]) => m.recommended);
   const archive = indexed.filter(([m]) => !m.recommended);
 
-  const scored = archive.map(([m]) => m.assessed === false ? null : m.score);
-  const count = key => scored.filter(s => simBand(s) === key).length;
-  document.getElementById('sc-counts').innerHTML =
-    (thisYear.length ? '<span class="rp-n ty"><b>' + thisYear.length + '</b> recommended this year</span>' : '')
-    + ['close', 'some', 'little']
-      .map(k => '<span class="rp-n"><b class="sim-' + k + '">' + count(k) + '</b> ' + { close: 'close', some: 'some overlap', little: 'little overlap' }[k] + '</span>')
-      .join('');
-
   const tyNote = document.getElementById('ty-note');
   // Only a scored, real overlap is worth the red line; 31% is not a warning.
   const top = thisYear.length ? thisYear[0][0] : null;
@@ -1797,9 +1729,16 @@ function renderResult(data, fileName, onLoad) {
     tyNote.querySelector('span').innerHTML = '<b>Recommended this year:</b> ' + escapeHtml(top.title)
       + (section ? ' (' + escapeHtml(section) + ')' : '') + ' is ' + Number(top.score) + '% close to yours.';
   }
-  document.getElementById('ty-card').hidden = !thisYear.length;
-  document.getElementById('ty-count').textContent = '(' + thisYear.length + ')';
-  document.getElementById('ty-list').innerHTML = thisYear.map(([m, i], n) => renderMatchItem(m, i, data.duplication_check_id, n)).join('');
+  document.getElementById('ty-count').textContent = thisYear.length;
+  document.getElementById('ar-count').textContent = archive.length;
+  document.getElementById('sx-count').textContent = (data.instructors || []).length;
+  pcCounts = { ty: thisYear.length, ar: archive.length };
+  document.getElementById('ty-list').innerHTML = thisYear.length
+    ? thisYear.map(([m, i], n) => renderMatchItem(m, i, data.duplication_check_id, n)).join('')
+    : '<div class="dup-none">No recommended titles from this year came back.</div>';
+  const reportLink = document.getElementById('pc-report-link');
+  reportLink.href = DUP_REPORT_URL.replace('__C__', data.duplication_check_id);
+  reportLink.hidden = false;
 
   document.getElementById('doc-title').textContent = data.concepts.title || fileName;
 
@@ -1812,17 +1751,17 @@ function renderResult(data, fileName, onLoad) {
   const meta = document.getElementById('doc-meta');
   meta.textContent = '';
   if (band === 'close' && shared.length) {
-    meta.append('The closest ones share ');
+    meta.append('Shares ');
     const b = document.createElement('b');
-    b.textContent = shared.join(' · ');
-    meta.append(b, '. Similar work is common and is not a rejection: it shows where yours should stand apart.');
+    b.textContent = shared[0];
+    meta.append(b, ' with the closest match.');
   } else if (band === 'close' || band === 'some') {
-    meta.textContent = 'Some archived capstones overlap with it. Open them to see what they share, and where yours stands apart.';
+    meta.textContent = 'Some archived capstones overlap with it.';
   } else {
-    meta.textContent = 'Nothing in the archive is close to it. Your CaPSA still reviews every title.';
+    meta.textContent = 'Nothing in the archive is close to it.';
   }
 
-  document.getElementById('match-count').textContent = archive.length ? 'past capstones' : '';
+  showTab(pcTab);
 
   const matchList = document.getElementById('matches-list');
   if (!archive.length) {
@@ -1946,16 +1885,14 @@ function renderMatchItem(m, i, checkId, n) {
   // from=pp tells the match page it was opened here and not from the full
   // report, so its Back button comes back to this page.
   return `
-    <a class="mrow" href="${DUP_MATCH_URL.replace('__C__', checkId).replace('__R__', i + 1)}?from=pp">
-      <div>
-        <div class="pc sim-${simBand(s)}">${s === null ? '—' : s + '%'}</div>
-        <div class="rk">#${n + 1}</div>
+    <a class="pc-row" href="${DUP_MATCH_URL.replace('__C__', checkId).replace('__R__', i + 1)}?from=pp">
+      <div class="pc-what">
+        <b>${escapeHtml(m.title)}</b>
+        <small>${m.recommended ? `<span class="ty-tag">${escapeHtml((m.recommended.split(' — ')[1]) || 'This year')}</span> ${m.recommended.startsWith('Pending') ? 'Pending' : 'Recommended'} pre-proposal` : `${m.academic_year || 'N/A'}${m.program ? ' · ' + escapeHtml(m.program) : ''}`}</small>
+        ${why ? `<small class="wy" title="${escapeHtml(why)}">${escapeHtml(why)}</small>` : ''}
       </div>
-      <div>
-        <div class="t">${escapeHtml(m.title)}</div>
-        <div class="mt">${m.recommended ? `<span class="ty-tag">${escapeHtml((m.recommended.split(' — ')[1]) || 'This year')}</span> Recommended pre-proposal` : `${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}`}</div>
-        ${why ? `<div class="wy">${escapeHtml(why)}</div>` : ''}
-      </div>
+      <span class="band band-${simBand(s)}">${s === null ? 'Not scored' : s + '%'}</span>
+      <span class="pc-cmp">Compare</span>
     </a>`;
 }
 
@@ -1963,7 +1900,32 @@ let pendingRemoveId = null;
 
 let pendingClearCheck = false;
 
+// The two windows behind the header buttons. A confirm opened from inside
+// one would sit underneath it, so those close it first.
+function openDlg(id) {
+  const d = document.getElementById(id);
+  if (d && !d.open) d.showModal();
+}
+function closeDlgs() {
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+}
+document.querySelectorAll('.pc-dlg').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+
+// var, not let: the saved check is drawn before this line runs.
+var pcTab, pcCounts;
+function showTab(which) {
+  pcTab = which = which || 'ar';
+  const ty = which === 'ty';
+  document.getElementById('tab-ty').setAttribute('aria-selected', ty);
+  document.getElementById('tab-ar').setAttribute('aria-selected', !ty);
+  document.getElementById('ty-list').hidden = !ty;
+  document.getElementById('matches-list').hidden = ty;
+  document.getElementById('match-count').textContent = !pcCounts ? ''
+    : ty ? pcCounts.ty + ' recommended this year' : pcCounts.ar + ' archived matches';
+}
+
 function openRemoveConfirm(proposalId) {
+  closeDlgs();
   pendingRemoveId = proposalId;
   document.getElementById('pp-confirm-message').textContent = 'Remove this proposal? This cannot be undone.';
   document.getElementById('pp-confirm-modal').classList.add('show');
@@ -1976,6 +1938,7 @@ function openRemoveConfirm(proposalId) {
  * set aside by it - and the button sat one click away from doing that.
  */
 function confirmChooseTitle(id, title) {
+  closeDlgs();
   document.getElementById('pp-cc-title').textContent = title;
   document.getElementById('pp-cc-ok').onclick = function () {
     document.getElementById('choose-form-' + id).submit();

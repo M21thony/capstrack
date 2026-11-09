@@ -3,10 +3,12 @@
   $mScore = \App\Support\SimilarityBand::scoreOf($m);
   $why = $m['similarities'] ?? ($m['reason'] ?? null);
 @endphp
-<a class="rp-row" href="{{ route('student.duplication.similar', [$check->id, $i + 1]) }}" title="{{ $m['title'] ?? '' }}">
-  <span class="rp-rank"><b class="sim-{{ \App\Support\SimilarityBand::of($mScore) }}">{{ $mScore === null ? '—' : $mScore.'%' }}</b></span>
-  <span class="rp-what">
+<a class="pc-row" href="{{ route('student.duplication.similar', [$check->id, $i + 1]) }}" title="{{ $m['title'] ?? '' }}">
+  <div class="pc-what">
     <b>{{ $m['title'] ?? '' }}</b>
-    <small><span @if ($subClass) class="{{ $subClass }}" @endif>{{ $sub }}</span>@if ($why) &middot; {{ $why }}@endif</small>
-  </span>
+    <small @if ($subClass) class="{{ $subClass }}" @endif>{{ $sub }}</small>
+    @if ($why)<small class="wy">{{ $why }}</small>@endif
+  </div>
+  <span class="band band-{{ \App\Support\SimilarityBand::of($mScore) }}">{{ $mScore === null ? 'Not scored' : $mScore.'%' }}</span>
+  <span class="pc-cmp">Compare</span>
 </a>

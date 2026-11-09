@@ -153,8 +153,8 @@ class PendingTitlesInDuplicationTest extends TestCase
         $this->actingAs($leader)->get(route('student.duplication.report', $check->id))
             ->assertOk()
             ->assertSeeText('Pending this year: ClinicQueue (BSIT 3C) is 84% close to yours.')
-            ->assertSeeText('2 from this year')
-            ->assertSeeInOrder(['This School Year (2)', 'ClinicQueue', 'BSIT 3C · Pending, not yet decided', 'MediLine', 'BSIT 3B', 'Top 10 from the Archive', 'Archive One'])
+            ->assertSee('2 recommended this year')
+            ->assertSeeInOrder(['Recommended this year <span class="pc-n">2</span>', 'Top 10 archived', 'ClinicQueue', 'BSIT 3C · Pending, not yet decided', 'MediLine', 'BSIT 3B', 'Archive One'], false)
             ->assertDontSee('BSIT 3B · Pending');
     }
 
@@ -167,7 +167,6 @@ class PendingTitlesInDuplicationTest extends TestCase
         $page = fn () => $this->actingAs($leader)->get(route('student.duplication.similar', [$check->id, 1]))->assertOk();
 
         $page()->assertSee('This year 1 of 1')
-            ->assertSee('a title still pending this year')
             ->assertSee('Pending, not yet decided:', false)
             ->assertSee('Pending pre-proposal')
             ->assertSeeInOrder(['Patients wait in long lines.', 'An online queue.', 'One clinic.']);
