@@ -61,10 +61,6 @@ class GradesController extends Controller
         $submit = $request->boolean('submit');
         $open = collect(self::records($defense))->where('own', false);
 
-        if ($submit && ! $defense->signed_sheets_path) {
-            return response()->json(['success' => false, 'message' => 'Attach the signed grade sheets PDF first.'], 422);
-        }
-
         if ($submit && $open->contains(fn ($r) => ($totals[$r['id']] ?? null) === null)) {
             return response()->json(['success' => false, 'message' => 'Type every total before submitting.'], 422);
         }

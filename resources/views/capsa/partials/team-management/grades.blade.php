@@ -248,13 +248,12 @@
     return { d, totals, vals, typed, bad, live, changed, full: live && typed === d.open.length };
   };
   // A submitted row counts again only once a total is changed.
-  const ready = () => rows().map(read).filter(r => r.full && !r.bad && r.d.sheet && (r.changed || !r.d.submitted));
+  const ready = () => rows().map(read).filter(r => r.full && !r.bad && (r.changed || !r.d.submitted));
 
-  const noteEl = document.getElementById('gr-note'), review = document.getElementById('gr-review');
+  const review = document.getElementById('gr-review');
   function note() {
-    if (!noteEl) return;
-    const missing = rows().map(read).filter(r => r.full && !r.d.sheet).length, n = ready().length;
-    noteEl.textContent = missing ? plural(missing, 'team needs', 'teams need') + ' the signed PDF before submitting.' : '';
+    if (!review) return;
+    const n = ready().length;
     review.textContent = n ? 'Review ' + plural(n, 'result', 'results') : 'Review & submit';
     review.disabled = !n;
   }

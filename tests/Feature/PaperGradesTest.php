@@ -142,17 +142,13 @@ class PaperGradesTest extends TestCase
         return PanelGrade::where('defense_id', $this->defense->defense_id)->where('expert_id', $this->id($who))->first();
     }
 
-    public function test_capsa_saves_drafts_then_submits_once_the_signed_sheets_are_attached(): void
+    public function test_capsa_saves_drafts_then_submits_without_waiting_for_the_signed_sheets(): void
     {
         $this->encode(['chair' => 90, 'one' => 90])->assertOk()->assertJson(['message' => 'Drafts saved.']);
         $this->assertSame(PanelGrade::DRAFT, $this->gradeOf('one')->status);
         $this->assertNull($this->gradeOf('two'));
         $this->assertFalse($this->defense->fresh()->allGradesIn());
 
-        $this->encode(['chair' => 90, 'one' => 90, 'two' => 84], true)
-            ->assertStatus(422)->assertJson(['message' => 'Attach the signed grade sheets PDF first.']);
-
-        $this->attachSheet()->assertOk()->assertJson(['success' => true]);
         $this->encode(['chair' => 90, 'one' => 90], true)
             ->assertStatus(422)->assertJson(['message' => 'Type every total before submitting.']);
 
