@@ -300,9 +300,18 @@
               @if ($years)
                 <div class="ad-chart">
                   <div class="ad-axis"><span>{{ $step * 3 }}</span><span>{{ $step * 2 }}</span><span>{{ $step }}</span><span>0</span></div>
+                  @php
+                    // One point per school year, centred over its label below.
+                    $pts = collect($series)->values()->map(fn ($row, $i) => [round(($i + 0.5) / $years * 100, 2), round(100 - $row['value'] / ($step * 3) * 100, 2), $row['value']]);
+                    $line = $pts->map(fn ($p) => $p[0].','.$p[1])->implode(' ');
+                  @endphp
                   <div class="ad-plot">
-                    @foreach ($series as $row)
-                      <span class="ad-col"><b style="height:{{ round($row['value'] / ($step * 3) * 100, 2) }}%"><em>{{ $row['value'] }}</em></b></span>
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                      <polygon points="{{ $pts->first()[0] }},100 {{ $line }} {{ $pts->last()[0] }},100"/>
+                      <polyline points="{{ $line }}"/>
+                    </svg>
+                    @foreach ($pts as [$x, $y, $value])
+                      <i style="left:{{ $x }}%;bottom:{{ 100 - $y }}%"><em>{{ $value }}</em></i>
                     @endforeach
                   </div>
                   <div class="ad-months">@foreach ($series as $row)<span>{{ $row['label'] }}</span>@endforeach</div>

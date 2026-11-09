@@ -343,10 +343,11 @@ button.db-more:hover{text-decoration:underline}
 .ad-chart{display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:minmax(0,1fr) 22px;min-height:130px}
 .ad-axis{display:flex;flex-direction:column;justify-content:space-between;font-size:11px;color:var(--text2);margin:-6px 0}
 .ad-plot{position:relative;border-left:1px solid var(--bg4);border-bottom:1px solid var(--border);background:repeating-linear-gradient(180deg,var(--bg4) 0 1px,transparent 1px 33.33%)}
-.ad-plot{display:flex}
-.ad-col{flex:1;display:flex;align-items:flex-end;justify-content:center}
-.ad-col b{position:relative;width:min(56px,60%);background:var(--accent);border-radius:6px 6px 0 0}
-.ad-col em{position:absolute;bottom:100%;left:50%;transform:translate(-50%,-3px);font-style:normal;font-size:11px;font-weight:700;color:var(--text)}
+.ad-plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ad-plot polygon{fill:var(--accent);opacity:.15}
+.ad-plot polyline{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
+.ad-plot i{position:absolute;width:8px;height:8px;margin:0 0 -4px -4px;border-radius:50%;background:var(--accent);border:1.5px solid #fff}
+.ad-plot em{position:absolute;bottom:100%;left:50%;transform:translate(-50%,-3px);font-style:normal;font-size:11px;font-weight:700;color:var(--text)}
 .ad-months{grid-column:2;display:flex;align-items:flex-end;font-size:11px;color:var(--text2)}
 .ad-months span{flex:1;text-align:center}
 
