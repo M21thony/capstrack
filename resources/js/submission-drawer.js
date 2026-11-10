@@ -509,7 +509,7 @@ const initials = (name) => String(name || '?').replace(/^(Dr|Prof|Engr|Mr|Ms|Mrs
 function pill(p, { locked = false, toggle = false } = {}) {
   const on = locked || S.picked.has(p.role);
   const who = [p.name, p.note].filter(Boolean).join(' · ');
-  const inner = `<i class="up-av" aria-hidden="true">${esc(initials(p.name || p.label))}</i><span class="up-pill-t"><b>${esc(p.label)}</b>${who ? `<span>${esc(who)}</span>` : ''}</span>${locked ? `<span class="up-lock" title="Set by the last version">${svg('lock', 13)}</span>` : ''}`;
+  const inner = `<i class="up-av" aria-hidden="true">${esc(initials(p.name || p.label))}</i><span class="up-pill-t"><b>${esc(p.label)}</b>${who ? `<span>${esc(who)}</span>` : ''}</span>${locked ? `<span class="up-lock" title="${S.plan?.set && !S.plan.locked ? 'Set by your CaPSA' : 'Set by the last version'}">${svg('lock', 13)}</span>` : ''}`;
   if (toggle && p.available) {
     return `<button type="button" class="up-pill${on ? ' on' : ' off'}" data-act="toggle" data-role="${p.role}" aria-pressed="${on}">${inner}</button>`;
   }
@@ -522,7 +522,7 @@ function goesToHtml() {
   if (!plan) return '';
   const people = plan.people || [];
   const paper = !!plan.item?.paper;
-  const locked = plan.locked || paper;
+  const locked = plan.locked || paper || !!plan.set;
   let right = '';
   if (plan.locked && !paper && plan.version > 1) right = `<span class="up-muted">same as version ${plan.version - 1}</span>`;
 
@@ -697,7 +697,7 @@ function bodyAndFoot() {
 
 /** Why Send is greyed out, when the file itself is fine. */
 function whyNot() {
-  if (canSend() || !S.plan || S.checking || S.broken || S.same || S.plan.item?.paper || S.plan.locked) return '';
+  if (canSend() || !S.plan || S.checking || S.broken || S.same || S.plan.item?.paper || S.plan.locked || S.plan.set) return '';
   return '<span class="up-why">Choose who it goes to.</span>';
 }
 

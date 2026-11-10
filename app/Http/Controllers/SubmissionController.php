@@ -406,6 +406,8 @@ class SubmissionController extends Controller
             'round' => $version > 1 ? self::ordinal($version - 1).' revision' : null,
             'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', ...self::DIAGRAM_TYPES],
             'locked' => $plan['locked'],
+            // The CaPSA chose who gets this line, so the student has nothing to pick.
+            'set' => (bool) $item?->sendsTo(),
             'people' => array_map(fn ($p) => array_diff_key($p, ['expert_ids' => true]), $plan['people']),
             'remark' => ($last ?? $revises) && ! $isPaper ? RevisionRemark::on($last ?? $revises, 160) : null,
             'lines' => $item || $revises ? [] : $lines->reject(fn ($l) => $l->locked)->values()->map(fn ($l) => [

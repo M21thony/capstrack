@@ -106,6 +106,7 @@ class MilestonePagesTest extends TestCase
             ->assertSee('Instructions')
             ->assertSee('Upload file')
             ->assertSee('Which defense')
+            ->assertSee('Send to')->assertSee('name="recipients" value="grammarian"', false)
             ->assertSee('In <b>Chapter 1-3 Submission</b>', false);
 
         $this->get(route('capsa.team_management.milestones.requirements.edit', $this->form))

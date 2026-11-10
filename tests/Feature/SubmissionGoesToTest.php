@@ -347,6 +347,10 @@ class SubmissionGoesToTest extends TestCase
             ->update(['review_status' => CapstoneDocumentReview::REVIEWED, 'verdict' => $verdict, 'verdict_at' => now()]);
         $state = fn () => $this->progressOf($this->checklist, $this->team, $line);
 
+        // The student is shown who it goes to, with nothing to pick.
+        $this->actingAs($this->student)->getJson(route('student.submission.plan', ['item' => $line->id]))
+            ->assertOk()->assertJsonPath('set', true)->assertJsonPath('people.0.on', true)->assertJsonPath('people.1.on', true);
+
         $this->send($line, [])->assertOk();
         $this->assertSame(['adviser:'.$this->experts['adviser']->expert_id, 'grammarian:'.$this->experts['grammarian']->expert_id], $this->reviewsOfLatest());
         $this->assertSame('adviser', $state()->waiting_on);
