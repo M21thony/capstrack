@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import FigureCrop from "./FigureCrop";
 import { DIAGRAM_LABEL, isFigureRemark, shapeLabel } from "./figures";
+import { readOutline } from "./outline.js";
 
 /*
  * The pieces the reviewer's annotator and the student's Review Viewer share:
@@ -56,6 +57,8 @@ const PATHS = {
   box: <rect x="4" y="5" width="16" height="14" rx="1" strokeDasharray="3 2.5" />,
   pin: (<><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z" /><circle cx="12" cy="10" r="2" /></>),
   shape: (<><rect x="3" y="4" width="8" height="6" rx="1" /><rect x="13" y="14" width="8" height="6" rx="1" /><path d="M7 10v7h6" /></>),
+  pages: (<><rect x="5" y="3" width="14" height="18" rx="1.5" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="9" y1="12" x2="15" y2="12" /></>),
+  list: (<><line x1="9" y1="6" x2="20" y2="6" /><line x1="9" y1="12" x2="20" y2="12" /><line x1="9" y1="18" x2="20" y2="18" /><line x1="4" y1="6" x2="4.1" y2="6" /><line x1="4" y1="12" x2="4.1" y2="12" /><line x1="4" y1="18" x2="4.1" y2="18" /></>),
 };
 export function Icon({ name }) {
   return (
@@ -599,11 +602,50 @@ export function RemarksPanel({
  * The page strip: one small page per page, with how many remarks are on it.
  * Diagram pages, from firstDiagramPage on, sit under a "Diagrams" divider.
  */
-export function PageStrip({ numPages, currentPage, counts, onGo, firstDiagramPage = null }) {
+function useOutline(pdf) {
+  const [outline, setOutline] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    setOutline([]);
+    if (pdf?.getOutline) readOutline(pdf).then((flat) => { if (alive) setOutline(flat); }).catch(() => {});
+    return () => { alive = false; };
+  }, [pdf]);
+  return outline;
+}
+
+export function PageStrip({ numPages, currentPage, counts, onGo, firstDiagramPage = null, pdf = null }) {
+  const outline = useOutline(pdf);
+  const [tab, setTab] = useState("pages");
+  const [open, setOpen] = useState(() => new Set());
   if (!numPages) return <nav className="rr-strip" aria-label="Pages" />;
+  const sections = tab === "sections" && outline.length > 0;
+  const shown = sections ? outline.filter((it) => it.path.every((p) => open.has(p))) : [];
+  const here = shown.findLast((it) => it.page && it.page <= currentPage);
+  const toggle = (id) => setOpen((prev) => { const next = new Set(prev); if (!next.delete(id)) next.add(id); return next; });
   return (
-    <nav className="rr-strip" aria-label="Pages">
-      {Array.from({ length: numPages }, (_, i) => {
+    <nav className={`rr-strip${sections ? " wide" : ""}`} aria-label={sections ? "Sections" : "Pages"}>
+      {outline.length > 0 && (
+        <div className="rr-strip-tabs">
+          <button type="button" aria-pressed={!sections} aria-label="Pages" title="Pages" onClick={() => setTab("pages")}><Icon name="pages" /></button>
+          <button type="button" aria-pressed={sections} aria-label="Sections" title="Sections" onClick={() => setTab("sections")}><Icon name="list" /></button>
+        </div>
+      )}
+      {sections && (
+        <ul className="rr-outline">
+          {shown.map((it) => (
+            <li key={it.id} style={{ paddingLeft: Math.min(it.path.length, 3) * 12 }}>
+              {it.kids
+                ? <button type="button" className="rr-ol-fold" aria-expanded={open.has(it.id)} aria-label={`${open.has(it.id) ? "Hide" : "Show"} what is under ${it.title}`} onClick={() => toggle(it.id)}><Icon name={open.has(it.id) ? "down" : "right"} /></button>
+                : <span className="rr-ol-fold" />}
+              <button type="button" className="rr-ol-go" aria-current={it === here} disabled={!it.page} onClick={() => onGo(it.page)}>
+                <span>{it.title}</span>
+                <span className="rr-ol-pn">{it.page}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!sections && Array.from({ length: numPages }, (_, i) => {
         const n = i + 1;
         const c = counts[n] || 0;
         const isDiagram = firstDiagramPage != null && n >= firstDiagramPage;

@@ -675,7 +675,7 @@ function PDFChecker({
 
   return (
     <div className="rr-work">
-      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} firstDiagramPage={firstDiagramPage} />
+      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} firstDiagramPage={firstDiagramPage} pdf={pdf} />
 
       <section className="rr-viewer" aria-label="Document">
         <div className="rr-hint">{showChanges && figureDiff.status === "loading" ? figureDiff.note || "Comparing the figures…" : hint}</div>
