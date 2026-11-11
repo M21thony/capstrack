@@ -3,6 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\CapstoneExpert;
+use App\Models\Student;
+use App\Models\StudentRoster;
+use App\Models\Term;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -21,6 +24,8 @@ class StartingAccountsSeeder extends Seeder
 
     private const CAPSA = 'markanthonybalilla21@gmail.com';
 
+    private const STUDENT = 'mabalilla@my.cspc.edu.ph';
+
     public function run(): void
     {
         // No migration puts the roles in, and a CaPSA/TSA is a role.
@@ -34,6 +39,21 @@ class StartingAccountsSeeder extends Seeder
             DB::table('expert_roles')->insertOrIgnore([
                 'expert_id' => $capsa->expert_id,
                 'role_id' => DB::table('roles')->where('role_name', CapstoneExpert::CAPSA_ROLE)->value('role_id'),
+            ]);
+        }
+
+        // A student gets in by being on the class list; the account itself is
+        // made on their first sign-in. Once they have signed in, the list is
+        // left alone, so a CaPSA/TSA taking them off it is not undone here.
+        $onList = fn (string $model) => $model::whereRaw('LOWER(email) = ?', [self::STUDENT])->exists();
+
+        if (! $onList(StudentRoster::class) && ! $onList(Student::class)) {
+            StudentRoster::create([
+                'email' => self::STUDENT,
+                'name' => self::STUDENT,
+                'program' => 'BSIT',
+                'section' => '3rd · B',
+                'school_year' => Term::currentSchoolYear(),
             ]);
         }
     }

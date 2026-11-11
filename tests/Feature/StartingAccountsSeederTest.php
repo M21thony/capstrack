@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\Student;
+use App\Models\StudentRoster;
 use Database\Seeders\StartingAccountsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -34,5 +36,23 @@ class StartingAccountsSeederTest extends TestCase
         $this->assertSame(2, CapstoneExpert::withTrashed()->count());
         $this->assertSame('Mark', $capsa->fresh()->first_name);
         $this->assertNull(CapstoneExpert::where('email', 'markanthonybalilla@gmail.com')->first());
+    }
+
+    public function test_the_starting_student_is_on_the_class_list_until_a_capsa_takes_them_off(): void
+    {
+        $this->seed(StartingAccountsSeeder::class);
+        $this->seed(StartingAccountsSeeder::class);
+
+        $listed = StudentRoster::where('email', 'mabalilla@my.cspc.edu.ph')->get();
+        $this->assertCount(1, $listed);
+        $this->assertSame('BSIT', $listed[0]->program);
+
+        // They signed in once, then were taken off the list: a restart must not put them back.
+        Student::factory()->create(['email' => 'mabalilla@my.cspc.edu.ph']);
+        $listed[0]->delete();
+
+        $this->seed(StartingAccountsSeeder::class);
+
+        $this->assertSame(0, StudentRoster::count());
     }
 }
