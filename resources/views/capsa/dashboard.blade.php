@@ -68,7 +68,7 @@
           <div class="db-banner-text">
             <div>
               <h1>Welcome back, <span>{{ $viewer->name }}!</span></h1>
-              <p>CaPSA · {{ implode(' · ', $viewer->handledPrograms()) }} · {{ $c['sections'] }} {{ \Illuminate\Support\Str::plural('section', $c['sections']) }}</p>
+              <p>CaPSA/TSA · {{ implode(' · ', $viewer->handledPrograms()) }} · {{ $c['sections'] }} {{ \Illuminate\Support\Str::plural('section', $c['sections']) }}</p>
             </div>
           </div>
           <div class="db-banner-photo" aria-hidden="true"></div>
@@ -247,7 +247,7 @@
         $many = fn (int $n, string $word) => $n.' '.\Illuminate\Support\Str::plural($word, $n);
         $chips = array_values(array_filter([
             ! $admin['schoolYear'] ? ['red', 'i-cal', 'School year', 'is not set', route('admin.settings')] : null,
-            $uncovered ? ['red', 'i-team-solid', $many($uncovered, 'Section'), 'with no CaPSA', route('admin.experts')] : null,
+            $uncovered ? ['red', 'i-team-solid', $many($uncovered, 'Section'), 'with no CaPSA/TSA', route('admin.experts')] : null,
             $admin['noSections'] ? ['orange', 'i-book-open', $many($admin['noSections'], 'Program'), 'with no sections', route('admin.settings')] : null,
             $a['archive']['missing'] ? ['purple', 'i-cloud', $many($a['archive']['missing'], 'Year'), 'with no uploads', route('admin.archive')] : null,
         ]));
@@ -269,11 +269,11 @@
           </a>
           <a class="db-tile tile-green" href="{{ route('admin.experts') }}">
             <span class="db-ico t-green"><svg class="i"><use href="#i-shield"/></svg></span>
-            <b>{{ $admin['capsas'] }}</b><span class="ad-cap" style="text-transform:none">CAPSAs</span><span class="ad-sub">Running the subject</span>
+            <b>{{ $admin['capsas'] }}</b><span class="ad-cap" style="text-transform:none">CaPSA/TSAs</span><span class="ad-sub">Running the subject</span>
           </a>
           <a class="db-tile tile-red" href="{{ route('admin.experts') }}">
             <span class="db-ico t-red"><svg class="i"><use href="#i-doc"/></svg></span>
-            <b>{{ $uncovered }}</b><span class="ad-cap">Sections without<br>a CaPSA</span>
+            <b>{{ $uncovered }}</b><span class="ad-cap">Sections without<br>a CaPSA/TSA</span>
           </a>
           <a class="db-tile tile-gold" href="{{ route('admin.archive') }}">
             <span class="db-ico t-gold"><svg class="i"><use href="#i-box"/></svg></span>
@@ -337,11 +337,14 @@
               </div>
               <div class="ad-people">
                 <svg viewBox="0 0 120 76" aria-hidden="true">
-                  <path d="M28 62a32 32 0 0 1 64 0Z" fill="#f3e3a6"/>
-                  <circle cx="30" cy="34" r="9" fill="#4a5060"/><path d="M12 76c0-16 8-26 18-26s18 10 18 26Z" fill="#4a5060"/>
-                  <circle cx="90" cy="34" r="9" fill="#4a5060"/><path d="M72 76c0-16 8-26 18-26s18 10 18 26Z" fill="#4a5060"/>
-                  <circle cx="68" cy="26" r="11" fill="#18191f"/><path d="M44 76c0-22 10-36 24-36s24 14 24 36Z" fill="#18191f"/>
-                  <circle cx="50" cy="40" r="9" fill="#c9a82c"/><path d="M32 76c0-14 8-24 18-24s18 10 18 24Z" fill="#c9a82c"/>
+                  <path d="M14 14l2 5 5 2-5 2-2 5-2-5-5-2 5-2Z M106 24l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5Z" fill="#c9a82c"/>
+                  <path d="M12 70c18-4 36-4 48 4 12-8 30-8 48-4v4c-18-4-36-4-48 2-12-6-30-6-48-2Z" fill="#4a5060"/>
+                  <path d="M60 72c-12-8-30-8-44-4V40c14-4 32-4 44 4Z" fill="#f3e3a6"/>
+                  <path d="M60 72c12-8 30-8 44-4V40c-14-4-32-4-44 4Z" fill="#c9a82c"/>
+                  <path d="M24 50c10-2 20-2 28 2M24 58c10-2 20-2 28 2" stroke="#c9a82c" stroke-width="2" fill="none" stroke-linecap="round"/>
+                  <path d="M42 19v9q18 8 36 0v-9l-18 7Z" fill="#2b2d36"/>
+                  <path d="M60 2l34 12-34 12-34-12Z" fill="#18191f"/>
+                  <path d="M60 14l28 4v12" stroke="#c9a82c" stroke-width="1.5" fill="none"/><circle cx="88" cy="32" r="3" fill="#c9a82c"/><circle cx="60" cy="14" r="2" fill="#c9a82c"/>
                 </svg>
                 Building a stronger academic community.
               </div>
@@ -379,7 +382,7 @@
             </div>
             <div class="ad-money">
               <div>
-                <div><span class="ad-amount">₱{{ number_format($fee['received'], 2) }}</span><span class="ad-note">Fees Received<br>from CaPSAs</span></div>
+                <div><span class="ad-amount">₱{{ number_format($fee['received'], 2) }}</span><span class="ad-note">Fees Received<br>from CaPSA/TSAs</span></div>
               </div>
               <div class="ad-receipts">
                 <div class="ad-receipt"><span class="db-ico t-green"><svg class="i" style="fill:none"><use href="#i-check"/></svg></span><span>Sections Sent<b>{{ $fee['sent'] }}</b></span></div>
