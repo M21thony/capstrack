@@ -8,6 +8,7 @@ public/hot
 bootstrap/cache/*.php
 .env
 .env.*
+storage/app/*
 storage/logs/*
 storage/framework/cache/*
 storage/framework/sessions/*
