@@ -682,6 +682,7 @@ const MODES = [
 
 export function ReaderTools({
   currentPage, numPages, zoom, onGo, onZoom, mode = null, onMode = null, shapes = false, before = null, beforeLabel = "", onBefore = null,
+  real = null, onReal = null,
 }) {
   return (
     <div className="rr-tools" role="toolbar" aria-label="Pages">
@@ -707,6 +708,9 @@ export function ReaderTools({
       <span className="rr-pg">{Math.round(zoom * 100)}%</span>
       <button type="button" className="rr-btn icon ghost" aria-label="Zoom in" disabled={zoom >= 2} onClick={() => onZoom(Math.min(2, +(zoom + 0.25).toFixed(2)))}><Icon name="plus" /></button>
       <button type="button" className="rr-btn icon ghost" aria-label="Fit page width" onClick={() => onZoom(1)}><Icon name="fit" /></button>
+      {real !== null && (
+        <button type="button" className={`rr-btn sm ghost${real ? " on" : ""}`} aria-pressed={real} title="Show big diagrams as large as they were drawn" onClick={onReal}>Real size</button>
+      )}
     </div>
   );
 }
@@ -719,7 +723,9 @@ export function ReaderTools({
 export function usePageColumn(numPages) {
   const canvasRef = useRef(null);
   const pageRefs = useRef({});
-  const [baseWidth, setBaseWidth] = useState(760);
+  // How wide the window onto the pages is; a page is at most 900 of it.
+  const [room, setRoom] = useState(808);
+  const baseWidth = Math.min(900, Math.max(360, room - 48));
   const [zoom, setZoomState] = useState(1);
   const [visible, setVisible] = useState(() => new Set([1, 2, 3]));
   const [currentPage, setCurrentPage] = useState(1);
@@ -728,7 +734,7 @@ export function usePageColumn(numPages) {
   useLayoutEffect(() => {
     const el = canvasRef.current;
     if (!el) return undefined;
-    const observer = new ResizeObserver(() => setBaseWidth(Math.min(900, Math.max(360, el.clientWidth - 48))));
+    const observer = new ResizeObserver(() => setRoom(el.clientWidth));
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -769,7 +775,11 @@ export function usePageColumn(numPages) {
     const root = canvasRef.current;
     if (!el || !root) return;
     const top = el.offsetTop + Number(rect?.top_position || 0) * el.offsetHeight - root.clientHeight / 3;
-    root.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+    // Sideways too, on a page wider than the window (a diagram at its real size): the spot goes to the middle.
+    const left = rect?.left_position != null && el.offsetWidth > root.clientWidth
+      ? el.offsetLeft + (Number(rect.left_position) + Number(rect.highlight_width || 0) / 2) * el.offsetWidth - root.clientWidth / 2
+      : root.scrollLeft;
+    root.scrollTo({ top, left, behavior: smooth ? "smooth" : "auto" });
   };
 
   const setZoom = (z) => { keepPage.current = currentPage; setZoomState(z); };
@@ -777,7 +787,7 @@ export function usePageColumn(numPages) {
     if (keepPage.current != null) { goToPage(keepPage.current, false); keepPage.current = null; }
   }, [zoom]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { canvasRef, pageRefs, pageWidth: Math.round(baseWidth * zoom), zoom, setZoom, visible, currentPage, onScroll, goToPage, goToRect };
+  return { canvasRef, pageRefs, room, baseWidth, pageWidth: Math.round(baseWidth * zoom), zoom, setZoom, visible, currentPage, onScroll, goToPage, goToRect };
 }
 
 export function Toast({ toast, onClose }) {

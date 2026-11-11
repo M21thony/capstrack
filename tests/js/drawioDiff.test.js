@@ -2,7 +2,7 @@
 // page is, and how a shape is recoloured. Run with `npm run test:js`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cellAt, comparePages, followShapes, pairPages, shapeRects, shapeRole, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
+import { cellAt, comparePages, diagramChanges, followShapes, pairPages, shapeRects, shapeRole, withStyle } from "../../resources/js/component/reader/drawioDiff.js";
 
 const page = (file, name, index, words = "") => ({ file, name, index, words: new Set(words.split(" ").filter(Boolean)) });
 
@@ -111,6 +111,26 @@ test("a shape remark follows its cell: unchanged, renamed, or removed", () => {
   assert.equal(followShapes(ref("c"), compare).status, "removed");
   assert.equal(followShapes(ref("a", "c"), compare).status, "changed");
   assert.equal(followShapes(ref("gone"), compare).status, "removed");
+});
+
+test("the diagram pages' changes are listed in reading order, a removed one on the earlier picture", () => {
+  const cells = (list) => [cell({ id: "1" }), ...list.map(([id, value, x, y]) => cell({ id, vertex: "1", parent: "1", value }, { x, y, width: 80, height: 40 }))];
+  const picture = (list) => ({ width: 1000, height: 1000, targets: list.map(([id, , x, y]) => ({ id, kind: "vertex", box: [x, y, x + 80, y + 40], labels: [] })) });
+  const before = [["a", "Login", 0, 0], ["b", "Dashboard", 0, 600], ["c", "Logout", 600, 0]];
+  const after = [["a", "Login", 0, 0], ["b", "Home", 0, 600], ["d", "Refund", 600, 600]];
+  const pages = [
+    { name: "Flow", plain: picture(after), marked: picture(after), oldMarked: picture(before), compare: comparePages({ els: cells(before) }, { els: cells(after) }) },
+    { name: "New page", plain: picture(after), marked: picture(after) },
+    { name: "Same", plain: picture(after), marked: null },
+  ];
+  const list = diagramChanges(pages, 5);
+  assert.deepEqual(list.map((c) => [c.kind, c.page, c.earlier]), [
+    ["removed", 5, true], ["changed", 5, false], ["added", 5, false], ["added", 6, false],
+  ]);
+  assert.equal(new Set(list.map((c) => c.id)).size, 4);
+  // The box around a change is where its shape sits on the picture.
+  assert.ok(Math.abs(list[2].rect.left_position - 0.6) < 0.05 && Math.abs(list[2].rect.top_position - 0.6) < 0.05);
+  assert.equal(list[3].rect, null);
 });
 
 test("a bent arrow is outlined along its legs, not by one box over what it goes around", () => {

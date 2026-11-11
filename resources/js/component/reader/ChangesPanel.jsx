@@ -3,7 +3,7 @@ import { pdfjs } from "react-pdf";
 import { Icon, KIND_LABEL, PagedList, figureTitle, kindOf } from "./Reader";
 import { regionPixels } from "./FigureCrop";
 import { boundsOf, isFigureRemark, marksOf, remarkFromServer } from "./figures";
-import { followShapes } from "./drawioDiff";
+import { diagramChanges, followShapes } from "./drawioDiff";
 import { shapeCell, shapeRects } from "./diagramPages";
 import { PICTURE_CHANGED, findPicture, greyOf, labelsAt, pictureDifference } from "./revisionCheck";
 import { compareFigures, highlighted, outlined } from "./figureDiff";
@@ -385,7 +385,7 @@ function Verdict({ status, onSet, round }) {
   );
 }
 
-const KIND = { added: ["Added", "add"], removed: ["Removed", "del"], reworded: ["Reworded", "mod"] };
+const KIND = { added: ["Added", "add"], removed: ["Removed", "del"], reworded: ["Reworded", "mod"], changed: ["Changed", "mod"] };
 
 /**
  * What changed since an earlier version: the passages that differ, and each
@@ -395,11 +395,12 @@ const KIND = { added: ["Added", "add"], removed: ["Removed", "del"], reworded: [
 export default function ChangesPanel({
   top, base, diff, selectedChange, onOpenChange, onOpenRemark,
   pdf = null, revisionStatus = {}, onRevision = () => {}, onOpenRevision = () => {},
-  diagramPages = [], firstDiagramPage = 1, shownShapeId = null,
+  diagramPages = [], firstDiagramPage = 1, shownShapeId = null, onOpenDiagramChange = () => {},
   figureDiff = { status: "idle", figures: [], note: "" }, onWantFigures = () => {},
 }) {
   const ready = diff.status === "ready";
-  const changes = ready ? diff.changes : [];
+  // The words that changed, then what changed in the diagrams after them.
+  const changes = [...(ready ? diff.changes : []), ...diagramChanges(diagramPages, firstDiagramPage)];
   // Where the reviewer, or the picture search, put a remark instead.
   const [moved, setMoved] = useState({});
   const shapes = useShapeRevision(base, diagramPages, firstDiagramPage);
@@ -522,30 +523,37 @@ export default function ChangesPanel({
                 items={changes}
                 keyOf={(c) => c.id}
                 noun="change"
-                focusKey={selectedChange}
+                focusKey={selectedChange ?? shownShapeId}
                 empty={<><b>No text changed</b><span>The words match {base?.round}. Formatting and pictures are not compared.</span></>}
-                renderItem={(c, measuring) => (
-                  <div
-                    className="rr-card text"
-                    role={measuring ? undefined : "button"}
-                    tabIndex={measuring ? -1 : 0}
-                    aria-current={selectedChange === c.id}
-                    onClick={() => onOpenChange(c)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenChange(c); } }}
-                  >
-                    <div className="rr-card-r1">
-                      <span className={`rr-tag ${KIND[c.kind][1]}`}>{KIND[c.kind][0]}</span>
-                      <span className="rr-where">p.{c.page}</span>
+                renderItem={(c, measuring) => {
+                  // A diagram's change says what changed in its own words, and opens on the drawing.
+                  const open = () => (c.said ? onOpenDiagramChange(c) : onOpenChange(c));
+                  return (
+                    <div
+                      className="rr-card text"
+                      role={measuring ? undefined : "button"}
+                      tabIndex={measuring ? -1 : 0}
+                      aria-current={(c.said ? shownShapeId : selectedChange) === c.id}
+                      onClick={open}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }}
+                    >
+                      <div className="rr-card-r1">
+                        <span className={`rr-tag ${KIND[c.kind][1]}`}>{KIND[c.kind][0]}</span>
+                        {c.said && <span className="rr-tag fig">Diagram</span>}
+                        <span className="rr-where">p.{c.page}</span>
+                      </div>
+                      {c.said ? <div className="rr-t">{c.said.join("\n")}</div> : (
+                        <div className="rr-diffline">
+                          {c.before && <>…{c.before} </>}
+                          {c.oldText && <del>{c.oldText}</del>}
+                          {c.oldText && c.newText && " "}
+                          {c.newText && <ins>{c.newText}</ins>}
+                          {c.after && <> {c.after}…</>}
+                        </div>
+                      )}
                     </div>
-                    <div className="rr-diffline">
-                      {c.before && <>…{c.before} </>}
-                      {c.oldText && <del>{c.oldText}</del>}
-                      {c.oldText && c.newText && " "}
-                      {c.newText && <ins>{c.newText}</ins>}
-                      {c.after && <> {c.after}…</>}
-                    </div>
-                  </div>
-                )}
+                  );
+                }}
               />
             ) : (
               <>

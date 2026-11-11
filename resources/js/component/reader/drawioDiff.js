@@ -1,4 +1,5 @@
 import { editScript } from "./versionDiff.js";
+import { boundsOf } from "./figures.js";
 
 /*
  * Exact compare of a diagram from the draw.io files the team sent with the
@@ -429,4 +430,28 @@ export function shapeRects(target, pic, pad = 4) {
     });
   });
   return [...legs, ...labels];
+}
+
+/**
+ * The diagram pages' changes as a list, each page's in reading order:
+ * [{ id, kind: added | removed | changed, page, said, earlier, rects, rect }].
+ * rects outline the changed shapes on the page's picture and rect is the box
+ * around them; earlier says they are on the earlier version's picture, as
+ * nothing of the change is left on this one. first is the first diagram page's number.
+ */
+export function diagramChanges(pages, first = 1) {
+  return pages.flatMap((p, at) => {
+    const page = first + at;
+    // No earlier page to set it against: the whole page is new.
+    if (!p.compare) return p.marked ? [{ id: `g${at}`, kind: "added", page, said: [p.name || p.file], earlier: false, rects: [], rect: null }] : [];
+    return p.compare.spots.map((s, i) => {
+      const now = s.items.filter((x) => x.neu);
+      const earlier = !now.length;
+      const pic = earlier ? p.oldMarked : p.marked || p.plain;
+      const ids = new Set((earlier ? s.items.map((x) => x.old) : now.map((x) => x.neu)).map((c) => c.id));
+      const rects = pic.targets.filter((t) => ids.has(t.id)).flatMap((t) => shapeRects(t, pic));
+      const kind = s.items.every((x) => x.what === "added") ? "added" : s.items.every((x) => x.what === "removed") ? "removed" : "changed";
+      return { id: `g${at}-${i}`, kind, page, said: s.said, earlier, rects, rect: rects.length ? boundsOf(rects) : null };
+    }).sort((a, b) => (a.rect?.top_position ?? 0) - (b.rect?.top_position ?? 0) || (a.rect?.left_position ?? 0) - (b.rect?.left_position ?? 0));
+  });
 }

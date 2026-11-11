@@ -281,6 +281,19 @@ function PDFChecker({
   const [shownShape, setShownShape] = useState(null);
   // Diagram pages show the earlier version's drawing instead (V).
   const [beforeView, setBeforeView] = useState(false);
+  // Big diagrams as large as they were drawn, instead of squeezed to the page's width.
+  const [realSize, setRealSize] = useState(false);
+  const canReal = drawings.pages.some((p) => p.plain.width > col.baseWidth);
+  // A diagram's change is outlined on its drawing, at a size it can be read; one that was removed, on the earlier version's. Clicking it again hides it.
+  const openDiagramChange = (c) => {
+    const hide = shownShape?.id === c.id;
+    setShownShape(hide ? null : { id: c.id, page: c.page, rects: c.rects, before: c.earlier });
+    setBeforeView(!hide && c.earlier);
+    if (hide) return;
+    setChangeId(null);
+    if (canReal) setRealSize(true);
+    requestAnimationFrame(() => (c.rect ? col.goToRect(c.page, c.rect) : col.goToPage(c.page)));
+  };
   const hasBefore = drawings.pages.some((p) => p.oldMarked);
   const drawing = useRef(null);
   const [popPos, setPopPos] = useState(null);
@@ -703,6 +716,12 @@ function PDFChecker({
                 const before = Boolean(beforeView && drawing?.oldMarked);
                 // A shape remark is outlined from its cells on the drawing, not from the outline it was saved with.
                 const pic = drawing && shownPicture(drawing, showChanges);
+                // At its real size a big diagram is as wide as it was drawn, and the pages scroll sideways under it; a page that fits the window stays in its middle.
+                const drawn = drawing && shownPicture(drawing, showChanges, beforeView);
+                const width = realSize && drawn?.width > col.baseWidth ? Math.round(drawn.width * col.zoom) : col.pageWidth;
+                // Measured from inside the window's 24px edge, which is where a pinned page is held from.
+    const side = Math.max(0, (col.room - width) / 2 - 24);
+    const middle = realSize && width < col.room ? { position: "sticky", left: side, right: side } : null;
                 const outline = (c) => c.shape_ref.cells.flatMap((cell) => { const t = pic.targets.find((x) => x.id === cell.id); return t ? shapeRects(t, pic) : []; });
                 const pageRemarks = before ? [] : comments.filter((c) => Number(c.page_number) === n)
                   .map((c) => (pic && c.type === "shape" && c.shape_ref && outline(c).length ? { ...c, highlightRects: outline(c) } : c));
@@ -713,7 +732,7 @@ function PDFChecker({
                     data-page={n}
                     className={`rr-page${mode !== "text" ? " marking" : ""}${mode === "pin" ? " pinning" : ""}${mode === "shape" && drawing ? " shaping" : ""}${n === flashPage ? " flash" : ""}`}
                     onAnimationEnd={(e) => { if (e.animationName === "rr-flash") setFlashPage(null); }}
-                    style={{ width: col.pageWidth, minHeight: drawing || (rendered.has(n) && col.visible.has(n)) ? undefined : Math.round((col.pageWidth * 11) / 8.5) }}
+                    style={{ width, ...middle, minHeight: drawing || (rendered.has(n) && col.visible.has(n)) ? undefined : Math.round((col.pageWidth * 11) / 8.5) }}
                     onPointerDown={(e) => onMarkDown(e, n)}
                     onPointerMove={(e) => onMarkMove(e, n)}
                     onPointerLeave={() => setHoverShape(null)}
@@ -851,7 +870,8 @@ function PDFChecker({
           )}
         </div>
         <ReaderTools currentPage={col.currentPage} numPages={totalPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} mode={mode} onMode={changeMode} shapes={drawings.pages.length > 0}
-          before={hasBefore ? beforeView : null} beforeLabel={base?.round || "Earlier version"} onBefore={() => setBeforeView((v) => !v)} />
+          before={hasBefore ? beforeView : null} beforeLabel={base?.round || "Earlier version"} onBefore={() => setBeforeView((v) => !v)}
+          real={canReal ? realSize : null} onReal={() => { setRealSize((v) => !v); requestAnimationFrame(() => col.goToPage(col.currentPage, false)); }} />
       </section>
 
       {base && tab === "changes" ? (
@@ -870,6 +890,7 @@ function PDFChecker({
           diagramPages={drawings.pages}
           firstDiagramPage={(numPages ?? 0) + 1}
           shownShapeId={shownShape?.id}
+          onOpenDiagramChange={openDiagramChange}
           onOpenRevision={(r) => {
             // A card outlines its remark where it is now, and goes there; clicking it again hides it.
             const hide = shownShape?.id === r.id;
