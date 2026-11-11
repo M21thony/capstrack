@@ -125,7 +125,7 @@ function StudentPdfViewer({
 
   return (
     <div className="rr-work">
-      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} />
+      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} pdf={pdf} />
       <section className="rr-viewer" aria-label="Your document with the reviewer's remarks">
         <div className="rr-hint">Click a highlight or its number to see the remark</div>
         <div className="rr-canvas" ref={col.canvasRef} onScroll={col.onScroll}>

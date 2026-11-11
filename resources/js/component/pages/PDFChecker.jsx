@@ -713,7 +713,7 @@ function PDFChecker({
                     data-page={n}
                     className={`rr-page${mode !== "text" ? " marking" : ""}${mode === "pin" ? " pinning" : ""}${mode === "shape" && drawing ? " shaping" : ""}${n === flashPage ? " flash" : ""}`}
                     onAnimationEnd={(e) => { if (e.animationName === "rr-flash") setFlashPage(null); }}
-                    style={{ width: col.pageWidth, minHeight: drawing || rendered.has(n) ? undefined : Math.round((col.pageWidth * 11) / 8.5) }}
+                    style={{ width: col.pageWidth, minHeight: drawing || (rendered.has(n) && col.visible.has(n)) ? undefined : Math.round((col.pageWidth * 11) / 8.5) }}
                     onPointerDown={(e) => onMarkDown(e, n)}
                     onPointerMove={(e) => onMarkMove(e, n)}
                     onPointerLeave={() => setHoverShape(null)}
