@@ -90,9 +90,9 @@
         <span class="tm-count">{{ $teamSize }} / {{ $memberCount }}{{ $seatsLeft === 0 ? ' · Full' : '' }}</span>
       </div>
       @if ($asksCapsaToLeave)
-        <button type="button" class="tm-leave" @if ($myLeaveRequest) disabled title="Your request is waiting on your CaPSA" @else onclick="openCapsaLeaveModal('leave')" aria-haspopup="dialog" @endif>
+        <button type="button" class="tm-leave" @if ($myLeaveRequest) disabled title="Your request is waiting on your CaPSA/TSA" @else onclick="openCapsaLeaveModal('leave')" aria-haspopup="dialog" @endif>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
-          {{ $myLeaveRequest ? 'Leave request with CaPSA' : 'Ask CaPSA to leave' }}
+          {{ $myLeaveRequest ? 'Leave request with CaPSA/TSA' : 'Ask CaPSA/TSA to leave' }}
         </button>
       @endif
     </div>
@@ -100,7 +100,7 @@
     @if ($teamLocked)
       <div class="tm-note" role="status">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span><b>Members locked{{ $teamLockedAt ? ' since '.$teamLockedAt->format('M j, Y') : '' }}.</b> Your team passed Title Defense, so no one can join, and a member leaves only with your CaPSA's approval.</span>
+        <span><b>Members locked{{ $teamLockedAt ? ' since '.$teamLockedAt->format('M j, Y') : '' }}.</b> Your team passed Title Defense, so no one can join, and a member leaves only with your CaPSA/TSA's approval.</span>
       </div>
     @endif
 
@@ -133,9 +133,9 @@
             @if ($isTeamLeader)<span class="tm-tag is-leader">LEADER</span>@endif
             @if ($isMe)<span class="tm-tag is-you">YOU</span>@endif
             @if ($leaveRequests->contains('student_id', $member->student_id))
-              <span class="tm-tag is-capsa" title="A request about this member is waiting on your CaPSA">WITH CAPSA</span>
+              <span class="tm-tag is-capsa" title="A request about this member is waiting on your CaPSA/TSA">WITH CAPSA</span>
             @elseif ($teamLocked && $isLeader && ! $isMe)
-              <button type="button" class="tm-link is-danger" onclick="openCapsaLeaveModal('remove', {{ $member->student_id }}, {{ Js::from($memberName) }})" title="Ask your CaPSA to remove this member">Remove</button>
+              <button type="button" class="tm-link is-danger" onclick="openCapsaLeaveModal('remove', {{ $member->student_id }}, {{ Js::from($memberName) }})" title="Ask your CaPSA/TSA to remove this member">Remove</button>
             @elseif ($isLeader && ! $isMe && ! $myTeam->is_confirmed)
               <button type="button" class="tm-link is-danger" onclick="openRemoveMemberModal({{ $member->student_id }}, {{ Js::from($memberName) }}, {{ Js::from($member->email ?? '') }}, {{ Js::from(($member->course ?? '').($member->year_section ? ' · '.$member->year_section : '')) }}, {{ Js::from($member->avatarUrl()) }})">Remove</button>
             @endif
@@ -203,7 +203,7 @@
     </div>
   </section>
 
-  {{-- Defense Panel: who the CaPSA put on the team's next defense.
+  {{-- Defense Panel: who the CaPSA/TSA put on the team's next defense.
        Assigning a panel writes the same three experts onto every stage at
        once, so this is "the" panel rather than one for a single date. --}}
   <section class="tm-card tm-panel" aria-labelledby="tm-panel-h">
@@ -228,7 +228,7 @@
         @endforeach
       </ul>
     @else
-      <p class="tm-panel-empty">Not assigned yet. Your CaPSA sets your defense panel once your team is ready.</p>
+      <p class="tm-panel-empty">Not assigned yet. Your CaPSA/TSA sets your defense panel once your team is ready.</p>
     @endif
   </section>
 </div>
@@ -237,7 +237,7 @@
   <section class="tm-card" aria-labelledby="tm-waiting-h">
     <div class="tm-card-head">
       <div class="tm-card-title">
-        <h2 id="tm-waiting-h">Waiting on your CaPSA</h2>
+        <h2 id="tm-waiting-h">Waiting on your CaPSA/TSA</h2>
         <span class="tm-count">{{ $leaveRequests->count() }}</span>
       </div>
     </div>
@@ -256,7 +256,7 @@
             <p>“{{ $rr->reason }}”</p>
             <div class="tm-request-meta">
               <span>Sent {{ $rr->created_at->diffForHumans() }}</span>
-              <span @class(['tm-clock', 'is-soon' => $rrHoursLeft <= 24]) title="If your CaPSA has not decided by {{ $rrDeadline->format('M j, g:i A') }}, it is declined automatically">
+              <span @class(['tm-clock', 'is-soon' => $rrHoursLeft <= 24]) title="If your CaPSA/TSA has not decided by {{ $rrDeadline->format('M j, g:i A') }}, it is declined automatically">
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                 Auto-declines {{ $rrHoursLeft <= 24 ? 'in '.max(1, $rrHoursLeft).' '.(max(1, $rrHoursLeft) === 1 ? 'hour' : 'hours') : $rrDeadline->format('M j') }} without a decision
               </span>
@@ -276,13 +276,13 @@
   </section>
 @endif
 
-{{-- Declined by the clock, not the CaPSA: said plainly, with the way to ask again. --}}
+{{-- Declined by the clock, not the CaPSA/TSA: said plainly, with the way to ask again. --}}
 @if ($autoDeclinedRequests->isNotEmpty())
   <section class="tm-card" aria-labelledby="tm-declined-h">
     <div class="tm-card-head">
       <h2 id="tm-declined-h">Declined automatically</h2>
     </div>
-    <p class="tm-card-sub">Your CaPSA did not act on these within {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days. You can send the request again.</p>
+    <p class="tm-card-sub">Your CaPSA/TSA did not act on these within {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days. You can send the request again.</p>
     <div class="tm-requests">
       @foreach ($autoDeclinedRequests as $rr)
         @php
@@ -294,7 +294,7 @@
             <b>{{ $rr->type === 'leave' ? $rrMember.' asked to leave' : $rrBy.' asked to remove '.$rrMember }}</b>
             <span class="tm-clock">
               <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-              Auto-declined · No action from CaPSA in {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days
+              Auto-declined · No action from CaPSA/TSA in {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days
             </span>
             <p>“{{ $rr->reason }}”</p>
             <div class="tm-request-meta"><span>Sent {{ $rr->created_at->format('M j') }} · declined {{ $rr->decided_at?->format('M j, g:i A') }}</span></div>

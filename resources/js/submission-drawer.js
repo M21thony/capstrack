@@ -423,12 +423,12 @@ function sendLabel() {
   return labels.length ? 'Send to ' + labels.join(', ') : 'Send';
 }
 
-/** "your CaPA and CaPSA" - for the notice back on the page. */
+/** "your CaPA and CaPSA/TSA" - for the notice back on the page. */
 function sentLine(forToast) {
   const title = S.plan?.item?.title || S.file?.name || 'Your file';
   const labels = (S.result?.recipients || []).map((r) => r.label);
   const unique = [...new Set(labels)];
-  if (S.plan?.item?.paper) return `${title} handed in to your CaPSA`;
+  if (S.plan?.item?.paper) return `${title} handed in to your CaPSA/TSA`;
   if (!unique.length) return `${title} sent`;
   const joined = unique.length === 1 ? unique[0] : unique.slice(0, -1).join(', ') + ' and ' + unique.at(-1);
   return forToast ? `${title} sent to your ${joined}` : joined;
@@ -446,7 +446,7 @@ function subText() {
   if (!S.plan) return '';
   if (!item && S.revises) return [S.plan.paper, S.plan.round, S.plan.version ? `goes up as version ${S.plan.version}` : null].filter(Boolean).join(' · ');
   if (!item) return S.fixedLine ? 'A chapter, the manuscript, or a diagram for your experts to review' : 'Pick what it’s for, then the file';
-  if (item.paper) return 'Signed paper · your CaPSA checks it';
+  if (item.paper) return 'Signed paper · your CaPSA/TSA checks it';
   if (S.plan.round) return `Goes up as version ${S.plan.version}`;
   return [item.phase, item.due ? 'due ' + item.due : null].filter(Boolean).join(' · ');
 }
@@ -509,7 +509,7 @@ const initials = (name) => String(name || '?').replace(/^(Dr|Prof|Engr|Mr|Ms|Mrs
 function pill(p, { locked = false, toggle = false } = {}) {
   const on = locked || S.picked.has(p.role);
   const who = [p.name, p.note].filter(Boolean).join(' · ');
-  const inner = `<i class="up-av" aria-hidden="true">${esc(initials(p.name || p.label))}</i><span class="up-pill-t"><b>${esc(p.label)}</b>${who ? `<span>${esc(who)}</span>` : ''}</span>${locked ? `<span class="up-lock" title="${S.plan?.set && !S.plan.locked ? 'Set by your CaPSA' : 'Set by the last version'}">${svg('lock', 13)}</span>` : ''}`;
+  const inner = `<i class="up-av" aria-hidden="true">${esc(initials(p.name || p.label))}</i><span class="up-pill-t"><b>${esc(p.label)}</b>${who ? `<span>${esc(who)}</span>` : ''}</span>${locked ? `<span class="up-lock" title="${S.plan?.set && !S.plan.locked ? 'Set by your CaPSA/TSA' : 'Set by the last version'}">${svg('lock', 13)}</span>` : ''}`;
   if (toggle && p.available) {
     return `<button type="button" class="up-pill${on ? ' on' : ' off'}" data-act="toggle" data-role="${p.role}" aria-pressed="${on}">${inner}</button>`;
   }
@@ -530,9 +530,9 @@ function goesToHtml() {
   const pills = people.map((p) => pill(p, locked ? { locked: true } : { toggle: true })).join('');
 
   let hint = '';
-  if (paper) hint = 'A signed paper always goes to your CaPSA to check.';
+  if (paper) hint = 'A signed paper always goes to your CaPSA/TSA to check.';
   else if (plan.locked) hint = 'A revision goes back to the people who read the last version.';
-  else if (people.some((p) => p.role === 'subject_adviser' && p.note === 'review if asked')) hint = 'Your CaPSA only reviews this chapter when they ask for it.';
+  else if (people.some((p) => p.role === 'subject_adviser' && p.note === 'review if asked')) hint = 'Your CaPSA/TSA only reviews this chapter when they ask for it.';
   if (!paper && !people.some((p) => p.available)) hint = 'Nobody is assigned to your team yet, so there is no one to send it to.';
 
   const head = paper ? 'Checked by' : plan.locked ? 'Goes back to' : 'Send to';
@@ -556,7 +556,7 @@ function fileDone() {
 }
 
 function versionText() {
-  if (S.plan?.item?.paper) return 'Handed in to your CaPSA to check';
+  if (S.plan?.item?.paper) return 'Handed in to your CaPSA/TSA to check';
   if (S.plan?.version) return `Goes up as version ${S.plan.version}`;
   if (S.revises) return 'The next version of the paper sent back';
   if (!S.guess) return 'Reading the name…';
@@ -827,7 +827,7 @@ async function openPreview() {
       <div class="up-pv-stage" tabindex="0"></div>
     </div>
     <div class="up-pv-foot">
-      <span>Look through every page. This is exactly what ${S.plan?.item?.paper ? 'your CaPSA' : 'your reviewers'} will open.</span>
+      <span>Look through every page. This is exactly what ${S.plan?.item?.paper ? 'your CaPSA/TSA' : 'your reviewers'} will open.</span>
       <button type="button" class="up-btn" data-pv="another">Choose another file</button>
       <button type="button" class="up-btn primary" data-pv="send"${canSend() ? '' : ' disabled'}>${svg('send', 14, 2.4)}Looks right, ${S.plan?.item?.paper ? 'hand it in' : 'send it'}</button>
     </div>`;

@@ -89,7 +89,7 @@
   </div>
 
   <div class="content list-page tk">
-    {{-- Students belong to their CaPSA: they are enrolled from the section
+    {{-- Students belong to their CaPSA/TSA: they are enrolled from the section
          list and the roster import, both of which live on that side. An admin
          who could add or edit one here would be doing a job from a page with
          different powers behind it, so this is a register - search it, take a
@@ -102,7 +102,7 @@
           fn ($v) => $v !== '' && $v !== null
       ));
       $tabs = ['' => 'All', 'with' => 'In a team', 'without' => 'No team'];
-      // Section ("BSIT-3A") => its CaPSA, built once - TeamChecklist::capsaFor
+      // Section ("BSIT-3A") => its CaPSA/TSA, built once - TeamChecklist::capsaFor
       // is a query per call. Lowest id wins, as it does there.
       $capsaOf = \App\Models\CapstoneExpert::whereNotNull('sections')->orderByDesc('expert_id')->get()
           ->reduce(fn ($map, $c) => array_merge($map, array_fill_keys($c->sections ?? [], $c->name)), []);
@@ -113,7 +113,7 @@
           <span class="page-count" id="studentCount">{{ $teamCounts[''] }}</span>
           <span class="page-count-noun" id="studentCountNoun">{{ Str::plural('student', $teamCounts['']) }}</span>
         </div>
-        <span class="tk-info"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>Added and edited by each section's CaPSA</span>
+        <span class="tk-info"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>Added and edited by each section's CaPSA/TSA</span>
       </div>
       {{-- View Report and Download Excel, from partials/table-export. Taking a
            copy of the list is what this page is for, so Download Excel is the

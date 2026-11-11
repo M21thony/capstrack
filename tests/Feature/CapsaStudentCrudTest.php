@@ -13,7 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * A CaPSA managing their own students.
+ * A CaPSA/TSA managing their own students.
  *
  * The rule under all of it is one sentence: a student is yours when the
  * section computed from their course and year is one of yours. What is worth
@@ -84,7 +84,7 @@ class CapsaStudentCrudTest extends TestCase
      * classmates. The hand-added one used to be saved as "BSIT" and the
      * uploaded one under the full course name, and classmates are matched on
      * that column - so a leader could not see, or fill an open slot with,
-     * the student their CaPSA had just added.
+     * the student their CaPSA/TSA had just added.
      */
     public function test_a_hand_added_student_is_a_classmate_of_the_uploaded_ones(): void
     {
@@ -303,7 +303,7 @@ class CapsaStudentCrudTest extends TestCase
         $this->assertSame('Angelo', $existing->fresh()->f_name);
     }
 
-    /** Nor is somebody another CaPSA is handling. */
+    /** Nor is somebody another CaPSA/TSA is handling. */
     public function test_a_student_in_another_section_cannot_be_taken(): void
     {
         $theirs = $this->student('BSIT', '4th · C');
@@ -323,7 +323,7 @@ class CapsaStudentCrudTest extends TestCase
      * Removing a student keeps their account and only clears the section, so
      * the address is still in the table afterwards. Adding refused any
      * address already there, which made a removal impossible to undo: the
-     * CaPSA was told the email already exists, with no way forward.
+     * CaPSA/TSA was told the email already exists, with no way forward.
      */
     public function test_a_removed_student_can_be_added_back(): void
     {

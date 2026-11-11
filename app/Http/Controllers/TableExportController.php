@@ -9,7 +9,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Download as Excel, for any table on a CaPSA, Expert or Admin page.
+ * Download as Excel, for any table on a CaPSA/TSA, Expert or Admin page.
  *
  * The page sends what its own table shows, already narrowed to the columns the
  * person ticked (partials/table-export). There is nothing to look up here, so

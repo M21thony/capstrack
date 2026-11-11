@@ -49,10 +49,10 @@ class ProfileController extends Controller
             'programSlots' => $programSlots,
             'teamsHandled' => $teamsHandled,
             'slotSuggestion' => $expert->slotSuggestion($teamsHandled),
-            // A CaPSA or Admin who also advises keeps their name and sections
+            // A CaPSA/TSA or Admin who also advises keeps their name and sections
             // on their own portal's profile page.
-            // A CaPSA or Admin who also advises keeps everything here: their
-            // name, and for a CaPSA the sections the Admin gave them.
+            // A CaPSA/TSA or Admin who also advises keeps everything here: their
+            // name, and for a CaPSA/TSA the sections the Admin gave them.
             'canEditName' => $expert->is_staff,
             'capsaSections' => $expert->is_capsa ? ($expert->sections ?? []) : null,
             'schoolYear' => Setting::get('current_school_year'),
@@ -75,10 +75,10 @@ class ProfileController extends Controller
         $all = ($saved['all'] ?? true) !== false;
 
         $byGroup = [
-            'teams' => ['Teams', 'A team applies to you, a student asks to leave or be removed, or (CaPSA) teams outnumber the free expert slots', ['expert_application', 'leave_request_received', 'expert_slots_short']],
+            'teams' => ['Teams', 'A team applies to you, a student asks to leave or be removed, or (CaPSA/TSA) teams outnumber the free expert slots', ['expert_application', 'leave_request_received', 'expert_slots_short']],
             'consultations' => ['Consultations', 'Bookings, cancellations, and a reminder on the day', ['consultation_booked', 'consultation_cancelled', 'consultation_reminder']],
             'documents' => ['Documents', 'Documents and signed papers to review, and a reminder when they wait', ['document_submitted', 'paper_to_check', 'review_reminder']],
-            'announcements' => ['Announcements', 'Important or urgent announcements from a CaPSA', ['announcement']],
+            'announcements' => ['Announcements', 'Important or urgent announcements from a CaPSA/TSA', ['announcement']],
         ];
         $grouped = array_merge(...array_column($byGroup, 2));
         $byGroup['other'] = ['Other', 'Anything else CapsTrack emails you about', array_values(array_diff(array_keys($types), $grouped))];
@@ -107,7 +107,7 @@ class ProfileController extends Controller
      * The only two things an expert may change about their own account:
      * which programs they accept teams from (and how many of each), and
      * their areas of expertise. Everything else - name, email, roles, the
-     * program they belong to - stays under CaPSA/Admin control.
+     * program they belong to - stays under CaPSA/TSA/Admin control.
      */
     public function update(Request $request): JsonResponse
     {
@@ -127,7 +127,7 @@ class ProfileController extends Controller
             'expertise.*' => ['string', 'max:100'],
             'highest_degree' => ['nullable', 'in:'.implode(',', array_keys(CapstoneExpert::DEGREES))],
             'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
-            // A CaPSA's or Admin's own name; other experts' names are the Admin's.
+            // A CaPSA/TSA's or Admin's own name; other experts' names are the Admin's.
             'name' => ['sometimes', 'array'],
             'name.first_name' => ['required_with:name', 'string', 'max:50'],
             'name.middle_name' => ['nullable', 'string', 'max:50'],

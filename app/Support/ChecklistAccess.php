@@ -10,7 +10,7 @@ use App\Models\Team;
 use Illuminate\Support\Collection;
 
 /**
- * What the signed-in CaPSA may touch: her own checklists, and the teams in
+ * What the signed-in CaPSA/TSA may touch: her own checklists, and the teams in
  * her sections. One place, so no endpoint re-implements it.
  */
 class ChecklistAccess

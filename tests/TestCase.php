@@ -22,9 +22,9 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * Make an expert a CaPSA.
+     * Make an expert a CaPSA/TSA.
      *
-     * Being a CaPSA is holding the capstone_adviser role - there is no
+     * Being a CaPSA/TSA is holding the capstone_adviser role - there is no
      * is_capsa column to set any more (see CapstoneExpert::CAPSA_ROLE), so
      * fixtures grant the role the same way the app does.
      */

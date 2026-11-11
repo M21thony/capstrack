@@ -12,7 +12,7 @@ return new class extends Migration
      * description  what the milestone is for, shown to teams under its name
      * due_on       the date the whole milestone is due; a deliverable with no
      *              date of its own falls due on it
-     * closed_at    the CaPSA closed it: it leaves the open list and sends no
+     * closed_at    the CaPSA/TSA closed it: it leaves the open list and sends no
      *              more reminders, while every team's progress stays as it is
      *
      * All empty by default, so every existing checklist reads as it did.

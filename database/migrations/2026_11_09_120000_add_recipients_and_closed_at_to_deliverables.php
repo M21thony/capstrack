@@ -5,8 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Who a requirement's uploads go to, set by the CaPSA (null keeps the usual
- * people), and when the CaPSA closed it to further uploads.
+ * Who a requirement's uploads go to, set by the CaPSA/TSA (null keeps the usual
+ * people), and when the CaPSA/TSA closed it to further uploads.
  */
 return new class extends Migration
 {

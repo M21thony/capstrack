@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * The staff portals - Admin, CaPSA and the experts' - load the way the
+ * The staff portals - Admin, CaPSA/TSA and the experts' - load the way the
  * student portal does: the first time a page is opened since signing in, its
  * content comes up as its own skeleton (partials/content-skeleton), and every
  * page holds its first paint until it has been read in full

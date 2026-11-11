@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * Until now the checklist guessed, by reading "Chapter N" out of the file
  * name, so a file called final_na_final.pdf counted towards nothing and a
- * line with no chapter (Revised Proposal Manuscript, anything a CaPSA adds)
+ * line with no chapter (Revised Proposal Manuscript, anything a CaPSA/TSA adds)
  * could never be closed by an upload at all.
  *
  * Nullable on purpose: an upload sent only for feedback - a grammarian's pass

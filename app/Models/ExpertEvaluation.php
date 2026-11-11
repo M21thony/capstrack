@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A team leader's evaluation of one of the team's experts after a passed
- * defense: the CaPSA's questions, each answered 1-5, and the rating that is
- * their average. Anonymous to the CaPSA and the expert - student_id is kept
+ * defense: the CaPSA/TSA's questions, each answered 1-5, and the rating that is
+ * their average. Anonymous to the CaPSA/TSA and the expert - student_id is kept
  * for the record and never shown. Rows from before evaluations followed
  * defenses carry a Progress Tracker phase and a comment instead.
  * See App\Support\ExpertEvaluations.

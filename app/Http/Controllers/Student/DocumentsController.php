@@ -34,7 +34,7 @@ class DocumentsController extends Controller
         $studentId = Auth::id();
 
         // A signed paper is handed in on Progress Tracker and checked there by
-        // the CaPSA. Documents is the team's papers for its experts to review.
+        // the CaPSA/TSA. Documents is the team's papers for its experts to review.
         $uploads = CapstoneDocument::forTeamOf($studentId)
             ->exceptSignedPapers()
             ->with(['deliverable', 'reviews' => fn ($q) => $q->with('expert')->orderByDesc('reviewed_at')])
@@ -144,7 +144,7 @@ class DocumentsController extends Controller
         ];
     }
 
-    /** A reviewer by the name the team knows them by: CaPA, Consultant, CaPSA. */
+    /** A reviewer by the name the team knows them by: CaPA, Consultant, CaPSA/TSA. */
     public static function roleLabel(?string $role): string
     {
         return SubmissionRecipients::LABELS[$role] ?? StudentReviewController::roleLabel($role);

@@ -185,7 +185,7 @@ class TeamTodo
     }
 
     /**
-     * Everything waiting on a CaPSA as CaPSA, across her teams.
+     * Everything waiting on a CaPSA/TSA as CaPSA/TSA, across her teams.
      *
      * @param  Collection<int, object>  $rows
      * @return Collection<int, object>
@@ -365,7 +365,7 @@ class TeamTodo
 
         // The CaPA's go: a team defends Title, Pre Oral or Final Oral only once
         // its adviser says it is ready. Not ready cancels the date, and the
-        // CaPSA gives the team a new one. The CaPA may answer before or on the
+        // CaPSA/TSA gives the team a new one. The CaPA may answer before or on the
         // defense day itself.
         $defenses = DefenseSchedule::whereIn('defense_type', DefenseBoard::PAID_STAGES)
             ->whereNull('outcome')
@@ -394,7 +394,7 @@ class TeamTodo
                         'declineLabel' => 'Not ready, cancel', 'declineOnly' => true,
                         'declineTitle' => 'Cancel the '.$defense->defense_type.' of Team '.$defense->team->team_name.'?',
                         'note' => 'note', 'min' => 0, 'noteOptional' => true,
-                        'declineEffect' => 'The '.$defense->defense_type.' is cancelled and the CaPSA gives the team a new date.',
+                        'declineEffect' => 'The '.$defense->defense_type.' is cancelled and the CaPSA/TSA gives the team a new date.',
                         'effect' => '',
                     ],
                 ]));
@@ -418,7 +418,7 @@ class TeamTodo
                     'field' => 'answer', 'approve' => CapaGo::GO, 'decline' => CapaGo::NOT_READY,
                     'declineLabel' => 'Not ready',
                     'note' => 'note', 'min' => 0, 'noteOptional' => true,
-                    'declineEffect' => 'The '.$defense->defense_type.' is cancelled and the CaPSA gives the team a new date.',
+                    'declineEffect' => 'The '.$defense->defense_type.' is cancelled and the CaPSA/TSA gives the team a new date.',
                     'effect' => 'Team '.$defense->team->team_name.' defends on '.$defense->schedule_date->format('M j').'.',
                 ],
             ]));
@@ -451,7 +451,7 @@ class TeamTodo
     }
 
     /**
-     * Everything a CaPSA decided, newest first. Each opens on the team's page.
+     * Everything a CaPSA/TSA decided, newest first. Each opens on the team's page.
      *
      * @param  Collection<int, object>  $rows
      * @return Collection<int, object>

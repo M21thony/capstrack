@@ -206,7 +206,7 @@ class DefenseScheduleExport
     /**
      * Every member with a verified receipt for this stage's fee.
      *
-     * Per student, unlike DefenseBoard::paidTeamIds() - a spreadsheet a CaPSA
+     * Per student, unlike DefenseBoard::paidTeamIds() - a spreadsheet a CaPSA/TSA
      * hands to the department office is exactly the place someone still
      * owing a fee has to be named, not folded into a team that "isn't paid".
      *

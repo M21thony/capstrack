@@ -22,7 +22,7 @@ use Tests\TestCase;
 /**
  * Title, Pre Oral and Final Oral Defense go ahead on the CaPA's word. "Not
  * ready" cancels the date, keeps it on record, and puts the team back in
- * line for its CaPSA to give it a new one.
+ * line for its CaPSA/TSA to give it a new one.
  */
 class CapaGoTest extends TestCase
 {

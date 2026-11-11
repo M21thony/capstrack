@@ -283,7 +283,7 @@ class TeamController extends Controller
 
         // The title itself can be corrected here - a misspelling, a wrong
         // case, a word or two. A reworded title needs the panel's "passed
-        // with revision"; a different one goes through the CaPSA. Checked
+        // with revision"; a different one goes through the CaPSA/TSA. Checked
         // before anything is saved, so a refused title changes nothing.
         $oldTitle = (string) $team->project_title;
         $newTitle = null;
@@ -295,7 +295,7 @@ class TeamController extends Controller
             Validator::make(['project_title' => $candidate], [
                 'project_title' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) use ($oldTitle, $canRevise) {
                     if (! $canRevise && ! TitleRevision::isCorrection($oldTitle, $value)) {
-                        $fail('That is more than a spelling fix. Only small corrections can be made here - a different title goes through your CaPSA.');
+                        $fail('That is more than a spelling fix. Only small corrections can be made here - a different title goes through your CaPSA/TSA.');
                     }
                 }],
             ])->validate();
@@ -328,7 +328,7 @@ class TeamController extends Controller
         if ($newTitle !== null) {
             $team->update(['project_title' => $newTitle]);
 
-            // Written down, so the CaPSA can see what the approved title became.
+            // Written down, so the CaPSA/TSA can see what the approved title became.
             $this->logActivity(
                 $studentId,
                 'title_corrected',
@@ -339,7 +339,7 @@ class TeamController extends Controller
 
         $team->update([
             'team_name' => $validated['team_name'],
-            // Mirrored onto the team, which panel suggestions and the CaPSA's
+            // Mirrored onto the team, which panel suggestions and the CaPSA/TSA's
             // team list read.
             'tags' => $titleTags !== null ? array_values($titleTags) : $team->tags,
             'team_status' => $validated['team_status'] ?? $team->team_status,
@@ -354,7 +354,7 @@ class TeamController extends Controller
         // Auto-close team if it has reached full capacity
         $autoClosed = false;
         if ($team->team_status === 'Active') {
-            // The section's limit from the CaPSA's Team Rules, not a flat 5.
+            // The section's limit from the CaPSA/TSA's Team Rules, not a flat 5.
             if ($team->isFull()) {
                 $team->update(['team_status' => 'Full']);
                 $autoClosed = true;
@@ -428,7 +428,7 @@ class TeamController extends Controller
             return $this->terminateSoloTeam($student, $team);
         }
 
-        // A member leaves only with their CaPSA's approval.
+        // A member leaves only with their CaPSA/TSA's approval.
         return redirect()->route('student.team')->with('error', MemberLeaveRequest::ASK_CAPSA);
     }
 

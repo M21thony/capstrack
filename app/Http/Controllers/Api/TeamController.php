@@ -177,7 +177,7 @@ class TeamController extends Controller
 
         $autoClosed = false;
         if ($team->team_status === 'Active') {
-            // The section's limit from the CaPSA's Team Rules, not a flat 5.
+            // The section's limit from the CaPSA/TSA's Team Rules, not a flat 5.
             if ($team->isFull()) {
                 $team->update(['team_status' => 'Full']);
                 $autoClosed = true;
@@ -252,7 +252,7 @@ class TeamController extends Controller
             ]);
         }
 
-        // A member leaves only with their CaPSA's approval.
+        // A member leaves only with their CaPSA/TSA's approval.
         return response()->json(['message' => MemberLeaveRequest::ASK_CAPSA], 422);
     }
 

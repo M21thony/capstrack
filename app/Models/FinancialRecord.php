@@ -83,8 +83,8 @@ class FinancialRecord extends Model
 
     /**
      * A member's receipt for one fee - their first, or a new photo in place
-     * of one the CaPSA sent back. It goes straight to the CaPSA, waiting to
-     * be checked; there is no stop with the team leader. A receipt the CaPSA
+     * of one the CaPSA/TSA sent back. It goes straight to the CaPSA/TSA, waiting to
+     * be checked; there is no stop with the team leader. A receipt the CaPSA/TSA
      * already has, or has verified, is not replaced.
      */
     public static function submitFor(Student $student, ExpensePost $post, UploadedFile $file, string $orNumber): self
@@ -102,15 +102,15 @@ class FinancialRecord extends Model
 
         if ($current?->f_record_status === 'pending') {
             throw ValidationException::withMessages([
-                'receipt_image' => 'Your CaPSA already has this receipt. Wait for it to be checked.',
+                'receipt_image' => 'Your CaPSA/TSA already has this receipt. Wait for it to be checked.',
             ]);
         }
 
         $values = [
             'receipt_image' => $file->store('receipts', 'public'),
-            // Typed by the student; the CaPSA checks it against the photo before verifying.
+            // Typed by the student; the CaPSA/TSA checks it against the photo before verifying.
             'receipt_number' => self::normaliseOrNumber($orNumber),
-            // Waiting on the CaPSA from the moment it is uploaded.
+            // Waiting on the CaPSA/TSA from the moment it is uploaded.
             'f_record_status' => 'pending',
             'rejection_reason' => null,
             'verified_at' => null,

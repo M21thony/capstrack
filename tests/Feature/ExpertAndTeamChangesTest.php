@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * A CaPSA cannot switch off their own account; a degree is chosen as it is
+ * A CaPSA/TSA cannot switch off their own account; a degree is chosen as it is
  * written (MIT, PhD) and sets the level the Panel Chair rule reads; panel
  * suggestions show that degree and nothing when there is none; the team page
  * knows the Team Rules before anyone fills in a form; and a reviewer can open

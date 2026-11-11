@@ -16,7 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * Where a CaPSA decides whether a member may leave a team, or be removed from
+ * Where a CaPSA/TSA decides whether a member may leave a team, or be removed from
  * one that passed Title Defense.
  */
 class LeaveRequestController extends Controller

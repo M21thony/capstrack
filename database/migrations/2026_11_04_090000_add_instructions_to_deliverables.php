@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/** What the CaPSA tells teams about a requirement: what to hand in and how. */
+/** What the CaPSA/TSA tells teams about a requirement: what to hand in and how. */
 return new class extends Migration
 {
     public function up(): void

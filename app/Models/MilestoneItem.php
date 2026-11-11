@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * One deliverable inside a milestone.
  *
- * The kind decides what closes it. FORM and CUSTOM are checked by the CaPSA,
+ * The kind decides what closes it. FORM and CUSTOM are checked by the CaPSA/TSA,
  * who writes completed_at here, and so is an APPROVAL marked needs_check once
  * it is approved. Everything else is answered by the document, review or
  * defense it points at, so nothing has to be kept in step. See
@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class MilestoneItem extends Model
 {
-    /** A signed paper; the team uploads a scan or photo and the CaPSA checks it. */
+    /** A signed paper; the team uploads a scan or photo and the CaPSA/TSA checks it. */
     public const FORM = 'form';
 
     /** A draft the team uploads. Closed by the upload existing. */
@@ -27,7 +27,7 @@ class MilestoneItem extends Model
     /** Closed by the panel's recorded outcome. */
     public const DEFENSE = 'defense';
 
-    /** Anything a CaPSA adds themselves. Ticked by hand, like a form. */
+    /** Anything a CaPSA/TSA adds themselves. Ticked by hand, like a form. */
     public const CUSTOM = 'custom';
 
     public const KINDS = [self::FORM, self::DOCUMENT, self::APPROVAL, self::DEFENSE, self::CUSTOM];
@@ -80,7 +80,7 @@ class MilestoneItem extends Model
         return in_array($this->kind, self::TICKED_BY_HAND, true);
     }
 
-    /** Whether the CaPSA's check is what closes this line. */
+    /** Whether the CaPSA/TSA's check is what closes this line. */
     public function isCheckedByCapsa(): bool
     {
         return $this->isTickedByHand() || ($this->kind === self::APPROVAL && $this->needs_check);

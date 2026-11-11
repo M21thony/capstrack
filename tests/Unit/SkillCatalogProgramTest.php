@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * Each programme has its own areas of expertise.
  *
- * CaPSA asked for this: the four programmes are not the same subject, and one
+ * CaPSA/TSA asked for this: the four programmes are not the same subject, and one
  * list for all of them offered a BLIS adviser "Embedded Systems" and a BSCS
  * one "Cataloguing & Classification".
  */

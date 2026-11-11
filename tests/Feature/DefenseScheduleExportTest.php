@@ -48,7 +48,7 @@ class DefenseScheduleExportTest extends TestCase
         return app(DefenseScheduleExport::class);
     }
 
-    /** A confirmed team with $memberCount members, in the CaPSA's own section unless told otherwise. */
+    /** A confirmed team with $memberCount members, in the CaPSA/TSA's own section unless told otherwise. */
     private function team(string $name, int $memberCount = 3, string $section = '3rd · A'): Team
     {
         $this->seq++;
@@ -222,7 +222,7 @@ class DefenseScheduleExportTest extends TestCase
 
         $members = collect($this->export()->rows($this->capsa, self::STAGE)[0]['members']);
 
-        // One member paid, the other did not - a spreadsheet a CaPSA hands to
+        // One member paid, the other did not - a spreadsheet a CaPSA/TSA hands to
         // the office is exactly where the one still owing has to be named.
         $this->assertTrue($members->contains(fn ($m) => $m['paid'] === true));
         $this->assertTrue($members->contains(fn ($m) => $m['paid'] === false));

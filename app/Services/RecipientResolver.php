@@ -54,16 +54,16 @@ class RecipientResolver
     }
 
     /**
-     * The CaPSA responsible for this team, found by section.
+     * The CaPSA/TSA responsible for this team, found by section.
      *
      * It used to match capstone_experts.program against student_s_y.program.
-     * Neither column is filled by anything: a CaPSA is given sections when
+     * Neither column is filled by anything: a CaPSA/TSA is given sections when
      * they are named, and a student's programme lives on students.course. So
      * both sides were NULL, and "WHERE program = NULL" is never true in SQL -
      * which is why the Subject Adviser was permanently "Not yet assigned"
      * without anything ever erroring.
      *
-     * Sections are how the rest of the system decides which CaPSA owns a
+     * Sections are how the rest of the system decides which CaPSA/TSA owns a
      * team, so this asks SectionScope rather than inventing a second answer.
      */
     private function subjectAdviser(?int $teamId): ?CapstoneExpert

@@ -13,7 +13,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * The Edit milestones window's endpoints: a CaPSA's checklists, reordered by
+ * The Edit milestones window's endpoints: a CaPSA/TSA's checklists, reordered by
  * drag or arrow keys, edited in place and in bulk, archived and restored,
  * removed with Undo until they are purged.
  */
@@ -93,7 +93,7 @@ class ChecklistEditorTest extends TestCase
 
         $milestone = $this->postJson(route('capsa.checklists.milestones.store', $checklist), ['name' => 'Chapter 4'])
             ->assertCreated()
-            // Opens with the milestone above it unless the CaPSA ticks the gate.
+            // Opens with the milestone above it unless the CaPSA/TSA ticks the gate.
             ->assertJsonPath('requires_previous', false)
             ->json();
 

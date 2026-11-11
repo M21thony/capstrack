@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * A change request names who the team wants instead. When the CaPSA approves
+ * A change request names who the team wants instead. When the CaPSA/TSA approves
  * it, the application to that expert goes out at once - if they still have
  * room - and they accept or decline it like any other.
  *

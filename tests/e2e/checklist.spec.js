@@ -148,12 +148,12 @@ test('admin/experts: the deactivate dialog talks about deactivating', async ({ p
   await expect(modal).not.toContainText('cannot be undone');
   await expect(modal.locator('#removeConfirmBtn')).toHaveText('Deactivate');
 
-  // And it posts to admin.*, not the CaPSA route that answered 403.
+  // And it posts to admin.*, not the CaPSA/TSA route that answered 403.
   const html = await page.content();
   expect(html).toContain('/admin/experts/');
 });
 
-test('admin/experts: the sidebar badge counts CaPSAs, not every expert', async ({ page }, testInfo) => {
+test('admin/experts: the sidebar badge counts CaPSA/TSAs, not every expert', async ({ page }, testInfo) => {
   await staff(page, 'admin', 'experts');
   await shot(page, testInfo, 'admin-experts');
 
@@ -173,7 +173,7 @@ test('admin/experts: the sidebar badge counts CaPSAs, not every expert', async (
   expect(shown, 'the badge never exceeds what the page lists').toBeLessThanOrEqual(listed);
 });
 
-// ── CaPSA ─────────────────────────────────────────────────────────────────
+// ── CaPSA/TSA ─────────────────────────────────────────────────────────────────
 
 test('capsa/sections: only 3rd and 4th year can be chosen', async ({ page }, testInfo) => {
   await staff(page, 'capsa', 'sections');

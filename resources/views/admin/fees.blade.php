@@ -147,8 +147,8 @@
       <div class="tk-toolbar">
         <label class="experts-search" style="flex:0 1 280px">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <span class="tk-vh">Search section or CaPSA</span>
-          <input class="input" type="search" id="feSearch" placeholder="Search section or CaPSA" oninput="feFilter()">
+          <span class="tk-vh">Search section or CaPSA/TSA</span>
+          <input class="input" type="search" id="feSearch" placeholder="Search section or CaPSA/TSA" oninput="feFilter()">
         </label>
         <div class="tk-tabs tk-toolbar-end" role="tablist" aria-label="Status">
           <button type="button" class="tk-tab" role="tab" data-show="all" aria-selected="true" onclick="feShow(this)">All <span class="n">{{ $total }}</span></button>

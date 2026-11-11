@@ -84,7 +84,7 @@ class AdminTeamVerificationController extends Controller
     // Mirrors AdminApprovalController::approve() exactly - same shape
     // (approved_status + rejection_reason), same guards.
     /**
-     * A CaPSA either picks this pre-proposal or sends it back, and both are
+     * A CaPSA/TSA either picks this pre-proposal or sends it back, and both are
      * the same field changing. The status says which; the methods below
      * still do the work.
      */
@@ -182,7 +182,7 @@ class AdminTeamVerificationController extends Controller
     /**
      * What the review modal needs to redraw itself after a decision.
      *
-     * It used to reload the page instead, which closed the modal - so a CaPSA
+     * It used to reload the page instead, which closed the modal - so a CaPSA/TSA
      * with three titles to get through had to reopen it after each one.
      */
     private function reviewState(Team $team): array
@@ -199,7 +199,7 @@ class AdminTeamVerificationController extends Controller
     /**
      * Settle the team's title, but only once the review is actually over.
      *
-     * Approving one proposal used to set the title there and then. A CaPSA
+     * Approving one proposal used to set the title there and then. A CaPSA/TSA
      * working down a team's three titles approves one and is still reading
      * the others, so the team was told its title was decided while two were
      * still being looked at - and if a second was then approved, the choice
@@ -233,7 +233,7 @@ class AdminTeamVerificationController extends Controller
         );
 
         // Still being reviewed. Say nothing and change nothing - the team
-        // finds out when their CaPSA has finished, not partway through.
+        // finds out when their CaPSA/TSA has finished, not partway through.
         if ($undecided->isNotEmpty()) {
             return;
         }
@@ -246,9 +246,9 @@ class AdminTeamVerificationController extends Controller
             // Sent back for a new title: the team already has its adviser, so
             // the adviser confirms the new title before it becomes the team's.
             if (TitleRevision::needsNewTitle($team)) {
-                // The team's own CaPSA is also the team's own adviser, and it is
+                // The team's own CaPSA/TSA is also the team's own adviser, and it is
                 // them recommending: one person, one click - recommended and
-                // approved together. Any other CaPSA still leaves it to the adviser.
+                // approved together. Any other CaPSA/TSA still leaves it to the adviser.
                 $resolver = app(RecipientResolver::class);
                 $adviserId = $resolver->resolveTeamRoleExpert((int) $team->team_id, 'adviser');
                 if ($adviserId
@@ -256,14 +256,14 @@ class AdminTeamVerificationController extends Controller
                     && $adviserId === auth('expert')->id()) {
                     $winner->update(['adviser_status' => TitleRevision::APPROVED, 'adviser_note' => null, 'adviser_decided_at' => now()]);
                     $team->update(['selected_pre_proposal_id' => $winner->id, 'project_title' => $winner->title]);
-                    $this->notifyTeam($team, 'title_approved', 'New Title Approved', 'Your CaPSA, who is also your adviser, recommended and approved <strong>'.e($winner->title).'</strong> as your new title.');
+                    $this->notifyTeam($team, 'title_approved', 'New Title Approved', 'Your CaPSA/TSA, who is also your adviser, recommended and approved <strong>'.e($winner->title).'</strong> as your new title.');
 
                     return;
                 }
 
                 if ($winner->adviser_status !== TitleRevision::PENDING) {
                     TitleRevision::askAdviser($winner);
-                    $this->notifyTeam($team, 'title_awaiting_adviser', 'Title Recommended by CaPSA', 'Your CaPSA recommended <strong>'.e($winner->title).'</strong>. Your adviser approves it next.');
+                    $this->notifyTeam($team, 'title_awaiting_adviser', 'Title Recommended by CaPSA/TSA', 'Your CaPSA/TSA recommended <strong>'.e($winner->title).'</strong>. Your adviser approves it next.');
                 }
 
                 return;
@@ -275,7 +275,7 @@ class AdminTeamVerificationController extends Controller
                     'project_title' => $winner->title,
                 ]);
 
-                $this->notifyTeam($team, 'title_approved', 'Title Recommended', 'Your CaPSA recommended your title <strong>'.e($winner->title).'</strong>.');
+                $this->notifyTeam($team, 'title_approved', 'Title Recommended', 'Your CaPSA/TSA recommended your title <strong>'.e($winner->title).'</strong>.');
             }
 
             return;
@@ -306,7 +306,7 @@ class AdminTeamVerificationController extends Controller
             ]);
         }
 
-        $this->notifyTeam($team, 'titles_rejected', 'Titles Not Recommended', 'Your CaPSA did not recommend any of the titles you submitted. Save new titles and submit them for checking again.');
+        $this->notifyTeam($team, 'titles_rejected', 'Titles Not Recommended', 'Your CaPSA/TSA did not recommend any of the titles you submitted. Save new titles and submit them for checking again.');
     }
 
     private function notifyTeam(Team $team, string $type, string $title, string $message): void

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
- * The CaPSA deciding whether a team may let go of an expert who already took
+ * The CaPSA/TSA deciding whether a team may let go of an expert who already took
  * them on. Approving removes the expert and sends the team's application to
  * the replacement it picked, who accepts or declines it like any other.
  */
@@ -70,7 +70,7 @@ class ExpertRemovalRequestController extends Controller
             // The replacement is checked before anyone is removed, so the old
             // expert never goes for an application that cannot be sent. A
             // replacement who filled up while the request waited is the
-            // CaPSA's to decline.
+            // CaPSA/TSA's to decline.
             if ($swapping) {
                 $refusal = $replacement
                     ? $this->applications->refusal($team, $leader, $replacement, (int) $removal->replacement_expert_role_id, $assignment->assignment_id)
@@ -92,7 +92,7 @@ class ExpertRemovalRequestController extends Controller
                 (int) $assignment->expert_id,
                 'expert_application',
                 'Removed from a team',
-                'The CaPSA removed you as the '.e($role).' of '.$teamName.'.',
+                'The CaPSA/TSA removed you as the '.e($role).' of '.$teamName.'.',
                 route('instructor.teams'),
                 ['team_id' => $team->team_id],
             );
@@ -120,7 +120,7 @@ class ExpertRemovalRequestController extends Controller
                     'student_id' => $studentId,
                     'type' => 'expert_removal_approved',
                     'title' => 'Expert change approved',
-                    'message' => 'Your CaPSA approved removing <strong>'.e($expertName).'</strong> as the '.e($role).' of '.$teamName.'. '
+                    'message' => 'Your CaPSA/TSA approved removing <strong>'.e($expertName).'</strong> as the '.e($role).' of '.$teamName.'. '
                         .($replaced
                             ? 'Your application went to <strong>'.e($replacement->name).'</strong>, who will accept or decline it.'
                             : 'You can apply to another '.e($role).' now.')
@@ -148,7 +148,7 @@ class ExpertRemovalRequestController extends Controller
                 'student_id' => $removal->requested_by,
                 'type' => 'expert_removal_declined',
                 'title' => 'Expert change declined',
-                'message' => 'Your CaPSA declined removing <strong>'.e($expertName).'</strong> from '.$teamName
+                'message' => 'Your CaPSA/TSA declined removing <strong>'.e($expertName).'</strong> from '.$teamName
                     .'. They stay your expert. Their reason: "'.e($note).'"',
                 'link' => route('student.experts'),
             ]);

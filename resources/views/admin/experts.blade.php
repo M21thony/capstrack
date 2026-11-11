@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CaPSA Management - CapsTRACK Admin</title>
+<title>CaPSA/TSA Management - CapsTRACK Admin</title>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/table-kit.css') }}"/>
@@ -71,7 +71,7 @@
   .ct-preview-table tr:last-child td{border-bottom:none}
   .ct-preview-table th:nth-child(3),.ct-preview-table td:nth-child(3){width:180px}
   .ct-preview-table th:nth-child(5),.ct-preview-table td:nth-child(5){width:160px}
-  /* The badge is what a CaPSA scans the list by, so the three outcomes have
+  /* The badge is what a CaPSA/TSA scans the list by, so the three outcomes have
      to be tellable apart at a glance and not only by their wording. */
   .ct-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;white-space:nowrap}
   .ct-tag-create{background:rgba(22,163,74,0.1);color:#15803d}
@@ -90,8 +90,8 @@
   .ct-modal-card-wide .ct-modal-actions{justify-content:flex-end}
   .ct-modal-card-wide .ct-modal-actions .ct-btn{flex:0 0 auto;min-width:160px}
 
-  /* Expert Management (Admin's copy: CaPSAs only, and naming them is the
-     whole job). The CaPSA's own copy is resources/views/capsa/experts.blade.php
+  /* Expert Management (Admin's copy: CaPSA/TSAs only, and naming them is the
+     whole job). The CaPSA/TSA's own copy is resources/views/capsa/experts.blade.php
      - the faculty, their roles, and who advises whom. These two used to be one
      file switching on the viewer's role, which made neither version easy to
      read on its own. */
@@ -146,7 +146,7 @@
     gap:5px;
   }
 
-  {{-- .icon-btn lives in admin.css: both CaPSA pages use it too. --}}
+  {{-- .icon-btn lives in admin.css: both CaPSA/TSA pages use it too. --}}
 
 
 
@@ -195,7 +195,7 @@
     z-index: 9999;
     animation: ctFadeIn 0.18s ease;
     /* "safe center" centers a modal that fits, but falls back to
-       top-aligned once it's taller than the viewport - the Make CaPSA
+       top-aligned once it's taller than the viewport - the Make CaPSA/TSA
        modal can now genuinely grow past screen height with a lot of
        sections expanded, and plain "center" would clip its top out of
        reach with no way to scroll to it. */
@@ -258,8 +258,8 @@
   .ct-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;text-align:left}
   .ct-modal-grid .full{grid-column:1 / -1}
 
-  /* Section picker (Make CaPSA modal). Grouped by program with a
-     collapsed-by-default body and a per-group "select all" - a CaPSA
+  /* Section picker (Make CaPSA/TSA modal). Grouped by program with a
+     collapsed-by-default body and a per-group "select all" - a CaPSA/TSA
      covering every section of a program is one click on that group, not
      checking each section one at a time. Deliberately its own top-level
      component, not nested under .ct-modal-label/.ct-modal-input - a
@@ -384,7 +384,7 @@
     <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="page-title">CaPSA Management</div>
+    <div class="page-title">CaPSA/TSA Management</div>
     <div class="topbar-actions">
       @include('capsa.partials.notification-dropdown')
     </div>
@@ -439,7 +439,7 @@
           ->sortKeys()
           ->map(fn ($list) => $list->map(fn ($s) => Str::after($s, '-'))->sort()->values());
 
-      // The programs the CaPSAs on this page cover, for the Program filter.
+      // The programs the CaPSA/TSAs on this page cover, for the Program filter.
       $programsHere = $experts->flatMap(fn ($e) => collect($e->sections ?? [])->map(fn ($s) => Str::before($s, '-')))
           ->unique()->sort()->values();
     @endphp
@@ -450,18 +450,18 @@
       <div class="tk-head-text">
         <div class="page-head-text">
           <span class="page-count">{{ $experts->count() }}</span>
-          <span class="page-count-noun">{{ Str::plural('CaPSA', $experts->count()) }}</span>
+          <span class="page-count-noun">{{ Str::plural('CaPSA/TSA', $experts->count()) }}</span>
           <span class="page-count-noun">&middot; <strong>{{ $sectionsCovered }} of {{ $sectionsTotal }}</strong> {{ Str::plural('section', $sectionsTotal) }} assigned</span>
         </div>
       </div>
-      {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
-           into the system is the CaPSA's, from their own copy of this page,
+      {{-- Admin's job here is naming CaPSA/TSAs. Getting the rest of the faculty
+           into the system is the CaPSA/TSA's, from their own copy of this page,
            so the list upload and the one-off Add Expert form are not offered
            twice. View Report and Download Excel are put in here by
            partials/table-export (data-export-into on the table). --}}
       <div class="tk-actions">
         <span id="tkExport" style="display:contents"></span>
-        <button type="button" class="tk-btn tk-btn-pri" onclick="addCapsa()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add CaPSA</button>
+        <button type="button" class="tk-btn tk-btn-pri" onclick="addCapsa()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add CaPSA/TSA</button>
       </div>
     </div>
 
@@ -472,8 +472,8 @@
         <div class="tk-alert-top">
           <span class="tk-alert-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
           <div class="tk-alert-text">
-            <h2 class="tk-alert-title" id="tkCovTitle">{{ $uncoveredSections->count() }} {{ Str::plural('section', $uncoveredSections->count()) }} {{ $uncoveredSections->count() === 1 ? 'needs' : 'need' }} a CaPSA</h2>
-            <p class="tk-alert-sub">Assign a CaPSA so students in these sections can form teams.</p>
+            <h2 class="tk-alert-title" id="tkCovTitle">{{ $uncoveredSections->count() }} {{ Str::plural('section', $uncoveredSections->count()) }} {{ $uncoveredSections->count() === 1 ? 'needs' : 'need' }} a CaPSA/TSA</h2>
+            <p class="tk-alert-sub">Assign a CaPSA/TSA so students in these sections can form teams.</p>
             <p class="tk-alert-sub" style="display:flex;gap:18px;margin-top:10px;font-size:12px">
               @foreach ($uncoveredByProgram as $programCode => $letters)<span title="{{ $letters->map(fn ($l) => $programCode.'-'.$l)->implode(', ') }}"><b>{{ $programCode }}</b> {{ $letters->count() }}</span>@endforeach
             </p>
@@ -485,7 +485,7 @@
 
     @include('partials.row-select', [
       'table' => '.table',
-      'noun' => 'CaPSA',
+      'noun' => 'CaPSA/TSA',
       'actions' => [
         ['id' => 'bulkRemove', 'label' => 'Deactivate accounts', 'danger' => true,
          'icon' => '<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><path d="M12 2v10"/>'],
@@ -496,7 +496,7 @@
     <div class="card list-card">
       <div style="display:flex;align-items:center;gap:9px;padding:18px 20px 0">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <h2 style="margin:0;font-size:15px">CaPSA directory</h2>
+        <h2 style="margin:0;font-size:15px">CaPSA/TSA directory</h2>
         @if ($awaitingCount)<small style="margin-left:auto;font-size:12px;color:var(--text2)">{{ $awaitingCount }} awaiting first sign-in</small>@endif
       </div>
       {{-- Look for someone, narrow the list: inside the card, so the controls
@@ -509,7 +509,7 @@
         </div>
         <label class="experts-search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <span class="tk-vh">Search CaPSAs</span>
+          <span class="tk-vh">Search CaPSA/TSAs</span>
           <input class="input" id="experts-search-input" placeholder="Search by name, email or research area"/>
         </label>
         <div class="tk-toolbar-end">
@@ -532,10 +532,10 @@
       </div>
 
       <div class="tk-scroll">
-      <table class="table" data-export="CaPSA List" data-export-into="#tkExport">
+      <table class="table" data-export="CaPSA/TSA List" data-export-into="#tkExport">
         <thead>
           <tr>
-            <th style="width:30%">CaPSA</th>
+            <th style="width:30%">CaPSA/TSA</th>
             <th style="width:190px">Sign-in status</th>
             <th style="width:22%">Sections handled</th>
             <th class="tk-opt" style="width:22%">Research Areas</th>
@@ -558,8 +558,8 @@
               $maxTeams = $expert->max_teams ?? 0;
               $teamCount = $expert->team_assignments_count ?? 0;
 
-              // Team slots belong to the roles that take teams. A CaPSA is
-              // not one of them, so a plain CaPSA has no slots to show.
+              // Team slots belong to the roles that take teams. A CaPSA/TSA is
+              // not one of them, so a plain CaPSA/TSA has no slots to show.
               $takesTeams = $expert->roles
                   ->pluck('role_name')
                   ->intersect(\App\Models\CapstoneExpert::STUDENT_FACING_ROLES)
@@ -706,7 +706,7 @@
                   <div class="rowmenu-pop" hidden>
                     <button type="button" class="rowmenu-item warn"
                             onclick="toggleCapsa({{ $expert->expert_id }}, {{ $expert->is_capsa ? 'true' : 'false' }}, {{ Illuminate\Support\Js::from($displayName) }})">
-                      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg> {{ $expert->is_capsa ? 'Remove CaPSA role' : 'Make CaPSA' }}
+                      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg> {{ $expert->is_capsa ? 'Remove CaPSA/TSA role' : 'Make CaPSA/TSA' }}
                     </button>
                     <div class="rowmenu-sep"></div>
                     @if ($isOff)
@@ -720,7 +720,7 @@
                       </button>
                       <p style="margin:0;padding:2px 12px 8px;max-width:260px;font-size:11.5px;line-height:1.4;color:var(--text3);white-space:normal">{{ $deactivationBlocker }}</p>
                     @else
-                      {{-- Deactivate rather than delete: a CaPSA who steps down for a
+                      {{-- Deactivate rather than delete: a CaPSA/TSA who steps down for a
                            term should not have to be created from nothing when they
                            come back, and their history hangs off the row. --}}
                       <button type="button" class="rowmenu-item danger remove-trigger"
@@ -738,7 +738,7 @@
       </table>
       </div>
       <div class="tk-foot">
-        <span id="tkShowing">Showing all <strong>{{ $experts->count() }}</strong> {{ Str::plural('CaPSA', $experts->count()) }}</span>
+        <span id="tkShowing">Showing all <strong>{{ $experts->count() }}</strong> {{ Str::plural('CaPSA/TSA', $experts->count()) }}</span>
         @if ($uncoveredSections->isNotEmpty())
           <a href="#" onclick="assignSections(); return false;" style="color:var(--accent3,#9a7b14);font-weight:600">View {{ $uncoveredSections->count() }} unassigned {{ Str::plural('section', $uncoveredSections->count()) }} &rarr;</a>
         @endif
@@ -784,14 +784,14 @@
       // A table that just goes blank reads as broken, not as "nobody matched".
       noMatch.hidden = visible > 0;
       showing.innerHTML = visible === total
-        ? 'Showing all <strong>' + total + '</strong> ' + (total === 1 ? 'CaPSA' : 'CaPSAs')
+        ? 'Showing all <strong>' + total + '</strong> ' + (total === 1 ? 'CaPSA/TSA' : 'CaPSA/TSAs')
         : 'Showing <strong>' + visible + '</strong> of <strong>' + total + '</strong>';
     }
 
     var noMatch = document.createElement('tr');
     noMatch.className = 'tk-note';
     noMatch.hidden = true;
-    noMatch.innerHTML = '<td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No CaPSA matches that search.</td>';
+    noMatch.innerHTML = '<td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No CaPSA/TSA matches that search.</td>';
     rows[0]?.parentNode.appendChild(noMatch);
 
     if (searchInput) searchInput.addEventListener('input', filterRows);
@@ -911,10 +911,10 @@
     <h3 class="ct-modal-title">
       <span id="capsaModalLead">Make</span>
       <span id="capsaExpertName" style="color:#2563eb;"></span>
-      <span id="capsaModalTail">a CaPSA</span>
+      <span id="capsaModalTail">a CaPSA/TSA</span>
     </h3>
     <p class="ct-modal-desc" id="capsaModalDesc">
-      CaPSA duties (account approval, panel assignment, team verification, financial checks) are scoped to the section(s) assigned below.
+      CaPSA/TSA duties (account approval, panel assignment, team verification, financial checks) are scoped to the section(s) assigned below.
     </p>
 
     {{-- Only for a person with no account yet. The same modal grants the role
@@ -939,7 +939,7 @@
     <div class="section-field" id="capsaPickFields" style="display:none">
       <label class="ct-modal-label" for="capsaAssignee" style="margin-bottom:6px">Assign to</label>
       <select id="capsaAssignee" class="ct-modal-input">
-        <option value="">Choose a CaPSA</option>
+        <option value="">Choose a CaPSA/TSA</option>
         @foreach ($experts->filter(fn ($e) => $e->is_capsa && ! $e->deactivated_at) as $c)
           <option value="{{ $c->expert_id }}" data-sections="{{ json_encode($c->sections ?? []) }}">{{ $c->name !== '' ? $c->name : $c->email }}</option>
         @endforeach
@@ -964,7 +964,7 @@
     </div>
 
     <div class="section-field">
-      <label class="ct-modal-label" style="margin-bottom:6px">This CaPSA will cover</label>
+      <label class="ct-modal-label" style="margin-bottom:6px">This CaPSA/TSA will cover</label>
       <div class="section-preview" id="selectedPreview"><span class="section-preview-empty">Nothing selected yet.</span></div>
     </div>
 
@@ -980,7 +980,7 @@
           <div class="section-group-body">
             @foreach ($sections as $section)
               {{-- Who already covers it, so the picker can leave it out for
-                   everyone else. Two CaPSAs on one section means two people
+                   everyone else. Two CaPSA/TSAs on one section means two people
                    approving the same teams. Shown as the letter alone:
                    assigning takes a section, not a year - the value is still
                    the whole label (BSIT-3A), the starting class. --}}
@@ -996,7 +996,7 @@
       @endforelse
 
       {{-- A class after Year Promotion. Only here once someone holds it or
-           students are in it, so saving a CaPSA who has one keeps it. --}}
+           students are in it, so saving a CaPSA/TSA who has one keeps it. --}}
       @if ($laterSections->isNotEmpty())
         <div class="section-group" data-program="later">
           <div class="section-group-header" onclick="toggleGroup(this)">
@@ -1021,7 +1021,7 @@
       <button type="button" id="capsaCancelBtn" class="ct-btn ct-btn-secondary">Cancel</button>
       {{-- Same picker for granting the role and for changing sections later;
            the label says which job it is doing. --}}
-      <button type="button" id="capsaConfirmBtn" class="ct-btn ct-btn-primary">Make CaPSA</button>
+      <button type="button" id="capsaConfirmBtn" class="ct-btn ct-btn-primary">Make CaPSA/TSA</button>
     </div>
   </div>
 </div>
@@ -1036,13 +1036,13 @@
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/>
       </svg>
     </div>
-    <h3 class="ct-modal-title">Remove CaPSA from <span id="removeCapsaExpertName" style="color:#d97706;"></span>?</h3>
+    <h3 class="ct-modal-title">Remove CaPSA/TSA from <span id="removeCapsaExpertName" style="color:#d97706;"></span>?</h3>
     <p class="ct-modal-desc">
-      They'll lose access to account approval, panel assignment, team verification, and financial checks for their assigned section(s). This can be undone later by making them CaPSA again.
+      They'll lose access to account approval, panel assignment, team verification, and financial checks for their assigned section(s). This can be undone later by making them CaPSA/TSA again.
     </p>
     <div class="ct-modal-actions">
       <button type="button" id="removeCapsaCancelBtn" class="ct-btn ct-btn-secondary">Cancel</button>
-      <button type="button" id="removeCapsaConfirmBtn" class="ct-btn ct-btn-warning">Remove CaPSA</button>
+      <button type="button" id="removeCapsaConfirmBtn" class="ct-btn ct-btn-warning">Remove CaPSA/TSA</button>
     </div>
   </div>
 </div>
@@ -1151,14 +1151,14 @@ let capsaEditingSections = false;
 let capsaAdding = false;
 
 /**
- * Change the sections a CaPSA covers.
+ * Change the sections a CaPSA/TSA covers.
  *
  * Sections used to be settable only while granting the role, so changing
- * them meant removing the person as CaPSA and making them one again - which
+ * them meant removing the person as CaPSA/TSA and making them one again - which
  * cuts off their approval, panel, verification and financial access in
  * between, for a change that was never about their role.
  */
-/** Hand unassigned sections to a CaPSA picked here; saves like Edit sections. */
+/** Hand unassigned sections to a CaPSA/TSA picked here; saves like Edit sections. */
 function assignSections() {
   const pick = document.getElementById('capsaAssignee');
   pick.value = '';
@@ -1190,7 +1190,7 @@ function editCapsaSections(expertId, expertName, current) {
   document.getElementById('capsaModalLead').textContent = 'Manage sections for';
   document.getElementById('capsaModalTail').textContent = '';
   document.getElementById('capsaModalDesc').textContent =
-    'Tick every section they handle. Their CaPSA role is not affected - only what it covers.';
+    'Tick every section they handle. Their CaPSA/TSA role is not affected - only what it covers.';
   capsaModal.style.display = 'flex';
 }
 
@@ -1211,9 +1211,9 @@ function checkSections(names) {
 }
 
 /**
- * Make a CaPSA from an email address, with no account needed first.
+ * Make a CaPSA/TSA from an email address, with no account needed first.
  *
- * The job moves between faculty and there is no permanent CaPSA, so this
+ * The job moves between faculty and there is no permanent CaPSA/TSA, so this
  * happens often enough that it should not need the expert list uploaded for
  * the sake of one person.
  */
@@ -1229,11 +1229,11 @@ function addCapsa() {
   document.getElementById('capsaEmailError').style.display = 'none';
 
   capsaExpertName.textContent = '';
-  document.getElementById('capsaModalLead').textContent = 'Add a CaPSA';
+  document.getElementById('capsaModalLead').textContent = 'Add a CaPSA/TSA';
   document.getElementById('capsaModalTail').textContent = '';
   document.getElementById('capsaModalDesc').textContent =
-    'The account is made if it does not exist yet, and is approved straight away. CaPSA duties are scoped to the section(s) assigned below.';
-  capsaConfirmBtn.textContent = 'Add CaPSA';
+    'The account is made if it does not exist yet, and is approved straight away. CaPSA/TSA duties are scoped to the section(s) assigned below.';
+  capsaConfirmBtn.textContent = 'Add CaPSA/TSA';
 
   capsaSectionsError.style.display = 'none';
   resetSectionPicker();
@@ -1246,17 +1246,17 @@ function toggleCapsa(expertId, isCurrentlyCapsa, expertName) {
   capsaEditingSections = false;
   capsaAdding = false;
   document.getElementById('capsaNewFields').style.display = 'none';
-  capsaConfirmBtn.textContent = 'Make CaPSA';
+  capsaConfirmBtn.textContent = 'Make CaPSA/TSA';
   document.getElementById('capsaModalLead').textContent = 'Make';
-  document.getElementById('capsaModalTail').textContent = 'a CaPSA';
+  document.getElementById('capsaModalTail').textContent = 'a CaPSA/TSA';
   document.getElementById('capsaModalDesc').textContent =
-    'CaPSA duties (account approval, panel assignment, team verification, financial checks) are scoped to the section(s) assigned below.';
+    'CaPSA/TSA duties (account approval, panel assignment, team verification, financial checks) are scoped to the section(s) assigned below.';
 
   if (isCurrentlyCapsa) {
     removeCapsaTargetExpertId = expertId;
     document.getElementById('removeCapsaExpertName').textContent = expertName;
     document.getElementById('removeCapsaConfirmBtn').disabled = false;
-    document.getElementById('removeCapsaConfirmBtn').textContent = 'Remove CaPSA';
+    document.getElementById('removeCapsaConfirmBtn').textContent = 'Remove CaPSA/TSA';
     removeCapsaModal.style.display = 'flex';
     return;
   }
@@ -1269,7 +1269,7 @@ function toggleCapsa(expertId, isCurrentlyCapsa, expertName) {
   capsaModal.style.display = 'flex';
 }
 
-// Removing CaPSA isn't destructive (making them CaPSA again undoes it),
+// Removing CaPSA/TSA isn't destructive (making them CaPSA/TSA again undoes it),
 // but it does immediately cut off account approval/panel/verification/
 // financial access, so it still deserves a confirmation step rather than
 // firing the instant the icon is clicked.
@@ -1285,9 +1285,9 @@ document.getElementById('removeCapsaConfirmBtn').addEventListener('click', funct
   const expertName = document.getElementById('removeCapsaExpertName').textContent;
   this.disabled = true;
   this.textContent = 'Removing...';
-  sendToggleCapsa(removeCapsaTargetExpertId, null, 'Removed CaPSA from '.concat(expertName, '.'), () => {
+  sendToggleCapsa(removeCapsaTargetExpertId, null, 'Removed CaPSA/TSA from '.concat(expertName, '.'), () => {
     this.disabled = false;
-    this.textContent = 'Remove CaPSA';
+    this.textContent = 'Remove CaPSA/TSA';
   });
 });
 
@@ -1303,7 +1303,7 @@ capsaConfirmBtn.addEventListener('click', function () {
   // and sections can be given to them from this same modal later.
   if (capsaAdding && !document.getElementById('capsaEmail').value.trim()) {
     const box = document.getElementById('capsaEmailError');
-    box.textContent = 'Type the email address of the person to make a CaPSA.';
+    box.textContent = 'Type the email address of the person to make a CaPSA/TSA.';
     box.style.display = 'block';
     return;
   }
@@ -1313,7 +1313,7 @@ capsaConfirmBtn.addEventListener('click', function () {
   const wasAdding = capsaAdding;
   const restore = () => {
     this.disabled = false;
-    this.textContent = wasAdding ? 'Add CaPSA' : (wasEditing ? 'Save Sections' : 'Make CaPSA');
+    this.textContent = wasAdding ? 'Add CaPSA/TSA' : (wasEditing ? 'Save Sections' : 'Make CaPSA/TSA');
   };
 
   this.disabled = true;
@@ -1326,13 +1326,13 @@ capsaConfirmBtn.addEventListener('click', function () {
   }
 
   if (wasEditing) {
-    if (!capsaTargetExpertId) { restore(); showToast('Choose a CaPSA first.', 'error'); return; }
+    if (!capsaTargetExpertId) { restore(); showToast('Choose a CaPSA/TSA first.', 'error'); return; }
     saveCapsaSections(capsaTargetExpertId, sections, restore);
 
     return;
   }
 
-  sendToggleCapsa(capsaTargetExpertId, sections, 'CaPSA assigned successfully.', restore);
+  sendToggleCapsa(capsaTargetExpertId, sections, 'CaPSA/TSA assigned successfully.', restore);
 });
 
 /** Make the account if it is needed, grant the role, set the sections. */
@@ -1357,7 +1357,7 @@ function addCapsaByEmail(sections, onDone) {
     .then(data => {
       if (data.success) {
         capsaModal.style.display = 'none';
-        showToast(data.message || 'CaPSA added.', 'success');
+        showToast(data.message || 'CaPSA/TSA added.', 'success');
         setTimeout(() => window.location.reload(), 900);
 
         return;
@@ -1365,10 +1365,10 @@ function addCapsaByEmail(sections, onDone) {
 
       // Beside the field it is about, rather than in a toast that has gone
       // by the time they look back at what they typed.
-      errorBox.textContent = data.message || 'Could not add that CaPSA.';
+      errorBox.textContent = data.message || 'Could not add that CaPSA/TSA.';
       errorBox.style.display = 'block';
     })
-    .catch(() => showToast('Network error adding the CaPSA.', 'error'))
+    .catch(() => showToast('Network error adding the CaPSA/TSA.', 'error'))
     .finally(() => { if (onDone) onDone(); });
 }
 
@@ -1397,16 +1397,16 @@ function saveCapsaSections(expertId, sections, onDone) {
     .finally(() => { if (onDone) onDone(); });
 }
 
-// ── SECTION PICKER (Make CaPSA modal) ────────────────────────
+// ── SECTION PICKER (Make CaPSA/TSA modal) ────────────────────────
 // Grouped by program, collapsed by default, with a per-group "select
-// all" - a CaPSA covering an entire program is one click, not checking
+// all" - a CaPSA/TSA covering an entire program is one click, not checking
 // every section in it one at a time.
 /**
- * Leave out sections another CaPSA already covers.
+ * Leave out sections another CaPSA/TSA already covers.
  *
- * Two CaPSAs on one section means two people approving the same teams, so
+ * Two CaPSA/TSAs on one section means two people approving the same teams, so
  * a section that is taken is simply not on offer. The one exception is the
- * CaPSA being edited: their own sections have to stay tickable, or opening
+ * CaPSA/TSA being edited: their own sections have to stay tickable, or opening
  * Manage Sections would show them as covering nothing.
  */
 function hideTakenSections(forExpertId) {
@@ -1434,7 +1434,7 @@ function hideTakenSections(forExpertId) {
   const note = document.getElementById('sectionsTakenNote');
   if (note) {
     note.textContent = hidden
-      ? hidden + ' section' + (hidden === 1 ? ' is' : 's are') + ' already handled by another CaPSA and not shown.'
+      ? hidden + ' section' + (hidden === 1 ? ' is' : 's are') + ' already handled by another CaPSA/TSA and not shown.'
       : '';
     note.style.display = hidden ? 'block' : 'none';
   }
@@ -1604,7 +1604,7 @@ function openExpertDetail(data) {
 
   // No separate "CAPSA" chip - is_capsa stays synced with the
   // capstone_adviser role, so data.roles already says "Capstone Subject
-  // Adviser" for a CaPSA account.
+  // Adviser" for a CaPSA/TSA account.
   const badges = [];
   data.roles.forEach(r => badges.push(r));
   if (!badges.length) badges.push('No Role');

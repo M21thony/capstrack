@@ -1,5 +1,5 @@
 /*
- * Financial Records, for the CaPSA and for students.
+ * Financial Records, for the CaPSA/TSA and for students.
  *
  * Every class is fx- prefixed so the app's own .btn, .card, .avatar and
  * table styles cannot leak in. Colours are CapsTrack's tokens.
@@ -57,7 +57,7 @@
 .fx-bar span{display:block;height:100%}
 .fx-bar .fx-v{background:var(--fx-ok)} .fx-bar .fx-w{background:var(--fx-brand)} .fx-bar .fx-b{background:var(--fx-bad)}
 
-/* CaPSA */
+/* CaPSA/TSA */
 .fx-crumb{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14px;color:var(--fx-muted)}
 .fx-crumb b{color:var(--fx-ink);font-weight:700}
 .fx-crumb button{border:0;background:none;padding:0;color:var(--fx-ink2);font-weight:600;text-decoration:underline;text-underline-offset:3px}
@@ -194,7 +194,7 @@
   #fx-capsa .fx-list colgroup col{width:auto!important}
   #fx-capsa .fx-list colgroup col:first-child{width:52px!important}
 }
-/* The CaPSA's header on a phone: the title and New fee on one line, the fee
+/* The CaPSA/TSA's header on a phone: the title and New fee on one line, the fee
    tabs on their own below. The tabs are drawn by script after the page is
    first on screen; with nowhere set aside for them they took the title's
    line and pushed New fee - and the whole page under it - down a row. Their

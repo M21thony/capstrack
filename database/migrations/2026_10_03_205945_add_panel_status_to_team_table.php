@@ -6,14 +6,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * A team's panel is a draft while the CaPSAs are still working it out - a
- * panelist can move to another team - and final once the CaPSA says so. A
+ * A team's panel is a draft while the CaPSA/TSAs are still working it out - a
+ * panelist can move to another team - and final once the CaPSA/TSA says so. A
  * final panel sits every defense through Final Oral; only a panelist who can
  * no longer sit is replaced (panel_replacements).
  *
  * Teams whose panel has already sat or been given a date are final: that
  * panel is the one they have. A panel nobody has been scheduled with yet is
- * a draft, for the CaPSA to look over and finalize.
+ * a draft, for the CaPSA/TSA to look over and finalize.
  */
 return new class extends Migration
 {

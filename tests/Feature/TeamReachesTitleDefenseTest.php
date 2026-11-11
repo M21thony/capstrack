@@ -39,7 +39,7 @@ use Tests\TestCase;
 /**
  * One team from the Pre-proposal Defense to a passed Title Defense, every step taken
  * through the pages the people involved use: the students upload, the
- * adviser and consultant review, the CaPSA checks papers, recommends a
+ * adviser and consultant review, the CaPSA/TSA checks papers, recommends a
  * title, verifies fees and schedules, and the panel grades and decides.
  * Only the AI behind the duplication check is stood in for.
  */
@@ -80,7 +80,7 @@ class TeamReachesTitleDefenseTest extends TestCase
 
         $this->capsa = $this->capsaFor(['BSIT-4A']);
         $this->checklist = $this->departmentChecklist($this->capsa);
-        // The CaPSA's expert evaluation for every defense, set up from the start.
+        // The CaPSA/TSA's expert evaluation for every defense, set up from the start.
         foreach (EvaluationTemplate::STAGES as $stage) {
             EvaluationTemplate::factory()->withQuestions()->create(['capsa_id' => $this->capsa->expert_id, 'defense_type' => $stage]);
         }
@@ -175,7 +175,7 @@ class TeamReachesTitleDefenseTest extends TestCase
     }
 
     /**
-     * What a leader does after each passed defense: answer the CaPSA's
+     * What a leader does after each passed defense: answer the CaPSA/TSA's
      * evaluation of every expert, 5 stars each. The next phase stays locked
      * until they do (see ExpertEvaluations).
      */
@@ -229,7 +229,7 @@ class TeamReachesTitleDefenseTest extends TestCase
             ->assertJson(['success' => true]);
     }
 
-    /** The CaPSA ticks a signed paper as checked. */
+    /** The CaPSA/TSA ticks a signed paper as checked. */
     private function capsaChecks(string $key): void
     {
         $this->asExpert($this->capsa)
@@ -237,7 +237,7 @@ class TeamReachesTitleDefenseTest extends TestCase
             ->assertOk();
     }
 
-    /** A paper the team signs, uploads, and the CaPSA checks. */
+    /** A paper the team signs, uploads, and the CaPSA/TSA checks. */
     private function paper(string $key): void
     {
         $this->handIn($key);
@@ -247,7 +247,7 @@ class TeamReachesTitleDefenseTest extends TestCase
 
     /**
      * A document sent to everyone the upload pop-up offers for it; every
-     * reviewer on it approves, then the CaPSA checks it.
+     * reviewer on it approves, then the CaPSA/TSA checks it.
      */
     private function reviewed(string $key): void
     {
@@ -274,7 +274,7 @@ class TeamReachesTitleDefenseTest extends TestCase
 
     /**
      * Every member hands their receipt for the defense's fee to the leader,
-     * the leader sends the team's to the CaPSA at once, and the CaPSA
+     * the leader sends the team's to the CaPSA/TSA at once, and the CaPSA/TSA
      * verifies each.
      */
     private function feesPaid(string $type): void
@@ -293,7 +293,7 @@ class TeamReachesTitleDefenseTest extends TestCase
                 ])->assertSessionHasNoErrors();
         }
 
-        // Each receipt is with the CaPSA as soon as it is uploaded.
+        // Each receipt is with the CaPSA/TSA as soon as it is uploaded.
         foreach ($this->members as $member) {
             $record = FinancialRecord::where('student_id', $member->student_id)->where('expense_post_id', $fee->id)->firstOrFail();
             $this->asExpert($this->capsa)
@@ -310,7 +310,7 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->paper("{$prefix}_hearing_notice");
     }
 
-    /** The CaPSA gives the team its panel, sets the date inside the window, and the panel grades it on the day. */
+    /** The CaPSA/TSA gives the team its panel, sets the date inside the window, and the panel grades it on the day. */
     private function defense(string $type, string $date): void
     {
         DefenseWindow::updateOrCreate(['defense_type' => $type], ['start_date' => $date, 'end_date' => $date]);
@@ -397,7 +397,7 @@ class TeamReachesTitleDefenseTest extends TestCase
         // Public Presentation.
         $this->paper('participation_certificate');
 
-        // The Archive Entry, sent by the leader and published by the CaPSA.
+        // The Archive Entry, sent by the leader and published by the CaPSA/TSA.
         $this->actingAs($this->leader(), 'web')->post(route('student.archive.manuscript.submit'), [
             'title' => 'A Tracker for Capstone Teams', 'abstract' => 'We built a tracker.',
         ])->assertSessionHas('success');
@@ -487,7 +487,7 @@ class TeamReachesTitleDefenseTest extends TestCase
         ]);
     }
 
-    /** Chapters 1, 2 and 5 go to the adviser and the CaPSA: after the adviser's approval, the CaPSA's check closes them. */
+    /** Chapters 1, 2 and 5 go to the adviser and the CaPSA/TSA: after the adviser's approval, the CaPSA/TSA's check closes them. */
     public function test_a_draft_not_sent_to_the_consultant_closes_on_the_advisers_approval(): void
     {
         $fileId = $this->onRecord($this->line('chapter_1_draft'));
@@ -517,7 +517,7 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->assertDone('chapter_3_draft');
     }
 
-    /** The CaPSA's check, straight in - the lock on the draft is not what these test. */
+    /** The CaPSA/TSA's check, straight in - the lock on the draft is not what these test. */
     private function checked(string $key): void
     {
         DeliverableCheck::create(['deliverable_id' => $this->line($key)->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()]);

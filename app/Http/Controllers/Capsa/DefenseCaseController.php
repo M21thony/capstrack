@@ -18,7 +18,7 @@ use Illuminate\Validation\Rule;
 /**
  * The smaller things the Defenses page records about a team or a panelist:
  * a panelist's days away, a member who is a returnee, and the CaPA's go when
- * the CaPA gave it to the CaPSA in person.
+ * the CaPA gave it to the CaPSA/TSA in person.
  */
 class DefenseCaseController extends Controller
 {
@@ -75,7 +75,7 @@ class DefenseCaseController extends Controller
         return response()->json(['success' => true, 'message' => trim($student->f_name.' '.$student->l_name).($validated['is_returnee'] ? ' is marked as a returnee.' : ' is no longer marked as a returnee.')]);
     }
 
-    /** POST /panel_assignment/capa/{defense} - the CaPA's answer, as they gave it to the CaPSA. */
+    /** POST /panel_assignment/capa/{defense} - the CaPA's answer, as they gave it to the CaPSA/TSA. */
     public function capa(Request $request, DefenseSchedule $defense): JsonResponse
     {
         $validated = $request->validate([

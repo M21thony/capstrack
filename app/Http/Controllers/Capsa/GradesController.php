@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Team Management's Grades tab: the panel grades on paper, and the section's
- * CaPSA types each sheet's total and keeps the signed sheets as one PDF.
+ * CaPSA/TSA types each sheet's total and keeps the signed sheets as one PDF.
  *
  * A total goes in once per record - one per panelist graded on their own, one
  * per shared grade (the grader's row, copied onto everyone joined to it). A
@@ -85,7 +85,7 @@ class GradesController extends Controller
                     'scores' => [],
                     'total_score' => (float) $value,
                     'verdict' => null,
-                    'remarks' => PanelGrade::FROM_PAPER.$capsa->name.' (CaPSA).',
+                    'remarks' => PanelGrade::FROM_PAPER.$capsa->name.' (CaPSA/TSA).',
                     'status' => $submit ? PanelGrade::SUBMITTED : PanelGrade::DRAFT,
                     'submitted_at' => $submit ? now() : null,
                 ]
@@ -144,7 +144,7 @@ class GradesController extends Controller
     /**
      * One record per sheet to type: a shared grade (its grader's row, naming
      * everyone it counts for) or a panelist on their own. `own` when the
-     * panelist turned it in themselves, which CaPSA sees but does not type.
+     * panelist turned it in themselves, which CaPSA/TSA sees but does not type.
      *
      * @return list<array<string, mixed>>
      */
@@ -183,7 +183,7 @@ class GradesController extends Controller
         return $records;
     }
 
-    /** The defense's team has to be in one of this CaPSA's sections. */
+    /** The defense's team has to be in one of this CaPSA/TSA's sections. */
     private function guard(DefenseSchedule $defense): CapstoneExpert
     {
         /** @var CapstoneExpert $capsa */

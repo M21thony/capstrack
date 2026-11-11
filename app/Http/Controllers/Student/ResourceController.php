@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ResourceController extends Controller
 {
-    /** The categories a CaPSA files under, as the page names them. */
+    /** The categories a CaPSA/TSA files under, as the page names them. */
     public const CATEGORIES = [
         'pre-proposal' => 'Pre-proposal',
         'ch1-3' => 'Chapters 1–3',
@@ -100,7 +100,7 @@ class ResourceController extends Controller
     /**
      * Hand over a file the student may see, and count it.
      *
-     * The file lives in the CaPSA's Google Drive; this sends the browser to
+     * The file lives in the CaPSA/TSA's Google Drive; this sends the browser to
      * Drive's own download. A file the student cannot see is not found, the
      * same answer a file that does not exist gets.
      */
@@ -204,7 +204,7 @@ class ResourceController extends Controller
         return $dompdf->output();
     }
 
-    /** The category's key: the CaPSA's choice, or an older free-text one made into one. */
+    /** The category's key: the CaPSA/TSA's choice, or an older free-text one made into one. */
     private static function categoryKey(?string $category): string
     {
         $key = strtolower(trim((string) $category));

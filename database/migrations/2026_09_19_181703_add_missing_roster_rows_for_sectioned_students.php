@@ -9,15 +9,15 @@ use Illuminate\Support\Str;
 return new class extends Migration
 {
     /**
-     * Put back on the class list every student a CaPSA can see in a section.
+     * Put back on the class list every student a CaPSA/TSA can see in a section.
      *
      * Sign-in admits a student only through student_rosters. When that rule
      * was tightened, the students who had signed in before any list was
      * uploaded were assumed to be on it already, and not all were: they kept
-     * their account and their section, so their CaPSA saw them in the list,
+     * their account and their section, so their CaPSA/TSA saw them in the list,
      * while the sign-in page told them they were not on it.
      *
-     * A student with a section is one a CaPSA has placed. Removing somebody
+     * A student with a section is one a CaPSA/TSA has placed. Removing somebody
      * clears their section as well as their roster row, so those stay out.
      * A course that maps to no program cannot be in anyone's section list,
      * and is left alone too.
@@ -62,7 +62,7 @@ return new class extends Migration
 
     /**
      * Nothing to undo safely: the rows added here cannot be told apart from
-     * ones a CaPSA has since edited or relied on, and taking them away would
+     * ones a CaPSA/TSA has since edited or relied on, and taking them away would
      * lock those students out again.
      */
     public function down(): void {}

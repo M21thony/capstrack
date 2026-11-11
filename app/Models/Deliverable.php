@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * One thing inside a milestone that a team hands in or passes.
  *
  * The kind decides what closes it. A signed paper - a form, or a CLF the
- * adviser or consultant signed by hand - closes when the CaPSA checks the
+ * adviser or consultant signed by hand - closes when the CaPSA/TSA checks the
  * uploaded scan, because the system has no e-signing. An upload closes on
  * being uploaded, a defense on the panel's recorded pass.
  */
@@ -29,26 +29,26 @@ class Deliverable extends Model
 
     public const CUSTOM = 'custom';
 
-    /** A Bluebook requirement: a file or a Drive video link the dean's office checks, not the CaPSA. */
+    /** A Bluebook requirement: a file or a Drive video link the dean's office checks, not the CaPSA/TSA. */
     public const BLUEBOOK = 'bluebook';
 
     public const KINDS = [self::FORM, self::DOCUMENT, self::APPROVAL, self::DEFENSE, self::CUSTOM, self::BLUEBOOK];
 
-    /** The signed papers and tasks: sent as a scan, opened by the CaPSA as the file itself. */
+    /** The signed papers and tasks: sent as a scan, opened by the CaPSA/TSA as the file itself. */
     public const CHECKED_BY_CAPSA = [self::FORM, self::APPROVAL, self::CUSTOM];
 
-    /** The kinds only the CaPSA's check closes: everything but a defense, which closes on its result. */
+    /** The kinds only the CaPSA/TSA's check closes: everything but a defense, which closes on its result. */
     public const CLOSED_BY_CAPSA = [self::FORM, self::DOCUMENT, self::APPROVAL, self::CUSTOM];
 
     /**
-     * The Recommended Pre-Proposal Title Form. The CaPSA recommends a title in
+     * The Recommended Pre-Proposal Title Form. The CaPSA/TSA recommends a title in
      * CapsTrack itself, so the line closes on that and nothing is uploaded for it.
      */
     public const TITLE_RECOMMENDATION = 'pre_proposal_title_form';
 
     /**
      * The Archive Entry: title, abstract and proponents, typed on the archive
-     * page. The line closes when the CaPSA publishes it; nothing is uploaded.
+     * page. The line closes when the CaPSA/TSA publishes it; nothing is uploaded.
      */
     public const ARCHIVE_ENTRY = 'archive_entry';
 
@@ -83,7 +83,7 @@ class Deliverable extends Model
     ];
 
     /**
-     * The roles the CaPSA chose for this line's uploads, every one of whom
+     * The roles the CaPSA/TSA chose for this line's uploads, every one of whom
      * must approve; null keeps the usual people (SubmissionRecipients::rulesFor).
      * A signed CLF, a defense and the special lines keep their own rules.
      *
@@ -108,7 +108,7 @@ class Deliverable extends Model
         return $this->hasMany(DeliverableCheck::class);
     }
 
-    /** Whether the CaPSA's title recommendation closes this line, not an upload. */
+    /** Whether the CaPSA/TSA's title recommendation closes this line, not an upload. */
     public function closesOnTitleRecommendation(): bool
     {
         return $this->template_key === self::TITLE_RECOMMENDATION;
@@ -134,7 +134,7 @@ class Deliverable extends Model
 
     /**
      * How a line is recognised across copies: by its department key, or by
-     * its title for a line a CaPSA wrote themselves.
+     * its title for a line a CaPSA/TSA wrote themselves.
      */
     public static function keyFor(?string $templateKey, string $title): string
     {

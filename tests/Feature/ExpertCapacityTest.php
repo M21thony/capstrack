@@ -15,7 +15,7 @@ use Tests\TestCase;
 
 /**
  * The panel's "cross-check teams and experts": per program and role, teams
- * still needing an expert against the slots experts have left - on the CaPSA
+ * still needing an expert against the slots experts have left - on the CaPSA/TSA
  * dashboard, and as a notice when a program runs short.
  */
 class ExpertCapacityTest extends TestCase

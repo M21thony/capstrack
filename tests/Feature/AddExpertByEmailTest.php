@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * A CaPSA adds one expert from their email address.
+ * A CaPSA/TSA adds one expert from their email address.
  *
  * The list upload is for a whole faculty at once. This is for the person it
  * missed - without it, admitting one late arrival meant re-uploading a
@@ -128,7 +128,7 @@ class AddExpertByEmailTest extends TestCase
      * A role is no longer required here.
      *
      * It used to be, on the reasoning that an account with no role can sign
-     * in and do nothing. But the role is the CaPSA's to decide - the module
+     * in and do nothing. But the role is the CaPSA/TSA's to decide - the module
      * says so - and making them decide it at the moment they type an address
      * is what the requirement was trying to avoid. The account exists; the
      * role follows from the row.
@@ -188,7 +188,7 @@ class AddExpertByEmailTest extends TestCase
         $this->assertSame(['grammarian'], $this->rolesOf('already@gmail.com'));
     }
 
-    /** Adding an expert cannot hand out CaPSA - that stays Admin's. */
+    /** Adding an expert cannot hand out CaPSA/TSA - that stays Admin's. */
     public function test_capsa_cannot_be_granted_through_this(): void
     {
         $this->actingAs($this->capsa(), 'expert');
@@ -218,7 +218,7 @@ class AddExpertByEmailTest extends TestCase
         $this->assertSame(0, ExpertExpertise::where('expert_id', $expert->expert_id)->count());
     }
 
-    /** The button and its fields are on the CaPSA's page. */
+    /** The button and its fields are on the CaPSA/TSA's page. */
     public function test_the_page_offers_adding_an_expert_by_email(): void
     {
         $this->actingAs($this->capsa(), 'expert');

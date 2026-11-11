@@ -141,7 +141,7 @@ class RoutesFollowRestConventionsTest extends TestCase
             'student.pre-proposal.document' => ['GET', 'pre-proposal/{preProposal}/document'],
             // Answering an invitation - one address, the status in the body.
             'invitations.update' => ['PATCH', 'invitations/{invitation}'],
-            // Naming a CaPSA.
+            // Naming a CaPSA/TSA.
             'admin.experts.capsa.store' => ['POST', 'admin/experts/capsa'],
             // Switching an account off, and back on again.
             'admin.experts.destroy' => ['DELETE', 'admin/experts/{expert}'],

@@ -19,7 +19,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * Panel Assignment and Defense Scheduling as separate pages: a CaPSA works
+ * Panel Assignment and Defense Scheduling as separate pages: a CaPSA/TSA works
  * with her own sections, other sections' bookings still count, saving the
  * window schedules nobody, a redefense keeps its panel, and a stage with no
  * rubric is flagged.

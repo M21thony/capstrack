@@ -8,13 +8,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
-/** The demo data a BSIT-3A/3B CaPSA uses to show Generate schedule on the Pre-proposal Defense. */
+/** The demo data a BSIT-3A/3B CaPSA/TSA uses to show Generate schedule on the Pre-proposal Defense. */
 class ScheduleDemoSeederTest extends TestCase
 {
     use BuildsChecklists;
     use RefreshDatabase;
 
-    /** The CaPSA has the department checklist, whose forms come before the Pre-proposal Defense. */
+    /** The CaPSA/TSA has the department checklist, whose forms come before the Pre-proposal Defense. */
     /** A missing grammarian is only a warning, so the team without one is still given a date. */
     public function test_generate_schedule_suggests_every_demo_team_with_a_panel(): void
     {

@@ -40,11 +40,11 @@ test('two tabs switch, and Schedule opens and closes with Escape', async ({ page
   await expect(page.locator('#xh-panel-find')).toBeVisible();
   await expect(page.locator('#xh-panel-book')).toBeHidden();
   await noSidewaysScroll(page);
-  // The quick guide folds; opened it shows three steps and the CaPSA rule.
+  // The quick guide folds; opened it shows three steps and the CaPSA/TSA rule.
   const guide = page.locator('.xh-guide');
   if (!(await guide.evaluate((d) => d.open))) { await guide.locator('summary').click(); }
   await expect(guide.locator('li')).toHaveCount(3);
-  await expect(guide).toContainText("ask your section's CaPSA");
+  await expect(guide).toContainText("ask your section's CaPSA/TSA");
   await shot(page, testInfo, '2-find-experts');
 
   await book.click();

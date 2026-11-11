@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /**
- * A CaPSA correcting the address a student signs in with.
+ * A CaPSA/TSA correcting the address a student signs in with.
  *
  * Sign-in finds a student by email, so the address has to move together with
  * the class-list entry that admits them - otherwise the new address is turned
@@ -59,7 +59,7 @@ class CapsaEditStudentEmailTest extends TestCase
 
     private function signInWithGoogle(string $email)
     {
-        // A fresh visitor: the CaPSA who made the change is not the one signing in.
+        // A fresh visitor: the CaPSA/TSA who made the change is not the one signing in.
         $this->app['auth']->forgetGuards();
         $this->app['auth']->shouldUse('web');
         $this->flushSession();

@@ -10,7 +10,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The CaPSA opens each milestone for her whole section, and a team is held
+ * The CaPSA/TSA opens each milestone for her whole section, and a team is held
  * back only by the defense above it. Live checklists keep open every
  * milestone up to the furthest one a team has started on.
  */

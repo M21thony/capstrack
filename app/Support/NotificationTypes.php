@@ -34,7 +34,7 @@ final class NotificationTypes
 
     public const EXPERT = [
         'expert_application' => [
-            'label' => 'A team applies to me, or a CaPSA removes me from a team',
+            'label' => 'A team applies to me, or a CaPSA/TSA removes me from a team',
             'email' => true,
         ],
         'consultation_booked' => [
@@ -66,16 +66,16 @@ final class NotificationTypes
             'email' => true,
         ],
         'announcement' => [
-            'label' => 'A CaPSA posts an announcement for experts',
+            'label' => 'A CaPSA/TSA posts an announcement for experts',
             'email' => true,
         ],
         'expert_slots_short' => [
-            'label' => 'My programs have more teams needing an expert than free expert slots (CaPSA)',
+            'label' => 'My programs have more teams needing an expert than free expert slots (CaPSA/TSA)',
             'email' => true,
         ],
-        // One per student, so bell only: an email each would bury the CaPSA.
+        // One per student, so bell only: an email each would bury the CaPSA/TSA.
         'team_rating_submitted' => [
-            'label' => 'A student submits a team rating (CaPSA)',
+            'label' => 'A student submits a team rating (CaPSA/TSA)',
             'email' => false,
         ],
     ];
@@ -167,7 +167,7 @@ final class NotificationTypes
             'web' => false,
         ],
         'announcement' => [
-            'label' => 'A CaPSA posts an announcement',
+            'label' => 'A CaPSA/TSA posts an announcement',
             'email' => true,
             'web' => false,
         ],
@@ -180,7 +180,7 @@ final class NotificationTypes
             'email' => false,
         ],
         'checklist_item_added' => [
-            'label' => 'Our CaPSA adds something new to our checklist',
+            'label' => 'Our CaPSA/TSA adds something new to our checklist',
             'email' => false,
         ],
         'consultation_reminder' => [

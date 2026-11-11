@@ -12,7 +12,7 @@ use App\Models\TeamExpertAssignment;
  * team that still needs an adviser, consultant or grammarian?
  *
  * The panel asked for this cross-check to be automatic. Teams still pick
- * their own experts - this only counts, so the CaPSA hears about a shortage
+ * their own experts - this only counts, so the CaPSA/TSA hears about a shortage
  * before the teams run into full experts one by one.
  *
  * A team "needs" a role until it has an approved expert in it: a pending
@@ -94,7 +94,7 @@ final class ExpertCapacity
     }
 
     /**
-     * The shortages in plain words, one line each - what the CaPSA's notice says.
+     * The shortages in plain words, one line each - what the CaPSA/TSA's notice says.
      *
      * @param  array<string, list<array{role: string, label: string, need: int, free: int|null, short: int, status: string}>>  $capacity
      * @return list<string>

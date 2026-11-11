@@ -15,7 +15,7 @@ use Tests\TestCase;
 
 /**
  * Every page behind the staff sidebar still opens, for the account that sees
- * the most of it - Admin, CaPSA and adviser at once - and the sidebar on it is
+ * the most of it - Admin, CaPSA/TSA and adviser at once - and the sidebar on it is
  * in topic order. The sidebar is on all of these pages, so one broken line in
  * it breaks every one of them at once.
  */
@@ -83,7 +83,7 @@ class EveryStaffPageStillOpensTest extends TestCase
             ->assertRedirect(route('capsa.team_management', ['tab' => 'applications']));
         $this->actingAs($expert, 'expert')->get(route('capsa.team_management', ['tab' => 'applications']))->assertOk();
 
-        // A CaPSA's expert teams are on Team Management: one Teams page, not two.
+        // A CaPSA/TSA's expert teams are on Team Management: one Teams page, not two.
         $this->actingAs($expert, 'expert')->get(route('instructor.teams'))
             ->assertRedirect(route('capsa.team_management', ['tab' => 'teams']));
     }
@@ -105,7 +105,7 @@ class EveryStaffPageStillOpensTest extends TestCase
             ], false);
     }
 
-    /** A plain CaPSA sees no adviser or admin pages, and no empty headings for them. */
+    /** A plain CaPSA/TSA sees no adviser or admin pages, and no empty headings for them. */
     public function test_a_capsa_only_account_sees_only_its_own_pages(): void
     {
         $capsa = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'sections' => ['BSIT-3A']]);
@@ -144,6 +144,6 @@ class EveryStaffPageStillOpensTest extends TestCase
         DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => DefenseOutcome::TITLE_DEFENSE, 'attempt' => 1, 'outcome' => DefenseOutcome::PASSED, 'outcome_recorded_at' => now()]);
 
         $this->actingAs($leader, 'web')->get(route('student.team'))->assertOk()->assertSee('Members locked');
-        $this->actingAs($member, 'web')->get(route('student.team'))->assertOk()->assertSee('Ask CaPSA to leave');
+        $this->actingAs($member, 'web')->get(route('student.team'))->assertOk()->assertSee('Ask CaPSA/TSA to leave');
     }
 }

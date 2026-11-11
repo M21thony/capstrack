@@ -5,11 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * An approval the CaPSA still has to see for themselves.
+ * An approval the CaPSA/TSA still has to see for themselves.
  *
- * A CLF closes on the adviser's verdict. Some CaPSAs want to look at the
+ * A CLF closes on the adviser's verdict. Some CaPSA/TSAs want to look at the
  * signed copy before believing it, so an approval line can ask for that: once
- * approved it waits on the CaPSA, and closes when they check it (written to
+ * approved it waits on the CaPSA/TSA, and closes when they check it (written to
  * completed_at, the same column a checked form uses).
  *
  * Off by default, so every existing checklist behaves exactly as before.

@@ -80,7 +80,7 @@ class AdminProfileController extends Controller
         ]);
 
         // Sections and the school year are the Admin's to set (Expert
-        // Management and Settings); this page used to let a CaPSA change their
+        // Management and Settings); this page used to let a CaPSA/TSA change their
         // own, and a save with none ticked wiped them.
 
         $data = [

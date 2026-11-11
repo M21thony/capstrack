@@ -198,7 +198,7 @@ class MobileTabBarTest extends TestCase
             ->assertSee('class="mtab is-floating"', false)
             ->assertSeeInOrder(['>Home<', '>Experts<', '>Students<', '>Analytics<', '>Menu<'], false)
             ->assertSee('href="'.route('admin.dashboard').'" class="mtab-item', false)
-            // Not a CaPSA, so no CaPSA-only pages in the bar.
+            // Not a CaPSA/TSA, so no CaPSA/TSA-only pages in the bar.
             ->assertDontSee('>Defenses<', false)
             // The phone card layout for this page's list.
             ->assertSee('class="table std-table"', false);

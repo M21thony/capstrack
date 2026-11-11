@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 /**
  * New notifications and announcements pop up in the bottom corner of every
- * portal, and a CaPSA's announcement for experts reaches the experts' bells.
+ * portal, and a CaPSA/TSA's announcement for experts reaches the experts' bells.
  */
 class NotificationPopupsTest extends TestCase
 {
@@ -77,7 +77,7 @@ class NotificationPopupsTest extends TestCase
         $this->assertSame('announcement', $notification->type);
         $this->assertSame('Title defense moved to Friday', $notification->title);
         $this->assertSame('The title defense is now on Friday.', $notification->message);
-        $this->assertFalse(Notification::where('expert_id', $capsa->expert_id)->exists(), 'The CaPSA who posted it is not told about it.');
+        $this->assertFalse(Notification::where('expert_id', $capsa->expert_id)->exists(), 'The CaPSA/TSA who posted it is not told about it.');
         $this->assertFalse(Notification::where('expert_id', $pending->expert_id)->exists(), 'An expert not yet approved is not told.');
 
         // It is in the feed the pop-ups read.

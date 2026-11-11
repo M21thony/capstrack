@@ -49,7 +49,7 @@
     <div id="evp-title">Time to evaluate your {{ \App\Support\ExpertEvaluations::whom($evaluationsOwed) }}</div>
     <div id="evp-sub">
       Your team passed {{ $owedPhases->pluck('name')->implode(' and ') }}.
-      As team leader, answer your CaPSA's short evaluation of each one, 1 to 5 stars per question. It is anonymous. <b>The next phase stays locked until you do.</b>
+      As team leader, answer your CaPSA/TSA's short evaluation of each one, 1 to 5 stars per question. It is anonymous. <b>The next phase stays locked until you do.</b>
     </div>
     <ul id="evp-list">
       @foreach($owedPhases->take(3) as $phase)

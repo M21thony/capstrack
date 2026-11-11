@@ -135,7 +135,7 @@ class MilestonePagesTest extends TestCase
             ->assertOk()
             ->assertSee('Set up milestones')
             ->assertSee("Use the department's milestones", false)
-            ->assertDontSee("Copy another CaPSA's milestones", false)
+            ->assertDontSee("Copy another CaPSA/TSA's milestones", false)
             ->assertSee('Start empty');
     }
 

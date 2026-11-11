@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * When a CaPSA, Admin or Expert finished (or skipped) their portal's guided
+ * When a CaPSA/TSA, Admin or Expert finished (or skipped) their portal's guided
  * tour - the same thing students.tutorial_completed_at records for students.
  * Empty until then, so the tour opens by itself once.
  */

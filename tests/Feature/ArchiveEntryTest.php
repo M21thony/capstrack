@@ -20,7 +20,7 @@ use Tests\TestCase;
 /**
  * The Archive Entry: its own milestone after the Final Oral Defense. The
  * team sends a title, a typed abstract and its proponents - no manuscript -
- * and the line closes once the CaPSA publishes it in the Archive.
+ * and the line closes once the CaPSA/TSA publishes it in the Archive.
  */
 class ArchiveEntryTest extends TestCase
 {
@@ -128,10 +128,10 @@ class ArchiveEntryTest extends TestCase
 
         $this->actingAs($this->leader, 'web')->get(route('student.archive'))
             ->assertOk()
-            ->assertSee('Your CaPSA has closed the Archive Entry.')
+            ->assertSee('Your CaPSA/TSA has closed the Archive Entry.')
             ->assertDontSee('id="ms-proponents"', false);
 
-        $this->send()->assertSessionHas('error', 'Your CaPSA has closed the Archive Entry.');
+        $this->send()->assertSessionHas('error', 'Your CaPSA/TSA has closed the Archive Entry.');
         $this->assertSame(0, ArchivedDocument::count());
     }
 
@@ -142,7 +142,7 @@ class ArchiveEntryTest extends TestCase
         $this->actingAs($this->leader, 'web')->get(route('student.progress'))
             ->assertOk()
             ->assertSee('Send your title, abstract and proponents.')
-            ->assertSee('Closes when your CaPSA publishes it in the Archive')
+            ->assertSee('Closes when your CaPSA/TSA publishes it in the Archive')
             ->assertSee(route('student.archive'), false);
     }
 }

@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Team Management is the CaPSA's one page for the teams in her sections.
+ * Team Management is the CaPSA/TSA's one page for the teams in her sections.
  *
  * The axis matters: this is section oversight - every team in the sections
  * she covers, whoever advises them - and NOT "My Expert Duties", which is
@@ -128,7 +128,7 @@ class CapsaTeamManagementTest extends TestCase
     }
 
     // Team Verification only ever showed teams already marked Complete. A
-    // team that stalled while still forming was invisible to the CaPSA -
+    // team that stalled while still forming was invisible to the CaPSA/TSA -
     // which is exactly the team an oversight page should surface.
     public function test_it_shows_teams_that_have_not_reached_complete_yet(): void
     {
@@ -146,7 +146,7 @@ class CapsaTeamManagementTest extends TestCase
         $capsa = $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team Progress');
 
-        // Worked out from the CaPSA's checks and the dates on her checklist,
+        // Worked out from the CaPSA/TSA's checks and the dates on her checklist,
         // never stored.
         $milestone = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist'])
             ->milestones()->create(['name' => 'Getting started', 'position' => 0]);
@@ -198,7 +198,7 @@ class CapsaTeamManagementTest extends TestCase
     }
 
     /**
-     * A signed paper closes on the CaPSA's check, and the check lives in the
+     * A signed paper closes on the CaPSA/TSA's check, and the check lives in the
      * Milestones tracker. On the team's own page the line used to read
      * "Handed in" and stop there, with nothing to click.
      */
@@ -261,7 +261,7 @@ class CapsaTeamManagementTest extends TestCase
 
     // Two approved titles is the state that otherwise looks like an
     // unexplained dead end: verification is blocked and nothing says why,
-    // because it is the team's move, not the CaPSA's.
+    // because it is the team's move, not the CaPSA/TSA's.
     public function test_it_explains_why_a_team_with_two_approved_titles_cannot_be_verified(): void
     {
         $this->makeCapsaWithSections();
@@ -451,7 +451,7 @@ class CapsaTeamManagementTest extends TestCase
     }
 
     /**
-     * Papers reach this tab only under the subject_adviser role - her CaPSA
+     * Papers reach this tab only under the subject_adviser role - her CaPSA/TSA
      * hat. What she reviews as somebody's adviser is a different job and
      * stays in her To do with the rest of her expert work.
      */
@@ -712,7 +712,7 @@ class CapsaTeamManagementTest extends TestCase
             ->assertRedirect(route('capsa.team_management'));
     }
 
-    // The CaPSA decides whether a title is too close to something already
+    // The CaPSA/TSA decides whether a title is too close to something already
     // done, so she needs the report the team saw - the matched abstracts and
     // what the check made of them - not a title and a percentage.
     public function test_the_title_and_similar_pages_carry_the_whole_duplication_report(): void

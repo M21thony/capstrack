@@ -13,7 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Two rules before a CaPSA can assign a panel: the team has its adviser and
+ * Two rules before a CaPSA/TSA can assign a panel: the team has its adviser and
  * consultant (the grammarian may come later), and the Panel Chair holds a
  * Master's or higher.
  * And suggested teams are the ones whose project meets the panel's expertise.

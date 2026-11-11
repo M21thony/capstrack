@@ -83,10 +83,10 @@ class TitleConfirmationController extends Controller
         $team = $titleChangeRequest->team;
         $approve = $validated['decision'] === 'approve';
 
-        // The CaPSA verified the Signed Final Project Title Form while this
+        // The CaPSA/TSA verified the Signed Final Project Title Form while this
         // waited: the title is final now.
         if ($approve && TitleRevision::finalTitleVerified($team)) {
-            $final = 'The CaPSA has already verified '.$team->team_name.'\'s Signed Final Project Title Form, so the title is final. Keep the title and tell the team why.';
+            $final = 'The CaPSA/TSA has already verified '.$team->team_name.'\'s Signed Final Project Title Form, so the title is final. Keep the title and tell the team why.';
 
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $final, 'errors' => ['note' => [$final]]], 422);

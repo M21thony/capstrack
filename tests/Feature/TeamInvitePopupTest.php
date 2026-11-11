@@ -222,7 +222,7 @@ class TeamInvitePopupTest extends TestCase
     }
 
     /**
-     * A CaPSA verifying a team does not close its roster.
+     * A CaPSA/TSA verifying a team does not close its roster.
      *
      * The invite button was hidden once is_confirmed was set, so a leader
      * whose member dropped out after verification had no way to replace them.

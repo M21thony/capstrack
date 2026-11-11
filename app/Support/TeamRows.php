@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\DB;
 /**
  * The teams one person looks after, each summarised into one row.
  *
- * A CaPSA looks after every team in her sections; an expert looks after the
+ * A CaPSA/TSA looks after every team in her sections; an expert looks after the
  * teams that took them on as adviser, consultant or grammarian, and the ones
  * they sit on a panel for. Someone who is both gets one list holding both,
- * each row saying whether it is hers as CaPSA ($row->inSections), as an
+ * each row saying whether it is hers as CaPSA/TSA ($row->inSections), as an
  * expert ($row->myRole), or both.
  *
  * One pass, a handful of queries, and every page below the list reads the
@@ -32,7 +32,7 @@ class TeamRows
     /** The seats that follow a team's checklist. */
     public const FOLLOWS_PROGRESS = ['adviser', 'consultant'];
 
-    /** The review role a CaPSA's format check is filed under. */
+    /** The review role a CaPSA/TSA's format check is filed under. */
     private const FORMAT_CHECK = 'subject_adviser';
 
     public function __construct(
@@ -230,7 +230,7 @@ class TeamRows
     }
 
     /**
-     * Papers sent to this person, under either hat: the CaPSA's format check
+     * Papers sent to this person, under either hat: the CaPSA/TSA's format check
      * (role = subject_adviser) or an expert's review of what a paper says.
      *
      * @return array<int, Collection<int, object>>
@@ -282,7 +282,7 @@ class TeamRows
         $submitted = $team->hasSubmittedPreProposals();
 
         // Only titles the team has actually turned in. A draft they are still
-        // working on is not the CaPSA's to read.
+        // working on is not the CaPSA/TSA's to read.
         $proposals = $team->preProposals->whereNotNull('submitted_at')->values();
         $approved = $proposals->where('approved_status', true);
         $pending = $proposals->filter(fn ($p) => ! $p->approved_status && ! $p->rejection_reason);
@@ -313,7 +313,7 @@ class TeamRows
 
         $stages = $this->progress->allStages($team, $defenseSchedules);
 
-        // A CaPSA's format checks only count on teams in her sections; the
+        // A CaPSA/TSA's format checks only count on teams in her sections; the
         // rest of her reviews are an expert's, and wait on her as one.
         [$formatChecks, $reviews] = $papers->partition(fn ($p) => $p->role === self::FORMAT_CHECK);
         $formatChecks = $inSections ? $formatChecks->values() : collect();
@@ -331,17 +331,17 @@ class TeamRows
             'gradient' => $gradient,
             'tags' => $tags,
             'leaderName' => $leaderName,
-            // A team's checklist is its own, its CaPSA's and the two experts it
+            // A team's checklist is its own, its CaPSA/TSA's and the two experts it
             // chose - not its grammarian's or its panel's.
             'milestones' => $inSections || in_array($myRole, self::FOLLOWS_PROGRESS, true) ? $milestones : null,
             'engagedRoles' => $engagedRoles,
             'inSections' => $inSections,
             'myRole' => $myRole,
             // The adviser is who the department lets see a team's defense
-            // scores, besides its CaPSA.
+            // scores, besides its CaPSA/TSA.
             'seesScores' => $inSections || $myRole === 'adviser',
             // Papers sent to this person on this team, under the hat the page
-            // is worn in: format checks for a CaPSA, reviews for an expert.
+            // is worn in: format checks for a CaPSA/TSA, reviews for an expert.
             'papers' => $inSections ? $formatChecks : $reviews->values(),
             'formatChecks' => $formatChecks,
             'reviews' => $reviews->values(),

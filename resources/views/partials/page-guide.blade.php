@@ -14,7 +14,7 @@
     $pgAll = config('page-guide', []);
     $pg = $pgAll[$pgName] ?? null;
     // The portals this viewer can open: one staff account can be admin or
-    // CaPSA and an adviser too, and its sidebar links both sets of pages.
+    // CaPSA/TSA and an adviser too, and its sidebar links both sets of pages.
     $pgViewer = str_starts_with($pgName, 'student.') ? null : auth('expert')->user();
     $pgPortals = $pgViewer ? array_keys(array_filter([
         'admin.' => (bool) $pgViewer->is_admin,

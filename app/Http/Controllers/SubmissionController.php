@@ -91,7 +91,7 @@ class SubmissionController extends Controller
                 ], 422);
             }
 
-            // The same gate the CaPSA's grid and the team's own checklist
+            // The same gate the CaPSA/TSA's grid and the team's own checklist
             // read, asked here so nothing can be handed in past a milestone
             // that shows as locked on screen.
             $gate = MilestoneProgress::forTeam($checklist, (int) $teamModel->team_id)
@@ -107,13 +107,13 @@ class SubmissionController extends Controller
             if ($item->closed_at) {
                 return response()->json([
                     'success' => false,
-                    'message' => $item->title.' is closed. Your CaPSA no longer takes uploads for it.',
+                    'message' => $item->title.' is closed. Your CaPSA/TSA no longer takes uploads for it.',
                 ], 422);
             }
         }
 
         // A signed paper - a form, or a CLF signed by hand - is checked by the
-        // CaPSA, not reviewed, so it needs no recipient and a phone photo of
+        // CaPSA/TSA, not reviewed, so it needs no recipient and a phone photo of
         // it is as good as a scan. Anything else goes to a reviewer's
         // annotator, which reads documents.
         $isPaper = $item && ! $item->sendsTo() && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
@@ -214,7 +214,7 @@ class SubmissionController extends Controller
         ]);
 
         // A paper goes into no reviewer's queue - it waits on the section's
-        // CaPSA, who until now was told nothing and only found it by opening
+        // CaPSA/TSA, who until now was told nothing and only found it by opening
         // the Milestones tab and picking the right section.
         if ($isPaper) {
             Notifier::toExpert(
@@ -385,7 +385,7 @@ class SubmissionController extends Controller
             $capsaId = $this->resolver->resolveSubjectAdviserAdmin($teamId);
             $capsa = $capsaId ? CapstoneExpert::find($capsaId) : null;
             $plan['people'][] = [
-                'role' => 'subject_adviser', 'label' => 'CaPSA', 'name' => $capsa?->name,
+                'role' => 'subject_adviser', 'label' => 'CaPSA/TSA', 'name' => $capsa?->name,
                 'note' => null, 'on' => true, 'available' => true,
             ];
         }
@@ -406,7 +406,7 @@ class SubmissionController extends Controller
             'round' => $version > 1 ? self::ordinal($version - 1).' revision' : null,
             'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', ...self::DIAGRAM_TYPES],
             'locked' => $plan['locked'],
-            // The CaPSA chose who gets this line, so the student has nothing to pick.
+            // The CaPSA/TSA chose who gets this line, so the student has nothing to pick.
             'set' => (bool) $item?->sendsTo(),
             'people' => array_map(fn ($p) => array_diff_key($p, ['expert_ids' => true]), $plan['people']),
             'remark' => ($last ?? $revises) && ! $isPaper ? RevisionRemark::on($last ?? $revises, 160) : null,

@@ -20,7 +20,7 @@ const AWAY_REASONS = BOOT.away_reasons;
 const SHORT = { 'Pre-proposal Defense': 'Pre-proposal', 'Title Defense': 'Title', 'Pre Oral Defense': 'Pre Oral', 'Final Oral Defense': 'Final Oral' };
 const SEATS = [['chair', 'Panel Chair', "Master's degree or higher"], ['m1', 'Member 1', 'Any degree'], ['m2', 'Member 2', 'Any degree']];
 const SEAT_ROLE = { chair: 'Panel Chair', m1: 'Member 1', m2: 'Member 2' };
-// Still pickable: the CaPSA may want them anyway, the tag just says so.
+// Still pickable: the CaPSA/TSA may want them anyway, the tag just says so.
 const LEAVE = e => (e.leave ? ' <span class="leave">On study leave</span>' : '');
 const STEPS = [
   ['panel', 'Panel not final', 'No panel yet, or still a draft'],
@@ -325,7 +325,7 @@ function roomsView(list) {
     const n = list.filter(t => t.schedule.date === d).length + all.filter(o => o.date === d).length;
     return `<button type="button" role="tab" data-act="rday" data-d="${d}" aria-selected="${d === P.rday}"><b>${fmtDay(d)}</b><span>${n} of ${total} slots</span></button>`;
   }).join('')}</div>`
-    + '<div class="rkey"><span><i class="k mine"></i>Your sections</span><span><i class="k oth"></i>Another CaPSA\'s section</span><span><i class="k free"></i>Free</span></div>';
+    + '<div class="rkey"><span><i class="k mine"></i>Your sections</span><span><i class="k oth"></i>Another CaPSA/TSA\'s section</span><span><i class="k free"></i>Free</span></div>';
   const rows = S.venues.map(v => `<tr><th scope="row">${esc(v)}</th>${slots().map(time => {
     const mine = list.find(t => t.schedule.date === P.rday && t.schedule.time === time && t.schedule.venue === v);
     const oth = all.find(o => o.date === P.rday && o.time === time && o.venue === v);
@@ -590,7 +590,7 @@ function openMove(id) {
     + '<div class="df"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="button" class="btn gold" id="mvSave" data-act="move-save">Save</button></div>');
 }
 
-/* The CaPA's answer, as they gave it to the CaPSA in person. */
+/* The CaPA's answer, as they gave it to the CaPSA/TSA in person. */
 let CP = null;
 function openCapa(id) {
   const t = T(id);
@@ -620,11 +620,11 @@ function openWindow() {
   const w = win();
   const m = w.minutes || 120;
   const preset = [60, 90, 120].includes(m);
-  openDialog(head(`${SHORT[S.stage]} window`, `Every section shares this window, as agreed at the CaPSA meeting.${w.set_by ? ` Last set by ${esc(w.set_by)}${w.set_on ? ' on ' + fmtDay(w.set_on) : ''}.` : ''}`)
+  openDialog(head(`${SHORT[S.stage]} window`, `Every section shares this window, as agreed at the CaPSA/TSA meeting.${w.set_by ? ` Last set by ${esc(w.set_by)}${w.set_on ? ' on ' + fmtDay(w.set_on) : ''}.` : ''}`)
     + `<div class="db"><div class="two"><div><label class="lbl" for="wS">First day</label><input class="field" type="date" id="wS" value="${w.start || ''}" min="${TODAY}"></div><div><label class="lbl" for="wE">Last day</label><input class="field" type="date" id="wE" value="${w.end || ''}" min="${TODAY}"></div></div>`
     + `<div><span class="lbl">Length of each defense</span><div class="seg" id="wLen">${[[60, '1 hour'], [90, '1½ hours'], [120, '2 hours']].map(o => `<button type="button" data-act="len" data-min="${o[0]}" aria-pressed="${m === o[0]}">${o[1]}</button>`).join('')}<button type="button" data-act="len" data-min="custom" aria-pressed="${!preset}">Custom</button></div>`
     + `<div id="wCustom" style="margin-top:8px"${preset ? ' hidden' : ''}><label class="lbl" for="wM">Minutes per defense (30–240)</label><input class="field" type="number" id="wM" min="30" max="240" step="5" value="${m}" style="width:140px"></div></div>`
-    + '<p class="muted" style="margin:0;font-size:12.5px">Weekdays, 8 AM – 5 PM, with lunch from 12 to 1 kept free. Saving changes it for every section and tells the other CaPSAs. Nobody is scheduled until someone uses Generate schedule.</p></div>'
+    + '<p class="muted" style="margin:0;font-size:12.5px">Weekdays, 8 AM – 5 PM, with lunch from 12 to 1 kept free. Saving changes it for every section and tells the other CaPSA/TSAs. Nobody is scheduled until someone uses Generate schedule.</p></div>'
     + '<div class="df"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="button" class="btn gold" data-act="window-save">Save window</button></div>');
 }
 
@@ -815,7 +815,7 @@ const ACT = {
       S.windows[S.stage] = { start: res.data.start_date, end: res.data.end_date, minutes: res.data.duration_minutes, slots: res.data.slots, set_by: res.data.set_by, set_on: res.data.set_on };
       closeDlg();
       render();
-      toast(`${SHORT[S.stage]} window saved for every section. The other CaPSAs are told.`);
+      toast(`${SHORT[S.stage]} window saved for every section. The other CaPSA/TSAs are told.`);
     } catch (e) {
       toast(e.message, 'error');
       el.disabled = false;

@@ -16,14 +16,14 @@ use Illuminate\View\View;
 
 /**
  * Teams: an expert's one hub, the same To do, Team Applications and Teams a
- * CaPSA has.
+ * CaPSA/TSA has.
  *
  * To do is the shortcut to everything waiting on them: team applications,
  * papers sent to them (Document Review), titles to confirm, defenses waiting
  * for their go and score sheets due. Team Applications is the whole list of
  * teams asking for them; Teams is every team they advise, consult for, check
  * the grammar of or sit on a panel for, each opening the same team page a
- * CaPSA sees.
+ * CaPSA/TSA sees.
  */
 class TeamController extends Controller
 {
@@ -43,7 +43,7 @@ class TeamController extends Controller
 
         $tab = in_array($request->query('tab'), self::TABS, true) ? $request->query('tab') : 'todo';
 
-        // A CaPSA who is also an expert has one Teams page, not two: the tab
+        // A CaPSA/TSA who is also an expert has one Teams page, not two: the tab
         // asked for, or her teams.
         if ($expert->is_capsa) {
             return redirect()->route('capsa.team_management', [
@@ -70,7 +70,7 @@ class TeamController extends Controller
         ]);
     }
 
-    /** One team, the same page a CaPSA sees, from the expert's seat. */
+    /** One team, the same page a CaPSA/TSA sees, from the expert's seat. */
     public function show(Request $request, Team $team): View|RedirectResponse
     {
         /** @var CapstoneExpert $expert */

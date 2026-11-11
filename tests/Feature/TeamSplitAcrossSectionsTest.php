@@ -17,7 +17,7 @@ use Tests\TestCase;
 /**
  * A team forms inside one section in 3rd year. By 4th year its members can
  * be split - one in 4A, one in 4B - and still be one team finishing one
- * capstone. The team keeps one section, its leader's, so it keeps one CaPSA,
+ * capstone. The team keeps one section, its leader's, so it keeps one CaPSA/TSA,
  * one checklist and one place in team management and defenses.
  */
 class TeamSplitAcrossSectionsTest extends TestCase
@@ -68,7 +68,7 @@ class TeamSplitAcrossSectionsTest extends TestCase
         $board = app(DefenseBoard::class);
 
         $this->assertTrue($board->covers($capsaA, $this->team));
-        $this->assertFalse($board->covers($capsaB, $this->team), 'not two CaPSAs deciding for one team');
+        $this->assertFalse($board->covers($capsaB, $this->team), 'not two CaPSA/TSAs deciding for one team');
 
         $this->actingAs($capsaA, 'expert')->get(route('capsa.team_management'))->assertOk()->assertSee('Team1');
         $this->actingAs($capsaB, 'expert')->get(route('capsa.team_management'))->assertOk()->assertDontSee('Team1');
@@ -86,18 +86,18 @@ class TeamSplitAcrossSectionsTest extends TestCase
             $this->actingAs($student, 'web')->get(route('student.progress'))->assertOk()
                 ->assertSee('Team1')
                 ->assertSee('Pre-proposal Defense')
-                ->assertDontSee('Your CaPSA has not set up a checklist for your team yet.');
+                ->assertDontSee('Your CaPSA/TSA has not set up a checklist for your team yet.');
         }
     }
 
-    /** The other section's CaPSA sees their student is on a team that belongs elsewhere. */
+    /** The other section's CaPSA/TSA sees their student is on a team that belongs elsewhere. */
     public function test_the_section_list_labels_a_team_that_belongs_to_another_section(): void
     {
         $this->actingAs($this->capsaFor(['BSIT-4B']), 'expert')->get(route('capsa.sections'))->assertOk()
             ->assertSee($this->member->l_name)
             ->assertSee('Team1')
             ->assertSee('Team in BSIT-4A')
-            ->assertSee("That section's CaPSA handles its checklist, defenses and grading.");
+            ->assertSee("That section's CaPSA/TSA handles its checklist, defenses and grading.");
 
         // The leader's own section shows the team plainly.
         $this->actingAs($this->capsaFor(['BSIT-4A']), 'expert')->get(route('capsa.sections'))->assertOk()

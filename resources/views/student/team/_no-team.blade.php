@@ -8,7 +8,7 @@
       <span class="nt-kicker">{{ $sectionLabel }} · Capstone SY {{ $mySchoolYear?->school_year ?? '' }}</span>
       <h1 id="nt-h">You’re not in a team yet</h1>
       @if ($capstoneStage !== 1)
-        <p>Capstone 2 has started, so teams keep the members they finished Capstone 1 with. New teams and recruitment posts are closed. Speak to your CaPSA if you are not on a team.</p>
+        <p>Capstone 2 has started, so teams keep the members they finished Capstone 1 with. New teams and recruitment posts are closed. Speak to your CaPSA/TSA if you are not on a team.</p>
       @elseif ($myRecruitment)
         <p>Your post is up: {{ $myRecruitment->recruitment_goal === 'build_a_team' ? 'you are building a team' : 'you are looking for a team' }}. Classmates in your section can see it{{ $myRecruitment->recruitment_goal === 'find_a_team' ? ' and invite you' : '' }}.</p>
       @else
@@ -20,7 +20,7 @@
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         <span>
           @if (! $creationAllowed && ! $joiningAllowed)
-            <b>Creating and joining teams are closed</b> in {{ $sectionLabel }}. Your CaPSA has turned them off for now. Speak to your CaPSA if you are not on a team.
+            <b>Creating and joining teams are closed</b> in {{ $sectionLabel }}. Your CaPSA/TSA has turned them off for now. Speak to your CaPSA/TSA if you are not on a team.
           @elseif (! $creationAllowed)
             <b>Creating a team is closed</b> in {{ $sectionLabel }}. You can still post that you’re looking for a team and accept invites.
           @else

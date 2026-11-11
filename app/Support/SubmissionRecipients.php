@@ -14,7 +14,7 @@ use Illuminate\Support\Collection;
  * Who a file goes to, decided here and not by the team ticking boxes.
  *
  * A first upload starts from the line's rule - Chapters 1-2 go to the
- * adviser (CaPA) and the CaPSA, Chapter 3 to the adviser and the consultant,
+ * adviser (CaPA) and the CaPSA/TSA, Chapter 3 to the adviser and the consultant,
  * the manuscripts to the defense panel as well - and the team may add or
  * drop an optional reviewer. A file for no line has no one ticked: the team
  * picks from the CaPA, consultant and grammarian. Any later version goes back to exactly the
@@ -30,7 +30,7 @@ class SubmissionRecipients
         'adviser' => 'CaPA',
         'consultant' => 'Consultant',
         'grammarian' => 'Grammarian',
-        'subject_adviser' => 'CaPSA',
+        'subject_adviser' => 'CaPSA/TSA',
         'panel' => 'Panel',
     ];
 
@@ -58,7 +58,7 @@ class SubmissionRecipients
     {
         $formatOnly = [self::OPTIONAL, 'review if asked'];
 
-        // The CaPSA chose who gets this line: all of them, every time.
+        // The CaPSA/TSA chose who gets this line: all of them, every time.
         if ($chosen = $item?->sendsTo()) {
             return array_fill_keys(array_values(array_intersect(self::ROLES, $chosen)), [self::ON, null]);
         }
@@ -71,7 +71,7 @@ class SubmissionRecipients
             'revised' => ['panel' => [self::ON, null], 'adviser' => [self::ON, null], 'subject_adviser' => [self::ON, null]],
             'final' => ['panel' => [self::ON, null], 'adviser' => [self::ON, null], 'subject_adviser' => [self::ON, null], 'grammarian' => [self::ON, null]],
             // A file that is not a checklist line: the team picks who reads it,
-            // with nobody ticked for them. The CaPSA is not offered - what they
+            // with nobody ticked for them. The CaPSA/TSA is not offered - what they
             // want to check, they add as a line on Progress Tracker.
             default => [
                 'adviser' => [self::OPTIONAL, null],

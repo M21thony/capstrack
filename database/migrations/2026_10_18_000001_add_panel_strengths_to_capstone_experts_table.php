@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Panel comment 15: what an expert is strongest in as a panelist -
- * manuscript, system design, software development - so the CaPSA can seat a
+ * manuscript, system design, software development - so the CaPSA/TSA can seat a
  * panel that covers all three.
  */
 return new class extends Migration

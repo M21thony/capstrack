@@ -10,7 +10,7 @@ class ProgressController extends Controller
 {
     /**
      * Milestone progress for the teams this expert advises or consults for:
-     * the CaPSA's tracker, read-only. Teams they grade as a panelist or read
+     * the CaPSA/TSA's tracker, read-only. Teams they grade as a panelist or read
      * as a grammarian are not theirs to follow.
      */
     public function index(ChecklistTracker $tracker)

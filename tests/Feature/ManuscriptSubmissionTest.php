@@ -52,7 +52,7 @@ class ManuscriptSubmissionTest extends TestCase
         return [$leader, $team];
     }
 
-    /** The archive decisions are made as a signed-in CaPSA. */
+    /** The archive decisions are made as a signed-in CaPSA/TSA. */
     private function actingAsCapsa(): void
     {
         $capsa = CapstoneExpert::factory()->create(['approved_status' => true]);

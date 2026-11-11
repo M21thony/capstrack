@@ -17,7 +17,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * The CaPSA recommends a pre-proposal title in CapsTrack, so the Recommended
+ * The CaPSA/TSA recommends a pre-proposal title in CapsTrack, so the Recommended
  * Pre-Proposal Title Form closes on that and the team uploads nothing for it.
  */
 class TitleFormClosesOnRecommendationTest extends TestCase
@@ -113,7 +113,7 @@ class TitleFormClosesOnRecommendationTest extends TestCase
 
         $this->get('/student/progress')
             ->assertOk()
-            ->assertSee('Closed when your CaPSA recommends one of your pre-proposal titles');
+            ->assertSee('Closed when your CaPSA/TSA recommends one of your pre-proposal titles');
 
         $lines = collect($this->getJson(route('student.submission.plan'))->assertOk()->json('lines'));
 
@@ -121,7 +121,7 @@ class TitleFormClosesOnRecommendationTest extends TestCase
         $this->assertTrue($lines->contains('id', $this->line($this->checklist, 'team_assignment_form')->id));
     }
 
-    /** The other forms still wait on an upload and the CaPSA's check. */
+    /** The other forms still wait on an upload and the CaPSA/TSA's check. */
     public function test_other_forms_are_unchanged(): void
     {
         $form = $this->line($this->checklist, 'team_assignment_form');

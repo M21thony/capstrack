@@ -11,12 +11,12 @@ use App\Support\TeamChecklist;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** Adding, renaming, archiving and removing a milestone on a CaPSA's checklist. */
+/** Adding, renaming, archiving and removing a milestone on a CaPSA/TSA's checklist. */
 class ChecklistMilestoneController extends Controller
 {
     public function __construct(private ChecklistAccess $access, private TeamChecklist $checklists) {}
 
-    /** A new milestone goes at the end; the CaPSA drags it where it belongs. */
+    /** A new milestone goes at the end; the CaPSA/TSA drags it where it belongs. */
     public function store(Request $request, Checklist $checklist): JsonResponse
     {
         $this->access->checklist($checklist);
@@ -92,7 +92,7 @@ class ChecklistMilestoneController extends Controller
             $milestone->opened_at ??= $milestone->closed_at;
         }
 
-        // Opened by the CaPSA for the whole section; nothing opens it on its own.
+        // Opened by the CaPSA/TSA for the whole section; nothing opens it on its own.
         if (array_key_exists('opened', $data)) {
             $milestone->opened_at = $data['opened'] ? ($milestone->opened_at ?? now()) : null;
         }

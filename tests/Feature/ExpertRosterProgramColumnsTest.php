@@ -14,7 +14,7 @@ use Tests\TestCase;
  * Accepted Programs and Team Slots on the expert list upload.
  *
  * Both optional. An expert who has never opened their profile cannot be
- * applied to, so letting the CaPSA fill this in while they are already
+ * applied to, so letting the CaPSA/TSA fill this in while they are already
  * typing the list saves everybody a round of chasing - but a blank cell has
  * to keep meaning "not saying", never "clear what they set".
  */

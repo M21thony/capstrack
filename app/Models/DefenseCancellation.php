@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * A defense date called off because the team's CaPA said they were not
- * ready. The team waits for its CaPSA to give it a new date.
+ * ready. The team waits for its CaPSA/TSA to give it a new date.
  */
 class DefenseCancellation extends Model
 {

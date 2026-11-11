@@ -67,7 +67,7 @@ final class ActivityIcons
         'leadership_transferred' => ['crown', 'gold', 'Leadership passed on'],
         'leadership_transfer_declined' => ['x', 'red', 'Leadership handover declined'],
         'leave_requested' => ['door', 'amber', 'Asked to leave'],
-        'leave_request_sent' => ['door', 'amber', 'Asked the CaPSA to leave'],
+        'leave_request_sent' => ['door', 'amber', 'Asked the CaPSA/TSA to leave'],
         'leave_approved' => ['check', 'green', 'Leave approved'],
         'leave_declined' => ['x', 'red', 'Leave declined'],
         'post_created' => ['edit', 'gold', 'Posted to recruit'],

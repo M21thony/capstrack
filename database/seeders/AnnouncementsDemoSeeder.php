@@ -12,13 +12,13 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * A CaPSA, three of their students and one outside their sections, for
+ * A CaPSA/TSA, three of their students and one outside their sections, for
  * trying who an announcement reaches - and for tests/e2e/announcements.spec.js,
  * which signs in as these accounts by address.
  *
- * The CaPSA covers BSIT-3A and BSIT-3B. Ana (3A) leads the team "PW Bug
+ * The CaPSA/TSA covers BSIT-3A and BSIT-3B. Ana (3A) leads the team "PW Bug
  * Busters", Ben is her classmate in 3A, Cara is in 3B and Dan in 3C, which
- * the CaPSA does not cover.
+ * the CaPSA/TSA does not cover.
  *
  *   php artisan db:seed --class=AnnouncementsDemoSeeder
  *

@@ -428,7 +428,7 @@ class AdminGradingRubricTest extends TestCase
 
         $response->assertStatus(200);
         // The route name is still admin.rubric_management; the view moved to
-        // the capsa/ folder when the Admin/CaPSA views were split.
+        // the capsa/ folder when the Admin/CaPSA/TSA views were split.
         $response->assertViewIs('capsa.rubric_management');
     }
 

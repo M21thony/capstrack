@@ -16,7 +16,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The CaPSA's Team Rules: how large a team may be, and whether students may
+ * The CaPSA/TSA's Team Rules: how large a team may be, and whether students may
  * create or join one at all.
  *
  * Each rule is enforced at every door it has. Team creation has two - making
@@ -118,7 +118,7 @@ class TeamRulesTest extends TestCase
         $this->assertFalse(Team::joiningAllowed('BSIT-3A'));
     }
 
-    /** Team rules reach only the CaPSA's own sections; another CaPSA's section keeps its own. */
+    /** Team rules reach only the CaPSA/TSA's own sections; another CaPSA/TSA's section keeps its own. */
     public function test_a_save_changes_only_the_capsas_own_sections(): void
     {
         $this->actingAs($this->capsa(['BSIT-3A']), 'expert')
@@ -134,7 +134,7 @@ class TeamRulesTest extends TestCase
         $this->assertSame(5, Team::maxMembers());
     }
 
-    /** A CaPSA with BSIT and BSIS sections may give each program its own size. */
+    /** A CaPSA/TSA with BSIT and BSIS sections may give each program its own size. */
     public function test_each_program_gets_its_own_max(): void
     {
         $this->actingAs($this->capsa(['BSIT-3A', 'BSIT-3B', 'BSIS-3A']), 'expert')
@@ -193,7 +193,7 @@ class TeamRulesTest extends TestCase
             ->assertRedirect(route('capsa.team_management'));
     }
 
-    /** The menu can say who a lower limit reaches before the CaPSA saves it. */
+    /** The menu can say who a lower limit reaches before the CaPSA/TSA saves it. */
     public function test_the_menu_knows_how_many_teams_have_each_size(): void
     {
         $leader = $this->student('sized@my.cspc.edu.ph');
@@ -207,7 +207,7 @@ class TeamRulesTest extends TestCase
             ->assertViewHas('rules', fn ($data) => ($data['programs'][0]['sizes'][4] ?? 0) === 1);
     }
 
-    /** Teams in another CaPSA's section are not hers to count. */
+    /** Teams in another CaPSA/TSA's section are not hers to count. */
     public function test_the_menu_counts_only_teams_in_her_sections(): void
     {
         $this->teamLedBy($this->student('elsewhere@my.cspc.edu.ph', 'B'), [$this->student('e1@my.cspc.edu.ph', 'B')]);

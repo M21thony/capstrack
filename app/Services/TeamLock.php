@@ -71,7 +71,7 @@ class TeamLock
                 'type' => 'team_locked',
                 'title' => 'Leave request closed',
                 'message' => 'Your request to leave '.$teamName.' was closed because the team passed Title Defense. '
-                    .'If you still need to leave, ask your CaPSA from the Team page.',
+                    .'If you still need to leave, ask your CaPSA/TSA from the Team page.',
                 'link' => route('student.team'),
             ]);
         }
@@ -82,13 +82,13 @@ class TeamLock
                 'type' => 'team_locked',
                 'title' => 'Team members locked',
                 'message' => $teamName.' passed Title Defense, so its members are locked. No one can join, '
-                    .'and a member can only leave with your CaPSA\'s approval.',
+                    .'and a member can only leave with your CaPSA/TSA\'s approval.',
                 'link' => route('student.team'),
             ]);
         }
     }
 
-    /** Take a member off a team, as a CaPSA approved. */
+    /** Take a member off a team, as a CaPSA/TSA approved. */
     public function release(MemberLeaveRequest $request, CapstoneExpert $capsa, ?string $note): void
     {
         $team = $request->team;
@@ -116,8 +116,8 @@ class TeamLock
             'type' => 'leave_request_approved',
             'title' => $request->type === MemberLeaveRequest::LEAVE ? 'Leave approved' : 'Removed from team',
             'message' => ($request->type === MemberLeaveRequest::LEAVE
-                ? 'Your CaPSA approved your request to leave '.$teamName.'.'
-                : 'Your CaPSA approved your leader\'s request to remove you from '.$teamName.'.')
+                ? 'Your CaPSA/TSA approved your request to leave '.$teamName.'.'
+                : 'Your CaPSA/TSA approved your leader\'s request to remove you from '.$teamName.'.')
                 .' You are no longer on the team.'.$noteText,
             'link' => route('student.team'),
             // Which request, so tapping it can show the whole decision.
@@ -129,7 +129,7 @@ class TeamLock
                 'student_id' => $memberId,
                 'type' => 'leave_request_approved',
                 'title' => 'Member left the team',
-                'message' => '<strong>'.$name.'</strong> is no longer on '.$teamName.'. Your CaPSA approved it.'.$noteText,
+                'message' => '<strong>'.$name.'</strong> is no longer on '.$teamName.'. Your CaPSA/TSA approved it.'.$noteText,
                 'link' => route('student.team'),
                 'data' => ['leave_request_id' => $request->id],
             ]);
@@ -138,7 +138,7 @@ class TeamLock
         ActivityLog::create([
             'student_id' => $request->student_id,
             'type' => 'team_left',
-            'description' => 'Left team '.$teamName.' with CaPSA approval',
+            'description' => 'Left team '.$teamName.' with CaPSA/TSA approval',
             'metadata' => ['team_id' => $request->team_id, 'leave_request_id' => $request->id],
             'created_at' => now(),
         ]);
@@ -156,7 +156,7 @@ class TeamLock
                 $assignment->expert,
                 'team_member_left',
                 'Member left a team',
-                '<strong>'.$name.'</strong> is no longer on '.$teamName.'. Their CaPSA approved it.',
+                '<strong>'.$name.'</strong> is no longer on '.$teamName.'. Their CaPSA/TSA approved it.',
                 route('instructor.teams'),
                 ['team_id' => $team->team_id],
             );

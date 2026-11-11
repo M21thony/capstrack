@@ -2,7 +2,7 @@
  * A student's Financial Records: their own receipt (progress, the receipt
  * they sent, or the form to send one) and the team's payments beside it.
  *
- * A receipt goes straight to the CaPSA, waiting to be checked.
+ * A receipt goes straight to the CaPSA/TSA, waiting to be checked.
  */
 import { $, esc, peso, LABEL, send, toast, wireDialogs } from './shared.js';
 
@@ -23,10 +23,10 @@ const chip = s => `<span class="fx-sb-chip is-${s}"><i></i>${LABEL[s]}</span>`;
 const slot = document.getElementById('tm-toprow-end');
 if (slot) slot.append($('#s-fees'));
 
-/** Upload receipt → Waiting for CaPSA → Verified; a send-back turns the middle step red. */
+/** Upload receipt → Waiting for CaPSA/TSA → Verified; a send-back turns the middle step red. */
 function stepsHtml(s) {
   const at = { none: 0, pending: 1, sent_back: 1, verified: 3 }[s];
-  return ['Upload receipt', 'Waiting for CaPSA', 'Verified'].map((label, i) => {
+  return ['Upload receipt', 'Waiting for CaPSA/TSA', 'Verified'].map((label, i) => {
     const back = s === 'sent_back' && i === 1;
     const state = back ? 'is-back' : i < at ? 'is-done' : i === at ? 'is-now' : '';
     return `<li class="${state}"${i === at || back ? ' aria-current="step"' : ''}><span></span>${back ? 'Sent back' : label}</li>`;
@@ -40,7 +40,7 @@ function renderMine() {
   if (!fee) {
     $('#s-mine-status').innerHTML = '';
     $('#s-steps').innerHTML = '';
-    $('#s-mine').innerHTML = '<p class="fx-sb-empty"><b>No defense fee yet</b>Your CaPSA has not posted a fee for your program. Pre-proposal Defense has no fee.</p>';
+    $('#s-mine').innerHTML = '<p class="fx-sb-empty"><b>No defense fee yet</b>Your CaPSA/TSA has not posted a fee for your program. Pre-proposal Defense has no fee.</p>';
     return;
   }
 
@@ -61,7 +61,7 @@ function renderMine() {
       + `<div><dt>OR number</dt><dd class="fx-num">${esc(r?.or || '—')}</dd></div>`
       + `<div><dt>Amount</dt><dd>${peso(f.amount)}</dd></div>`
       + `<div><dt>Uploaded</dt><dd>${esc(r?.at || '—')}</dd></div>`
-      + (s === 'verified' ? `<div><dt>Checked on</dt><dd>${esc(r?.on || '—')}</dd></div>` : '<div><dt>Status</dt><dd>Waiting for your CaPSA</dd></div>')
+      + (s === 'verified' ? `<div><dt>Checked on</dt><dd>${esc(r?.on || '—')}</dd></div>` : '<div><dt>Status</dt><dd>Waiting for your CaPSA/TSA</dd></div>')
       + '</dl></div>';
     // A photo whose file is gone shows a plain placeholder, not the browser's
     // broken-image box, and no longer opens an empty viewer.
@@ -76,14 +76,14 @@ function renderMine() {
     return;
   }
 
-  // Nothing sent, or sent back: the form, with the CaPSA's reason above it.
+  // Nothing sent, or sent back: the form, with the CaPSA/TSA's reason above it.
   $('#s-mine').innerHTML = s === 'sent_back'
-    ? `<div class="fx-sb-back" role="alert"><svg><use href="#fx-i-alert"/></svg><span><b>Sent back by your CaPSA:</b> ${esc(r?.reason || 'No reason given.')} Send it again below.</span></div>`
+    ? `<div class="fx-sb-back" role="alert"><svg><use href="#fx-i-alert"/></svg><span><b>Sent back by your CaPSA/TSA:</b> ${esc(r?.reason || 'No reason given.')} Send it again below.</span></div>`
     : '';
   const where = f.note ? ` at the ${esc(f.note)}` : '';
-  $('#u-how').innerHTML = `Pay ${peso(f.amount)}${where}, then send the official receipt to your CaPSA.`;
+  $('#u-how').innerHTML = `Pay ${peso(f.amount)}${where}, then send the official receipt to your CaPSA/TSA.`;
   $('#u-or').value = s === 'sent_back' ? (r?.or || '') : '';
-  $('#u-send-t').textContent = s === 'sent_back' ? 'Send again' : 'Send to CaPSA';
+  $('#u-send-t').textContent = s === 'sent_back' ? 'Send again' : 'Send to CaPSA/TSA';
   clearPhoto();
   uploadError('');
   form.hidden = false;
@@ -177,7 +177,7 @@ async function upload(e) {
     const res = await send('POST', URLS.upload, form);
     R[`${fee}:${ME}`] = { id: res.data.id, status: 'pending', img: res.data.receipt_image, or: res.data.receipt_number, at: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) };
     render();
-    toast(was === 'sent_back' ? 'Sent again to your CaPSA.' : 'Sent to your CaPSA.');
+    toast(was === 'sent_back' ? 'Sent again to your CaPSA/TSA.' : 'Sent to your CaPSA/TSA.');
   } catch (err) {
     uploadError(err.message);
     btn.disabled = false;

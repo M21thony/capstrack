@@ -98,7 +98,7 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $this->assertSame([], $stillIncluding);
     }
 
-    /** A CaPSA who also advises opens the same expert profile page, inside their own portal. */
+    /** A CaPSA/TSA who also advises opens the same expert profile page, inside their own portal. */
     public function test_a_capsa_who_also_advises_opens_the_expert_profile_page(): void
     {
         $capsa = $this->capsa(alsoAdviser: true);
@@ -108,17 +108,17 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         $this->assertStringNotContainsString('id="ep-overlay"', $html);
 
         // One profile: their name and sections are on it too, and the old
-        // CaPSA profile sends them there.
+        // CaPSA/TSA profile sends them there.
         $this->actingAs($capsa, 'expert')->get(route('instructor.profile'))->assertOk()
             ->assertSee('Team slots')
             ->assertSee('id="pp-name-btn"', false)
-            ->assertSeeInOrder(['CaPSA of', 'BSIT-4B'])
+            ->assertSeeInOrder(['CaPSA/TSA of', 'BSIT-4B'])
             ->assertSee('Roles and sections are set by the administrator')
             ->assertDontSee('id="pp-folders-h"', false);
         $this->actingAs($capsa, 'expert')->get(route('capsa.profile'))->assertRedirect(route('instructor.profile'));
     }
 
-    /** A CaPSA who advises edits their own name on the one profile; an ordinary expert only their middle name. */
+    /** A CaPSA/TSA who advises edits their own name on the one profile; an ordinary expert only their middle name. */
     public function test_only_a_capsa_or_admin_edits_their_name_on_the_profile(): void
     {
         $capsa = $this->capsa(alsoAdviser: true);
@@ -140,7 +140,7 @@ class StaffProfileAndDashboardTilesTest extends TestCase
 
         $this->actingAs($adviser, 'expert')->get(route('instructor.profile'))->assertOk()
             ->assertSee('id="pp-last" autocomplete="family-name" maxlength="50" readonly', false)
-            ->assertDontSee('CaPSA of')
+            ->assertDontSee('CaPSA/TSA of')
             ->assertDontSee('id="pp-folders-h"', false);
     }
 

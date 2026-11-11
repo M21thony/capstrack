@@ -170,12 +170,12 @@ class SubmissionRecipientsTest extends TestCase
     }
 
     // ----------------------------------------------------------------
-    // The CaPSA
+    // The CaPSA/TSA
     // ----------------------------------------------------------------
 
     /**
      * It used to match capstone_experts.program against student_s_y.program.
-     * Nothing fills either column - a CaPSA is given sections, and a
+     * Nothing fills either column - a CaPSA/TSA is given sections, and a
      * student's programme lives on students.course - so both were NULL, and
      * "WHERE program = NULL" is never true. The Subject Adviser read "Not yet
      * assigned" permanently, with nothing ever erroring.
@@ -190,7 +190,7 @@ class SubmissionRecipientsTest extends TestCase
         $this->assertSame('Grom Hellscream', $names['subject_adviser']['name']);
     }
 
-    /** A CaPSA who does not cover that section is not this team's. */
+    /** A CaPSA/TSA who does not cover that section is not this team's. */
     public function test_a_capsa_covering_other_sections_is_not_returned(): void
     {
         $team = $this->teamInSection('BSIT', '4th · A');
@@ -201,7 +201,7 @@ class SubmissionRecipientsTest extends TestCase
 
     /**
      * A team whose members have incomplete profiles has no computable
-     * section, so no CaPSA can be named. Nothing is guessed - naming the
+     * section, so no CaPSA/TSA can be named. Nothing is guessed - naming the
      * wrong one would send the document to somebody who is not theirs.
      */
     public function test_no_section_means_no_subject_adviser(): void
@@ -279,7 +279,7 @@ class SubmissionRecipientsTest extends TestCase
         $expertRoleId = DB::table('expert_roles')
             ->where('expert_id', $expert->expert_id)->value('expert_role_id');
 
-        // Applying needs a pre-proposal the CaPSA recommended.
+        // Applying needs a pre-proposal the CaPSA/TSA recommended.
         $check = DuplicationCheck::create([
             'student_s_y_id' => StudentSchoolYear::where('team_id', $team->team_id)->value('s_y_id'),
             'document_path' => 'duplication-checks/recommended.pdf',

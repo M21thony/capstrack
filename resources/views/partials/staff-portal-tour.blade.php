@@ -1,6 +1,6 @@
-{{-- The CaPSA, Admin or Expert guided tour: that portal's steps from
-     config/staff-tour.php, for partials/portal-tour. Included by the CaPSA
-     sidebar (CaPSA and Admin) and the Expert sidebar.
+{{-- The CaPSA/TSA, Admin or Expert guided tour: that portal's steps from
+     config/staff-tour.php, for partials/portal-tour. Included by the CaPSA/TSA
+     sidebar (CaPSA/TSA and Admin) and the Expert sidebar.
        $tourKey   'capsa', 'admin' or 'expert'
        $expert    the signed-in account --}}
 @php

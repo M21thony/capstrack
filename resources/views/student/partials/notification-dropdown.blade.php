@@ -46,7 +46,7 @@
 .notif-item:last-child{border-bottom:none}
 .notif-item:hover{background:var(--bg3)}
 
-/* ── The CaPSA's decision on a leave request ── */
+/* ── The CaPSA/TSA's decision on a leave request ── */
 .ld-overlay{display:none;position:fixed;inset:0;z-index:99990;align-items:center;justify-content:center;padding:20px;background:rgba(15,16,22,.6);backdrop-filter:blur(3px)}
 .ld-overlay.show{display:flex}
 .ld-card{width:min(480px,100%);max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.3);display:flex;flex-direction:column}
@@ -208,7 +208,7 @@
           </div>
         </div>
       @else
-      {{-- A CaPSA's decision on a leave request carries the whole of it, for
+      {{-- A CaPSA/TSA's decision on a leave request carries the whole of it, for
            the pop-up that opens instead of the Team page. --}}
       <a href="{{ $notif->link ?? '#' }}" class="notif-item {{ $notif->is_read ? '' : 'is-unread' }}" data-id="{{ $notif->id }}" data-type="{{ $notif->type }}"
          @isset($leaveDecisions[$notif->id]) data-leave="{{ json_encode($leaveDecisions[$notif->id]) }}" @endisset>
@@ -231,7 +231,7 @@
   </div>
 </div>
 
-{{-- The CaPSA's decision on a leave or removal request, opened from its
+{{-- The CaPSA/TSA's decision on a leave or removal request, opened from its
      notification: the decision, their reason, who and when, and the request
      it answers. Filled in by openLeaveDecision() below, as text only. --}}
 <div class="ld-overlay" id="ld-overlay" onclick="if (event.target === this) closeLeaveDecision()">
@@ -249,7 +249,7 @@
     </div>
     <div class="ld-body">
       <div class="ld-quote">
-        <div class="ld-label">Reason from your CaPSA</div>
+        <div class="ld-label">Reason from your CaPSA/TSA</div>
         <p id="ld-note"></p>
         <div class="ld-by" id="ld-by"></div>
       </div>
@@ -382,7 +382,7 @@ document.addEventListener('click', function(e) {
     var id = item.getAttribute('data-id');
     var href = item.getAttribute('href');
 
-    // The CaPSA's decision on a leave request: read here, in full, rather
+    // The CaPSA/TSA's decision on a leave request: read here, in full, rather
     // than on a page that only shows what is still waiting.
     if (item.dataset.leave) {
       fetch('/notifications/' + id + '/read', {
@@ -403,7 +403,7 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// ── The CaPSA's decision on a leave request, in full ──
+// ── The CaPSA/TSA's decision on a leave request, in full ──
 // Everything goes in as text: the reasons are what people typed.
 function openLeaveDecision(d, href) {
   var approved = d.status === 'approved';
@@ -421,20 +421,20 @@ function openLeaveDecision(d, href) {
     ? (approved ? 'You may leave the team' : 'You are staying on the team')
     : (approved ? 'The member was removed' : 'The member stays on the team'));
   set('ld-sub', leave
-    ? (approved ? 'Your CaPSA approved your request to leave ' + (d.team || 'your team') + '.' : 'Your CaPSA declined your request to leave ' + (d.team || 'your team') + '.')
-    : (approved ? 'Your CaPSA approved the request to remove ' + (d.member || 'the member') + '.' : 'Your CaPSA declined the request to remove ' + (d.member || 'the member') + '.'));
+    ? (approved ? 'Your CaPSA/TSA approved your request to leave ' + (d.team || 'your team') + '.' : 'Your CaPSA/TSA declined your request to leave ' + (d.team || 'your team') + '.')
+    : (approved ? 'Your CaPSA/TSA approved the request to remove ' + (d.member || 'the member') + '.' : 'Your CaPSA/TSA declined the request to remove ' + (d.member || 'the member') + '.'));
 
   var note = document.getElementById('ld-note');
   note.textContent = d.decisionNote || 'No reason was written with this decision.';
   note.classList.toggle('is-empty', !d.decisionNote);
-  set('ld-by', '— ' + (d.decidedBy || 'Your CaPSA') + ', CaPSA');
+  set('ld-by', '— ' + (d.decidedBy || 'Your CaPSA/TSA') + ', CaPSA/TSA');
 
-  // Nobody said no: the CaPSA let it run out, and the popup tells it that way.
+  // Nobody said no: the CaPSA/TSA let it run out, and the popup tells it that way.
   if (d.auto) {
     set('ld-status', 'Auto-declined');
     set('ld-sub', (leave ? 'Your request to leave ' + (d.team || 'your team') : 'The request to remove ' + (d.member || 'the member'))
-      + ' was declined automatically: your CaPSA did not act on it within ' + d.autoDays + ' days. You can ask again.');
-    set('ld-by', '— No action from your CaPSA in ' + d.autoDays + ' days');
+      + ' was declined automatically: your CaPSA/TSA did not act on it within ' + d.autoDays + ' days. You can ask again.');
+    set('ld-by', '— No action from your CaPSA/TSA in ' + d.autoDays + ' days');
   }
 
   set('ld-team', d.team);

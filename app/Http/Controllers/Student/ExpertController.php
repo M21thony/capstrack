@@ -129,7 +129,7 @@ class ExpertController extends Controller
         // arrives worded several ways and the roster runs to dozens of
         // distinct spellings. A flat list of all of them is unbrowsable, so
         // they are sorted into the curated areas in SkillCatalog - the same
-        // grouped, searchable shape the "Make CaPSA" section picker uses -
+        // grouped, searchable shape the "Make CaPSA/TSA" section picker uses -
         // with anything unrecognised kept under "Other skills" rather than
         // dropped. Within a group, the wording most experts use comes first.
         $inUse = $visible()
@@ -334,9 +334,9 @@ class ExpertController extends Controller
             // still open.
             'rolesSpokenFor' => $rolesSpokenFor,
             'team' => $team,
-            // The pre-proposal the CaPSA settled on. When a team has one,
+            // The pre-proposal the CaPSA/TSA settled on. When a team has one,
             // applying does not need a PDF - that document already went
-            // through the CaPSA, and asking for it again only invited a
+            // through the CaPSA/TSA, and asking for it again only invited a
             // different, unapproved file to be attached instead.
             'approvedProposal' => $approvedProposal,
             // Null unless the file is genuinely there. A stored path is not
@@ -344,15 +344,15 @@ class ExpertController extends Controller
             // lost its upload, and a "View PDF" button leading to a 404 is
             // worse than no button. One stat call per page render buys that.
             'proposalPdfUrl' => $this->proposalPdfUrl($approvedProposal),
-            // Experts whose removal is waiting on the CaPSA, keyed by
+            // Experts whose removal is waiting on the CaPSA/TSA, keyed by
             // assignment id -> request id, so the "Change requested" badge can
-            // also offer taking the request back before the CaPSA decides.
+            // also offer taking the request back before the CaPSA/TSA decides.
             'pendingRemovalIds' => $team
                 ? ExpertRemovalRequest::pending()->with('replacement')->where('team_id', $team->team_id)->get()->mapWithKeys(fn ($r) => [(int) $r->assignment_id => ['request' => (int) $r->id, 'assignment' => (int) $r->assignment_id, 'replacement' => $r->replacement?->name]])->all()
                 : [],
             // The team's section, shown in the change-request dialog so the
-            // team can see whose CaPSA the request waits on. Resolved the
-            // same way the CaPSA side scopes it, so the two cannot disagree.
+            // team can see whose CaPSA/TSA the request waits on. Resolved the
+            // same way the CaPSA/TSA side scopes it, so the two cannot disagree.
             'teamSection' => $team ? app(SectionScope::class)->sectionFor($team) : '',
             'isLeader' => $isLeader,
             // The checklist lines a booking can name as what the team brings.
@@ -362,7 +362,7 @@ class ExpertController extends Controller
             'replacementOptions' => $isLeader && $team ? $this->replacementOptions($team, $student, $roleAssignments) : [],
             // What team leaders rated each listed expert, across every team
             // and defense: the average and how many. The rating is all a
-            // student sees - the answers stay with the CaPSA and the expert.
+            // student sees - the answers stay with the CaPSA/TSA and the expert.
             'expertRatings' => ExpertEvaluation::whereIn('expert_id', $experts->pluck('expert_id')->merge($assignments->where('status', 'approved')->pluck('expert_id')))
                 ->groupBy('expert_id')
                 ->selectRaw('expert_id, AVG(rating) as average, COUNT(*) as total')
@@ -370,7 +370,7 @@ class ExpertController extends Controller
                 ->mapWithKeys(fn ($row) => [(int) $row->expert_id => ['average' => round((float) $row->average, 1), 'total' => (int) $row->total]])
                 ->all(),
             // The Evaluations tab: what the leader still owes for the defenses
-            // the team has passed, the CaPSA's questions for each, and what was sent.
+            // the team has passed, the CaPSA/TSA's questions for each, and what was sent.
             'evaluationsDue' => $evaluationsDue = ($team ? app(ExpertEvaluations::class)->due($team) : collect()),
             'evaluationTemplates' => EvaluationTemplate::with('questions')->whereIn('id', $evaluationsDue->pluck('template_id')->unique())->get()->keyBy('id'),
             'evaluationHistory' => $team ? app(ExpertEvaluations::class)->history($team) : collect(),

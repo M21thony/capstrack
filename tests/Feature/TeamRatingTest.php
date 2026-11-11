@@ -18,7 +18,7 @@ use Tests\TestCase;
 /**
  * Team Rating: each student rates every teammate but themself, per activity,
  * on the 7-criterion rubric. Drafts save as they go; submit sends them all at
- * once and nothing changes after. Only the CaPSA sees what anyone was given.
+ * once and nothing changes after. Only the CaPSA/TSA sees what anyone was given.
  */
 class TeamRatingTest extends TestCase
 {
@@ -68,7 +68,7 @@ class TeamRatingTest extends TestCase
         return [$team, $members];
     }
 
-    /** An open rating with the CaPSA's own activities. */
+    /** An open rating with the CaPSA/TSA's own activities. */
     private function openForm(array $labels = ['Chapter 1'], array $overrides = []): TeamRatingForm
     {
         $form = TeamRatingForm::create(array_merge([

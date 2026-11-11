@@ -67,7 +67,7 @@ class DefenseScheduleNotifier
 
         // An announcement naming the team shows on each member's dashboard
         // whatever section it is aimed at (DashboardController).
-        // Posted as whoever set the date - the CaPSA - or, when a schedule
+        // Posted as whoever set the date - the CaPSA/TSA - or, when a schedule
         // is placed without anyone signed in, as the Panel Chair.
         $authorId = auth('expert')->id()
             ?? $schedule->panels->firstWhere('panel_role', 'Panel Chair')?->expert_id;

@@ -7,7 +7,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Each team's score at every defense it has sat, for the people allowed to see
- * it besides the team: their section's CaPSA and their adviser.
+ * it besides the team: their section's CaPSA/TSA and their adviser.
  *
  * The score is DefenseSchedule::panelAverage() - every panelist's total added
  * up and divided by the size of the panel (65 + 85 + 75, over 3). It stays

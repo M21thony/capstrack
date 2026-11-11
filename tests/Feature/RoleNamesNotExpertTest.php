@@ -42,7 +42,7 @@ class RoleNamesNotExpertTest extends TestCase
             ->where('role_id', Role::where('role_name', $role)->value('role_id'))->value('expert_role_id');
     }
 
-    /** A BSIT 3A leader with a recommended pre-proposal, and the section's CaPSA. */
+    /** A BSIT 3A leader with a recommended pre-proposal, and the section's CaPSA/TSA. */
     private function leader(): array
     {
         $leader = Student::factory()->withCompleteProfile()->create([
@@ -90,7 +90,7 @@ class RoleNamesNotExpertTest extends TestCase
         $this->actingAs($leader, 'web')->get(route('student.experts'))
             ->assertOk()
             ->assertSee("Your team's adviser, consultant and grammarian", false)
-            ->assertSee("To change your adviser, consultant or grammarian later, ask your section's CaPSA.", false)
+            ->assertSee("To change your adviser, consultant or grammarian later, ask your section's CaPSA/TSA.", false)
             ->assertSee('Once your adviser or consultant accepts, their open dates show up here.')
             ->assertDontSee("Your team's experts", false)
             ->assertDontSee('To change an expert later')

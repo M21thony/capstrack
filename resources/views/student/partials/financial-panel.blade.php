@@ -28,7 +28,7 @@
         <div id="s-mine"></div>
 
         {{-- Both, together: the OR number as typed and the photo it has to
-             match. The CaPSA checks one against the other before verifying. --}}
+             match. The CaPSA/TSA checks one against the other before verifying. --}}
         <form class="fx-sb-form" id="u-form" aria-label="Send your receipt" novalidate hidden>
           <p class="fx-muted" id="u-how"></p>
           <div class="fx-sb-fields">
@@ -54,7 +54,7 @@
           <div id="u-err" class="fx-sb-err" role="alert" hidden></div>
           <div class="fx-sb-foot">
             <span class="fx-sb-help" id="u-hint">Add the photo to send.</span>
-            <button type="submit" class="fx-sb-send" id="u-send" disabled><svg><use href="#fx-i-send"/></svg><span id="u-send-t">Send to CaPSA</span></button>
+            <button type="submit" class="fx-sb-send" id="u-send" disabled><svg><use href="#fx-i-send"/></svg><span id="u-send-t">Send to CaPSA/TSA</span></button>
           </div>
         </form>
       </section>

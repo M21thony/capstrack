@@ -9,7 +9,7 @@ namespace App\Support;
  * The archive came from the library's list, which says what each study is
  * about but not which ProjectTags it falls under. This names them from the
  * words the study uses - "web-based", "RFID", "augmented reality" - so every
- * capstone is counted in Analytics. A CaPSA can correct any of them from the
+ * capstone is counted in Analytics. A CaPSA/TSA can correct any of them from the
  * card afterwards.
  */
 class ArchiveTagGuesser

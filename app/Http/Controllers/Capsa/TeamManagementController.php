@@ -29,11 +29,11 @@ use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
- * Everything a CaPSA does with the teams in her sections, on one page.
+ * Everything a CaPSA/TSA does with the teams in her sections, on one page.
  *
  * Three tabs: To do (every decision waiting on her, in one list), Teams
  * (every team, with its progress as one strip) and Milestones (setting up
- * the checklist). A CaPSA who is also an adviser, consultant, grammarian or
+ * the checklist). A CaPSA/TSA who is also an adviser, consultant, grammarian or
  * panelist gets her expert work here too - one Teams page and one To do,
  * each item saying which hat it is for - rather than a second "Teams".
  */
@@ -135,7 +135,7 @@ class TeamManagementController extends Controller
     /**
      * One team, everything about it.
      *
-     * The milestone shown is the CaPSA's pick, or the first one that is not
+     * The milestone shown is the CaPSA/TSA's pick, or the first one that is not
      * finished - the one she is most likely to have come here for.
      */
     public function show(Request $request, Team $team): View
@@ -278,7 +278,7 @@ class TeamManagementController extends Controller
      *
      * Authorisation is the same question as "is this team on her list?", so
      * it is answered by her list rather than by a second set of rules that
-     * could drift from it. The pages where she acts as CaPSA - titles and
+     * could drift from it. The pages where she acts as CaPSA/TSA - titles and
      * their similar studies - also need the team to be in her sections, not
      * only one she advises.
      */

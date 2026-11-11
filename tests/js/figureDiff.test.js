@@ -208,7 +208,7 @@ test("a renamed or removed word is changed, a word that moved with its box or al
 });
 
 test("the same word a little way off in a diagram drawn bigger moved, it did not change; far off it did", () => {
-  const { old, neu } = changedWords([w("CaPSA", 25, 753), w("Student", 25, 400)], [w("CaPSA", 38, 735), w("Student", 25, 600)]);
+  const { old, neu } = changedWords([w("CaPSA/TSA", 25, 753), w("Student", 25, 400)], [w("CaPSA/TSA", 38, 735), w("Student", 25, 600)]);
   assert.deepEqual(old.map((it) => it.str), ["Student"]);
   assert.deepEqual(neu.map((it) => it.str), ["Student"]);
 });

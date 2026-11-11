@@ -63,7 +63,7 @@ class ExpertAcceptsColumnTest extends TestCase
 
         $adviserRole = Role::firstOrCreate(['role_name' => 'adviser']);
         $capsaRole = Role::firstOrCreate(['role_name' => CapstoneExpert::CAPSA_ROLE]);
-        // The admin's copy of the list only shows CaPSAs, so the expert wears
+        // The admin's copy of the list only shows CaPSA/TSAs, so the expert wears
         // both roles the way a real one does: runs the subject and advises.
         $expert->roles()->attach([$adviserRole->role_id, $capsaRole->role_id]);
 
@@ -102,8 +102,8 @@ class ExpertAcceptsColumnTest extends TestCase
     {
         $this->splitExpert();
 
-        // On Expert Management, where the column lives. CaPSA Management
-        // shows the sections a CaPSA handles instead.
+        // On Expert Management, where the column lives. CaPSA/TSA Management
+        // shows the sections a CaPSA/TSA handles instead.
         $html = $this->actingAs($this->capsa(), 'expert')
             ->get(route('capsa.experts'))->assertOk()->getContent();
 
@@ -119,7 +119,7 @@ class ExpertAcceptsColumnTest extends TestCase
         $this->assertStringNotContainsString('total assigned', $html);
     }
 
-    /** Admin's copy lists CaPSAs by their sections, and leaves slots out. */
+    /** Admin's copy lists CaPSA/TSAs by their sections, and leaves slots out. */
     public function test_the_admin_copy_of_the_list_leaves_slots_out(): void
     {
         $this->splitExpert();

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/** One saved report-builder table of a CaPSA: its columns, filters and row mode. */
+/** One saved report-builder table of a CaPSA/TSA: its columns, filters and row mode. */
 class ReportTable extends Model
 {
     protected $fillable = ['expert_id', 'name', 'mode', 'columns', 'filters'];

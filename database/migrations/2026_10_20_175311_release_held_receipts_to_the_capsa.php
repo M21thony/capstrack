@@ -5,8 +5,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Receipts no longer wait on the team leader: an upload goes straight to the
- * CaPSA. Any receipt still held by a leader when this ships is released to
- * the CaPSA, waiting to be checked, so nobody's receipt is stranded in a
+ * CaPSA/TSA. Any receipt still held by a leader when this ships is released to
+ * the CaPSA/TSA, waiting to be checked, so nobody's receipt is stranded in a
  * status nothing reads any more.
  */
 return new class extends Migration

@@ -5,9 +5,9 @@ use App\Support\SectionCatalog;
 use Illuminate\Database\Migrations\Migration;
 
 /**
- * Sections used to be added for 3rd and 4th year at once, so every CaPSA
+ * Sections used to be added for 3rd and 4th year at once, so every CaPSA/TSA
  * looked like they ran both. The list now starts at 3rd year; the 4th-year
- * sections it made in advance are taken off it, except one a CaPSA already
+ * sections it made in advance are taken off it, except one a CaPSA/TSA already
  * holds. A 4th-year section with students in it is still listed - that comes
  * from the students, not from this list.
  */

@@ -62,7 +62,7 @@ class TeamApplications
 
         return [
             // Teams can only apply to someone who is an adviser, consultant or
-            // grammarian; a CaPSA who is none of these has nothing to list.
+            // grammarian; a CaPSA/TSA who is none of these has nothing to list.
             'open' => $waiting->isNotEmpty() || $declined->isNotEmpty()
                 || $expert->roles()->whereIn('role_name', self::ROLES)->exists(),
             'waiting' => $waiting,
@@ -91,7 +91,7 @@ class TeamApplications
             'id' => $assignment->assignment_id,
             'team' => $team?->team_name ?? 'Unknown',
             'project' => $assignment->preProposal?->title ?: ($team?->project_title ?: ''),
-            // Applied with the pre-proposal their CaPSA approved: the expert
+            // Applied with the pre-proposal their CaPSA/TSA approved: the expert
             // is reading the document that got through, not one the team chose.
             'recommended' => (bool) $assignment->preProposal,
             'role' => ucfirst($assignment->engaged_role_name ?: 'expert'),

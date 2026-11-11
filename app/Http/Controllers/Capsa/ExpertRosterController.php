@@ -87,7 +87,7 @@ class ExpertRosterController extends Controller
             $roleCol = $columnIndex['role'] ?? $columnIndex['roles'] ?? null;
             $expertiseCol = $columnIndex['expertise'] ?? $columnIndex['areas of expertise'] ?? null;
             // Both optional, and both something the expert can set for
-            // themselves - a CaPSA filling them in is a head start, not the
+            // themselves - a CaPSA/TSA filling them in is a head start, not the
             // only way they get there.
             $programsCol = $columnIndex['accepted programs'] ?? $columnIndex['programs'] ?? null;
             $slotsCol = $columnIndex['team slots'] ?? $columnIndex['slots'] ?? $columnIndex['max teams'] ?? null;
@@ -137,13 +137,13 @@ class ExpertRosterController extends Controller
                 }
 
                 // This tool onboards Adviser/Consultant/Grammarian experts,
-                // not Admin/CaPSA staff - changing one of those accounts
+                // not Admin/CaPSA/TSA staff - changing one of those accounts
                 // (even just its name) is Admin's call, not a side effect of
                 // a bulk file upload that happens to share their email
                 // (which a real roster can do by accident).
                 if ($this->isStaffAccount($email)) {
                     $skipped++;
-                    $errors[] = "{$where}: \"{$email}\" belongs to an Admin/CaPSA account - roster uploads don't touch those.";
+                    $errors[] = "{$where}: \"{$email}\" belongs to an Admin/CaPSA/TSA account - roster uploads don't touch those.";
 
                     continue;
                 }
@@ -280,7 +280,7 @@ class ExpertRosterController extends Controller
             }
 
             // Scoped to the student-facing roles, so an upload can neither
-            // grant nor revoke CaPSA - that stays its own deliberate action.
+            // grant nor revoke CaPSA/TSA - that stays its own deliberate action.
             if ($ids !== []) {
                 CapstoneExpert::syncRoles($expertId, $ids, $roleIds->values());
             }
@@ -371,7 +371,7 @@ class ExpertRosterController extends Controller
                 'email' => $email,
                 'roles' => $person['roles'],
                 'expertise' => $person['expertise'] ?? [],
-                // Shown in the preview so a CaPSA sees what the sheet is
+                // Shown in the preview so a CaPSA/TSA sees what the sheet is
                 // about to set before it sets it.
                 'programs' => $person['programs'] ?? [],
                 'slots' => $person['slots'],
@@ -420,7 +420,7 @@ class ExpertRosterController extends Controller
             $changes[] = 'approval';
         }
 
-        // Scoped to the student-facing roles, because CaPSA is the only role
+        // Scoped to the student-facing roles, because CaPSA/TSA is the only role
         // an upload never touches and comparing it in would report a change
         // that could not happen.
         $held = DB::table('expert_roles')
@@ -558,9 +558,9 @@ class ExpertRosterController extends Controller
     }
 
     /**
-     * Whether this address belongs to an Admin or a CaPSA.
+     * Whether this address belongs to an Admin or a CaPSA/TSA.
      *
-     * Being a CaPSA means holding the capstone_adviser role (see
+     * Being a CaPSA/TSA means holding the capstone_adviser role (see
      * CapstoneExpert::CAPSA_ROLE) - read from expert_roles, not from the
      * retired is_capsa column.
      */

@@ -19,7 +19,7 @@ use Tests\TestCase;
 
 /**
  * Progress is worked out from the records that hold the answer, never stored:
- * the upload, the verdict, the panel's outcome, the CaPSA's check.
+ * the upload, the verdict, the panel's outcome, the CaPSA/TSA's check.
  */
 class MilestoneProgressTest extends TestCase
 {
@@ -78,7 +78,7 @@ class MilestoneProgressTest extends TestCase
     }
 
     /**
-     * Handed in, reviewed, revised, approved by both, checked by the CaPSA - only then done. Sent
+     * Handed in, reviewed, revised, approved by both, checked by the CaPSA/TSA - only then done. Sent
      * to the consultant as well, so their verdict is waited for; a draft that
      * never went to them closes on the adviser's (TeamReachesTitleDefenseTest).
      */
@@ -111,7 +111,7 @@ class MilestoneProgressTest extends TestCase
             ->update(['review_status' => CapstoneDocumentReview::REVIEWED, 'verdict' => CapstoneDocumentReview::APPROVED, 'verdict_at' => now()->subDay()]);
         $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $this->progressOf($checklist, $this->team, $draft)->waiting_on);
 
-        // Sent back by the CaPSA: the team owes a new version, then she checks it again.
+        // Sent back by the CaPSA/TSA: the team owes a new version, then she checks it again.
         $this->check($draft, DeliverableCheck::SENT_BACK, now()->subHours(12)->toDateTimeString(), 'Fix the margins');
         $state = $this->progressOf($checklist, $this->team, $draft);
         $this->assertSame(MilestoneProgress::WAITING_ON_TEAM, $state->waiting_on);
@@ -124,7 +124,7 @@ class MilestoneProgressTest extends TestCase
 
     /**
      * There is no e-signing, so a CLF is paper: the adviser approving the
-     * draft only means the signed copy can follow. The CaPSA's check closes it.
+     * draft only means the signed copy can follow. The CaPSA/TSA's check closes it.
      */
     public function test_a_signed_clf_waits_for_the_signed_copy_and_then_the_capsa(): void
     {

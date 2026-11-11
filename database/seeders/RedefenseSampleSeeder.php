@@ -51,7 +51,7 @@ class RedefenseSampleSeeder extends Seeder
             return;
         }
 
-        // Section BSIT-3A, so the sample shows up on that CaPSA's pages.
+        // Section BSIT-3A, so the sample shows up on that CaPSA/TSA's pages.
         $students = collect(range(1, 3))->map(fn ($i) => Student::factory()->withCompleteProfile()->create([
             'email' => "sample.{$slug}.{$i}@my.cspc.edu.ph",
             'course' => 'Bachelor of Science in Information Technology',

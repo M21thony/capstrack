@@ -9,7 +9,7 @@ return new class extends Migration
 {
     /**
      * A milestone now opens only once the one before it is complete, unless
-     * the CaPSA unticks it for the ones where order does not matter.
+     * the CaPSA/TSA unticks it for the ones where order does not matter.
      *
      * The adviser asked for this as the rule, not an option nobody finds, so
      * the existing milestones are turned on too. The first milestone's flag

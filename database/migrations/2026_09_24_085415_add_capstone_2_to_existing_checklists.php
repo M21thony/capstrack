@@ -6,7 +6,7 @@ use Illuminate\Database\Migrations\Migration;
 
 /**
  * Checklists made before Capstone 2 existed end at Title Defense. Carry each
- * one on with the Capstone 2 milestones, below whatever the CaPSA has, so a
+ * one on with the Capstone 2 milestones, below whatever the CaPSA/TSA has, so a
  * team's checklist runs through to Final Oral Defense.
  */
 return new class extends Migration

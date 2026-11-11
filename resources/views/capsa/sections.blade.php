@@ -101,7 +101,7 @@
   .ct-preview-table th:nth-child(8),.ct-preview-table td:nth-child(8){width:96px}
   .ct-preview-table th:nth-child(9),.ct-preview-table td:nth-child(9){width:150px}
   .ct-preview-table tr:last-child td{border-bottom:none}
-  /* The badge is what a CaPSA scans the list by, so the three outcomes have
+  /* The badge is what a CaPSA/TSA scans the list by, so the three outcomes have
      to be tellable apart at a glance and not only by their wording. */
   .ct-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;white-space:nowrap}
   .ct-tag-create{background:rgba(22,163,74,0.1);color:#15803d}
@@ -182,7 +182,7 @@
     {{-- What the page holds on the left, the ways in on the right, and the
          sections underneath the count as the first way to narrow it. --}}
     @php
-      // The numbers a CaPSA is looking for on this page that the list itself
+      // The numbers a CaPSA/TSA is looking for on this page that the list itself
       // will not tell them without scrolling all of it - one per tab.
       $unteamed = $students->filter(fn ($s) => ! ($s->currentSy && $s->currentSy->team))->count();
       $notSignedIn = $students->filter(fn ($s) => ! $s->last_seen_at)->count();
@@ -334,7 +334,7 @@
                       @if ($student->teamSection)
                         {{-- A 4th-year team split across sections: it is one team, handled under its leader's section. --}}
                         <span class="std-team-elsewhere"
-                              title="{{ $student->teamHandledHere ? 'This team is listed under '.$student->teamSection.', its leader\'s section.' : 'This team belongs to '.$student->teamSection.', its leader\'s section. That section\'s CaPSA handles its checklist, defenses and grading.' }}">
+                              title="{{ $student->teamHandledHere ? 'This team is listed under '.$student->teamSection.', its leader\'s section.' : 'This team belongs to '.$student->teamSection.', its leader\'s section. That section\'s CaPSA/TSA handles its checklist, defenses and grading.' }}">
                           Team in {{ $student->teamSection }}
                         </span>
                       @endif
@@ -517,7 +517,7 @@ function closeSidebar() {
     <div id="studentRosterStep2" style="display:none">
       <div class="ct-preview-summary" id="studentRosterSummary"></div>
       {{-- Year Promotion: who moves up a year, by section, and whether this
-           CaPSA stays on with them. A CaPSA can change in 4th year, so it is
+           CaPSA/TSA stays on with them. A CaPSA/TSA can change in 4th year, so it is
            a choice, not a given. --}}
       <div class="ct-promo" id="studentRosterPromotions" style="display:none"></div>
       <div class="ct-preview-scroll"><table class="ct-preview-table" id="studentRosterPreviewTable"></table></div>
@@ -595,7 +595,7 @@ function renderYearPromotion() {
       ? `<span class="ct-promo-note">You already cover ${escRoster(p.to)}.</span>`
       : p.covered_by
         ? `<span class="ct-promo-note">${escRoster(p.to)} is covered by ${escRoster(p.covered_by)}.</span>`
-        : `<label><input type="checkbox" class="yp-stay" data-to="${escRoster(p.to)}" checked>Stay their CaPSA in ${escRoster(p.to)}</label>`;
+        : `<label><input type="checkbox" class="yp-stay" data-to="${escRoster(p.to)}" checked>Stay their CaPSA/TSA in ${escRoster(p.to)}</label>`;
     const people = p.students.map(s => `<label style="font-weight:400"><input type="checkbox" class="yp-student" data-section="${i}" value="${s.id}" checked>${escRoster(s.name)}${s.team ? ` <span class="ct-promo-note">· ${escRoster(s.team)}</span>` : ''}</label>`).join('');
     return `<div class="ct-promo-row" style="display:block">
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px">
@@ -921,14 +921,14 @@ function renderPromotions(promotions) {
     } else if (!p.mine) {
       choice = `<span class="ct-promo-note">Not your section now; nobody covers ${escRoster(p.to)} yet.</span>`;
     } else {
-      choice = `<label><input type="checkbox" name="stay_on" value="${escRoster(p.to)}" checked>Stay their CaPSA in ${escRoster(p.to)}</label>`;
+      choice = `<label><input type="checkbox" name="stay_on" value="${escRoster(p.to)}" checked>Stay their CaPSA/TSA in ${escRoster(p.to)}</label>`;
     }
     return `<div class="ct-promo-row">${move}${choice}</div>`;
   }).join('');
 
   box.style.display = 'block';
   box.innerHTML = '<div class="ct-promo-title">Moving up a year</div>'
-    + '<div class="ct-promo-sub">Their teams and work stay. Untick a section if another CaPSA will take it in the new year.</div>' + rows;
+    + '<div class="ct-promo-sub">Their teams and work stay. Untick a section if another CaPSA/TSA will take it in the new year.</div>' + rows;
 }
 
 function uploadStudentRoster(btn) {
@@ -1178,7 +1178,7 @@ function uploadStudentRoster(btn) {
       <div class="cf-names" id="bulk-section-names"></div>
 
       @php
-        // Taken apart from the sections this CaPSA actually handles - the
+        // Taken apart from the sections this CaPSA/TSA actually handles - the
         // endpoint refuses a move into anyone else's, so offering one here
         // would be offering a choice that comes back as an error.
         $myYears = [];
@@ -1245,7 +1245,7 @@ function uploadStudentRoster(btn) {
 ])
 
 <script nonce="{{ Vite::cspNonce() }}">
-// ══ the CaPSA's own students ══
+// ══ the CaPSA/TSA's own students ══
 // Every call here goes to one of three routes: post to the collection to take
 // somebody on, patch a record to change part of it, delete to take them off
 // the roster. Bulk is a loop over the patch, so the rule about which sections
@@ -1474,7 +1474,7 @@ function saveEditStudent() {
     send(false);
   }
 
-  // transfer=true is the second attempt, after the CaPSA has been told what
+  // transfer=true is the second attempt, after the CaPSA/TSA has been told what
   // moving a student out of their sections means. The server refuses the
   // first one on purpose - handing a student to a colleague is correct to
   // allow, wrong to do by accident, and impossible to undo from this side.
@@ -1505,7 +1505,7 @@ function saveEditStudent() {
           // two and was still going through the browser's own box.
           confirmSheet({
             title: 'Transfer ' + (name || 'this student') + where + '?',
-            body: 'They will belong to the CaPSA who handles that section, and you '
+            body: 'They will belong to the CaPSA/TSA who handles that section, and you '
               + 'will not be able to edit them afterwards.',
             confirmLabel: 'Transfer',
             danger: true,
@@ -1563,7 +1563,7 @@ function patchEach(ids, body, done) {
 }
 
 // == bulk editing ==
-// The sections this CaPSA handles, so a sheet can say whether the change it is
+// The sections this CaPSA/TSA handles, so a sheet can say whether the change it is
 // about to make leaves the students within reach. The endpoint refuses a move
 // out of them, and a red toast afterwards is a worse way to learn that.
 const MY_SECTIONS = @json($adminSections);
@@ -1719,7 +1719,7 @@ function removeOneStudent(student) {
     title: 'Remove ' + student.f_name + ' ' + student.l_name + ' from your section?',
     names: [student.l_name + ', ' + student.f_name],
     body: 'Their account, team and submissions are kept. Only the section is cleared, '
-        + 'so whoever handles the section they join next becomes their CaPSA.',
+        + 'so whoever handles the section they join next becomes their CaPSA/TSA.',
     confirmLabel: 'Remove from section',
     danger: true,
   }).then(function (yes) {
@@ -1745,7 +1745,7 @@ if (typeof onBulk === 'function') {
       title: 'Remove ' + ids.length + (ids.length === 1 ? ' student' : ' students') + ' from your section?',
       names: pickedNames(rows),
       body: 'Their accounts, teams and submissions are kept. Only the section is cleared, '
-          + 'so whoever handles the section they join next becomes their CaPSA.',
+          + 'so whoever handles the section they join next becomes their CaPSA/TSA.',
       confirmLabel: 'Remove from section',
       danger: true,
     }).then(function (yes) {

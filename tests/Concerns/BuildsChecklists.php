@@ -13,7 +13,7 @@ use App\Support\MilestoneTemplate;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Fixtures for the one-checklist-per-CaPSA model: a CaPSA who handles a
+ * Fixtures for the one-checklist-per-CaPSA/TSA model: a CaPSA/TSA who handles a
  * section, a team whose members put it in that section, the checklist they
  * follow, and uploads against its deliverables.
  */
@@ -49,7 +49,7 @@ trait BuildsChecklists
         return [$team, $leader];
     }
 
-    /** With every milestone already opened by the CaPSA. */
+    /** With every milestone already opened by the CaPSA/TSA. */
     protected function departmentChecklist(CapstoneExpert $capsa, string $program = 'BSIT'): Checklist
     {
         $checklist = MilestoneTemplate::createChecklist($capsa->expert_id, $program);

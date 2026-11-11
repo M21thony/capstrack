@@ -1,4 +1,4 @@
-{{-- Grades: CaPSA types each paper sheet's total and attaches the signed
+{{-- Grades: CaPSA/TSA types each paper sheet's total and attaches the signed
      sheets as one PDF (Encode scores), then sees every team's panel average
      (Grade summary). The Panel Chair still records the decision. --}}
 @include('capsa.partials.team-management._milestone_kit')

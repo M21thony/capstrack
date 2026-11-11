@@ -23,7 +23,7 @@
 
   $standing = match (true) {
       ! $proposal => 'not saved as a pre-proposal',
-      $proposal->status === 'approved' => 'recommended by your CaPSA',
+      $proposal->status === 'approved' => 'recommended by your CaPSA/TSA',
       $proposal->status === 'rejected' => 'rejected',
       (bool) $proposal->submitted_at => 'awaiting review',
       default => 'draft',

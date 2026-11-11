@@ -20,18 +20,18 @@ use Illuminate\Support\Facades\DB;
  * The leader's evaluation of the team's experts, once per passed defense.
  *
  * When a team passes a defense - Pre-proposal, Title, Pre Oral or Final Oral
- * - its leader owes an evaluation of each engaged expert the CaPSA's
- * evaluation for that defense covers. The CaPSA writes the questions
+ * - its leader owes an evaluation of each engaged expert the CaPSA/TSA's
+ * evaluation for that defense covers. The CaPSA/TSA writes the questions
  * (EvaluationTemplate); each is answered 1 to 5, and the expert's rating for
- * that defense is the average. The leader is anonymous to the CaPSA and the
+ * that defense is the average. The leader is anonymous to the CaPSA/TSA and the
  * expert.
  *
  * Only a defense decided after its evaluation was set up counts: one a team
- * passed before the CaPSA had written any questions owes nothing, so adding
+ * passed before the CaPSA/TSA had written any questions owes nothing, so adding
  * an evaluation never reaches back and locks teams that are long past it.
  * What the leader is asked, though, is the evaluation last set for that
- * defense - its questions and its roles - so a CaPSA's edit reaches every
- * leader yet to answer, a role it drops included. Every CaPSA of the team's
+ * defense - its questions and its roles - so a CaPSA/TSA's edit reaches every
+ * leader yet to answer, a role it drops included. Every CaPSA/TSA of the team's
  * section counts, when a section has more than one; the one who edited last
  * decides.
  *
@@ -79,7 +79,7 @@ class ExpertEvaluations
             return $out;
         }
 
-        // Whose evaluations apply: every CaPSA of each team's section - a
+        // Whose evaluations apply: every CaPSA/TSA of each team's section - a
         // section can have more than one.
         $teams = Team::whereIn('team_id', $passed->keys())->get()->keyBy('team_id');
         $records = StudentSchoolYear::with('student')->whereIn('team_id', $passed->keys())->get()->groupBy('team_id');
@@ -112,7 +112,7 @@ class ExpertEvaluations
             foreach ($defenses->unique(fn ($d) => mb_strtolower($d->defense_type)) as $defense) {
                 $decided = $defense->outcome_recorded_at ?? $defense->schedule_date ?? $defense->updated_at ?? Carbon::now();
 
-                // This defense's evaluations, by any CaPSA of the section.
+                // This defense's evaluations, by any CaPSA/TSA of the section.
                 $forStage = $templates->filter(fn (EvaluationTemplate $t) => in_array((int) $t->capsa_id, $capsaIds, true)
                     && mb_strtolower($t->defense_type) === mb_strtolower($defense->defense_type));
 
@@ -120,7 +120,7 @@ class ExpertEvaluations
                     continue;
                 }
 
-                // The CaPSA who last set this defense's evaluation decides it
+                // The CaPSA/TSA who last set this defense's evaluation decides it
                 // whole - its questions and its roles - so an edit that drops
                 // a role drops it here too, not just the questions.
                 $newest = fn (Collection $set) => $set->sortByDesc(fn (EvaluationTemplate $t) => [$t->updated_at?->getTimestamp() ?? 0, $t->id])->first();
@@ -195,10 +195,10 @@ class ExpertEvaluations
         $template = EvaluationTemplate::with('questions')->find($owed->template_id);
         $scored = [];
 
-        // Answers to none of these questions: the CaPSA changed them while the
+        // Answers to none of these questions: the CaPSA/TSA changed them while the
         // page was open.
         if ($answers !== [] && $template->questions->pluck('id')->intersect(array_map('intval', array_keys($answers)))->isEmpty()) {
-            return 'Your CaPSA changed these questions while you were answering. Here they are again.';
+            return 'Your CaPSA/TSA changed these questions while you were answering. Here they are again.';
         }
 
         foreach ($template->questions as $question) {
@@ -271,7 +271,7 @@ class ExpertEvaluations
                 $leader,
                 'evaluation_due',
                 'Evaluate your '.self::whom($rows).': '.$stage,
-                'Your team passed <strong>'.e($stage).'</strong>. Answer your CaPSA\'s evaluation for '.e($names).'. It is anonymous, and the next phase stays locked until it is done.',
+                'Your team passed <strong>'.e($stage).'</strong>. Answer your CaPSA/TSA\'s evaluation for '.e($names).'. It is anonymous, and the next phase stays locked until it is done.',
                 route('student.experts', ['tab' => 'evaluations']),
                 ['tag' => 'evaluation:defense:'.$defenseId],
             );
@@ -282,9 +282,9 @@ class ExpertEvaluations
     }
 
     /**
-     * The defenses coming up in this CaPSA's sections whose stage has no
+     * The defenses coming up in this CaPSA/TSA's sections whose stage has no
      * evaluation yet. The leaders of the teams that pass will owe one only if
-     * it exists before the defense is decided, so the CaPSA is asked for it
+     * it exists before the defense is decided, so the CaPSA/TSA is asked for it
      * as soon as the date is set.
      *
      * @return Collection<int, object{stage: string, teams: int, first: Carbon}>
@@ -311,7 +311,7 @@ class ExpertEvaluations
         $scope = app(SectionScope::class);
         $sectionOf = $teams->mapWithKeys(fn (Team $team) => [$team->team_id => $scope->sectionFor($team, $records->get($team->team_id, collect()))]);
 
-        // An evaluation by any CaPSA of the team's section covers it.
+        // An evaluation by any CaPSA/TSA of the team's section covers it.
         $capsasBySection = self::capsasBySection();
         $stagesBy = EvaluationTemplate::active()->whereHas('questions')
             ->whereIn('capsa_id', collect($sections)->flatMap(fn ($s) => $capsasBySection[$s] ?? [])->unique()->values())
@@ -335,7 +335,7 @@ class ExpertEvaluations
     }
 
     /**
-     * Every evaluation still owed on this CaPSA's own questions, across the
+     * Every evaluation still owed on this CaPSA/TSA's own questions, across the
      * teams of their sections - what the results page counts as waiting.
      * Each row is an owedForTeams() row plus its team_id.
      *
@@ -363,7 +363,7 @@ class ExpertEvaluations
     }
 
     /**
-     * Every CaPSA of each section, by section.
+     * Every CaPSA/TSA of each section, by section.
      *
      * @return array<string, array<int, int>>
      */

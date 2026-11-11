@@ -17,7 +17,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * The CaPSA's reports, built as tables.
+ * The CaPSA/TSA's reports, built as tables.
  *
  * Every report is a list of columns and a list of rows, each row one team
  * (or one expert, for Expert Load). The page, the PDF and the Excel file are
@@ -565,7 +565,7 @@ class CapsaReports
             ->keyBy('team_id');
     }
 
-    /** Results, fees and the schedule count the teams the CaPSA verified, as the defense and fee pages do. */
+    /** Results, fees and the schedule count the teams the CaPSA/TSA verified, as the defense and fee pages do. */
     private function verifiedTeams(array $ctx): Collection
     {
         return $ctx['teams']->filter(fn (Team $t) => (bool) $t->is_confirmed)->values();
@@ -1104,7 +1104,7 @@ class CapsaReports
 
     private function roleKey(TeamExpertAssignment $a): ?string
     {
-        // Exact names: the CaPSA's own role is "capstone_adviser", which is not an adviser.
+        // Exact names: the CaPSA/TSA's own role is "capstone_adviser", which is not an adviser.
         $name = strtolower(trim((string) $a->engaged_role_name));
 
         return array_key_exists($name, self::ROLES) ? $name : null;

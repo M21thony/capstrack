@@ -126,7 +126,7 @@ class StudentExpertController extends Controller
             return response()->json(['success' => false, 'message' => $refusal['message']], $refusal['status']);
         }
 
-        // Only the pre-proposal the CaPSA recommended goes out: the expert can
+        // Only the pre-proposal the CaPSA/TSA recommended goes out: the expert can
         // trust it was checked, and no other file can be sent in its place.
         $approvedProposal = $team->selected_pre_proposal_id
             ? CapstonePreProposal::find($team->selected_pre_proposal_id)
@@ -135,7 +135,7 @@ class StudentExpertController extends Controller
         if (! $approvedProposal) {
             return response()->json([
                 'success' => false,
-                'message' => 'Your pre-proposal has to be recommended by your CaPSA before you can apply for an expert.',
+                'message' => 'Your pre-proposal has to be recommended by your CaPSA/TSA before you can apply for an expert.',
             ], 422);
         }
 
@@ -188,25 +188,25 @@ class StudentExpertController extends Controller
         }
 
         // An expert who already took the team on is only changed with the
-        // CaPSA's permission. The request goes to them; the expert stays
+        // CaPSA/TSA's permission. The request goes to them; the expert stays
         // until they approve it. An application still waiting on the expert
         // is the team's to withdraw, below.
         if ($assignment->status === 'approved') {
             if (mb_strlen(trim($request->reason)) < ExpertRemovalRequest::REASON_MIN) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Give your CaPSA a reason they can decide on - at least '.ExpertRemovalRequest::REASON_MIN.' characters.',
+                    'message' => 'Give your CaPSA/TSA a reason they can decide on - at least '.ExpertRemovalRequest::REASON_MIN.' characters.',
                 ], 422);
             }
 
             if (ExpertRemovalRequest::pending()->where('assignment_id', $assignment->assignment_id)->exists()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'A request to remove this expert is already waiting on your CaPSA.',
+                    'message' => 'A request to remove this expert is already waiting on your CaPSA/TSA.',
                 ], 422);
             }
 
-            // Who the team wants instead, applied to the moment the CaPSA
+            // Who the team wants instead, applied to the moment the CaPSA/TSA
             // approves - so the role is not left empty while the team starts
             // over. Checked now as well as then: a replacement who cannot take
             // the team is better refused here than discovered later.
@@ -234,14 +234,14 @@ class StudentExpertController extends Controller
             ActivityLog::create([
                 'student_id' => $student->student_id,
                 'type' => 'expert_removal_requested',
-                'description' => 'Asked the CaPSA to remove expert '.($assignment->expert?->name ?? '#'.$assignment->expert_id)." — Reason: {$request->reason}",
+                'description' => 'Asked the CaPSA/TSA to remove expert '.($assignment->expert?->name ?? '#'.$assignment->expert_id)." — Reason: {$request->reason}",
                 'metadata' => ['assignment_id' => $assignment->assignment_id, 'expert_id' => $assignment->expert_id],
                 'created_at' => now(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sent to your CaPSA. '.$assignment->expert?->name.' stays with your team until they approve; then your application goes to '.$replacement['expert']->name.'.',
+                'message' => 'Sent to your CaPSA/TSA. '.$assignment->expert?->name.' stays with your team until they approve; then your application goes to '.$replacement['expert']->name.'.',
             ]);
         }
 
@@ -321,11 +321,11 @@ class StudentExpertController extends Controller
     }
 
     /**
-     * The team taking back a change request the CaPSA has not decided on yet.
+     * The team taking back a change request the CaPSA/TSA has not decided on yet.
      *
      * DELETE /api/expert-removal-requests/{expertRemovalRequest}
      *
-     * Once the CaPSA has approved or declined, there is nothing left to take
+     * Once the CaPSA/TSA has approved or declined, there is nothing left to take
      * back - an approval has already removed the expert.
      */
     public function destroyRemovalRequest(Request $request, ExpertRemovalRequest $expertRemovalRequest): JsonResponse
@@ -354,7 +354,7 @@ class StudentExpertController extends Controller
         if (! $expertRemovalRequest->isPending()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Your CaPSA has already '.$expertRemovalRequest->status.' this request, so there is nothing to take back.',
+                'message' => 'Your CaPSA/TSA has already '.$expertRemovalRequest->status.' this request, so there is nothing to take back.',
             ], 409);
         }
 
@@ -370,7 +370,7 @@ class StudentExpertController extends Controller
         ActivityLog::create([
             'student_id' => $student->student_id,
             'type' => 'expert_removal_withdrawn',
-            'description' => 'Took back the request to remove expert '.$expertName.' - the CaPSA had not decided on it yet.',
+            'description' => 'Took back the request to remove expert '.$expertName.' - the CaPSA/TSA had not decided on it yet.',
             'metadata' => [
                 'expert_removal_request_id' => $expertRemovalRequest->id,
                 'assignment_id' => $expertRemovalRequest->assignment_id,

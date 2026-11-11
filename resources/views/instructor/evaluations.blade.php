@@ -29,7 +29,7 @@
     <div class="ev-page">
       <div class="ev-head">
         <div>
-          <p>After each defense a team passes, its leader rates you on the CaPSA's questions, <b>1 to 5 stars</b> each. Your rating is the average. Every response is <b>anonymous</b>: no team or student is ever shown.</p>
+          <p>After each defense a team passes, its leader rates you on the CaPSA/TSA's questions, <b>1 to 5 stars</b> each. Your rating is the average. Every response is <b>anonymous</b>: no team or student is ever shown.</p>
         </div>
       </div>
 

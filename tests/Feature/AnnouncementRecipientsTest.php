@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
- * Who a CaPSA's announcement reaches.
+ * Who a CaPSA/TSA's announcement reaches.
  *
  * The bell, the email and the student dashboard used to decide this each on
  * their own. A post to "Student" with no section picked went to every student

@@ -64,7 +64,7 @@ return [
         [
             'key' => 'reference',
             'label' => 'Templates and past work',
-            'body' => '**Download guides** from your CaPSA and browse **past capstones** for ideas.',
+            'body' => '**Download guides** from your CaPSA/TSA and browse **past capstones** for ideas.',
             'target' => ['student.resources', 'student.archive'],
         ],
         [

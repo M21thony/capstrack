@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Expert evaluations move from one per Progress Tracker phase to one per
- * passed defense, answered on the CaPSA's questions.
+ * passed defense, answered on the CaPSA/TSA's questions.
  *
  * An evaluation now belongs to a defense and the template it was answered
  * on, keeps its answers (each question's wording with its 1-5 score, so a

@@ -99,7 +99,7 @@ Route::middleware(['web', 'expert.auth'])
                 Route::delete('/expense-posts/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('expense-posts.destroy');
             });
 
-            // Archive/Announcements are CaPSA's academic-process content,
+            // Archive/Announcements are CaPSA/TSA's academic-process content,
             // not Admin's - see routes/web.php's matching comment.
             Route::post('/announcements', [AnnouncementController::class, 'store'])->name('api.admin.announcements.store');
             Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('api.admin.announcements.update');
@@ -143,7 +143,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/experts/{expert}', [StudentExpertController::class, 'show'])->name('api.student.experts.show');
     Route::post('/assignments', [StudentExpertController::class, 'store'])->name('api.student.assignments.store');
     Route::delete('/assignments/{assignment}', [StudentExpertController::class, 'destroy'])->name('api.student.assignments.destroy');
-    // Taking back a change request still waiting on the CaPSA.
+    // Taking back a change request still waiting on the CaPSA/TSA.
     Route::delete('/expert-removal-requests/{expertRemovalRequest}', [StudentExpertController::class, 'destroyRemovalRequest'])->name('api.student.expert-removals.destroy');
 
     // Student Financial

@@ -417,7 +417,7 @@ class StudentExpertApplyTest extends TestCase
         $this->assertStringNotContainsString($label('Adviser'), $html);
     }
 
-    /** An approved pre-proposal for a team, the way the CaPSA leaves one. */
+    /** An approved pre-proposal for a team, the way the CaPSA/TSA leaves one. */
     private function approvedPreProposal(Team $team, Student $leader): CapstonePreProposal
     {
         $sy = StudentSchoolYear::firstOrCreate([
@@ -457,7 +457,7 @@ class StudentExpertApplyTest extends TestCase
     }
 
     /**
-     * A team whose pre-proposal the CaPSA approved should not have to find
+     * A team whose pre-proposal the CaPSA/TSA approved should not have to find
      * and re-upload the same PDF - and re-uploading invited a different,
      * unapproved file to be sent instead.
      */
@@ -497,7 +497,7 @@ class StudentExpertApplyTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $this->assertStringContainsString('recommended by your CaPSA', $response->json('message'));
+        $this->assertStringContainsString('recommended by your CaPSA/TSA', $response->json('message'));
         $this->assertSame(0, TeamExpertAssignment::where('team_id', $team->team_id)->count());
     }
 
@@ -509,13 +509,13 @@ class StudentExpertApplyTest extends TestCase
         $this->makeAdviserExpert();
 
         $this->actingAs($student, 'web')->get('/student/experts?tab=find')->assertOk()
-            ->assertSee('Your pre-proposal has to be recommended by your CaPSA before you can apply for experts.')
+            ->assertSee('Your pre-proposal has to be recommended by your CaPSA/TSA before you can apply for experts.')
             ->assertDontSee('"apply":true', false);
     }
 
     /**
      * An expert cannot drop a team they approved. The team planned around
-     * that yes; a change of expert goes through their CaPSA, the same way the
+     * that yes; a change of expert goes through their CaPSA/TSA, the same way the
      * students' own side asks for one.
      */
     public function test_an_expert_cannot_drop_a_team_they_approved(): void

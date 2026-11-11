@@ -1,6 +1,6 @@
 // Expert evaluations: the student's one-sheet form (every expert on one
-// form), CaPSA's results summary, and the page for one expert. Makes its own
-// data - a passed defense, the CaPSA's form, one rating - and removes it after.
+// form), CaPSA/TSA's results summary, and the page for one expert. Makes its own
+// data - a passed defense, the CaPSA/TSA's form, one rating - and removes it after.
 // Nothing is submitted - the student form is only filled in, never sent.
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
@@ -16,7 +16,7 @@ const php = (code) => {
 const MODELS = ['ExpertEvaluation', 'EvaluationTemplateQuestion', 'EvaluationTemplate'];
 let before;
 
-// Team 111 (student 131) passes defense 44 with CaPSA 91's form already set
+// Team 111 (student 131) passes defense 44 with CaPSA/TSA 91's form already set
 // up, and has rated its grammarian (123): adviser and consultant stay owed.
 test.beforeAll(() => {
   before = php(`$o = [];
@@ -82,7 +82,7 @@ test('the student rates every expert on one sheet and the counts keep up', async
   await shot(page, testInfo, 'student-sheet');
 });
 
-test('CaPSA reads the summary, opens an expert and comes back by the breadcrumb', async ({ page }, testInfo) => {
+test('CaPSA/TSA reads the summary, opens an expert and comes back by the breadcrumb', async ({ page }, testInfo) => {
   await staff(page, 'capsa', 'evaluations');
   await page.goto('/capsa/evaluations?tab=results');
   await expect(page.locator('.ev-sum-strip'), 'the summary strip').toBeVisible();
@@ -109,7 +109,7 @@ test('CaPSA reads the summary, opens an expert and comes back by the breadcrumb'
   await expect(page.locator('.ev-sum-strip')).toBeVisible();
 });
 
-test('an expert page the CaPSA has no answers for is not found', async ({ page }) => {
+test('an expert page the CaPSA/TSA has no answers for is not found', async ({ page }) => {
   await staff(page, 'capsa', 'evaluations');
   const res = await page.goto('/capsa/evaluations/experts/999999');
   expect(res.status()).toBe(404);

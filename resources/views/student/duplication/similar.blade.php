@@ -91,7 +91,7 @@
       <div class="ty-note">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         @if ($pending)
-          <span><b>Pending, not yet decided:</b> another team turned this in and its CaPSA has not decided yet. If it is recommended, two teams can't have the same title in one school year, so make yours different enough.</span>
+          <span><b>Pending, not yet decided:</b> another team turned this in and its CaPSA/TSA has not decided yet. If it is recommended, two teams can't have the same title in one school year, so make yours different enough.</span>
         @else
           <span><b>Recommended this year:</b> two teams can't have the same title in one school year. Change your title or its focus before you turn it in.</span>
         @endif

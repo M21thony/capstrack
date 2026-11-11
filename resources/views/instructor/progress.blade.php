@@ -28,7 +28,7 @@
 
   <div id="real-content" style="display:none">
   <div class="content">
-    {{-- The teams this expert advises or consults for, on the CaPSA's tracker,
+    {{-- The teams this expert advises or consults for, on the CaPSA/TSA's tracker,
          read-only. Drawn by resources/js/milestones/tracker.js. --}}
     <div class="ms-app" id="ms-tracker"
          data-mode="adviser"

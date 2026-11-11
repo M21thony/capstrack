@@ -109,7 +109,7 @@ class GoogleDriveController extends Controller
         $request->validate([
             'file' => [$isBatch ? 'nullable' : 'required', 'file', 'max:25600', $isAllowedType],
 
-            // Capped because this runs while the CaPSA waits - two Drive calls
+            // Capped because this runs while the CaPSA/TSA waits - two Drive calls
             // a file, no queue. Raise it when someone actually needs to.
             'files' => [$isBatch ? 'required' : 'nullable', 'array', 'max:25'],
             'files.*' => ['file', 'max:25600', $isAllowedType],
@@ -125,7 +125,7 @@ class GoogleDriveController extends Controller
             'categories' => ['nullable', 'array'],
             'categories.*' => ['nullable', 'string', 'max:50'],
             'category' => [$isBatch ? 'nullable' : 'required', 'string', 'max:50'],
-            // Only a program this CaPSA actually handles. Without this the
+            // Only a program this CaPSA/TSA actually handles. Without this the
             // page could be scoped and a hand-made request still file a
             // resource under someone else's program. Null means every
             // program, which stays open.
@@ -254,7 +254,7 @@ class GoogleDriveController extends Controller
     }
 
     /**
-     * The files inside a folder the CaPSA picked, so each can be given its own
+     * The files inside a folder the CaPSA/TSA picked, so each can be given its own
      * category before any of them is taken on.
      *
      * An empty list is a real answer, not an error: the drive.file scope may
@@ -276,7 +276,7 @@ class GoogleDriveController extends Controller
     }
 
     /**
-     * Take on files the CaPSA already has in Drive, chosen through the Picker.
+     * Take on files the CaPSA/TSA already has in Drive, chosen through the Picker.
      *
      * Nothing is uploaded - each file stays where it is, and what is written
      * here is a row saying where to find it and who it is for. The category
@@ -289,7 +289,7 @@ class GoogleDriveController extends Controller
 
         $validated = $request->validate([
             // Capped like the upload: two Drive calls a file, no queue, and
-            // the CaPSA is watching.
+            // the CaPSA/TSA is watching.
             'files' => ['required', 'array', 'max:25'],
             'files.*.drive_file_id' => ['required', 'string', 'max:255'],
             'files.*.category' => ['required', 'string', 'max:50'],
@@ -365,7 +365,7 @@ class GoogleDriveController extends Controller
                     // opened, so it is not offered as a download.
                     'is_downloadable' => ! str_starts_with($file['mime_type'] ?? '', 'application/vnd.google-apps.'),
                     'drive_file_id' => $file['id'],
-                    // The folder it sits in is the CaPSA's own, not one this
+                    // The folder it sits in is the CaPSA/TSA's own, not one this
                     // app made, so there is no admin_drive_folders row to point at.
                     'drive_folder_id' => null,
                     'drive_web_view_link' => $file['web_view_link'],
@@ -419,7 +419,7 @@ class GoogleDriveController extends Controller
         $viewer = Auth::guard('expert')->user();
 
         // Deleting is scoped like seeing: your own uploads only. There was no
-        // ownership check at all, so any CaPSA could remove anyone's.
+        // ownership check at all, so any CaPSA/TSA could remove anyone's.
         if ($viewer && ! $viewer->is_admin && (int) $resource->uploaded_by !== (int) $viewer->expert_id) {
             return response()->json([
                 'success' => false,
@@ -428,7 +428,7 @@ class GoogleDriveController extends Controller
         }
 
         // Off CapsTrack only. The file itself stays in Drive, untouched - it
-        // may be the CaPSA's own original, and Drive refused to bin the ones
+        // may be the CaPSA/TSA's own original, and Drive refused to bin the ones
         // this account does not own anyway.
         $resource->sections()->delete();
         $resource->delete();

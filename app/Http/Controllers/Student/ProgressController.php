@@ -16,10 +16,10 @@ use Illuminate\Http\Request;
 class ProgressController extends Controller
 {
     /**
-     * The team's own milestones, as its section's CaPSA keeps them.
+     * The team's own milestones, as its section's CaPSA/TSA keeps them.
      *
      * Read-only on purpose: every deliverable is closed by somebody else - the
-     * CaPSA checks a signed paper, an upload closes a draft, the panel closes
+     * CaPSA/TSA checks a signed paper, an upload closes a draft, the panel closes
      * a defense. What a team can do is upload, and that goes through Document
      * Submission with the deliverable already picked.
      */
@@ -39,14 +39,14 @@ class ProgressController extends Controller
                 ->map(fn ($summary) => (object) [
                     'name' => $summary->milestone->name,
                     'description' => $summary->milestone->description,
-                    // The milestone's own date, when the CaPSA set one.
+                    // The milestone's own date, when the CaPSA/TSA set one.
                     'due' => $summary->milestone->due_on,
                     'past_due' => $summary->past_due,
                     'rows' => $summary->items,
                     'closed' => $summary->completed,
                     'overdue' => $summary->overdue,
                     'dues' => $summary->items->pluck('due_on')->filter()->sort()->values(),
-                    // Not opened by the CaPSA yet, or shut until the defense before
+                    // Not opened by the CaPSA/TSA yet, or shut until the defense before
                     // it is passed and its experts rated.
                     'locked' => $summary->locked,
                     'not_open' => $summary->not_open,

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * The expert and CaPSA portals on a phone and a tablet: pages open finished
+ * The expert and CaPSA/TSA portals on a phone and a tablet: pages open finished
  * and hold still, every list's buttons are on the screen, and the menu on a
  * tablet slides in rather than taking a third of the page.
  */
@@ -98,7 +98,7 @@ test('a team card on a phone keeps its arrow beside the name', async ({ browser 
   await context.close();
 });
 
-test('CaPSA Financial on a phone gives the member their name', async ({ browser }) => {
+test('CaPSA/TSA Financial on a phone gives the member their name', async ({ browser }) => {
   const { context, page } = await phone(browser);
   await signIn(page, 'capsa', 'financial');
   await page.waitForTimeout(1000);
@@ -209,14 +209,14 @@ test('on a phone the expert profile opens from the floating bar as a page of its
   await context.close();
 });
 
-test('on a phone a CaPSA name card opens My Profile', async ({ browser }) => {
+test('on a phone a CaPSA/TSA name card opens My Profile', async ({ browser }) => {
   const { context, page } = await phone(browser);
   await signIn(page, 'capsa');
   await page.waitForTimeout(800);
   await noTour(page);
   await page.locator('.mtab .mtab-item').last().tap();
   await expect.poll(() => page.evaluate(() => Math.round(document.querySelector('.sidebar').getBoundingClientRect().left))).toBe(0);
-  // A CaPSA who also advises has one profile, the expert one.
+  // A CaPSA/TSA who also advises has one profile, the expert one.
   await Promise.all([page.waitForURL(/\/(capsa|instructor)\/profile$/), page.locator('.sidebar .sidebar-user').tap()]);
   await context.close();
 });

@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * An Admin makes a CaPSA by typing their email address.
+ * An Admin makes a CaPSA/TSA by typing their email address.
  *
- * There is no permanent CaPSA - the job moves between faculty - and making
+ * There is no permanent CaPSA/TSA - the job moves between faculty - and making
  * one used to mean getting them into the system through the expert list
  * upload first, then finding them in it to grant the role. For one person
  * that is a spreadsheet to serve a single row.
@@ -67,7 +67,7 @@ class AddCapsaByEmailTest extends TestCase
 
     /**
      * Left on the row, capsaFor() - which reads sections, not the role - kept
-     * routing those sections to someone who was no longer a CaPSA.
+     * routing those sections to someone who was no longer a CaPSA/TSA.
      */
     public function test_taking_the_role_away_frees_their_sections(): void
     {
@@ -81,7 +81,7 @@ class AddCapsaByEmailTest extends TestCase
 
     /**
      * The page names a section nobody covers, and says why Deactivate is
-     * greyed out for a CaPSA who still holds one.
+     * greyed out for a CaPSA/TSA who still holds one.
      */
     public function test_the_page_names_uncovered_sections_and_why_a_capsa_cannot_be_deactivated(): void
     {
@@ -94,9 +94,9 @@ class AddCapsaByEmailTest extends TestCase
         $this->actingAs($this->admin(), 'expert')
             ->get(route('admin.experts'))
             ->assertOk()
-            ->assertSee('1 section has no CaPSA yet')
+            ->assertSee('1 section has no CaPSA/TSA yet')
             ->assertSee('BSIT-3B')
-            ->assertSee('is still the CaPSA for BSIT-3A', false);
+            ->assertSee('is still the CaPSA/TSA for BSIT-3A', false);
     }
 
     /** An email and a section is the whole of it. */
@@ -306,7 +306,7 @@ class AddCapsaByEmailTest extends TestCase
         $this->assertTrue($this->isCapsa('nosections@cspc.edu.ph'));
     }
 
-    /** Granting CaPSA is Admin's, so a CaPSA cannot hand it out. */
+    /** Granting CaPSA/TSA is Admin's, so a CaPSA/TSA cannot hand it out. */
     public function test_a_capsa_cannot_add_another_capsa(): void
     {
         $capsa = $this->makeCapsa(CapstoneExpert::create([
@@ -335,7 +335,7 @@ class AddCapsaByEmailTest extends TestCase
         $response = $this->get(route('admin.experts'));
 
         $response->assertOk();
-        $response->assertSee('Add CaPSA', false);
+        $response->assertSee('Add CaPSA/TSA', false);
         $response->assertSee('id="capsaEmail"', false);
         $response->assertSee('id="capsaNewFields"', false);
     }

@@ -17,7 +17,7 @@ use App\Models\TitleChangeRequest;
  *                                  the Signed Final Project Title Form is in.
  *   Redefense with a new title   - the old titles are set aside; the team
  *                                  turns in new ones and keeps its experts.
- *                                  The CaPSA approves the new title, then the
+ *                                  The CaPSA/TSA approves the new title, then the
  *                                  adviser confirms it before it is the team's.
  *
  * Once passed, the leader can also ask the adviser to change part of the
@@ -65,7 +65,7 @@ class TitleRevision
     }
 
     /**
-     * Whether the CaPSA has checked the team's Signed Final Project Title
+     * Whether the CaPSA/TSA has checked the team's Signed Final Project Title
      * Form as complete. From then the title is final.
      */
     public static function finalTitleVerified(Team $team): bool
@@ -99,7 +99,7 @@ class TitleRevision
     /**
      * Why the team cannot ask its adviser to change part of its title, or
      * null when it can. Open once the Pre-proposal Defense is passed and until
-     * the CaPSA verifies the Signed Final Project Title Form - except while
+     * the CaPSA/TSA verifies the Signed Final Project Title Form - except while
      * the leader may still reword it freely (passed with revision, final
      * title form not in) or a request is already with the adviser.
      */
@@ -110,7 +110,7 @@ class TitleRevision
         return match (true) {
             ! $decision || ! in_array($decision->outcome, [DefenseOutcome::PASSED, DefenseOutcome::PASSED_WITH_REVISION], true) => 'You can ask to change your title once your panel has passed it.',
             ! $team->project_title => 'Your team has no approved title to change yet.',
-            self::finalTitleVerified($team) => 'Your CaPSA has verified your Signed Final Project Title Form, so the title is final.',
+            self::finalTitleVerified($team) => 'Your CaPSA/TSA has verified your Signed Final Project Title Form, so the title is final.',
             self::canRevise($team) => 'You can still reword your title yourself until the Signed Final Project Title Form is in.',
             self::pendingChange($team) !== null => 'Your adviser is still deciding on the change you asked for.',
             default => null,
@@ -139,7 +139,7 @@ class TitleRevision
      * punctuation, a word or two - rather than being a different title.
      *
      * A leader may always fix the approved title's spelling (Update Team).
-     * Anything bigger is a new title, which goes through the CaPSA, or a
+     * Anything bigger is a new title, which goes through the CaPSA/TSA, or a
      * revision, which the panel has to allow (whyNot()).
      */
     public static function isCorrection(string $from, string $to): bool

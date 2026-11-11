@@ -8,14 +8,14 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 /**
- * View Report, for any table on a CaPSA, Expert or Admin page.
+ * View Report, for any table on a CaPSA/TSA, Expert or Admin page.
  *
  * The page sends the table it is showing; it is kept for a few hours under a
  * random token that only the person who opened it can read, and the Reports'
  * own screen (Capsa\ReportController::snapshot) is drawn over it. Nothing is
  * looked up again, so the report is what the page showed - filters and all -
  * and any table gets the same column picker, Preview PDF and PDF or Excel
- * download the CaPSA's reports have.
+ * download the CaPSA/TSA's reports have.
  */
 class TableReportController extends Controller
 {
@@ -51,7 +51,7 @@ class TableReportController extends Controller
             'headings' => $headings,
             'rows' => $rows,
             'back' => $back,
-            // The Expert portal has no CaPSA sidebar to draw the report inside.
+            // The Expert portal has no CaPSA/TSA sidebar to draw the report inside.
             'portal' => $back && str_starts_with($back, '/instructor') ? 'instructor' : 'capsa',
         ], now()->addHours(self::KEEP_HOURS));
 

@@ -1,5 +1,5 @@
 {{--
-  The head of the Teams hub: one line on what is waiting, Team rules (CaPSA
+  The head of the Teams hub: one line on what is waiting, Team rules (CaPSA/TSA
   only) beside it, and the tabs. The page's name is already in the top bar,
   so it is not said again here.
 
@@ -58,7 +58,7 @@
       <div class="menu" id="setMenu" hidden>
         <h3>Team rules</h3>
         {{-- One max per program she handles; these rules reach only her own
-             sections, other CaPSAs set theirs. --}}
+             sections, other CaPSA/TSAs set theirs. --}}
         @foreach ($rules['programs'] as $p)
           <label class="opt" for="tsize-{{ $p['program'] }}">
             <span><b>Max members per team · {{ $p['program'] }}</b><small>{{ implode(', ', $p['sections']) }} · {{ \App\Models\Team::MIN_MEMBERS }} to {{ \App\Models\Team::MAX_MEMBERS }}</small></span>

@@ -93,7 +93,7 @@ class TeamExpertAssignment extends Model
      */
     /**
      * The approved pre-proposal this application was made with, when the team
-     * had one - so an expert can see the CaPSA already passed it rather than
+     * had one - so an expert can see the CaPSA/TSA already passed it rather than
      * take a re-uploaded PDF on trust.
      */
     public function preProposal()

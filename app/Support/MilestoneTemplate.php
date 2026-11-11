@@ -13,10 +13,10 @@ use App\Models\MilestoneItem;
  * Each milestone is a phase of the department's TCP and its requirements are
  * that phase's deliverables. Capstone 1 is transcribed from the department's
  * own CAPSTONE PROJECT 1 CHECKLIST - nineteen deliverables in the order they
- * appear on the paper, so a CaPSA can work down the screen and the sheet
+ * appear on the paper, so a CaPSA/TSA can work down the screen and the sheet
  * together. Applying a
  * template is a starting point, not a cage: every item can be renamed,
- * re-dated, reordered or removed afterwards, and a CaPSA can add their own.
+ * re-dated, reordered or removed afterwards, and a CaPSA/TSA can add their own.
  *
  * Each item carries a template_key so a revised checklist can be applied
  * again over a milestone that is already partly ticked, matching items up by
@@ -42,7 +42,7 @@ class MilestoneTemplate
      */
     public const GATES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Final Manuscript', 'Archive Entry', 'Bluebook Clearance'];
 
-    /** The milestones open from the start, older checklists' names too; the CaPSA opens every other one. Bluebook is the dean's, so it opens on the Final Oral Defense pass, not the CaPSA. */
+    /** The milestones open from the start, older checklists' names too; the CaPSA/TSA opens every other one. Bluebook is the dean's, so it opens on the Final Oral Defense pass, not the CaPSA/TSA. */
     public const OPEN_FROM_THE_START = ['Pre-proposal Defense', 'Getting started', 'Pre-proposal', 'Bluebook Clearance'];
 
     public static function all(): array
@@ -73,7 +73,7 @@ class MilestoneTemplate
      * Write a template's items onto a milestone.
      *
      * Existing items keep their completed_at and their own due dates - this
-     * is meant to be safe to re-run when the checklist changes. Items a CaPSA
+     * is meant to be safe to re-run when the checklist changes. Items a CaPSA/TSA
      * added by hand (no template_key) are left alone entirely.
      */
     public static function applyTo(Milestone $milestone, string $key): int
@@ -118,7 +118,7 @@ class MilestoneTemplate
     }
 
     /**
-     * Start a CaPSA's checklist from the department's, grouping its lines
+     * Start a CaPSA/TSA's checklist from the department's, grouping its lines
      * into milestones by phase in the order the paper gives them. Capstone 1
      * comes first and Capstone 2 carries on below it.
      */
@@ -320,7 +320,7 @@ class MilestoneTemplate
 
             ['template_key' => 'participation_certificate', 'title' => 'Certificate of Participation', 'short' => 'Participation', 'phase' => 'Public Presentation', 'kind' => $F],
 
-            // Its own milestone, so the CaPSA opens and closes it apart from the rest.
+            // Its own milestone, so the CaPSA/TSA opens and closes it apart from the rest.
             ['template_key' => Deliverable::ARCHIVE_ENTRY, 'title' => 'Archive Entry (Title, Abstract, Proponents)', 'short' => 'Archive Entry', 'phase' => 'Archive Entry', 'kind' => $C],
 
             ...self::bluebookItems(),
@@ -329,7 +329,7 @@ class MilestoneTemplate
 
     /**
      * What the dean's office checks before the bluebook. Courses differ, so a
-     * CaPSA edits these lines in the milestone editor; the clearance line
+     * CaPSA/TSA edits these lines in the milestone editor; the clearance line
      * stays last and closes when the dean clears the team.
      */
     private static function bluebookItems(): array

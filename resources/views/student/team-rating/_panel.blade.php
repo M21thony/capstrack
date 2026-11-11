@@ -72,7 +72,7 @@
     @if (! $myTeam)
       <div class="trs-card"><div class="trs-empty">Join a team first. Team Rating is where you rate your teammates.</div></div>
     @elseif ($open->isEmpty())
-      <div class="trs-card"><div class="trs-ch"><h2>Team Rating</h2></div><div class="trs-empty">No rating is open right now. Your CaPSA opens one when an activity is due, and you'll get a notice.</div></div>
+      <div class="trs-card"><div class="trs-ch"><h2>Team Rating</h2></div><div class="trs-empty">No rating is open right now. Your CaPSA/TSA opens one when an activity is due, and you'll get a notice.</div></div>
     @endif
 
     @foreach ($open as $r)
@@ -111,7 +111,7 @@
             </div>
             <div class="r">
               @if ($r->submittedAt)
-                <span class="muted">Sent to your CaPSA</span>
+                <span class="muted">Sent to your CaPSA/TSA</span>
               @else
                 <a class="trs-btn {{ $c ? '' : 'pri' }}" href="{{ route('student.team_rating.rate', [$f, $m->student->student_id]) }}">{{ $c ? 'Edit' : ($m->done ? 'Continue' : 'Rate') }}</a>
               @endif
@@ -124,7 +124,7 @@
         </div>
         <div class="trs-foot">
           @if ($r->submittedAt)
-            <span>Your ratings went to your CaPSA. They can't be changed now.</span>
+            <span>Your ratings went to your CaPSA/TSA. They can't be changed now.</span>
           @elseif ($r->mates->isEmpty())
             <span>You have no teammates to rate yet.</span>
           @else
@@ -141,7 +141,7 @@
       @if (! $r->submittedAt && $all && $r->mates->isNotEmpty())
         <dialog class="trs-dlg" id="trs-dlg-{{ $f->id }}" aria-labelledby="trs-dlg-h-{{ $f->id }}">
           <div class="mh">
-            <div><h3 id="trs-dlg-h-{{ $f->id }}">Submit your {{ $f->name }}?</h3><p>Your scores for {{ $items->pluck('label')->implode(', ') }} go to your CaPSA only. Check the totals before you send them.</p></div>
+            <div><h3 id="trs-dlg-h-{{ $f->id }}">Submit your {{ $f->name }}?</h3><p>Your scores for {{ $items->pluck('label')->implode(', ') }} go to your CaPSA/TSA only. Check the totals before you send them.</p></div>
             <button class="x" type="button" data-trs-close aria-label="Close">×</button>
           </div>
           <div class="mb">
@@ -170,7 +170,7 @@
     @if ($myTeam)
       <div class="trs-note">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-        <div>Only your CaPSA sees these ratings. Your teammates never see what you gave them, and you never see what they gave you.</div>
+        <div>Only your CaPSA/TSA sees these ratings. Your teammates never see what you gave them, and you never see what they gave you.</div>
       </div>
     @endif
   </div>
@@ -231,7 +231,7 @@
   @endif
   @if (request()->query('sent'))
     var sentUrl = new URL(location.href); sentUrl.searchParams.delete('sent'); history.replaceState(null, '', sentUrl.pathname + sentUrl.search);
-    window.addEventListener('load', function () { if (typeof showToast === 'function') { showToast('Ratings sent to your CaPSA', 'success'); } });
+    window.addEventListener('load', function () { if (typeof showToast === 'function') { showToast('Ratings sent to your CaPSA/TSA', 'success'); } });
   @endif
 })();
 </script>

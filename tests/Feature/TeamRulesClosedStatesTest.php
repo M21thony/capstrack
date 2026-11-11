@@ -13,7 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * What the Team page shows when the CaPSA's Team Rules close creating or
+ * What the Team page shows when the CaPSA/TSA's Team Rules close creating or
  * joining a team: a banner naming what is closed and what still works, and
  * every affected control locked. The server refuses the closed actions on
  * its own (TeamRulesTest); this is what the student sees before trying.

@@ -14,7 +14,7 @@ class ResourcesController extends Controller
     {
         $viewer = Auth::guard('expert')->user();
 
-        // A CaPSA sees what they uploaded, and nobody else's. This page
+        // A CaPSA/TSA sees what they uploaded, and nobody else's. This page
         // listed every resource in the system regardless of who put it there.
         // The admin runs the system and is not scoped.
         $ownerId = $viewer && ! $viewer->is_admin ? $viewer->expert_id : null;
@@ -28,7 +28,7 @@ class ResourcesController extends Controller
                 ->get(),
             'folders' => AdminDriveFolder::orderBy('name')->get(),
             'driveConnected' => $drive->isConnected(Auth::guard('expert')->id()),
-            // The sections this CaPSA handles, so the form can offer those
+            // The sections this CaPSA/TSA handles, so the form can offer those
             // rather than every program in the school.
             'mySections' => $viewer?->sections ?? [],
             'isAdmin' => (bool) $viewer?->is_admin,

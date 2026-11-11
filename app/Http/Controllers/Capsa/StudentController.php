@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
- * A CaPSA's own students: the ones in the sections they handle.
+ * A CaPSA/TSA's own students: the ones in the sections they handle.
  *
  * These used to live on the admin page, which meant the person who runs the
  * subject had to ask someone else to fix a section. They are here now, and
@@ -27,7 +27,7 @@ use Illuminate\Validation\Rule;
  */
 class StudentController extends Controller
 {
-    /** Sections this CaPSA handles - an admin is not scoped. */
+    /** Sections this CaPSA/TSA handles - an admin is not scoped. */
     private function sections(): ?array
     {
         $viewer = auth('expert')->user();
@@ -96,7 +96,7 @@ class StudentController extends Controller
     }
 
     /**
-     * The section a change would put them in, so a CaPSA cannot move somebody
+     * The section a change would put them in, so a CaPSA/TSA cannot move somebody
      * into a colleague's section any more than out of one.
      */
     private function targetAllowed(?string $course, ?string $yearSection): bool
@@ -123,14 +123,14 @@ class StudentController extends Controller
             // their account and only clears the section, so the address of
             // somebody you removed a minute ago is still in the table -
             // refusing it here made that removal impossible to undo. An
-            // address that belongs to somebody another CaPSA still handles
+            // address that belongs to somebody another CaPSA/TSA still handles
             // is refused below, where the reason can be stated.
             'email' => ['required', 'email', 'max:190'],
             'f_name' => ['required', 'string', 'max:60'],
             'm_name' => ['nullable', 'string', 'max:60'],
             'l_name' => ['required', 'string', 'max:60'],
             // Required: the number is how the registrar's lists and the
-            // CaPSA's own records find a student, and one added without it
+            // CaPSA/TSA's own records find a student, and one added without it
             // stayed without it.
             'student_number' => ['required', 'string', 'max:30'],
             'course' => ['required', Rule::in(array_keys(Student::PROGRAM_COURSES))],
@@ -194,7 +194,7 @@ class StudentController extends Controller
         // submissions and everything else hanging off student_id stay.
         // The invitation. Being on this list is what lets a student sign
         // in - the upload writes it for a whole class, and adding one by
-        // hand has to write it too, or the student a CaPSA just added is
+        // hand has to write it too, or the student a CaPSA/TSA just added is
         // turned away at the door.
         StudentRoster::updateOrCreate(
             ['email' => $email],
@@ -255,7 +255,7 @@ class StudentController extends Controller
             'course' => ['sometimes', Rule::in(array_keys(Student::PROGRAM_COURSES))],
             'year' => ['sometimes', 'integer', Rule::in(Student::CAPSTONE_YEARS)],
             'section' => ['sometimes', 'string', 'max:4', 'regex:/^[A-Za-z]+$/'],
-            // Deliberate, and asked for in the dialog. A CaPSA may hand a
+            // Deliberate, and asked for in the dialog. A CaPSA/TSA may hand a
             // student to a colleague; they may not do it by accident, and
             // they may not reach back afterwards.
             'transfer' => ['sometimes', 'boolean'],
@@ -311,7 +311,7 @@ class StudentController extends Controller
 
         $leavingYou = ! $this->targetAllowed($course, $yearSection);
 
-        // A student moving to another CaPSA's section is a transfer, not an
+        // A student moving to another CaPSA/TSA's section is a transfer, not an
         // edit: correct to allow, wrong to do without meaning to, and beyond
         // your reach to undo once it is done. So it is refused unless the
         // request says that is what it is - which the dialog asks first.
@@ -321,7 +321,7 @@ class StudentController extends Controller
                 'needs_transfer' => true,
                 'section' => Student::computeSectionLabel($course, $yearSection),
                 'message' => 'That section is not one of yours. Transferring hands this student to '
-                    .'the CaPSA who handles it, and you will not be able to edit them afterwards.',
+                    .'the CaPSA/TSA who handles it, and you will not be able to edit them afterwards.',
             ], 409);
         }
 
@@ -352,14 +352,14 @@ class StudentController extends Controller
     }
 
     /**
-     * Make the class list agree with the student a CaPSA just saved.
+     * Make the class list agree with the student a CaPSA/TSA just saved.
      *
-     * The list is what admits somebody at sign-in, and the page a CaPSA works
+     * The list is what admits somebody at sign-in, and the page a CaPSA/TSA works
      * from is built from the accounts, not the list. The two drifted: a
      * student who signed in before any list was uploaded had an account and
-     * a section, showed in their CaPSA's section, and was still turned away
+     * a section, showed in their CaPSA/TSA's section, and was still turned away
      * as "not on your section's list". Saving them here is the moment a
-     * CaPSA vouches for them, so the list is written then, and carries the
+     * CaPSA/TSA vouches for them, so the list is written then, and carries the
      * section they now have rather than the one they were uploaded with.
      */
     private function keepOnList(Student $student): void

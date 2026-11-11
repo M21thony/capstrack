@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/** The CaPSA's verdict on one team's signed paper for one deliverable. */
+/** The CaPSA/TSA's verdict on one team's signed paper for one deliverable. */
 class DeliverableCheck extends Model
 {
     public const COMPLETE = 'complete';

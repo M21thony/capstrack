@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
- * A CaPSA's checklists, as the Edit milestones window reads and reorders them.
+ * A CaPSA/TSA's checklists, as the Edit milestones window reads and reorders them.
  * One per program; every section of that program she handles follows it.
  */
 class ChecklistController extends Controller

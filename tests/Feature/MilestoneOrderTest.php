@@ -17,7 +17,7 @@ use Tests\TestCase;
  * What a team may hand in when: a ticked milestone waits only for the
  * defense above it to be passed, the chapters never wait for each other, and
  * inside a milestone a CLF waits for its draft and a defense for the papers
- * before it. An unopened milestone waits for the CaPSA.
+ * before it. An unopened milestone waits for the CaPSA/TSA.
  */
 class MilestoneOrderTest extends TestCase
 {
@@ -86,7 +86,7 @@ class MilestoneOrderTest extends TestCase
         $draft = $milestone->deliverables()->create(['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT, 'chapter' => '1', 'position' => 0]);
 
         $progress = MilestoneProgress::forTeam($checklist, $team->team_id);
-        $this->assertSame('your CaPSA to open it', $progress->items->firstWhere('item.id', $draft->id)->waits_for);
+        $this->assertSame('your CaPSA/TSA to open it', $progress->items->firstWhere('item.id', $draft->id)->waits_for);
 
         $milestone->update(['opened_at' => now()]);
         $this->assertNull(MilestoneProgress::forTeam($checklist, $team->team_id)->items->firstWhere('item.id', $draft->id)->waits_for);

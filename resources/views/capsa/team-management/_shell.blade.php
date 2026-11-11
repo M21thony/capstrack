@@ -1,7 +1,7 @@
 {{--
   The shell every level below the team list shares.
 
-  Same chrome as the list it came from - Team Management for a CaPSA, My
+  Same chrome as the list it came from - Team Management for a CaPSA/TSA, My
   Teams for an expert - with the mockup's stylesheet scoped to .tmx over it,
   so these pages look like the agreed design without the mockup's class
   names colliding with the portal stylesheet's own .card, .btn, .pill and

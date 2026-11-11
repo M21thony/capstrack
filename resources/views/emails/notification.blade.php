@@ -12,7 +12,7 @@
 
         <div style="padding:22px 24px;">
             @if ($poster)
-                <div style="font-size:12px;color:#656b7a;margin-bottom:6px;">From {{ $poster }}, CaPSA</div>
+                <div style="font-size:12px;color:#656b7a;margin-bottom:6px;">From {{ $poster }}, CaPSA/TSA</div>
             @endif
             <h1 style="font-size:20px;line-height:1.3;margin:0 0 14px;color:#1e2128;">{{ $headline }}</h1>
             <p style="margin:0 0 12px;">Hi {{ $recipientName }},</p>

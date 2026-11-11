@@ -18,17 +18,17 @@ use Illuminate\Support\Facades\DB;
  *
  * Everything here is worked out at read time from the records that already
  * hold the answer - the upload, the reviewer's verdict, the panel's outcome,
- * the CaPSA's check - so nothing is copied onto the checklist to go stale.
+ * the CaPSA/TSA's check - so nothing is copied onto the checklist to go stale.
  *
  * What closes a deliverable depends on its kind:
  *
  *   document  the team uploads it
  *   defense   the panel records a pass
  *   form, approval, custom
- *             the CaPSA checks it complete.
+ *             the CaPSA/TSA checks it complete.
  *
  * The Recommended Pre-Proposal Title Form is the one form that needs no
- * paper: the CaPSA recommends a title in CapsTrack, and that closes it.
+ * paper: the CaPSA/TSA recommends a title in CapsTrack, and that closes it.
  *
  * The Signed Final Project Title Form is signed on the title the panel
  * passed, so it waits for a passed Pre-proposal Defense wherever the line
@@ -62,13 +62,13 @@ class MilestoneProgress
 
     public const COMPLETE_STATES = [self::DONE, self::DONE_LATE];
 
-    /** The team owes something: a revision the reviewer asked for, or a paper the CaPSA sent back. */
+    /** The team owes something: a revision the reviewer asked for, or a paper the CaPSA/TSA sent back. */
     public const WAITING_ON_TEAM = 'team';
 
-    /** A signed paper is uploaded and waits for the CaPSA's check. */
+    /** A signed paper is uploaded and waits for the CaPSA/TSA's check. */
     public const WAITING_ON_CAPSA = 'capsa';
 
-    /** A Bluebook line: the dean's office checks it, so it is never in the CaPSA's queue. */
+    /** A Bluebook line: the dean's office checks it, so it is never in the CaPSA/TSA's queue. */
     public const WAITING_ON_DEAN = 'dean';
 
     /** The adviser approved the draft; the team still has to upload the signed CLF. */
@@ -77,7 +77,7 @@ class MilestoneProgress
     /** The panel asked for a re-defense and the next attempt is not scheduled yet. */
     public const WAITING_ON_REDEFENSE = 'redefense';
 
-    /** The titles are submitted and the CaPSA has not recommended one yet. */
+    /** The titles are submitted and the CaPSA/TSA has not recommended one yet. */
     public const WAITING_ON_TITLE_REVIEW = 'title_review';
 
     public static function forTeam(Checklist $checklist, int $teamId): object
@@ -156,7 +156,7 @@ class MilestoneProgress
      * The same items grouped into their milestones, in checklist order, each
      * with the gate worked out.
      *
-     * The CaPSA opens each milestone for the whole section; one she has not
+     * The CaPSA/TSA opens each milestone for the whole section; one she has not
      * opened is locked for every team. On top of that a gated milestone is
      * locked for a team that has not passed the defense above it: no
      * Pre-proposal Defense, no Title Defense; no Title Defense, no Pre Oral.
@@ -186,7 +186,7 @@ class MilestoneProgress
                 $completed = $items->whereIn('state', self::COMPLETE_STATES)->count();
                 $notOpen = ! $milestone->isOpened();
                 $waitsFor = match (true) {
-                    $notOpen => 'your CaPSA to open it',
+                    $notOpen => 'your CaPSA/TSA to open it',
                     $milestone->requires_previous => $gate,
                     default => null,
                 };
@@ -219,7 +219,7 @@ class MilestoneProgress
                     'percent' => $total === 0 ? 0 : (int) round($completed / $total * 100),
                     'locked' => $locked,
                     'not_open' => $notOpen,
-                    // The milestone's own date when the CaPSA set one;
+                    // The milestone's own date when the CaPSA/TSA set one;
                     // otherwise the last thing due inside it.
                     'due_on' => $dueOn,
                     // Its date has passed and the team has not finished it.
@@ -479,7 +479,7 @@ class MilestoneProgress
             'milestone' => $deliverable->milestone,
             'due_on' => $due,
             'submitted_at' => $submittedAt ? Carbon::parse($submittedAt) : null,
-            // The latest upload for the line, which is what the CaPSA opens to check.
+            // The latest upload for the line, which is what the CaPSA/TSA opens to check.
             'file_id' => $own->last()?->file_id,
             'file_path' => $own->last()?->file_path,
             // How many times it was sent back: by a reviewer, or - for a defense - by the panel asking for a re-defense.
@@ -516,7 +516,7 @@ class MilestoneProgress
     }
 
     /**
-     * [closedAt, started, waitingOn, changesRequested] for a line the CaPSA's
+     * [closedAt, started, waitingOn, changesRequested] for a line the CaPSA/TSA's
      * check closes: a signed form, a signed CLF, or a task of her own.
      */
     private static function checkedState(
@@ -532,7 +532,7 @@ class MilestoneProgress
         }
 
         // Sent back, and nothing uploaded since: the team owes a new copy. An
-        // upload after the send-back puts it back in the CaPSA's queue.
+        // upload after the send-back puts it back in the CaPSA/TSA's queue.
         $latestUpload = $own->max('created_at');
 
         if ($check?->status === DeliverableCheck::SENT_BACK
@@ -564,8 +564,8 @@ class MilestoneProgress
 
     /**
      * [closedAt, started, waitingOn, changesRequested] for the Recommended
-     * Pre-Proposal Title Form: closed once the CaPSA recommends one of the
-     * team's titles. A check the CaPSA already recorded on it still counts.
+     * Pre-Proposal Title Form: closed once the CaPSA/TSA recommends one of the
+     * team's titles. A check the CaPSA/TSA already recorded on it still counts.
      */
     private static function titleRecommendationState(?object $titles, ?DeliverableCheck $check): array
     {
@@ -586,7 +586,7 @@ class MilestoneProgress
 
     /**
      * [closedAt, started, waitingOn, changesRequested] for the Archive Entry:
-     * closed once the CaPSA publishes it. A check the CaPSA recorded on it
+     * closed once the CaPSA/TSA publishes it. A check the CaPSA/TSA recorded on it
      * still counts.
      */
     private static function archiveEntryState(?ArchivedDocument $archive, ?DeliverableCheck $check): array
@@ -612,9 +612,9 @@ class MilestoneProgress
      * runs the whole cycle - handed in, reviewed, revised, approved - and is
      * done only once the adviser's latest verdict is approved, and the
      * [closedAt, started, waitingOn, changesRequested] for a line whose
-     * uploads go to the people the CaPSA chose: done once every one of them
+     * uploads go to the people the CaPSA/TSA chose: done once every one of them
      * approved the latest upload. One asking for changes sends it back. The
-     * CaPSA's own check still closes it, as on any line.
+     * CaPSA/TSA's own check still closes it, as on any line.
      *
      * @param  array<int, string>  $roles
      */
@@ -650,7 +650,7 @@ class MilestoneProgress
             }
         }
 
-        // Nobody to send it to at all: only the CaPSA's check can close it.
+        // Nobody to send it to at all: only the CaPSA/TSA's check can close it.
         if ($onLatest->isEmpty()) {
             return [null, true, self::WAITING_ON_CAPSA, false];
         }
@@ -675,7 +675,7 @@ class MilestoneProgress
             return [$check->checked_at, true, null, false];
         }
 
-        // Sent back by the CaPSA, and nothing uploaded since: the team owes a new version.
+        // Sent back by the CaPSA/TSA, and nothing uploaded since: the team owes a new version.
         if ($check?->status === DeliverableCheck::SENT_BACK
             && Carbon::parse($own->max('created_at'))->lte($check->checked_at)) {
             return [null, true, self::WAITING_ON_TEAM, true];
@@ -693,7 +693,7 @@ class MilestoneProgress
 
         // The adviser always, and the consultant when the draft went to them.
         // Chapters 1, 2 and 5 and both manuscripts go to the adviser and
-        // the CaPSA, not the consultant (SubmissionRecipients::rulesFor), so
+        // the CaPSA/TSA, not the consultant (SubmissionRecipients::rulesFor), so
         // waiting on a consultant's verdict for them kept a team on Chapter 1
         // for good.
         $sentTo = $reviews->pluck('role')->all();
@@ -708,7 +708,7 @@ class MilestoneProgress
 
         }
 
-        // Approved by the reviewers; the CaPSA's check is what closes it.
+        // Approved by the reviewers; the CaPSA/TSA's check is what closes it.
         return [null, true, self::WAITING_ON_CAPSA, false];
     }
 
@@ -861,7 +861,7 @@ class MilestoneProgress
 
     /**
      * Where each team's submitted pre-proposal titles stand, for the line the
-     * CaPSA's recommendation closes.
+     * CaPSA/TSA's recommendation closes.
      *
      * @return Collection<int, object{submitted_at: mixed, recommended_at: mixed, in_review: bool}> keyed by team id
      */

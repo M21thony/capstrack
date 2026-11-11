@@ -2,7 +2,7 @@
 
 /*
  * The Page Guide: what the ? beside the bell opens on every page.
- * Keyed by the page's route name, so a page shared by two portals (a CaPSA
+ * Keyed by the page's route name, so a page shared by two portals (a CaPSA/TSA
  * and an adviser both have a Profile) has one guide for each.
  *
  *   title    the page's name
@@ -30,7 +30,7 @@ $expertTour = [
     ['Sent evaluations', 'Opens the **evaluations your team has sent**.', '.xh-link[data-tab="evaluations"]'],
     ['Details', 'Opens that session. **Ask to cancel** sends your request; it **stays booked** until the expert answers. Too close to the date, you **message the expert** instead.', '.xh-upc-row [data-xh="session"]', 'one'],
     // The Evaluations view
-    ['Anonymous', 'Your CaPSA and the expert see the answers, **never who sent them**. **1 is Poor, 5 is Excellent**.', '.xh-ev-anon'],
+    ['Anonymous', 'Your CaPSA/TSA and the expert see the answers, **never who sent them**. **1 is Poor, 5 is Excellent**.', '.xh-ev-anon'],
     ['Evaluation form', 'Open one expert at a time and pick **one circle on each row**.', '.xh-ev-form'],
     ['Next expert', 'Moves to the **next expert\'s form**.', '#xh-panel-eval [data-next]', 'one'],
     ['Send all', 'Sends **every evaluation at once**.', '.xh-ev-foot button[type="submit"]'],
@@ -42,7 +42,7 @@ $expertTabs = [
     'find' => ['button' => '#xh-tab-find', 'tour' => [
         ['Your roles', '**One card per role**. Click one to look for that role.', '.xh-slot', 'one'],
         ['Asked to meet you', 'An expert wants to meet first. Pick a time and press **Book this time**; it shows in **both schedules**.', '#xh-meet'],
-        ['Request a change', 'Opens a form for your reason and the new expert. **Your section\'s CaPSA decides**; **your expert stays until then**.', '[data-xh="change"]', 'one'],
+        ['Request a change', 'Opens a form for your reason and the new expert. **Your section\'s CaPSA/TSA decides**; **your expert stays until then**.', '[data-xh="change"]', 'one'],
         ['Take back', 'Asks you to **confirm**, then **keeps them as your expert**.', '[data-xh="takeback"]', 'one'],
         ['Search', 'Type a **name or research area** and press **Enter**.', '#xh-q'],
         ['Filter by skill', 'Opens a **list of skills**. Pick one to show **only the experts who have it**.', '#xh-skill-trigger'],
@@ -55,7 +55,7 @@ $expertTabs = [
     ]],
 ];
 
-// Teams and CaPSA Team Management are one hub: To do is the page's own tour,
+// Teams and CaPSA/TSA Team Management are one hub: To do is the page's own tour,
 // these are its other two tabs.
 $hubTabs = [
     'applications' => ['button' => '.hub-tabs [data-hub-tab="applications"]', 'tour' => [
@@ -83,7 +83,7 @@ $hubTabs = [
     ]],
 ];
 
-// CaPSA's Team Management: the same hub, plus the section's own lists.
+// CaPSA/TSA's Team Management: the same hub, plus the section's own lists.
 $capsaHubTabs = [
     'applications' => $hubTabs['applications'],
     'teams' => ['button' => '.hub-tabs [data-hub-tab="teams"]', 'tour' => [
@@ -143,7 +143,7 @@ $capsaHubTabs = [
 // The Defenses board: one page, three steps, two sidebar links into it.
 $boardTop = [
     ['The defenses', '**Click one** to work on it. Each shows how many teams **have a date**.', '#stages'],
-    ['The window', 'The days this defense can be held, for every section. Press it to set the **first day, last day and length** of each defense. Saving **tells the other CaPSAs**, and nobody is scheduled until someone uses **Generate schedule**.', '#windowChip'],
+    ['The window', 'The days this defense can be held, for every section. Press it to set the **first day, last day and length** of each defense. Saving **tells the other CaPSA/TSAs**, and nobody is scheduled until someone uses **Generate schedule**.', '#windowChip'],
     ['No rubric yet', 'Panelists can\'t grade this defense until it has an **active rubric**. The link opens **Grading Rubrics**.', '#rubricWarn'],
     ['Shortcuts', 'Lists the keys that do the same jobs, like **/ to search**.', '.keys-btn'],
     ['Export to Excel', 'Downloads this defense\'s schedule as an **Excel file**.', '#exportBtn'],
@@ -223,7 +223,7 @@ return [
             ['Your next step', 'Takes you to the page for **what your team should do next**.', 'a.ns-go'],
             ['Your Capstone Progress', 'How many requirements are **done**, what is **overdue**, and what is **due next**.', '.db-progress'],
             ['Quick Actions', '**Shortcuts** to the pages you use most.', '.db-qa-grid'],
-            ['Announcements', 'News from your **CaPSA and CCS**.', '#announcements-card'],
+            ['Announcements', 'News from your **CaPSA/TSA and CCS**.', '#announcements-card'],
             ['An announcement', 'Opens it in a **popup** so you can read all of it.', '.ann-item', 'one'],
             ['Your Team', 'Your teammates, and the way to **Team Management**.', '.db-team-top'],
         ],
@@ -250,7 +250,7 @@ return [
             'student.duplication' => 'Check your titles',
             'student.team' => 'Manage your team',
         ],
-        'tip' => 'Changing an approved expert goes to your section\'s CaPSA to decide.',
+        'tip' => 'Changing an approved expert goes to your section\'s CaPSA/TSA to decide.',
     ],
 
     'student.consultation' => [
@@ -330,8 +330,8 @@ return [
             ['Pick which to turn in', 'Only the **ticked titles** go in.', '.pp-pick', 'one'],
             ['Similarity Report', 'Opens the **full report** for this title.', '.pp-card a.golink', 'one'],
             ['Remove', 'Asks you to **confirm**, then **removes this title**.', '.pp-card .match-abstract-toggle', 'one'],
-            ['Submit for Checking', 'Asks you to **confirm**, then **turns in the ticked titles** for your CaPSA to check.', '.pp-btn-submit'],
-            ['Unsubmit', 'Takes your titles **back**, **until your CaPSA starts reviewing them**.', '.pp-btn-unsubmit', 'one'],
+            ['Submit for Checking', 'Asks you to **confirm**, then **turns in the ticked titles** for your CaPSA/TSA to check.', '.pp-btn-submit'],
+            ['Unsubmit', 'Takes your titles **back**, **until your CaPSA/TSA starts reviewing them**.', '.pp-btn-unsubmit', 'one'],
         ],
         'related' => [
             'student.archive' => 'Browse past capstones',
@@ -466,15 +466,15 @@ return [
             ['Transfer leadership', 'Pick a member to **hand the leader role** to. You **stay on the team as a member**. It stays **grey** until someone else has joined.', '.tm-hero-actions > button:nth-child(2)'],
             ['Leave team', 'Asks you to **confirm**, then takes you out of the team. A leader **hands leadership over first**; if you are the only member, **leaving ends the team**.', '#leave-team-form button'],
             ['Team members', 'Everyone in your team, with their **role**. **LEADER** and **YOU** mark who is who.', '.tm-members'],
-            ['Ask CaPSA to leave', 'Opens a form for your **reason**. **Your CaPSA reads it and decides**; you **stay on the team until then**.', '.tm-leave'],
+            ['Ask CaPSA/TSA to leave', 'Opens a form for your **reason**. **Your CaPSA/TSA reads it and decides**; you **stay on the team until then**.', '.tm-leave'],
             ['Invite a classmate', 'Opens a list of **classmates without a team**. Pick one to send an invite; they join **once they accept it**.', '.tm-slot.is-open', 'one'],
             ['Remove', 'Shows that member and asks you to **confirm**. Once you do, they are **taken off the team**.', '.tm-link[onclick^="openRemoveMemberModal"]', 'one'],
-            ['Remove', '**After Title Defense**, removing a member goes to your CaPSA. Opens a form for your reason; **your CaPSA decides**.', '.tm-link[onclick^="openCapsaLeaveModal(\'remove\'"]', 'one'],
+            ['Remove', '**After Title Defense**, removing a member goes to your CaPSA/TSA. Opens a form for your reason; **your CaPSA/TSA decides**.', '.tm-link[onclick^="openCapsaLeaveModal(\'remove\'"]', 'one'],
             ['Cancel invite', 'Asks you to **confirm**, then **takes back the invite**, so that classmate can no longer accept it.', '.tm-link[onclick^="cancelPendingInvite"]', 'one'],
-            ['Defense panel', 'The experts who will **sit on your defense**. Your CaPSA sets it **once your team is ready**.', '.tm-panel'],
-            ['Waiting on your CaPSA', 'Leave and remove requests your CaPSA has **not decided yet**. One left too long is **declined by itself**.', 'section[aria-labelledby="tm-waiting-h"]'],
-            ['Withdraw', '**Takes back your request** before your CaPSA decides on it.', '.tm-request form .tm-act', 'one'],
-            ['Declined automatically', 'Requests your CaPSA **did not act on in time**. You can **send them again**.', 'section[aria-labelledby="tm-declined-h"]'],
+            ['Defense panel', 'The experts who will **sit on your defense**. Your CaPSA/TSA sets it **once your team is ready**.', '.tm-panel'],
+            ['Waiting on your CaPSA/TSA', 'Leave and remove requests your CaPSA/TSA has **not decided yet**. One left too long is **declined by itself**.', 'section[aria-labelledby="tm-waiting-h"]'],
+            ['Withdraw', '**Takes back your request** before your CaPSA/TSA decides on it.', '.tm-request form .tm-act', 'one'],
+            ['Declined automatically', 'Requests your CaPSA/TSA **did not act on in time**. You can **send them again**.', 'section[aria-labelledby="tm-declined-h"]'],
             ['Your recruitment post', 'Your post in **Team selection**, so classmates can find your team.', '#my-post-section'],
             ['Edit post', 'Opens your post in a form. Saving changes what classmates see in **Team selection**.', '#my-post-section [onclick^="openEditModal"]'],
             ['Delete post', 'Asks you to **confirm**, then **takes your post down**.', '#my-post-section [onclick^="openDeleteModal"]'],
@@ -497,7 +497,7 @@ return [
             ['Section overview', 'How many in your section have **teamed up so far**.', '.ts-aside'],
             // The other tabs: a click opens it and the tour goes on there.
             ['Financial Records', 'Your **defense fees and receipts**. **Click it** to open it; the tour goes on there.', '#tm-tab-financial'],
-            ['Team Rating', 'Where you **rate your teammates** once your CaPSA opens a rating. **Click it** to open it.', '#tm-tab-rating'],
+            ['Team Rating', 'Where you **rate your teammates** once your CaPSA/TSA opens a rating. **Click it** to open it.', '#tm-tab-rating'],
         ],
         'tabs' => [
             'financial' => ['button' => '#tm-tab-financial', 'tour' => [
@@ -505,14 +505,14 @@ return [
                 ['Your receipt', 'Your receipt for this fee and where it is: **sent, checked, or sent back**.', '.fx-sb-mine'],
                 ['OR number', 'Type it **exactly as printed** on the receipt. It is **checked against the photo**.', '#u-or'],
                 ['Photo of the receipt', 'Take or choose a photo of it. **JPG or PNG, up to 10 MB**.', '#u-pick'],
-                ['Send to CaPSA', 'Sends the receipt to **your CaPSA** to check. This card then shows it as **waiting, verified or sent back**.', '#u-send'],
+                ['Send to CaPSA/TSA', 'Sends the receipt to **your CaPSA/TSA** to check. This card then shows it as **waiting, verified or sent back**.', '#u-send'],
                 ['Team payments', 'Who in your team has a **verified receipt** for this fee, and who is **still waiting**.', '.fx-sb-team'],
             ]],
             'rating' => ['button' => '#tm-tab-rating', 'tour' => [
-                ['Nothing open', 'Your CaPSA **opens a rating** when an activity is due, and you get a **notice**.', '.trs-empty'],
+                ['Nothing open', 'Your CaPSA/TSA **opens a rating** when an activity is due, and you get a **notice**.', '.trs-empty'],
                 ['Open now', 'The rating that is **open** and what it covers.', '.trs-card[id^="trs-form-"]'],
                 ['Rate', 'Opens the **rating form** for that teammate. **Edit** changes scores you already gave.', 'a.trs-btn', 'one'],
-                ['Review & submit', 'Once **every teammate is rated**, shows your totals to check. **Submit ratings** sends them to **your CaPSA only**.', '[data-trs-review]', 'one'],
+                ['Review & submit', 'Once **every teammate is rated**, shows your totals to check. **Submit ratings** sends them to **your CaPSA/TSA only**.', '[data-trs-review]', 'one'],
                 ['Other ratings', 'Ratings **already sent**, and ones **not open yet**.', '.trs-olist'],
             ]],
         ],
@@ -521,7 +521,7 @@ return [
             'student.documents' => 'Submit a paper',
             'student.progress' => 'See your progress',
         ],
-        'tip' => 'Leaving a team goes to your section\'s CaPSA to decide, not straight out.',
+        'tip' => 'Leaving a team goes to your section\'s CaPSA/TSA to decide, not straight out.',
     ],
 
     'student.duplication.report' => [
@@ -907,7 +907,7 @@ return [
             ['Team slots', 'Type **how many teams** you take from each program. Leave it at **0** for a program you don\'t take.', '.pp-progs'],
             ['Your areas', '**Click a tab** to see your research areas by group. Press the **x** on an area to take it off.', '.pp-tabs'],
             ['Add an area', '**Search** for one, or type your own and **add it**. Teams are **matched to you** by these.', '.pp-finder'],
-            ['Strengths', 'The CaPSA sees these when **seating a defense panel**. **Tick one or more**.', '.pp-strengths'],
+            ['Strengths', 'The CaPSA/TSA sees these when **seating a defense panel**. **Tick one or more**.', '.pp-strengths'],
             ['Email notifications', 'What also goes to your **email**. Everything always shows in the **bell**.', '.pp-aside'],
             ['Save', 'This appears when you change something. **Save** keeps it; **Discard** puts it back.', '.pp-save'],
         ],
@@ -918,7 +918,7 @@ return [
         'tip' => 'Your photo comes from your Google account.',
     ],
 
-    // ── CaPSA (the capstone subject adviser) ──
+    // ── CaPSA/TSA (the capstone subject adviser) ──
 
     'capsa.dashboard' => [
         'title' => 'Dashboard',
@@ -1612,23 +1612,23 @@ return [
         'title' => 'Dashboard',
         'summary' => 'The whole system: every section, every program.',
         'steps' => [
-            ['Read the tiles', 'for students, teams, experts, CaPSAs and the archive.'],
+            ['Read the tiles', 'for students, teams, experts, CaPSA/TSAs and the archive.'],
             ['Check Needs Attention', 'and fix each line.'],
             ['Read the cards', 'for students, experts, defenses and fees.'],
         ],
         'tour' => [
-            ['In numbers', 'Students, teams, experts, CaPSAs, **sections without a CaPSA** and **archived capstones**.', '.ad-tiles'],
+            ['In numbers', 'Students, teams, experts, CaPSA/TSAs, **sections without a CaPSA/TSA** and **archived capstones**.', '.ad-tiles'],
             ['A tile', 'Opens the **page behind that number**.', '.ad-tiles a.db-tile', 'one'],
             ['Students Overview', 'How many students are **active**, and how many **each school year** had.', '.ad-row-2 > .db-card:first-child'],
             ['Experts by Role', 'How many experts hold **each role**. An expert with two roles **counts under each**.', '.ad-row-2 > .db-card:last-child'],
             ['Defense Results', 'How many teams **passed this school year**.', '.ad-row-3 > .db-card:first-child'],
-            ['Fees and Archive', 'The **fees CaPSAs have sent you**, and **archived capstones** by year.', '.ad-row-3 > .db-card:last-child'],
+            ['Fees and Archive', 'The **fees CaPSA/TSAs have sent you**, and **archived capstones** by year.', '.ad-row-3 > .db-card:last-child'],
             ['View Details', 'Opens the page with the **full numbers**.', '.ad-row-3 a.db-btn-dark', 'one'],
-            ['Needs Attention', '**What is missing**: the school year, sections with no CaPSA, or years with no uploads.', '.ad-attn'],
+            ['Needs Attention', '**What is missing**: the school year, sections with no CaPSA/TSA, or years with no uploads.', '.ad-attn'],
             ['Fix it', 'Opens the page where you **fix that line**.', 'a.ad-chip', 'one'],
         ],
         'related' => [
-            'admin.experts' => 'Manage CaPSAs',
+            'admin.experts' => 'Manage CaPSA/TSAs',
             'admin.students' => 'See every student',
             'admin.settings' => 'Set the school year',
         ],
@@ -1637,13 +1637,13 @@ return [
 
     'admin.fees' => [
         'title' => 'Fees',
-        'summary' => 'The fees each section\'s CaPSA has sent you.',
+        'summary' => 'The fees each section\'s CaPSA/TSA has sent you.',
         'steps' => [
             ['Read a row', 'for the amount and how many receipts it covers.'],
             ['Check Status', 'to see which sections have not sent yet.'],
         ],
         'tour' => [
-            ['The sections', 'Every section, **what it sent, when and who sent it**. A CaPSA sends **after verifying the receipts**.', '.list-card'],
+            ['The sections', 'Every section, **what it sent, when and who sent it**. A CaPSA/TSA sends **after verifying the receipts**.', '.list-card'],
         ],
         'related' => [
             'admin.archive' => 'Open Archived Capstones',
@@ -1693,7 +1693,7 @@ return [
 
     'admin.archive' => [
         'title' => 'Archived Capstones',
-        'summary' => 'Every finished capstone, to read. CaPSAs add and remove them.',
+        'summary' => 'Every finished capstone, to read. CaPSA/TSAs add and remove them.',
         'steps' => [
             ['Search', 'by title, author or keyword.'],
             ['Filter', 'by category or school year.'],
@@ -1713,28 +1713,28 @@ return [
     ],
 
     'admin.experts' => [
-        'title' => 'CaPSAs',
+        'title' => 'CaPSA/TSAs',
         'summary' => 'The capstone subject advisers and the sections each one handles.',
         'steps' => [
-            ['Check the sections without a CaPSA', 'at the top.'],
-            ['Press Add CaPSA', 'to make one.'],
-            ['Press Assign sections or Edit sections', 'to change what a CaPSA handles.'],
+            ['Check the sections without a CaPSA/TSA', 'at the top.'],
+            ['Press Add CaPSA/TSA', 'to make one.'],
+            ['Press Assign sections or Edit sections', 'to change what a CaPSA/TSA handles.'],
         ],
         'tour' => [
-            ['CaPSAs', '**How many** there are, and how many **sections** they cover.', '.page-head'],
-            ['Add CaPSA', 'Opens a form. Type the **email** and **pick sections** if you want to. The account is made if it does not exist yet, and is **approved straight away**.', '.tk-actions .tk-btn-pri'],
+            ['CaPSA/TSAs', '**How many** there are, and how many **sections** they cover.', '.page-head'],
+            ['Add CaPSA/TSA', 'Opens a form. Type the **email** and **pick sections** if you want to. The account is made if it does not exist yet, and is **approved straight away**.', '.tk-actions .tk-btn-pri'],
             ['View Report', 'Opens this list as a **report** you can download.', 'button.tx-btn', 'one'],
             ['Download Excel', 'Asks which **columns** you want, then **downloads the list**.', 'button.tx-btn + button.tx-btn', 'one'],
-            ['Sections without a CaPSA', 'These sections **can\'t form teams** until someone covers them.', '.tk-alert'],
+            ['Sections without a CaPSA/TSA', 'These sections **can\'t form teams** until someone covers them.', '.tk-alert'],
             ['Hide or Show', '**Folds** this list away, or **brings it back**.', '#tkCovToggle'],
-            ['Assign sections', 'Opens the same form as **Add CaPSA**.', '.tk-alert .tk-btn-pri'],
+            ['Assign sections', 'Opens the same form as **Add CaPSA/TSA**.', '.tk-alert .tk-btn-pri'],
             ['All, Active or Deactivated', 'Shows **only those accounts**. The page stays where it is.', '.tk-toolbar button.tk-tab', 'one'],
             ['Search', 'Finds someone by **name, email or research area**.', '#experts-search-input'],
             ['Program', 'Shows **one program**.', '#tkProgramFilter'],
             ['Tick accounts', '**Tick accounts** to act on them together. A bar then offers **Deactivate accounts**, which **asks you first**.', '.rs-box', 'one'],
             ['More research areas', 'Opens this person\'s details, with **every research area**.', 'button.tk-more', 'one'],
-            ['Edit sections', 'Opens the **section picker**. A section another CaPSA already holds is **not listed**.', 'button[title="Edit sections"]', 'one'],
-            ['More options', 'Opens this person\'s options. **Remove CaPSA** takes away what the role can do, and making them CaPSA again undoes it. **Make CaPSA** opens the section picker. **Deactivate** stops them signing in and takes them off the lists students choose from; **nothing is deleted**, and **Reactivate** switches them back on. Remove and Deactivate ask you first.', 'button.rowmenu-btn', 'one'],
+            ['Edit sections', 'Opens the **section picker**. A section another CaPSA/TSA already holds is **not listed**.', 'button[title="Edit sections"]', 'one'],
+            ['More options', 'Opens this person\'s options. **Remove CaPSA/TSA** takes away what the role can do, and making them CaPSA/TSA again undoes it. **Make CaPSA/TSA** opens the section picker. **Deactivate** stops them signing in and takes them off the lists students choose from; **nothing is deleted**, and **Reactivate** switches them back on. Remove and Deactivate ask you first.', 'button.rowmenu-btn', 'one'],
         ],
         'related' => [
             'admin.students' => 'See every student',
@@ -1744,7 +1744,7 @@ return [
 
     'admin.students' => [
         'title' => 'Students',
-        'summary' => 'Every student in the system. Each section CaPSA adds and edits them.',
+        'summary' => 'Every student in the system. Each section CaPSA/TSA adds and edits them.',
         'steps' => [
             ['Filter', 'to students in a team or without one.'],
             ['Search', 'by name or student number, or pick a program and year.'],
@@ -1764,7 +1764,7 @@ return [
             ['More options', 'Opens **Copy email** and **Remove student**. Remove student asks you first, then **deletes the account** and takes them off their team. If they lead it, the **next member takes over**. If no one else is on it, **the team goes too**.', 'button.rowmenu-btn', 'one'],
         ],
         'related' => [
-            'admin.experts' => 'Manage CaPSAs',
+            'admin.experts' => 'Manage CaPSA/TSAs',
         ],
     ],
 
@@ -1786,7 +1786,7 @@ return [
             ['Remove a section', 'Takes that section off the list **straight away**. **It does not ask first.**', '.sec-item button', 'one'],
         ],
         'related' => [
-            'admin.experts' => 'Give sections a CaPSA',
+            'admin.experts' => 'Give sections a CaPSA/TSA',
         ],
     ],
 

@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Moving every team's own checklist copy onto its CaPSA's one checklist,
+ * Moving every team's own checklist copy onto its CaPSA/TSA's one checklist,
  * without losing a tick or an upload's link, and without doing it twice.
  */
 class ChecklistConsolidationTest extends TestCase
@@ -131,7 +131,7 @@ class ChecklistConsolidationTest extends TestCase
         $this->tick($this->copyFor($team), 'team_assignment_form', '2026-08-28');
 
         $this->artisan('checklists:consolidate', ['--apply' => true])
-            ->expectsOutputToContain('no CaPSA covers section BSIS-4B')
+            ->expectsOutputToContain('no CaPSA/TSA covers section BSIS-4B')
             ->assertSuccessful();
 
         $this->assertSame(0, Checklist::count());

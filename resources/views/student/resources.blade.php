@@ -14,7 +14,7 @@
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 
   /* Resources: one list of everything a student can download - their
-     CaPSA's files and the rubrics their panel grades with. A row opens in
+     CaPSA/TSA's files and the rubrics their panel grades with. A row opens in
      place for its details; View opens the file itself in a side panel. */
   .rs { background: #fff; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
   .rs-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid var(--border); }
@@ -208,7 +208,7 @@
                     <dt>Format</dt><dd>PDF, letter size</dd>
                   @else
                     <dt>Category</dt><dd>{{ $item['categoryLabel'] }}</dd>
-                    <dt>Posted</dt><dd>{{ $item['date'] ? $item['date'].' by your CaPSA' : 'By your CaPSA' }}</dd>
+                    <dt>Posted</dt><dd>{{ $item['date'] ? $item['date'].' by your CaPSA/TSA' : 'By your CaPSA/TSA' }}</dd>
                   @endif
                 </dl>
                 <div class="rs-acts">
@@ -241,7 +241,7 @@
         @if ($items->isEmpty())
           <div class="rs-empty">
             <b>Nothing here yet</b>
-            <span>Templates, lessons and forms show up here once your CaPSA posts them.</span>
+            <span>Templates, lessons and forms show up here once your CaPSA/TSA posts them.</span>
           </div>
         @endif
       </section>

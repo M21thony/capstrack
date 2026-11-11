@@ -48,7 +48,7 @@ class StudentReviewController extends Controller
     {
         return match ($role) {
             null, '' => 'Reviewer',
-            'subject_adviser' => 'CaPSA',
+            'subject_adviser' => 'CaPSA/TSA',
             'panel' => 'Panelist',
             default => ucwords(str_replace('_', ' ', $role)),
         };

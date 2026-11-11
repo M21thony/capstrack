@@ -222,7 +222,7 @@ class TitleChangeRequestTest extends TestCase
         $this->passed();
         $this->capsaVerifiesFinalTitleForm();
 
-        $this->ask()->assertSessionHas('error', 'Your CaPSA has verified your Signed Final Project Title Form, so the title is final.');
+        $this->ask()->assertSessionHas('error', 'Your CaPSA/TSA has verified your Signed Final Project Title Form, so the title is final.');
         $this->assertSame(0, TitleChangeRequest::count());
     }
 

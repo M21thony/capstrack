@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Every section shares a stage's window, agreed at the CaPSAs' meeting. Who
+ * Every section shares a stage's window, agreed at the CaPSA/TSAs' meeting. Who
  * last set it, and when, so the others can see it was not changed behind
  * their backs.
  */

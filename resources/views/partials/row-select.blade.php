@@ -8,7 +8,7 @@
   which a bar opening above the table could not manage.
 
   The bulk actions are supplied by the page, because who may change what is not
-  the same on both sides - a CaPSA sets roles, an admin sets roles and sections,
+  the same on both sides - a CaPSA/TSA sets roles, an admin sets roles and sections,
   and how many teams an expert takes is the expert's own answer on their
   profile, which neither of them can touch.
 

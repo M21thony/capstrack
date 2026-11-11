@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * A student's Resources page: their CaPSA's files, and the blank rubric
+ * A student's Resources page: their CaPSA/TSA's files, and the blank rubric
  * their panel grades each defense with, for their own program.
  */
 class StudentResourcesTest extends TestCase

@@ -10,7 +10,7 @@
 
 <style nonce="{{ Vite::cspNonce() }}">
   /* ============================================================
-     My Profile (CaPSA / Admin). Built on admin.css tokens, scoped
+     My Profile (CaPSA/TSA / Admin). Built on admin.css tokens, scoped
      to .profile-page. One form, one Save: details, research areas
      and sections are saved together.
      ============================================================ */

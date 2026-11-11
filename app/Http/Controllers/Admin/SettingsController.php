@@ -41,7 +41,7 @@ class SettingsController extends Controller
      * 3rd year, where capstone starts.
      *
      * The Admin picks no year. 4th-year sections are not made here: made for
-     * both years at once, every CaPSA looked like they ran 3rd and 4th year
+     * both years at once, every CaPSA/TSA looked like they ran 3rd and 4th year
      * together. They come from the student list once students are in them.
      *
      * A range rather than one at a time because a department does not run

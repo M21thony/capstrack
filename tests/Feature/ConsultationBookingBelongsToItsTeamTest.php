@@ -341,7 +341,7 @@ class ConsultationBookingBelongsToItsTeamTest extends TestCase
         $this->assertDatabaseHas('team', ['team_id' => $old]);
         $this->assertNotSame('cancelled', ConsultationBooking::find($bookingId)->booking_status);
 
-        // Once the CaPSA has released the expert, leaving ends the team.
+        // Once the CaPSA/TSA has released the expert, leaving ends the team.
         DB::table('capstone_expert_application')->where('team_id', $old)->delete();
         $this->actingAs($leader, 'web')->delete(route('team.destroy'))->assertRedirect(route('student.team'));
         $this->assertDatabaseMissing('team', ['team_id' => $old]);

@@ -1,5 +1,5 @@
 // End to end across roles: a student sends from the Experts page, then the
-// expert or CaPSA it went to signs in and sees it, and the answer comes back.
+// expert or CaPSA/TSA it went to signs in and sees it, and the answer comes back.
 // These SEND - run them only against the no-mail server, which logs every
 // email instead (preview "capstrack-e2e-nomail"):
 //   PW_BASE_URL=http://127.0.0.1:8002 npx playwright test experts-end-to-end
@@ -18,7 +18,7 @@ const php = (code) => {
 };
 
 // Student 131 leads team 111 "Demo Pixel Pioneers": adviser Marites Castillo
-// (121), section BSIT-3A, whose CaPSA (91) is the dev "capsa" login.
+// (121), section BSIT-3A, whose CaPSA/TSA (91) is the dev "capsa" login.
 // Student 24 leads team 119, unconfirmed - confirmed for the apply test only.
 const TEAM = 'Demo Pixel Pioneers';
 // Children first, so the clean-up never leaves one pointing at nothing.
@@ -127,7 +127,7 @@ test('a booking reaches the adviser, and the cancel they approve reaches the tea
   await adviser.context().close();
 });
 
-test('a change request reaches the section CaPSA, and taking it back clears it', async ({ page, browser }, testInfo) => {
+test('a change request reaches the section CaPSA/TSA, and taking it back clears it', async ({ page, browser }, testInfo) => {
   await student(page, '131', 'find');
   const change = page.locator('[data-xh="change"]').first();
   const name = await change.getAttribute('data-name');
@@ -144,10 +144,10 @@ test('a change request reaches the section CaPSA, and taking it back clears it',
 
   const capsa = await staff(browser, 'capsa/team_management', '/capsa/team-management?tab=leave_requests');
   const line = capsa.getByText(new RegExp(`asks to remove ${name} as \\w+ of ${TEAM}`));
-  await expect(line, 'the CaPSA sees the change request').toBeVisible();
+  await expect(line, 'the CaPSA/TSA sees the change request').toBeVisible();
   await shot(capsa, testInfo, '2b-capsa-sees-change-request');
 
-  // The team takes it back; it leaves the CaPSA's list.
+  // The team takes it back; it leaves the CaPSA/TSA's list.
   await page.locator('[data-xh="takeback"]').click();
   await page.locator('dialog[open] [data-xh="takeback-send"]').click();
   await expect(page.locator('[data-xh="takeback"]')).toHaveCount(0);
@@ -201,8 +201,8 @@ test('an application reaches the expert, and withdrawing it clears it', async ({
   await expert.context().close();
 });
 
-test('evaluations the team sends show up for the CaPSA', async ({ page, browser }, testInfo) => {
-  // Owed only after a passed defense, with the section CaPSA's form set up
+test('evaluations the team sends show up for the CaPSA/TSA', async ({ page, browser }, testInfo) => {
+  // Owed only after a passed defense, with the section CaPSA/TSA's form set up
   // before it was decided - both made here and undone after.
   php(`$t = App\\Models\\EvaluationTemplate::create(['capsa_id' => 91, 'title' => 'E2E pre-proposal evaluation', 'defense_type' => 'Pre-proposal Defense', 'roles' => ['adviser', 'consultant', 'grammarian'], 'is_active' => true]);
     $t->forceFill(['created_at' => '2026-10-01 08:00:00'])->saveQuietly();

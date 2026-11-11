@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Until now a team's uploads were found through its members, so a student
  * who moved to a new team brought their old team's papers along: a team made
  * that day already showed its Getting started forms as handed in and waiting
- * on the CaPSA's check.
+ * on the CaPSA/TSA's check.
  *
  * Existing uploads are given the uploader's current team only when that team
  * already existed when the file went up. One sent before it existed was for

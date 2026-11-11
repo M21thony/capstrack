@@ -1,7 +1,7 @@
 {{--
   Team Rating › Rate one teammate: every criterion of the rubric, a row of
   radios per activity the rating covers. Each pick saves as a draft; the
-  ratings only reach the CaPSA from Review & submit on the Team Rating tab.
+  ratings only reach the CaPSA/TSA from Review & submit on the Team Rating tab.
 --}}
 @php
   use App\Http\Controllers\TeamRatingController as TR;

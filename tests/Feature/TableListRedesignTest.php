@@ -13,7 +13,7 @@ use Tests\TestCase;
 /**
  * The four people lists as one kind of page (public/css/table-kit.css).
  *
- * CaPSA Management, Student Accounts, Expert Management and Student Section
+ * CaPSA/TSA Management, Student Accounts, Expert Management and Student Section
  * List each say how many rows every filter holds before it is picked, keep
  * their filters inside the card with the table, and keep destructive actions
  * in the row's menu rather than as a red button on every row.
@@ -218,7 +218,7 @@ class TableListRedesignTest extends TestCase
         $this->assertStringContainsString('id="tkShowAwaiting"', $html);
     }
 
-    // ── CaPSA Management ────────────────────────────────────────────────
+    // ── CaPSA/TSA Management ────────────────────────────────────────────────
 
     public function test_capsa_management_groups_uncovered_sections_and_drops_slots(): void
     {

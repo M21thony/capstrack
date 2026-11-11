@@ -17,7 +17,7 @@ use Tests\TestCase;
 /**
  * The bell shows one person's business, not everyone's.
  *
- * A CaPSA covers named sections and the rest of their portal is scoped to
+ * A CaPSA/TSA covers named sections and the rest of their portal is scoped to
  * them; the bell used to list every student's activity in the school, so
  * teams they do not handle appeared in it. An expert's bell shows the teams
  * that applied to that expert and nobody else's.
@@ -89,7 +89,7 @@ class NotificationBellScopeTest extends TestCase
     }
 
     /**
-     * The admin and CaPSA bell is the expert bell now, so it carries what is
+     * The admin and CaPSA/TSA bell is the expert bell now, so it carries what is
      * addressed to that person rather than the whole school's activity log.
      * Recent Activity did not disappear - it has a page of its own, which the
      * bell's footer links to.
@@ -113,7 +113,7 @@ class NotificationBellScopeTest extends TestCase
     }
 
     /**
-     * A student with no computable section cannot be matched to a CaPSA, so
+     * A student with no computable section cannot be matched to a CaPSA/TSA, so
      * they stay out of a scoped bell rather than falling into everyone's.
      */
     public function test_a_student_with_no_section_is_not_shown_to_a_scoped_capsa(): void

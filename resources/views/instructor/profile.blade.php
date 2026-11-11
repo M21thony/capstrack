@@ -205,7 +205,7 @@
     <div class="pp-page">
 
       {{-- Who this is. The degree is picked beside the name it follows; a
-           CaPSA or Admin edits their own name here too. Roles and sections
+           CaPSA/TSA or Admin edits their own name here too. Roles and sections
            are the Admin's, so they only show. --}}
       <header class="pp-id">
         <img class="pp-id-photo" src="{{ $expert->avatarUrl() }}" alt="" title="Your photo comes from your Google account" onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}'">
@@ -222,7 +222,7 @@
           </div>
           <div class="pp-id-mail">{{ $expert->email }} <span class="pp-chair" id="pp-chair" aria-live="polite"></span></div>
         </div>
-        {{-- Only a CaPSA or Admin edits the whole name; everyone else's first
+        {{-- Only a CaPSA/TSA or Admin edits the whole name; everyone else's first
              and last name come from Google, which has no middle name. --}}
         <div class="pp-name-form" id="pp-name-form" hidden>
           <label>First name<input id="pp-first" autocomplete="given-name" maxlength="50" @readonly(! $canEditName) @if (! $canEditName) title="From your Google account" @endif></label>
@@ -240,7 +240,7 @@
           </div>
           @if ($capsaSections !== null)
             <div class="pp-id-secs">
-              <span>CaPSA of</span>
+              <span>CaPSA/TSA of</span>
               @forelse ($capsaSections as $section)
                 <b>{{ $section }}</b>
               @empty
@@ -303,7 +303,7 @@
 
           <section class="pp-sec" aria-labelledby="pp-strong-h">
             <div class="pp-sec-h"><h2 id="pp-strong-h">As a panelist, I'm strongest in</h2></div>
-            <p class="pp-help">The CaPSA sees this when seating a defense panel, so each panel covers all three. Tick one or more.</p>
+            <p class="pp-help">The CaPSA/TSA sees this when seating a defense panel, so each panel covers all three. Tick one or more.</p>
             @php($strengthHints = ['manuscript' => 'Chapters, research method, writing', 'design' => 'Diagrams, database, architecture', 'software' => 'The working system, code, testing'])
             <div class="pp-strengths">
               @foreach (\App\Models\CapstoneExpert::STRENGTHS as $key => $label)

@@ -5,17 +5,17 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * One checklist per CaPSA per program, instead of a copy per team.
+ * One checklist per CaPSA/TSA per program, instead of a copy per team.
  *
  * Every team used to get its own milestones row and its own nineteen
  * milestone_items, so moving one deliverable meant changing every team's copy
  * - on MyISAM, where a failure halfway cannot be rolled back and leaves teams
  * with different checklists. A checklist is now written once:
  *
- *   checklists            a CaPSA's list for one program (BSIT, BSIS, ...)
+ *   checklists            a CaPSA/TSA's list for one program (BSIT, BSIS, ...)
  *   checklist_milestones  its numbered groups, in order
  *   deliverables          what a team hands in or passes, in order
- *   deliverable_checks    the CaPSA's verdict on one team's signed paper
+ *   deliverable_checks    the CaPSA/TSA's verdict on one team's signed paper
  *
  * Archiving sets archived_at and can be undone; removing is a soft delete,
  * purged for good after a few days, so Undo can still bring it back.

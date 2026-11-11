@@ -176,7 +176,7 @@ class TeamUpdateTest extends TestCase
 
     // A team's title is whichever pre-proposal the CAPSA approves. The leader
     // may correct it in Update Team - a misspelling, a word or two - but a
-    // different title is refused: that goes through the CaPSA.
+    // different title is refused: that goes through the CaPSA/TSA.
     public function test_a_different_title_cannot_be_set_through_the_update_form(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
@@ -423,7 +423,7 @@ class TeamUpdateTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('name="project_title"', false);
         $response->assertSee('data-saved="The Approved Title"', false);
-        $response->assertSee('Fix spelling or small mistakes. A different title goes through your CaPSA.');
+        $response->assertSee('Fix spelling or small mistakes. A different title goes through your CaPSA/TSA.');
     }
 
     public function test_without_a_title_there_is_nothing_to_correct(): void
@@ -434,7 +434,7 @@ class TeamUpdateTest extends TestCase
 
         $this->get(route('student.team'))->assertOk()->assertDontSee('name="project_title"', false);
 
-        // And posting one anyway sets nothing: the title comes from the CaPSA's approval.
+        // And posting one anyway sets nothing: the title comes from the CaPSA/TSA's approval.
         $this->put(route('team.update', $team->team_id), [
             'team_name' => 'Original Name', 'project_title' => 'A Title The Leader Typed',
         ])->assertSessionDoesntHaveErrors();
@@ -449,7 +449,7 @@ class TeamUpdateTest extends TestCase
         $response = $this->actingAs($student, 'web')->get(route('student.team'));
 
         $response->assertStatus(200);
-        $response->assertSee('Set once your CaPSA approves one of your pre-proposal titles.');
+        $response->assertSee('Set once your CaPSA/TSA approves one of your pre-proposal titles.');
     }
 
     // Two approved titles means the team still has to pick, so the form

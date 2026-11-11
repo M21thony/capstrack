@@ -1,4 +1,4 @@
-{{-- Shared by the CaPSA's Expert Evaluations pages and the expert's My
+{{-- Shared by the CaPSA/TSA's Expert Evaluations pages and the expert's My
      Evaluations: the stage cards, the question editor and the anonymous
      results. Built on the tokens admin.css and expert.css both define. --}}
 <style nonce="{{ Vite::cspNonce() }}">
@@ -217,7 +217,7 @@
 .ev-back:hover{color:var(--text)}
 .ev-back svg{width:15px;height:15px}
 
-/* the CaPSA's evaluations: only the ones they made */
+/* the CaPSA/TSA's evaluations: only the ones they made */
 .ev-tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;align-items:stretch}
 .ev-stage-tag{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--accent3);white-space:nowrap}
 .ev-card2{display:flex;flex-direction:column;gap:10px;padding:16px 16px 0;border:1px solid var(--border);border-radius:14px;background:var(--bg2);box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .2s,border-color .2s,transform .2s}
@@ -291,7 +291,7 @@
   .ev-kbd{display:none}
   .ev-form-foot .ev-btn{flex:1}
 }
-/* Results summary (CaPSA) and one expert's answer spread. */
+/* Results summary (CaPSA/TSA) and one expert's answer spread. */
 .ev-sum-h{font-size:22px;font-weight:700;letter-spacing:-.3px;color:var(--text);margin:0}
 .ev-sum-card{background:#fff;border:1px solid #e0e2e8;border-radius:14px}
 .ev-sum-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0}

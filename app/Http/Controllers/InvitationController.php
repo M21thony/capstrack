@@ -173,7 +173,7 @@ class InvitationController extends Controller
         // The moment somebody actually joins is the moment to ask whether they
         // may. This path - the one the page uses - asked nothing: an invitation
         // sent while a seat was free could be accepted after it went, after
-        // Capstone 2 began, or after the CaPSA closed joining. Two invitations
+        // Capstone 2 began, or after the CaPSA/TSA closed joining. Two invitations
         // for the last seat both got in.
         $joining = Team::find($invitation->team_id);
 
@@ -228,7 +228,7 @@ class InvitationController extends Controller
         // Auto-close team if it has reached full capacity
         if ($team && $team->team_status === 'Active') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
-            // The CaPSA's limit, not member_count - that column is a flat 5
+            // The CaPSA/TSA's limit, not member_count - that column is a flat 5
             // written at creation, so a team of three never closed at three.
             if ($currentCount >= $team->memberLimit()) {
                 $team->update(['team_status' => 'Full']);

@@ -2,7 +2,7 @@
   What makes the Teams hub work: the tabs, the To do's Waiting / Decided
   switch, the Team Applications filters and its application window, the
   Teams filters and sorting, the Approve / Decline dialog, the quiet
-  refresh, and - for a CaPSA - the Team rules menu.
+  refresh, and - for a CaPSA/TSA - the Team rules menu.
 --}}
 <dialog id="tm-decide" class="tm-dialog" aria-labelledby="tm-decide-t">
   <form method="post">@csrf
@@ -207,7 +207,7 @@
       }
       if (d.project) {
         const t = el('p', 'tma-title', d.project);
-        side.append(sec(d.recommended ? 'Project title · recommended by their CaPSA' : 'Project title', t));
+        side.append(sec(d.recommended ? 'Project title · recommended by their CaPSA/TSA' : 'Project title', t));
       }
       if (d.verdict) { side.append(sec('Duplication check', verdictOf(d))); }
       const people = [el('p', 'tma-text', (d.leader || 'Leader not set') + ' · Leader')];

@@ -1,8 +1,8 @@
 {{--
-  The one bell every expert page carries - instructor, CaPSA and admin alike.
+  The one bell every expert page carries - instructor, CaPSA/TSA and admin alike.
 
   It is one partial rather than three because one person is often more than
-  one of those: a CaPSA who also advises a team has to hear about that team
+  one of those: a CaPSA/TSA who also advises a team has to hear about that team
   from whichever page they happen to be on. It reads the notifications table,
   the same store the student bell reads, so both sides of CapsTrack behave
   identically.
@@ -156,7 +156,7 @@
     <div class="np-empty" hidden>No notifications here.</div>
   @endif
 
-  {{-- CaPSA and instructor keep separate profile pages, so the caller says
+  {{-- CaPSA/TSA and instructor keep separate profile pages, so the caller says
        which one this bell's settings live on. An Admin has neither, so their
        bell keeps the way through to Recent Activity instead. --}}
   <div class="notif-footer">

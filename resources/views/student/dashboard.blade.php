@@ -227,7 +227,7 @@
           @if (! $myTeam)
             <p class="db-empty">Join a team to see your progress here.</p>
           @elseif (! $progress)
-            <p class="db-empty">Your section's checklist is not set up yet. Your CaPSA adds it; it shows here once they do.</p>
+            <p class="db-empty">Your section's checklist is not set up yet. Your CaPSA/TSA adds it; it shows here once they do.</p>
           @else
             <div class="db-progress-body">
               <div class="db-ring-wrap">
@@ -424,7 +424,7 @@
           @if ($newResourceCount)
             <div class="db-notice">
               <svg class="i c-orange"><use href="#i-megaphone"/></svg>
-              <b>Your CaPSA uploaded {{ $newResourceCount }} new {{ Str::plural('resource', $newResourceCount) }}</b>
+              <b>Your CaPSA/TSA uploaded {{ $newResourceCount }} new {{ Str::plural('resource', $newResourceCount) }}</b>
               <time class="db-meta">{{ $newResourceDate->format('M j') }}</time>
             </div>
           @endif

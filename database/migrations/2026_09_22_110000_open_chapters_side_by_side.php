@@ -11,7 +11,7 @@ return new class extends Migration
      * Teams start Chapter 3 while still revising Chapter 2, so the chapters
      * after the first open together with it instead of each waiting for the
      * one before. A new milestone opens with the one above it unless the
-     * CaPSA ticks its gate.
+     * CaPSA/TSA ticks its gate.
      */
     public function up(): void
     {

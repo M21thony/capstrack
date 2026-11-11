@@ -78,7 +78,7 @@ class CapstoneDocument extends Model
 
     /**
      * The team's papers for its experts: everything but a signed paper, which
-     * is handed in on Progress Tracker and checked there by the CaPSA.
+     * is handed in on Progress Tracker and checked there by the CaPSA/TSA.
      */
     public function scopeExceptSignedPapers(Builder $query): Builder
     {
@@ -153,7 +153,7 @@ class CapstoneDocument extends Model
     /**
      * Whether the team may take this upload back, as in Google Classroom: it
      * is the newest of its line and nobody has started on it - no remark, no
-     * verdict, no review begun, no CaPSA check of a signed paper.
+     * verdict, no review begun, no CaPSA/TSA check of a signed paper.
      */
     public function canBeUnsubmitted(): bool
     {

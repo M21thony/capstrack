@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 /**
  * An adviser (CaPA) saying whether their team is ready for its Title, Pre
  * Oral or Final Oral Defense date. Not ready marks it Cancelled, keeping the
- * date on record; the CaPSA gives the team a new one.
+ * date on record; the CaPSA/TSA gives the team a new one.
  */
 class DefenseGoController extends Controller
 {
@@ -37,7 +37,7 @@ class DefenseGoController extends Controller
 
         return $this->answered($request, $validated['answer'] === CapaGo::GO
             ? $team.' has your go for the '.$defense->defense_type.'.'
-            : $team.'\'s '.$defense->defense_type.' is cancelled. The CaPSA will set a new date.');
+            : $team.'\'s '.$defense->defense_type.' is cancelled. The CaPSA/TSA will set a new date.');
     }
 
     /** Back to the To do it was answered from, or the answer itself for the To do's dialog. */

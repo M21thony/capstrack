@@ -5,9 +5,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * A resource can be aimed at several of a CaPSA's sections, not just one.
+ * A resource can be aimed at several of a CaPSA/TSA's sections, not just one.
  *
- * The single `section` column added earlier could only say "4A". A CaPSA
+ * The single `section` column added earlier could only say "4A". A CaPSA/TSA
  * handing out material usually means "these two of my four sections", so the
  * targets live in their own table - one row per section, the full label,
  * because a set of labels is not a column.

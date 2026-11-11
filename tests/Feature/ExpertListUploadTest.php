@@ -13,11 +13,11 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
 
 /**
- * A CaPSA uploads the faculty list, and the file says what each of them does.
+ * A CaPSA/TSA uploads the faculty list, and the file says what each of them does.
  *
  * The list is how faculty get accounts at all - nobody applies and nobody
  * picks their own role - so what the file carries is what the account ends up
- * being: approved, named, and holding the roles CaPSA wrote down.
+ * being: approved, named, and holding the roles CaPSA/TSA wrote down.
  */
 class ExpertListUploadTest extends TestCase
 {
@@ -38,7 +38,7 @@ class ExpertListUploadTest extends TestCase
             'email' => 'capsa.experts@test.com',
             'first_name' => 'Cap',
             'last_name' => 'Sa',
-            // Not an Admin: the expert list is the CaPSA's to upload, and it
+            // Not an Admin: the expert list is the CaPSA/TSA's to upload, and it
             // is their copy of Expert Management that offers it. An Admin
             // here would render the other view entirely.
             'is_admin' => false,
@@ -172,7 +172,7 @@ class ExpertListUploadTest extends TestCase
     /**
      * The older three-sheet file still works, the sheet name naming the role.
      *
-     * CaPSA keeps this file by hand; a new template must not make the one she
+     * CaPSA/TSA keeps this file by hand; a new template must not make the one she
      * already has stop importing.
      */
     public function test_the_older_three_sheet_file_still_imports(): void
@@ -210,7 +210,7 @@ class ExpertListUploadTest extends TestCase
         $this->assertSame([], $this->rolesOf('typo@gmail.com'));
     }
 
-    /** An upload can neither grant nor revoke CaPSA. */
+    /** An upload can neither grant nor revoke CaPSA/TSA. */
     public function test_an_upload_does_not_touch_a_capsa_account(): void
     {
         $capsa = $this->capsa();
@@ -242,7 +242,7 @@ class ExpertListUploadTest extends TestCase
         $sheet = IOFactory::load($response->baseResponse->getFile()->getPathname())->getActiveSheet();
 
         // The last two are optional - an expert who has set neither cannot
-        // be applied to, so a CaPSA already typing the list can save a round
+        // be applied to, so a CaPSA/TSA already typing the list can save a round
         // of chasing by filling them in.
         $this->assertSame(
             ['Name', 'Email Address', 'Role', 'Expertise', 'Accepted Programs', 'Team Slots'],
@@ -364,7 +364,7 @@ class ExpertListUploadTest extends TestCase
         $this->assertSame('unchanged', $rows['same@gmail.com']['action']);
         $this->assertSame('update', $rows['moved@gmail.com']['action']);
 
-        // Named, so a CaPSA can see it is the roles about to move.
+        // Named, so a CaPSA/TSA can see it is the roles about to move.
         $this->assertSame(['roles'], $rows['moved@gmail.com']['changes']);
         $this->assertSame(['grammarian'], $rows['moved@gmail.com']['roles']);
     }

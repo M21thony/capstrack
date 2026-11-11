@@ -38,13 +38,13 @@ class ChecklistMilestone extends Model
         $query->whereNull('archived_at');
     }
 
-    /** Not closed by the CaPSA: still on the open list and still sending reminders. */
+    /** Not closed by the CaPSA/TSA: still on the open list and still sending reminders. */
     public function scopeOpen(Builder $query): void
     {
         $query->whereNull('closed_at');
     }
 
-    /** Opened by the CaPSA for the whole section. A finished one was open. */
+    /** Opened by the CaPSA/TSA for the whole section. A finished one was open. */
     public function isOpened(): bool
     {
         return $this->opened_at !== null || $this->closed_at !== null;

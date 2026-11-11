@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\URL;
 /**
  * Sends the Google-mail copy of an important notification.
  *
- * Every portal goes through here - a student, an expert, a CaPSA or an admin
+ * Every portal goes through here - a student, an expert, a CaPSA/TSA or an admin
  * is one of the two kinds of person the bell knows - so a notification
  * cannot be important in one portal and silent by email in another.
  *

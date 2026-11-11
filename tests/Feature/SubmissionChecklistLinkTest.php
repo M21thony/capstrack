@@ -105,7 +105,7 @@ class SubmissionChecklistLinkTest extends TestCase
         $this->send(['file' => UploadedFile::fake()->image('old.jpg'), 'deliverable_id' => $gone->id])->assertStatus(422);
     }
 
-    /** A signed paper goes to the CaPSA to check, not to a reviewer - and a phone photo is fine. */
+    /** A signed paper goes to the CaPSA/TSA to check, not to a reviewer - and a phone photo is fine. */
     public function test_a_photo_of_a_signed_form_or_clf_needs_no_reviewer(): void
     {
         $form = $this->addDeliverable($this->checklist, ['title' => 'Signed Title Defense Hearing Notice']);
@@ -121,7 +121,7 @@ class SubmissionChecklistLinkTest extends TestCase
         $this->assertSame(0, CapstoneDocumentReview::count());
     }
 
-    /** Nobody reviews a paper, so if the CaPSA is not told one arrived, nobody is. */
+    /** Nobody reviews a paper, so if the CaPSA/TSA is not told one arrived, nobody is. */
     public function test_the_capsa_is_told_a_signed_paper_is_waiting(): void
     {
         $form = $this->addDeliverable($this->checklist, ['title' => 'Signed Project Team Assignment Form']);

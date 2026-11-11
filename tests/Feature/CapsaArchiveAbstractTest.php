@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The CaPSA's archive opens any capstone's full abstract in a modal, with
+ * The CaPSA/TSA's archive opens any capstone's full abstract in a modal, with
  * its title, proponents, program, school year and date.
  */
 class CapsaArchiveAbstractTest extends TestCase

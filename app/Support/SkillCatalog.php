@@ -69,7 +69,7 @@ class SkillCatalog
     /**
      * Which programme each technical skill belongs to.
      *
-     * CaPSA asked for this: the four programmes are not the same subject, and
+     * CaPSA/TSA asked for this: the four programmes are not the same subject, and
      * offering a BLIS adviser "Embedded Systems" - or a BSCS one "Cataloguing
      * & Classification" - made the picker longer without making it more
      * useful. A skill can belong to several, because they genuinely overlap:
@@ -82,7 +82,7 @@ class SkillCatalog
      *   BSIS  what an organisation does with it - process, records, decisions
      *   BLIS  organising information so it can be found again
      *
-     * It is a starting point and CaPSA's to correct, not a rule: an expert
+     * It is a starting point and CaPSA/TSA's to correct, not a rule: an expert
      * can still type any skill at all, including one from another programme.
      */
     private const PROGRAM_SKILLS = [

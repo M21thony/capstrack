@@ -307,7 +307,7 @@ class BugsFromTestingRoundTest extends TestCase
     }
 
     // ---------------------------------------------------------------
-    // Admin / Experts - Add CaPSA
+    // Admin / Experts - Add CaPSA/TSA
     // ---------------------------------------------------------------
 
     /** The message has to name somebody, and their address is who they are. */
@@ -319,7 +319,7 @@ class BugsFromTestingRoundTest extends TestCase
             ->postJson(route('admin.experts.capsa.store'), ['email' => 'r.villanueva@cspc.edu.ph'])
             ->assertOk()
             ->assertJsonFragment([
-                'message' => 'r.villanueva@cspc.edu.ph was made a CaPSA. '
+                'message' => 'r.villanueva@cspc.edu.ph was made a CaPSA/TSA. '
                     .'They can sign in with r.villanueva@cspc.edu.ph.',
             ]);
     }

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
  *
  * The team's adviser (CaPA) says whether the team is ready for the date it
  * was given. "Go" is kept on the defense. "Not ready" cancels it (see
- * cancel()). The CaPSA may record an answer the CaPA gave in person. Either
+ * cancel()). The CaPSA/TSA may record an answer the CaPA gave in person. Either
  * may answer any time before or on the defense day; nothing cancels by itself.
  */
 class CapaGo
@@ -57,7 +57,7 @@ class CapaGo
     /**
      * Cancel the defense. It keeps its date, venue and panel with the status
      * Cancelled, as the department's sheet does; the team's next try opens
-     * with no date, under Ready to schedule, for the CaPSA to give one.
+     * with no date, under Ready to schedule, for the CaPSA/TSA to give one.
      * $by is whoever said "Not ready" (null on cancels the system made before
      * the CaPA alone decided).
      */
@@ -89,7 +89,7 @@ class CapaGo
         $team = $schedule->team?->team_name ?? 'The team';
         $title = $schedule->defense_type.' cancelled: '.$team;
         $message = $team.'\'s '.$schedule->defense_type.' on '.$schedule->schedule_date->format('M j, g:i A').' is cancelled. '.$reason
-            .($note ? ' ('.$note.')' : '').'. The CaPSA will set a new date.';
+            .($note ? ' ('.$note.')' : '').'. The CaPSA/TSA will set a new date.';
 
         Notifier::toStudents(
             StudentSchoolYear::where('team_id', $schedule->team_id)->whereNotNull('student_id')->pluck('student_id')->unique()->map(fn ($id) => (int) $id),

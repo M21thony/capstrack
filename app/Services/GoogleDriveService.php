@@ -154,7 +154,7 @@ class GoogleDriveService
      * the caller says something useful when that is nothing - rather than us
      * guessing in advance and being wrong in either direction.
      *
-     * Sub-folders are not followed. One level is what a CaPSA means by "this
+     * Sub-folders are not followed. One level is what a CaPSA/TSA means by "this
      * folder", and recursing invites importing someone's whole Drive.
      *
      * @return array<int, array{id: string, name: string, mime_type: string, size: ?int, web_view_link: ?string}>

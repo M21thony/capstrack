@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  * So an item carries a short label for the column and the phase it belongs
  * to, which is what groups the columns.
  *
- * Both are nullable. An item a CaPSA adds by hand has neither, and falls back
+ * Both are nullable. An item a CaPSA/TSA adds by hand has neither, and falls back
  * to its title under a trailing group.
  */
 return new class extends Migration

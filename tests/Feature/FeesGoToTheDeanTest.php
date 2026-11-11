@@ -12,7 +12,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * The CaPSA verifies each receipt, then sends the verified ones to the dean,
+ * The CaPSA/TSA verifies each receipt, then sends the verified ones to the dean,
  * who only reads the totals. A sent receipt cannot be changed.
  */
 class FeesGoToTheDeanTest extends TestCase
@@ -93,7 +93,7 @@ class FeesGoToTheDeanTest extends TestCase
     {
         [, $sent] = $this->teamInSection('Alpha');
         [, $held] = $this->teamInSection('Bravo', yearSection: '3rd · B');
-        $this->receipt($sent, extra: ['sent_to_dean_at' => now(), 'sent_to_dean_by' => 'Ms. CaPSA']);
+        $this->receipt($sent, extra: ['sent_to_dean_at' => now(), 'sent_to_dean_by' => 'Ms. CaPSA/TSA']);
         $this->receipt($held);
 
         $rows = collect(app(FeeBoard::class)->forDean())->keyBy('section');
@@ -101,14 +101,14 @@ class FeesGoToTheDeanTest extends TestCase
         $this->assertTrue($rows['BSIT-3A']['is_sent']);
         $this->assertSame(500.0, $rows['BSIT-3A']['amount']);
         $this->assertSame(['Title Defense' => 500.0], $rows['BSIT-3A']['stages']);
-        $this->assertSame('Ms. CaPSA', $rows['BSIT-3A']['sent_by']);
+        $this->assertSame('Ms. CaPSA/TSA', $rows['BSIT-3A']['sent_by']);
 
         $this->assertFalse($rows['BSIT-3B']['is_sent']);
         $this->assertSame(0.0, $rows['BSIT-3B']['amount']);
         $this->assertSame(1, $rows['BSIT-3B']['held']);
     }
 
-    /** The dean reads; only a CaPSA sends. */
+    /** The dean reads; only a CaPSA/TSA sends. */
     public function test_a_plain_admin_cannot_send(): void
     {
         $admin = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]);

@@ -20,7 +20,7 @@ use Illuminate\Console\Command;
  * one event the user asked for that never had one, and adding one would be
  * the spam they were trying to get away from.
  *
- * A milestone the CaPSA closed sends nothing: it is over, whatever is left.
+ * A milestone the CaPSA/TSA closed sends nothing: it is over, whatever is left.
  */
 class SendMilestoneReminders extends Command
 {
@@ -38,7 +38,7 @@ class SendMilestoneReminders extends Command
 
         // Grouped by checklist so the progress pass runs once per section
         // instead of once per team - it reads uploads, reviews, defenses and
-        // CaPSA checks, which is not a query to repeat forty times.
+        // CaPSA/TSA checks, which is not a query to repeat forty times.
         $groups = [];
 
         foreach ($teams as $team) {

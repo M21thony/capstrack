@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <style nonce="{{ Vite::cspNonce() }}">
   /* Templates & Lessons: the same list the students see on Resources, with
-     what a CaPSA needs on top - who each file is shared with, how often it
+     what a CaPSA/TSA needs on top - who each file is shared with, how often it
      was downloaded, and a way to take it back off. Uploading opens beside
      the list, the way the students' preview does. */
   .tl-drive { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; font-size:13.5px; color:var(--text2); }
@@ -271,7 +271,7 @@
             </div>
           </div>
 
-          {{-- Who it is for. A CaPSA hands material to their own sections, so
+          {{-- Who it is for. A CaPSA/TSA hands material to their own sections, so
                those are what is offered - the program list used to include
                programs they do not handle. Tick none to reach all of yours.
                Checkboxes rather than a dropdown: with a handful of sections
@@ -420,7 +420,7 @@
     </div>
 
     <section class="tl-card" aria-label="Your uploads">
-    {{-- Search first, then the three ways a CaPSA narrows - what kind of
+    {{-- Search first, then the three ways a CaPSA/TSA narrows - what kind of
          file, who it is for, where it lives - and the order. --}}
     <div class="lib-bar">
       <label class="tl-search">
@@ -530,7 +530,7 @@ function mapResource(r) {
     driveLink: r.drive_web_view_link,
     driveFolderId: r.drive_folder_id || null,
     // Empty means it was never aimed at particular sections, so it reaches
-    // every student this CaPSA handles.
+    // every student this CaPSA/TSA handles.
     sections: (r.sections || []).map(function (s) { return s.section; }),
     downloads: parseInt(r.downloads, 10) || 0,
     ts: date.getTime(),
@@ -604,7 +604,7 @@ function formatSize(bytes){
 
 // -- RENDER --------------------------------------------------------------------
 // Who can open this file, in the words the header asks the question in.
-// A file aimed at no section reaches everyone this CaPSA handles, and is
+// A file aimed at no section reaches everyone this CaPSA/TSA handles, and is
 // drawn differently on purpose so nobody reads it as a section name.
 function sharedWith(r){
   if(!r.sections.length){
@@ -740,7 +740,7 @@ document.getElementById('res-category-chips').addEventListener('click', function
 
 // ── ticking several library rows ──
 // What is ticked but filtered out stays ticked, and is not what gets removed:
-// only rows on screen are acted on, so nothing goes that the CaPSA cannot see.
+// only rows on screen are acted on, so nothing goes that the CaPSA/TSA cannot see.
 let libSelected = new Set();
 let libShown = [];
 
@@ -824,7 +824,7 @@ function onFileSelect(e){ handleFile(e.target.files[0]); }
 const MAX_FOLDER_FILES = 25;
 
 // The folder input hands over every file inside, subfolders included. Only the
-// ones we accept are kept, and the rest are counted so the CaPSA is told what
+// ones we accept are kept, and the rest are counted so the CaPSA/TSA is told what
 // was left behind rather than wondering.
 function onFolderSelect(e){
   const allowed = ['pdf','doc','docx','ppt','pptx'];
@@ -1378,7 +1378,7 @@ function uploadResource(){
 
   const name = document.getElementById('res-name').value.trim();
   const category = document.getElementById('res-category').value;
-  // Empty means every section this CaPSA handles - the resource reaches
+  // Empty means every section this CaPSA/TSA handles - the resource reaches
   // their own students either way, since that is who sees their uploads.
   const chosenSections = Array.prototype.map.call(
     document.querySelectorAll('#res-sections input:checked'), function (i) { return i.value; }
@@ -1456,7 +1456,7 @@ function resetForm(){
   syncCatChips();
   document.getElementById('res-folder').value='';
 
-  // A CaPSA sees section checkboxes where an admin sees the program dropdown,
+  // A CaPSA/TSA sees section checkboxes where an admin sees the program dropdown,
   // so neither can be assumed to be on the page.
   const programEl = document.getElementById('res-program');
   if(programEl) programEl.value='';

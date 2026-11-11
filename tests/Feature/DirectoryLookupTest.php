@@ -145,9 +145,9 @@ class DirectoryLookupTest extends TestCase
     /**
      * The Admin is not in the directory.
      *
-     * This box adds experts and names CaPSAs, and the Admin is neither - so
+     * This box adds experts and names CaPSA/TSAs, and the Admin is neither - so
      * listing them did nothing but hand their address to anybody who typed
-     * three letters of it, which on this system is every CaPSA.
+     * three letters of it, which on this system is every CaPSA/TSA.
      */
     public function test_the_admin_is_never_listed(): void
     {
@@ -208,7 +208,7 @@ class DirectoryLookupTest extends TestCase
      * submission. An address typed out in full still reached the add
      * endpoint, which looked the account up by email, found the Admin, and
      * attached a student-facing role to it - so they never appeared in the
-     * CaPSA's own list, and did appear in front of every team on
+     * CaPSA/TSA's own list, and did appear in front of every team on
      * student/experts.
      */
     public function test_the_admin_cannot_be_added_as_an_expert(): void
@@ -265,7 +265,7 @@ class DirectoryLookupTest extends TestCase
         }
     }
 
-    /** Nor made a CaPSA by the same route. */
+    /** Nor made a CaPSA/TSA by the same route. */
     public function test_the_admin_cannot_be_made_a_capsa(): void
     {
         $admin = CapstoneExpert::factory()->create([

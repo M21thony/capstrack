@@ -10,7 +10,7 @@ use Tests\TestCase;
 /**
  * A student's section has to be on a list before they can sign in.
  *
- * CaPSA asked for this: the department decides who is a student on which
+ * CaPSA/TSA asked for this: the department decides who is a student on which
  * course, in which section, and until this the site let anybody with a
  * my.cspc.edu.ph address in and made them an account on the spot.
  */
@@ -38,14 +38,14 @@ class StudentSignupGateTest extends TestCase
 
         $response->assertStatus(403);
         $response->assertJson(['success' => false]);
-        $this->assertStringContainsString('CaPSA', $response->json('message'));
+        $this->assertStringContainsString('CaPSA/TSA', $response->json('message'));
 
         // And nothing was created on the way out.
         $this->assertNull(Student::where('email', 'stranger@my.cspc.edu.ph')->first());
         $this->assertGuest();
     }
 
-    /** On the list CaPSA uploaded, so they are expected. */
+    /** On the list CaPSA/TSA uploaded, so they are expected. */
     public function test_a_student_on_an_uploaded_list_gets_in(): void
     {
         StudentRoster::create([

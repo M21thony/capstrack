@@ -16,7 +16,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * Panel comments 14 and 17: a CaPSA report with one row per student - their
+ * Panel comments 14 and 17: a CaPSA/TSA report with one row per student - their
  * team's panel average at each defense, the average so far and the team's
  * requirements done - downloadable like every other report.
  */

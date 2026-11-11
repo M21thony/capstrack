@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The questions a CaPSA asks team leaders about their experts after a
+ * The questions a CaPSA/TSA asks team leaders about their experts after a
  * defense: one set per defense stage and the roles it covers (adviser,
  * consultant, grammarian), each question answered on a 1-5 scale.
  */
@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('evaluation_templates', function (Blueprint $table) {
             $table->id();
-            // The CaPSA who wrote it; it applies to the teams in their sections.
+            // The CaPSA/TSA who wrote it; it applies to the teams in their sections.
             $table->unsignedBigInteger('capsa_id');
             $table->string('title', 150);
             // Pre-proposal Defense, Title Defense, Pre Oral Defense or Final Oral Defense.

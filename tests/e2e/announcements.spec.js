@@ -4,13 +4,13 @@ import { execFileSync } from 'node:child_process';
 /**
  * Announcements (capsa/announcements): who a post reaches.
  *
- * Posts from the CaPSA page and checks each seeded student's dashboard and
+ * Posts from the CaPSA/TSA page and checks each seeded student's dashboard and
  * bell. Posting SENDS mail - run it only against the no-mail server:
  *
  *   PW_BASE_URL=http://127.0.0.1:8002 npx playwright test announcements
  *
  * It seeds its own accounts (AnnouncementsDemoSeeder) and takes them out
- * after, with every notification the posts made. The CaPSA covers BSIT-3A
+ * after, with every notification the posts made. The CaPSA/TSA covers BSIT-3A
  * and BSIT-3B. Ana (3A) is on "PW Bug Busters", Ben is her classmate, Cara
  * is in 3B and Dan in 3C.
  */
@@ -50,7 +50,7 @@ const student = (name) => `pw-ann-${name}@my.cspc.edu.ph`;
 
 async function asCapsa(page) {
   const response = await page.goto(`/__dev-login-expert/capsa/announcements?email=${CAPSA}`).catch(() => null);
-  test.skip(!response || response.status() >= 400, 'the CaPSA account was not seeded');
+  test.skip(!response || response.status() >= 400, 'the CaPSA/TSA account was not seeded');
   await page.evaluate(() => document.getElementById('erp-overlay')?.remove());
   await expect(page.locator('#ann-title')).toBeVisible();
 }
@@ -88,7 +88,7 @@ test.afterEach(async ({ page }) => {
   }).catch(() => {});
 });
 
-test('a post to Students reaches the CaPSA\'s own sections and nobody else', async ({ page }) => {
+test('a post to Students reaches the CaPSA/TSA\'s own sections and nobody else', async ({ page }) => {
   await asCapsa(page);
   await post(page, { title: t('Chapter 3 deadline'), body: 'Upload Chapter 3 by Friday.', audience: ['student'] });
 

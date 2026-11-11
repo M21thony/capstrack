@@ -143,7 +143,7 @@ class ExpertResearchAreasBySideTest extends TestCase
         return $capsa->fresh();
     }
 
-    /** A CaPSA who also advises keeps the same per-side lists - on their profile page and their panel. */
+    /** A CaPSA/TSA who also advises keeps the same per-side lists - on their profile page and their panel. */
     public function test_a_capsa_who_is_also_an_expert_gets_the_same_sides(): void
     {
         $capsa = $this->capsaWhoAdvises();

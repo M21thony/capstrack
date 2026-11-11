@@ -14,7 +14,7 @@ use Illuminate\Support\Collection;
 
 /**
  * What a team page shows besides its row: the panel, the activity feed and
- * the three expert seats. Shared by the CaPSA's Team Management and an
+ * the three expert seats. Shared by the CaPSA/TSA's Team Management and an
  * expert's Teams, which show the same page.
  */
 trait ShowsTeamPage
@@ -84,7 +84,7 @@ trait ShowsTeamPage
                     $review->verdict_at, $returned ? 'returned' : 'checked');
             });
 
-        // The CaPSA's check on a requirement, with the note when it was sent back.
+        // The CaPSA/TSA's check on a requirement, with the note when it was sent back.
         $checks = DeliverableCheck::with('deliverable')
             ->where('team_id', $team->team_id)
             ->whereNotNull('checked_at')
@@ -93,7 +93,7 @@ trait ShowsTeamPage
         $checked = $checks->map(function ($check) use ($event, $checkers) {
             $back = $check->status === DeliverableCheck::SENT_BACK;
 
-            return $event(null, $checkers->get($check->checked_by)?->name ?? 'The CaPSA',
+            return $event(null, $checkers->get($check->checked_by)?->name ?? 'The CaPSA/TSA',
                 ($back ? 'sent back ' : 'checked ').($check->deliverable?->title ?? 'a requirement'),
                 $check->checked_at, $back ? 'returned' : 'checked', $back ? $check->note : null);
         });

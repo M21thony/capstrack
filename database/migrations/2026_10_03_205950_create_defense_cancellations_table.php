@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * A defense date that was called off because the CaPA said the team was not
- * ready. The team keeps its place in line and waits for its CaPSA to give it
+ * ready. The team keeps its place in line and waits for its CaPSA/TSA to give it
  * a new date; this keeps the date it lost, and why.
  */
 return new class extends Migration

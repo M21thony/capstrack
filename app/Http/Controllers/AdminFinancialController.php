@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * The CaPSA's Financial Records page. It is drawn from the JSON FeeBoard
+ * The CaPSA/TSA's Financial Records page. It is drawn from the JSON FeeBoard
  * builds; its actions call Api\AdminFinancialController.
  */
 class AdminFinancialController extends Controller
@@ -24,7 +24,7 @@ class AdminFinancialController extends Controller
         return view('capsa.financial', ['state' => $fees->forCapsa($capsa)]);
     }
 
-    /** The dean's page: what each section's CaPSA has sent so far. */
+    /** The dean's page: what each section's CaPSA/TSA has sent so far. */
     public function fees(FeeBoard $fees): View
     {
         return view('admin.fees', ['rows' => $fees->forDean()]);

@@ -23,7 +23,7 @@ use Tests\TestCase;
 /**
  * Generating a stage's schedule at once: every ready team is suggested a slot
  * that clashes with nothing, every other team is listed with what it still
- * needs, and the CaPSA saves the reviewed set in one go.
+ * needs, and the CaPSA/TSA saves the reviewed set in one go.
  */
 class GenerateDefenseScheduleTest extends TestCase
 {
@@ -173,7 +173,7 @@ class GenerateDefenseScheduleTest extends TestCase
     {
         $schedule = $this->panel($this->team('Alpha'), CapstoneExpert::factory()->create(['approved_status' => true]));
 
-        // The CaPSA moved the suggestion to the afternoon in the Open Lab.
+        // The CaPSA/TSA moved the suggestion to the afternoon in the Open Lab.
         $this->apply([['defense_id' => $schedule->defense_id, 'date' => '2027-03-16', 'start_time' => '15:00', 'venue' => 'Open Lab']])
             ->assertOk()
             ->assertJsonCount(1, 'data.scheduled');
@@ -377,7 +377,7 @@ class GenerateDefenseScheduleTest extends TestCase
         $this->assertSame('Mac Lab', $row['venue']);
     }
 
-    /** Suggests and saves the whole draft, as the CaPSA does after reviewing it. */
+    /** Suggests and saves the whole draft, as the CaPSA/TSA does after reviewing it. */
     private function generateAndSave(): array
     {
         $draft = $this->draft()->assertOk()->json('data.draft');
@@ -420,7 +420,7 @@ class GenerateDefenseScheduleTest extends TestCase
 
     public function test_the_five_teams_of_one_panel_stay_on_one_day_when_two_are_ready_late(): void
     {
-        // The case the CaPSA asked about: five teams, one panel, three ready.
+        // The case the CaPSA/TSA asked about: five teams, one panel, three ready.
         // Hour-long defenses, so a room holds eight a day and all five fit.
         DefenseWindow::where('defense_type', self::STAGE)->update(['duration_minutes' => 60]);
         $chair = CapstoneExpert::factory()->create(['approved_status' => true]);
@@ -463,7 +463,7 @@ class GenerateDefenseScheduleTest extends TestCase
 
         $this->assertSame('2027-03-16', $row['date']);
         $this->assertSame('08:00', $row['start_time']);
-        $this->assertStringStartsWith('Not earlier: Mar 15', $row['skipped'], 'the CaPSA is told why day one was passed over');
+        $this->assertStringStartsWith('Not earlier: Mar 15', $row['skipped'], 'the CaPSA/TSA is told why day one was passed over');
     }
 
     public function test_a_row_outside_the_window_or_not_ready_is_skipped(): void

@@ -293,7 +293,7 @@ class Student extends Authenticatable
      * Which Capstone this student is in.
      *
      * 3rd year is Capstone 1, 4th is Capstone 2. The year is the signal
-     * because of how the list works: a CaPSA uploads a section when it
+     * because of how the list works: a CaPSA/TSA uploads a section when it
      * starts capstone, and uploads it again as 4th year when it moves up -
      * so the year on the roster changes exactly when the stage does, with
      * nobody having to remember to declare it anywhere.

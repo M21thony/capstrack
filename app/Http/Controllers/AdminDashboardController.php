@@ -21,10 +21,10 @@ use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
- * The first page an Admin or a CaPSA sees: how things stand, then what is
+ * The first page an Admin or a CaPSA/TSA sees: how things stand, then what is
  * waiting on them.
  *
- * A CaPSA sees their teams, how well experts cover them, what is waiting on
+ * A CaPSA/TSA sees their teams, how well experts cover them, what is waiting on
  * them and what is due next. An Admin sees the summary from DashboardStats and
  * the setup that is still missing, like a section nobody covers.
  */
@@ -37,7 +37,7 @@ class AdminDashboardController extends Controller
         /** @var CapstoneExpert $viewer */
         $viewer = Auth::guard('expert')->user();
 
-        // The running term, the CaPSA's sections - the same teams Reports counts.
+        // The running term, the CaPSA/TSA's sections - the same teams Reports counts.
         $ctx = $viewer->is_capsa ? $this->reports->context($viewer, []) : null;
         $capsaStats = $ctx ? $this->stats->capsa($viewer, $ctx) : null;
 

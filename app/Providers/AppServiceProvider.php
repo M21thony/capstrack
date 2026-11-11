@@ -111,7 +111,7 @@ class AppServiceProvider extends ServiceProvider
             ->latest('created_at')
             ->take(15)
             ->get();
-        // A CaPSA's decision on a leave request opens in a pop-up with
+        // A CaPSA/TSA's decision on a leave request opens in a pop-up with
         // the whole of it, not just the line in the bell.
         $leaveDecisions = LeaveDecisionDetails::forNotifications($bellNotifications, (int) $studentId);
         // "Later" on a join-request popup stores its id in

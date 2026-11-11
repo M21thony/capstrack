@@ -10,8 +10,8 @@ use App\Models\Setting;
  *
  * Sections used to be worked out from the students enrolled in them, which is
  * true once a term is under way and useless before it: a fresh install has no
- * students, so it has no sections, so nobody can be made a CaPSA - and a
- * CaPSA is who uploads the students. That is a knot with no end to pull.
+ * students, so it has no sections, so nobody can be made a CaPSA/TSA - and a
+ * CaPSA/TSA is who uploads the students. That is a knot with no end to pull.
  *
  * An Admin now states them up front. What a student is enrolled in still
  * counts, so an install that has been running keeps every section it already
@@ -31,7 +31,7 @@ class SectionCatalog
      * The year a section is added for. Capstone starts in the second
      * semester of 3rd year, so that is where an Admin's sections begin; a
      * 4th-year section comes from the student list (or Year Promotion) once
-     * students are in it, and its CaPSA is assigned then - often not the
+     * students are in it, and its CaPSA/TSA is assigned then - often not the
      * same one as in 3rd year.
      */
     public const STARTING_YEAR = 3;

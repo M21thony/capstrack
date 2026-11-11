@@ -84,7 +84,7 @@ class DefenseSchedulingController extends Controller
 
     /**
      * The schedule as a spreadsheet, in the department's own layout (see
-     * DefenseScheduleWorkbook). Scoped the same way the page is: a CaPSA gets
+     * DefenseScheduleWorkbook). Scoped the same way the page is: a CaPSA/TSA gets
      * her own sections, the Admin gets every team.
      */
     private function export(CapstoneExpert $capsa, string $stage): StreamedResponse

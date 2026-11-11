@@ -24,7 +24,7 @@ class GradingController extends Controller
 
     private const VERDICTS = ['approved', 'revision', 'rejected'];
 
-    /** An abstention needs a reason the panel and CaPSA can read. */
+    /** An abstention needs a reason the panel and CaPSA/TSA can read. */
     private const ABSTAIN_REASON_MIN = 10;
 
     // Who a panelist can grade comes from defense_panels (the real,

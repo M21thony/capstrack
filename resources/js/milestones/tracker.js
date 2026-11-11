@@ -35,7 +35,7 @@ async function drawPdf(box, url, label) {
 /*
  * The milestone tracker.
  *
- * A CaPSA sees one section at a time: a row per team with one strip of
+ * A CaPSA/TSA sees one section at a time: a row per team with one strip of
  * blocks, a block per milestone. A team's name opens a page of its own -
  * reached by a breadcrumb, not a dropdown - with every milestone and
  * deliverable, and the signed papers waiting for her check. Changing the
@@ -71,7 +71,7 @@ function start(root) {
 
   // A link from elsewhere - the bell, a team's own page - can name the team
   // and the paper: ?team=9&check=1 lands on that team with the scan already
-  // open, rather than leaving the CaPSA to hunt for the row.
+  // open, rather than leaving the CaPSA/TSA to hunt for the row.
   const link = new URLSearchParams(location.search);
   const linked = (S.data?.teams || []).find(t => t.id === Number(link.get('team')));
   if (linked) S.team = linked.id;
@@ -109,7 +109,7 @@ function start(root) {
 
   function draw() {
     const d = S.data;
-    // An expert's top bar already says Milestone progress; a CaPSA's says
+    // An expert's top bar already says Milestone progress; a CaPSA/TSA's says
     // Team Management, so hers names the tracker and links to its set-up.
     if (CAPSA) {
       const top = el('div', 'ms-top');
@@ -209,7 +209,7 @@ function start(root) {
       setup.href = fill(URLS.setup, program);
       box.append(setup);
     } else {
-      box.append(el('p', 'ms-hint', 'Their CaPSA has not set them up yet.'));
+      box.append(el('p', 'ms-hint', 'Their CaPSA/TSA has not set them up yet.'));
     }
     return box;
   }
@@ -456,8 +456,8 @@ function start(root) {
     if (r.state === 'overdue') return 'Overdue';
     if (r.state === 'not_started') return 'Open';
     switch (r.waiting_on) {
-      case 'capsa': return CAPSA ? 'Waiting for your check' : "Waiting for the CaPSA's check";
-      case 'title_review': return CAPSA ? 'Titles waiting for your recommendation' : "Titles waiting for the CaPSA's recommendation";
+      case 'capsa': return CAPSA ? 'Waiting for your check' : "Waiting for the CaPSA/TSA's check";
+      case 'title_review': return CAPSA ? 'Titles waiting for your recommendation' : "Titles waiting for the CaPSA/TSA's recommendation";
       case 'team': return r.note ? 'Sent back' : ordinal(Math.max(1, r.revision)) + ' revision requested';
       case 'signed_copy': return 'Approved, signed copy not uploaded';
       case 'adviser':
@@ -474,16 +474,16 @@ function start(root) {
   }
 
   function closer(r, t) {
-    const who = CAPSA ? 'you check' : 'the CaPSA checks';
+    const who = CAPSA ? 'you check' : 'the CaPSA/TSA checks';
     const signer = (r.role === 'consultant' ? t.consultant : t.adviser) || 'the ' + (r.role || 'adviser');
-    if (r.by_recommendation) return `Closed when ${CAPSA ? 'you recommend' : 'the CaPSA recommends'} one of the team's titles`;
-    if (r.by_archive) return `Closes when ${CAPSA ? 'you publish' : 'the CaPSA publishes'} it in the Archive`;
+    if (r.by_recommendation) return `Closed when ${CAPSA ? 'you recommend' : 'the CaPSA/TSA recommends'} one of the team's titles`;
+    if (r.by_archive) return `Closes when ${CAPSA ? 'you publish' : 'the CaPSA/TSA publishes'} it in the Archive`;
     return {
       form: `Closed when ${who} the signed form`,
       approval: `Closed when ${who} the CLF signed by ${signer}`,
       document: 'Closes when the adviser and the consultant both approve it',
       defense: 'Closes when the panel records a pass',
-      custom: CAPSA ? 'Ticked by you' : 'Ticked by the CaPSA',
+      custom: CAPSA ? 'Ticked by you' : 'Ticked by the CaPSA/TSA',
     }[r.kind] || '';
   }
 
@@ -527,7 +527,7 @@ function start(root) {
     syncCounts();
   }
 
-  // returnTo: the page the CaPSA came from. Deciding, or closing without
+  // returnTo: the page the CaPSA/TSA came from. Deciding, or closing without
   // deciding, takes her back there instead of leaving her on the tracker.
   function openCheck(r, t, returnTo = null) {
     const dialog = el('dialog', 'ms-dialog ms-check');

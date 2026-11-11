@@ -16,7 +16,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * When the CaPSA sends something back, nothing the student sent is removed:
+ * When the CaPSA/TSA sends something back, nothing the student sent is removed:
  * they are told what to change, and replace the file with a corrected copy.
  */
 class SentBackKeepsTheFileTest extends TestCase
@@ -62,7 +62,7 @@ class SentBackKeepsTheFileTest extends TestCase
             ->assertSee(route('student.documents.file', $fileId), false)
             ->assertSee('View the file you sent');
 
-        // The corrected copy goes back to the CaPSA to check; both versions are kept.
+        // The corrected copy goes back to the CaPSA/TSA to check; both versions are kept.
         $this->upload($leader, $form, now()->addMinute()->toDateTimeString(), null, 'submissions/team-form-2.pdf');
         $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $this->progressOf($checklist, $team, $form)->waiting_on);
         $this->assertSame(2, CapstoneDocument::where('deliverable_id', $form->id)->count());

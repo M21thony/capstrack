@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The CaPSA decides how many members a team may have.
+ * The CaPSA/TSA decides how many members a team may have.
  *
  * The number used to be written out as 5 in seven places - the invitation
  * check, both recruitment paths, the team page - so it could not be changed
@@ -73,7 +73,7 @@ class CapsaSetsTeamSizeTest extends TestCase
     }
 
     /**
-     * Every team follows the CaPSA, including one carrying a member_count.
+     * Every team follows the CaPSA/TSA, including one carrying a member_count.
      *
      * That column is written as a flat 5 whenever a team is made, so reading
      * it as a per-team override gave every team an "override" of 5 and the

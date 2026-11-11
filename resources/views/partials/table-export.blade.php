@@ -1,5 +1,5 @@
 {{--
-  View Report and Download Excel for the tables on CaPSA, Admin and Expert pages.
+  View Report and Download Excel for the tables on CaPSA/TSA, Admin and Expert pages.
 
   Included once, from each staff sidebar, so every page has it. A table opts in
   with data-export="Name of the report". Nothing else needs wiring: the script

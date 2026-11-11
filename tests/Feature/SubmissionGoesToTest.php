@@ -173,7 +173,7 @@ class SubmissionGoesToTest extends TestCase
         $this->assertCount(5, $reviews);
     }
 
-    /** A file for no line: the team picks who reads it, with nobody ticked and no CaPSA to pick. */
+    /** A file for no line: the team picks who reads it, with nobody ticked and no CaPSA/TSA to pick. */
     public function test_a_file_for_no_line_has_nobody_ticked_and_no_capsa(): void
     {
         $plan = $this->plan(null);
@@ -222,7 +222,7 @@ class SubmissionGoesToTest extends TestCase
         $this->send($line, ['adviser', 'consultant'], 'version one')->assertOk();
         $first = $this->reviewsOfLatest();
 
-        // The team now has a different adviser, and asks for the CaPSA as well.
+        // The team now has a different adviser, and asks for the CaPSA/TSA as well.
         DB::table('capstone_expert_application')->where('expert_id', $this->experts['adviser']->expert_id)->update(['status' => 'removed']);
         $this->engage('adviser');
 
@@ -254,7 +254,7 @@ class SubmissionGoesToTest extends TestCase
             ->assertJsonPath('version', 2)
             ->assertJsonPath('round', '1st revision');
 
-        // Asking for the CaPSA as well changes nothing: the consultant had it.
+        // Asking for the CaPSA/TSA as well changes nothing: the consultant had it.
         // Nor does a new file name: it is still the next version of that file.
         $this->actingAs($this->student)->postJson(route('student.submission.store'), [
             'file' => UploadedFile::fake()->createWithContent('diagram-notes-fixed-labels.pdf', 'version two'),
@@ -315,7 +315,7 @@ class SubmissionGoesToTest extends TestCase
             ->assertJsonPath('accept', ['pdf', 'drawio', 'vsdx'])
             ->assertJsonPath('locked', true)
             ->assertJsonPath('people.0.label', 'CaPA')
-            ->assertJsonPath('people.1.label', 'CaPSA')
+            ->assertJsonPath('people.1.label', 'CaPSA/TSA')
             ->assertJsonPath('remark.who', 'Your CaPA')
             ->assertJsonPath('remark.count', 2)
             ->assertJsonPath('remark.first', 'Tighten the problem statement.')
@@ -330,13 +330,13 @@ class SubmissionGoesToTest extends TestCase
             ->assertOk()
             ->assertJsonPath('item.paper', true)
             ->assertJsonPath('accept', ['pdf', 'jpg', 'jpeg', 'png'])
-            ->assertJsonPath('people.0.label', 'CaPSA')
+            ->assertJsonPath('people.0.label', 'CaPSA/TSA')
             ->assertJsonPath('people.0.name', $this->capsa->name);
     }
 
     public function test_the_team_sees_the_capsa_by_that_name(): void
     {
-        $this->assertSame('CaPSA', StudentReviewController::roleLabel('subject_adviser'));
+        $this->assertSame('CaPSA/TSA', StudentReviewController::roleLabel('subject_adviser'));
         $this->assertSame('Panelist', StudentReviewController::roleLabel('panel'));
     }
 

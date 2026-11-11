@@ -14,9 +14,9 @@ use Tests\TestCase;
 
 /**
  * Each member uploads their own receipt, with its OR number, and it goes
- * straight to the CaPSA, waiting to be checked - there is no stop with the
- * team leader. A receipt the CaPSA has, or has verified, is final until she
- * sends it back; a sent-back one is replaced and waits again. The CaPSA sees
+ * straight to the CaPSA/TSA, waiting to be checked - there is no stop with the
+ * team leader. A receipt the CaPSA/TSA has, or has verified, is final until she
+ * sends it back; a sent-back one is replaced and waits again. The CaPSA/TSA sees
  * the fees and receipts of her own sections.
  */
 class FinancialReceiptsTest extends TestCase
@@ -70,7 +70,7 @@ class FinancialReceiptsTest extends TestCase
         $this->assertSame(0, FinancialRecord::count());
     }
 
-    /** The CaPSA is told when the same OR number is on another receipt. */
+    /** The CaPSA/TSA is told when the same OR number is on another receipt. */
     public function test_the_same_or_number_on_two_receipts_is_flagged(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A']);
@@ -177,7 +177,7 @@ class FinancialReceiptsTest extends TestCase
             ->assertViewHas('financialState', fn ($state) => $state['receipts'][$fee->id.':'.$member->student_id]['status'] === 'pending');
     }
 
-    /** Nobody waits on the rest of the team: each receipt reaches the CaPSA as it is uploaded. */
+    /** Nobody waits on the rest of the team: each receipt reaches the CaPSA/TSA as it is uploaded. */
     public function test_each_members_receipt_reaches_the_capsa_on_its_own(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A']);
@@ -252,7 +252,7 @@ class FinancialReceiptsTest extends TestCase
         $this->assertSame('verified', $record->fresh()->f_record_status);
     }
 
-    /** Receipts a leader was still holding when the change shipped go to the CaPSA. */
+    /** Receipts a leader was still holding when the change shipped go to the CaPSA/TSA. */
     public function test_receipts_still_held_by_a_leader_are_released_to_the_capsa(): void
     {
         [, $student] = $this->teamInSection('Held');

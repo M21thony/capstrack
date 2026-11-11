@@ -19,7 +19,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * A CaPSA uploads the official student list for their sections.
+ * A CaPSA/TSA uploads the official student list for their sections.
  *
  * Students never wait on this - they can sign in with Google and use the site
  * the moment they arrive, list or no list, with their academic fields simply
@@ -71,7 +71,7 @@ class StudentRosterController extends Controller
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt'],
-            // Year Promotion: the 4th-year sections the CaPSA stays on with their students.
+            // Year Promotion: the 4th-year sections the CaPSA/TSA stays on with their students.
             'stay_on' => ['nullable', 'array'],
             'stay_on.*' => ['string'],
         ]);
@@ -192,7 +192,7 @@ class StudentRosterController extends Controller
      * it matches, so a list with a wrong column - or last term's sections -
      * changes real profiles, and nothing undoes it. This runs the same
      * reading and the same comparison store() runs and reports the outcome
-     * per row instead of writing it, so a CaPSA sees what a file does before
+     * per row instead of writing it, so a CaPSA/TSA sees what a file does before
      * it does it.
      */
     public function preview(Request $request): JsonResponse
@@ -217,7 +217,7 @@ class StudentRosterController extends Controller
 
             // Warn before the upload, not after it crashes: a number that
             // already belongs to a different account is dropped on import, so
-            // the CaPSA sees which rows will not carry theirs.
+            // the CaPSA/TSA sees which rows will not carry theirs.
             if ($row['student_number'] !== '' && $this->numberTakenByOther($row['student_number'], $student?->student_id)) {
                 $read['errors'][] = "Row {$row['row']}: student number {$row['student_number']} already belongs to {$this->holderOf($row['student_number'])}.";
             }
@@ -279,7 +279,7 @@ class StudentRosterController extends Controller
     /**
      * The blank list, with the headings this reads and one filled-in row.
      *
-     * The modal described the columns in prose, which left a CaPSA to type
+     * The modal described the columns in prose, which left a CaPSA/TSA to type
      * the headings by hand - and "Students No." for "Student No." reads as
      * no column at all, so the number silently never arrives. Handing over
      * the file removes that whole class of mistake, and the example row
@@ -449,7 +449,7 @@ class StudentRosterController extends Controller
 
     /**
      * Who moves up, by section: how many students go from each section to
-     * which, whether the uploading CaPSA has them now, and who (if anyone)
+     * which, whether the uploading CaPSA/TSA has them now, and who (if anyone)
      * already covers the section they are going to.
      *
      * @return list<array{from: string, to: string, students: int, mine: bool, covered_by: ?string, already_mine: bool}>
@@ -483,9 +483,9 @@ class StudentRosterController extends Controller
     }
 
     /**
-     * Put the CaPSA on the sections their students moved up into, where they
+     * Put the CaPSA/TSA on the sections their students moved up into, where they
      * asked to be. Only a section they had the students in before, and only
-     * one nobody else covers - two CaPSAs on one section is two people
+     * one nobody else covers - two CaPSA/TSAs on one section is two people
      * approving the same teams. Their old sections stay theirs.
      *
      * @return string[] the sections added
@@ -547,7 +547,7 @@ class StudentRosterController extends Controller
         );
     }
 
-    /** Who holds a student number, so the CaPSA can find the account that clashes. */
+    /** Who holds a student number, so the CaPSA/TSA can find the account that clashes. */
     private function holderOf(string $number): string
     {
         $holder = Student::where('student_number', $number)->first();
@@ -675,7 +675,7 @@ class StudentRosterController extends Controller
      * own profile, and every section lookup reads that shape - so a list that
      * gives year and section in separate columns has to be joined the same
      * way, or an imported student lands in a section of their own that no
-     * CaPSA covers.
+     * CaPSA/TSA covers.
      */
     private function yearSection(string $year, string $section, string $combined): string
     {

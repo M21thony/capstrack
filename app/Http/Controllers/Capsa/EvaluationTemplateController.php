@@ -16,10 +16,10 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
- * Expert Evaluations: the questions a CaPSA asks team leaders about their
+ * Expert Evaluations: the questions a CaPSA/TSA asks team leaders about their
  * experts after each defense, and what the answers add up to.
  *
- * An evaluation covers one defense stage and the roles the CaPSA picks;
+ * An evaluation covers one defense stage and the roles the CaPSA/TSA picks;
  * every question is answered 1 to 5 and the expert's rating is the average.
  * Results are anonymous - no team or student is ever read for them.
  */
@@ -50,7 +50,7 @@ class EvaluationTemplateController extends Controller
 
         return view('capsa.evaluations', [
             'tab' => $tab,
-            // Only what the CaPSA made: the defense is theirs to pick.
+            // Only what the CaPSA/TSA made: the defense is theirs to pick.
             'active' => $active,
             'turnedOff' => $templates->where('is_active', false)->values(),
             'resultStages' => collect(EvaluationTemplate::STAGES)->filter(fn ($s) => $templates->contains('defense_type', $s))->values()->all(),
@@ -65,7 +65,7 @@ class EvaluationTemplateController extends Controller
 
     /**
      * GET /capsa/evaluations/experts/{expert} - how teams answered each of
-     * the CaPSA's questions about one expert. Anonymous like the results.
+     * the CaPSA/TSA's questions about one expert. Anonymous like the results.
      */
     public function expert(Request $request, int $expert): View
     {
@@ -153,7 +153,7 @@ class EvaluationTemplateController extends Controller
         ];
     }
 
-    /** What leaders in this CaPSA's sections still owe, for one stage or all. */
+    /** What leaders in this CaPSA/TSA's sections still owe, for one stage or all. */
     private function owed(CapstoneExpert $capsa, ?string $stage)
     {
         return ExpertEvaluations::owedForCapsa($capsa)

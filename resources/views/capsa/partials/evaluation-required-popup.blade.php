@@ -1,4 +1,4 @@
-{{-- Tells a CaPSA that a defense is scheduled in their sections with no
+{{-- Tells a CaPSA/TSA that a defense is scheduled in their sections with no
      expert evaluation for its stage. Leaders owe an evaluation only if it
      exists before the defense is decided, so this asks as soon as there is a
      date. Not on the Expert Evaluations pages themselves; "Later" quiets it

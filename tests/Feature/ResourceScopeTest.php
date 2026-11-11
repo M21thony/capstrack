@@ -11,9 +11,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Resources are uploaded by a CaPSA and read by students.
+ * Resources are uploaded by a CaPSA/TSA and read by students.
  *
- * A CaPSA sees what they uploaded and nobody else's. A student sees the ones
+ * A CaPSA/TSA sees what they uploaded and nobody else's. A student sees the ones
  * for their own program plus the ones marked for every program - the filter
  * used to be skipped whenever the student's program could not be read, which
  * showed them every program's material instead.
@@ -89,7 +89,7 @@ class ResourceScopeTest extends TestCase
         $response->assertDontSee('Theirs');
     }
 
-    /** Even one marked for every program, if another CaPSA put it there. */
+    /** Even one marked for every program, if another CaPSA/TSA put it there. */
     public function test_an_all_programs_upload_by_someone_else_is_still_theirs(): void
     {
         $mine = $this->capsa(['BSIT-4A']);
@@ -133,7 +133,7 @@ class ResourceScopeTest extends TestCase
     }
 
     /**
-     * A student we cannot place has no CaPSA covering them, so they get
+     * A student we cannot place has no CaPSA/TSA covering them, so they get
      * nothing - deliberately, rather than everything. An empty scope read as
      * "no filter" is how this page came to show everybody everything.
      */
@@ -152,19 +152,19 @@ class ResourceScopeTest extends TestCase
         $response->assertDontSee('For BSIT');
     }
 
-    /** Another CaPSA's upload is not theirs to read, program or not. */
+    /** Another CaPSA/TSA's upload is not theirs to read, program or not. */
     public function test_a_student_does_not_see_another_capsas_uploads(): void
     {
         $mine = $this->capsa(['BSIT-4B']);
         $theirs = $this->capsa(['BSCS-4B']);
 
-        $this->resource('From My CaPSA', 'BSIT', $mine->expert_id);
-        $this->resource('From Another CaPSA', 'BSIT', $theirs->expert_id);
+        $this->resource('From My CaPSA/TSA', 'BSIT', $mine->expert_id);
+        $this->resource('From Another CaPSA/TSA', 'BSIT', $theirs->expert_id);
 
         $response = $this->actingAs($this->student('BSIT'), 'web')->get('/student/resources');
 
-        $response->assertSee('From My CaPSA');
-        $response->assertDontSee('From Another CaPSA');
+        $response->assertSee('From My CaPSA/TSA');
+        $response->assertDontSee('From Another CaPSA/TSA');
     }
 
     /** The program on the row still wins when it is there. */
@@ -229,7 +229,7 @@ class ResourceScopeTest extends TestCase
         $this->assertSame([], $this->resource('Untargeted', 'BSIT', $capsa->expert_id)->targetSections());
     }
 
-    /** A CaPSA's programs come from the sections they handle. */
+    /** A CaPSA/TSA's programs come from the sections they handle. */
     public function test_handled_programs_are_read_off_the_sections(): void
     {
         $capsa = $this->capsa(['BSIT-4A', 'BSIT-4B', 'BSIS-3A']);

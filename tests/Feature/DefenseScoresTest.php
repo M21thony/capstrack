@@ -19,7 +19,7 @@ use Tests\TestCase;
 
 /**
  * A team's defense score: every panelist's total added up and divided by the
- * panel (65 + 85 + 75, over 3), seen by the team, their section's CaPSA and
+ * panel (65 + 85 + 75, over 3), seen by the team, their section's CaPSA/TSA and
  * their adviser.
  */
 class DefenseScoresTest extends TestCase

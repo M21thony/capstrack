@@ -8,15 +8,15 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The CaPSA's expert list, minus the column that told them nothing.
+ * The CaPSA/TSA's expert list, minus the column that told them nothing.
  *
- * Sections are the Admin's: they are the thing a CaPSA is scoped by, and they
- * are set on the Admin's own expert page. Printing them here handed the CaPSA
+ * Sections are the Admin's: they are the thing a CaPSA/TSA is scoped by, and they
+ * are set on the Admin's own expert page. Printing them here handed the CaPSA/TSA
  * their own sections back, and printed an em-dash against every ordinary
  * expert, who never has any to begin with.
  *
  * The Admin's half of the pair keeps its Sections column - what changed is one
- * page's reading of the data, not what a CaPSA is scoped by.
+ * page's reading of the data, not what a CaPSA/TSA is scoped by.
  */
 class CapsaExpertsTableTest extends TestCase
 {

@@ -16,7 +16,7 @@ use Tests\TestCase;
  * student stays reachable while four are selected. And nothing on these pages
  * asks a question through the browser any more - window.prompt could not show
  * what a change would come to, could not be cancelled halfway through a pair
- * of them, and asked a CaPSA to pick a program by typing a number.
+ * of them, and asked a CaPSA/TSA to pick a program by typing a number.
  */
 class RowActionsAndBulkSheetsTest extends TestCase
 {
@@ -138,7 +138,7 @@ class RowActionsAndBulkSheetsTest extends TestCase
 
         // The two used to be a person-plus and a person-minus icon, which is
         // the shape of an add-friend button and said nothing about capstone.
-        $this->assertStringContainsString('Remove CaPSA role', $html);
+        $this->assertStringContainsString('Remove CaPSA/TSA role', $html);
         $this->assertStringContainsString('Deactivate', $html);
         $this->assertStringContainsString('Edit sections', $html);
         $this->assertStringNotContainsString('window.confirm(', $html);

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 /**
- * The leader answering the CaPSA's evaluation of one of the team's experts
+ * The leader answering the CaPSA/TSA's evaluation of one of the team's experts
  * after a passed defense.
  */
 class ExpertEvaluationController extends Controller

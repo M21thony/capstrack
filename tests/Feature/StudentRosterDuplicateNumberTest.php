@@ -17,7 +17,7 @@ use Tests\TestCase;
  * students.student_number is unique, so a row carrying a number another
  * account already holds - the template's own example row is the usual
  * culprit - used to throw straight through to a "Server Error". The upload
- * now keeps importing, drops just that number, and tells the CaPSA which
+ * now keeps importing, drops just that number, and tells the CaPSA/TSA which
  * rows it happened on.
  */
 class StudentRosterDuplicateNumberTest extends TestCase
@@ -73,11 +73,11 @@ class StudentRosterDuplicateNumberTest extends TestCase
         $created = Student::where('email', 'juan.delacruz@my.cspc.edu.ph')->firstOrFail();
         $this->assertNull($created->student_number);
 
-        // And the CaPSA is told, by row, rather than left with a crash.
+        // And the CaPSA/TSA is told, by row, rather than left with a crash.
         $errors = implode(' ', $response->json('errors'));
         $this->assertStringContainsString('221001135', $errors);
         $this->assertStringContainsString('another account', $errors);
-        // Named, so the CaPSA can find the account that holds it.
+        // Named, so the CaPSA/TSA can find the account that holds it.
         $this->assertStringContainsString('someone.else@my.cspc.edu.ph', $errors);
     }
 

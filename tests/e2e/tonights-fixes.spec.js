@@ -95,7 +95,7 @@ test('a member with no role is asked once, and cannot dismiss it', async ({ page
   test.skip(await dialog.count() === 0, 'this student already has a role');
 
   await expect(dialog).toBeVisible();
-  // No close button on purpose: every roster row and the CaPSA's own
+  // No close button on purpose: every roster row and the CaPSA/TSA's own
   // verification list read this field.
   await expect(dialog.locator('.pm-close-btn, .sheet-x')).toHaveCount(0);
   // Programmer is stated, never offered.

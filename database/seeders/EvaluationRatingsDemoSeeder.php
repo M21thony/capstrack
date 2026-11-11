@@ -16,13 +16,13 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Dummy expert evaluations, for seeing the ratings: the CaPSA's Expert
+ * Dummy expert evaluations, for seeing the ratings: the CaPSA/TSA's Expert
  * Evaluations (questions and results), the expert's My Evaluations, and the
  * stars and review counts on the students' Find experts.
  *
  * Ten BSIT-3B teams passed their Pre-proposal Defense over the last two
  * months, six of them their Title Defense too, and each leader evaluated the
- * team's experts on the CaPSA's questions:
+ * team's experts on the CaPSA/TSA's questions:
  *
  *   Pre-proposal Defense   the five standard questions, every role
  *   Title Defense          four questions, adviser and consultant
@@ -31,7 +31,7 @@ use Illuminate\Support\Facades\DB;
  * The experts are the chosen one (an adviser on six teams, the consultant on
  * four) and three demo experts - Liza Bautista (adviser), Jomar Reyes
  * (consultant) and Ana Villanueva (grammarian) - each rated on a different
- * curve, so the averages differ. The evaluations belong to the CaPSA of
+ * curve, so the averages differ. The evaluations belong to the CaPSA/TSA of
  * BSIT-3B. Every other account is @example.test, so nothing emails a real
  * person. Running it again replaces the demo.
  *
@@ -101,7 +101,7 @@ class EvaluationRatingsDemoSeeder extends Seeder
         if (! $me || ! $capsa) {
             $this->command?->error(! $me
                 ? 'No expert account to rate. Sign in as an expert first, then run this again.'
-                : 'No CaPSA covers '.self::SECTION.'. Give a CaPSA that section, or set EVAL_DEMO_CAPSA.');
+                : 'No CaPSA/TSA covers '.self::SECTION.'. Give a CaPSA/TSA that section, or set EVAL_DEMO_CAPSA.');
 
             return;
         }
@@ -141,7 +141,7 @@ class EvaluationRatingsDemoSeeder extends Seeder
         }
 
         $this->command?->info(sprintf(
-            'Evaluation demo is ready: %d evaluations. CaPSA %s - Expert Evaluations > Results. Expert %s - My Evaluations.',
+            'Evaluation demo is ready: %d evaluations. CaPSA/TSA %s - Expert Evaluations > Results. Expert %s - My Evaluations.',
             ExpertEvaluation::whereIn('team_id', Team::where('team_name', 'like', self::PREFIX.'%')->pluck('team_id'))->count(),
             $capsa->email,
             $me->email,

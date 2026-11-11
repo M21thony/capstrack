@@ -18,6 +18,6 @@ class RoleSeeder extends Seeder
         // worked. Seeded properly now that role assignment is a real,
         // deliberate CAPSA action (AdminApprovalController::approve()) rather
         // than a checkbox nobody's write path actually saved.
-        Role::updateOrCreate(['role_name' => 'capstone_adviser'], ['description' => 'Serves as Capstone Project Subject Adviser (CaPSA) or Thesis Subject Adviser for a program.']);
+        Role::updateOrCreate(['role_name' => 'capstone_adviser'], ['description' => 'Serves as Capstone Project Subject Adviser (CaPSA/TSA) or Thesis Subject Adviser for a program.']);
     }
 }

@@ -21,7 +21,7 @@ class ActivityLogController extends Controller
 
     public function index(Request $request)
     {
-        // A CaPSA reads their own sections here; the admin reads everything.
+        // A CaPSA/TSA reads their own sections here; the admin reads everything.
         $visibleIds = ActivityScope::studentIdsFor(Auth::guard('expert')->user());
 
         $query = ActivityLog::with('student.currentTeam')

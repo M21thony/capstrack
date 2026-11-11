@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 /**
  * A student's Financial Records: each defense fee, their own receipt for it,
  * and where each teammate stands. Each member uploads their own receipt to
- * their team leader, who sends the team's receipts to the CaPSA together.
+ * their team leader, who sends the team's receipts to the CaPSA/TSA together.
  *
  * It is a tab of Team Management now (TeamController::index draws it), so
  * the old address opens that tab - links in notifications and bookmarks
@@ -46,6 +46,6 @@ class StudentFinancialController extends Controller
 
         FinancialRecord::submitFor($student, ExpensePost::findOrFail($validated['expense_post_id']), $request->file('receipt_image'), $validated['receipt_number']);
 
-        return redirect()->back()->with('success', 'Receipt saved. Your team leader sends it to the CaPSA with everyone else\'s.');
+        return redirect()->back()->with('success', 'Receipt saved. Your team leader sends it to the CaPSA/TSA with everyone else\'s.');
     }
 }

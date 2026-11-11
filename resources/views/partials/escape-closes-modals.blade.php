@@ -13,7 +13,7 @@
 
   Deliberately last-resort. A panel that must not be dismissed says so by
   carrying data-no-escape - the role choice is the only one today, because
-  every roster row and the CaPSA's verification list read the field it sets.
+  every roster row and the CaPSA/TSA's verification list read the field it sets.
 --}}
 <script nonce="{{ Vite::cspNonce() }}">
 (function () {

@@ -105,7 +105,7 @@ if (config('filesystems.disks.public.driver') === 's3') {
 // is_staff for what each bucket means.
 // Pages both roles open. They are registered under BOTH prefixes rather
 // than shared from one, so an Admin never sees /capsa in the address of a
-// page that is theirs, and a CaPSA never sees /admin. Same controllers
+// page that is theirs, and a CaPSA/TSA never sees /admin. Same controllers
 // either way - only the address and the guard in front of it differ.
 $pagesBothRolesOpen = function () {
     // Expert List upload is shared. It only creates approved accounts
@@ -113,7 +113,7 @@ $pagesBothRolesOpen = function () {
     // hands Admin no role-assignment power - it just gets people into
     // the system. That matters on a fresh install: Admin can populate
     // the list from the .xlsx without hand-typing anyone's email, then
-    // make one of them CaPSA, who assigns everyone's roles from there.
+    // make one of them CaPSA/TSA, who assigns everyone's roles from there.
     Route::get('/rosters/experts/template', [ExpertRosterController::class, 'template'])->name('rosters.experts.template');
     Route::post('/rosters/experts/preview', [ExpertRosterController::class, 'preview'])->name('rosters.experts.preview');
     Route::post('/rosters/experts', [ExpertRosterController::class, 'store'])->name('rosters.experts.store');
@@ -150,33 +150,33 @@ $pagesBothRolesOpen = function () {
         return response()->json(['success' => true]);
     })->name('notifications.seen');
 };
-// Admin's own surface: naming a CaPSA, the student accounts, the system
+// Admin's own surface: naming a CaPSA/TSA, the student accounts, the system
 // settings, and the dean's read-only Fees and Archive. Everything else an
-// Admin can open is shared with CaPSA and lives under /capsa with it.
+// Admin can open is shared with CaPSA/TSA and lives under /capsa with it.
 Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () use ($pagesBothRolesOpen) {
 
     Route::middleware('expert.admin')->group(function () {
-        // Making a CaPSA from an email alone, for someone who has no account
-        // yet - there is no permanent CaPSA, so this happens often enough
+        // Making a CaPSA/TSA from an email alone, for someone who has no account
+        // yet - there is no permanent CaPSA/TSA, so this happens often enough
         // that it should not need a spreadsheet with one row in it.
         Route::post('/experts/capsa', [AdminExpertsController::class, 'storeCapsa'])->name('experts.capsa.store');
         Route::put('/experts/{expert}/capsa', [AdminExpertsController::class, 'toggleCapsa'])->name('experts.capsa.update');
         // Changing sections is not a change of role, so it does not go
         // through the toggle - see AdminExpertsController::updateSections.
         Route::put('/experts/{expert}/sections', [AdminExpertsController::class, 'updateSections'])->name('experts.sections');
-        // A register, not an editor. Students belong to their CaPSA - enrolled
+        // A register, not an editor. Students belong to their CaPSA/TSA - enrolled
         // from the section list and the roster import, both on that side. The
         // one write is removing an account outright, which is the Admin's.
         Route::get('/students', [StudentAccountsController::class, 'index'])->name('students');
         Route::delete('/students/{student}', [StudentAccountsController::class, 'destroy'])->name('students.destroy');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
         Route::put('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
-        // Sections have to exist before anybody can be made a CaPSA over them,
+        // Sections have to exist before anybody can be made a CaPSA/TSA over them,
         // and they cannot be worked out from students on an install that has
         // none yet - see App\Support\SectionCatalog.
         Route::post('/settings/sections', [AdminSettingsController::class, 'storeSections'])->name('settings.sections.store');
         Route::delete('/settings/sections', [AdminSettingsController::class, 'destroySection'])->name('settings.sections.destroy');
-        // The dean only reads these. The CaPSA sends the fees and keeps the archive.
+        // The dean only reads these. The CaPSA/TSA sends the fees and keeps the archive.
         Route::get('/fees', [AdminFinancialController::class, 'fees'])->name('fees');
         Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
         // Bluebook Clearance: the dean checks each line, then clears the team.
@@ -192,7 +192,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
     Route::middleware('expert.admin')->group($pagesBothRolesOpen);
 });
 
-// The CaPSA's pages answered on /admin until now, so a bookmark, an open tab
+// The CaPSA/TSA's pages answered on /admin until now, so a bookmark, an open tab
 // or a pasted link still points there. These send those to where the page
 // actually lives rather than showing a 404 for an address that worked
 // yesterday. Safe to delete once nobody is on an old link - the paths kept
@@ -211,11 +211,11 @@ Route::get('/admin/{path}', function (string $path) {
     return redirect('/capsa/'.$path);
 })->where('path', '(?!students|settings|gdrive|experts)[a-zA-Z0-9/_-]+');
 
-// The CaPSA's surface. This used to sit under /admin with everything else,
-// which meant a CaPSA saw "admin" in the address of every page they opened -
+// The CaPSA/TSA's surface. This used to sit under /admin with everything else,
+// which meant a CaPSA/TSA saw "admin" in the address of every page they opened -
 // including the ones an Admin cannot reach at all. The pages both roles open
 // (dashboard, the expert list, the sections) live here too: the
-// system is overwhelmingly the CaPSA's to run, so their reading of the URL is
+// system is overwhelmingly the CaPSA/TSA's to run, so their reading of the URL is
 // the one that should be right.
 Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')->name('capsa.')->group(function () use ($pagesBothRolesOpen) {
     Route::middleware('expert.capsa')->group(function () {
@@ -225,8 +225,8 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // faculty come in on an uploaded list or are added by address - so its
         // queue was always empty. An old bookmark lands on Expert Management.
         Route::redirect('/approval', '/capsa/experts');
-        // Assigning an expert's roles is the CaPSA's call, not Admin's. Admin's copy of Expert Management lists
-        // CaPSAs and only CaPSAs, so there was never an expert on that page whose
+        // Assigning an expert's roles is the CaPSA/TSA's call, not Admin's. Admin's copy of Expert Management lists
+        // CaPSA/TSAs and only CaPSA/TSAs, so there was never an expert on that page whose
         // roles an Admin could be setting - and a button they cannot use is a
         // smaller problem than an endpoint they still can.
         Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
@@ -236,7 +236,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::get('/panel_assignment', [DefenseSchedulingController::class, 'panels'])->name('panel_assignment');
         Route::get('/defense-scheduling', [DefenseSchedulingController::class, 'index'])->name('defense_scheduling');
         // Team Management is the single page for everything about the teams
-        // in a CaPSA's sections. Team Verification's actions keep their old
+        // in a CaPSA/TSA's sections. Team Verification's actions keep their old
         // route names so nothing that links to them breaks, but its page
         // redirects here - it was only ever half of this.
         Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
@@ -269,16 +269,16 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // may create or join one. One resource, replaced whole on save.
         Route::get('/team-rules', [TeamRulesController::class, 'show'])->name('team_rules');
         Route::put('/team-rules', [TeamRulesController::class, 'update'])->name('team_rules.update');
-        // A member leaving a team that passed Title Defense - the CaPSA decides.
+        // A member leaving a team that passed Title Defense - the CaPSA/TSA decides.
         Route::get('/leave-requests', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'index'])->name('leave_requests');
         Route::patch('/leave-requests/{leaveRequest}', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'update'])->name('leave_requests.update');
-        // A team changing an expert who already took them on - the CaPSA decides.
+        // A team changing an expert who already took them on - the CaPSA/TSA decides.
         Route::patch('/expert-removal-requests/{expertRemovalRequest}', [ExpertRemovalRequestController::class, 'update'])->name('expert_removal_requests.update');
         Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management'))->name('verify_teams');
         Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
         Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
         Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');
-        // A CaPSA's checklists, edited in the Edit milestones window on the
+        // A CaPSA/TSA's checklists, edited in the Edit milestones window on the
         // Milestones tab. One per program serves every section of that program.
         Route::get('/checklists', [ChecklistController::class, 'index'])->name('checklists.index');
         Route::post('/checklists', [ChecklistController::class, 'store'])->name('checklists.store');
@@ -295,7 +295,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::patch('/deliverables/{deliverable}', [DeliverableController::class, 'update'])->name('deliverables.update');
         // Undo for a remove.
         Route::put('/removals', [RemovalController::class, 'update'])->name('removals.update');
-        // The CaPSA's check of one team's signed paper.
+        // The CaPSA/TSA's check of one team's signed paper.
         Route::put('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'update'])->name('deliverables.checks.update');
         Route::delete('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'destroy'])->name('deliverables.checks.destroy');
         // One section of the tracker, loaded when its tab is picked.
@@ -310,7 +310,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::delete('/reports/tables/{table}', [ReportBuilderController::class, 'destroy'])->name('reports.tables.destroy');
         Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show')
             ->whereIn('report', array_keys(CapsaReports::REPORTS));
-        // The file a team uploaded for a line, opened by the CaPSA to check it.
+        // The file a team uploaded for a line, opened by the CaPSA/TSA to check it.
         Route::get('/documents/{document}/file', [DocumentFileController::class, 'show'])->name('documents.file');
         Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
         // The questions team leaders answer about their experts after each
@@ -329,7 +329,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::delete('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('financial.expense-post.destroy');
         Route::patch('/financial/receipts/{financialRecord}', [AdminFinancialController::class, 'updateReceipt'])->name('financial.receipt.update');
         // Upload is a modal on Student Section List itself, not its own page.
-        // The template is offered inside that same modal - a CaPSA who has to
+        // The template is offered inside that same modal - a CaPSA/TSA who has to
         // go looking for it elsewhere ends up typing the headings by hand.
         Route::get('/rosters/students/template', [StudentRosterController::class, 'template'])->name('rosters.students.template');
         Route::post('/rosters/students/preview', [StudentRosterController::class, 'preview'])->name('rosters.students.preview');
@@ -337,7 +337,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
 
         // Archive/Announcements/Resources are academic-process content
         // (archived capstones, lesson templates, student-facing
-        // announcements) - CaPSA's to change. Admin reads the archive at
+        // announcements) - CaPSA/TSA's to change. Admin reads the archive at
         // admin.archive.
         Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
         Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
@@ -348,7 +348,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // unscoped list they actually want.
         Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
 
-        // A CaPSA's own students. These moved off the admin page, where the person
+        // A CaPSA/TSA's own students. These moved off the admin page, where the person
         // who runs the subject had to ask someone else to fix a section.
         // PATCH rather than PUT: the row editor sends everything and setting a
         // section for a group sends only that, and both are partial changes to the
@@ -400,7 +400,7 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::patch('/assignments/{assignment}', [InstructorAssignmentController::class, 'update'])->name('assignments.update');
     Route::delete('/assignments/{assignment}', [InstructorAssignmentController::class, 'remove'])->name('assignments.remove');
     // The pre-proposal PDF a team applied with, when they used the one
-    // their CaPSA approved instead of attaching a file.
+    // their CaPSA/TSA approved instead of attaching a file.
     Route::get('/assignments/{assignment}/pre-proposal', [InstructorAssignmentController::class, 'preProposalDocument'])->name('assignments.pre_proposal');
     Route::view('/pending', 'instructor.pending')->name('pending');
     // Account approval is gone; the page needs the account it is about, which
@@ -453,7 +453,7 @@ Route::post('/login/google/mock', [AuthController::class, 'handleMockLogin'])->n
 Route::get('/login/rejected', [AuthController::class, 'rejected'])->name('login.rejected');
 // Faculty applying for their own account, switched off rather than deleted.
 //
-// A CaPSA now puts faculty in herself - on the uploaded list, or one at a
+// A CaPSA/TSA now puts faculty in herself - on the uploaded list, or one at a
 // time with Add Expert on Expert Management - so an account is only ever made
 // by somebody who already knows who the person is. Leaving the form reachable
 // alongside that gave two ways in with different vetting behind them, and a
@@ -462,7 +462,7 @@ Route::get('/login/rejected', [AuthController::class, 'rejected'])->name('login.
 // login page has always told them to "request account access"; for a while
 // these two lines were commented out and there was nowhere to do it.
 // Applying for an account is gone. Faculty arrive one of two ways - on the
-// list a CaPSA uploads, or added one at a time by address - so an account is
+// list a CaPSA/TSA uploads, or added one at a time by address - so an account is
 // only ever made by somebody who already knows who this person is. Asking a
 // stranger to fill in a form and then queueing it for approval was a third
 // way in that duplicated both and needed policing.
@@ -494,7 +494,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::put('/team/leadership/{notification}/reminder', [TeamController::class, 'remindLeadershipLater'])->name('team.leadership.remind-later');
     Route::delete('/team/members/{student}', [TeamController::class, 'removeMember'])->name('team.members.remove');
     Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
-    // After Title Defense, leaving or removing a member is asked of the CaPSA.
+    // After Title Defense, leaving or removing a member is asked of the CaPSA/TSA.
     Route::post('/team/capsa-leave-requests', [LeaveRequestController::class, 'store'])->name('team.capsa-leave-requests.store');
     Route::patch('/team/capsa-leave-requests/{leaveRequest}', [LeaveRequestController::class, 'update'])->name('team.capsa-leave-requests.update');
     Route::post('/recruitment', [RecruitmentController::class, 'store'])->name('recruitment.store');
@@ -613,7 +613,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     // The browser hands us the address its push service gave it.
     Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
 });
-// Download as Excel for any table on a CaPSA, Admin or Expert page: the page
+// Download as Excel for any table on a CaPSA/TSA, Admin or Expert page: the page
 // sends the columns and rows it is showing (partials/table-export).
 Route::post('table-export', [TableExportController::class, 'download'])
     ->middleware(['expert.auth'])
@@ -628,10 +628,10 @@ Route::get('table-report/{token}', [ReportController::class, 'snapshot'])
     ->middleware(['expert.auth', 'no.cache'])
     ->name('table.report.show');
 
-// The bell on every expert page - CaPSA, admin and instructor alike, since one
+// The bell on every expert page - CaPSA/TSA, admin and instructor alike, since one
 // person is often more than one of those. Deliberately not behind
 // expert.approved: an unapproved expert still needs to hear a team apply to them.
-// Finished or skipped the portal tour - CaPSA, Admin and Expert alike, from
+// Finished or skipped the portal tour - CaPSA/TSA, Admin and Expert alike, from
 // whichever sidebar they have.
 Route::put('instructor/tour', [App\Http\Controllers\Instructor\PortalTourController::class, 'update'])
     ->middleware(['expert.auth'])
@@ -686,12 +686,12 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     Route::get('/status', [GoogleDriveController::class, 'status'])->name('status');
     Route::delete('/connection', [GoogleDriveController::class, 'disconnect'])->name('connection.destroy');
     Route::get('/folders', [GoogleDriveController::class, 'listFolders'])->name('folders.index');
-    // What is inside a folder the CaPSA picked, so each file can be given
+    // What is inside a folder the CaPSA/TSA picked, so each file can be given
     // its own category before anything is taken on.
     Route::get('/folders/{folder}/files', [GoogleDriveController::class, 'folderFiles'])->name('folders.files.index');
     Route::post('/folders', [GoogleDriveController::class, 'createFolder'])->name('folders.store');
     Route::post('/resources', [GoogleDriveController::class, 'upload'])->name('resources.store');
-    // Taking on files that already exist in the CaPSA's Drive. An import
+    // Taking on files that already exist in the CaPSA/TSA's Drive. An import
     // is the thing being made here - the files are not touched beyond
     // being opened to their students.
     Route::post('/imports', [GoogleDriveController::class, 'import'])->name('imports.store');
@@ -722,7 +722,7 @@ if (app()->environment('local')) {
         return redirect()->route(Route::has($route) ? $route : 'student.duplication');
     })->name('dev.login.student');
 
-    // The same door for the staff side. Admin and CaPSA are different
+    // The same door for the staff side. Admin and CaPSA/TSA are different
     // accounts with different pages, and a browser test cannot sign in
     // through Google any more than a student one can.
     Route::get('/__dev-login-expert/{role}/{page?}', function (string $role, ?string $page = null) {

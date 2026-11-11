@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * The panel grades on paper. The section's CaPSA types each sheet's total on
+ * The panel grades on paper. The section's CaPSA/TSA types each sheet's total on
  * Team Management's Grades tab and attaches the signed sheets as one PDF; the
  * Panel Chair sets who grades (Individual, Joint, Mixed) from Grading setup.
  */

@@ -166,7 +166,7 @@
     <div>
       <div style="font-size:13px;font-weight:700;color:var(--text)">Archive Entry</div>
       <div style="font-size:12px;color:var(--text3);margin-top:2px">
-        Your title, abstract and proponents. It goes into the archive once your CaPSA publishes it.
+        Your title, abstract and proponents. It goes into the archive once your CaPSA/TSA publishes it.
       </div>
     </div>
     @if ($sub['existing'])
@@ -187,7 +187,7 @@
         @endif
       </div>
       @if ($sub['existing']->submission_status === \App\Models\ArchivedDocument::PENDING)
-        <div style="color:var(--text3);margin-top:4px">Your CaPSA has to publish it before it appears in the archive. One entry per team.</div>
+        <div style="color:var(--text3);margin-top:4px">Your CaPSA/TSA has to publish it before it appears in the archive. One entry per team.</div>
       @endif
     </div>
   @elseif (! $sub['isLeader'])
@@ -345,7 +345,7 @@
   <div class="arx-empty">
     <span class="arx-empty-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5" rx="1"/><path d="M10 12h4"/></svg></span>
     <b>No archived capstones yet</b>
-    <p>Finished capstones appear here once your CaPSA publishes them.</p>
+    <p>Finished capstones appear here once your CaPSA/TSA publishes them.</p>
   </div>
 @endif
 <div class="arx-empty" id="archive-empty" style="display:none">

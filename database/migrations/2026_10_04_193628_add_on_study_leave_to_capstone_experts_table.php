@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * An expert on study leave - taking a master's or a doctorate - still takes
- * teams, but is slower to schedule. The CaPSA sets it; students see it as a
+ * teams, but is slower to schedule. The CaPSA/TSA sets it; students see it as a
  * quiet tag on the expert's card.
  */
 return new class extends Migration

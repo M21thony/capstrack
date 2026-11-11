@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 /**
  * Team Assignments became the Team Applications tab of Teams, the same for an
- * expert and a CaPSA; the To do keeps the waiting ones as a shortcut.
+ * expert and a CaPSA/TSA; the To do keeps the waiting ones as a shortcut.
  */
 class TeamApplicationsTabTest extends TestCase
 {

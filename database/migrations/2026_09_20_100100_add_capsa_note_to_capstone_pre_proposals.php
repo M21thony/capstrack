@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * The suggestion a CaPSA may leave when she recommends a title.
+     * The suggestion a CaPSA/TSA may leave when she recommends a title.
      *
      * Its own column rather than adviser_note: that one is the team's own
      * adviser confirming the title, written before it ever reaches her.

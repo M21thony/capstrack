@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
 class AdminExpertsController extends Controller
 {
     /**
-     * Display a listing of the experts. Admin and CaPSA each get their own
+     * Display a listing of the experts. Admin and CaPSA/TSA each get their own
      * separate view now (resources/views/admin/experts.blade.php vs
      * capsa/experts.blade.php) - same URL and route name either way, the
      * view picked just depends on who's looking, so this one method still
@@ -28,9 +28,9 @@ class AdminExpertsController extends Controller
      *
      * Admin accounts never appear in this list, for either viewer - Admin
      * is a different kind of account entirely (runs the platform), not a
-     * professional role like Adviser/Consultant/Grammarian/CaPSA that this
+     * professional role like Adviser/Consultant/Grammarian/CaPSA/TSA that this
      * page exists to manage. This is unconditional, not "hide it from
-     * CaPSA but show it to Admin" - an Admin managing another Admin's
+     * CaPSA/TSA but show it to Admin" - an Admin managing another Admin's
      * account isn't this page's job either.
      */
     public function index()
@@ -38,8 +38,8 @@ class AdminExpertsController extends Controller
         $viewer = auth('expert')->user();
         $isCapsaOnly = $viewer && $viewer->is_capsa && ! $viewer->is_admin;
 
-        // Admin's copy of this page is about CaPSAs and nothing else - the
-        // faculty themselves are the CaPSA's to onboard and give roles to,
+        // Admin's copy of this page is about CaPSA/TSAs and nothing else - the
+        // faculty themselves are the CaPSA/TSA's to onboard and give roles to,
         // from their own copy, so listing every expert here only offered the
         // same job from two places with different powers behind it.
         // The only list that shows a deactivated account, because it is the
@@ -63,13 +63,13 @@ class AdminExpertsController extends Controller
             ->sortBy(fn ($e) => $e->expert_id === $viewer?->expert_id ? 0 : 1)
             ->values();
 
-        // Section picker for the "Make CaPSA" and "Edit sections" modals.
+        // Section picker for the "Make CaPSA/TSA" and "Edit sections" modals.
         // Assigning takes a section, not a year: the picker shows each
         // program's letters, and a letter is that section's starting class
         // (3rd year, where capstone starts - "BSIT-3A"). Where that class goes
         // in 4th year is Year Promotion's call. A 4th-year section is only
         // offered on its own, below, once someone holds it or students are in
-        // it, so saving a CaPSA who already has one does not drop it.
+        // it, so saving a CaPSA/TSA who already has one does not drop it.
         $available = collect(AdminProfileController::getAllAvailableSections());
         $isStarting = fn (string $section) => (bool) preg_match('/^[A-Z]+-'.SectionCatalog::STARTING_YEAR.'[A-Z]*$/', $section);
 
@@ -79,9 +79,9 @@ class AdminExpertsController extends Controller
 
         // Not route names: these are the two view FILES. They read the same
         // as the route names, which is how a bulk rename of route('admin.x')
-        // to route('capsa.x') silently pointed both branches at the CaPSA
-        // page and took Add CaPSA away from Admin.
-        // Which sections another CaPSA already covers, so the picker can
+        // to route('capsa.x') silently pointed both branches at the CaPSA/TSA
+        // page and took Add CaPSA/TSA away from Admin.
+        // Which sections another CaPSA/TSA already covers, so the picker can
         // leave them out - a section handled twice means two people
         // approving the same teams.
         $sectionOwners = CapstoneExpert::whereHas(
@@ -148,7 +148,7 @@ class AdminExpertsController extends Controller
      * Add one expert from their email address.
      *
      * The list upload is for a whole faculty at once; this is for the person
-     * it missed. Without it a CaPSA had to re-upload a spreadsheet to admit
+     * it missed. Without it a CaPSA/TSA had to re-upload a spreadsheet to admit
      * one late arrival, which is a lot of ceremony for one row - and it is
      * the reason a stricter sign-in rule for experts would have been unfair,
      * because there was no quick way to let somebody in.
@@ -167,8 +167,8 @@ class AdminExpertsController extends Controller
             'email' => ['required', 'email', 'max:190'],
             // The address is the whole of what is needed. A name typed here
             // is a guess at how somebody spells their own - Google gives the
-            // real one the first time they sign in, which is how Add CaPSA
-            // has always worked. Roles are the CaPSA's to set and can be set
+            // real one the first time they sign in, which is how Add CaPSA/TSA
+            // has always worked. Roles are the CaPSA/TSA's to set and can be set
             // now or from the row afterwards.
             'name' => ['nullable', 'string', 'max:120'],
             'roles' => ['nullable', 'array'],
@@ -205,7 +205,7 @@ class AdminExpertsController extends Controller
         //
         // The refusal does not say why. Naming the account confirms which
         // address belongs to the administrator to anybody who guesses it,
-        // and a CaPSA has no reason to be told. It is still a weak signal -
+        // and a CaPSA/TSA has no reason to be told. It is still a weak signal -
         // this is the only address that is refused - but a signal that
         // confirms nothing is worth more than one that does.
         $existing = CapstoneExpert::withTrashed()->where('email', $email)->first();
@@ -231,7 +231,7 @@ class AdminExpertsController extends Controller
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'credentials' => $credentials,
-                // CaPSA naming them is the vetting, the same as including
+                // CaPSA/TSA naming them is the vetting, the same as including
                 // them on the list - there is nobody left to approve them.
                 'approved_status' => true,
                 'reject_attempts' => 0,
@@ -261,11 +261,11 @@ class AdminExpertsController extends Controller
         }
 
         // No roles asked for is a perfectly good state: the person exists and
-        // the CaPSA decides what they are later. Syncing an empty list would
+        // the CaPSA/TSA decides what they are later. Syncing an empty list would
         // strip the roles an existing expert already has.
         if ($wanted !== []) {
             // Scoped to the student-facing roles, so this can neither grant
-            // nor revoke CaPSA - that stays Admin's own action.
+            // nor revoke CaPSA/TSA - that stays Admin's own action.
             CapstoneExpert::syncRoles($expert->expert_id, $wanted, $roleIds->values());
         }
 
@@ -401,7 +401,7 @@ class AdminExpertsController extends Controller
      * back in short of the database. Every route that changes an expert
      * comes through here first.
      *
-     * A CaPSA is told nothing that identifies the account. The directory
+     * A CaPSA/TSA is told nothing that identifies the account. The directory
      * already hides the Admin from them, and a refusal that says "that is
      * the administrator" hands back exactly what the hiding was for. The
      * Admin acting on themselves gets the real reason, because they know
@@ -438,7 +438,7 @@ class AdminExpertsController extends Controller
         if ((int) $expert->expert_id === (int) Auth::guard('expert')->id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'You cannot deactivate your own account. Ask another CaPSA or the admin if it needs to be switched off.',
+                'message' => 'You cannot deactivate your own account. Ask another CaPSA/TSA or the admin if it needs to be switched off.',
             ], 422);
         }
 
@@ -552,7 +552,7 @@ class AdminExpertsController extends Controller
             ->pluck('role_id');
 
         // Scoped to the student-facing roles so this screen can neither grant
-        // nor revoke capstone_adviser (that is Make/Remove CaPSA's job), and
+        // nor revoke capstone_adviser (that is Make/Remove CaPSA/TSA's job), and
         // diffing rather than delete-all so an unchanged role keeps its
         // expert_role_id - the handle live assignments point at.
         CapstoneExpert::syncRoles($expert->expert_id, $validated['role_ids'], $allowedRoleIds);
@@ -564,10 +564,10 @@ class AdminExpertsController extends Controller
     }
 
     /**
-     * Change which sections a CaPSA covers, without touching the role.
+     * Change which sections a CaPSA/TSA covers, without touching the role.
      *
-     * Sections could only be set while granting CaPSA, so changing them meant
-     * removing the person as CaPSA and making them one again - which cuts off
+     * Sections could only be set while granting CaPSA/TSA, so changing them meant
+     * removing the person as CaPSA/TSA and making them one again - which cuts off
      * their account approval, panel, verification and financial access in
      * between, for a change of section that was never about their role.
      */
@@ -598,13 +598,13 @@ class AdminExpertsController extends Controller
 
         $validated = $validator->validated();
 
-        // Sections are what a CaPSA covers, so they only mean anything on
+        // Sections are what a CaPSA/TSA covers, so they only mean anything on
         // someone who holds the role. Setting them on anyone else would leave
         // a value nothing reads, waiting to surprise whoever grants it later.
         if (! $expert->is_capsa) {
             return response()->json([
                 'success' => false,
-                'message' => 'That expert is not a CaPSA, so they have no sections to change.',
+                'message' => 'That expert is not a CaPSA/TSA, so they have no sections to change.',
             ], 422);
         }
 
@@ -623,9 +623,9 @@ class AdminExpertsController extends Controller
     // (one CAPSA can have multiple sections), so turning one on never turns
     // another off.
     /**
-     * Make somebody a CaPSA from their email address alone.
+     * Make somebody a CaPSA/TSA from their email address alone.
      *
-     * There is no permanent CaPSA - the job moves between faculty - and until
+     * There is no permanent CaPSA/TSA - the job moves between faculty - and until
      * now making one meant first getting them into the system through the
      * expert list upload, then finding them in it and granting the role. For
      * one person that is a spreadsheet to serve a single row. This makes the
@@ -648,7 +648,7 @@ class AdminExpertsController extends Controller
             'sections' => ['nullable', 'array'],
             'sections.*' => ['string'],
         ], [
-            'email.required' => 'Type the email address of the person to make a CaPSA.',
+            'email.required' => 'Type the email address of the person to make a CaPSA/TSA.',
             'email.email' => 'That is not an email address.',
         ]);
 
@@ -666,7 +666,7 @@ class AdminExpertsController extends Controller
         if (! Str::endsWith($email, CapstoneExpert::EMAIL_DOMAINS)) {
             return response()->json([
                 'success' => false,
-                'message' => 'A CaPSA signs in with '.implode(' or ', CapstoneExpert::EMAIL_DOMAINS)
+                'message' => 'A CaPSA/TSA signs in with '.implode(' or ', CapstoneExpert::EMAIL_DOMAINS)
                     .', so an address outside those could never be used.',
             ], 422);
         }
@@ -688,7 +688,7 @@ class AdminExpertsController extends Controller
         //
         // The refusal does not say why. Naming the account confirms which
         // address belongs to the administrator to anybody who guesses it,
-        // and a CaPSA has no reason to be told. It is still a weak signal -
+        // and a CaPSA/TSA has no reason to be told. It is still a weak signal -
         // this is the only address that is refused - but a signal that
         // confirms nothing is worth more than one that does.
         $existing = CapstoneExpert::withTrashed()->where('email', $email)->first();
@@ -729,7 +729,7 @@ class AdminExpertsController extends Controller
         ]);
 
         // Optional now, so an empty submission must not wipe the sections an
-        // existing CaPSA already handles.
+        // existing CaPSA/TSA already handles.
         if ($request->has('sections')) {
             $expert->sections = $request->input('sections', []);
         }
@@ -744,8 +744,8 @@ class AdminExpertsController extends Controller
             'created' => $created,
             'name' => $expert->name,
             'message' => $created
-                ? "{$label} was made a CaPSA. They can sign in with {$email}."
-                : "{$label} is now a CaPSA.",
+                ? "{$label} was made a CaPSA/TSA. They can sign in with {$email}."
+                : "{$label} is now a CaPSA/TSA.",
         ]);
     }
 
@@ -756,7 +756,7 @@ class AdminExpertsController extends Controller
      * Anthony Balilla, not Mark, of the family Anthony Balilla. Two given
      * names is the ordinary case here, not the exception.
      *
-     * Add Expert still asks for a name; Add CaPSA does not, and a blank one
+     * Add Expert still asks for a name; Add CaPSA/TSA does not, and a blank one
      * gives back two blank strings. It must never be read off the address
      * instead: that works for "juan.delacruz@" but produces
      * "Markanthonybalilla21" for an address with nothing to split on, which
@@ -801,7 +801,7 @@ class AdminExpertsController extends Controller
             ], 500);
         }
 
-        // Read once, up front - being a CaPSA is just holding this role, so
+        // Read once, up front - being a CaPSA/TSA is just holding this role, so
         // granting/revoking it IS the toggle. There is no is_capsa column to
         // keep in step any more.
         $willBeCapsa = ! $expert->is_capsa;
@@ -822,7 +822,7 @@ class AdminExpertsController extends Controller
             // Taking the role away frees their sections too. Left on the row,
             // TeamChecklist::capsaFor() - which reads sections, not the role -
             // kept sending those sections' checklist and requests to someone
-            // who is no longer a CaPSA, and the picker hid them from everyone
+            // who is no longer a CaPSA/TSA, and the picker hid them from everyone
             // else as already covered.
             if (! $willBeCapsa) {
                 $expert->sections = [];

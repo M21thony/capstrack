@@ -177,7 +177,7 @@
   $initials = fn ($name) => collect(preg_split('/\s+/', trim((string) $name)))
       ->reject(fn ($w) => $w === '' || str_ends_with($w, '.'))->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))
       ->pipe(fn ($c) => $c->count() > 1 ? $c->first().$c->last() : $c->implode(''));
-  // What she does here as CaPSA - titles, verifying, checks - only on a team
+  // What she does here as CaPSA/TSA - titles, verifying, checks - only on a team
   // in her sections; on a team she only advises, the page is an expert's.
   $asCapsa = $portal === 'capsa' && $row->inSections;
   $showRoute = $portal === 'capsa' ? 'capsa.team_management.show' : 'instructor.teams.show';

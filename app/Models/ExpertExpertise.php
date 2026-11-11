@@ -15,7 +15,7 @@ class ExpertExpertise extends Model
     /**
      * The sides an expert keeps research areas for: each role a team engages
      * them as, and sitting on a defense panel. A null side is a list from
-     * before sides existed, or one a CaPSA entered, and stands for all of them.
+     * before sides existed, or one a CaPSA/TSA entered, and stands for all of them.
      */
     public const SIDES = ['adviser' => 'CaPA', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian', 'panel' => 'Panel'];
 

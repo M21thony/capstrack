@@ -3,7 +3,7 @@
    pdf.js, never the browser's own viewer in an iframe - that brought its
    toolbar, and on a phone a download prompt instead of the paper.
 
-   Self-contained on purpose: it opens over the student portal, the CaPSA
+   Self-contained on purpose: it opens over the student portal, the CaPSA/TSA
    pages and the expert pages, which each load different stylesheets, so it
    names its own colours rather than borrowing a page's variables. */
 

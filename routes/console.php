@@ -17,7 +17,7 @@ Schedule::command('consultations:send-reminders')->dailyAt('00:05');
 // waiting on their review gets one email listing them.
 Schedule::command('milestones:send-review-reminders')->dailyAt('07:00');
 
-// Milestones and deliverables a CaPSA removed are kept a few days so Undo can
+// Milestones and deliverables a CaPSA/TSA removed are kept a few days so Undo can
 // bring them back, then deleted for good.
 Schedule::command('checklists:purge-removed')->dailyAt('02:00');
 
@@ -33,11 +33,11 @@ Schedule::command('team-ratings:notify')->dailyAt('07:10');
 // once per phase, so running it often only makes the email arrive sooner.
 Schedule::command('evaluations:send-reminders')->hourly();
 
-// A request to leave a team, or to remove a member, that the CaPSA has not
+// A request to leave a team, or to remove a member, that the CaPSA/TSA has not
 // decided in three days is declined on its own and the team is told why.
 Schedule::command('leave-requests:expire')->hourly();
 
-// Each CaPSA is told when their programs have more teams needing an adviser,
+// Each CaPSA/TSA is told when their programs have more teams needing an adviser,
 // consultant or grammarian than there are free expert slots. Only a changed
 // shortage is sent, so running it hourly does not repeat the same notice.
 Schedule::command('experts:check-capacity')->hourly();

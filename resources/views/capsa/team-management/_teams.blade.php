@@ -109,7 +109,7 @@
           $untitled = [
             'awaiting_team_choice' => $row->approvedProposalCount.' recommended - the team is choosing',
             'settling' => 'One title recommended, waiting for the adviser',
-            'awaiting_review' => $row->inSections ? 'Titles to review' : 'Titles with the CaPSA',
+            'awaiting_review' => $row->inSections ? 'Titles to review' : 'Titles with the CaPSA/TSA',
             'all_rejected' => 'All titles turned down - the team is writing new ones',
           ][$row->titleState] ?? 'No titles yet';
         @endphp

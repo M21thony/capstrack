@@ -11,10 +11,10 @@ use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * The Analytics page, for the Admin and for every CaPSA.
+ * The Analytics page, for the Admin and for every CaPSA/TSA.
  *
  * Both open the same page and see different amounts of it: an Admin every
- * team, a CaPSA the teams in their sections. That scoping is not done here -
+ * team, a CaPSA/TSA the teams in their sections. That scoping is not done here -
  * DefenseAnalytics does it from the signed-in expert - so the page and the
  * CSV cannot disagree about who is in them.
  */

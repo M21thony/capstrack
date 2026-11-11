@@ -1,5 +1,5 @@
 /*
- * The CaPSA's Financial Records: fees as tabs, every receipt in her sections
+ * The CaPSA/TSA's Financial Records: fees as tabs, every receipt in her sections
  * grouped by team, and the selected receipt shown large with Verify / Send back.
  * A decision moves straight to the next receipt, so a batch needs no mouse.
  */

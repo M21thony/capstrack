@@ -1,6 +1,6 @@
 {{--
-  The Teams hub, the same for a CaPSA (Team Management) and an expert
-  (Teams): To do, Team Applications, Teams, and for a CaPSA a Milestones tab
+  The Teams hub, the same for a CaPSA/TSA (Team Management) and an expert
+  (Teams): To do, Team Applications, Teams, and for a CaPSA/TSA a Milestones tab
   that sets up the checklist.
 --}}
 <div class="tmx tm-hub" data-portal="{{ $portal }}">

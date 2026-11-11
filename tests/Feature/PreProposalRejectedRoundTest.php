@@ -14,7 +14,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * When the CaPSA turns down every title a team submitted, that round is over:
+ * When the CaPSA/TSA turns down every title a team submitted, that round is over:
  * the team saves new titles and submits them. The page used to stay on
  * "Submitted for checking" with nothing to press.
  */
@@ -59,7 +59,7 @@ class PreProposalRejectedRoundTest extends TestCase
         $this->actingAs($this->leader)->get(route('student.duplication'))
             ->assertOk()
             ->assertDontSee('Submitted for checking')
-            ->assertSee('Your CaPSA did not recommend any of these titles.')
+            ->assertSee('Your CaPSA/TSA did not recommend any of these titles.')
             ->assertSee('Save a new title to submit.')
             // Nothing new is saved yet, so there is nothing to submit.
             ->assertDontSee('id="pp-submit-btn"', false);
@@ -80,7 +80,7 @@ class PreProposalRejectedRoundTest extends TestCase
         $this->assertNotNull($new->fresh()->submitted_at);
         $this->assertSame('rejected', $rejected->fresh()->status);
 
-        // The new round is with the CaPSA, and an old rejection does not count
+        // The new round is with the CaPSA/TSA, and an old rejection does not count
         // as her having started on it: it can still be taken back.
         $this->actingAs($this->leader)->get(route('student.duplication'))
             ->assertSee('Submitted for checking')
@@ -112,7 +112,7 @@ class PreProposalRejectedRoundTest extends TestCase
 
         $this->actingAs($this->leader)->get(route('student.duplication'))
             ->assertSee('Submitted for checking')
-            ->assertDontSee('Your CaPSA did not recommend any of these titles.');
+            ->assertDontSee('Your CaPSA/TSA did not recommend any of these titles.');
 
         $this->actingAs($this->leader)
             ->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])

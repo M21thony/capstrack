@@ -19,7 +19,7 @@ use Tests\TestCase;
 
 /**
  * Reports: the index picks the period, each report opens as a table of the
- * CaPSA's own teams, and the PDF and the spreadsheet carry the columns,
+ * CaPSA/TSA's own teams, and the PDF and the spreadsheet carry the columns,
  * order and merged reports shown on screen.
  */
 class ReportsTest extends TestCase

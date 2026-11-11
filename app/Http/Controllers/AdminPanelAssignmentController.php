@@ -37,7 +37,7 @@ class AdminPanelAssignmentController extends Controller
     private const VENUES = DefenseBoard::VENUES;
 
     /**
-     * Held while a date is checked and saved, by every CaPSA: two of them
+     * Held while a date is checked and saved, by every CaPSA/TSA: two of them
      * saving at the same moment would otherwise both find the same slot free.
      */
     private const SAVE_LOCK = 'defense-schedule-save';
@@ -199,7 +199,7 @@ class AdminPanelAssignmentController extends Controller
             : $this->writePanelToAllStages($team, $validated);
 
         if ($result['success']) {
-            // A panel saved here is a draft until the CaPSA finalizes it.
+            // A panel saved here is a draft until the CaPSA/TSA finalizes it.
             $team->update(['panel_status' => empty($validated['chair_expert_id']) ? null : Team::PANEL_DRAFT]);
         }
 
@@ -454,9 +454,9 @@ class AdminPanelAssignmentController extends Controller
     /**
      * PUT /panel_assignment/schedule/{defense} - move one team's defense.
      *
-     * A clash inside the CaPSA's own sections is shown and can be kept on
+     * A clash inside the CaPSA/TSA's own sections is shown and can be kept on
      * purpose. A clash with another section's defense cannot: that booking is
-     * another CaPSA's, and overruling it would double-book their room or panelist.
+     * another CaPSA/TSA's, and overruling it would double-book their room or panelist.
      */
     public function updateSchedule(Request $request, DefenseSchedule $defense): JsonResponse
     {
@@ -488,14 +488,14 @@ class AdminPanelAssignmentController extends Controller
 
     /**
      * Run a check-and-save holding the save lock, waiting a few seconds for
-     * another CaPSA's save to finish first.
+     * another CaPSA/TSA's save to finish first.
      */
     private function whileSaving(callable $save): JsonResponse
     {
         try {
             return Cache::lock(self::SAVE_LOCK, 30)->block(5, $save);
         } catch (LockTimeoutException) {
-            return response()->json(['success' => false, 'message' => 'Another CaPSA is saving a schedule. Try again in a moment.'], 423);
+            return response()->json(['success' => false, 'message' => 'Another CaPSA/TSA is saving a schedule. Try again in a moment.'], 423);
         }
     }
 
@@ -546,7 +546,7 @@ class AdminPanelAssignmentController extends Controller
     /**
      * The same, for a panel that is not (yet) the defense's own - a panelist
      * about to be replaced. A panelist's day away can be kept on purpose,
-     * like a clash in the CaPSA's own sections; the defense goes ahead
+     * like a clash in the CaPSA/TSA's own sections; the defense goes ahead
      * without them.
      *
      * @param  array<int, int>  $ids
@@ -640,7 +640,7 @@ class AdminPanelAssignmentController extends Controller
 
     /**
      * POST /panel_assignment/schedule-drafts - a suggested date, time and
-     * venue for every team in the CaPSA's sections that can be scheduled for
+     * venue for every team in the CaPSA/TSA's sections that can be scheduled for
      * this stage. Nothing is saved.
      *
      * Suggestions are held in memory, and each next team's search treats them
@@ -802,7 +802,7 @@ class AdminPanelAssignmentController extends Controller
     }
 
     /**
-     * The CaPSA's teams sorted into ready to schedule for this stage and not,
+     * The CaPSA/TSA's teams sorted into ready to schedule for this stage and not,
      * with the reason - read from DefenseBoard, the one place that decides.
      *
      * @return array{0: Collection<int, DefenseSchedule>, 1: array<int, array{team_id: int, team_name: string, reason: string}>, 2: int}
@@ -850,7 +850,7 @@ class AdminPanelAssignmentController extends Controller
         $before = DefenseWindow::where('defense_type', $defenseType)->first();
         $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], array_filter($validated, fn ($v) => $v !== null) + ['updated_by' => $capsa->expert_id, 'updated_at' => now()]);
 
-        // Every section shares the window, so the other CaPSAs hear when it moves.
+        // Every section shares the window, so the other CaPSA/TSAs hear when it moves.
         if (! $before || ! $before->start_date->equalTo($window->start_date) || ! $before->end_date->equalTo($window->end_date)) {
             CapstoneExpert::whereHas('roles', fn ($q) => $q->where('role_name', CapstoneExpert::CAPSA_ROLE))->where('expert_id', '!=', $capsa->expert_id)->get()
                 ->each(fn (CapstoneExpert $other) => Notifier::toExpert($other, 'defense_window', $defenseType.' window: '.$window->start_date->format('M j').' – '.$window->end_date->format('M j'),

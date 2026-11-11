@@ -11,7 +11,7 @@ use Tests\TestCase;
 
 /**
  * A student can mistype the OR number they read off their receipt. The
- * CaPSA, looking at the photo, puts it right as she verifies - never on its
+ * CaPSA/TSA, looking at the photo, puts it right as she verifies - never on its
  * own, and only in the format a student would have to type it in.
  */
 class CapsaCorrectsOrNumberTest extends TestCase

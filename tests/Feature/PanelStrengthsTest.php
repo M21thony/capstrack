@@ -12,7 +12,7 @@ use Tests\TestCase;
 /**
  * Panel comment 15: an expert ticks what they are strongest in as a panelist
  * - manuscript, system design, software development - on their profile, and
- * the CaPSA's Assign panel shows it so a panel can cover all three.
+ * the CaPSA/TSA's Assign panel shows it so a panel can cover all three.
  */
 class PanelStrengthsTest extends TestCase
 {

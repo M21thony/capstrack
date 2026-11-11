@@ -18,7 +18,7 @@ class StudentSectionController extends Controller
         $adminSections = $admin->sections ?? [];
 
         // Only one of theirs. Picking a section used to skip the ownership
-        // check below entirely, so any CaPSA could read another's students by
+        // check below entirely, so any CaPSA/TSA could read another's students by
         // choosing their section from a list that offered all eleven of them.
         $selectedSection = $request->query('section');
 
@@ -39,7 +39,7 @@ class StudentSectionController extends Controller
 
         // Each team's own section - its leader's. A 4th-year team can have a
         // member here while it belongs to another section, and that student's
-        // row says so rather than looking like one of this CaPSA's teams.
+        // row says so rather than looking like one of this CaPSA/TSA's teams.
         $scope = app(SectionScope::class);
         $teamIds = $syRecords->pluck('team_id')->filter()->unique();
         $teamRecords = StudentSchoolYear::with('student')->whereIn('team_id', $teamIds)->get()->groupBy('team_id');
@@ -82,7 +82,7 @@ class StudentSectionController extends Controller
 
         $students = $students->values();
 
-        // The sections this CaPSA handles, which is what "All my sections"
+        // The sections this CaPSA/TSA handles, which is what "All my sections"
         // is the top of. It used to list every section in the college, so the
         // dropdown was mostly other people's work.
         $allSections = SectionCatalog::tidy($adminSections);

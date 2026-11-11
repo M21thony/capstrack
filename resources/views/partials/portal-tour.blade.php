@@ -128,7 +128,7 @@
   // On a phone the sidebar is off screen; a step about a sidebar link opens
   // it, and a step about anything else puts it back.
   // The student portal slides its sidebar in with a class on <body>; the
-  // CaPSA, Admin and Expert portals show it with .mobile-open, through their
+  // CaPSA/TSA, Admin and Expert portals show it with .mobile-open, through their
   // own openSidebar()/closeSidebar().
   function sidebarIsOpen() {
     return document.body.classList.contains('sidebar-open') || !!document.querySelector('.sidebar.mobile-open');

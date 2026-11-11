@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Templates & Lessons: the CaPSA's side of the students' Resources page.
+ * Templates & Lessons: the CaPSA/TSA's side of the students' Resources page.
  * One list with search and filters, rows that open in place, and an upload
  * panel that picks a category from chips.
  */

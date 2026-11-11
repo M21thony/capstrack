@@ -136,7 +136,7 @@ class SubmissionRevisionCheckTest extends TestCase
         $this->assertSame(['heading', 'unrelated'], $this->types($this->check($this->pdf('Chapter 3', self::CHAPTER_3), $line)));
     }
 
-    /** A signed form is a scan the CaPSA checks, not a draft that is revised. */
+    /** A signed form is a scan the CaPSA/TSA checks, not a draft that is revised. */
     public function test_a_signed_paper_is_not_checked(): void
     {
         $this->assertSame([], $this->types($this->check($this->pdf('Chapter 3', self::CHAPTER_3), $this->line($this->checklist, 'team_assignment_form'))));

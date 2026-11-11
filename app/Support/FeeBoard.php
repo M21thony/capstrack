@@ -18,14 +18,14 @@ use Illuminate\Support\Collection;
  * fee at all. Scheduling reads the same records (DefenseBoard::paidTeamIds).
  *
  * Each member uploads their own receipt to their team leader. Once every
- * member has, the leader sends them to the CaPSA together, who verifies each
+ * member has, the leader sends them to the CaPSA/TSA together, who verifies each
  * or sends it back. Only the latest upload per member per fee counts.
  */
 class FeeBoard
 {
     public function __construct(private DefenseBoard $board) {}
 
-    /** @return array<string, mixed> what the CaPSA page draws */
+    /** @return array<string, mixed> what the CaPSA/TSA page draws */
     public function forCapsa(CapstoneExpert $capsa): array
     {
         ['teams' => $teams, 'sections' => $sections] = $this->board->teamsFor($capsa);
@@ -54,7 +54,7 @@ class FeeBoard
     }
 
     /**
-     * What the CaPSAs have sent the dean, one row per section. A section counts
+     * What the CaPSA/TSAs have sent the dean, one row per section. A section counts
      * as sent once it has sent receipts and no verified receipt still held back.
      *
      * @return list<array<string, mixed>>
@@ -168,7 +168,7 @@ class FeeBoard
             ->unique(fn (FinancialRecord $r) => $r->expense_post_id.':'.$r->student_id);
 
         // The same OR number on somebody else's receipt: one payment claimed
-        // twice, or a typo. Said to the CaPSA, not refused - a parent paying
+        // twice, or a typo. Said to the CaPSA/TSA, not refused - a parent paying
         // for two students on one receipt is real.
         $numbers = $latest->pluck('receipt_number')->filter()->unique()->values();
         $usedBy = $numbers->isEmpty() ? collect() : FinancialRecord::whereIn('receipt_number', $numbers)

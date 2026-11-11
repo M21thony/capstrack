@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * A team sent back for a new title already has its adviser, so there is no
  * application for the adviser to approve the title through. The adviser
- * confirms the new title here instead, after the CaPSA approves it.
+ * confirms the new title here instead, after the CaPSA/TSA approves it.
  */
 return new class extends Migration
 {

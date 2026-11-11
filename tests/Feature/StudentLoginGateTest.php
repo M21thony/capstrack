@@ -13,7 +13,7 @@ use Tests\TestCase;
 /**
  * Who is allowed to sign in as a student.
  *
- * The class list is the answer. A student is on it because a CaPSA put them
+ * The class list is the answer. A student is on it because a CaPSA/TSA put them
  * there, and taking them off it is how access is withdrawn - which is the
  * only removal the system actually has.
  *
@@ -62,7 +62,7 @@ class StudentLoginGateTest extends TestCase
     }
 
     /**
-     * The one that was broken. Taking a student off the list is how a CaPSA
+     * The one that was broken. Taking a student off the list is how a CaPSA/TSA
      * withdraws access, and it has to hold even though the account they
      * already made is still sitting there.
      */
@@ -92,7 +92,7 @@ class StudentLoginGateTest extends TestCase
         $this->assertNotNull($this->gate('JoAurilla@my.cspc.edu.ph'));
     }
 
-    /** A CaPSA who handles BSIT 3B, as the page would have them. */
+    /** A CaPSA/TSA who handles BSIT 3B, as the page would have them. */
     private function capsaFor(string $section): CapstoneExpert
     {
         $capsa = CapstoneExpert::factory()->create(['sections' => [$section]]);
@@ -103,7 +103,7 @@ class StudentLoginGateTest extends TestCase
 
     /**
      * Signed in before any list was uploaded: an account and a section, so
-     * their CaPSA sees them in the section - but no list row, so sign-in
+     * their CaPSA/TSA sees them in the section - but no list row, so sign-in
      * told them they were not on it.
      */
     private function studentFromBeforeTheList(string $email = 'jorabusa@my.cspc.edu.ph', ?string $yearSection = '3rd · B'): Student
@@ -142,7 +142,7 @@ class StudentLoginGateTest extends TestCase
 
     public function test_the_backfill_leaves_removed_students_out_and_listed_ones_alone(): void
     {
-        // Removed by their CaPSA: section cleared, list row gone.
+        // Removed by their CaPSA/TSA: section cleared, list row gone.
         $this->studentFromBeforeTheList('removed@my.cspc.edu.ph', null);
         // Already listed, under a different case.
         $this->roster('Listed@my.cspc.edu.ph');
@@ -186,7 +186,7 @@ class StudentLoginGateTest extends TestCase
         $this->assertNotNull($this->gate('jorabusa@my.cspc.edu.ph'), 'a transfer is not a removal');
     }
 
-    /** Removing them through the CaPSA page withdraws the invitation. */
+    /** Removing them through the CaPSA/TSA page withdraws the invitation. */
     public function test_the_capsa_removal_takes_them_off_the_list(): void
     {
         $this->roster('joaurilla@my.cspc.edu.ph');

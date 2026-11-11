@@ -15,12 +15,12 @@ use Illuminate\Support\Facades\Schema;
  * Four kinds, because the checklist has four kinds, and the kind decides what
  * closes the item:
  *
- *   form      a signed paper the CaPSA sights - the only kind a human ticks,
+ *   form      a signed paper the CaPSA/TSA sights - the only kind a human ticks,
  *             and the only kind that writes completed_at here
  *   document  a draft the team uploads; closed by the upload existing
  *   approval  a CLF; closed by the adviser or consultant's verdict
  *   defense   closed by the panel's recorded outcome
- *   custom    whatever a CaPSA adds by hand, ticked like a form
+ *   custom    whatever a CaPSA/TSA adds by hand, ticked like a form
  *
  * The last three are resolved from the records that already hold the answer
  * rather than copied here, so nothing has to be kept in step and nothing can
@@ -37,7 +37,7 @@ return new class extends Migration
 
             // Stable identity for an item that came from a template, so a
             // revised checklist can be applied again without losing what is
-            // already ticked. Null for anything a CaPSA added by hand.
+            // already ticked. Null for anything a CaPSA/TSA added by hand.
             $table->string('template_key', 64)->nullable();
 
             $table->string('title');

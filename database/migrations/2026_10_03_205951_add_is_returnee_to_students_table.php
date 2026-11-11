@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * A student back from an earlier school year, defending with a new team. The
- * CaPSA marks them; the defense lists and the schedule export show it.
+ * CaPSA/TSA marks them; the defense lists and the schedule export show it.
  */
 return new class extends Migration
 {

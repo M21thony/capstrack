@@ -16,14 +16,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
-/** A team needs its CaPSA's permission to remove an expert who already took them on. */
+/** A team needs its CaPSA/TSA's permission to remove an expert who already took them on. */
 class ExpertRemovalRequestTest extends TestCase
 {
     use RefreshDatabase;
 
     private const REASON = 'Our adviser moved to another campus this semester.';
 
-    /** The adviser the team names instead - applied to once the CaPSA approves. */
+    /** The adviser the team names instead - applied to once the CaPSA/TSA approves. */
     private ?CapstoneExpert $replacement = null;
 
     protected function setUp(): void
@@ -144,7 +144,7 @@ class ExpertRemovalRequestTest extends TestCase
         $this->replacement->update(['max_teams' => 1, 'program_slots' => '1 - BSIT']);
         $this->askToRemove($leader, $assignment)->assertOk();
 
-        // While the CaPSA was deciding, another team took the last slot.
+        // While the CaPSA/TSA was deciding, another team took the last slot.
         $other = Team::create(['team_name' => 'Faster', 'team_status' => 'Active', 'is_confirmed' => true]);
         TeamExpertAssignment::create(['team_id' => $other->team_id, 'expert_id' => $this->replacement->expert_id, 'status' => 'approved',
             'expert_role_id' => DB::table('expert_roles')->where('expert_id', $this->replacement->expert_id)->value('expert_role_id')]);
@@ -152,7 +152,7 @@ class ExpertRemovalRequestTest extends TestCase
 
         $this->approve($capsa)->assertStatus(422)->assertJsonFragment(['success' => false]);
 
-        // Nothing moved: the team keeps its adviser and the CaPSA can decline.
+        // Nothing moved: the team keeps its adviser and the CaPSA/TSA can decline.
         $this->assertDatabaseHas('capstone_expert_application', ['assignment_id' => $assignment->assignment_id, 'status' => 'approved']);
         $this->assertFalse(TeamExpertAssignment::where('team_id', $team->team_id)->where('expert_id', $this->replacement->expert_id)->exists());
         $this->assertTrue(ExpertRemovalRequest::first()->isPending());
@@ -205,25 +205,25 @@ class ExpertRemovalRequestTest extends TestCase
 
         // Asking twice does not stack requests.
         $this->askToRemove($leader, $assignment)->assertStatus(422);
-        // A reason the CaPSA can decide on.
+        // A reason the CaPSA/TSA can decide on.
         ExpertRemovalRequest::query()->delete();
         $this->askToRemove($leader, $assignment, 'no')->assertStatus(422);
     }
 
-    /** The dialog says whose CaPSA decides, and a waiting request says so on the expert. */
+    /** The dialog says whose CaPSA/TSA decides, and a waiting request says so on the expert. */
     public function test_the_experts_page_names_the_sections_capsa_and_flags_a_waiting_change(): void
     {
         [$leader, , $assignment] = $this->teamWithAdviser();
 
         // Before asking: browsing advisers offers the change, and the dialog
-        // it opens names the section whose CaPSA decides.
+        // it opens names the section whose CaPSA/TSA decides.
         $this->actingAs($leader, 'web')
             ->get(route('student.experts', ['tab' => 'find', 'role' => 'adviser']))
             ->assertOk()
             ->assertSee('Request a change')
             ->assertSee("'Request a ' + esc(role) + ' change'", false)
             ->assertSee('"teamSection":"BSIT-3A"', false)
-            ->assertSee('Decided by the CaPSA for ', false);
+            ->assertSee('Decided by the CaPSA/TSA for ', false);
 
         // After asking: the adviser's card is flagged, and taking the request
         // back replaces the button.
@@ -243,7 +243,7 @@ class ExpertRemovalRequestTest extends TestCase
         $this->askToRemove($leader, $assignment)->assertOk();
         $removal = ExpertRemovalRequest::first();
 
-        // It waits on the CaPSA's Leave Requests tab.
+        // It waits on the CaPSA/TSA's Leave Requests tab.
         $this->actingAs($capsa, 'expert')
             ->get(route('capsa.team_management', ['tab' => 'leave_requests']))
             ->assertOk()
@@ -300,7 +300,7 @@ class ExpertRemovalRequestTest extends TestCase
         $this->assertSame(0, ExpertRemovalRequest::count());
     }
 
-    /** Undo: the team takes back a request its CaPSA has not decided on yet. */
+    /** Undo: the team takes back a request its CaPSA/TSA has not decided on yet. */
     public function test_the_team_can_take_back_a_change_request_the_capsa_has_not_decided(): void
     {
         [$leader, , $assignment] = $this->teamWithAdviser();
@@ -326,7 +326,7 @@ class ExpertRemovalRequestTest extends TestCase
             ->assertDontSee('Take back request')
             ->assertSee('Request a change');
 
-        // A withdrawn request is not the CaPSA's to decide any more.
+        // A withdrawn request is not the CaPSA/TSA's to decide any more.
         $this->assertSame(0, ExpertRemovalRequest::pending()->count());
     }
 
@@ -361,7 +361,7 @@ class ExpertRemovalRequestTest extends TestCase
             ->assertNotFound();
         $this->assertSame(ExpertRemovalRequest::PENDING, $removal->fresh()->status);
 
-        // Once the CaPSA has decided there is nothing left to take back.
+        // Once the CaPSA/TSA has decided there is nothing left to take back.
         $this->actingAs($capsa, 'expert')
             ->patchJson(route('capsa.expert_removal_requests.update', $removal), ['status' => 'approved'])
             ->assertOk();

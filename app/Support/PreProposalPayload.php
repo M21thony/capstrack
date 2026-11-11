@@ -12,7 +12,7 @@ use App\Services\SimilarityService;
  *
  * It lived inside the page controller, which meant approving a title could
  * only refresh the modal by reloading the whole page - and reloading closed
- * the modal, so a CaPSA working through three titles had to reopen it after
+ * the modal, so a CaPSA/TSA working through three titles had to reopen it after
  * every single decision. The approve and reject endpoints hand back the same
  * shape now, so the modal can redraw itself where it stands.
  */
@@ -28,11 +28,11 @@ class PreProposalPayload
         )?->name;
 
         // Only titles the team has turned in for checking. A draft they are
-        // still writing is not the CaPSA's to read - the counts on the
+        // still writing is not the CaPSA/TSA's to read - the counts on the
         // Pre-Proposals tab have always filtered on this, but the review
         // modal was built from every row, so opening it showed drafts that
         // had never been submitted. A title the adviser sent back is set
-        // aside, but it stays here so the CaPSA sees why the team is back.
+        // aside, but it stays here so the CaPSA/TSA sees why the team is back.
         return $team->allPreProposals
             ->whereNotNull('submitted_at')
             ->filter(fn ($p) => ! $p->retired_at || $p->adviser_status === TitleRevision::DECLINED)

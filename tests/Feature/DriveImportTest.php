@@ -12,11 +12,11 @@ use Mockery;
 use Tests\TestCase;
 
 /**
- * Taking on files a CaPSA already has in Drive.
+ * Taking on files a CaPSA/TSA already has in Drive.
  *
  * Nothing is uploaded here, so what is worth checking is the bookkeeping: a
  * row per file pointing at where it lives, the section rules that stop a
- * CaPSA filing into someone else's section, and not importing the same file
+ * CaPSA/TSA filing into someone else's section, and not importing the same file
  * twice into two rows students would see as two documents.
  */
 class DriveImportTest extends TestCase

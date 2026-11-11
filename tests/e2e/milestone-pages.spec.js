@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 
 /**
- * Manage milestones, CaPSA to student: she sets up her program, adds a
+ * Manage milestones, CaPSA/TSA to student: she sets up her program, adds a
  * milestone, opens it to teams, gives it a requirement, and deletes another;
  * the team sees the opened one on its tracker.
  *
  *   PW_BASE_URL=http://127.0.0.1:8002 npx playwright test milestone-pages
  *
- * It seeds its own CaPSA (BSIT-4X) and a one-member team, and takes them out after.
+ * It seeds its own CaPSA/TSA (BSIT-4X) and a one-member team, and takes them out after.
  */
 test.skip(!process.env.PW_BASE_URL, 'point PW_BASE_URL at the test server');
 test.use({ viewport: { width: 1440, height: 900 } });

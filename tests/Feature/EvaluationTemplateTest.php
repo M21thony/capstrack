@@ -20,9 +20,9 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * The CaPSA's side of expert evaluations: the questions per defense - the
+ * The CaPSA/TSA's side of expert evaluations: the questions per defense - the
  * five standard ones in a click, or their own - the popup when a defense is
- * scheduled with none, and the anonymous results the CaPSA and the expert
+ * scheduled with none, and the anonymous results the CaPSA/TSA and the expert
  * read.
  */
 class EvaluationTemplateTest extends TestCase
@@ -82,7 +82,7 @@ class EvaluationTemplateTest extends TestCase
 
     /**
      * Nothing is laid out per defense up front, and there is one way in:
-     * Create new evaluation, where the CaPSA picks the defense.
+     * Create new evaluation, where the CaPSA/TSA picks the defense.
      */
     public function test_with_no_evaluations_the_page_points_to_create_new_evaluation(): void
     {
@@ -310,7 +310,7 @@ class EvaluationTemplateTest extends TestCase
             ->assertDontSee('Expert evaluation required');
     }
 
-    /** Two CaPSAs on one section: either one's evaluation is enough, so neither is nagged. */
+    /** Two CaPSA/TSAs on one section: either one's evaluation is enough, so neither is nagged. */
     public function test_an_evaluation_by_the_other_capsa_of_the_section_covers_it(): void
     {
         $this->schedule();

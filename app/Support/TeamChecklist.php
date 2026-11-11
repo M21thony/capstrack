@@ -10,7 +10,7 @@ use App\Models\Team;
 use Illuminate\Support\Collection;
 
 /**
- * Which checklist a team follows: the one its section's CaPSA keeps for the
+ * Which checklist a team follows: the one its section's CaPSA/TSA keeps for the
  * program that section belongs to. A team has no checklist of its own.
  */
 class TeamChecklist
@@ -25,8 +25,8 @@ class TeamChecklist
     /**
      * The other direction: every student on every team that follows this
      * checklist. A checklist covers a whole program across every section its
-     * CaPSA runs, so "who does this change reach" is the same question as
-     * "which of this CaPSA's teams are in that program" - answered with the
+     * CaPSA/TSA runs, so "who does this change reach" is the same question as
+     * "which of this CaPSA/TSA's teams are in that program" - answered with the
      * same filter the team-management list uses, so the two cannot drift.
      *
      * @return Collection<int, Student>
@@ -68,7 +68,7 @@ class TeamChecklist
             : null;
     }
 
-    /** The CaPSA who handles a section, or null when nobody does. */
+    /** The CaPSA/TSA who handles a section, or null when nobody does. */
     public function capsaFor(string $section): ?CapstoneExpert
     {
         if ($section === '') {

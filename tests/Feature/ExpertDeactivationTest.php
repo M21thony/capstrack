@@ -259,7 +259,7 @@ class ExpertDeactivationTest extends TestCase
             ])
             ->assertStatus(403)
             ->assertJsonFragment([
-                'message' => 'This account has been deactivated. Ask a CaPSA to switch it back on.',
+                'message' => 'This account has been deactivated. Ask a CaPSA/TSA to switch it back on.',
             ]);
     }
 }

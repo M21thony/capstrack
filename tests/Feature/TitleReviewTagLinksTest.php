@@ -19,7 +19,7 @@ use Tests\TestCase;
  * They used to be one comma-joined string in the answers list, which threw
  * away the only thing they are good for: the same fixed vocabulary drives the
  * Analytics tag filter, so "IoT" here can show every other team doing IoT -
- * which is exactly the question a CaPSA is asking while judging a title.
+ * which is exactly the question a CaPSA/TSA is asking while judging a title.
  */
 class TitleReviewTagLinksTest extends TestCase
 {

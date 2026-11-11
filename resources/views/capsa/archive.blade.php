@@ -94,7 +94,7 @@
     <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    {{-- The dean reads the archive; the CaPSA keeps it (the write routes are CaPSA-only too). --}}
+    {{-- The dean reads the archive; the CaPSA/TSA keeps it (the write routes are CaPSA/TSA-only too). --}}
     @php $viewOnly = request()->routeIs('admin.archive'); @endphp
     <div class="page-title">{{ $viewOnly ? 'Archived Capstones' : 'Archived Capstone Management' }}</div>
     <div class="topbar-actions">

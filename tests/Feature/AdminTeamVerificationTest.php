@@ -679,7 +679,7 @@ class AdminTeamVerificationTest extends TestCase
 
     /**
      * Approving one while the others are still unread used to hand the team
-     * a final title. The CaPSA is mid-review; nothing is decided yet.
+     * a final title. The CaPSA/TSA is mid-review; nothing is decided yet.
      */
     public function test_approving_one_title_settles_nothing_while_others_are_unreviewed(): void
     {
@@ -758,7 +758,7 @@ class AdminTeamVerificationTest extends TestCase
 
     /**
      * The modal used to be refreshed by reloading the page, which closed it -
-     * so a CaPSA with three titles reopened it after every decision. The
+     * so a CaPSA/TSA with three titles reopened it after every decision. The
      * endpoints hand back what the modal needs to redraw itself instead.
      */
     public function test_a_decision_returns_what_the_modal_needs_to_redraw(): void
@@ -790,7 +790,7 @@ class AdminTeamVerificationTest extends TestCase
     }
 
     /**
-     * A draft is not the CaPSA's to read.
+     * A draft is not the CaPSA/TSA's to read.
      *
      * The Pre-Proposals tab has always counted only turned-in titles, but the
      * review modal was built from every row on the team - so a title the team
@@ -815,7 +815,7 @@ class AdminTeamVerificationTest extends TestCase
         $this->assertStringNotContainsString(
             'A Draft Nobody Has Turned In Yet',
             $html,
-            'A title the team never submitted was handed to the CaPSA.',
+            'A title the team never submitted was handed to the CaPSA/TSA.',
         );
         $this->assertStringContainsString($turnedIn->title, $html);
     }

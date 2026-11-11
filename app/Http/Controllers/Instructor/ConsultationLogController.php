@@ -21,7 +21,7 @@ class ConsultationLogController extends Controller
             ->join('capstone_documents as d', 'd.file_id', '=', 'r.file_id')
             ->leftJoin('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
             ->leftJoin('team as t', 't.team_id', '=', 'sy.team_id')
-            // The deadline printed on the form is the due date the CaPSA set on
+            // The deadline printed on the form is the due date the CaPSA/TSA set on
             // the checklist item this file was handed in against. It is the only
             // deadline in the system nobody has to type again.
             ->leftJoin('deliverables as dl', 'dl.id', '=', 'd.deliverable_id')
@@ -72,7 +72,7 @@ class ConsultationLogController extends Controller
         $deadline = $review->deadline;
 
         // A file handed in outside the checklist tiles carries no deliverable
-        // link, which is most of them. Fall back to the date the CaPSA set for
+        // link, which is most of them. Fall back to the date the CaPSA/TSA set for
         // this chapter on the team's own checklist, so the form still prints a
         // real deadline instead of the blank line she flagged.
         if (! $deadline && $review->chapter && $review->team_id) {

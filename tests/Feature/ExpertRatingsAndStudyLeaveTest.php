@@ -19,7 +19,7 @@ use Tests\TestCase;
 
 /**
  * Find experts shows what team leaders rated each expert, and a quiet
- * "Study leave" tag the CaPSA sets for an expert who is slow to reply and
+ * "Study leave" tag the CaPSA/TSA sets for an expert who is slow to reply and
  * hard to book for a while - and takes off again when the leave is over.
  */
 class ExpertRatingsAndStudyLeaveTest extends TestCase
@@ -220,7 +220,7 @@ class ExpertRatingsAndStudyLeaveTest extends TestCase
         $this->assertSame([true, false], array_column($check->suggestionsForDisplay(), 'study_leave'));
     }
 
-    /** The defense panel picker still lists them, tagged, so the CaPSA can choose them on purpose. */
+    /** The defense panel picker still lists them, tagged, so the CaPSA/TSA can choose them on purpose. */
     public function test_the_panel_picker_tags_an_expert_on_study_leave(): void
     {
         $onLeave = $this->adviser(['on_study_leave' => true, 'first_login_at' => now()]);

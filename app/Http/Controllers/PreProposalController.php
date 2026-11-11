@@ -35,7 +35,7 @@ class PreProposalController extends Controller
      *
      * It used to be a floor: fewer than this and the submit button was dead.
      * A team who genuinely had two titles they believed in was stuck writing
-     * two they did not, which is worse for the CaPSA reading them than two
+     * two they did not, which is worse for the CaPSA/TSA reading them than two
      * good ones. It is a recommendation now, made once at the point of
      * submitting, and they can go ahead with one.
      */
@@ -69,7 +69,7 @@ class PreProposalController extends Controller
             'canTurnIn' => (bool) $team
                 && $proposals->whereNull('submitted_at')->isNotEmpty()
                 && ! $this->isTurnedIn($team),
-            // The CaPSA turned down every title the team handed in: the round
+            // The CaPSA/TSA turned down every title the team handed in: the round
             // is over, and the team writes new ones and submits again.
             'allRejected' => (bool) $team
                 && $proposals->whereNotNull('submitted_at')->isNotEmpty()
@@ -288,7 +288,7 @@ class PreProposalController extends Controller
             if (! $studentSy) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Your enrolment record is missing, so the result cannot be saved. Tell your CaPSA.',
+                    'message' => 'Your enrolment record is missing, so the result cannot be saved. Tell your CaPSA/TSA.',
                 ], 422);
             }
 
@@ -334,7 +334,7 @@ class PreProposalController extends Controller
                     'success' => false,
                     'message' => 'The similarity checker is not responding right now. '
                         .'Nothing you uploaded was lost - try again in a few minutes, '
-                        .'and tell your CaPSA if it keeps happening.',
+                        .'and tell your CaPSA/TSA if it keeps happening.',
                 ], 503);
             }
 
@@ -384,7 +384,7 @@ class PreProposalController extends Controller
      * a panel that cannot be dismissed is its own kind of stuck.
      *
      * Only a scan that has not become a pre-proposal. Once it has, the check
-     * is the evidence behind a saved title and belongs to the CaPSA reviewing
+     * is the evidence behind a saved title and belongs to the CaPSA/TSA reviewing
      * it as much as to the team.
      */
     public function destroyCheck(Request $request, DuplicationCheck $check): JsonResponse
@@ -515,14 +515,14 @@ class PreProposalController extends Controller
             'applyLockShort' => match (true) {
                 ! $proposal => 'Not saved yet',
                 $proposal->status === 'rejected' => 'Pre-proposal rejected',
-                $proposal->status !== 'approved' => 'Needs CaPSA recommendation',
+                $proposal->status !== 'approved' => 'Needs CaPSA/TSA recommendation',
                 $setAside => 'Not your chosen title',
                 default => 'Team leader only',
             },
             'applyLockReason' => match (true) {
-                ! $proposal => "Save this pre-proposal and wait for your CaPSA's recommendation before you can apply to an expert.",
+                ! $proposal => "Save this pre-proposal and wait for your CaPSA/TSA's recommendation before you can apply to an expert.",
                 $proposal->status === 'rejected' => 'This pre-proposal was rejected, so you cannot apply to an expert with it. Revise it or use one that was recommended.',
-                $proposal->status !== 'approved' => 'Your CaPSA has to recommend this pre-proposal before your team can apply to an expert with it. It is still awaiting review.',
+                $proposal->status !== 'approved' => 'Your CaPSA/TSA has to recommend this pre-proposal before your team can apply to an expert with it. It is still awaiting review.',
                 $setAside => 'Your team chose a different title, so this one is no longer the one you apply with.',
                 default => 'Only your team leader can apply to an expert.',
             },
@@ -687,7 +687,7 @@ class PreProposalController extends Controller
                 ->with('error', 'Run the duplication check for this proposal first.');
         }
 
-        // The point of turning in more than one title is to offer the CaPSA
+        // The point of turning in more than one title is to offer the CaPSA/TSA
         // a choice. The same title twice, or the same scanned document twice,
         // is not a choice - and it went in silently, so a team could fill
         // every slot with one proposal and think they had done the work.
@@ -761,11 +761,11 @@ class PreProposalController extends Controller
 
         if (! $preProposal->approved_status) {
             return redirect()->route('student.duplication')
-                ->with('error', 'You can only choose a title the CaPSA has recommended.');
+                ->with('error', 'You can only choose a title the CaPSA/TSA has recommended.');
         }
 
         // A new title after the defense goes to the team's adviser to confirm first.
-        // Skipped when their CaPSA is also their adviser: that person already
+        // Skipped when their CaPSA/TSA is also their adviser: that person already
         // recommended this title, so the pick stands like any other.
         $resolver = app(RecipientResolver::class);
         $adviserId = $resolver->resolveTeamRoleExpert((int) $team->team_id, 'adviser');
@@ -837,7 +837,7 @@ class PreProposalController extends Controller
         }
 
         // Which of the drafts to turn in. A team that scanned five titles
-        // and wants their CaPSA to see three used to have to delete the
+        // and wants their CaPSA/TSA to see three used to have to delete the
         // other two - the only way to leave a title out was to lose it and
         // its report. Left out, every draft goes, which is what the page
         // sends when nobody has unticked anything.
@@ -878,7 +878,7 @@ class PreProposalController extends Controller
         $held = $team->preProposals()->whereNull('submitted_at')->count();
 
         return redirect()->route('student.duplication')
-            ->with('status', 'Submitted for checking. Your CaPSA can now review your '
+            ->with('status', 'Submitted for checking. Your CaPSA/TSA can now review your '
                 .$count.' '.($count === 1 ? 'title' : 'titles').'.'
                 .($held > 0 ? ' '.$held.' kept as '.($held === 1 ? 'a draft' : 'drafts').'.' : ''));
     }
@@ -910,10 +910,10 @@ class PreProposalController extends Controller
 
         if ($this->reviewStarted($team)) {
             return redirect()->route('student.duplication')
-                ->with('error', 'Your CaPSA has already started reviewing these titles, so they can no longer be unsubmitted.');
+                ->with('error', 'Your CaPSA/TSA has already started reviewing these titles, so they can no longer be unsubmitted.');
         }
 
-        // Only the titles still waiting: one the CaPSA turned down in an
+        // Only the titles still waiting: one the CaPSA/TSA turned down in an
         // earlier round stays turned down, not a draft to hand in again.
         $team->preProposals()->whereNull('rejection_reason')->update(['submitted_at' => null]);
 
@@ -924,7 +924,7 @@ class PreProposalController extends Controller
     /**
      * The PDF the team actually uploaded, served back to that same team.
      *
-     * The CaPSA has had this since they started reviewing; the students who
+     * The CaPSA/TSA has had this since they started reviewing; the students who
      * wrote it had no way to open it again. It matters most on the expert
      * application form, which tells a team their approved pre-proposal goes
      * out with the application without ever showing them which file that is.
@@ -993,7 +993,7 @@ class PreProposalController extends Controller
 
     /** Whether this team has turned their pre-proposals in for checking. */
     /**
-     * Whether the team's titles are with the CaPSA: submitted, and not all
+     * Whether the team's titles are with the CaPSA/TSA: submitted, and not all
      * turned down. Once every one is rejected the round is over - the team
      * saves new titles and submits again. Counting the rejected ones kept the
      * page on "Submitted for checking" with no way forward.

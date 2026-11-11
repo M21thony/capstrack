@@ -18,7 +18,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * Where every team in a CaPSA's sections stands for one defense stage.
+ * Where every team in a CaPSA/TSA's sections stands for one defense stage.
  *
  * Panel Assignment, Defense Scheduling and Generate schedule all ask the same
  * question - can this team be scheduled, and if not, why not - so the answer
@@ -116,7 +116,7 @@ class DefenseBoard
 
     /**
      * The stage a page shows: the one asked for, else the earliest stage any
-     * of this CaPSA's teams is still working through - where the work is.
+     * of this CaPSA/TSA's teams is still working through - where the work is.
      */
     public function openingStage(CapstoneExpert $capsa, ?string $asked): string
     {
@@ -133,8 +133,8 @@ class DefenseBoard
     }
 
     /**
-     * The confirmed teams this CaPSA is responsible for, each with its section.
-     * A CaPSA with no sections on record (the admin account) sees every team.
+     * The confirmed teams this CaPSA/TSA is responsible for, each with its section.
+     * A CaPSA/TSA with no sections on record (the admin account) sees every team.
      *
      * @return array{teams: Collection<int, Team>, sections: array<int, string>}
      */
@@ -165,7 +165,7 @@ class DefenseBoard
         return ['teams' => $kept, 'sections' => $sections];
     }
 
-    /** Whether this CaPSA may act on a team. */
+    /** Whether this CaPSA/TSA may act on a team. */
     public function covers(CapstoneExpert $capsa, Team $team): bool
     {
         $capsaSections = $capsa->sections ?? [];
@@ -274,7 +274,7 @@ class DefenseBoard
             $out[] = ['key' => 'prev', 'text' => 'Has not passed the '.$previous.' yet'];
         }
 
-        // Named, so the CaPSA knows which checklist line is holding the team up.
+        // Named, so the CaPSA/TSA knows which checklist line is holding the team up.
         if ($open = $team->checklistBlockersFor($stage)) {
             $out[] = ['key' => 'req', 'text' => 'Requirements not done: '.$open[0].(count($open) > 1 ? ' (and '.(count($open) - 1).' more)' : '')];
         }
@@ -448,7 +448,7 @@ class DefenseBoard
     }
 
     /**
-     * Defenses on the calendar for teams outside this CaPSA's sections. They
+     * Defenses on the calendar for teams outside this CaPSA/TSA's sections. They
      * are not hers to change, but their rooms and panelists are still taken.
      *
      * @param  array<int, int>  $ownTeamIds

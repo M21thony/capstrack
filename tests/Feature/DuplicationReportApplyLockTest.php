@@ -103,8 +103,8 @@ class DuplicationReportApplyLockTest extends TestCase
 
         $response->assertStatus(200);
         // The lock has to name who unblocks it, not just that it is locked.
-        $response->assertSee('Needs CaPSA recommendation');
-        $response->assertSee('Your CaPSA has to recommend this pre-proposal');
+        $response->assertSee('Needs CaPSA/TSA recommendation');
+        $response->assertSee('Your CaPSA/TSA has to recommend this pre-proposal');
         $response->assertDontSee('student/experts?apply='.$expert->expert_id, false);
     }
 
@@ -119,6 +119,6 @@ class DuplicationReportApplyLockTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('apply='.$expert->expert_id, false);
-        $response->assertDontSee('Your CaPSA has to recommend this pre-proposal');
+        $response->assertDontSee('Your CaPSA/TSA has to recommend this pre-proposal');
     }
 }

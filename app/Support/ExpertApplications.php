@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Asked by Apply on the Experts page and by an approved change request,
  * which applies to the replacement the team picked. Both go through the same
- * checks, so a replacement who filled up while the CaPSA was deciding is
+ * checks, so a replacement who filled up while the CaPSA/TSA was deciding is
  * refused just as a direct application would be.
  */
 class ExpertApplications

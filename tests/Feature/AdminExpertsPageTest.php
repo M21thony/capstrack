@@ -29,9 +29,9 @@ class AdminExpertsPageTest extends TestCase
     }
 
     /**
-     * Admin's copy of this page lists CaPSAs and nothing else.
+     * Admin's copy of this page lists CaPSA/TSAs and nothing else.
      *
-     * Onboarding the faculty and giving them their roles is the CaPSA's job,
+     * Onboarding the faculty and giving them their roles is the CaPSA/TSA's job,
      * from their own copy of this page. Listing every expert here offered the
      * same job from two places with different powers behind it.
      */
@@ -52,7 +52,7 @@ class AdminExpertsPageTest extends TestCase
             'approved_status' => true,
         ]));
 
-        // An adviser and consultant who is not a CaPSA - the CaPSA's own copy
+        // An adviser and consultant who is not a CaPSA/TSA - the CaPSA/TSA's own copy
         // of this page is where they are managed.
         $expert = CapstoneExpert::create([
             'email' => 'expert.one@test.com',
@@ -71,29 +71,29 @@ class AdminExpertsPageTest extends TestCase
         $response = $this->get(route('admin.experts'));
 
         $response->assertOk();
-        $response->assertSee('CaPSA Management', false);
+        $response->assertSee('CaPSA/TSA Management', false);
         // Roles sit under the name now rather than in a column of their own.
         $response->assertSee('cx-roles"', false);
         $response->assertSee('Capstone Subject Adviser', false);
         $response->assertSee('Action', false);
 
-        // The CaPSA is listed; the plain expert is not.
+        // The CaPSA/TSA is listed; the plain expert is not.
         $response->assertSee('Rosa', false);
         $response->assertDontSee('Mara', false);
         // The count is a figure and a noun in their own elements now, rather
         // than one grey sentence, so they are read apart.
         $response->assertSee('class="page-count">1<', false);
-        $response->assertSee('class="page-count-noun">CaPSA<', false);
+        $response->assertSee('class="page-count-noun">CaPSA/TSA<', false);
 
         // Row actions that still belong to Admin. Setting roles is not among
         // them - see AdminHasNoRoleManagementTest for why.
         $response->assertSee('Edit sections', false);
-        $response->assertSee('Remove CaPSA role', false);
+        $response->assertSee('Remove CaPSA/TSA role', false);
         $response->assertSee('Deactivate', false);
         $response->assertDontSee('Transfer Rights', false);
     }
 
-    /** Naming a CaPSA is the only thing this page starts. */
+    /** Naming a CaPSA/TSA is the only thing this page starts. */
     public function test_the_admin_page_offers_only_adding_a_capsa(): void
     {
         $admin = CapstoneExpert::create([
@@ -109,16 +109,16 @@ class AdminExpertsPageTest extends TestCase
         $response = $this->get(route('admin.experts'));
 
         $response->assertOk();
-        $response->assertSee('Add CaPSA', false);
+        $response->assertSee('Add CaPSA/TSA', false);
 
         // Uploading the faculty list and adding one expert by hand are the
-        // CaPSA's, so they are not offered from here as well.
+        // CaPSA/TSA's, so they are not offered from here as well.
         $response->assertDontSee('openExpertRosterModal()', false);
         $response->assertDontSee('+ Add Expert', false);
     }
 
     /**
-     * A CaPSA who advises nobody has no team slots, and is not "Full".
+     * A CaPSA/TSA who advises nobody has no team slots, and is not "Full".
      *
      * Team slots belong to the roles that take teams. Running the subject is
      * not one of them, so the row used to read "0/0 - 0 left" with a Full
@@ -155,11 +155,11 @@ class AdminExpertsPageTest extends TestCase
     }
 
     /**
-     * Team slots are not shown here even for a CaPSA who also advises.
+     * Team slots are not shown here even for a CaPSA/TSA who also advises.
      *
      * How many teams someone takes is the expert's own answer, and it is
      * already on Expert Management. On this page the column took the room the
-     * sections a CaPSA handles - the thing Admin actually sets - needed.
+     * sections a CaPSA/TSA handles - the thing Admin actually sets - needed.
      */
     public function test_team_slots_are_left_to_expert_management(): void
     {
@@ -232,7 +232,7 @@ class AdminExpertsPageTest extends TestCase
 
         $response->assertOk();
 
-        // Each section a CaPSA handles by its own name; status is a dot on
+        // Each section a CaPSA/TSA handles by its own name; status is a dot on
         // the avatar rather than a column.
         $response->assertSee('>Sections handled</th>', false);
         $response->assertSee('class="tk-sec">BSIT-4B<', false);
@@ -248,7 +248,7 @@ class AdminExpertsPageTest extends TestCase
         $response->assertSee('+2', false);
 
         // What the filter reads, so it no longer counts columns. Roles are
-        // not among them any more: Admin's copy of this page lists CaPSAs and
+        // not among them any more: Admin's copy of this page lists CaPSA/TSAs and
         // nothing else, so a filter over roles could only ever return nothing.
         $response->assertSee('data-status="', false);
         $response->assertSee('data-search="', false);

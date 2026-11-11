@@ -97,7 +97,7 @@ class TeamCreationTest extends TestCase
         $this->assertDatabaseMissing('team', ['team_id' => $team->team_id]);
     }
 
-    /** Ending the team would leave an expert who took it on with nothing, so the CaPSA releases them first. */
+    /** Ending the team would leave an expert who took it on with nothing, so the CaPSA/TSA releases them first. */
     public function test_a_leader_on_their_own_cannot_end_a_team_an_expert_took_on(): void
     {
         $student = Student::create(['email' => 'solo.expert@my.cspc.edu.ph', 'f_name' => 'Solo', 'l_name' => 'Leader']);
@@ -117,7 +117,7 @@ class TeamCreationTest extends TestCase
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id]);
         $this->assertSame($team->team_id, StudentSchoolYear::where('student_id', $student->student_id)->value('team_id'));
 
-        // Once the CaPSA has released the expert, the team can end.
+        // Once the CaPSA/TSA has released the expert, the team can end.
         $assignment->delete();
 
         $this->delete('/team')->assertSessionHas('status', 'You have left the team and the team has been terminated.');
@@ -259,7 +259,7 @@ class TeamCreationTest extends TestCase
             'leader_id' => $member->student_id,
         ]);
 
-        // Now the original leader is a regular member, so leaving goes to the CaPSA
+        // Now the original leader is a regular member, so leaving goes to the CaPSA/TSA
         $this->actingAs($leader, 'web');
         $response = $this->delete('/team');
         $response->assertSessionHas('error', MemberLeaveRequest::ASK_CAPSA);

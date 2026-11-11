@@ -5,7 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
-/** One activity a team rating covers: a checklist milestone, one deliverable, or the CaPSA's own. */
+/** One activity a team rating covers: a checklist milestone, one deliverable, or the CaPSA/TSA's own. */
 class TeamRatingItem extends Model
 {
     protected $fillable = ['form_id', 'label', 'checklist_milestone_id', 'deliverable_id'];

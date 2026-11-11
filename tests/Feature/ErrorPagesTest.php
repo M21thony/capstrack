@@ -18,7 +18,7 @@ class ErrorPagesTest extends TestCase
     public static function errorViews(): array
     {
         return [
-            '403' => ['403', 'That is not yours to open', 'ask the CaPSA to check your role'],
+            '403' => ['403', 'That is not yours to open', 'ask the CaPSA/TSA to check your role'],
             '404' => ['404', 'That page is not here', 'Everything you can open is in the sidebar'],
             '419' => ['419', 'Your sign-in expired', 'Nothing was saved'],
             '500' => ['500', 'Something broke on our side', 'nothing else was altered'],

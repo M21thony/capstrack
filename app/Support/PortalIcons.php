@@ -11,7 +11,7 @@ use InvalidArgumentException;
  * Each page used to spell its own SVG out, so the same page wore a different
  * picture in each portal (Document Review was a plain page in one sidebar and
  * a pencil in another) and several unrelated pages wore the same one (three
- * of CaPSA's People links were all "two people"). One name per idea, kept
+ * of CaPSA/TSA's People links were all "two people"). One name per idea, kept
  * here, is what stops that drifting back.
  *
  * Line icons on a 24x24 grid, stroked in currentColor, so whatever holds one

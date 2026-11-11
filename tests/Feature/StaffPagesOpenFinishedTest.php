@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Vite;
 use Tests\TestCase;
 
 /**
- * The expert and CaPSA pages open as they will stay: nothing arrives after
+ * The expert and CaPSA/TSA pages open as they will stay: nothing arrives after
  * the page is on screen to push what is already there out of the way, and
  * nothing is drawn plain first and dressed a moment later.
  */
@@ -124,7 +124,7 @@ class StaffPagesOpenFinishedTest extends TestCase
             ->assertSee('id="gdrive-connect-btn" style="font-size:12px;display:none"', false);
     }
 
-    /** The shared card, as the CaPSA profile shows it; an expert's profile has switches of its own. */
+    /** The shared card, as the CaPSA/TSA profile shows it; an expert's profile has switches of its own. */
     public function test_the_notification_settings_are_styled_and_filled_before_they_are_shown(): void
     {
         $html = $this->actingAs($this->capsa(), 'expert')->get(route('capsa.profile'))->assertOk()->getContent();

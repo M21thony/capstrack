@@ -157,7 +157,7 @@ class StudentFinancialController extends Controller
         }
 
         // A first receipt, or a new photo for one sent back. It goes straight
-        // to the CaPSA.
+        // to the CaPSA/TSA.
         $record = FinancialRecord::submitFor($student, ExpensePost::findOrFail($validated['expense_post_id']), $request->file('receipt_image'), $validated['receipt_number']);
 
         $record->load('expensePost');

@@ -13,8 +13,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * A student told of their CaPSA's decision on a leave request can open it in
- * full from the bell: the decision, the CaPSA's reason, who decided, when,
+ * A student told of their CaPSA/TSA's decision on a leave request can open it in
+ * full from the bell: the decision, the CaPSA/TSA's reason, who decided, when,
  * and the request it answered.
  */
 class LeaveDecisionPopupTest extends TestCase

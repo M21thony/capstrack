@@ -12,7 +12,7 @@ use Tests\TestCase;
 /**
  * Suggesting an expert for each role, rather than three experts overall.
  *
- * A CaPSA asked how this would ever suggest an adviser whose strength is
+ * A CaPSA/TSA asked how this would ever suggest an adviser whose strength is
  * research writing, and the honest answer used to be that it would not: every
  * student-facing expert was ranked against the proposal on expertise alone
  * and the top three were returned, with no mention anywhere of what role any
@@ -133,7 +133,7 @@ class ExpertSuggestionRolesTest extends TestCase
     }
 
     /**
-     * The heart of the CaPSA's question. A machine-learning specialist cannot
+     * The heart of the CaPSA/TSA's question. A machine-learning specialist cannot
      * take the adviser slot from a writing-focused adviser, because they are
      * not on the adviser shortlist at all.
      */

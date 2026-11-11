@@ -23,7 +23,7 @@ use Tests\TestCase;
  * Passing Title Defense locks a team's members.
  *
  * Nobody joins after it, and nobody leaves on their own or the leader's
- * say-so - a member who has to go asks the section's CaPSA, with a reason.
+ * say-so - a member who has to go asks the section's CaPSA/TSA, with a reason.
  */
 class TitleDefenseTeamLockTest extends TestCase
 {
@@ -197,7 +197,7 @@ class TitleDefenseTeamLockTest extends TestCase
         $this->assertTrue($this->inTeam($a, $team));
     }
 
-    // ── asking the CaPSA ─────────────────────────────────────────────────
+    // ── asking the CaPSA/TSA ─────────────────────────────────────────────────
 
     public function test_a_member_asks_their_capsa_to_leave(): void
     {
@@ -222,13 +222,13 @@ class TitleDefenseTeamLockTest extends TestCase
         $this->askToLeave($a, 'My family is moving to Cebu next month.')->assertCreated();
 
         $notification = Notification::where('expert_id', $capsa->expert_id)->where('type', 'leave_request_received')->first();
-        $this->assertNotNull($notification, 'the CaPSA who decides is told');
+        $this->assertNotNull($notification, 'the CaPSA/TSA who decides is told');
         $this->assertSame('Student asked to leave a team', $notification->title);
         $this->assertStringContainsString('My family is moving to Cebu next month.', $notification->message);
         $this->assertStringContainsString('Ana Tester', $notification->message);
         $this->assertSame(route('capsa.team_management', ['tab' => 'leave_requests']), $notification->link);
 
-        $this->assertFalse(Notification::where('expert_id', $otherCapsa->expert_id)->exists(), 'another section\'s CaPSA is not');
+        $this->assertFalse(Notification::where('expert_id', $otherCapsa->expert_id)->exists(), 'another section\'s CaPSA/TSA is not');
     }
 
     public function test_the_capsa_is_notified_of_a_removal_request_with_who_and_why(): void
@@ -257,11 +257,11 @@ class TitleDefenseTeamLockTest extends TestCase
             'type' => MemberLeaveRequest::LEAVE, 'reason' => 'An earlier reason that was declined.', 'status' => MemberLeaveRequest::DECLINED,
         ]);
 
-        // Send to CaPSA is never a silently disabled button: a short reason gets a message instead.
+        // Send to CaPSA/TSA is never a silently disabled button: a short reason gets a message instead.
         $this->actingAs($a, 'web')->get(route('student.team'))
             ->assertOk()
-            ->assertSee('Ask CaPSA to leave')
-            ->assertSee('id="rrm-submit" style="flex:1;">Send to CaPSA', false)
+            ->assertSee('Ask CaPSA/TSA to leave')
+            ->assertSee('id="rrm-submit" style="flex:1;">Send to CaPSA/TSA', false)
             ->assertSee('id="rrm-error"', false);
 
         $this->actingAs($a, 'web')
@@ -291,7 +291,7 @@ class TitleDefenseTeamLockTest extends TestCase
         $this->assertSame(0, MemberLeaveRequest::count());
     }
 
-    /** Before Title Defense a member still asks the CaPSA to leave; the leader removes members directly. */
+    /** Before Title Defense a member still asks the CaPSA/TSA to leave; the leader removes members directly. */
     public function test_an_unlocked_team_asks_the_capsa_to_leave_but_not_to_remove(): void
     {
         [$team, $leader, $a, $b] = $this->team();
@@ -377,7 +377,7 @@ class TitleDefenseTeamLockTest extends TestCase
         $this->assertSame(MemberLeaveRequest::WITHDRAWN, $request->fresh()->status);
     }
 
-    // ── the CaPSA decides ────────────────────────────────────────────────
+    // ── the CaPSA/TSA decides ────────────────────────────────────────────────
 
     public function test_the_capsa_approves_and_the_member_is_released(): void
     {
@@ -463,13 +463,13 @@ class TitleDefenseTeamLockTest extends TestCase
         return $expert;
     }
 
-    /** A leader on their own whose team an expert took on asks the CaPSA; approving ends the team and tells the expert. */
+    /** A leader on their own whose team an expert took on asks the CaPSA/TSA; approving ends the team and tells the expert. */
     public function test_a_solo_leader_with_an_expert_leaves_only_with_the_capsa(): void
     {
         [$team, $leader, $a, $b] = $this->team();
         StudentSchoolYear::whereIn('student_id', [$a->student_id, $b->student_id])->update(['team_id' => null]);
 
-        // No expert yet: Leave Team is the way out, not the CaPSA.
+        // No expert yet: Leave Team is the way out, not the CaPSA/TSA.
         $this->askToLeave($leader)->assertStatus(422);
 
         $expert = $this->approvedExpert($team);
@@ -528,6 +528,6 @@ class TitleDefenseTeamLockTest extends TestCase
             ->get(route('student.team'))
             ->assertOk()
             ->assertSee('Members locked since')
-            ->assertSee('Ask CaPSA to leave');
+            ->assertSee('Ask CaPSA/TSA to leave');
     }
 }

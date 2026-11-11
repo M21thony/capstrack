@@ -1,5 +1,5 @@
 {{-- Milestones for a program she handles that has none yet: the
-     department's, another CaPSA's, or none to start. --}}
+     department's, another CaPSA/TSA's, or none to start. --}}
 @extends('capsa.team-management._shell')
 
 @section('title', 'Set up '.$program.' milestones')

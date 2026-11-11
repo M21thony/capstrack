@@ -9,19 +9,19 @@
     $adminEmail = $admin?->email;
     $adminName = $admin ? trim(($admin->first_name ?? '').' '.($admin->last_name ?? '')) : 'System Administrator';
 
-    // Same reasoning as the "Duties" group label below: a CaPSA-only
+    // Same reasoning as the "Duties" group label below: a CaPSA/TSA-only
     // account has no admin capabilities, so the portal's own brand label
     // shouldn't tell them they're in the "Admin Portal".
     $portalLabel = match (true) {
-        $admin?->is_admin && $admin?->is_capsa => 'Admin & CaPSA Portal',
-        $admin?->is_capsa => 'CaPSA Portal',
+        $admin?->is_admin && $admin?->is_capsa => 'Admin & CaPSA/TSA Portal',
+        $admin?->is_capsa => 'CaPSA/TSA Portal',
         default => 'Admin Portal',
     };
 
     $currentRoute = Route::currentRouteName();
 
     // Counted from whatever the badge's own page actually lists. Admin's
-    // Expert Management is CaPSAs and nothing else, so counting every
+    // Expert Management is CaPSA/TSAs and nothing else, so counting every
     // approved expert put a 10 beside a page showing three.
     $approvedExpertIds = App\Models\CapstoneExpert::where('approved_status', true)
         ->when($rolePrefix === 'admin.', fn ($q) => $q->whereHas(
@@ -86,7 +86,7 @@
     // Admins who are ALSO registered as an adviser/consultant/grammarian
     // (e.g. assigned to a team's panel) get the expert-facing nav items
     // merged into this same sidebar, per the consultant's guidance that a
-    // CaPSA who is also an Adviser shouldn't have to juggle two separate
+    // CaPSA/TSA who is also an Adviser shouldn't have to juggle two separate
     // portals - the instructor.* routes already let any is_admin account
     // through regardless of approval status (see CheckExpertApproval).
     $adminHasExpertRole = $admin && $admin->roles->pluck('role_name')->intersect(['adviser', 'consultant', 'grammarian'])->isNotEmpty();
@@ -119,7 +119,7 @@
        instructor sidebar has (instructor/partials/expert-profile.blade.php)
        - only when this account actually holds an expert role, since that
        panel's fields (Team Capacity, Areas of Expertise) don't apply to a
-       plain CaPSA account with no expert duties. Such an account's card opens
+       plain CaPSA/TSA account with no expert duties. Such an account's card opens
        its own profile page instead: it used to do nothing at all, and on a
        phone the menu is the only way there. A plain Admin has no profile page,
        so theirs is not a link. --}}
@@ -161,7 +161,7 @@
   <nav class="nav">
     @php
       // Sorted by what the page is about, not by which hat the account wears.
-      // An account can be Admin, CaPSA and an adviser at once, and grouping by
+      // An account can be Admin, CaPSA/TSA and an adviser at once, and grouping by
       // role put team pages at the top, the middle and the bottom. Each item
       // still only shows for the role it belongs to, and a heading only shows
       // when something under it does.
@@ -169,12 +169,12 @@
       $isAdmin = (bool) $admin?->is_admin;
       $isExpert = $adminHasExpertRole;
 
-      // Waiting on this CaPSA inside Team Management: teams to verify, and
+      // Waiting on this CaPSA/TSA inside Team Management: teams to verify, and
       // members asking to leave a team that passed Title Defense.
       $pendingLeaveRequests = $isCapsa ? App\Models\MemberLeaveRequest::pendingCountFor($admin) : 0;
       $teamManagementBadge = $unseenPendingVerifyTeamCount + $pendingLeaveRequests + ($adminHasExpertRole ? $unseenExpertAssignmentCount : 0);
       $badge = fn (int $n) => $n > 99 ? '99+' : $n;
-      // Defense stages coming up in this CaPSA's sections with no expert
+      // Defense stages coming up in this CaPSA/TSA's sections with no expert
       // evaluation yet - the badge here and the popup below.
       $evaluationsToSetUp = $isCapsa ? app(App\Support\ExpertEvaluations::class)->upcomingWithoutEvaluation($admin) : collect();
     @endphp
@@ -225,7 +225,7 @@
     </a>
     @endif
     @if ($isExpert)
-    {{-- A CaPSA's expert work is on Team Management too: one Teams page, not two. --}}
+    {{-- A CaPSA/TSA's expert work is on Team Management too: one Teams page, not two. --}}
     @unless ($isCapsa)
     <a href="{{ route('instructor.teams') }}" class="nav-item {{ str_starts_with($currentRoute ?? '', 'instructor.teams') ? 'active' : '' }}">
       <x-portal-icon name="team" />
@@ -368,7 +368,7 @@
         $phoneTabs[] = ['label' => 'Defenses', 'href' => route('capsa.defenses'), 'active' => $onDefenses,
             'icon' => App\Support\PortalIcons::paths('defense')];
     }
-    // An admin who is not also a CaPSA runs accounts and reports, so their
+    // An admin who is not also a CaPSA/TSA runs accounts and reports, so their
     // bar is the people they manage and the numbers they read.
     if ($isAdmin && ! $isCapsa) {
         $phoneTabs[] = ['label' => 'Experts', 'href' => route('admin.experts'), 'active' => $currentRoute === 'admin.experts',
@@ -389,7 +389,7 @@
     }
 @endphp
 @include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => $admin ? ['url' => $admin->hasAvatarImage() ? $admin->avatarUrl() : null, 'initials' => $admin->avatarInitials()] : null, 'tabs' => array_slice($phoneTabs, 0, 4)])
-{{-- The guided tour: the CaPSA's, or the Admin's for an admin who is not also a CaPSA. --}}
+{{-- The guided tour: the CaPSA/TSA's, or the Admin's for an admin who is not also a CaPSA/TSA. --}}
 @include('partials.staff-portal-tour', ['tourKey' => $isCapsa ? 'capsa' : 'admin', 'expert' => $admin])
 @include('partials.table-export')
 @include('partials.sidebar-scroll-restore')

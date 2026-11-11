@@ -9,7 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The CaPSA Announcements page posts announcements only - the old Milestone
+ * The CaPSA/TSA Announcements page posts announcements only - the old Milestone
  * tab that made milestones from here is gone. Milestone posts made before
  * still show, with their submissions to review.
  */

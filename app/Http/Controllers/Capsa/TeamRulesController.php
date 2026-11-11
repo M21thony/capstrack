@@ -30,8 +30,8 @@ class TeamRulesController extends Controller
     }
 
     /**
-     * What the Team Rules menu shows: one max per program this CaPSA handles,
-     * since a CaPSA with BSIT and BSIS sections may allow each a different size.
+     * What the Team Rules menu shows: one max per program this CaPSA/TSA handles,
+     * since a CaPSA/TSA with BSIT and BSIS sections may allow each a different size.
      *
      * @return array{programs: array<int, array{program: string, sections: array<int, string>, max: int, sizes: array<int, int>}>, allowCreation: bool, allowJoining: bool}
      */
@@ -45,7 +45,7 @@ class TeamRulesController extends Controller
             $programs[$program] = ['program' => $program, 'sections' => $own, 'max' => Team::maxMembers($own[0] ?? null), 'sizes' => []];
         }
 
-        // How many of this CaPSA's teams have each headcount, per program, so
+        // How many of this CaPSA/TSA's teams have each headcount, per program, so
         // the menu can say who a lower limit reaches before saving.
         $scope = app(SectionScope::class);
         $records = StudentSchoolYear::whereNotNull('team_id')->with('student')->get()->groupBy('team_id');
@@ -83,7 +83,7 @@ class TeamRulesController extends Controller
     {
         /** @var CapstoneExpert $capsa */
         $capsa = auth('expert')->user();
-        // Only the CaPSA's own sections: other CaPSAs set theirs.
+        // Only the CaPSA/TSA's own sections: other CaPSA/TSAs set theirs.
         $sections = $capsa->sections ?? [];
         $programs = $capsa->handledPrograms();
 

@@ -9,11 +9,11 @@ use App\Support\StudentTeam;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * A team's uploaded file, for the CaPSA to look at before a signed paper or
+ * A team's uploaded file, for the CaPSA/TSA to look at before a signed paper or
  * an approval counts on the checklist.
  *
  * Read-only, and separate from the annotator: the annotator is the assigned
- * reviewer's, and the CaPSA is not reviewing the document - she is checking
+ * reviewer's, and the CaPSA/TSA is not reviewing the document - she is checking
  * that the signed copy exists and is what it says.
  */
 class DocumentFileController extends Controller

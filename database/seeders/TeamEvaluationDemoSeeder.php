@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\DB;
  *
  * The chosen student becomes the leader of their team (only a leader
  * evaluates), the team passes a Pre-proposal Defense yesterday, and the
- * CaPSA of its section has an evaluation for that defense from before it -
+ * CaPSA/TSA of its section has an evaluation for that defense from before it -
  * the one already there, or a demo one. Nothing the team had is changed but
  * its leader, and clean() puts that back.
  *
@@ -65,7 +65,7 @@ class TeamEvaluationDemoSeeder extends Seeder
         $capsa = app(TeamChecklist::class)->capsaFor(app(SectionScope::class)->sectionFor($team));
 
         if (! $capsa) {
-            $this->command?->error($team->team_name.' has no CaPSA for its section, so there is no one to set the questions.');
+            $this->command?->error($team->team_name.' has no CaPSA/TSA for its section, so there is no one to set the questions.');
 
             return;
         }
@@ -88,7 +88,7 @@ class TeamEvaluationDemoSeeder extends Seeder
             ]);
             $state['defense_id'] = $defense->defense_id;
 
-            // The CaPSA's own evaluation for the defense if one was there
+            // The CaPSA/TSA's own evaluation for the defense if one was there
             // before it; a demo one otherwise.
             $existing = EvaluationTemplate::active()->where('capsa_id', $capsa->expert_id)
                 ->where('defense_type', DefenseOutcome::PRE_PROPOSAL)->whereHas('questions')

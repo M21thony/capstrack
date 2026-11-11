@@ -11,8 +11,8 @@ use Tests\TestCase;
  * Adding one expert asks for an address and nothing else.
  *
  * A name typed here is a guess at how somebody spells their own; Google
- * gives the real one the first time they sign in. The role is the CaPSA's to
- * set, and can be set from the row afterwards. Add CaPSA has always worked
+ * gives the real one the first time they sign in. The role is the CaPSA/TSA's to
+ * set, and can be set from the row afterwards. Add CaPSA/TSA has always worked
  * this way - this brings Add Expert alongside it.
  */
 class AddExpertNeedsOnlyAnEmailTest extends TestCase
@@ -42,7 +42,7 @@ class AddExpertNeedsOnlyAnEmailTest extends TestCase
 
         $this->assertNotNull($expert);
         $this->assertSame('', trim($expert->name), 'the name waits for their first sign-in');
-        $this->assertCount(0, $expert->roles, 'the CaPSA sets the role when they decide it');
+        $this->assertCount(0, $expert->roles, 'the CaPSA/TSA sets the role when they decide it');
     }
 
     /** The address is still the one thing that must be there. */

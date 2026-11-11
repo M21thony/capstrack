@@ -8,12 +8,12 @@ use App\Models\Student;
 use Illuminate\Support\Collection;
 
 /**
- * What a student is shown on tapping a notification about their CaPSA's
- * decision on a leave or removal request: the decision, the CaPSA's reason,
+ * What a student is shown on tapping a notification about their CaPSA/TSA's
+ * decision on a leave or removal request: the decision, the CaPSA/TSA's reason,
  * who decided and when, and the request it answered.
  *
  * Newer notifications name their request (data.leave_request_id). Older ones
- * do not, so they are matched to the student's own request that the CaPSA
+ * do not, so they are matched to the student's own request that the CaPSA/TSA
  * decided closest before the notification went out.
  */
 class LeaveDecisionDetails
@@ -89,7 +89,7 @@ class LeaveDecisionDetails
             // Declined by the clock: nobody decided, and the popup says so.
             'auto' => (bool) $request->auto_declined,
             'autoDays' => MemberLeaveRequest::DECIDE_WITHIN_DAYS,
-            'decidedBy' => $decider ? trim(($decider->first_name ?? '').' '.($decider->last_name ?? '')) ?: 'Your CaPSA' : 'Your CaPSA',
+            'decidedBy' => $decider ? trim(($decider->first_name ?? '').' '.($decider->last_name ?? '')) ?: 'Your CaPSA/TSA' : 'Your CaPSA/TSA',
             'decidedOn' => $request->decided_at?->format('F j, Y · g:i A'),
         ];
     }

@@ -16,8 +16,8 @@ use Tests\TestCase;
 /**
  * A team's Full status follows its seats under its section's Team Rules.
  *
- * It closes when the last seat the CaPSA allows is taken, and it opens again
- * when somebody leaves - which nothing did before, so the CaPSA kept seeing
+ * It closes when the last seat the CaPSA/TSA allows is taken, and it opens again
+ * when somebody leaves - which nothing did before, so the CaPSA/TSA kept seeing
  * "Full" on a team with a free seat.
  */
 class TeamStatusFollowsSeatsTest extends TestCase
@@ -60,7 +60,7 @@ class TeamStatusFollowsSeatsTest extends TestCase
         return [$team, $leader, $member];
     }
 
-    /** The CaPSA's Team Rules for the team's section: a limit of $max. */
+    /** The CaPSA/TSA's Team Rules for the team's section: a limit of $max. */
     private function sectionLimit(Team $team, int $max): void
     {
         Setting::set(Team::RULES_KEY.$team->section(), json_encode(['max' => $max, 'create' => true, 'join' => true]));

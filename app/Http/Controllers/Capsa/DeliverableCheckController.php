@@ -15,7 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * The CaPSA's check of one team's signed paper: complete, or sent back with
+ * The CaPSA/TSA's check of one team's signed paper: complete, or sent back with
  * a note saying what to fix. The system has no e-signing, so a signed form
  * and a signed CLF both close this way.
  */
@@ -63,7 +63,7 @@ class DeliverableCheckController extends Controller
                 $team->members,
                 'paper_sent_back',
                 'Sent back: '.$deliverable->title,
-                'Your CaPSA sent back <strong>'.e($deliverable->title).'</strong>: “'.e(trim($data['note'])).'” Your file is kept - replace it with a corrected copy.',
+                'Your CaPSA/TSA sent back <strong>'.e($deliverable->title).'</strong>: “'.e(trim($data['note'])).'” Your file is kept - replace it with a corrected copy.',
                 route('student.progress'),
                 ['team_id' => $team->team_id, 'deliverable_id' => $deliverable->id],
             );

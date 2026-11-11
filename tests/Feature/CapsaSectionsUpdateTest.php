@@ -9,10 +9,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Changing which sections a CaPSA covers.
+ * Changing which sections a CaPSA/TSA covers.
  *
  * Sections could only be set while granting the role, so changing them meant
- * removing the person as CaPSA and making them one again - which cuts off
+ * removing the person as CaPSA/TSA and making them one again - which cuts off
  * their account approval, panel, verification and financial access in
  * between, for a change that was never about their role.
  */
@@ -61,7 +61,7 @@ class CapsaSectionsUpdateTest extends TestCase
         $this->assertTrue($capsa->is_capsa, 'Changing sections took the role away.');
     }
 
-    /** An empty set would leave a CaPSA covering nothing at all. */
+    /** An empty set would leave a CaPSA/TSA covering nothing at all. */
     public function test_at_least_one_section_is_required(): void
     {
         $this->actingAs($this->admin(), 'expert');
@@ -90,7 +90,7 @@ class CapsaSectionsUpdateTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $this->assertStringContainsString('not a CaPSA', $response->json('message'));
+        $this->assertStringContainsString('not a CaPSA/TSA', $response->json('message'));
         $this->assertNull($plain->fresh()->sections);
     }
 
@@ -109,12 +109,12 @@ class CapsaSectionsUpdateTest extends TestCase
 
     /**
      * The page has to offer it. Without a button, the only way to change a
-     * section is still to remove the person as CaPSA and start again.
+     * section is still to remove the person as CaPSA/TSA and start again.
      */
     /**
      * Assigning takes a section, not a year: each program's letters, standing
      * for its starting (3rd-year) class. A 4th-year section is offered on its
-     * own, so saving a CaPSA who already holds one keeps it.
+     * own, so saving a CaPSA/TSA who already holds one keeps it.
      */
     public function test_the_picker_offers_sections_without_a_year(): void
     {

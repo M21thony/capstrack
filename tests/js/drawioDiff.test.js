@@ -134,7 +134,7 @@ test("a slanted arrow goes in short steps, a box stays one box", () => {
 test("a shape is named by its part in the diagram", () => {
   const cell = (shape, text = "", more = {}) => ({ kind: "vertex", shape, text, heads: [], ...more });
   const process = cell("swimlane", "1.3");
-  const dfd = [process, cell("text", "Register Users", { parentCell: process }), cell("rect", "CaPSA"), cell("partialRectangle", "Users"), cell("rect", "D1")];
+  const dfd = [process, cell("text", "Register Users", { parentCell: process }), cell("rect", "CaPSA/TSA"), cell("partialRectangle", "Users"), cell("rect", "D1")];
   assert.deepEqual(dfd.map((c) => shapeRole(c, dfd)), ["Process", "Process", "Entity", "Data store", "Data store"]);
   const flow = [cell("rhombus", "Valid login?"), cell("rect", "Open dashboard"), cell("cloud", "Internet")];
   assert.deepEqual(flow.map((c) => shapeRole(c, flow)), ["Decision", "Process", "Shape"]);

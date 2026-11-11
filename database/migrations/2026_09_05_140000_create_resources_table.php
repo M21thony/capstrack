@@ -50,7 +50,7 @@ return new class extends Migration
             $table->unsignedInteger('downloads')->default(0);
             $table->dateTime('uploaded_at')->nullable();
 
-            // The CaPSA who uploaded it. They see their own and nobody else's.
+            // The CaPSA/TSA who uploaded it. They see their own and nobody else's.
             $table->integer('uploaded_by');
         });
     }

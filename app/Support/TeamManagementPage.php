@@ -153,7 +153,7 @@ class TeamManagementPage
 
         $hasPendingRequest = $outgoingRequests->isNotEmpty();
 
-        // Leaving always waits on the CaPSA; after Title Defense so does
+        // Leaving always waits on the CaPSA/TSA; after Title Defense so does
         // removing a member.
         $teamLocked = $myTeam?->isTeamLocked() ?? false;
         // What ran out of time is declined before it is shown as waiting.
@@ -168,7 +168,7 @@ class TeamManagementPage
                 ->get()
             : collect();
         // The last week's requests that declined themselves, so the team sees
-        // it was the clock and not the CaPSA - and that they can ask again.
+        // it was the clock and not the CaPSA/TSA - and that they can ask again.
         $autoDeclinedRequests = $myTeam
             ? MemberLeaveRequest::with(['student', 'requester'])
                 ->where('team_id', $myTeam->team_id)
@@ -264,7 +264,7 @@ class TeamManagementPage
             'selectionFolded' => in_array($screen, [self::MEMBER, self::LEADER_FULL], true),
             // The defense the team is working towards; null once every stage is passed.
             'currentStage' => $stage,
-            // A leader on their own ends the team by leaving; once an expert took it on, that is the CaPSA's call.
+            // A leader on their own ends the team by leaving; once an expert took it on, that is the CaPSA/TSA's call.
             'leaderAsksCapsa' => $isLeader && $teamMembers->count() === 1 && (bool) $myTeam?->hasApprovedExpert(),
             // What a leader with free seats still needs, from the seats left in each role.
             'openRoles' => $screen === self::LEADER_OPEN ? TeamSeating::for($myTeam)->openRoles() : [],
@@ -285,7 +285,7 @@ class TeamManagementPage
             'myTeam' => $myTeam,
             'panel' => $panel,
             'panelDefenseType' => $panelDefenseType,
-            // The CaPSA's Team Rules, so a closed door is said before anyone fills in a form.
+            // The CaPSA/TSA's Team Rules, so a closed door is said before anyone fills in a form.
             'creationAllowed' => Team::creationAllowed($rulesSection),
             'joiningAllowed' => Team::joiningAllowed($rulesSection),
             // What a recruitment post may advertise for. Project Head is left

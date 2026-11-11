@@ -334,7 +334,7 @@
           <li><b>Apply to one expert</b><span>Pick someone with an open slot.</span></li>
           <li><b>Wait for them to accept</b><span>They then show up in Your experts.</span></li>
         </ol>
-        <p>To change your adviser, consultant or grammarian later, ask your section's CaPSA.</p>
+        <p>To change your adviser, consultant or grammarian later, ask your section's CaPSA/TSA.</p>
       </details>
       {{-- The team's three experts. Under Consultations a card picks who you
            book; under Find experts it picks the role you are browsing. --}}
@@ -351,7 +351,7 @@
               $ex = $a?->expert;
               $removal = $a ? $removalByAssignment->get($a->assignment_id) : null;
               if ($a) {
-                $findMeta = $removal ? 'Change request waiting on CaPSA' : 'Accepted your team';
+                $findMeta = $removal ? 'Change request waiting on CaPSA/TSA' : 'Accepted your team';
               } elseif ($pendingByRole->has($r)) {
                 $findMeta = 'Waiting on '.$pendingByRole[$r];
               } else {
@@ -400,7 +400,7 @@
           @elseif(! $teamConfirmed)
             <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your team has to be verified before you can apply for experts.</span></div>
           @elseif(! $approvedProposal)
-            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your pre-proposal has to be recommended by your CaPSA before you can apply for experts.</span></div>
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your pre-proposal has to be recommended by your CaPSA/TSA before you can apply for experts.</span></div>
           @endif
 
           @if($activeFilled)
@@ -408,7 +408,7 @@
             @if($activeRemoval)
               <div class="xh-banner xh-wait">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                <span class="xh-banner-text">Your request to change <b>{{ $activeFilled->expert->name }}</b> is waiting on your section's CaPSA. They stay your {{ $activeRole }} until the CaPSA decides.@if(! empty($activeRemoval['replacement'])) If approved, your application goes to <b>{{ $activeRemoval['replacement'] }}</b>.@endif</span>
+                <span class="xh-banner-text">Your request to change <b>{{ $activeFilled->expert->name }}</b> is waiting on your section's CaPSA/TSA. They stay your {{ $activeRole }} until the CaPSA/TSA decides.@if(! empty($activeRemoval['replacement'])) If approved, your application goes to <b>{{ $activeRemoval['replacement'] }}</b>.@endif</span>
                 @if($isLeader)
                   <button type="button" class="xh-btn xh-ghost xh-sm" data-xh="takeback" data-request="{{ $activeRemoval['request'] }}" data-name="{{ $activeFilled->expert->name }}" data-role="{{ $activeRole }}">Take back request</button>
                 @endif
@@ -663,9 +663,9 @@
     </section>
 
     {{-- ===================== EVALUATIONS ===================== --}}
-    {{-- After each passed defense the leader answers the CaPSA's questions about
+    {{-- After each passed defense the leader answers the CaPSA/TSA's questions about
          every expert they cover, 1-5 each; the rating is the average. Anonymous
-         to the CaPSA and the expert. See App\Support\ExpertEvaluations. --}}
+         to the CaPSA/TSA and the expert. See App\Support\ExpertEvaluations. --}}
     @php
       $evalExperts = $assignments->where('status', 'approved')->pluck('expert')->filter()->keyBy('expert_id');
       $evalByDefense = $evaluationsDue->groupBy('defense_id');
@@ -695,14 +695,14 @@
 
           <div class="xh-ev-anon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-            <span><b>Anonymous.</b> Your CaPSA and the expert see the answers, never who sent them. Answer honestly: 1 is Poor, 5 is Excellent.</span>
+            <span><b>Anonymous.</b> Your CaPSA/TSA and the expert see the answers, never who sent them. Answer honestly: 1 is Poor, 5 is Excellent.</span>
           </div>
 
           @if($evaluationsDue->isEmpty())
             <div class="xh-card xh-hint xh-ev-empty">
               {!! str_replace('<svg ', '<svg fill="none" stroke="currentColor" stroke-width="1.8" ', $star) !!}
               <b>Nothing to evaluate right now</b>
-              <p>When your team passes a defense, {{ $isLeader ? 'you answer' : 'your leader answers' }} your CaPSA's questions about your adviser, consultant and grammarian here. The next phase opens once it is done.</p>
+              <p>When your team passes a defense, {{ $isLeader ? 'you answer' : 'your leader answers' }} your CaPSA/TSA's questions about your adviser, consultant and grammarian here. The next phase opens once it is done.</p>
             </div>
           @elseif(! $isLeader)
             <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your team leader evaluates the experts. <b>{{ $evaluationsDue->count() }}</b> {{ $evaluationsDue->count() === 1 ? 'evaluation is' : 'evaluations are' }} waiting for {{ $evalByDefense->map(fn ($rows) => $rows->first()->stage)->implode(', ') }}.</span></div>
@@ -1374,7 +1374,7 @@ function openApply(id, draft) {
       + '<span>' + esc(ucfirst(c.name)) + '</span></label>';
   }).join('');
   var proposal = '<div class="xh-field"><span class="xh-flabel">Recommended pre-proposal</span><div class="xh-attach">' + ICON.file
-    + '<div class="xh-attach-meta"><b>' + esc(D.proposalTitle) + '</b><span>Recommended by your CaPSA. It is sent with this application, so there is nothing to upload.</span></div>'
+    + '<div class="xh-attach-meta"><b>' + esc(D.proposalTitle) + '</b><span>Recommended by your CaPSA/TSA. It is sent with this application, so there is nothing to upload.</span></div>'
     + '<button type="button" class="xh-btn xh-ghost xh-sm" data-xh="proposal">Preview</button></div></div>';
   openDialog(head('Apply to ' + esc(p.name), 'Your application goes to ' + esc(p.name) + '. They accept or decline.')
     + '<div class="xh-dlg-body" data-expert="' + p.id + '">'
@@ -1443,19 +1443,19 @@ function openChange(btn) {
   var file = D.hasApprovedProposal ? ''
     : '<div class="xh-field" id="xh-f-change-file"><label for="xh-change-file">Pre-proposal for them (PDF) <span class="xh-req">*</span></label>'
       + filePicker('xh-change-file', '') + '<span class="xh-fmeta"><span class="xh-ferr">That is not a PDF, or it is over 5 MB.</span></span></div>';
-  openDialog(head('Request a ' + esc(role) + ' change', 'Your section\'s CaPSA decides. ' + esc(btn.dataset.name) + ' stays with your team until they do. Once approved, your application goes to the ' + esc(role) + ' you pick below.',
+  openDialog(head('Request a ' + esc(role) + ' change', 'Your section\'s CaPSA/TSA decides. ' + esc(btn.dataset.name) + ' stays with your team until they do. Once approved, your application goes to the ' + esc(role) + ' you pick below.',
       '<span class="xh-dlg-icon xh-ic-amber">' + ICON.swap + '</span>')
     + '<div class="xh-dlg-body"><div class="xh-detail r-' + role + '">' + avatar(D.team[role] || {}, role, 'xh-sm') + '<span class="xh-detail-meta"><b>' + esc(btn.dataset.name) + '</b><span>' + ucfirst(role) + ' of your team'
-    + (D.teamSection ? ' · Decided by the CaPSA for ' + esc(D.teamSection) : '') + '</span></span></div>'
-    + '<div class="xh-field" id="xh-f-reason"><label for="xh-change-reason">Reason for your CaPSA <span class="xh-req">*</span></label>'
-    + '<textarea id="xh-change-reason" rows="3" maxlength="500" placeholder="Explain to your CaPSA why your ' + esc(role) + ' has to change."></textarea>'
-    + '<span class="xh-fmeta"><span class="xh-ferr">Give at least ' + D.reasonMin + ' characters so your CaPSA can decide.</span><span><span id="xh-reason-count">0</span>/500</span></span></div>'
+    + (D.teamSection ? ' · Decided by the CaPSA/TSA for ' + esc(D.teamSection) : '') + '</span></span></div>'
+    + '<div class="xh-field" id="xh-f-reason"><label for="xh-change-reason">Reason for your CaPSA/TSA <span class="xh-req">*</span></label>'
+    + '<textarea id="xh-change-reason" rows="3" maxlength="500" placeholder="Explain to your CaPSA/TSA why your ' + esc(role) + ' has to change."></textarea>'
+    + '<span class="xh-fmeta"><span class="xh-ferr">Give at least ' + D.reasonMin + ' characters so your CaPSA/TSA can decide.</span><span><span id="xh-reason-count">0</span>/500</span></span></div>'
     + '<div class="xh-field" id="xh-f-change-to"><label for="' + (options.length ? 'xh-change-q' : 'xh-change-to') + '">' + ucfirst(role) + ' to replace them <span class="xh-req">*</span></label>' + picker
-    + '<span class="xh-note">Sent to them only if the CaPSA approves and they still have a slot then. They accept or decline your team.</span></div>'
+    + '<span class="xh-note">Sent to them only if the CaPSA/TSA approves and they still have a slot then. They accept or decline your team.</span></div>'
     + (options.length ? '<div class="xh-field" id="xh-f-change-msg"><label for="xh-change-msg">Message to them <span class="xh-req">*</span></label>'
       + '<textarea id="xh-change-msg" rows="3" maxlength="3000" placeholder="Introduce your team and your project to the ' + esc(role) + ' you picked."></textarea></div>' + file : '')
     + '</div>'
-    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="change-send" data-assignment="' + btn.dataset.assignment + '" id="xh-change-send" disabled>Send to CaPSA</button></div>');
+    + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Cancel</button><button type="button" class="xh-btn xh-gold" data-xh="change-send" data-assignment="' + btn.dataset.assignment + '" id="xh-change-send" disabled>Send to CaPSA/TSA</button></div>');
 }
 
 function taRow(o, q) {
@@ -1505,7 +1505,7 @@ function changeReady() {
 }
 
 function openTakeBack(btn) {
-  openDialog(head('Take back your change request?', 'Your request to change <b>' + esc(btn.dataset.name) + '</b> is still waiting on your section\'s CaPSA. Taking it back keeps them as your ' + esc(btn.dataset.role || 'expert') + '.',
+  openDialog(head('Take back your change request?', 'Your request to change <b>' + esc(btn.dataset.name) + '</b> is still waiting on your section\'s CaPSA/TSA. Taking it back keeps them as your ' + esc(btn.dataset.role || 'expert') + '.',
       '<span class="xh-dlg-icon xh-ic-amber">' + ICON.swap + '</span>')
     + '<div class="xh-dlg-foot is-plain"><button type="button" class="xh-btn xh-ghost" data-xh="close">Keep the request</button><button type="button" class="xh-btn xh-gold" data-xh="takeback-send" data-request="' + btn.dataset.request + '">Take it back</button></div>', 'ask');
 }
@@ -2062,7 +2062,7 @@ document.addEventListener('submit', function (e) {
   var n = rows.length;
   var d = openDialog(head(n === 1 ? 'Send this evaluation?' : 'Send all ' + n + ' evaluations?', esc(form.dataset.stage))
     + '<div class="xh-dlg-body"><div class="xh-ev-sums">' + rows.join('') + '</div>'
-    + '<p class="xh-note">Once sent they cannot be changed. Your CaPSA and the experts see the answers, never that they came from you.</p></div>'
+    + '<p class="xh-note">Once sent they cannot be changed. Your CaPSA/TSA and the experts see the answers, never that they came from you.</p></div>'
     + '<div class="xh-dlg-foot"><button type="button" class="xh-btn xh-ghost" data-xh="close">Review answers</button><button type="button" class="xh-btn xh-gold" data-ev-send>' + (n === 1 ? 'Send evaluation' : 'Send all ' + n) + '</button></div>', 'ask');
   d.querySelector('[data-ev-send]').addEventListener('click', function () {
     busy(this, 'Sending…');

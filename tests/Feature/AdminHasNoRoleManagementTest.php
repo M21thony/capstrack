@@ -8,13 +8,13 @@ use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
- * An Admin names CaPSAs. Who advises, consults or proofreads for a team is
- * the CaPSA's call, made from their own copy of Expert Management.
+ * An Admin names CaPSA/TSAs. Who advises, consults or proofreads for a team is
+ * the CaPSA/TSA's call, made from their own copy of Expert Management.
  *
  * The page was offering it anyway - a row button, a bulk action and a filter -
- * and none of it could work: Admin's copy lists CaPSAs and nothing else, so
+ * and none of it could work: Admin's copy lists CaPSA/TSAs and nothing else, so
  * there was never an expert on it whose roles were in question, and the save
- * went to a CaPSA-guarded address that answered 403. It is gone at both ends,
+ * went to a CaPSA/TSA-guarded address that answered 403. It is gone at both ends,
  * which is what these pin down.
  */
 class AdminHasNoRoleManagementTest extends TestCase
@@ -25,7 +25,7 @@ class AdminHasNoRoleManagementTest extends TestCase
      * An Admin and nothing else - no capstone_adviser role, which is what
      * is_capsa is read off. The seeded account on a real install usually
      * holds both, and that is exactly the case where "an Admin can do it"
-     * hides the fact that they can only do it as a CaPSA.
+     * hides the fact that they can only do it as a CaPSA/TSA.
      */
     private function admin(): CapstoneExpert
     {
@@ -48,7 +48,7 @@ class AdminHasNoRoleManagementTest extends TestCase
         $this->assertStringNotContainsString('bulkRoles', $html);
         $this->assertStringNotContainsString('experts-role-filter', $html);
 
-        // The roles are still shown, under each name: a CaPSA who also
+        // The roles are still shown, under each name: a CaPSA/TSA who also
         // advises says so there, and it is read-only either way.
         $this->assertStringContainsString('cx-roles"', $html);
     }

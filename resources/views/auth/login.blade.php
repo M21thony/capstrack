@@ -232,13 +232,13 @@
         <svg viewBox="0 0 24 24" class="chevron size-4 flex-none fill-none stroke-current stroke-2 transition-transform duration-200 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
       </summary>
       <ul class="m-0 flex list-none flex-col gap-2 px-4 pb-4 md:pt-4">
-        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Students</strong> — sign in with your CSPC Mail <strong class="font-semibold text-ink">once your CaPSA has uploaded your section list</strong>.</li>
-        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Experts</strong> — sign in with your CSPC Mail <strong class="font-semibold text-ink">once a CaPSA has uploaded the expert list</strong>.</li>
+        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Students</strong> — sign in with your CSPC Mail <strong class="font-semibold text-ink">once your CaPSA/TSA has uploaded your section list</strong>.</li>
+        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Experts</strong> — sign in with your CSPC Mail <strong class="font-semibold text-ink">once a CaPSA/TSA has uploaded the expert list</strong>.</li>
       </ul>
     </details>
 
     {{-- A plain rule, not an "or": there is no second way to sign in, and the
-         line about asking a CaPSA for an account is gone with it. --}}
+         line about asking a CaPSA/TSA for an account is gone with it. --}}
     <div class="order-7 my-3 h-px bg-line"></div>
 
     <p class="order-9 mt-4 text-center text-[10px] text-[#a8a293] md:text-[11px] lg:mt-[clamp(12px,2.5vh,32px)]">CapsTrack — CSPC College of Computer Studies
@@ -311,7 +311,7 @@
                     <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">3</span>
                     <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
                         <h4 class="m-0 mb-1 text-[14px] font-bold text-white">Who Can See It</h4>
-                        Students see their own team&#039;s records. Advisers and panel members see the teams assigned to them, and the CaPSA sees the sections they handle.
+                        Students see their own team&#039;s records. Advisers and panel members see the teams assigned to them, and the CaPSA/TSA sees the sections they handle.
                     </div>
                 </section>
                 <section id="pp-protect" class="flex gap-3">
@@ -332,14 +332,14 @@
                     <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">6</span>
                     <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
                         <h4 class="m-0 mb-1 text-[14px] font-bold text-white">Google Services</h4>
-                        Advisers, panel members and CaPSA may connect Google Calendar and Drive, limited to the events and files CapsTrack creates. Students are never asked for this access.
+                        Advisers, panel members and CaPSA/TSA may connect Google Calendar and Drive, limited to the events and files CapsTrack creates. Students are never asked for this access.
                     </div>
                 </section>
                 <section id="pp-contact" class="flex gap-3">
                     <span class="flex size-6 flex-none items-center justify-center rounded-full bg-gold text-[12px] font-bold text-navy">7</span>
                     <div class="min-w-0 text-[13px] leading-relaxed text-[#b8b8b2]">
                         <h4 class="m-0 mb-1 text-[14px] font-bold text-white">Contact</h4>
-                        To see, correct or delete your CapsTrack records, contact your CaPSA or the CSPC Data Protection Officer.
+                        To see, correct or delete your CapsTrack records, contact your CaPSA/TSA or the CSPC Data Protection Officer.
                     </div>
                 </section>
             </div>
@@ -381,7 +381,7 @@ document.getElementById('google-login-form').addEventListener('submit', function
                     formNotice('loginNotice', {
                         tone: 'error',
                         title: 'Could not start Google sign-in',
-                        body: data.message || "Try again. If it keeps happening, check you are using the CSPC address on the department's list \u2014 CapsTrack accounts are created by the CaPSA.",
+                        body: data.message || "Try again. If it keeps happening, check you are using the CSPC address on the department's list \u2014 CapsTrack accounts are created by the CaPSA/TSA.",
                     });
                     btn.disabled = false;
                     btn.innerHTML = originalText;

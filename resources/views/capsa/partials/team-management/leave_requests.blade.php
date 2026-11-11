@@ -236,7 +236,7 @@
                 @elseif($r->auto_declined)
                   <span class="rr-auto-tag">
                     <svg class="rr-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                    No action from CaPSA in {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days
+                    No action from CaPSA/TSA in {{ \App\Models\MemberLeaveRequest::DECIDE_WITHIN_DAYS }} days
                   </span>
                 @elseif($decider)
                   <span>By {{ $decider }}</span>

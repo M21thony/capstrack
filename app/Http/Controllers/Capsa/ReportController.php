@@ -108,7 +108,7 @@ class ReportController extends Controller
      * was showing (TableReportController); this is the same report screen the
      * Reports use - column picker, search and sort, Preview PDF, and a PDF or
      * Excel download - over that table. Open to the Expert and Admin portals
-     * as well as the CaPSA's.
+     * as well as the CaPSA/TSA's.
      */
     public function snapshot(Request $request, string $token): View|Response
     {
@@ -181,7 +181,7 @@ class ReportController extends Controller
                 return $this->excel($name, $scope, $sheet, $fileName.'.xlsx');
             }
 
-            $pdf = Pdf::loadView('capsa.reports.pdf', ['name' => $name, 'scope' => $scope, 'sheet' => $sheet, 'by' => auth('expert')->user()->name ?? 'the CaPSA'])
+            $pdf = Pdf::loadView('capsa.reports.pdf', ['name' => $name, 'scope' => $scope, 'sheet' => $sheet, 'by' => auth('expert')->user()->name ?? 'the CaPSA/TSA'])
                 ->setPaper('letter', 'landscape');
             // The page count is only known once laid out, so the numbers are drawn after rendering.
             $pdf->render();

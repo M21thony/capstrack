@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
  * A rating that follows the checklist works its window out when it is read,
  * from the latest due date among its activities - so moving a milestone on
  * the checklist moves the rating with no hook in the checklist code. Once the
- * CaPSA changes the date by hand (date_overridden) the stored dates win.
+ * CaPSA/TSA changes the date by hand (date_overridden) the stored dates win.
  */
 class TeamRatingForm extends Model
 {
@@ -93,7 +93,7 @@ class TeamRatingForm extends Model
     /**
      * The teams that rate in this form, each with its section and members.
      *
-     * A team with no section is left out: it belongs to no CaPSA's list here.
+     * A team with no section is left out: it belongs to no CaPSA/TSA's list here.
      *
      * @return Collection<int, array{team: Team, section: string, members: Collection<int, Student>}>
      */

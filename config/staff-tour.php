@@ -2,7 +2,7 @@
 
 /*
 |--------------------------------------------------------------------------
-| CaPSA, Admin and Expert guided tours
+| CaPSA/TSA, Admin and Expert guided tours
 |--------------------------------------------------------------------------
 |
 | The same walkthrough students get (config/student-tour.php), one for each
@@ -53,10 +53,10 @@ return [
             'body' => 'This is where you look after CapsTrack itself - **who runs it, who is in it, and how it is set up**.'],
         ['key' => 'dashboard', 'label' => 'Your overview', 'target' => ['admin.dashboard'],
             'body' => 'Students, experts, teams and the archive, **at a glance**.'],
-        ['key' => 'experts', 'label' => 'Name the CaPSAs', 'target' => ['admin.experts'],
+        ['key' => 'experts', 'label' => 'Name the CaPSA/TSAs', 'target' => ['admin.experts'],
             'body' => 'Add the faculty who **run each section\'s capstones**, and **choose their sections**.'],
         ['key' => 'students', 'label' => 'Student accounts', 'target' => ['admin.students'],
-            'body' => '**Every student** in the system - **their CaPSA adds and edits them**.'],
+            'body' => '**Every student** in the system - **their CaPSA/TSA adds and edits them**.'],
         ['key' => 'analytics', 'label' => 'How the capstones are going', 'target' => ['admin.analytics'],
             'body' => '**Pass rates and progress** across programs and school years.'],
         ['key' => 'activity', 'label' => 'What happened, and when', 'target' => ['admin.activitylog'],

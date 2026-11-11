@@ -254,7 +254,7 @@ class AssignmentController extends Controller
      * Clear a declined request off the expert's list.
      *
      * An expert cannot drop a team they approved: the team built its plans
-     * around that yes, and a change of expert goes through their CaPSA (the
+     * around that yes, and a change of expert goes through their CaPSA/TSA (the
      * students' own side asks for it the same way). What is left here is
      * tidying the Declined tab. The team was already told why when it was
      * declined, so nobody is notified again.
@@ -284,7 +284,7 @@ class AssignmentController extends Controller
         if ($assignment->status === 'approved') {
             return response()->json([
                 'success' => false,
-                'message' => 'Approved teams stay with you. If you can no longer work with this team, ask their CaPSA.',
+                'message' => 'Approved teams stay with you. If you can no longer work with this team, ask their CaPSA/TSA.',
             ], 422);
         }
 

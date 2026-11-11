@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /** The panel's signed paper grade sheets, one PDF that CaPSA attaches. */
+    /** The panel's signed paper grade sheets, one PDF that CaPSA/TSA attaches. */
     public function up(): void
     {
         Schema::table('defense_schedule', function (Blueprint $table) {

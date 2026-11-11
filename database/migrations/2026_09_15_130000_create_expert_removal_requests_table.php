@@ -5,10 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * A team asking its CaPSA to let go of an expert who already took them on.
+ * A team asking its CaPSA/TSA to let go of an expert who already took them on.
  *
  * The leader used to remove an approved adviser, consultant or grammarian on
- * their own. Changing a team's experts now needs the CaPSA's permission, so a
+ * their own. Changing a team's experts now needs the CaPSA/TSA's permission, so a
  * row here holds who asked, about which expert, why, and what was decided.
  * Rows are kept after a decision as the record of it.
  */

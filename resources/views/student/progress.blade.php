@@ -218,7 +218,7 @@
 @elseif (! $progress)
 <div class="card">
   <div style="padding:22px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6">
-    Your CaPSA has not set up a checklist for your team yet.
+    Your CaPSA/TSA has not set up a checklist for your team yet.
   </div>
 </div>
 @else
@@ -260,7 +260,7 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="7.5 12.5 10.5 15.5 16.5 9"/></svg>
     <div>
       <b>{{ $team->team_name }} has completed every requirement on this checklist.</b>
-      <span>All {{ $progress->total }} are closed. Capstone 1 is done - your CaPSA will set up what comes next.</span>
+      <span>All {{ $progress->total }} are closed. Capstone 1 is done - your CaPSA/TSA will set up what comes next.</span>
     </div>
     <a class="pt-btn" href="{{ route('student.defense-scores') }}">See panel scores</a>
   </div>
@@ -327,7 +327,7 @@
   @else
     <section class="pt-next is-clear">
       <div class="pt-next-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="5 12.5 10 17 19 7.5"/></svg></div>
-      <div class="pt-next-body"><small>Up next</small><b>Nothing due right now</b><span>New deadlines show here as your CaPSA sets them.</span></div>
+      <div class="pt-next-body"><small>Up next</small><b>Nothing due right now</b><span>New deadlines show here as your CaPSA/TSA sets them.</span></div>
     </section>
   @endif
 
@@ -422,34 +422,34 @@
                 $done => 'Closed '.$row->closed_at->format('M j'),
                 $row->state === 'overdue' => 'Overdue since '.$row->due_on->format('M j'),
                 $row->state === 'not_started' => $row->due_on ? 'Due '.$row->due_on->format('M j, Y') : 'Not started',
-                $row->waiting_on === 'capsa' && $item->closesOnArchiveEntry() => 'With your CaPSA to publish',
-                $row->waiting_on === 'capsa' => 'With your CaPSA to check',
-                $row->waiting_on === 'title_review' => 'With your CaPSA to recommend a title',
+                $row->waiting_on === 'capsa' && $item->closesOnArchiveEntry() => 'With your CaPSA/TSA to publish',
+                $row->waiting_on === 'capsa' => 'With your CaPSA/TSA to check',
+                $row->waiting_on === 'title_review' => 'With your CaPSA/TSA to recommend a title',
                 $row->waiting_on === 'dean' => "With the Dean's Office to check",
                 $row->waiting_on === 'team' && $item->kind === 'bluebook' => "Sent back by the Dean's Office",
-                $row->waiting_on === 'team' && (bool) $row->note => 'Sent back by your CaPSA',
+                $row->waiting_on === 'team' && (bool) $row->note => 'Sent back by your CaPSA/TSA',
                 $row->waiting_on === 'team' => $ord(max(1, $row->revision)).' revision requested',
                 $row->waiting_on === 'signed_copy' => 'Approved — upload the signed copy',
                 in_array($row->waiting_on, ['adviser', 'consultant', 'grammarian', 'panel'], true) => 'With your '.$row->waiting_on,
-                $row->waiting_on === 'subject_adviser' => 'With your CaPSA to approve',
+                $row->waiting_on === 'subject_adviser' => 'With your CaPSA/TSA to approve',
                 $row->waiting_on === 'redefense' => 'Re-defense needed — the panel asked for another defense',
                 $item->kind === 'defense' && $row->revision > 0 => 'Re-defense scheduled',
                 default => 'Scheduled',
             };
             $closer = [
-                'form' => 'Closed when your CaPSA checks the signed form',
-                'approval' => 'Closed when your CaPSA checks the CLF signed by your '.($item->role ?: 'adviser'),
-                'document' => 'Closed when your CaPSA checks it, after your adviser approves it',
+                'form' => 'Closed when your CaPSA/TSA checks the signed form',
+                'approval' => 'Closed when your CaPSA/TSA checks the CLF signed by your '.($item->role ?: 'adviser'),
+                'document' => 'Closed when your CaPSA/TSA checks it, after your adviser approves it',
                 'defense' => 'Closes when the panel records a pass',
-                'custom' => 'Ticked by your CaPSA',
+                'custom' => 'Ticked by your CaPSA/TSA',
                 'bluebook' => $item->closesOnBluebookClearance() ? "Closes when the Dean's Office clears your team" : "Checked by the Dean's Office",
             ][$item->kind] ?? '';
             $byRecommendation = $item->closesOnTitleRecommendation();
             if ($byRecommendation) {
-                $closer = 'Closed when your CaPSA recommends one of your pre-proposal titles — nothing to upload';
+                $closer = 'Closed when your CaPSA/TSA recommends one of your pre-proposal titles — nothing to upload';
             }
             if ($item->closesOnArchiveEntry()) {
-                $closer = 'Closes when your CaPSA publishes it in the Archive';
+                $closer = 'Closes when your CaPSA/TSA publishes it in the Archive';
             }
             // Everything is handed in through Document Submission; a defense is not, nor the recommended title.
             // A line still waiting on an earlier one cannot be handed in yet, so

@@ -50,7 +50,7 @@ class ExpertListReportTest extends TestCase
     }
 
     /**
-     * The sheet row for one expert. The CaPSA viewing the report is an expert
+     * The sheet row for one expert. The CaPSA/TSA viewing the report is an expert
      * too, with a random factory name, so the list's alphabetical order can
      * put them first; finding the row by name keeps the test off that luck.
      *

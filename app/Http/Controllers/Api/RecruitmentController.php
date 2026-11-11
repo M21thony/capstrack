@@ -24,7 +24,7 @@ class RecruitmentController extends Controller
 
         $recruitments = Recruitment::with(['student.team'])
             ->where('student_id', '!=', $student->student_id)
-            // Off the feed only once the team reaches the CaPSA's limit.
+            // Off the feed only once the team reaches the CaPSA/TSA's limit.
             ->whereNotIn('student_id', $fullTeamStudentIds)
             ->whereIn('student_id', function ($query) use ($student) {
                 $query->select('student_s_y.student_id')

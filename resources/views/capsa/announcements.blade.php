@@ -195,7 +195,7 @@ textarea.ann-input{resize:vertical;min-height:150px;line-height:1.5}
                 @endphp
                 <article class="ann-card ann-post announcement-card" data-id="{{ $announcement->id }}" data-audience='@json($aud)' data-team="{{ $team }}" data-mine="{{ $announcement->admin_id == $me ? 1 : 0 }}" data-today="{{ $d->isToday() ? 1 : 0 }}" data-kinds="{{ implode(' ', $kinds($announcement)) }}">
                   <h3 class="ann-title">{{ $announcement->title }}</h3>
-                  <div class="ann-meta">@if ($to)To <strong>{{ $to }}</strong> · @endif{{ $announcement->created_at->format('g:i A') }} · by {{ $announcement->admin?->name ?? 'CaPSA' }}</div>
+                  <div class="ann-meta">@if ($to)To <strong>{{ $to }}</strong> · @endif{{ $announcement->created_at->format('g:i A') }} · by {{ $announcement->admin?->name ?? 'CaPSA/TSA' }}</div>
                   <div class="ann-msg ann-body">@if ($team){!! str_replace(e('@'.$team), '<span class="ann-mention">'.e('@'.$team).'</span>', e($announcement->body)) !!}@else{{ $announcement->body }}@endif</div>
                   <div class="ann-acts">
                     <button type="button" class="ann-btn sm" onclick="editAnnouncement({{ $announcement->id }})">Edit</button>
@@ -282,7 +282,7 @@ var forDrop = document.getElementById('ann-for-drop');
 var forSections = document.getElementById('ann-for-sections');
 
 // ---- Who it goes to ----
-// One of Everyone / Experts / Students, narrowed to some of the CaPSA's own
+// One of Everyone / Experts / Students, narrowed to some of the CaPSA/TSA's own
 // sections. With no section ticked the backend still sends to all of them,
 // so the last ticked section can't be unticked: what the menu shows is what
 // is sent.

@@ -10,10 +10,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * A CaPSA's reach: the sections they handle, and the one way out of them.
+ * A CaPSA/TSA's reach: the sections they handle, and the one way out of them.
  *
  * The filter on the sections page listed every section in the college and,
- * worse, choosing one skipped the ownership check entirely - so any CaPSA
+ * worse, choosing one skipped the ownership check entirely - so any CaPSA/TSA
  * could read another's students by picking their section from a dropdown
  * that offered it. Moving a student the other way was refused outright,
  * which left a genuine transfer with nowhere to go.

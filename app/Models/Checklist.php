@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * A CaPSA's checklist for one program. Every team in the sections of that
+ * A CaPSA/TSA's checklist for one program. Every team in the sections of that
  * program they handle follows it - there is no per-team copy.
  */
 class Checklist extends Model

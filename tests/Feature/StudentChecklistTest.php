@@ -51,7 +51,7 @@ class StudentChecklistTest extends TestCase
             ->assertSee('Chapter 1 Draft');
     }
 
-    /** The CaPSA's description shows under the milestone. */
+    /** The CaPSA/TSA's description shows under the milestone. */
     public function test_a_milestone_shows_its_due_date_past_due_and_description(): void
     {
         $milestone = $this->checklist()->milestones()->where('name', 'Pre-proposal Defense')->first();
@@ -71,7 +71,7 @@ class StudentChecklistTest extends TestCase
         $this->get('/student/progress')->assertOk()->assertDontSee('Past due');
     }
 
-    /** The CaPSA checking a signed form is what the team sees change. */
+    /** The CaPSA/TSA checking a signed form is what the team sees change. */
     public function test_a_form_the_capsa_checked_shows_as_closed(): void
     {
         $form = $this->line($this->checklist(), 'team_assignment_form');
@@ -110,7 +110,7 @@ class StudentChecklistTest extends TestCase
 
         $this->get('/student/progress')
             ->assertOk()
-            ->assertSee('Sent back by your CaPSA')
+            ->assertSee('Sent back by your CaPSA/TSA')
             ->assertSee('Two members have not signed.')
             ->assertSee('Replace file');
     }
@@ -129,7 +129,7 @@ class StudentChecklistTest extends TestCase
     {
         $this->get('/student/progress')
             ->assertOk()
-            ->assertSee('Your CaPSA has not set up a checklist for your team yet.');
+            ->assertSee('Your CaPSA/TSA has not set up a checklist for your team yet.');
     }
 
     /** Nothing on the tracker is the team's to close, so there is nothing here to mark done. */

@@ -12,13 +12,13 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Year Promotion without a file: the CaPSA picks their sections and moves the
+ * Year Promotion without a file: the CaPSA/TSA picks their sections and moves the
  * students in them up one year, "3rd · A" to "4th · A".
  *
  * The other way is uploading the new school year's class list, where the
  * year comes from the list. This one is for when there is no new list yet,
  * or only a few sections moved. Accounts, teams and work all stay; only the
- * year on each student changes. A CaPSA may or may not keep the section in
+ * year on each student changes. A CaPSA/TSA may or may not keep the section in
  * the new year, so staying on is a choice made here too.
  */
 class YearPromotionController extends Controller
@@ -28,7 +28,7 @@ class YearPromotionController extends Controller
 
     private const ORDINALS = [1 => '1st', 2 => '2nd', 3 => '3rd', 4 => '4th'];
 
-    /** The CaPSA's sections below 4th year, each with its students and where they would go. */
+    /** The CaPSA/TSA's sections below 4th year, each with its students and where they would go. */
     public function preview(): JsonResponse
     {
         return response()->json(['success' => true, 'sections' => $this->plan()->values()]);
@@ -47,7 +47,7 @@ class YearPromotionController extends Controller
             'sections.required' => 'Pick at least one section to move up.',
         ]);
 
-        // Only the CaPSA's own sections, whatever the request names.
+        // Only the CaPSA/TSA's own sections, whatever the request names.
         $plan = $this->plan()->whereIn('from', $validated['sections']);
         $leaveOut = array_map('intval', $validated['exclude'] ?? []);
 

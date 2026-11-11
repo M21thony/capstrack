@@ -4,11 +4,11 @@ import { execFileSync } from 'node:child_process';
 /**
  * The Archive Entry, end to end: a team that passed the Final Oral Defense
  * sends its title, typed abstract and proponents from the archive page, the
- * tracker shows it waiting on the CaPSA, and her Publish closes the line.
+ * tracker shows it waiting on the CaPSA/TSA, and her Publish closes the line.
  *
  *   PW_BASE_URL=http://127.0.0.1:8002 npx playwright test archive-entry
  *
- * It seeds its own CaPSA (BSIT-4Z, a section nobody else runs), her
+ * It seeds its own CaPSA/TSA (BSIT-4Z, a section nobody else runs), her
  * checklist and a two-member team, and takes them all out after.
  */
 test.skip(!process.env.PW_BASE_URL, 'point PW_BASE_URL at the test server');
@@ -95,12 +95,12 @@ test('the leader sends title, typed abstract and proponents', async ({ page }) =
   await expect(page.getByText('Archive Entry sent.')).toBeVisible();
 });
 
-test('the tracker shows it waiting on the CaPSA', async ({ page }) => {
+test('the tracker shows it waiting on the CaPSA/TSA', async ({ page }) => {
   await as(page, `/__dev-login-student/progress?email=${LEADER}`);
 
   const line = archiveLine(page);
-  await expect(line).toContainText('With your CaPSA to publish');
-  await expect(line).toContainText('Closes when your CaPSA publishes it in the Archive');
+  await expect(line).toContainText('With your CaPSA/TSA to publish');
+  await expect(line).toContainText('Closes when your CaPSA/TSA publishes it in the Archive');
   await expect(line.locator('a.pt-file', { hasText: 'Open it in Archive' })).toHaveAttribute('href', /\/student\/archive$/);
 });
 
@@ -109,7 +109,7 @@ test('a member is told the leader sends it', async ({ page }) => {
   await expect(page.locator('#open-manuscript')).toHaveCount(0);
 });
 
-test('the CaPSA publishes it and the line closes', async ({ page }) => {
+test('the CaPSA/TSA publishes it and the line closes', async ({ page }) => {
   await as(page, `/__dev-login-expert/capsa/archive?email=${CAPSA}`);
 
   const entry = page.locator('[id^="pending-"]', { hasText: TEAM });
@@ -135,15 +135,15 @@ test('a closed Archive Entry takes no new entry', async ({ page }) => {
   setArchiveMilestone(`['closed_at' => now()]`);
 
   await as(page, `/__dev-login-student/archive?email=${LEADER}`);
-  await expect(page.getByText('Your CaPSA has closed the Archive Entry.')).toBeVisible();
+  await expect(page.getByText('Your CaPSA/TSA has closed the Archive Entry.')).toBeVisible();
   await expect(page.locator('#open-manuscript')).toHaveCount(0);
 });
 
-test('an Archive Entry the CaPSA has not opened takes no entry', async ({ page }) => {
+test('an Archive Entry the CaPSA/TSA has not opened takes no entry', async ({ page }) => {
   setArchiveMilestone(`['closed_at' => null, 'opened_at' => null]`);
 
   await as(page, `/__dev-login-student/archive?email=${LEADER}`);
-  await expect(page.getByText('Your CaPSA has not opened the Archive Entry yet.')).toBeVisible();
+  await expect(page.getByText('Your CaPSA/TSA has not opened the Archive Entry yet.')).toBeVisible();
   await expect(page.locator('#open-manuscript')).toHaveCount(0);
 
   await as(page, `/__dev-login-student/progress?email=${LEADER}`);

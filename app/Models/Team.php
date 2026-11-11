@@ -195,10 +195,10 @@ class Team extends Model
         return $this->capstoneStage() === 1;
     }
 
-    /** Said wherever a student is turned away by the CaPSA's Team Rules. */
-    public const CREATION_CLOSED = 'Creating a team is closed right now - your CaPSA has turned it off.';
+    /** Said wherever a student is turned away by the CaPSA/TSA's Team Rules. */
+    public const CREATION_CLOSED = 'Creating a team is closed right now - your CaPSA/TSA has turned it off.';
 
-    public const JOINING_CLOSED = 'Joining a team is closed right now - your CaPSA has turned it off.';
+    public const JOINING_CLOSED = 'Joining a team is closed right now - your CaPSA/TSA has turned it off.';
 
     /** Members join in Capstone 1 (3rd year) only - said to a team and to a joiner alike. */
     public const MEMBERS_SETTLED = 'Capstone 2 has started, so a team keeps the members it '
@@ -209,17 +209,17 @@ class Team extends Model
 
     /** Said at every door a member could leave, or be removed, by. */
     public const TEAM_LOCKED = 'Your team passed Title Defense, so its members are locked. '
-        .'A member can only leave with your CaPSA\'s approval - send the request from the Team page.';
+        .'A member can only leave with your CaPSA/TSA\'s approval - send the request from the Team page.';
 
     /** Said to a leader on their own whose team an expert already took on. */
-    public const HAS_EXPERT = 'An expert has already taken on your team, so leaving needs your CaPSA\'s approval. '
-        .'Use Ask CaPSA to Leave on the Team page.';
+    public const HAS_EXPERT = 'An expert has already taken on your team, so leaving needs your CaPSA/TSA\'s approval. '
+        .'Use Ask CaPSA/TSA to Leave on the Team page.';
 
     public const NO_NEW_TEAMS = 'Capstone 2 has started. Teams keep the members they '
         .'finished Capstone 1 with, so new teams and recruitment posts are closed.';
 
     /**
-     * Whether students may start a team, as set on the CaPSA's Team Rules.
+     * Whether students may start a team, as set on the CaPSA/TSA's Team Rules.
      *
      * Open unless switched off. An unset rule is what every existing team was
      * formed under, and a fresh install must not start with teams closed.
@@ -239,9 +239,9 @@ class Team extends Model
     public const RULES_KEY = 'team_rules:';
 
     /**
-     * The Team Rules a section is under, as its CaPSA set them.
+     * The Team Rules a section is under, as its CaPSA/TSA set them.
      *
-     * Each CaPSA sets them for their own sections only. A section nobody has
+     * Each CaPSA/TSA sets them for their own sections only. A section nobody has
      * set yet falls back to the old single school-wide rules, and failing
      * those to five members with creating and joining open - what every
      * existing team was formed under.
@@ -274,7 +274,7 @@ class Team extends Model
      *
      * Asked when an invitation is accepted, not when it was sent. One sent
      * while a seat was free can be accepted after the last seat went, after
-     * Capstone 2 began, or after the CaPSA closed joining - and the accept
+     * Capstone 2 began, or after the CaPSA/TSA closed joining - and the accept
      * path the page uses checked none of the three, so two invitations for
      * one seat could both be accepted.
      *
@@ -365,7 +365,7 @@ class Team extends Model
     }
 
     /**
-     * Has the team reached the CaPSA's member limit?
+     * Has the team reached the CaPSA/TSA's member limit?
      *
      * Counted, not read off team_status: "Full" is written when the last
      * seat goes and never set back when somebody leaves.
@@ -378,7 +378,7 @@ class Team extends Model
     /**
      * Mark a Full team Active again once a seat has opened.
      *
-     * Called wherever somebody comes off a team. Without it the CaPSA kept
+     * Called wherever somebody comes off a team. Without it the CaPSA/TSA kept
      * seeing "Full" on a team with a free seat.
      */
     public function reopenIfRoom(): void
@@ -395,13 +395,13 @@ class Team extends Model
             ->count();
     }
 
-    /** The smallest and largest team a CaPSA may allow. */
+    /** The smallest and largest team a CaPSA/TSA may allow. */
     public const MIN_MEMBERS = 3;
 
     public const MAX_MEMBERS = 5;
 
     /**
-     * How many members a team may have, as the CaPSA has set it.
+     * How many members a team may have, as the CaPSA/TSA has set it.
      *
      * The number was written out as 5 in seven places - the invitation
      * check, two recruitment paths, the team page - so changing it meant
@@ -414,12 +414,12 @@ class Team extends Model
     }
 
     /**
-     * This team's limit, which is the CaPSA's number.
+     * This team's limit, which is the CaPSA/TSA's number.
      *
      * Not team.member_count. That column is written as a flat 5 whenever a
      * team or a recruitment post is made and never deliberately varied, so
      * reading it as a per-team override meant every team carried an
-     * "override" of 5 and the CaPSA's setting changed nothing. It is kept on
+     * "override" of 5 and the CaPSA/TSA's setting changed nothing. It is kept on
      * the table because other code stores a headcount in it.
      */
     public function memberLimit(): int
@@ -483,7 +483,7 @@ class Team extends Model
         ];
     }
 
-    /** This team's progress on its section CaPSA's checklist, or null when it has none. */
+    /** This team's progress on its section CaPSA/TSA's checklist, or null when it has none. */
     public function checklistProgress(): ?object
     {
         $checklist = app(TeamChecklist::class)->for($this);

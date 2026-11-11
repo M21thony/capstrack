@@ -17,7 +17,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * A CaPSA's named team ratings: create one, add activities while it waits to
+ * A CaPSA/TSA's named team ratings: create one, add activities while it waits to
  * open, move its due date, open or close it early, remind, and export.
  * The ratings themselves are given on the student side.
  */
@@ -116,7 +116,7 @@ class TeamRatingController extends Controller
         return response()->json(['reminded' => $form->remind()]);
     }
 
-    /** Every rating of this CaPSA, one sheet each, laid out like FINALS-PARTICIPATION.xlsx. */
+    /** Every rating of this CaPSA/TSA, one sheet each, laid out like FINALS-PARTICIPATION.xlsx. */
     public function export(): StreamedResponse
     {
         $forms = TeamRatingForm::with('items.milestone.deliverables', 'items.deliverable')
@@ -179,7 +179,7 @@ class TeamRatingController extends Controller
     }
 
     /**
-     * The picked activities as item rows. Each must be on this CaPSA's own
+     * The picked activities as item rows. Each must be on this CaPSA/TSA's own
      * checklist, and in no rating yet - a milestone counts as used when it or
      * any of its deliverables is, so nothing is rated twice.
      *

@@ -80,7 +80,7 @@ class TheAdminCannotBeLockedOutTest extends TestCase
 
     // ── except the Admin ──────────────────────────────────────────────────
 
-    /** A CaPSA reaching the Admin's id by hand must not switch them off. */
+    /** A CaPSA/TSA reaching the Admin's id by hand must not switch them off. */
     public function test_a_capsa_cannot_deactivate_the_admin(): void
     {
         $admin = $this->admin();
@@ -119,7 +119,7 @@ class TheAdminCannotBeLockedOutTest extends TestCase
         $this->assertSame('admin@cspc.edu.ph', $admin->fresh()->email);
     }
 
-    /** And the refusal must not tell a CaPSA which account this is. */
+    /** And the refusal must not tell a CaPSA/TSA which account this is. */
     public function test_the_refusal_does_not_identify_the_admin(): void
     {
         $admin = $this->admin();

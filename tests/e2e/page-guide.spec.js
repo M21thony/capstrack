@@ -20,7 +20,7 @@ const ROUTES = Object.fromEntries(JSON.parse(execSync('php artisan route:list --
   .filter((r) => r.name).map((r) => [r.name, '/' + r.uri.replace(/^\//, '')]));
 
 // More than one account where no single one reaches every page: 92 has papers
-// to review and a defense to grade but, as a CaPSA, is sent from Teams to
+// to review and a defense to grade but, as a CaPSA/TSA, is sent from Teams to
 // Team Management; 121 is a plain adviser with teams.
 const SIGN_IN = {
   admin: ['/__dev-login-expert/admin?email=ccs@cspc.edu.ph'],
@@ -85,7 +85,7 @@ for (const portal of Object.keys(SIGN_IN)) {
             const where = `${name} (${size})`;
             const landed = new URL(page.url()).pathname;
             if (!pattern(ROUTES[name]).test(landed)) {
-              // A CaPSA who also advises keeps one profile: the adviser one, which has its own guide.
+              // A CaPSA/TSA who also advises keeps one profile: the adviser one, which has its own guide.
               const to = routeOf(landed);
               if (to && GUIDES[to] && to.split('.').slice(1).join('.') === name.split('.').slice(1).join('.')) {
                 done.add(name);

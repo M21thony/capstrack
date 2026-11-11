@@ -1410,7 +1410,7 @@ PROMPT;
     /**
      * What each role is actually for, in the words the model is given.
      *
-     * This is the whole of the fix a CaPSA asked for. The suggestion used to
+     * This is the whole of the fix a CaPSA/TSA asked for. The suggestion used to
      * rank every student-facing expert against the proposal on expertise
      * alone and hand back the top three, with no mention anywhere of what
      * role any of them held - so an adviser whose strength is research
@@ -1456,7 +1456,7 @@ PROMPT;
     {
         // Only experts a team can actually engage: approved, not deactivated,
         // and holding at least one student-facing role. Suggesting an Admin or
-        // a CaPSA-only account gives the student a name they cannot apply to.
+        // a CaPSA/TSA-only account gives the student a name they cannot apply to.
         $experts = CapstoneExpert::query()
             ->where('approved_status', true)
             ->whereHas('roles', fn ($q) => $q->whereIn('role_name', CapstoneExpert::STUDENT_FACING_ROLES))

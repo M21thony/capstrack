@@ -19,7 +19,7 @@ use Illuminate\Validation\ValidationException;
  * rating covers, saved as a draft pick by pick, then submitted all at once.
  *
  * A student only ever sees the scores they are giving. What teammates gave
- * them goes to the CaPSA alone.
+ * them goes to the CaPSA/TSA alone.
  */
 class TeamRatingController extends Controller
 {
@@ -123,7 +123,7 @@ class TeamRatingController extends Controller
         return response()->json(['savedAt' => now()->format('g:i A')]);
     }
 
-    /** Sends every teammate's scores to the CaPSA at once; nothing changes after. */
+    /** Sends every teammate's scores to the CaPSA/TSA at once; nothing changes after. */
     public function submit(TeamRatingForm $form): JsonResponse
     {
         [$me, , $mates] = $this->rater($form);

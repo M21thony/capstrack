@@ -9,7 +9,7 @@ use App\Support\ExpertCapacity;
 use Illuminate\Console\Command;
 
 /**
- * Tell each CaPSA when their programs have more teams needing an expert than
+ * Tell each CaPSA/TSA when their programs have more teams needing an expert than
  * there are free expert slots - the panel's "cross-check teams and experts",
  * done on its own instead of by hand.
  *
@@ -22,7 +22,7 @@ class CheckExpertCapacity extends Command
 
     protected $signature = 'experts:check-capacity';
 
-    protected $description = 'Notify each CaPSA when teams in their programs outnumber the free expert slots';
+    protected $description = 'Notify each CaPSA/TSA when teams in their programs outnumber the free expert slots';
 
     public function handle(ExpertCapacity $capacity): int
     {
@@ -54,7 +54,7 @@ class CheckExpertCapacity extends Command
             $told++;
         }
 
-        $this->info("Warned {$told} CaPSA(s) about expert slot shortages.");
+        $this->info("Warned {$told} CaPSA/TSA(s) about expert slot shortages.");
 
         return self::SUCCESS;
     }

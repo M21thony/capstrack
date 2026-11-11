@@ -32,7 +32,7 @@ use Tests\TestCase;
 
 /**
  * After each defense a team passes - Pre-proposal, Title, Pre Oral, Final -
- * the leader answers the CaPSA's evaluation of each expert it covers, 1 to 5
+ * the leader answers the CaPSA/TSA's evaluation of each expert it covers, 1 to 5
  * stars per question; the rating is the average. The leader is told by bell
  * and email, nudged by a popup, and the next phase waits for it.
  */
@@ -349,7 +349,7 @@ class ExpertEvaluationTest extends TestCase
         $this->assertSame(0, ExpertEvaluation::count());
     }
 
-    /** The CaPSA edits the questions after the defense: the leader yet to answer is asked the new ones. */
+    /** The CaPSA/TSA edits the questions after the defense: the leader yet to answer is asked the new ones. */
     public function test_a_capsas_edit_reaches_the_leader_who_has_not_answered_yet(): void
     {
         $template = $this->template();
@@ -386,34 +386,34 @@ class ExpertEvaluationTest extends TestCase
         $this->actingAs($this->leader, 'web')->post(route('student.evaluations.store'), [
             'defense_id' => $defense->defense_id, 'expert_id' => $this->experts['adviser']->expert_id, 'role' => 'adviser',
             'answers' => $stale->mapWithKeys(fn ($q) => [$q->id => 5])->all(),
-        ])->assertSessionHas('evaluation_error', 'Your CaPSA changed these questions while you were answering. Here they are again.');
+        ])->assertSessionHas('evaluation_error', 'Your CaPSA/TSA changed these questions while you were answering. Here they are again.');
 
         $this->assertSame(0, ExpertEvaluation::count());
     }
 
     /**
-     * A section can have two CaPSAs. The other one's evaluation counts for the
+     * A section can have two CaPSA/TSAs. The other one's evaluation counts for the
      * team, and the newest of them is what the leader answers.
      */
     public function test_every_capsa_of_the_section_counts_and_the_newest_evaluation_is_asked(): void
     {
-        $this->template(questions: ['An older question from the first CaPSA.']);
+        $this->template(questions: ['An older question from the first CaPSA/TSA.']);
         $defense = $this->decide();
 
-        // The second CaPSA of BSIT-3A writes theirs after the defense.
+        // The second CaPSA/TSA of BSIT-3A writes theirs after the defense.
         Carbon::setTestNow(now()->addHour());
         $second = $this->capsaFor(['BSIT-3A']);
         $this->actingAs($second, 'expert')->post(route('capsa.evaluations.store'), [
-            'title' => 'Second CaPSA evaluation', 'defense_type' => DefenseOutcome::PRE_PROPOSAL,
-            'roles' => ['adviser', 'consultant', 'grammarian'], 'questions' => ['A newer question from the second CaPSA.'],
+            'title' => 'Second CaPSA/TSA evaluation', 'defense_type' => DefenseOutcome::PRE_PROPOSAL,
+            'roles' => ['adviser', 'consultant', 'grammarian'], 'questions' => ['A newer question from the second CaPSA/TSA.'],
         ])->assertSessionHasNoErrors();
         $newer = EvaluationTemplate::where('capsa_id', $second->expert_id)->sole();
 
         $this->assertSame([$newer->id], $this->due()->pluck('template_id')->unique()->values()->all());
         $this->actingAs($this->leader, 'web')->get(route('student.experts', ['tab' => 'evaluations']))
             ->assertOk()
-            ->assertSee('A newer question from the second CaPSA.')
-            ->assertDontSee('An older question from the first CaPSA.');
+            ->assertSee('A newer question from the second CaPSA/TSA.')
+            ->assertDontSee('An older question from the first CaPSA/TSA.');
 
         $this->answer($this->leader, $defense, $this->experts['adviser'], 'adviser', $newer->load('questions'))->assertSessionHas('evaluation_saved');
         $this->actingAs($second, 'expert')->get(route('capsa.evaluations', ['tab' => 'results']))
@@ -422,8 +422,8 @@ class ExpertEvaluationTest extends TestCase
     }
 
     /**
-     * What happened on BSIT-3B: the first CaPSA's evaluation covers every role,
-     * the second CaPSA edits theirs to cover only the adviser and consultant.
+     * What happened on BSIT-3B: the first CaPSA/TSA's evaluation covers every role,
+     * the second CaPSA/TSA edits theirs to cover only the adviser and consultant.
      * The edit decides - the grammarian is no longer asked about.
      */
     public function test_the_evaluation_edited_last_decides_the_roles_too(): void
@@ -450,7 +450,7 @@ class ExpertEvaluationTest extends TestCase
         $this->assertTrue($this->chaptersGateOpensAfter(['adviser', 'consultant'], $theirs->fresh('questions')));
     }
 
-    /** One CaPSA may split a defense's evaluation by role; both halves are asked. */
+    /** One CaPSA/TSA may split a defense's evaluation by role; both halves are asked. */
     public function test_one_capsas_evaluations_for_different_roles_are_all_asked(): void
     {
         $this->template(roles: ['adviser', 'consultant'], questions: ['For the adviser and consultant.']);

@@ -30,7 +30,7 @@ function Decision({ d }) {
         <b>Approved{d.date ? ` on ${d.date}` : ""}</b>
         <p>
           {d.requirement
-            ? `Your “${d.requirement}” now goes to your CaPSA to verify.`
+            ? `Your “${d.requirement}” now goes to your CaPSA/TSA to verify.`
             : `No changes needed from your ${d.role.toLowerCase()}.`}
         </p>
       </div>

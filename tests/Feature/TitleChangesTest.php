@@ -143,7 +143,7 @@ class TitleChangesTest extends TestCase
     {
         [$team, $old, $new, $adviser] = $this->newTitleApprovedByCapsa();
 
-        // Approved by the CaPSA, but not the team's title until the adviser says so.
+        // Approved by the CaPSA/TSA, but not the team's title until the adviser says so.
         $this->assertNull($team->project_title);
         $this->assertSame('pending', $new->adviser_status);
         $this->assertNotNull($old->fresh()->retired_at);
@@ -179,7 +179,7 @@ class TitleChangesTest extends TestCase
         $this->assertCount(0, $team->preProposals()->get());
         $this->assertSame('approved', TeamExpertAssignment::where('expert_id', $adviser->expert_id)->value('status'));
 
-        // The CaPSA's review window still shows the title, with the adviser's note.
+        // The CaPSA/TSA's review window still shows the title, with the adviser's note.
         $shown = collect(\App\Support\PreProposalPayload::forTeam($team->fresh()))->firstWhere('id', $new->id);
         $this->assertTrue($shown['set_aside']);
         $this->assertSame('declined', $shown['adviser']['status']);
@@ -193,11 +193,11 @@ class TitleChangesTest extends TestCase
 
     public function test_another_capsa_who_is_their_adviser_still_leaves_it_for_the_adviser_step(): void
     {
-        // Their adviser, but not their CaPSA (no sections): the usual two steps.
+        // Their adviser, but not their CaPSA/TSA (no sections): the usual two steps.
         $this->assertSame('pending', $this->recommendAsAdviser([]));
     }
 
-    /** A CaPSA with these sections, who is the team's adviser, recommends its new title. Returns the adviser status. */
+    /** A CaPSA/TSA with these sections, who is the team's adviser, recommends its new title. Returns the adviser status. */
     private function recommendAsAdviser(array $sections): string
     {
         [$team, $leader] = $this->team();

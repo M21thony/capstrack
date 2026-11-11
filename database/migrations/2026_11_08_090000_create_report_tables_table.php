@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/** A CaPSA's saved report-builder tables: the columns picked and the filters set. */
+/** A CaPSA/TSA's saved report-builder tables: the columns picked and the filters set. */
 return new class extends Migration
 {
     public function up(): void

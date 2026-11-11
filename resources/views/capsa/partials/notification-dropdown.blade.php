@@ -1,9 +1,9 @@
 {{--
-  The CaPSA and Admin bell is the shared expert bell.
+  The CaPSA/TSA and Admin bell is the shared expert bell.
 
   It used to show Recent Activity - every student action in scope - which is a
   log, not a notification: nothing in it was ever addressed to the person
-  reading it. A CaPSA is very often also an adviser, consultant or grammarian,
+  reading it. A CaPSA/TSA is very often also an adviser, consultant or grammarian,
   and on these pages they were told nothing about their own teams at all.
 
   Recent Activity is not gone. It has a page of its own, in the sidebar.

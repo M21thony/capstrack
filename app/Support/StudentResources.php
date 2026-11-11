@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * What a student finds on their Resources page: the files their own CaPSA
+ * What a student finds on their Resources page: the files their own CaPSA/TSA
  * posted for them, and the rubrics their panel will grade them with.
  *
  * The page lists these and the download routes hand them over, so both ask
@@ -41,9 +41,9 @@ class StudentResources
     /**
      * The files this student may see, newest first.
      *
-     * Their own CaPSA's uploads only. One aimed at named sections reaches
+     * Their own CaPSA/TSA's uploads only. One aimed at named sections reaches
      * those sections; one aimed at none is scoped by program, or reaches every
-     * program when it names none. No CaPSA covering the student means no
+     * program when it names none. No CaPSA/TSA covering the student means no
      * files - deliberately, not everything: an empty list read as "no filter"
      * is how this page once showed every program's material to everybody.
      *
@@ -54,7 +54,7 @@ class StudentResources
         $program = $this->program($student);
         $section = $this->section($student);
 
-        // The section is computed rather than stored, so the CaPSAs covering
+        // The section is computed rather than stored, so the CaPSA/TSAs covering
         // it are matched in PHP. There are a handful of them.
         $capsaIds = $section
             ? CapstoneExpert::whereHas('roles', fn ($q) => $q->where('role_name', 'capstone_adviser'))

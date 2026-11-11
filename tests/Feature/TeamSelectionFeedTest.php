@@ -14,7 +14,7 @@ use Tests\TestCase;
 /**
  * Which teams' posts Team selection lists.
  *
- * A team's post shows while it is below the CaPSA's member limit and goes
+ * A team's post shows while it is below the CaPSA/TSA's member limit and goes
  * once it reaches it. The feed counts the members each time: the stored
  * "Full" status is never set back when somebody leaves, and member_count is
  * a flat 5 written at creation, so trusting either listed teams that were

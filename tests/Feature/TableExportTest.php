@@ -9,7 +9,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 /**
- * View Report and Download Excel on the tables of the CaPSA, Expert and Admin
+ * View Report and Download Excel on the tables of the CaPSA/TSA, Expert and Admin
  * pages: the page sends the table it is showing, the server lays it out.
  */
 class TableExportTest extends TestCase

@@ -1,5 +1,5 @@
 {{--
-  The notification switches, for a student, an expert or a CaPSA alike.
+  The notification switches, for a student, an expert or a CaPSA/TSA alike.
 
   One partial rather than three copies. It works out who is logged in and
   where to post by itself, so a profile page only has to @include it - the

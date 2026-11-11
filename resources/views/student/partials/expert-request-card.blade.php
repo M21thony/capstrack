@@ -40,10 +40,10 @@
               // notification, then never shown again - so a team that missed
               // the notification had a rejected application and no idea why.
               'rejection_reason' => $assignment->rejection_reason,
-              // An application made with the CaPSA-approved pre-proposal has
+              // An application made with the CaPSA/TSA-approved pre-proposal has
               // no uploaded file, and the details said "None attached" - as
               // though nothing had been sent, when what was sent is the one
-              // document the CaPSA had already passed.
+              // document the CaPSA/TSA had already passed.
               'pre_proposal_title' => $assignment->preProposal?->title,
               'proposal' => $propUrl,
               'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',

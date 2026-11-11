@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * 'held' is a receipt that a member has uploaded and their team leader has not
- * yet sent to the CaPSA. The CaPSA only ever sees 'pending' and after.
+ * yet sent to the CaPSA/TSA. The CaPSA/TSA only ever sees 'pending' and after.
  */
 return new class extends Migration
 {

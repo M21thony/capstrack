@@ -9,11 +9,11 @@ return new class extends Migration
     /**
      * Three tidy-ups on capstone_experts:
      *
-     * 1. Drop is_capsa. "CaPSA" is Capstone Subject Adviser, which is the
+     * 1. Drop is_capsa. "CaPSA/TSA" is Capstone Subject Adviser, which is the
      *    capstone_adviser row in `roles` - the same fact stored twice. It is
      *    now derived from expert_roles (CapstoneExpert::getIsCapsaAttribute),
      *    so nothing reads this column. Keeping both is what let "Remove
-     *    CaPSA" leave the role behind.
+     *    CaPSA/TSA" leave the role behind.
      *
      * 2. max_teams_raw -> program_slots. It started out holding the roster
      *    upload's raw "Max Number of Teams" text, but now holds the expert's

@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
-/** Report builder: a CaPSA saves, opens, renames and deletes only her own tables. */
+/** Report builder: a CaPSA/TSA saves, opens, renames and deletes only her own tables. */
 class ReportBuilderTest extends TestCase
 {
     use BuildsChecklists;

@@ -17,9 +17,9 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * A student asking their CaPSA for a member to leave a team.
+ * A student asking their CaPSA/TSA for a member to leave a team.
  *
- * A member leaving always needs the CaPSA. A leader removing someone only
+ * A member leaving always needs the CaPSA/TSA. A leader removing someone only
  * does once the team passed Title Defense; before that the leader removes
  * members directly.
  */
@@ -32,8 +32,8 @@ class LeaveRequestController extends Controller
             'student_id' => ['nullable', 'integer', 'required_if:type,'.MemberLeaveRequest::REMOVE],
             'reason' => ['required', 'string', 'min:'.MemberLeaveRequest::REASON_MIN, 'max:1000'],
         ], [
-            'reason.required' => 'Tell your CaPSA why.',
-            'reason.min' => 'Give your CaPSA a reason they can decide on - at least '.MemberLeaveRequest::REASON_MIN.' characters.',
+            'reason.required' => 'Tell your CaPSA/TSA why.',
+            'reason.min' => 'Give your CaPSA/TSA a reason they can decide on - at least '.MemberLeaveRequest::REASON_MIN.' characters.',
         ]);
 
         $me = $request->user();
@@ -48,7 +48,7 @@ class LeaveRequestController extends Controller
         if ($validated['type'] === MemberLeaveRequest::LEAVE) {
             // The leader cannot be the one to go: a team with nobody leading it
             // has nobody to schedule, submit or answer for it. A leader on
-            // their own ends the team by leaving, which needs the CaPSA only
+            // their own ends the team by leaving, which needs the CaPSA/TSA only
             // once an expert has taken the team on.
             if ($isLeader) {
                 if (StudentSchoolYear::where('team_id', $team->team_id)->count() > 1) {
@@ -82,10 +82,10 @@ class LeaveRequestController extends Controller
         }
 
         // One question about a member at a time. A leave and a removal of the
-        // same person both pending would let the CaPSA approve one and leave
+        // same person both pending would let the CaPSA/TSA approve one and leave
         // the other hanging over someone who is already gone.
         if (MemberLeaveRequest::pending()->where('team_id', $team->team_id)->where('student_id', $subjectId)->exists()) {
-            return $this->refuse($request, 'A request about this member is already waiting on your CaPSA.');
+            return $this->refuse($request, 'A request about this member is already waiting on your CaPSA/TSA.');
         }
 
         $leaveRequest = MemberLeaveRequest::create([
@@ -107,8 +107,8 @@ class LeaveRequestController extends Controller
                 'student_id' => $subjectId,
                 'type' => 'leave_request_sent',
                 'title' => 'Removal requested',
-                'message' => 'Your team leader asked your CaPSA to remove you from '.$teamName.'. '
-                    .'Their reason: "'.e($leaveRequest->reason).'" You stay on the team unless your CaPSA approves.',
+                'message' => 'Your team leader asked your CaPSA/TSA to remove you from '.$teamName.'. '
+                    .'Their reason: "'.e($leaveRequest->reason).'" You stay on the team unless your CaPSA/TSA approves.',
                 'link' => route('student.team'),
             ]);
         } elseif (! $isLeader) {
@@ -116,7 +116,7 @@ class LeaveRequestController extends Controller
                 'student_id' => $team->leader_id,
                 'type' => 'leave_request_sent',
                 'title' => 'Member asked to leave',
-                'message' => '<strong>'.$myName.'</strong> asked your CaPSA to let them leave '.$teamName.'.',
+                'message' => '<strong>'.$myName.'</strong> asked your CaPSA/TSA to let them leave '.$teamName.'.',
                 'link' => route('student.team'),
             ]);
         }
@@ -128,12 +128,12 @@ class LeaveRequestController extends Controller
             $me->student_id,
             'leave_request_sent',
             $validated['type'] === MemberLeaveRequest::LEAVE
-                ? 'Asked the CaPSA to leave '.$teamName
-                : 'Asked the CaPSA to remove <strong>'.e(trim(($subject->f_name ?? '').' '.($subject->l_name ?? ''))).'</strong> from '.$teamName,
+                ? 'Asked the CaPSA/TSA to leave '.$teamName
+                : 'Asked the CaPSA/TSA to remove <strong>'.e(trim(($subject->f_name ?? '').' '.($subject->l_name ?? ''))).'</strong> from '.$teamName,
             ['team_id' => $team->team_id, 'leave_request_id' => $leaveRequest->id]
         );
 
-        $message = 'Sent to your CaPSA. You will be notified when they decide.';
+        $message = 'Sent to your CaPSA/TSA. You will be notified when they decide.';
 
         return $request->expectsJson()
             ? response()->json(['success' => true, 'message' => $message, 'request' => $leaveRequest], 201)
@@ -150,7 +150,7 @@ class LeaveRequestController extends Controller
         }
 
         if (! $leaveRequest->isPending()) {
-            return $this->refuse($request, 'Your CaPSA has already decided on this request.', 409);
+            return $this->refuse($request, 'Your CaPSA/TSA has already decided on this request.', 409);
         }
 
         $leaveRequest->update(['status' => MemberLeaveRequest::WITHDRAWN]);
@@ -161,8 +161,8 @@ class LeaveRequestController extends Controller
     }
 
     /**
-     * The CaPSA decides, so the CaPSA hears about it with the reason in hand.
-     * It goes to every CaPSA who can see the request on their Leave Requests
+     * The CaPSA/TSA decides, so the CaPSA/TSA hears about it with the reason in hand.
+     * It goes to every CaPSA/TSA who can see the request on their Leave Requests
      * tab - the same section rule MemberLeaveRequest::visibleTo() applies.
      */
     private function notifyCapsa(Team $team, MemberLeaveRequest $leaveRequest, string $requesterName, string $subjectName): void

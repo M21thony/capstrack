@@ -51,7 +51,7 @@ class CapstoneExpert extends Authenticatable
     // the keys of Student::PROGRAM_COURSES (a const can't call array_keys(),
     // so this is spelled out) - add a program there and it belongs here too,
     // or experts won't be able to take teams from it.
-    // "CaPSA" is Capstone [Project] Subject Adviser - the same thing as the
+    // "CaPSA/TSA" is Capstone [Project] Subject Adviser - the same thing as the
     // capstone_adviser row in `roles`, not a separate concept. expert_roles
     // is the single source of truth for it; capstone_experts.is_capsa is a
     // leftover duplicate of the same fact, no longer read or written, and
@@ -214,9 +214,9 @@ class CapstoneExpert extends Authenticatable
     // just an instructor" (login redirect, approval bypass, sidebar merge),
     // now that those two jobs are split into independent flags.
     /**
-     * Whether this expert is a CaPSA - resolved from expert_roles, not from
+     * Whether this expert is a CaPSA/TSA - resolved from expert_roles, not from
      * the old is_capsa column, so there is exactly one place the answer can
-     * come from. Keeping both in step by hand is what let "Remove CaPSA"
+     * come from. Keeping both in step by hand is what let "Remove CaPSA/TSA"
      * leave the role behind.
      */
     public function getIsCapsaAttribute(): bool
@@ -346,7 +346,7 @@ class CapstoneExpert extends Authenticatable
     /**
      * Increase, Maintain or Reduce slots, from how quickly the expert has
      * reviewed their teams' documents in the last 180 days. Shown to the
-     * expert and the CaPSA as a suggestion only - the expert decides.
+     * expert and the CaPSA/TSA as a suggestion only - the expert decides.
      * Null when there is no slot limit or no finished review to judge by.
      */
     public function slotSuggestion(int $teams): ?string
@@ -471,7 +471,7 @@ class CapstoneExpert extends Authenticatable
      * used to enforce it on apply, not just hide them from the list.
      */
     /**
-     * The programs this CaPSA covers, derived from the sections they handle -
+     * The programs this CaPSA/TSA covers, derived from the sections they handle -
      * "BSIT-4A" and "BSIT-4B" are one program, BSIT.
      *
      * Empty for an admin, who has no sections and is not scoped by program.
@@ -755,7 +755,7 @@ class CapstoneExpert extends Authenticatable
         });
 
         // A deactivated expert gives up their place on every team, the same
-        // as a CaPSA-approved removal. Left approved, the team's role stays
+        // as a CaPSA/TSA-approved removal. Left approved, the team's role stays
         // "filled" by someone nobody can see, and applying to a replacement
         // is refused because the role is taken.
         static::softDeleted(function (self $expert) {
@@ -775,7 +775,7 @@ class CapstoneExpert extends Authenticatable
     /**
      * Why this account cannot be switched off yet, or null when it can.
      *
-     * Unlike a team place, these cannot simply be given up: a CaPSA's
+     * Unlike a team place, these cannot simply be given up: a CaPSA/TSA's
      * sections would be left with nobody to own their checklist or receive
      * their requests, and a defense only gets its outcome once every panelist
      * has graded and the chair has recorded it. Both need a person chosen, so
@@ -784,7 +784,7 @@ class CapstoneExpert extends Authenticatable
     public function deactivationBlocker(): ?string
     {
         if ($this->is_capsa && $this->sections) {
-            return "{$this->name} is still the CaPSA for ".implode(', ', $this->sections).'. Take away their CaPSA role first, which frees those sections for another CaPSA.';
+            return "{$this->name} is still the CaPSA/TSA for ".implode(', ', $this->sections).'. Take away their CaPSA/TSA role first, which frees those sections for another CaPSA/TSA.';
         }
 
         $teamNames = DefenseSchedule::whereNull('outcome')

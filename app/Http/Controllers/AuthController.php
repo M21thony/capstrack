@@ -424,9 +424,9 @@ class AuthController extends Controller
                     $expert->markFirstLogin();
 
                     $redirectUrl = match (true) {
-                        // Admin and CaPSA each have their own copy of the
+                        // Admin and CaPSA/TSA each have their own copy of the
                         // dashboard, guarded by their own role - sending an
-                        // Admin to the CaPSA one is a 403 at the door.
+                        // Admin to the CaPSA/TSA one is a 403 at the door.
                         (bool) $expert->is_admin => '/admin/dashboard',
                         (bool) $expert->is_capsa => '/capsa/dashboard',
                         default => '/instructor/dashboard',
@@ -452,7 +452,7 @@ class AuthController extends Controller
             }
 
             // Applying for an account is switched off - see the commented
-            // routes in routes/web.php. A CaPSA puts faculty in, either on
+            // routes in routes/web.php. A CaPSA/TSA puts faculty in, either on
             // the uploaded list or one at a time with Add Expert, so an
             // address nobody has listed has nowhere to go but back.
             return $this->refuseUnlistedExpert($request);
@@ -572,9 +572,9 @@ class AuthController extends Controller
                     $expert->markFirstLogin();
 
                     $redirectUrl = match (true) {
-                        // Admin and CaPSA each have their own copy of the
+                        // Admin and CaPSA/TSA each have their own copy of the
                         // dashboard, guarded by their own role - sending an
-                        // Admin to the CaPSA one is a 403 at the door.
+                        // Admin to the CaPSA/TSA one is a 403 at the door.
                         (bool) $expert->is_admin => '/admin/dashboard',
                         (bool) $expert->is_capsa => '/capsa/dashboard',
                         default => '/instructor/dashboard',
@@ -615,7 +615,7 @@ class AuthController extends Controller
             }
 
             // Applying for an account is switched off - see the commented
-            // routes in routes/web.php. A CaPSA puts faculty in, either on
+            // routes in routes/web.php. A CaPSA/TSA puts faculty in, either on
             // the uploaded list or one at a time with Add Expert, so an
             // address nobody has listed has nowhere to go but back.
             return $this->refuseUnlistedExpert($request);
@@ -654,7 +654,7 @@ class AuthController extends Controller
     /**
      * The account this student signs in to, or null if nobody has listed them.
      *
-     * CaPSA uploads the section's list before its students may have accounts,
+     * CaPSA/TSA uploads the section's list before its students may have accounts,
      * so being on it is what makes somebody a student here. Anyone who
      * already has an account keeps it - they were let in before this rule
      * existed, and taking that away would lock out the students who have been
@@ -669,7 +669,7 @@ class AuthController extends Controller
     private function studentSigningIn(string $email, string $firstName, string $lastName, ?string $picture = null): ?Student
     {
         // The class list is the whole of the answer. A student is on it
-        // because a CaPSA put them there, and taking them off it is how
+        // because a CaPSA/TSA put them there, and taking them off it is how
         // access is withdrawn - it is the only removal the system has.
         //
         // This used to also admit anyone who already had a students row,
@@ -698,7 +698,7 @@ class AuthController extends Controller
         // student added by hand under another address, a typo on a list -
         // made this insert fail, and a listed student got a 500 and could
         // not get in at all. They get in without it; the account that holds
-        // the number keeps it, and the clash is logged for the CaPSA to sort.
+        // the number keeps it, and the clash is logged for the CaPSA/TSA to sort.
         $number = trim((string) ($roster->student_number ?? '')) ?: null;
 
         if ($number !== null && (mb_strlen($number) > 20 || Student::where('student_number', $number)->exists())) {
@@ -731,8 +731,8 @@ class AuthController extends Controller
     /**
      * Turn away a faculty member nobody has put in the system.
      *
-     * They used to be sent to a form to apply, which a CaPSA then approved.
-     * That path is switched off: a CaPSA adds faculty herself, on the list or
+     * They used to be sent to a form to apply, which a CaPSA/TSA then approved.
+     * That path is switched off: a CaPSA/TSA adds faculty herself, on the list or
      * one at a time, so an account is only ever made by somebody who already
      * knows who this person is.
      *
@@ -743,11 +743,11 @@ class AuthController extends Controller
     private function refuseUnlistedExpert(Request $request)
     {
         // There is nothing they can do themselves any more - applying for an
-        // account is gone, because a CaPSA adds faculty either on the
+        // account is gone, because a CaPSA/TSA adds faculty either on the
         // uploaded list or one at a time. So the message names the person to
         // ask rather than sending them to a form that would only queue up
         // behind the same decision.
-        $message = 'There is no account for this address. Ask your CaPSA to add you '
+        $message = 'There is no account for this address. Ask your CaPSA/TSA to add you '
             .'to the expert list, then sign in again.';
 
         if ($request->expectsJson()) {
@@ -767,7 +767,7 @@ class AuthController extends Controller
      */
     private function refuseDeactivatedExpert(Request $request)
     {
-        $message = 'This account has been deactivated. Ask a CaPSA to switch it back on.';
+        $message = 'This account has been deactivated. Ask a CaPSA/TSA to switch it back on.';
 
         if ($request->expectsJson()) {
             return response()->json(['success' => false, 'message' => $message], 403);
@@ -779,7 +779,7 @@ class AuthController extends Controller
     /**
      * Turn away a student who is not on any uploaded list.
      *
-     * CaPSA asked that a section's list be uploaded before its students can
+     * CaPSA/TSA asked that a section's list be uploaded before its students can
      * have accounts, so that nobody arrives with a profile the department
      * never put there. The message names the way out, because the student
      * cannot fix this themselves and "access denied" would leave them
@@ -787,7 +787,7 @@ class AuthController extends Controller
      */
     private function refuseUnlistedStudent(Request $request)
     {
-        $message = "Your account is not on your section's list yet. Ask your CaPSA to upload "
+        $message = "Your account is not on your section's list yet. Ask your CaPSA/TSA to upload "
             .'the student list for your section, then sign in again.';
 
         if ($request->expectsJson()) {

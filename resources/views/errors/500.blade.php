@@ -11,7 +11,7 @@
 @endsection
 
 @section('extra')
-<div class="err-note">If it keeps happening, tell the CaPSA what you were doing and roughly when. That is enough to find it in the log.</div>
+<div class="err-note">If it keeps happening, tell the CaPSA/TSA what you were doing and roughly when. That is enough to find it in the log.</div>
 @endsection
 
 @section('actions')

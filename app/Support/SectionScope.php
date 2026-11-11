@@ -8,10 +8,10 @@ use App\Models\Team;
 use Illuminate\Support\Collection;
 
 /**
- * Works out which section a team belongs to, and whether a given CaPSA is
+ * Works out which section a team belongs to, and whether a given CaPSA/TSA is
  * responsible for it.
  *
- * A CaPSA covers named sections ("BSIT-3A"), but a team has no section of
+ * A CaPSA/TSA covers named sections ("BSIT-3A"), but a team has no section of
  * its own - it is its leader's, or failing that the first member's with a
  * complete enough profile to compute one from (see sectionFor()). That inference has to give the same answer
  * everywhere: a listing page and the action behind it disagreeing is what
@@ -30,7 +30,7 @@ class SectionScope
      * by 4th year its members can be split across sections - 4A and 4B - and
      * still be one team finishing one capstone. Taking whichever member came
      * back first gave such a team a different section from one page to the
-     * next, and with it a different CaPSA, checklist and grading list. The
+     * next, and with it a different CaPSA/TSA, checklist and grading list. The
      * leader answers it the same way everywhere; the other members, in the
      * order they joined, only stand in when the leader's profile has no
      * section.
@@ -61,13 +61,13 @@ class SectionScope
     }
 
     /**
-     * Whether this CaPSA may act on a team.
+     * Whether this CaPSA/TSA may act on a team.
      *
      * A team with no computable section is allowed through deliberately.
      * Since the forced personal-info onboarding step was removed for new
      * sign-ins, that is a reachable state, and hiding such a team from
      * everyone would leave it permanently unverifiable with nobody able to
-     * fix it. It is shown to every CaPSA, distinctly labelled, instead.
+     * fix it. It is shown to every CaPSA/TSA, distinctly labelled, instead.
      */
     public function covers(array $capsaSections, string $section): bool
     {
@@ -75,7 +75,7 @@ class SectionScope
     }
 
     /**
-     * Filter teams down to the ones a CaPSA is responsible for.
+     * Filter teams down to the ones a CaPSA/TSA is responsible for.
      *
      * @param  Collection<int, Team>  $candidates
      * @param  Collection<int, Collection<int, StudentSchoolYear>>  $syRecords  Keyed by team_id.

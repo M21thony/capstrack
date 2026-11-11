@@ -14,7 +14,7 @@ use Tests\TestCase;
 /**
  * A team cannot turn the same proposal in twice.
  *
- * Turning in more than one title exists so the CaPSA has a choice. The same
+ * Turning in more than one title exists so the CaPSA/TSA has a choice. The same
  * title twice, or the same scanned document twice, is not a choice - and it
  * went in silently, so a team could fill every slot from one proposal and
  * believe they had done the work.

@@ -399,7 +399,7 @@ class MemberChoosesTheirRoleTest extends TestCase
     }
 
     /**
-     * The two seated roles scale with the size the CaPSA set.
+     * The two seated roles scale with the size the CaPSA/TSA set.
      *
      * A team is the leader plus everybody else, split across Network
      * Designer and QA Tester, so each takes half rounded up. Programmer sits
@@ -453,7 +453,7 @@ class MemberChoosesTheirRoleTest extends TestCase
      * Raising the limit opens the seats on teams that already exist.
      *
      * The seat count used to be read off the team's own member_count
-     * column, a copy written when the team was made. A CaPSA moving the
+     * column, a copy written when the team was made. A CaPSA/TSA moving the
      * limit from three to five left every existing team still seating one
      * designer and one tester, and a joining member was told a role was
      * full when it was not.

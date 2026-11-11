@@ -215,10 +215,10 @@ p {
     @endif
 
     {{-- "Request Account Again" is gone with the form it pointed at (see the
-         commented routes in routes/web.php). A CaPSA adds faculty now, so
+         commented routes in routes/web.php). A CaPSA/TSA adds faculty now, so
          there is nothing to resubmit - only somebody to ask. --}}
     <div style="margin-top:24px;font-size:13px;color:var(--text3)">
-      Ask a CaPSA to add you to the expert list if this was a mistake.
+      Ask a CaPSA/TSA to add you to the expert list if this was a mistake.
     </div>
   </div>
   @include('partials.system-credits')

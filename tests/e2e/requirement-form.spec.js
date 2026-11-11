@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 
 /**
- * The Requirement form, CaPSA to student: she adds an Upload file and a
+ * The Requirement form, CaPSA/TSA to student: she adds an Upload file and a
  * Defense, edits one, removes one, and the team sees the instructions on
  * its tracker and in the upload drawer.
  *
  *   PW_BASE_URL=http://127.0.0.1:8002 npx playwright test requirement-form
  *
- * It seeds its own CaPSA (BSIT-4Y), her checklist and a one-member team,
+ * It seeds its own CaPSA/TSA (BSIT-4Y), her checklist and a one-member team,
  * and takes them all out after.
  */
 test.skip(!process.env.PW_BASE_URL, 'point PW_BASE_URL at the test server');
@@ -104,7 +104,7 @@ test('Which defense shows only for a Defense, and a blank name is refused', asyn
   await expect(page.locator('#ml-err')).toHaveText('Give the requirement a name.');
 });
 
-test('the CaPSA adds an Upload file with instructions', async ({ page }, testInfo) => {
+test('the CaPSA/TSA adds an Upload file with instructions', async ({ page }, testInfo) => {
   await as(page, `/__dev-login-expert/capsa?email=${CAPSA}`);
   await page.goto(`/capsa/team-management/milestones/${milestone}/requirements/new`);
   await page.fill('[name=title]', UPLOAD);
@@ -119,7 +119,7 @@ test('the CaPSA adds an Upload file with instructions', async ({ page }, testInf
     .toEqual({ kind: 'form', instructions: STEPS });
 });
 
-test('the CaPSA adds a Defense and it reads as that defense', async ({ page }, testInfo) => {
+test('the CaPSA/TSA adds a Defense and it reads as that defense', async ({ page }, testInfo) => {
   await as(page, `/__dev-login-expert/capsa?email=${CAPSA}`);
   await page.goto(`/capsa/team-management/milestones/${milestone}/requirements/new`);
   await page.fill('[name=title]', DEFENSE);

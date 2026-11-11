@@ -41,7 +41,7 @@ export default function FinishReview({ open, onClose, onConfirm, remarks, genera
           <small>
             {approved
               ? ctx.requirement
-                ? <>No remarks, so the team's <b>{ctx.requirement}</b> goes to their CaPSA to verify.</>
+                ? <>No remarks, so the team's <b>{ctx.requirement}</b> goes to their CaPSA/TSA to verify.</>
                 : "No remarks, so the team is told this document is approved."
               : <>You left remarks, so the team is asked for their <b>{ctx.nextRound || "next revision"}</b> with your remarks attached.</>}
           </small>

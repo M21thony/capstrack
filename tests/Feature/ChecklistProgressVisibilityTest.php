@@ -12,7 +12,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * A team's milestone progress is for the team, its section's CaPSA, and the
+ * A team's milestone progress is for the team, its section's CaPSA/TSA, and the
  * adviser and consultant it chose - not for its grammarian or its panel.
  */
 class ChecklistProgressVisibilityTest extends TestCase

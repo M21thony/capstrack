@@ -15,9 +15,9 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
 
 /**
- * Year Promotion, both ways: a CaPSA picks sections and moves them up a
+ * Year Promotion, both ways: a CaPSA/TSA picks sections and moves them up a
  * year, or uploads the new school year's list and the year comes from it.
- * Accounts and teams stay; the CaPSA chooses whether to stay on.
+ * Accounts and teams stay; the CaPSA/TSA chooses whether to stay on.
  */
 class YearPromotionTest extends TestCase
 {

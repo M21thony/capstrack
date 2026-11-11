@@ -22,9 +22,9 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * The Defenses page's panel rules: a panel is a draft until the CaPSA
+ * The Defenses page's panel rules: a panel is a draft until the CaPSA/TSA
  * finalizes it, a final panel only changes one panelist at a time, a
- * panelist away keeps the seat, and every CaPSA shares the window.
+ * panelist away keeps the seat, and every CaPSA/TSA shares the window.
  */
 class DefensePanelRulesTest extends TestCase
 {

@@ -75,7 +75,7 @@ class CapsaProfileTabsTest extends TestCase
             ->assertRedirect(route('capsa.profile'));
     }
 
-    /** Sections and the school year are the Admin's; a CaPSA's own save neither changes nor wipes them. */
+    /** Sections and the school year are the Admin's; a CaPSA/TSA's own save neither changes nor wipes them. */
     public function test_a_capsa_cannot_change_their_own_sections_or_school_year(): void
     {
         $capsa = $this->capsa();

@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Before a signed paper or an approval counts, the CaPSA opens what the team
- * uploaded and looks for herself. Only the CaPSA whose section the team is in.
+ * Before a signed paper or an approval counts, the CaPSA/TSA opens what the team
+ * uploaded and looks for herself. Only the CaPSA/TSA whose section the team is in.
  */
 class CapsaChecksUploadedFileTest extends TestCase
 {

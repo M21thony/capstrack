@@ -39,7 +39,7 @@
             </div>
 
             <div class="space-y-8 px-5 py-7 text-[14px] leading-relaxed sm:px-8 [&_a]:text-gold [&_strong]:text-white">
-                <p class="mt-0">CapsTRACK is the capstone project tracking system of the CSPC College of Computer Studies, used by students, advisers, panel members and Capstone Subject Advisers (CaPSA). This page explains what personal information CapsTRACK collects, why, who can see it, and your rights under the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
+                <p class="mt-0">CapsTRACK is the capstone project tracking system of the CSPC College of Computer Studies, used by students, advisers, panel members and Capstone Subject Advisers (CaPSA/TSA). This page explains what personal information CapsTRACK collects, why, who can see it, and your rights under the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
 
                 @foreach ($sections as $id => $title)
                     <section id="{{ $id }}" class="flex scroll-mt-8 gap-4">
@@ -50,9 +50,9 @@
                                 @case('collect')
                                     <ul class="m-0 list-disc space-y-2 pl-5">
                                         <li><strong>Google account details:</strong> your name, email address, and profile picture, used to identify you and sign you in.</li>
-                                        <li><strong>Google Calendar (advisers, panel members and CaPSA only):</strong> access is limited to calendar events. CapsTRACK adds consultation bookings and defense schedules to your calendar, updates them when they are rescheduled, and removes them when they are cancelled. Students are not asked for Calendar access.</li>
-                                        <li><strong>Google Drive (advisers, panel members and CaPSA only):</strong> access is limited to files CapsTRACK itself creates or that you choose to open with it, used to store capstone documents. CapsTRACK cannot see any other files in your Drive. Students are not asked for Drive access.</li>
-                                        <li><strong>School records:</strong> student number, name, course, section, year level and school year, from the section list your CaPSA uploads, plus your field of expertise if you are an adviser or panel member.</li>
+                                        <li><strong>Google Calendar (advisers, panel members and CaPSA/TSA only):</strong> access is limited to calendar events. CapsTRACK adds consultation bookings and defense schedules to your calendar, updates them when they are rescheduled, and removes them when they are cancelled. Students are not asked for Calendar access.</li>
+                                        <li><strong>Google Drive (advisers, panel members and CaPSA/TSA only):</strong> access is limited to files CapsTRACK itself creates or that you choose to open with it, used to store capstone documents. CapsTRACK cannot see any other files in your Drive. Students are not asked for Drive access.</li>
+                                        <li><strong>School records:</strong> student number, name, course, section, year level and school year, from the section list your CaPSA/TSA uploads, plus your field of expertise if you are an adviser or panel member.</li>
                                         <li><strong>Capstone work:</strong> team details, titles, submitted documents and diagrams, comments, defense schedules, grades, evaluations and team ratings.</li>
                                         <li><strong>Consultations:</strong> the bookings you make or accept, their topics and notes.</li>
                                         <li><strong>Payments:</strong> receipt images, receipt numbers and amounts you submit for capstone fees.</li>
@@ -63,7 +63,7 @@
                                     <p class="m-0">This information is used only to run CapsTRACK: signing you in, tracking capstone progress, checking proposed titles for duplicates, scheduling consultations and defenses, recording grades and payments, and sending notifications by email or browser about your project. It is not sold, not used for advertising, and not shared with anyone outside the college's capstone program.</p>
                                     @break
                                 @case('see')
-                                    <p class="m-0">Students see their own team's records. Advisers and panel members see the teams assigned to them. The CaPSA and the college's capstone administrators see the records of the sections they handle.</p>
+                                    <p class="m-0">Students see their own team's records. Advisers and panel members see the teams assigned to them. The CaPSA/TSA and the college's capstone administrators see the records of the sections they handle.</p>
                                     @break
                                 @case('kept')
                                     <p class="m-0">Records and uploaded files are stored on servers run for the college. Title duplication checks are done by an AI model hosted by the school itself, so your documents are not sent to an outside AI service. Google keeps the Calendar events and Drive files described above in your own Google account.</p>
@@ -88,7 +88,7 @@
                                     <p class="m-0">CapsTRACK's use of information received from Google APIs follows the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
                                     @break
                                 @case('removing')
-                                    <p class="m-0">You can remove CapsTRACK's access to your Google account at any time from <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">your Google account permissions</a>. To see, correct or delete your CapsTRACK records, contact your CaPSA or the CSPC Data Protection Officer.</p>
+                                    <p class="m-0">You can remove CapsTRACK's access to your Google account at any time from <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">your Google account permissions</a>. To see, correct or delete your CapsTRACK records, contact your CaPSA/TSA or the CSPC Data Protection Officer.</p>
                                     @break
                             @endswitch
                         </div>

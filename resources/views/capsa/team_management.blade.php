@@ -61,7 +61,7 @@
 
       <div class="card"><div class="tm-empty">
         You have no sections assigned yet, so there are no teams to manage.<br>
-        An Admin assigns sections when they make someone a CaPSA.
+        An Admin assigns sections when they make someone a CaPSA/TSA.
       </div></div>
 
     @else

@@ -16,7 +16,7 @@ const quiet = async (page) => {
 
 test('Enter in the Add a student sheet adds the student', async ({ page }) => {
   const response = await page.goto('/__dev-login-expert/capsa/dashboard');
-  test.skip(response.status() === 404, 'there is no CaPSA account in this database');
+  test.skip(response.status() === 404, 'there is no CaPSA/TSA account in this database');
   await page.goto('/capsa/sections');
   await quiet(page);
   test.skip(await page.locator('#add-student-scrim').count() === 0, 'no Add a student sheet on this page');

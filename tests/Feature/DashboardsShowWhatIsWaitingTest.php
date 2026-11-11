@@ -13,7 +13,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * Each dashboard opens on what is waiting for that person: a CaPSA sees the
+ * Each dashboard opens on what is waiting for that person: a CaPSA/TSA sees the
  * work in their own sections, an Admin sees what the system still needs.
  */
 class DashboardsShowWhatIsWaitingTest extends TestCase
@@ -64,7 +64,7 @@ class DashboardsShowWhatIsWaitingTest extends TestCase
         $this->actingAs($admin, 'expert')
             ->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSeeInOrder(['Needs Attention', '1 Section', 'with no CaPSA'])
+            ->assertSeeInOrder(['Needs Attention', '1 Section', 'with no CaPSA/TSA'])
             ->assertViewHas('admin', fn ($a) => $a['uncovered'] === ['BSIT-3B'] && $a['capsas'] === 1)
             ->assertViewHas('capsa', null);
     }

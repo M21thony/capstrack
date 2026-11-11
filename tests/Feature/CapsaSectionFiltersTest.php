@@ -9,7 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The program and "without a team" filters on the CaPSA's section list.
+ * The program and "without a team" filters on the CaPSA/TSA's section list.
  *
  * They narrow the rows in the browser rather than on the server, so what the
  * page has to get right is the data behind each row: the filter reads
@@ -77,7 +77,7 @@ class CapsaSectionFiltersTest extends TestCase
         $this->assertSame(1, preg_match('/id="program-filter".*?<\/select>/s', $html, $m));
 
         $this->assertStringContainsString('<option value="BSIT">BSIT</option>', $m[0]);
-        // A CaPSA who handles one program should not be offered the other three.
+        // A CaPSA/TSA who handles one program should not be offered the other three.
         $this->assertStringNotContainsString('BLIS', $m[0]);
     }
 }

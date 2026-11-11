@@ -14,7 +14,7 @@ use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * The CaPSA's check of a team's signed paper: complete, or sent back with a
+ * The CaPSA/TSA's check of a team's signed paper: complete, or sent back with a
  * note. A paper goes upload, sent back, upload again, complete.
  */
 class DeliverableCheckTest extends TestCase

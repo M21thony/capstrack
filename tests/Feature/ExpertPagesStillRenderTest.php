@@ -50,7 +50,7 @@ class ExpertPagesStillRenderTest extends TestCase
         $this->actingAs($this->expert, 'expert')->get($url)->assertOk();
     }
 
-    /** Milestone progress is the CaPSA's tracker, read-only; My Teams shows progress as a column. */
+    /** Milestone progress is the CaPSA/TSA's tracker, read-only; My Teams shows progress as a column. */
     public function test_milestone_progress_renders_and_my_teams_shows_progress(): void
     {
         $this->actingAs($this->expert, 'expert')
@@ -63,7 +63,7 @@ class ExpertPagesStillRenderTest extends TestCase
             ->assertSee('data-sort="progress"', false);
     }
 
-    /** My Teams is the expert's hub: To do and Teams, the same as a CaPSA's. */
+    /** My Teams is the expert's hub: To do and Teams, the same as a CaPSA/TSA's. */
     public function test_my_teams_is_the_to_do_and_teams_hub(): void
     {
         $this->actingAs($this->expert, 'expert')->get('/instructor/teams')
@@ -71,7 +71,7 @@ class ExpertPagesStillRenderTest extends TestCase
             ->assertSee('<div class="tmx tm-hub" data-portal="expert">', false)
             ->assertSeeInOrder(['class="hub-tabs"', 'To do', 'Teams', 'id="tm-todo"', 'id="tm-teams"'], false)
             ->assertSee('All caught up')
-            // No CaPSA controls on an expert's page.
+            // No CaPSA/TSA controls on an expert's page.
             ->assertDontSee('id="setBtn"', false)
             ->assertDontSee('Milestones</a>', false);
     }

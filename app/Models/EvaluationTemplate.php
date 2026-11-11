@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * A CaPSA's questions about the experts, answered by a team leader after the
+ * A CaPSA/TSA's questions about the experts, answered by a team leader after the
  * team passes a defense. Each question is answered from 1 to 5 - the stars -
  * and the expert's rating for that defense is the average of the answers.
  * Deleting one leaders already answered only hides it, so its answers stay
@@ -30,7 +30,7 @@ class EvaluationTemplate extends Model
     /** What each point on the scale means. */
     public const SCALE = [1 => 'Poor', 2 => 'Fair', 3 => 'Good', 4 => 'Very good', 5 => 'Excellent'];
 
-    /** The questions a new evaluation starts from - five, which a CaPSA can keep, change or add to. */
+    /** The questions a new evaluation starts from - five, which a CaPSA/TSA can keep, change or add to. */
     public const STANDARD_QUESTIONS = [
         'The expert was available and responded to our team within a reasonable time.',
         'The expert gave clear, specific and useful feedback on our work.',

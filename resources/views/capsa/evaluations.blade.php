@@ -58,7 +58,7 @@
       </nav>
 
       @if($tab === 'questions')
-        {{-- A defense on the calendar with no evaluation: the CaPSA is asked
+        {{-- A defense on the calendar with no evaluation: the CaPSA/TSA is asked
              for it here, the same as in the popup. --}}
         @foreach($upcoming as $due)
           <div class="ev-req" role="alert">

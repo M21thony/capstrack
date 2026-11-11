@@ -13,7 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * A team cannot be invited past the size the CaPSA set.
+ * A team cannot be invited past the size the CaPSA/TSA set.
  *
  * Nothing checked this. The only capacity test ran after somebody had
  * already joined, and only to mark the team Full - so a leader could pick

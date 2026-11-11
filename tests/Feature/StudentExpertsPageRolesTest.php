@@ -218,7 +218,7 @@ class StudentExpertsPageRolesTest extends TestCase
      * An approved expert's name is said once at the top of the page.
      *
      * There used to be a row of role cards ending "Filled - Neil Inocencio"
-     * directly above Your Experts, which said the same thing twice - a CaPSA
+     * directly above Your Experts, which said the same thing twice - a CaPSA/TSA
      * reading over a team's shoulder pointed at it. The two are one row of
      * cards now: the expert's card is both who they are and the filter.
      */

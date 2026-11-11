@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * The Teams hub - To do and Teams - for a CaPSA (Team Management), for an
- * expert (My Teams), and for a CaPSA who is an expert too (one page, not two).
+ * The Teams hub - To do and Teams - for a CaPSA/TSA (Team Management), for an
+ * expert (My Teams), and for a CaPSA/TSA who is an expert too (one page, not two).
  */
 class TeamHubTest extends TestCase
 {
@@ -230,7 +230,7 @@ class TeamHubTest extends TestCase
             ->assertDontSee('My Teams')
             ->assertSee($proposal->title)
             ->assertSee('<span class="pill p-amber">Waiting</span>', false)
-            // Reviewing titles and verifying are the CaPSA's.
+            // Reviewing titles and verifying are the CaPSA/TSA's.
             ->assertDontSee(route('capsa.team_management.title', [$team->team_id, $proposal->id]), false)
             ->assertDontSee('Verify team')
             ->assertDontSee('Waiting on you');

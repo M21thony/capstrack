@@ -122,7 +122,7 @@ class AdminStudentAccountsPageTest extends TestCase
             ->assertDontSee('>Clear filters</a>', false);
     }
 
-    /** Student Section List is the CaPSA's, so Admin is not offered it. */
+    /** Student Section List is the CaPSA/TSA's, so Admin is not offered it. */
     public function test_admin_is_not_offered_student_section_list(): void
     {
         $this->actingAs($this->admin(), 'expert');

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
  * An expert who has not said how many teams they take does not take four.
  *
  * The column defaulted to 4 and the model handed back 4 for a null, so every
- * account ever made - by the list upload, by Add CaPSA, by anything - was
+ * account ever made - by the list upload, by Add CaPSA/TSA, by anything - was
  * credited with four teams' worth of slots that nobody had agreed to. That
  * number then fed the "slots left" and "full" readings on the expert lists
  * and the assignment checks, so it was not only cosmetic: it decided who

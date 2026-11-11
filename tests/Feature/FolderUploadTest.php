@@ -12,7 +12,7 @@ use Mockery;
 use Tests\TestCase;
 
 /**
- * A CaPSA can hand over a whole folder instead of one file at a time.
+ * A CaPSA/TSA can hand over a whole folder instead of one file at a time.
  *
  * A browser cannot send a folder - it sends what is inside one - so the only
  * things worth checking here are that every file becomes its own resource,
@@ -135,7 +135,7 @@ class FolderUploadTest extends TestCase
             $files[] = UploadedFile::fake()->create("File{$i}.pdf", 1);
         }
 
-        // The cap exists because this runs while the CaPSA waits.
+        // The cap exists because this runs while the CaPSA/TSA waits.
         $this->actingAs($capsa, 'expert')->postJson(route('gdrive.resources.store'), [
             'files' => $files,
             'category' => 'forms',

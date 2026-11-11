@@ -266,10 +266,10 @@
       <div class="card" style="margin-bottom:16px;border-color:rgba(220,38,38,0.25);background:var(--red-bg);">
         <div class="card-header"><span class="card-title">Your panel asked for a new title</span></div>
         <div style="font-size:13px;color:var(--text2);line-height:1.6">
-          Run the duplication check on your new pre-proposal and turn it in below, the same way as before. Your CaPSA recommends it first, then your adviser approves it. Your adviser, consultant and grammarian stay with your team.
+          Run the duplication check on your new pre-proposal and turn it in below, the same way as before. Your CaPSA/TSA recommends it first, then your adviser approves it. Your adviser, consultant and grammarian stay with your team.
           @if ($awaitingAdviser)
             <div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--bg2);border:1px solid var(--border)">
-              Your CaPSA recommended <b>{{ $awaitingAdviser->title }}</b>. Waiting for your adviser{{ $adviserName ? ', '.$adviserName.',' : '' }} to approve it.
+              Your CaPSA/TSA recommended <b>{{ $awaitingAdviser->title }}</b>. Waiting for your adviser{{ $adviserName ? ', '.$adviserName.',' : '' }} to approve it.
             </div>
           @endif
           @if ($retiredProposals->isNotEmpty())
@@ -406,7 +406,7 @@
 
         {{-- Turning in, the way Google Classroom does it: saving a title keeps
              a draft, and this is the separate act that hands the set to your
-             CaPSA. The titles to send are ticked in My pre-proposals. --}}
+             CaPSA/TSA. The titles to send are ticked in My pre-proposals. --}}
         <section class="card pc-card pp-submit-bar" aria-labelledby="pc-sub-h">
           <h2 class="pc-card-h" id="pc-sub-h"><svg viewBox="0 0 24 24" style="stroke:#16a34a"><polyline points="20 6 9 17 4 12"/></svg>Your submission</h2>
           @if ($turnedIn)
@@ -427,16 +427,16 @@
                 @csrf
                 <button type="submit" class="btn pp-btn-unsubmit">Unsubmit</button>
               </form>
-              <div class="pp-submit-note">You can still take this back until your CaPSA starts reviewing.</div>
+              <div class="pp-submit-note">You can still take this back until your CaPSA/TSA starts reviewing.</div>
             @elseif ($isLeader)
-              <div class="pp-submit-note">Your CaPSA has started reviewing, so this can no longer be unsubmitted.</div>
+              <div class="pp-submit-note">Your CaPSA/TSA has started reviewing, so this can no longer be unsubmitted.</div>
             @else
               <div class="pp-submit-note">Your team leader submitted these for checking.</div>
             @endif
           @else
             @if ($allRejected)
               <div class="pp-submit-q pp-submit-rejected" role="status">
-                <b>Your CaPSA did not recommend any of these titles.</b>
+                <b>Your CaPSA/TSA did not recommend any of these titles.</b>
                 Save new titles{{ $isLeader ? ', then submit them for checking again' : ' - your team leader submits them' }}. You can remove the rejected ones.
               </div>
             @endif
@@ -445,7 +445,7 @@
             @elseif ($canTurnIn)
               <div class="pp-submit-q" id="pp-submit-note">
                 <b>{{ $draftCount === 1 ? 'Your title is ticked.' : 'All '.$draftCount.' of your titles are ticked.' }}</b>
-                You can take them back until your CaPSA starts reviewing.
+                You can take them back until your CaPSA/TSA starts reviewing.
               </div>
               {{-- Turning in fewer than the suggested number is a decision, not
                    an error, so it is asked about once rather than forbidden. --}}
@@ -555,18 +555,18 @@
                         This is your team's title.
                       </span>
                     @elseif ($team?->selected_pre_proposal_id)
-                      <b style="color:var(--green)">Recommended by your CaPSA</b> &mdash; not the title your team chose.
+                      <b style="color:var(--green)">Recommended by your CaPSA/TSA</b> &mdash; not the title your team chose.
                     @else
-                      <b style="color:var(--green)">Recommended by your CaPSA</b> &mdash; waiting for your adviser.
+                      <b style="color:var(--green)">Recommended by your CaPSA/TSA</b> &mdash; waiting for your adviser.
                     @endif
                   @elseif ($proposal->submitted_at)
-                    <b>Submitted</b> &mdash; waiting for your CaPSA to review.
+                    <b>Submitted</b> &mdash; waiting for your CaPSA/TSA to review.
                   @else
                     <b>Draft</b> &mdash; not submitted yet.
                   @endif
                 </div>
                 @if ($proposal->status === 'approved' && $proposal->capsa_note)
-                  <div class="st">Suggestion from your CaPSA: {{ $proposal->capsa_note }}</div>
+                  <div class="st">Suggestion from your CaPSA/TSA: {{ $proposal->capsa_note }}</div>
                 @endif
 
                 @if ($check || $removable)
@@ -797,7 +797,7 @@
 </div>
 
 {{-- Handing your titles in is the one act that puts your team in front of
-     your CaPSA, so it asks first - every time, not only when there are fewer
+     your CaPSA/TSA, so it asks first - every time, not only when there are fewer
      than we suggest. It was a window.confirm(), which is the one dialog on
      this page that looks like nothing else on it. --}}
 <div class="pp-modal-overlay" id="pp-submit-confirm" onclick="if (event.target === this) closeSubmitConfirm()">
@@ -875,7 +875,7 @@
 
 <script nonce="{{ Vite::cspNonce() }}">
 // Handing your titles in is the one act that puts your team in front of your
-// CaPSA, so it always asks - not only when there are fewer than we suggest.
+// CaPSA/TSA, so it always asks - not only when there are fewer than we suggest.
 // Turning in fewer is allowed: it used to be refused outright, which pushed
 // teams into writing titles they did not believe in to unlock a button.
 let ppSubmitForm = null;
@@ -907,10 +907,10 @@ function confirmSubmitCount(e) {
 
   document.getElementById('pp-sc-title').textContent = 'Submit ' + titles + '?';
   document.getElementById('pp-sc-body').textContent = (short
-    ? 'We suggest turning in at least ' + recommended + '. Your CaPSA decides on each '
+    ? 'We suggest turning in at least ' + recommended + '. Your CaPSA/TSA decides on each '
       + 'title separately, so if one is turned down you still have others that could be '
       + 'recommended. You can go back and add more first.'
-    : 'Your CaPSA will review all ' + count + '. You can take this back any time until '
+    : 'Your CaPSA/TSA will review all ' + count + '. You can take this back any time until '
       + 'they start reviewing.') + heldNote;
 
   // Amber and a warning triangle when it is worth a second thought; gold
@@ -960,7 +960,7 @@ function refreshSubmitCount() {
     : picked + ' of your ' + total + ' titles are ticked.';
   note.innerHTML = '<b>' + ticked + '</b> ' + (picked === 0
     ? 'Tick at least one title to submit.'
-    : 'You can take them back until your CaPSA starts reviewing.');
+    : 'You can take them back until your CaPSA/TSA starts reviewing.');
 }
 
 document.addEventListener('DOMContentLoaded', refreshSubmitCount);

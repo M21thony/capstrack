@@ -6,7 +6,7 @@ use App\Models\ExpertEvaluation;
 use Illuminate\Support\Collection;
 
 /**
- * What team leaders' evaluations add up to, per expert - for the CaPSA who
+ * What team leaders' evaluations add up to, per expert - for the CaPSA/TSA who
  * wrote the questions and for the expert being evaluated.
  *
  * Anonymous by construction: nothing here reads the team or the student, so

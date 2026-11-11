@@ -15,8 +15,8 @@ use Tests\TestCase;
  *
  * Sections were worked out from the students enrolled in them, which is true
  * once a term is running and useless before it: a fresh system has no
- * students, so it offers no sections, so nobody can be made a CaPSA over one
- * - and a CaPSA is who uploads the students. This is the way out of that.
+ * students, so it offers no sections, so nobody can be made a CaPSA/TSA over one
+ * - and a CaPSA/TSA is who uploads the students. This is the way out of that.
  */
 class AdminSectionsSettingTest extends TestCase
 {
@@ -41,7 +41,7 @@ class AdminSectionsSettingTest extends TestCase
 
     /**
      * The knot this exists to cut: no students, therefore no sections,
-     * therefore no CaPSA.
+     * therefore no CaPSA/TSA.
      */
     public function test_a_capsa_can_be_made_on_a_system_with_no_students(): void
     {
@@ -88,7 +88,7 @@ class AdminSectionsSettingTest extends TestCase
 
     /**
      * Several programs at once, each made for 3rd year only, where capstone
-     * starts. Made for both years at once, every CaPSA looked like they ran
+     * starts. Made for both years at once, every CaPSA/TSA looked like they ran
      * 3rd and 4th year together; a 4th-year section comes from the list.
      */
     public function test_programs_are_added_for_3rd_year_only(): void
@@ -168,7 +168,7 @@ class AdminSectionsSettingTest extends TestCase
         $this->assertSame(['BSIT-3A', 'BSIT-4A'], AdminProfileController::getAllAvailableSections());
     }
 
-    /** The 4th-year sections made in advance come off the list, unless a CaPSA holds one. */
+    /** The 4th-year sections made in advance come off the list, unless a CaPSA/TSA holds one. */
     public function test_the_migration_drops_4th_year_sections_made_in_advance(): void
     {
         SectionCatalog::store(['BSIT-3A', 'BSIT-3B', 'BSIT-4A', 'BSIT-4B']);
@@ -197,7 +197,7 @@ class AdminSectionsSettingTest extends TestCase
         $this->assertSame([], SectionCatalog::defined());
     }
 
-    /** Writing down the department's sections is Admin's, not a CaPSA's. */
+    /** Writing down the department's sections is Admin's, not a CaPSA/TSA's. */
     public function test_a_capsa_cannot_write_the_sections(): void
     {
         $capsa = $this->makeCapsa(CapstoneExpert::create([

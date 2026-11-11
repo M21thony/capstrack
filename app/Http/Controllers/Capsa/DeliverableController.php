@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * Deliverables on a CaPSA's checklist: added many at once, edited in place,
+ * Deliverables on a CaPSA/TSA's checklist: added many at once, edited in place,
  * changed together from the bulk bar, archived or removed.
  */
 class DeliverableController extends Controller

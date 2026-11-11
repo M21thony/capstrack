@@ -12,7 +12,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
  * Team selection: the recruitment posts a student's section can see.
  *
  * Posts from the same course, section and school year, never the student's
- * own, and never a team that has reached the CaPSA's limit. They come eight
+ * own, and never a team that has reached the CaPSA/TSA's limit. They come eight
  * at a time, narrowed by what the post is for - building a team or finding
  * one - and by skill. The page shows the first eight; Load more asks for the
  * next through the same query, so the two can't disagree.
@@ -91,7 +91,7 @@ class TeamSelectionFeed
 
         return Recruitment::query()
             ->where('student_id', '!=', $student->student_id)
-            // Off the list only once the team reaches the CaPSA's limit.
+            // Off the list only once the team reaches the CaPSA/TSA's limit.
             ->whereNotIn('student_id', Recruitment::leadersOfFullTeams())
             ->whereIn('student_id', function ($query) use ($student) {
                 $query->select('student_s_y.student_id')

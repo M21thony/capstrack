@@ -58,7 +58,7 @@ class ChecklistTracker
     }
 
     /**
-     * The milestones list: every milestone on the checklists the CaPSA's
+     * The milestones list: every milestone on the checklists the CaPSA/TSA's
      * sections follow, each with how many of those teams have finished it.
      *
      * One checklist serves every section of its program, so the sections are
@@ -202,7 +202,7 @@ class ChecklistTracker
         ];
     }
 
-    /** Handed in and waiting for the CaPSA's check. */
+    /** Handed in and waiting for the CaPSA/TSA's check. */
     public static function toCheck(object $row): bool
     {
         return $row->waiting_on === MilestoneProgress::WAITING_ON_CAPSA
@@ -253,7 +253,7 @@ class ChecklistTracker
                         ? $progress[$team->team_id]->items->map(fn ($row) => self::row($row, $team->team_id, $canCheck))->values()
                         : [],
                     // Milestone name => what it waits for, for each still locked;
-                    // null for one the CaPSA has not opened yet.
+                    // null for one the CaPSA/TSA has not opened yet.
                     'locked' => isset($progress[$team->team_id])
                         ? $progress[$team->team_id]->milestones->where('locked', true)
                             ->mapWithKeys(fn ($m) => [$m->milestone->name => $m->not_open ? null : $m->requires])

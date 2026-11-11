@@ -151,8 +151,8 @@ class ScheduleDemoSeeder extends Seeder
 
     /**
      * Marks done every checklist line before the Pre-proposal Defense, so the
-     * section CaPSA's checklist does not hold the demo teams back.
-     * ponytail: a CaPSA check closes forms and tasks, not documents - enough for the BSIT checklist.
+     * section CaPSA/TSA's checklist does not hold the demo teams back.
+     * ponytail: a CaPSA/TSA check closes forms and tasks, not documents - enough for the BSIT checklist.
      */
     public function checkOffRequirementsBeforeTheDefense(Team $team): void
     {

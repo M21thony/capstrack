@@ -102,8 +102,8 @@ class SubmissionControllerTest extends TestCase
     }
 
     /**
-     * A file for no checklist line is not the CaPSA's to read: what they want
-     * to check, they add as a line. Even with a CaPSA for the section, asking
+     * A file for no checklist line is not the CaPSA/TSA's to read: what they want
+     * to check, they add as a line. Even with a CaPSA/TSA for the section, asking
      * for them sends it to nobody.
      */
     public function test_a_file_for_no_line_is_not_sent_to_the_capsa(): void

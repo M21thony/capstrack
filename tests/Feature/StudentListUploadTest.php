@@ -15,7 +15,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
 
 /**
- * A CaPSA uploads the department's student list.
+ * A CaPSA/TSA uploads the department's student list.
  *
  * The point is the students who signed in before the list existed: they have
  * no student number, course or section on their profile, because nothing had
@@ -717,7 +717,7 @@ class StudentListUploadTest extends TestCase
         $this->assertSame('unchanged', $rows['same@my.cspc.edu.ph']['action']);
         $this->assertSame('update', $rows['wrong@my.cspc.edu.ph']['action']);
 
-        // Named, so a CaPSA can see it is the course about to be rewritten.
+        // Named, so a CaPSA/TSA can see it is the course about to be rewritten.
         $this->assertSame(['course'], $rows['wrong@my.cspc.edu.ph']['changes']);
     }
 
@@ -780,7 +780,7 @@ class StudentListUploadTest extends TestCase
             ->toArray();
 
         // No School Year: the Admin sets it for the whole system, so a
-        // column asking a CaPSA to type it on every row is a way to
+        // column asking a CaPSA/TSA to type it on every row is a way to
         // disagree with that and nothing else.
         $this->assertSame(
             ['Email', 'Last Name', 'First Name', 'Middle Name', 'Student No.', 'Course/Program', 'Year', 'Section'],
@@ -823,7 +823,7 @@ class StudentListUploadTest extends TestCase
     /**
      * The modal is on the page, with the template inside it.
      *
-     * CaPSA asked for the template to be in the modal where the list is
+     * CaPSA/TSA asked for the template to be in the modal where the list is
      * uploaded, rather than somewhere she has to go and find it.
      */
     public function test_the_upload_modal_offers_the_template(): void

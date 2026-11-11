@@ -155,7 +155,7 @@ class Recruitment extends Model
     }
 
     /**
-     * The leaders whose teams have reached the CaPSA's member limit, so
+     * The leaders whose teams have reached the CaPSA/TSA's member limit, so
      * their build-a-team posts come off Team selection.
      *
      * One answer for the page and the API, which each kept their own copy:

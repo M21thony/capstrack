@@ -58,7 +58,7 @@ class StudentRole extends Model
      * says every member plays it partly.
      *
      * The other two are the whole of the choice, and they scale with the
-     * size of the team, which the CaPSA sets between three and five. A team
+     * size of the team, which the CaPSA/TSA sets between three and five. A team
      * of N is the leader plus N-1 members split across exactly these two, so
      * each holds ceil((N-1)/2):
      *
@@ -86,12 +86,12 @@ class StudentRole extends Model
     }
 
     /**
-     * The team size the CaPSA set.
+     * The team size the CaPSA/TSA set.
      *
      * This used to read the team's own member_count column, which is a
-     * stale copy - a CaPSA raising the limit from three to five left every
+     * stale copy - a CaPSA/TSA raising the limit from three to five left every
      * existing team still seating one designer and one tester. There is one
-     * limit and the CaPSA sets it, so it is asked of the same place the
+     * limit and the CaPSA/TSA sets it, so it is asked of the same place the
      * invite and join checks ask.
      */
     public static function teamSize(?int $teamId = null): int

@@ -12,9 +12,9 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Replace every team's own copy of the checklist with its CaPSA's one list.
+ * Replace every team's own copy of the checklist with its CaPSA/TSA's one list.
  *
- * Copies are grouped by the CaPSA covering the team's section and the program
+ * Copies are grouped by the CaPSA/TSA covering the team's section and the program
  * that section belongs to. The fullest copy in a group becomes the checklist;
  * every team's ticks become checks on it, and uploads that named a line of a
  * copy are pointed at the matching deliverable.
@@ -28,9 +28,9 @@ class ConsolidateChecklists extends Command
 {
     protected $signature = 'checklists:consolidate {--apply : Write the changes. Without it, only report what would happen.}';
 
-    protected $description = "Replace each team's own checklist copy with its CaPSA's single checklist";
+    protected $description = "Replace each team's own checklist copy with its CaPSA/TSA's single checklist";
 
-    /** Where lines a CaPSA added without a phase go. */
+    /** Where lines a CaPSA/TSA added without a phase go. */
     private const OWN_PHASE = 'Added by you';
 
     public function handle(SectionScope $sections): int
@@ -58,8 +58,8 @@ class ConsolidateChecklists extends Command
 
             if ($covering->count() !== 1) {
                 $problems[] = $covering->isEmpty()
-                    ? "{$copy->team->team_name}: no CaPSA covers section ".($section ?: '(none, incomplete profile)').'.'
-                    : "{$copy->team->team_name}: more than one CaPSA covers {$section}, so it was skipped.";
+                    ? "{$copy->team->team_name}: no CaPSA/TSA covers section ".($section ?: '(none, incomplete profile)').'.'
+                    : "{$copy->team->team_name}: more than one CaPSA/TSA covers {$section}, so it was skipped.";
 
                 continue;
             }

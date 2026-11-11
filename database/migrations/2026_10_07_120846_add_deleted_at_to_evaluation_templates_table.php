@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * A CaPSA can delete an evaluation they turned off. One that team leaders
+ * A CaPSA/TSA can delete an evaluation they turned off. One that team leaders
  * already answered is only hidden, so its answers stay in the results.
  */
 return new class extends Migration

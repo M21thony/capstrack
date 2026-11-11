@@ -180,7 +180,7 @@
     {{-- The "request again" button is gone with the form it pointed at.
          This page is only reached by an account made before applying was
          switched off; there is nothing for the person to do here but talk to
-         their CaPSA, which the text above already says. --}}
+         their CaPSA/TSA, which the text above already says. --}}
 
     <form method="POST" action="{{ route('expert.logout') }}">
       @csrf

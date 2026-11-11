@@ -6,14 +6,14 @@ use App\Models\Student;
 
 /**
  * The one thing a student's team has to do next to get set up: a team, then
- * titles turned in to the CaPSA, then an adviser. Read by the dashboard's
+ * titles turned in to the CaPSA/TSA, then an adviser. Read by the dashboard's
  * "Your next step" card and by the sidebar, which puts a dot on that page.
  *
  * Null once the team has an adviser - from there the section's checklist
  * (the "Where your team is" card) says what is next.
  *
  * The order is the app's own: an adviser can only be applied to once the
- * CaPSA has recommended a title and verified the team
+ * CaPSA/TSA has recommended a title and verified the team
  * (Student\ExpertController, $canApply).
  */
 class NextStep
@@ -42,7 +42,7 @@ class NextStep
         $teamRow = ['Team', 'ok', $team->team_name];
 
         // The same reading as PreProposalController::isTurnedIn(): a set the
-        // CaPSA turned down in full is no longer turned in.
+        // CaPSA/TSA turned down in full is no longer turned in.
         $submitted = $team->preProposals()->whereNotNull('submitted_at');
         $turnedIn = (clone $submitted)
             ->where(fn ($q) => $q->where('approved_status', true)->orWhereNull('rejection_reason'))
@@ -54,19 +54,19 @@ class NextStep
             return self::step('student.duplication', false,
                 $rejected ? 'Write new titles' : 'Check and turn in your titles',
                 $rejected
-                    ? 'Your CaPSA turned down the titles you sent. Check new ones and turn them in again.'
-                    : 'Each title is compared with past capstones, then your CaPSA picks one to recommend.',
+                    ? 'Your CaPSA/TSA turned down the titles you sent. Check new ones and turn them in again.'
+                    : 'Each title is compared with past capstones, then your CaPSA/TSA picks one to recommend.',
                 ['Type a title and press Check similarity.', 'If a past capstone is too close, change it and check again.',
-                    $isLeader ? 'Turn in the titles you want your CaPSA to see.' : 'Your leader turns them in to your CaPSA.'],
+                    $isLeader ? 'Turn in the titles you want your CaPSA/TSA to see.' : 'Your leader turns them in to your CaPSA/TSA.'],
                 'Go to Pre-Proposal Submission',
-                [$teamRow, ['Titles', 'todo', $rejected ? 'Turned down, write new ones' : 'Not turned in yet'], ['Adviser', 'lock', 'After your CaPSA recommends a title']]);
+                [$teamRow, ['Titles', 'todo', $rejected ? 'Turned down, write new ones' : 'Not turned in yet'], ['Adviser', 'lock', 'After your CaPSA/TSA recommends a title']]);
         }
 
         if (! $team->selected_pre_proposal_id || ! $team->is_confirmed) {
-            return self::step(null, true, 'Wait for your CaPSA',
-                'Your CaPSA is checking your titles and your team. The bell tells you when they recommend a title.',
+            return self::step(null, true, 'Wait for your CaPSA/TSA',
+                'Your CaPSA/TSA is checking your titles and your team. The bell tells you when they recommend a title.',
                 [], 'See your titles',
-                [$teamRow, ['Titles', 'wait', 'With your CaPSA'], ['Adviser', 'lock', 'After your CaPSA recommends a title']], 'student.duplication');
+                [$teamRow, ['Titles', 'wait', 'With your CaPSA/TSA'], ['Adviser', 'lock', 'After your CaPSA/TSA recommends a title']], 'student.duplication');
         }
 
         $titleRow = ['Titles', 'ok', 'Recommended: '.($team->selectedPreProposal?->title ?? 'yes')];
@@ -81,7 +81,7 @@ class NextStep
         }
 
         return self::step('student.experts', false, 'Get an adviser',
-            'Your CaPSA recommended your title, so you can now ask an adviser to take your team.',
+            'Your CaPSA/TSA recommended your title, so you can now ask an adviser to take your team.',
             ['Under Find experts, pick an adviser who fits your topic.',
                 $isLeader ? 'Press Apply.' : 'Your leader presses Apply.', 'The bell tells you when they accept.'],
             'Find an adviser',

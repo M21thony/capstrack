@@ -20,7 +20,7 @@ use Tests\TestCase;
  * 3rd year ends and the class moves up to 4th - often before the dean's new
  * section list exists. The team has to come through it whole: promoted
  * without a list, the members move up together; when the list arrives and
- * splits them across 4A and 4B, they are still one team with one CaPSA,
+ * splits them across 4A and 4B, they are still one team with one CaPSA/TSA,
  * checklist and section (the leader's); and a student whose section does not
  * change is simply left as they are.
  */
@@ -95,7 +95,7 @@ class FourthYearPromotionKeepsTeamsTest extends TestCase
         foreach ([$this->leader, $this->member] as $student) {
             $this->actingAs($student->fresh(), 'web')->get(route('student.progress'))->assertOk()
                 ->assertSee('Team1')
-                ->assertDontSee('Your CaPSA has not set up a checklist for your team yet.');
+                ->assertDontSee('Your CaPSA/TSA has not set up a checklist for your team yet.');
         }
     }
 
@@ -120,7 +120,7 @@ class FourthYearPromotionKeepsTeamsTest extends TestCase
         $this->assertSame('4th · B', $this->member->fresh()->year_section, 'moved to where the list puts them');
         $this->assertTeamIsWhole('BSIT-4A');
 
-        // The other section's CaPSA does not take the team over, and sees why their student is on it.
+        // The other section's CaPSA/TSA does not take the team over, and sees why their student is on it.
         $this->actingAs($otherCapsa, 'expert')->get(route('capsa.team_management'))->assertOk()->assertDontSee('Team1');
         $this->actingAs($otherCapsa, 'expert')->get(route('capsa.sections'))->assertOk()->assertSee('Team in BSIT-4A');
     }

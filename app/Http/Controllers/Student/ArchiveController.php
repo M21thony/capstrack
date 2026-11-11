@@ -113,10 +113,10 @@ class ArchiveController extends Controller
 
         $manuscript->tags()->sync($this->archiveTagIds($data['tags'] ?? []));
 
-        return back()->with('success', 'Archive Entry sent. It goes into the archive once your CaPSA publishes it.');
+        return back()->with('success', 'Archive Entry sent. It goes into the archive once your CaPSA/TSA publishes it.');
     }
 
-    /** Why the team can't send its Archive Entry yet or anymore, if the CaPSA hasn't opened it or has closed it. */
+    /** Why the team can't send its Archive Entry yet or anymore, if the CaPSA/TSA hasn't opened it or has closed it. */
     private function entryShut(Team $team): ?string
     {
         $milestone = app(TeamChecklist::class)->for($team)?->deliverables()
@@ -125,8 +125,8 @@ class ArchiveController extends Controller
 
         return match (true) {
             ! $milestone => null,
-            $milestone->isClosed() => 'Your CaPSA has closed the Archive Entry.',
-            ! $milestone->isOpened() => 'Your CaPSA has not opened the Archive Entry yet.',
+            $milestone->isClosed() => 'Your CaPSA/TSA has closed the Archive Entry.',
+            ! $milestone->isOpened() => 'Your CaPSA/TSA has not opened the Archive Entry yet.',
             default => null,
         };
     }

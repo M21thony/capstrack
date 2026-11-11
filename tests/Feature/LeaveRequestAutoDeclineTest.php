@@ -15,8 +15,8 @@ use Tests\TestCase;
 
 /**
  * A request to leave a team, or to remove a member, waits three days for the
- * CaPSA. Undecided by then, it is declined on its own, the team is told it
- * ran out of time rather than that the CaPSA said no, and both sides see a
+ * CaPSA/TSA. Undecided by then, it is declined on its own, the team is told it
+ * ran out of time rather than that the CaPSA/TSA said no, and both sides see a
  * tag saying so.
  */
 class LeaveRequestAutoDeclineTest extends TestCase
@@ -120,17 +120,17 @@ class LeaveRequestAutoDeclineTest extends TestCase
 
         $this->actingAs($this->member, 'web')->get(route('student.team'))
             ->assertOk()
-            ->assertSee('Waiting on your CaPSA')
+            ->assertSee('Waiting on your CaPSA/TSA')
             ->assertSee('Auto-declines Feb 4 without a decision');
 
         $this->travelTo(now()->addDays(3)->addMinute());
 
         $this->actingAs($this->member, 'web')->get(route('student.team'))
             ->assertOk()
-            ->assertDontSee('Waiting on your CaPSA')
+            ->assertDontSee('Waiting on your CaPSA/TSA')
             ->assertSee('Declined automatically')
-            ->assertSee('Auto-declined · No action from CaPSA in 3 days')
-            ->assertSee('Ask CaPSA to leave');
+            ->assertSee('Auto-declined · No action from CaPSA/TSA in 3 days')
+            ->assertSee('Ask CaPSA/TSA to leave');
 
         $this->assertTrue(MemberLeaveRequest::sole()->auto_declined);
     }
@@ -167,7 +167,7 @@ class LeaveRequestAutoDeclineTest extends TestCase
         $this->actingAs($capsa, 'expert')->get(route('capsa.team_management', ['tab' => 'leave_requests']))
             ->assertOk()
             ->assertSee('Auto-declined')
-            ->assertSee('No action from CaPSA in 3 days');
+            ->assertSee('No action from CaPSA/TSA in 3 days');
     }
 
     public function test_a_capsa_who_decides_in_time_is_unaffected(): void

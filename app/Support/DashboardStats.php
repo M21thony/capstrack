@@ -16,7 +16,7 @@ use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 
 /**
- * The numbers on the CaPSA, Admin and Expert dashboards.
+ * The numbers on the CaPSA/TSA, Admin and Expert dashboards.
  *
  * A dashboard answers "how are we doing" before it answers "what should I do
  * next": totals, how far along the teams are, how the defenses are going, what
@@ -35,9 +35,9 @@ final class DashboardStats
     public function __construct(private CapsaReports $reports, private DefenseAnalytics $defenses, private ExpertCapacity $capacity, private FeeBoard $feeBoard) {}
 
     /**
-     * A CaPSA's sections, the running term.
+     * A CaPSA/TSA's sections, the running term.
      *
-     * @param  array<string, mixed>  $ctx  CapsaReports::context() for this CaPSA.
+     * @param  array<string, mixed>  $ctx  CapsaReports::context() for this CaPSA/TSA.
      * @return array<string, mixed>
      */
     public function capsa(CapstoneExpert $capsa, array $ctx): array
@@ -242,7 +242,7 @@ final class DashboardStats
     }
 
     /**
-     * Where each fee stands across the CaPSA's verified teams: members paid,
+     * Where each fee stands across the CaPSA/TSA's verified teams: members paid,
      * receipts waiting to be checked, and the money collected so far.
      *
      * @param  array<string, mixed>  $ctx

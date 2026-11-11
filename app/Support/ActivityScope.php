@@ -10,10 +10,10 @@ use App\Models\Team;
 /**
  * Which students' activity a given portal user may see.
  *
- * A CaPSA covers named sections and the rest of their portal is scoped to
+ * A CaPSA/TSA covers named sections and the rest of their portal is scoped to
  * them - SectionScope exists for exactly that - but three surfaces were
  * reading the activity table with no scope at all: the notification bell,
- * the dashboard's recent-activity feed, and the Activity Log page. A CaPSA
+ * the dashboard's recent-activity feed, and the Activity Log page. A CaPSA/TSA
  * covering BSIT-3A could watch every other section's teams submit documents,
  * book consultations and apply to experts.
  *
@@ -39,7 +39,7 @@ class ActivityScope
 
         $sections = $viewer->sections ?? [];
 
-        // A CaPSA with no sections yet covers nobody. Returning null here
+        // A CaPSA/TSA with no sections yet covers nobody. Returning null here
         // would hand them everything, which is the bug this class exists to
         // stop, so it is an empty list on purpose.
         if ($sections === []) {
@@ -58,9 +58,9 @@ class ActivityScope
             })
             ->pluck('student_id');
 
-        // And everyone on a team this CaPSA handles, wherever their own
+        // And everyone on a team this CaPSA/TSA handles, wherever their own
         // section is now: a 4th-year team split across 4A and 4B is still one
-        // team, and its CaPSA follows all of it.
+        // team, and its CaPSA/TSA follows all of it.
         $scope = app(SectionScope::class);
         $records = StudentSchoolYear::with('student')->whereNotNull('team_id')->get()->groupBy('team_id');
         $onTheirTeams = Team::whereIn('team_id', $records->keys())->get()

@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Deletes for good the milestones and deliverables a CaPSA removed more than
+ * Deletes for good the milestones and deliverables a CaPSA/TSA removed more than
  * KEEP_DAYS ago, with the checks recorded on them. Until then Undo can still
  * bring them back.
  *

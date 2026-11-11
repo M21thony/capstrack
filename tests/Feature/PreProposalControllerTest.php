@@ -134,7 +134,7 @@ class PreProposalControllerTest extends TestCase
      * These used to send self::TITLE every time, so a team saving four
      * proposals saved the same title four times - which the endpoint now
      * refuses, because turning in one title four times is not the choice the
-     * CaPSA is being offered. The first word varies instead, which keeps the
+     * CaPSA/TSA is being offered. The first word varies instead, which keeps the
      * 11-12 meaningful words the title rule wants.
      */
     private function checkAndStore(string $fileName): void
@@ -246,7 +246,7 @@ class PreProposalControllerTest extends TestCase
      *
      * It used to be refused, which pushed a team with two titles they believed
      * in into writing two they did not, just to unlock the button - and the
-     * CaPSA then had four to read instead of two. The page asks once before
+     * CaPSA/TSA then had four to read instead of two. The page asks once before
      * sending fewer; the endpoint does not stand in the way.
      */
     public function test_submitting_fewer_than_the_suggested_number_is_allowed(): void

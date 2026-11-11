@@ -8,11 +8,11 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * A member leaving a team whose members are locked, waiting on a CaPSA.
+ * A member leaving a team whose members are locked, waiting on a CaPSA/TSA.
  *
- * The CaPSA has DECIDE_WITHIN_DAYS to decide. A request left that long is
+ * The CaPSA/TSA has DECIDE_WITHIN_DAYS to decide. A request left that long is
  * declined on its own (auto_declined) and the team is told it ran out of
- * time - not that the CaPSA said no.
+ * time - not that the CaPSA/TSA said no.
  *
  * See Team::isTeamLocked() for when that is, and TeamLock for what
  * approving one does.
@@ -35,13 +35,13 @@ class MemberLeaveRequest extends Model
 
     public const REASON_MIN = 15;
 
-    public const ASK_CAPSA = "Leaving a team needs your CaPSA's approval. Use Ask CaPSA to Leave on the Team page.";
+    public const ASK_CAPSA = "Leaving a team needs your CaPSA/TSA's approval. Use Ask CaPSA/TSA to Leave on the Team page.";
 
-    /** A CaPSA has this many days to decide; after that the request is declined on its own. */
+    /** A CaPSA/TSA has this many days to decide; after that the request is declined on its own. */
     public const DECIDE_WITHIN_DAYS = 3;
 
-    /** The reason an auto-decline carries, where a CaPSA's own would be. */
-    public const AUTO_DECLINE_NOTE = 'Declined automatically: your CaPSA did not act on it within '.self::DECIDE_WITHIN_DAYS.' days.';
+    /** The reason an auto-decline carries, where a CaPSA/TSA's own would be. */
+    public const AUTO_DECLINE_NOTE = 'Declined automatically: your CaPSA/TSA did not act on it within '.self::DECIDE_WITHIN_DAYS.' days.';
 
     protected $fillable = [
         'team_id',
@@ -92,16 +92,16 @@ class MemberLeaveRequest extends Model
         return $this->status === self::PENDING;
     }
 
-    /** When a pending request declines itself if the CaPSA has not decided. */
+    /** When a pending request declines itself if the CaPSA/TSA has not decided. */
     public function autoDeclinesAt(): Carbon
     {
         return $this->created_at->copy()->addDays(self::DECIDE_WITHIN_DAYS);
     }
 
     /**
-     * Declines every request the CaPSA left waiting DECIDE_WITHIN_DAYS or
+     * Declines every request the CaPSA/TSA left waiting DECIDE_WITHIN_DAYS or
      * longer, and tells the team. Run on a schedule and before any page or
-     * decision reads the requests, so a CaPSA can never approve one that has
+     * decision reads the requests, so a CaPSA/TSA can never approve one that has
      * already run out, whether or not the scheduler is running.
      *
      * @return int how many were declined
@@ -134,7 +134,7 @@ class MemberLeaveRequest extends Model
 
     /**
      * Tells the one who asked - and, for a removal, the member it was about -
-     * that the request was declined, by the CaPSA or by running out of time.
+     * that the request was declined, by the CaPSA/TSA or by running out of time.
      */
     public function tellDeclined(): void
     {
@@ -143,7 +143,7 @@ class MemberLeaveRequest extends Model
         $isLeave = $this->type === self::LEAVE;
 
         if ($this->auto_declined) {
-            $why = ' Your CaPSA did not act on it within '.self::DECIDE_WITHIN_DAYS.' days, so it was declined automatically. You can ask again.';
+            $why = ' Your CaPSA/TSA did not act on it within '.self::DECIDE_WITHIN_DAYS.' days, so it was declined automatically. You can ask again.';
             $requester = [
                 'title' => 'Request declined automatically',
                 'message' => ($isLeave
@@ -152,19 +152,19 @@ class MemberLeaveRequest extends Model
             ];
             $member = [
                 'title' => 'You stay on the team',
-                'message' => 'The request to remove you from '.$teamName.' was declined automatically: your CaPSA did not act on it within '.self::DECIDE_WITHIN_DAYS.' days.',
+                'message' => 'The request to remove you from '.$teamName.' was declined automatically: your CaPSA/TSA did not act on it within '.self::DECIDE_WITHIN_DAYS.' days.',
             ];
         } else {
             $why = ' Their reason: "'.e((string) $this->decision_note).'"';
             $requester = [
                 'title' => 'Request declined',
                 'message' => ($isLeave
-                    ? 'Your CaPSA declined your request to leave '.$teamName.'. You are still on the team.'
-                    : 'Your CaPSA declined your request to remove a member from '.$teamName.'.').$why,
+                    ? 'Your CaPSA/TSA declined your request to leave '.$teamName.'. You are still on the team.'
+                    : 'Your CaPSA/TSA declined your request to remove a member from '.$teamName.'.').$why,
             ];
             $member = [
                 'title' => 'You stay on the team',
-                'message' => 'Your CaPSA declined the request to remove you from '.$teamName.'.'.$why,
+                'message' => 'Your CaPSA/TSA declined the request to remove you from '.$teamName.'.'.$why,
             ];
         }
 
@@ -189,9 +189,9 @@ class MemberLeaveRequest extends Model
     }
 
     /**
-     * Only the requests from teams in this CaPSA's sections.
+     * Only the requests from teams in this CaPSA/TSA's sections.
      *
-     * Through SectionScope, the same as every other CaPSA page, so the list
+     * Through SectionScope, the same as every other CaPSA/TSA page, so the list
      * and the approve behind it cannot disagree about whose team it is.
      *
      * @param  Collection<int, self>  $requests
@@ -207,7 +207,7 @@ class MemberLeaveRequest extends Model
             ->values();
     }
 
-    /** How many are waiting on this CaPSA - the sidebar badge. */
+    /** How many are waiting on this CaPSA/TSA - the sidebar badge. */
     public static function pendingCountFor(CapstoneExpert $capsa): int
     {
         return static::visibleTo($capsa, static::pending()->with('team')->get())->count();

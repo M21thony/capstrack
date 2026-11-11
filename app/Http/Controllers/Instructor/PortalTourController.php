@@ -8,7 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * The guided tour a CaPSA, Admin or Expert is walked through once - the same
+ * The guided tour a CaPSA/TSA, Admin or Expert is walked through once - the same
  * one a student gets, with their own portal's steps.
  */
 class PortalTourController extends Controller

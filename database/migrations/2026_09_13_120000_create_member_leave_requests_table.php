@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Schema;
  * earned the title. A leader can no longer let someone go, and a member can
  * no longer walk out on the 3-hour timer a leave request used to run on.
  * People still drop out, though, so a row here is how that reaches the
- * section's CaPSA - who asked, about whom, and why - and what they decided.
+ * section's CaPSA/TSA - who asked, about whom, and why - and what they decided.
  *
- * Rows are never deleted. Withdrawn and declined requests stay, so a CaPSA
+ * Rows are never deleted. Withdrawn and declined requests stay, so a CaPSA/TSA
  * looking at a team later can see what was asked before.
  */
 return new class extends Migration

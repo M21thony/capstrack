@@ -16,7 +16,7 @@ use Tests\TestCase;
 
 /**
  * The tracker shows where things stand and sends people to where the work
- * happens: a student to Document Submission, the CaPSA to the uploaded scan.
+ * happens: a student to Document Submission, the CaPSA/TSA to the uploaded scan.
  */
 class ChecklistScreensLinkOutTest extends TestCase
 {

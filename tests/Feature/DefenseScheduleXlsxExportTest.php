@@ -21,7 +21,7 @@ use Tests\TestCase;
  * ?export=xlsx, streaming a spreadsheet with the department's own columns in
  * CapsTrack's look (App\Support\DefenseScheduleWorkbook) instead of the view.
  *
- * These read the actual bytes that come back, the way a CaPSA would open
+ * These read the actual bytes that come back, the way a CaPSA/TSA would open
  * them in Excel - not just that a controller method ran.
  */
 class DefenseScheduleXlsxExportTest extends TestCase
@@ -197,7 +197,7 @@ class DefenseScheduleXlsxExportTest extends TestCase
         $this->assertSame(['CANCELLED'], array_values(array_filter(array_column($sheet->rangeToArray('D7:D40'), 0))));
     }
 
-    /** Once the CaPSA sets the new date, the cancelled row says when, and the new date gets its own row. */
+    /** Once the CaPSA/TSA sets the new date, the cancelled row says when, and the new date gets its own row. */
     public function test_a_defense_cancelled_on_the_day_says_when_it_was_rescheduled(): void
     {
         $team = $this->team('Bravo');
@@ -290,9 +290,9 @@ class DefenseScheduleXlsxExportTest extends TestCase
     {
         // An Admin without sections of her own sees every team - the same
         // "no sections means unscoped" rule DefenseBoard::teamsFor() applies
-        // everywhere else. Defense Scheduling is CaPSA-gated, so, as in
+        // everywhere else. Defense Scheduling is CaPSA/TSA-gated, so, as in
         // GenerateDefenseScheduleTest, this is an admin who also holds the
-        // CaPSA role rather than a bare is_admin account.
+        // CaPSA/TSA role rather than a bare is_admin account.
         $admin = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]));
         $this->team('SectionA', '3rd · A');
         $this->team('SectionB', '3rd · B');

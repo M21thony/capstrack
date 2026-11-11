@@ -167,8 +167,8 @@ class DefenseAnalytics
     /**
      * Every team the viewer may see, with where it stands at each stage.
      *
-     * Admin sees everyone. A CaPSA sees their own sections, and - as on every
-     * other CaPSA page - a team whose section cannot be worked out is shown
+     * Admin sees everyone. A CaPSA/TSA sees their own sections, and - as on every
+     * other CaPSA/TSA page - a team whose section cannot be worked out is shown
      * to all of them rather than to nobody, because nobody could then fix it.
      *
      * @return Collection<int, array<string, mixed>>
@@ -223,7 +223,7 @@ class DefenseAnalytics
      * year's numbers as work still to come, and the page would show a wall of
      * teams nobody is waiting on.
      *
-     * This is derived like everything else here: if the CaPSA extends the
+     * This is derived like everything else here: if the CaPSA/TSA extends the
      * window and the team is back in play, the next time the page loads the
      * stage is no longer "missed" and its later stages count again.
      *

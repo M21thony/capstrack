@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 /**
  * The Team page for a member of a team: the hero, the members table, asking
- * the CaPSA to leave, and Team selection folded away.
+ * the CaPSA/TSA to leave, and Team selection folded away.
  */
 class MemberScreenTest extends TestCase
 {
@@ -102,8 +102,8 @@ class MemberScreenTest extends TestCase
             ->assertCreated();
 
         $html = $this->page($viewer);
-        $this->assertStringContainsString('Leave request with CaPSA', $html);
-        $this->assertStringContainsString('Waiting on your CaPSA', $html);
+        $this->assertStringContainsString('Leave request with CaPSA/TSA', $html);
+        $this->assertStringContainsString('Waiting on your CaPSA/TSA', $html);
         $this->assertSame(1, MemberLeaveRequest::where('team_id', $team->team_id)->count());
     }
 

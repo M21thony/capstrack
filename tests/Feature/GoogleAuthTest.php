@@ -233,7 +233,7 @@ class GoogleAuthTest extends TestCase
     /**
      * A faculty address nobody has put in the system is turned away.
      *
-     * It used to be sent to a form to apply. A CaPSA adds faculty now - on
+     * It used to be sent to a form to apply. A CaPSA/TSA adds faculty now - on
      * the list, or one at a time - so there is nothing to apply to.
      */
     public function test_mock_login_turns_away_an_unlisted_faculty_address(): void
@@ -248,7 +248,7 @@ class GoogleAuthTest extends TestCase
         ]);
 
         $response->assertStatus(403);
-        $this->assertStringContainsString('CaPSA', $response->json('message'));
+        $this->assertStringContainsString('CaPSA/TSA', $response->json('message'));
         $this->assertFalse(Auth::check());
 
         // Nothing was created on the way out.
@@ -323,7 +323,7 @@ class GoogleAuthTest extends TestCase
     {
         $expert = CapstoneExpert::create([
             'email' => 'typed.name@gmail.com',
-            // what a CaPSA guessed when they added them
+            // what a CaPSA/TSA guessed when they added them
             'first_name' => 'Markanthonybalilla21',
             'last_name' => '',
             'approved_status' => true,

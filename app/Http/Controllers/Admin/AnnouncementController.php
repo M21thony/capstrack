@@ -45,7 +45,7 @@ class AnnouncementController extends Controller
 
             // The team's own section - its leader's - the same answer the
             // rest of the portal gives, so a 4th-year team split across
-            // sections is offered to the one CaPSA who handles it.
+            // sections is offered to the one CaPSA/TSA who handles it.
             $scope = app(SectionScope::class);
 
             foreach ($confirmedTeams as $team) {

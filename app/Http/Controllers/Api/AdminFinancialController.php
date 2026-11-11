@@ -135,7 +135,7 @@ class AdminFinancialController extends Controller
 
     /**
      * PATCH /financial/records - verify several waiting receipts at once.
-     * Only receipts still waiting, from the CaPSA's own sections, change.
+     * Only receipts still waiting, from the CaPSA/TSA's own sections, change.
      */
     public function updateMany(Request $request): JsonResponse
     {
@@ -169,7 +169,7 @@ class AdminFinancialController extends Controller
     }
 
     /**
-     * Every verified receipt in this CaPSA's sections that has not gone yet.
+     * Every verified receipt in this CaPSA/TSA's sections that has not gone yet.
      * Sent receipts stay verified, and verified ones already cannot be changed.
      */
     public function sendToDean(FeeBoard $fees): JsonResponse
@@ -194,7 +194,7 @@ class AdminFinancialController extends Controller
         ]);
     }
 
-    /** Whether the receipt's student is on a team in this CaPSA's sections. */
+    /** Whether the receipt's student is on a team in this CaPSA/TSA's sections. */
     private function covers(FinancialRecord $record): bool
     {
         $team = $record->student?->team;
@@ -215,7 +215,7 @@ class AdminFinancialController extends Controller
         }
 
         // A student can mistype the number they read off the receipt. The
-        // CaPSA, holding the photo, puts right what they typed - saved with
+        // CaPSA/TSA, holding the photo, puts right what they typed - saved with
         // the verification, never on its own.
         $corrected = $request->validate([
             'receipt_number' => ['sometimes', ...FinancialRecord::orNumberRules()],
@@ -281,7 +281,7 @@ class AdminFinancialController extends Controller
             $financialRecord->student,
             'receipt_sent_back',
             'Receipt sent back',
-            'Your CaPSA sent back your receipt for <strong>'.e($financialRecord->expensePost?->title ?? 'the fee').'</strong>: “'.e($validated['rejection_reason']).'” Upload a corrected photo.',
+            'Your CaPSA/TSA sent back your receipt for <strong>'.e($financialRecord->expensePost?->title ?? 'the fee').'</strong>: “'.e($validated['rejection_reason']).'” Upload a corrected photo.',
             route('student.financial'),
             ['financial_record_id' => $financialRecord->id],
         );

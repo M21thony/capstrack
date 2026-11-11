@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The CaPSA, Admin and Expert portals get the guided tour students have: their
+ * The CaPSA/TSA, Admin and Expert portals get the guided tour students have: their
  * own steps and open by themselves once. There is no sidebar button to replay it.
  */
 class StaffPortalTourTest extends TestCase

@@ -412,7 +412,7 @@
 
     <div id="real-content" style="opacity:0">
     {{-- A form on this page can submit from either the team card up here or
-         the recruitment feed further down - Send to CaPSA, Update Team, a
+         the recruitment feed further down - Send to CaPSA/TSA, Update Team, a
          recruitment post, an invite response. Wherever it came from, the
          redirect lands back at the top of the page, so the confirmation
          belongs here too. It used to sit after the team card and before the
@@ -430,7 +430,7 @@
 
     {{-- LeaveRequestController::refuse() (and several other controllers that
          redirect back here) flash the reason under 'error', not 'status' -
-         a request the CaPSA feature turned down (already pending, team not
+         a request the CaPSA/TSA feature turned down (already pending, team not
          locked yet, a leader trying to leave without handing off first) had
          nothing on screen saying so, which is indistinguishable from the
          request never having been sent at all. --}}
@@ -571,7 +571,7 @@
           <input type="hidden" name="looking_for" id="looking-for-input" value="">
           <input type="hidden" name="introduction" id="introduction-input" value="">
           <input type="hidden" name="team_name" id="team-name-hidden" value="">
-          {{-- Posted when a team is created. It is the CaPSA's number, not a
+          {{-- Posted when a team is created. It is the CaPSA/TSA's number, not a
                fixed 5 - the column is only a record, since the cap itself is
                read from the setting. --}}
           <input type="hidden" name="member_count" id="member-count-input" value="{{ $memberCount }}">
@@ -625,13 +625,13 @@
     <div style="width:48px;height:48px;border-radius:50%;background:var(--bg2);color:var(--accent3);display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
-    <div class="section-title" id="rrm-title">Ask your CaPSA</div>
+    <div class="section-title" id="rrm-title">Ask your CaPSA/TSA</div>
     <p id="rrm-lede" style="margin-top:8px;font-size:13px;color:var(--text2);line-height:1.6;"></p>
     <form method="POST" action="{{ route('team.capsa-leave-requests.store') }}" id="capsa-leave-form" novalidate style="margin-top:14px;">
       @csrf
       <input type="hidden" name="type" id="rrm-type">
       <input type="hidden" name="student_id" id="rrm-student">
-      <label for="rrm-reason" style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Reason for your CaPSA</label>
+      <label for="rrm-reason" style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Reason for your CaPSA/TSA</label>
       <textarea id="rrm-reason" name="reason" rows="4" minlength="{{ \App\Models\MemberLeaveRequest::REASON_MIN }}" maxlength="1000" required placeholder="What happened, and why it cannot be worked out within the team" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px;line-height:1.5;resize:vertical;"></textarea>
       <div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--text3);margin-top:4px;">
         <span id="rrm-hint">At least {{ \App\Models\MemberLeaveRequest::REASON_MIN }} characters. Your team sees this too.</span>
@@ -640,7 +640,7 @@
       <div id="rrm-error" role="alert" style="display:none;margin-top:6px;font-size:12px;color:#ef4444;"></div>
       <ul id="rrm-effects" style="margin:12px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.7;"></ul>
       <div style="display:flex;gap:10px;margin-top:18px;">
-        <button type="submit" class="btn-primary" id="rrm-submit" style="flex:1;">Send to CaPSA</button>
+        <button type="submit" class="btn-primary" id="rrm-submit" style="flex:1;">Send to CaPSA/TSA</button>
         <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeCapsaLeaveModal()">Cancel</button>
       </div>
     </form>
@@ -662,11 +662,11 @@
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
       <input type="text" name="team_name" id="edit-team-name" value="{{ $myTeam->team_name }}" placeholder="Enter team name..." autocomplete="off" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:0;box-sizing:border-box;">
       <div id="edit-team-name-msg" style="font-size: 11px; color: var(--red); margin: 6px 0 0; display: none;"></div>
-      {{-- The title comes from the pre-proposal the CaPSA approves (and, when
+      {{-- The title comes from the pre-proposal the CaPSA/TSA approves (and, when
            two are, the one the team picks). Once it is set the leader can
            correct it here - a misspelling, a word or two. A reworded title
            needs the panel's "passed with revision"; a different one goes
-           through the CaPSA (TitleRevision). --}}
+           through the CaPSA/TSA (TitleRevision). --}}
       <label for="edit-project-title" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin: 16px 0 8px;">Project Title</label>
       @if ($myTeam->project_title)
         <textarea name="project_title" id="edit-project-title" class="ut-title" rows="2" maxlength="255" required
@@ -676,7 +676,7 @@
           @if ($titleCanBeReworded)
             Your panel passed the title with revision, so you can reword it until the Signed Final Project Title Form is in.
           @else
-            Fix spelling or small mistakes. A different title goes through your CaPSA.
+            Fix spelling or small mistakes. A different title goes through your CaPSA/TSA.
           @endif
         </div>
       @else
@@ -684,7 +684,7 @@
           @if ($approvedProposalCount >= 2)
             <span style="color:var(--text2);">{{ $approvedProposalCount }} of your titles were approved &mdash; choose the one you want on the <a href="{{ route('student.duplication') }}" style="color:var(--accent3);font-weight:600;">Duplication Checker</a> page.</span>
           @else
-            <span style="color:var(--text3);">Set once your CaPSA approves one of your pre-proposal titles.</span>
+            <span style="color:var(--text3);">Set once your CaPSA/TSA approves one of your pre-proposal titles.</span>
           @endif
         </div>
       @endif
@@ -709,7 +709,7 @@
           <div id="tagsMsg" class="ut-msg" role="alert" @if (! $tagsError) hidden @endif>{{ $tagsError }}</div>
           <div class="ut-note">From your capstone title. Keep at least {{ \App\Support\ProjectTags::MIN }}, up to {{ \App\Support\ProjectTags::MAX }}.</div>
         @else
-          <div class="ut-empty">Tags come with your capstone title. They appear here once your CaPSA approves one of your pre-proposal titles, and you can add or remove them then.</div>
+          <div class="ut-empty">Tags come with your capstone title. They appear here once your CaPSA/TSA approves one of your pre-proposal titles, and you can add or remove them then.</div>
         @endif
       </div>
       <div class="modal-actions modal-actions--dual" style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
@@ -952,7 +952,7 @@
      accept and this never appears.
 
      It has no close button on purpose. The choice is one click and the page
-     behind it is unusable without it: every roster row, and the CaPSA's own
+     behind it is unusable without it: every roster row, and the CaPSA/TSA's own
      verification list, reads this field. --}}
 @if(!empty($needsRole) && !empty($roleChoices))
 <div class="modal-overlay" id="roleChoiceModal" data-no-escape style="z-index:1200">
@@ -1228,7 +1228,7 @@ function confirmLeaveTeam() {
         }
     });
     @elseif($isLeader && $teamLocked)
-    showToast('Your team passed Title Defense, so it cannot be ended by leaving. Talk to your CaPSA.', 'error');
+    showToast('Your team passed Title Defense, so it cannot be ended by leaving. Talk to your CaPSA/TSA.', 'error');
     @elseif($isLeader)
     showConfirm({
         title: 'Leave & Terminate Team',
@@ -1285,16 +1285,16 @@ function openCapsaLeaveModal(type, studentId, name) {
     var leave = type === 'leave';
     document.getElementById('rrm-type').value = type;
     document.getElementById('rrm-student').value = leave ? '' : studentId;
-    document.getElementById('rrm-title').textContent = leave ? 'Ask your CaPSA to leave' : 'Ask your CaPSA to remove ' + name;
+    document.getElementById('rrm-title').textContent = leave ? 'Ask your CaPSA/TSA to leave' : 'Ask your CaPSA/TSA to remove ' + name;
     document.getElementById('rrm-lede').textContent = leave
-        ? 'Leaving a team needs your CaPSA\'s approval. Your CaPSA reads your reason and decides whether you can leave.'
-        : 'Your team passed Title Defense, so you cannot remove members yourself. Your CaPSA reads your reason and decides.';
+        ? 'Leaving a team needs your CaPSA/TSA\'s approval. Your CaPSA/TSA reads your reason and decides whether you can leave.'
+        : 'Your team passed Title Defense, so you cannot remove members yourself. Your CaPSA/TSA reads your reason and decides.';
 
     var effects = leave && {{ ($leaderAsksCapsa ?? false) ? 'true' : 'false' }}
-        ? ['Once your CaPSA approves, the team ends and your experts are told.', 'You stay on the team unless your CaPSA approves.', 'You can withdraw the request while it is waiting.']
+        ? ['Once your CaPSA/TSA approves, the team ends and your experts are told.', 'You stay on the team unless your CaPSA/TSA approves.', 'You can withdraw the request while it is waiting.']
         : leave
-        ? ['Your team leader is told you asked.', 'You stay on the team unless your CaPSA approves.', 'You can withdraw the request while it is waiting.']
-        : [name + ' is told you asked, and sees your reason.', name + ' stays on the team unless your CaPSA approves.', 'No one can be added to replace them.'];
+        ? ['Your team leader is told you asked.', 'You stay on the team unless your CaPSA/TSA approves.', 'You can withdraw the request while it is waiting.']
+        : [name + ' is told you asked, and sees your reason.', name + ' stays on the team unless your CaPSA/TSA approves.', 'No one can be added to replace them.'];
     var list = document.getElementById('rrm-effects');
     list.innerHTML = '';
     effects.forEach(function (text) {
@@ -1308,7 +1308,7 @@ function openCapsaLeaveModal(type, studentId, name) {
     showCapsaLeaveError('');
     var btn = document.getElementById('rrm-submit');
     btn.disabled = false;
-    btn.textContent = 'Send to CaPSA';
+    btn.textContent = 'Send to CaPSA/TSA';
     updateCapsaLeaveReason();
     document.getElementById('capsaLeaveModal').classList.add('active');
     reason.focus();
@@ -1342,7 +1342,7 @@ document.getElementById('capsa-leave-form').addEventListener('submit', function 
     if (n < LEAVE_REASON_MIN) {
         event.preventDefault();
         showCapsaLeaveError(n === 0
-            ? 'Write a reason for your CaPSA first.'
+            ? 'Write a reason for your CaPSA/TSA first.'
             : 'Add a little more - at least ' + LEAVE_REASON_MIN + ' characters (' + (LEAVE_REASON_MIN - n) + ' to go).');
         reason.focus();
         return;
@@ -1472,7 +1472,7 @@ function submitDecline() {
 // Which Capstone is running, so the page can say why rather than opening a
 // list nobody can be invited from.
 const CAPSTONE_STAGE = {{ $capstoneStage }};
-// The CaPSA's Team Rules. Checked the moment somebody starts to create, join
+// The CaPSA/TSA's Team Rules. Checked the moment somebody starts to create, join
 // or invite - never after they have filled in a form.
 //
 // Unconditional even though most of what follows is leader-only: updateModalUI()
@@ -2130,7 +2130,7 @@ function setPickedSkills(skills) {
 // goal: 'individual' opens the form on "Find a team" (the hero's second button).
 function openPostModal(goal) {
     if (!CREATION_ALLOWED && !JOINING_ALLOWED) {
-        showToast('Creating and joining teams are both closed right now - your CaPSA has turned them off.', 'error');
+        showToast('Creating and joining teams are both closed right now - your CaPSA/TSA has turned them off.', 'error');
         return;
     }
     resetPostModal();

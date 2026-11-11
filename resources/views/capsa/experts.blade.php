@@ -91,7 +91,7 @@
   .ct-preview-table tr:last-child td{border-bottom:none}
   .ct-preview-table th:nth-child(3),.ct-preview-table td:nth-child(3){width:180px}
   .ct-preview-table th:nth-child(5),.ct-preview-table td:nth-child(5){width:160px}
-  /* The badge is what a CaPSA scans the list by, so the three outcomes have
+  /* The badge is what a CaPSA/TSA scans the list by, so the three outcomes have
      to be tellable apart at a glance and not only by their wording. */
   .ct-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;white-space:nowrap}
   .ct-tag-create{background:rgba(22,163,74,0.1);color:#15803d}
@@ -110,7 +110,7 @@
   .ct-modal-card-wide .ct-modal-actions{justify-content:flex-end}
   .ct-modal-card-wide .ct-modal-actions .ct-btn{flex:0 0 auto;min-width:160px}
 
-  /* Expert Management (CaPSA's copy - view + Manage Roles only). Admin has
+  /* Expert Management (CaPSA/TSA's copy - view + Manage Roles only). Admin has
      its own separate, fuller copy at resources/views/admin/experts.blade.php
      (this plus Edit/Remove/Make CAPSA/Add Expert) - these two used to be
      one file switching on viewer role, which made neither version easy to
@@ -360,7 +360,7 @@
           </tbody>
         </table>
       </div>
-      {{-- Roles are the only column a CaPSA can change, and a page that does
+      {{-- Roles are the only column a CaPSA/TSA can change, and a page that does
            not say so invites trying the others. --}}
       <p class="table-legend">
         <b>Roles</b> are yours to set.
@@ -379,7 +379,7 @@
     @php
       $viewerId = (int) auth('expert')->id();
       // The mix, not just the total: how many of each role you have is the
-      // thing a CaPSA is actually deciding about when they open this page.
+      // thing a CaPSA/TSA is actually deciding about when they open this page.
       // A tab per role, each saying how many it holds.
       $roleCounts = $experts->flatMap(fn ($e) => $e->roles->pluck('role_name'))->countBy();
       $roleTabs = collect([\App\Models\CapstoneExpert::CAPSA_ROLE, ...\App\Models\CapstoneExpert::STUDENT_FACING_ROLES])
@@ -478,9 +478,9 @@
               $teamCount = $expert->team_assignments_count ?? 0;
               $slotsLeft = max(0, $maxTeams - $teamCount);
 
-              // Team slots belong to the roles that take teams. A CaPSA is
+              // Team slots belong to the roles that take teams. A CaPSA/TSA is
               // not one of them - the job is running the subject, not
-              // advising groups - so a plain CaPSA has no slots to show and
+              // advising groups - so a plain CaPSA/TSA has no slots to show and
               // reading "0/0 - Full" against their name says they are
               // overloaded when they were never carrying anything.
               $takesTeams = $expert->roles
@@ -1228,7 +1228,7 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
     {{-- Neither name nor role is asked for. The address is the whole of
          what is needed to make the account; Google gives the real spelling
          of their name the first time they sign in, and the role is the
-         CaPSA's to set, now or from the row afterwards. Add CaPSA has always
+         CaPSA/TSA's to set, now or from the row afterwards. Add CaPSA/TSA has always
          worked this way. --}}
     <div class="ae-field">
       <label class="ae-label">Role <span class="ae-opt">(optional)</span></label>
@@ -1848,7 +1848,7 @@ function openExpertDetail(data) {
 
   // No separate "CAPSA" chip - is_capsa stays synced with the
   // capstone_adviser role, so data.roles already says "Capstone Subject
-  // Adviser" for a CaPSA account. (Admin accounts never appear in this
+  // Adviser" for a CaPSA/TSA account. (Admin accounts never appear in this
   // list at all, so there's no is_admin case to handle here either.)
   const badges = [];
   data.roles.forEach(r => badges.push(r));
@@ -1926,7 +1926,7 @@ function closeSidebar() {
 <script nonce="{{ Vite::cspNonce() }}">
 // ── acting on several experts at once ──
 // Both loop the endpoint that already changes one expert, so the rules about
-// what a CaPSA may set stay in one place.
+// what a CaPSA/TSA may set stay in one place.
 
 function bulkNames(rows) {
   return rows.map(function (tr) {

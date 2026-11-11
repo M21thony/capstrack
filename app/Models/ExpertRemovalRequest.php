@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
- * A team asking its CaPSA to remove an expert who already took them on.
+ * A team asking its CaPSA/TSA to remove an expert who already took them on.
  *
  * Decided on the Leave Requests tab of Team Management, beside member leave
- * requests, and scoped to the CaPSA's sections the same way.
+ * requests, and scoped to the CaPSA/TSA's sections the same way.
  */
 class ExpertRemovalRequest extends Model
 {
@@ -25,7 +25,7 @@ class ExpertRemovalRequest extends Model
     public const REASON_MIN = 15;
 
     /**
-     * The application to the replacement went out when the CaPSA approved.
+     * The application to the replacement went out when the CaPSA/TSA approved.
      * Older rows may hold 'unavailable', from before a full replacement
      * blocked the approval instead.
      */
@@ -68,7 +68,7 @@ class ExpertRemovalRequest extends Model
         return $this->belongsTo(CapstoneExpert::class, 'expert_id', 'expert_id');
     }
 
-    /** Who the team wants instead - applied to as soon as the CaPSA approves. */
+    /** Who the team wants instead - applied to as soon as the CaPSA/TSA approves. */
     public function replacement()
     {
         return $this->belongsTo(CapstoneExpert::class, 'replacement_expert_id', 'expert_id');
@@ -95,7 +95,7 @@ class ExpertRemovalRequest extends Model
     }
 
     /**
-     * Only the requests from teams in this CaPSA's sections.
+     * Only the requests from teams in this CaPSA/TSA's sections.
      *
      * @param  Collection<int, self>  $requests
      * @return Collection<int, self>
@@ -110,7 +110,7 @@ class ExpertRemovalRequest extends Model
             ->values();
     }
 
-    /** How many are waiting on this CaPSA. */
+    /** How many are waiting on this CaPSA/TSA. */
     public static function pendingCountFor(CapstoneExpert $capsa): int
     {
         return static::visibleTo($capsa, static::pending()->with('team')->get())->count();
