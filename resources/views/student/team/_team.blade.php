@@ -133,7 +133,7 @@
             @if ($isTeamLeader)<span class="tm-tag is-leader">LEADER</span>@endif
             @if ($isMe)<span class="tm-tag is-you">YOU</span>@endif
             @if ($leaveRequests->contains('student_id', $member->student_id))
-              <span class="tm-tag is-capsa" title="A request about this member is waiting on your CaPSA/TSA">WITH CAPSA</span>
+              <span class="tm-tag is-capsa" title="A request about this member is waiting on your CaPSA/TSA">WITH CAPSA/TSA</span>
             @elseif ($teamLocked && $isLeader && ! $isMe)
               <button type="button" class="tm-link is-danger" onclick="openCapsaLeaveModal('remove', {{ $member->student_id }}, {{ Js::from($memberName) }})" title="Ask your CaPSA/TSA to remove this member">Remove</button>
             @elseif ($isLeader && ! $isMe && ! $myTeam->is_confirmed)

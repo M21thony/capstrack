@@ -1558,7 +1558,7 @@ function sendToggleCapsa(expertId, sections, successMessage, onDone) {
         showToast(successMessage, 'success');
         setTimeout(() => window.location.reload(), 700);
       } else {
-        showToast(data.message || 'Could not update CAPSA status.', 'error');
+        showToast(data.message || 'Could not update CaPSA/TSA status.', 'error');
       }
     })
     .catch(() => showToast('Network error updating CAPSA status.', 'error'))
