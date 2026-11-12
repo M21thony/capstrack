@@ -337,7 +337,7 @@
         </div>
         @if ($selected->locked)
           <div class="tp-gate"><x-tm-icon n="lock" s="15" />
-            <span>{{ $selected->not_open ? 'Not open yet.' : 'Opens after the team passes '.$selected->requires.'.' }}</span></div>
+            <span>{{ $selected->not_open ? 'Not open yet.' : 'Opens after '.$selected->requires.'.' }}</span></div>
         @endif
         <div class="tp-scroll" tabindex="0" aria-label="Requirements">
           <table>

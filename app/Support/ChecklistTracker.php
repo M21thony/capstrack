@@ -104,13 +104,12 @@ class ChecklistTracker
         $progress = MilestoneProgress::forTeams($checklist, $teamIds);
         $teams = count($progress);
         $number = 0;
-        $previous = null;
 
         // Hidden ones too: they are listed as finished, so they can be shown again.
         $milestones = $checklist->milestones()
             ->with(['deliverables' => fn ($query) => $query->whereNull('archived_at')])
             ->get()
-            ->map(function (ChecklistMilestone $milestone) use ($progress, $teams, &$number, &$previous) {
+            ->map(function (ChecklistMilestone $milestone) use ($progress, $teams, &$number) {
                 $summaries = collect($progress)
                     ->map(fn ($team) => $team->milestones->first(fn ($m) => $m->milestone->id === $milestone->id))
                     ->filter();
@@ -121,7 +120,6 @@ class ChecklistTracker
                     'milestone' => $milestone,
                     // Numbered as teams see the list, which leaves hidden ones out.
                     'number' => $hidden ? null : ++$number,
-                    'previous' => $previous,
                     'capstone2' => $milestone->deliverables->contains(fn ($d) => str_starts_with((string) $d->template_key, 'c2_') || $d->template_key === MilestoneTemplate::CAPSTONE_2_MARKER),
                     'deliverables' => $milestone->deliverables->count(),
                     'due_on' => $milestone->due_on ?? $milestone->deliverables->pluck('due_date')->filter()->max(),
@@ -131,11 +129,6 @@ class ChecklistTracker
                     'percent' => $teams === 0 ? 0 : (int) round($complete / $teams * 100),
                     'past_due' => $summaries->where('past_due', true)->count(),
                 ];
-
-                // A locked milestone waits for the last defense above it.
-                if (! $hidden && $milestone->deliverables->contains('kind', Deliverable::DEFENSE)) {
-                    $previous = $milestone->name;
-                }
 
                 return $row;
             });

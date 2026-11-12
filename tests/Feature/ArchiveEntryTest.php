@@ -103,9 +103,6 @@ class ArchiveEntryTest extends TestCase
 
     public function test_the_capsas_check_also_closes_it(): void
     {
-        // She checks only an open line; lift the earlier milestones' lock.
-        $this->checklist->milestones()->update(['requires_previous' => false]);
-
         $this->actingAs($this->capsa, 'expert')
             ->putJson(route('capsa.deliverables.checks.update', [$this->entry->id, $this->team->team_id]), ['status' => DeliverableCheck::COMPLETE])
             ->assertOk();

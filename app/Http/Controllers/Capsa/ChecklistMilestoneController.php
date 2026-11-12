@@ -24,7 +24,6 @@ class ChecklistMilestoneController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'due_on' => ['nullable', 'date', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
-            'requires_previous' => ['sometimes', 'boolean'],
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
 
@@ -32,7 +31,6 @@ class ChecklistMilestoneController extends Controller
             'name' => trim($data['name']),
             'description' => trim((string) ($data['description'] ?? '')) ?: null,
             'due_on' => $data['due_on'] ?? null,
-            'requires_previous' => $data['requires_previous'] ?? false,
             'position' => (int) $checklist->milestones()->withTrashed()->max('position') + 1,
         ]);
 
@@ -58,7 +56,6 @@ class ChecklistMilestoneController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'archived' => ['sometimes', 'boolean'],
-            'requires_previous' => ['sometimes', 'boolean'],
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'due_on' => ['sometimes', 'nullable', 'date', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
             'closed' => ['sometimes', 'boolean'],
@@ -71,10 +68,6 @@ class ChecklistMilestoneController extends Controller
 
         if (array_key_exists('archived', $data)) {
             $milestone->archived_at = $data['archived'] ? now() : null;
-        }
-
-        if (array_key_exists('requires_previous', $data)) {
-            $milestone->requires_previous = $data['requires_previous'];
         }
 
         if (array_key_exists('description', $data)) {
@@ -117,7 +110,6 @@ class ChecklistMilestoneController extends Controller
             'id' => $milestone->id,
             'name' => $milestone->name,
             'archived' => (bool) $milestone->archived_at,
-            'requires_previous' => (bool) $milestone->requires_previous,
             'description' => $milestone->description,
             'due_on' => $milestone->due_on?->toDateString(),
             'closed' => $milestone->isClosed(),

@@ -1,5 +1,5 @@
 {{-- Add a requirement to a milestone, or change one: its name, instructions,
-     type, who signs it, due date and place in the milestone. Editing adds
+     type, who signs it and due date. Editing adds
      hiding and removing it. --}}
 @extends('capsa.team-management._shell')
 
@@ -7,9 +7,6 @@
 
 @php
   $back = route('capsa.team_management.milestones.show', $milestone);
-  $siblings = collect($order)->firstWhere('id', $milestone->id)['deliverables'] ?? [];
-  $count = count($siblings) + ($deliverable ? 0 : 1);
-  $at = $deliverable ? array_search($deliverable->id, $siblings) + 1 : $count;
   $role = $deliverable?->kind === \App\Models\Deliverable::APPROVAL ? $deliverable->role : '';
   $bluebook = $milestone->deliverables()->where('kind', \App\Models\Deliverable::BLUEBOOK)->exists();
   // Who the uploads go to, all of whom must approve; a bluebook line, the title recommendation and the archive entry keep their own way.
@@ -65,18 +62,9 @@
         </div>
       </div>
     @endif
-    <div class="mdg-row">
-      <label class="mdg-f">Due date
-        <input class="mdg-in" type="date" name="due_date" value="{{ $deliverable?->due_date?->toDateString() }}">
-      </label>
-      <label class="mdg-f">Position
-        <select class="mdg-in" name="position">
-          @for ($i = 1; $i <= $count; $i++)
-            <option value="{{ $i }}" @selected($i === $at)>{{ $i }}</option>
-          @endfor
-        </select>
-      </label>
-    </div>
+    <label class="mdg-f">Due date
+      <input class="mdg-in" type="date" name="due_date" value="{{ $deliverable?->due_date?->toDateString() }}">
+    </label>
     @if ($deliverable && ! $defense)
       <label class="mdg-chk"><input type="checkbox" name="closed" @checked($deliverable->closed_at)> Closed — no team can upload to it</label>
     @endif
@@ -113,17 +101,6 @@
       showSend();
     });
 
-    // Moves this requirement to the chosen place; the order endpoint wants the whole checklist.
-    const place = async id => {
-      const at = Number(field('position').value);
-      if (at === {{ $at }}) { return; }
-      const order = @json($order);
-      const mine = order.find(milestone => milestone.id === {{ $milestone->id }});
-      mine.deliverables = mine.deliverables.filter(other => other !== id);
-      mine.deliverables.splice(at - 1, 0, id);
-      await mlSend(@json(route('capsa.checklists.order.update', $milestone->checklist_id)), 'PUT', { milestones: order });
-    };
-
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const button = form.querySelector('[type=submit]');
@@ -153,10 +130,8 @@
       try {
         @if ($deliverable)
           await mlSend(@json(route('capsa.deliverables.update', $deliverable)), 'PATCH', { title, ...body });
-          await place({{ $deliverable->id }});
         @else
-          const made = await mlSend(@json(route('capsa.checklist_milestones.deliverables.store', $milestone)), 'POST', { titles: [title], ...body });
-          await place(made.deliverables[0].id);
+          await mlSend(@json(route('capsa.checklist_milestones.deliverables.store', $milestone)), 'POST', { titles: [title], ...body });
         @endif
         location.href = back;
       } catch (failure) {

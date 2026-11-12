@@ -39,7 +39,6 @@ return new class extends Migration
 
                 $milestone->forceFill([
                     'opened_at' => $open ? ($milestone->closed_at ?? now()) : null,
-                    'requires_previous' => in_array($milestone->name, MilestoneTemplate::GATES, true),
                 ])->save();
             }
         });

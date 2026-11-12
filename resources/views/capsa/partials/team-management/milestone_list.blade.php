@@ -42,7 +42,6 @@
   .mlx th.c-num{width:56px}
   .mlx a.mlx-name{font-weight:700;font-size:14px;color:var(--gold-ink);text-decoration:none}
   .mlx a.mlx-name:hover{text-decoration:underline}
-  .mlx-gate{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--mut);margin-top:1px}
   .mlx .c-req,.mlx .c-due{color:var(--ink2);white-space:nowrap}
   .mlx-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
   .mlx-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
@@ -130,13 +129,6 @@
                   <td class="c-num">{{ $row->number ?? '—' }}</td>
                   <td class="c-name">
                     <a class="mlx-name" href="{{ $page }}">{{ $m->name }}</a>
-                    <span class="mlx-gate">
-                      @if ($m->requires_previous && $row->previous)
-                        <x-tm-icon n="lock" s="12" />After passing {{ $row->previous }}
-                      @else
-                        Open to teams
-                      @endif
-                    </span>
                   </td>
                   <td class="c-req" data-label="Requirements">{{ $row->deliverables }}</td>
                   <td class="c-due" data-label="Due date">{{ $row->due_on?->format('M j, Y') ?? '—' }}</td>

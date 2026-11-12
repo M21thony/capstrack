@@ -135,7 +135,6 @@ class ChecklistController extends Controller
                 'id' => $milestone->id,
                 'name' => $milestone->name,
                 'archived' => (bool) $milestone->archived_at,
-                'requires_previous' => (bool) $milestone->requires_previous,
                 'description' => $milestone->description,
                 'due_on' => $milestone->due_on?->toDateString(),
                 'closed' => $milestone->isClosed(),

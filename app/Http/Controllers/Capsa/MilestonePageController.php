@@ -73,12 +73,6 @@ class MilestonePageController extends Controller
         return view('capsa.team-management.milestone-form', [
             'checklist' => $checklist,
             'milestone' => null,
-            // A new one goes last, so it would wait for the last defense teams see.
-            'previous' => $checklist->milestones()->active()
-                ->whereHas('deliverables', fn ($query) => $query->where('kind', Deliverable::DEFENSE))
-                ->get()->last()?->name,
-            'order' => self::orderOf($checklist),
-            'active' => $checklist->milestones()->active()->pluck('id')->all(),
             'trail' => $this->trail([['New milestone', null]]),
         ]);
     }
@@ -86,15 +80,10 @@ class MilestonePageController extends Controller
     public function edit(ChecklistMilestone $milestone): View
     {
         $this->access->milestone($milestone);
-        $row = $this->boardOf($milestone->checklist)['milestones']->first(fn ($row) => $row->milestone->id === $milestone->id);
 
         return view('capsa.team-management.milestone-form', [
             'checklist' => $milestone->checklist,
             'milestone' => $milestone,
-            'previous' => $row?->previous,
-            'order' => self::orderOf($milestone->checklist),
-            // Numbered as teams see the list; a hidden one has no place in it.
-            'active' => $milestone->checklist->milestones()->active()->pluck('id')->all(),
             'trail' => $this->trail([
                 [$milestone->name, route('capsa.team_management.milestones.show', $milestone)],
                 ['Edit', null],
@@ -165,7 +154,6 @@ class MilestonePageController extends Controller
             'deliverable' => $deliverable,
             'defense' => $deliverable?->kind === Deliverable::DEFENSE,
             'stages' => DefenseBoard::STAGES,
-            'order' => self::orderOf($milestone->checklist),
             'trail' => $this->trail([
                 [$milestone->name, route('capsa.team_management.milestones.show', $milestone)],
                 [$deliverable ? 'Edit requirement' : 'Add requirement', null],

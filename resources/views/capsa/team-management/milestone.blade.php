@@ -100,9 +100,6 @@
           @if ($row?->due_on)
             <span><x-tm-icon n="cal" s="14" />Due {{ $row->due_on->format('M j, Y') }}</span>
           @endif
-          @if ($milestone->requires_previous && $row?->previous)
-            <span><x-tm-icon n="lock" s="14" />Opens after {{ $row->previous }}</span>
-          @endif
         </p>
         @if ($milestone->description)
           <p class="ms-desc">{{ $milestone->description }}</p>

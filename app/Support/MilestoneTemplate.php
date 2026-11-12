@@ -36,12 +36,6 @@ class MilestoneTemplate
     /** A line only Capstone 2 has, to tell whether a checklist already carries it. */
     public const CAPSTONE_2_MARKER = 'pre_oral_defense';
 
-    /**
-     * The milestones a team cannot use until it has passed the defense above
-     * them. Final Manuscript is an older checklist's name.
-     */
-    public const GATES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Final Manuscript', 'Archive Entry', 'Bluebook Clearance'];
-
     /** The milestones open from the start, older checklists' names too; the CaPSA/TSA opens every other one. Bluebook is the dean's, so it opens on the Final Oral Defense pass, not the CaPSA/TSA. */
     public const OPEN_FROM_THE_START = ['Pre-proposal Defense', 'Getting started', 'Pre-proposal', 'Bluebook Clearance'];
 
@@ -210,7 +204,6 @@ class MilestoneTemplate
             $milestone = $checklist->milestones()->create([
                 'name' => $lines->first()['phase'],
                 'position' => $from + $at,
-                'requires_previous' => in_array($lines->first()['phase'], self::GATES, true),
                 'opened_at' => in_array($lines->first()['phase'], self::OPEN_FROM_THE_START, true) ? now() : null,
             ]);
 

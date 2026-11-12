@@ -64,19 +64,6 @@ class MilestonePagesTest extends TestCase
             ->assertSee(route('capsa.team_management.milestones.requirements.edit', $this->form), false);
     }
 
-    public function test_a_locked_milestone_names_the_defense_it_waits_for_not_the_one_above(): void
-    {
-        $defense = $this->checklist->milestones()->create(['name' => 'Final Oral Defense', 'position' => 1, 'opened_at' => now()]);
-        $defense->deliverables()->create(['title' => 'Final Oral Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Final Oral Defense', 'position' => 0]);
-        $this->checklist->milestones()->create(['name' => 'Final Manuscript', 'position' => 2, 'requires_previous' => true]);
-        $archive = $this->checklist->milestones()->create(['name' => 'Archive Entry', 'position' => 3, 'requires_previous' => true]);
-
-        $this->get(route('capsa.team_management.milestones.show', $archive))
-            ->assertOk()
-            ->assertSee('Opens after Final Oral Defense')
-            ->assertDontSee('Opens after Final Manuscript');
-    }
-
     public function test_the_forms_open_for_new_and_existing_milestones_and_requirements(): void
     {
         $this->addDeliverable($this->checklist, ['title' => 'Title Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Title Defense']);
@@ -84,10 +71,9 @@ class MilestonePagesTest extends TestCase
         $this->get(route('capsa.team_management.milestones.create', $this->checklist))
             ->assertOk()
             ->assertSee('New milestone')
-            ->assertSee('Start only after the team passes the defense in Chapter 1-3 Submission')
             ->assertSee('Description')
-            ->assertSee('Position')
-            ->assertSee('<option value="2" selected>', false);
+            ->assertDontSee('Position')
+            ->assertDontSee('Start only after');
 
         // Named once, in the top bar: the milestone, then Edit.
         $this->get(route('capsa.team_management.milestones.edit', $this->milestone))
@@ -96,9 +82,7 @@ class MilestonePagesTest extends TestCase
             ->assertDontSee('<h1 class="ml-title">', false)
             ->assertSee('value="Chapter 1-3 Submission"', false)
             ->assertSee('Hide from teams')
-            ->assertSee('<option value="1" selected>', false)
-            ->assertSee('Delete milestone')
-            ->assertDontSee('Start only after');
+            ->assertSee('Delete milestone');
 
         $this->get(route('capsa.team_management.milestones.requirements.create', $this->milestone))
             ->assertOk()
@@ -157,12 +141,11 @@ class MilestonePagesTest extends TestCase
         $this->assertSame(0, $made->milestones()->count());
     }
 
-    public function test_a_new_milestone_keeps_its_due_date_and_lock(): void
+    public function test_a_new_milestone_keeps_its_due_date(): void
     {
         $response = $this->postJson(route('capsa.checklists.milestones.store', $this->checklist), [
             'name' => 'Pre-Oral Defense',
             'due_on' => '2026-11-30',
-            'requires_previous' => true,
             'description' => '  Bring the revised manuscript.  ',
         ])->assertCreated();
 
@@ -170,7 +153,6 @@ class MilestonePagesTest extends TestCase
         $this->assertSame('Pre-Oral Defense', $made->name);
         $this->assertSame('Bring the revised manuscript.', $made->description);
         $this->assertSame('2026-11-30', $made->due_on->toDateString());
-        $this->assertTrue((bool) $made->requires_previous);
     }
 
     public function test_a_new_requirement_keeps_its_instructions_and_which_defense(): void

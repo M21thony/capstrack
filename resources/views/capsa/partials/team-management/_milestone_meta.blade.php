@@ -27,9 +27,6 @@
   @else
     <span>No due date yet</span>
   @endif
-  @if ($m->requires_previous && $row->previous)
-    <span><x-tm-icon n="lock" s="12" /> Opens after {{ $row->previous }}</span>
-  @endif
 </div>
 <div class="ml-prog">
   <span class="ml-meter"><i style="width:{{ $row->percent }}%"></i></span>

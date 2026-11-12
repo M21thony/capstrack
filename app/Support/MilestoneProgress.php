@@ -159,11 +159,9 @@ class MilestoneProgress
      * with the gate worked out.
      *
      * The CaPSA/TSA opens each milestone for the whole section; one she has not
-     * opened is locked for every team. On top of that a gated milestone is
-     * locked for a team that has not passed the defense above it: no
-     * Pre-proposal Defense, no Title Defense; no Title Defense, no Pre Oral.
-     * Nothing else holds a team back, so a chapter opens on time even for a
-     * team still finishing the one before. It is read off the states here,
+     * opened is locked for every team. Passing the defense above it is not
+     * asked for, so a chapter opens on time even for a team still finishing
+     * the one before. It is read off the states here,
      * so the grid, the team page and the student's upload all read one answer.
      *
      * A passed defense still holds the next gate shut while the leader owes
@@ -177,7 +175,7 @@ class MilestoneProgress
      */
     private static function byMilestone(Collection $rows, Collection $owed): Collection
     {
-        // What the last defense above still lacks, if anything.
+        // The expert evaluation the last passed defense above still owes, if any.
         $gate = null;
 
         return $rows
@@ -187,11 +185,7 @@ class MilestoneProgress
                 $total = $items->count();
                 $completed = $items->whereIn('state', self::COMPLETE_STATES)->count();
                 $notOpen = ! $milestone->isOpened();
-                $waitsFor = match (true) {
-                    $notOpen => 'your CaPSA/TSA to open it',
-                    $milestone->requires_previous => $gate,
-                    default => null,
-                };
+                $waitsFor = $notOpen ? 'your CaPSA/TSA to open it' : $gate;
                 $locked = $waitsFor !== null;
                 $dueOn = $milestone->due_on ?? $items->pluck('due_on')->filter()->max();
                 // The defenses this milestone holds; once it is finished,
@@ -241,11 +235,7 @@ class MilestoneProgress
                 foreach ($items->filter(fn ($row) => $row->item->kind === Deliverable::DEFENSE && $row->item->defense_type) as $row) {
                     $stage = $row->item->defense_type;
                     $evaluations = $owed->filter(fn ($e) => mb_strtolower($e->stage) === mb_strtolower($stage));
-                    $gate = match (true) {
-                        ! in_array($row->state, self::COMPLETE_STATES, true) => 'a passed '.$stage,
-                        $evaluations->isNotEmpty() => 'the expert evaluation for '.$stage,
-                        default => null,
-                    };
+                    $gate = $evaluations->isNotEmpty() ? 'the expert evaluation for '.$stage : null;
                 }
 
                 return $summary;

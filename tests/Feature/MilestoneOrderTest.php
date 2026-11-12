@@ -29,24 +29,24 @@ class MilestoneOrderTest extends TestCase
         [$team, $student] = $this->teamInSection('Order Team');
         $checklist = Checklist::create(['capsa_id' => $this->capsaFor()->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist']);
 
-        $add = function (string $name, bool $gate, array $items) use ($checklist) {
-            $milestone = $checklist->milestones()->create(['name' => $name, 'position' => $checklist->milestones()->count(), 'requires_previous' => $gate, 'opened_at' => now()]);
+        $add = function (string $name, array $items) use ($checklist) {
+            $milestone = $checklist->milestones()->create(['name' => $name, 'position' => $checklist->milestones()->count(), 'opened_at' => now()]);
 
             return collect($items)->values()->map(fn ($item, $at) => $milestone->deliverables()->create($item + ['position' => $at]))->all();
         };
 
-        [$oral, $titleForm] = $add('Pre-proposal', false, [
+        [$oral, $titleForm] = $add('Pre-proposal', [
             ['title' => 'Pre-Proposal Oral Presentation', 'kind' => Deliverable::DEFENSE, 'defense_type' => DefenseOutcome::PRE_PROPOSAL],
             ['title' => 'Signed Final Project Title Form', 'kind' => Deliverable::FORM],
         ]);
-        [$draft1, $clf1] = $add('Chapter 1', false, [
+        [$draft1, $clf1] = $add('Chapter 1', [
             ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT, 'chapter' => '1'],
             ['title' => 'Signed CLF Approving Chapter 1', 'kind' => Deliverable::APPROVAL, 'role' => 'adviser', 'chapter' => '1'],
         ]);
-        [$draft2] = $add('Chapter 2', false, [
+        [$draft2] = $add('Chapter 2', [
             ['title' => 'Chapter 2 Draft', 'kind' => Deliverable::DOCUMENT, 'chapter' => '2'],
         ]);
-        [$recommend, $notice, $defense, $manuscript] = $add('Title Defense', true, [
+        [$recommend, $notice, $defense, $manuscript] = $add('Title Defense', [
             ['title' => 'Signed CLF Recommending for Title Defense', 'kind' => Deliverable::APPROVAL, 'role' => 'adviser'],
             ['title' => 'Signed Title Defense Hearing Notice', 'kind' => Deliverable::FORM],
             ['title' => 'Title Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Title Defense'],
@@ -55,18 +55,14 @@ class MilestoneOrderTest extends TestCase
 
         $waits = fn (Deliverable $d) => MilestoneProgress::forTeam($checklist, $team->team_id)->items->firstWhere('item.id', $d->id)->waits_for;
 
-        // Before the pre-proposal defense: its form waits for it, the
-        // chapters are open anyway, and Title Defense waits for the pass.
+        // Before the pre-proposal defense: its form waits for it; the
+        // chapters and Title Defense are open anyway.
         $this->assertNull($waits($oral));
         $this->assertSame('Pre-Proposal Oral Presentation', $waits($titleForm));
         $this->assertNull($waits($draft1));
         $this->assertNull($waits($draft2), 'Chapter 2 opens even with Chapter 1 unfinished');
         $this->assertSame('Chapter 1 Draft', $waits($clf1));
-        $this->assertSame('a passed Pre-proposal Defense', $waits($recommend));
-
-        // Passed: Title Defense opens with the chapters still unfinished.
-        $this->pass($team, DefenseOutcome::PRE_PROPOSAL);
-        $this->assertNull($waits($recommend));
+        $this->assertNull($waits($recommend), 'Title Defense does not wait for a passed Pre-proposal Defense');
         $this->assertNull($waits($notice));
 
         // Inside it, the defense waits for the papers above it, the manuscript for the defense.
@@ -95,13 +91,5 @@ class MilestoneOrderTest extends TestCase
     private function check(Team $team, Deliverable $deliverable): void
     {
         DeliverableCheck::create(['deliverable_id' => $deliverable->id, 'team_id' => $team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()]);
-    }
-
-    private function pass(Team $team, string $stage): void
-    {
-        DB::table('defense_schedule')->insert([
-            'team_id' => $team->team_id, 'defense_type' => $stage,
-            'outcome' => DefenseOutcome::PASSED, 'outcome_recorded_at' => now(),
-        ]);
     }
 }
