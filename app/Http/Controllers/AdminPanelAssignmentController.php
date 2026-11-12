@@ -178,10 +178,24 @@ class AdminPanelAssignmentController extends Controller
             // defense_type is accepted but ignored - panel is assigned to all stages
             'defense_type' => ['nullable', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
             // Clearing the Chair and saving removes the team's panel for all stages.
-            'chair_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id'],
-            'member1_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id'],
-            'member2_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id', 'different:member1_expert_id'],
+            'chair_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', $this->sitsOnPanels()],
+            'member1_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id', $this->sitsOnPanels()],
+            'member2_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id', 'different:member1_expert_id', $this->sitsOnPanels()],
         ]));
+    }
+
+    /**
+     * Only a CaPA or a consultant sits on a panel - never someone who is only
+     * a grammarian. The page lists no one else; this is for a request that
+     * did not come from the page.
+     */
+    private function sitsOnPanels(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) {
+            if ($value && ! CapstoneExpert::whereKey($value)->whereHas('roles', fn ($q) => $q->whereIn('role_name', ['adviser', 'consultant']))->exists()) {
+                $fail('Only a CaPA or a consultant can sit on a panel.');
+            }
+        };
     }
 
     // A team has one panel, and it sits every defense they face. Assigning,
@@ -262,7 +276,7 @@ class AdminPanelAssignmentController extends Controller
     {
         $validated = $request->validate([
             'seat' => ['required', 'in:chair,m1,m2'],
-            'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
+            'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id', $this->sitsOnPanels()],
             'reason' => ['required', 'string', 'min:5', 'max:255'],
         ]);
 

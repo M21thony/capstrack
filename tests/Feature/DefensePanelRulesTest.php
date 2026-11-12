@@ -107,6 +107,16 @@ class DefensePanelRulesTest extends TestCase
         $this->assertSame('Panel is still a draft.', collect($notReady)->firstWhere('team_id', $team->team_id)['reason']);
     }
 
+    /** Only a CaPA or a consultant sits on a panel; a grammarian never does. */
+    public function test_someone_who_is_only_a_grammarian_cannot_sit_on_a_panel(): void
+    {
+        $grammarian = CapstoneExpert::factory()->create(['approved_status' => true, 'first_login_at' => now()]);
+        $grammarian->roles()->attach(Role::firstOrCreate(['role_name' => 'grammarian'])->role_id);
+
+        $this->assign($this->staffedTeam(), $grammarian)->assertStatus(422)->assertJsonValidationErrors('chair_expert_id');
+        $this->assertSame(0, \App\Models\DefensePanel::count());
+    }
+
     public function test_a_draft_panel_can_still_change_and_a_final_one_cannot(): void
     {
         $team = $this->staffedTeam();

@@ -66,7 +66,7 @@ class PanelChairAndReadinessTest extends TestCase
     {
         $team = $this->team(staff: ['adviser', 'grammarian']);
 
-        $this->assign($team, CapstoneExpert::factory()->create(['approved_status' => true]))
+        $this->assign($team, CapstoneExpert::factory()->panelist()->create(['approved_status' => true]))
             ->assertStatus(422)
             ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'still needs a consultant'))->etc());
 
@@ -77,7 +77,7 @@ class PanelChairAndReadinessTest extends TestCase
     {
         $team = $this->team(staff: ['adviser', 'consultant']);
 
-        $this->assign($team, CapstoneExpert::factory()->create(['approved_status' => true]))->assertOk();
+        $this->assign($team, CapstoneExpert::factory()->panelist()->create(['approved_status' => true]))->assertOk();
 
         $this->assertGreaterThan(0, DefensePanel::count());
     }
@@ -88,7 +88,7 @@ class PanelChairAndReadinessTest extends TestCase
 
         $this->assertSame(['adviser', 'consultant'], $team->missingExpertRoles());
 
-        $this->assign($team, CapstoneExpert::factory()->create(['approved_status' => true]))
+        $this->assign($team, CapstoneExpert::factory()->panelist()->create(['approved_status' => true]))
             ->assertStatus(422)
             ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'an adviser and a consultant'))->etc());
     }
@@ -106,7 +106,7 @@ class PanelChairAndReadinessTest extends TestCase
     {
         $ready = $this->team('Ready');
         $unready = $this->team('Unready', staffed: false);
-        $chair = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $chair = CapstoneExpert::factory()->panelist()->create(['approved_status' => true]);
 
         $response = $this->actingAs($this->capsa, 'expert')
             ->postJson(route('api.admin.panel_assignment.store.bulk'), [
@@ -136,7 +136,7 @@ class PanelChairAndReadinessTest extends TestCase
     public function test_a_chair_without_a_masters_is_refused(): void
     {
         foreach (['bachelor', null] as $degree) {
-            $chair = CapstoneExpert::factory()->create(['approved_status' => true, 'highest_degree' => $degree]);
+            $chair = CapstoneExpert::factory()->panelist()->create(['approved_status' => true, 'highest_degree' => $degree]);
 
             $this->assign($this->team('Team '.($degree ?? 'none')), $chair)
                 ->assertStatus(422)
@@ -149,7 +149,7 @@ class PanelChairAndReadinessTest extends TestCase
     public function test_a_masters_or_doctorate_may_chair(): void
     {
         foreach (['master', 'doctorate'] as $degree) {
-            $chair = CapstoneExpert::factory()->create(['approved_status' => true, 'highest_degree' => $degree]);
+            $chair = CapstoneExpert::factory()->panelist()->create(['approved_status' => true, 'highest_degree' => $degree]);
             $this->assign($this->team('Team '.$degree), $chair)->assertOk();
         }
 
@@ -162,8 +162,8 @@ class PanelChairAndReadinessTest extends TestCase
     /** Only the chair needs the degree - members do not. */
     public function test_a_panel_member_needs_no_masters(): void
     {
-        $chair = CapstoneExpert::factory()->create(['approved_status' => true, 'highest_degree' => 'master']);
-        $member = CapstoneExpert::factory()->create(['approved_status' => true, 'highest_degree' => 'bachelor']);
+        $chair = CapstoneExpert::factory()->panelist()->create(['approved_status' => true, 'highest_degree' => 'master']);
+        $member = CapstoneExpert::factory()->panelist()->create(['approved_status' => true, 'highest_degree' => 'bachelor']);
 
         $this->actingAs($this->capsa, 'expert')
             ->postJson(route('api.admin.panel_assignment.store', $this->team()->team_id), [

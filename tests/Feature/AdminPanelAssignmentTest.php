@@ -124,7 +124,7 @@ class AdminPanelAssignmentTest extends TestCase
 
     private function makeExpert(array $overrides = []): CapstoneExpert
     {
-        return CapstoneExpert::factory()->create(array_merge([
+        return CapstoneExpert::factory()->panelist()->create(array_merge([
             'approved_status' => true,
         ], $overrides));
     }

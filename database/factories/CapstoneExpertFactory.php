@@ -25,4 +25,10 @@ class CapstoneExpertFactory extends Factory
             'created_at' => now(),
         ];
     }
+
+    /** Someone who can sit on a panel: only a CaPA or a consultant may. */
+    public function panelist(): static
+    {
+        return $this->afterCreating(fn (CapstoneExpert $e) => $e->roles()->attach(\App\Models\Role::firstOrCreate(['role_name' => 'adviser'])->role_id));
+    }
 }
