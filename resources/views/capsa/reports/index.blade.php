@@ -74,18 +74,18 @@
       <div class="section-heading">
         <div class="title-tools">
           <span class="icon-box"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg></span>
-          <h2 id="saved-title">Your saved tables</h2>
+          <h2 id="saved-title">Your saved reports</h2>
         </div>
-        <input id="find-table" type="search" placeholder="Find a saved table" aria-label="Find a saved table">
+        <input id="find-table" type="search" placeholder="Find a saved report" aria-label="Find a saved report">
       </div>
       <div class="saved-rows">
-        <div class="saved-header"><span>Table name</span><span>Rows</span><span>Columns</span><span class="updated-cell">Updated</span><span></span></div>
+        <div class="saved-header"><span>Report name</span><span>One row per</span><span>Columns</span><span class="updated-cell">Updated</span><span></span></div>
         <div id="saved-rows"></div>
       </div>
       <div class="menu row-menu" id="row-menu" role="menu" hidden>
-        <button type="button" role="menuitem" id="rename-saved"><svg class="mi blue" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Rename table</button>
-        <button type="button" role="menuitem" id="duplicate-saved"><svg class="mi purple" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>Duplicate table</button>
-        <button type="button" role="menuitem" class="danger" id="delete-saved"><svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>Delete table</button>
+        <button type="button" role="menuitem" id="rename-saved"><svg class="mi blue" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Rename report</button>
+        <button type="button" role="menuitem" id="duplicate-saved"><svg class="mi purple" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>Duplicate report</button>
+        <button type="button" role="menuitem" class="danger" id="delete-saved"><svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>Delete report</button>
       </div>
     </section>
 
@@ -139,7 +139,7 @@
         + '<span class="muted updated-cell">' + esc(updated(s)) + '</span>'
         + '<div class="row-actions"><button type="button" class="small" data-open="' + s.id + '">Open builder</button>'
         + '<button type="button" class="small ghost" data-options="' + s.id + '" aria-label="Options for ' + esc(s.name) + '">⋯</button></div></div>';
-    }).join('') || '<div class="empty-home">' + (saved.length ? 'No saved tables match your search.' : 'No saved tables yet.') + '</div>';
+    }).join('') || '<div class="empty-home">' + (saved.length ? 'No saved reports match your search.' : 'No saved reports yet.') + '</div>';
   }
   $('saved-rows').addEventListener('click', function (e) {
     var open = e.target.closest('[data-open]'), opts = e.target.closest('[data-options]');
@@ -177,7 +177,7 @@
   function create(template) {
     RB.openDialog(template ? 'Use ' + esc(template.name) : 'Create report',
       '<label>Report name<input id="report-name" maxlength="70" value="' + esc(unique(template ? template.name : 'Untitled report')) + '"></label>'
-      + '<label>Starting layout<select id="starting-template"><option value="blank">Custom table — basic fields</option>'
+      + '<label>Start from<select id="starting-template"><option value="blank">Blank — student basics</option>'
       + templates.map(function (t) { return '<option value="' + t.key + '"' + (template && t.key === template.key ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('') + '</select></label>',
       '<button type="button" data-close>Cancel</button><button type="button" class="primary" id="create-and-open">Create &amp; open builder</button>');
     $('create-and-open').addEventListener('click', function () {
@@ -194,17 +194,17 @@
   }
 
   function deleteSaved(s) {
-    RB.openDialog('Delete saved table?', '<p>Delete “' + esc(s.name) + '”?</p>',
-      '<button type="button" data-close>Cancel</button><button type="button" class="danger" id="confirm-delete">Delete table</button>');
+    RB.openDialog('Delete saved report?', '<p>Delete “' + esc(s.name) + '”?</p>',
+      '<button type="button" data-close>Cancel</button><button type="button" class="danger" id="confirm-delete">Delete report</button>');
     $('confirm-delete').addEventListener('click', function () {
       RB.api('DELETE', destroyUrl.replace('__ID__', s.id)).then(function () {
-        saved.splice(saved.indexOf(s), 1); render(); RB.closeDialog(); RB.toast('Table deleted.');
+        saved.splice(saved.indexOf(s), 1); render(); RB.closeDialog(); RB.toast('Report deleted.');
       }).catch(function (err) { RB.toast(err.message); });
     });
   }
   function nameSaved(s, copy) {
-    RB.openDialog(copy ? 'Duplicate table' : 'Rename table',
-      '<label>Table name<input id="saved-name" maxlength="70" value="' + esc(copy ? unique(s.name + ' — copy') : s.name) + '"></label>',
+    RB.openDialog(copy ? 'Duplicate report' : 'Rename report',
+      '<label>Report name<input id="saved-name" maxlength="70" value="' + esc(copy ? unique(s.name + ' — copy') : s.name) + '"></label>',
       '<button type="button" data-close>Cancel</button><button type="button" class="primary" id="apply-name">' + (copy ? 'Duplicate' : 'Rename') + '</button>');
     $('apply-name').addEventListener('click', function () {
       var name = $('saved-name').value.trim();
@@ -214,7 +214,7 @@
         : RB.api('PUT', updateUrl.replace('__ID__', s.id), {name: name});
       call.then(function (d) {
         if (copy) saved.unshift(d.table); else saved[saved.indexOf(s)] = d.table;
-        render(); RB.closeDialog(); RB.toast(copy ? 'Table duplicated.' : 'Table renamed.');
+        render(); RB.closeDialog(); RB.toast(copy ? 'Report duplicated.' : 'Report renamed.');
       }).catch(function (err) { RB.toast(err.message); });
     });
   }

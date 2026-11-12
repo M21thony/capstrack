@@ -205,7 +205,8 @@ class GradingSheetWorkbook
         $ws->getStyle("{$from}{$row}:{$to}".($row + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     }
 
-    private function logo(Worksheet $ws, string $which, string $cell, int $offsetX): void
+    /** Also heads the report sheets (Capsa\ReportController). */
+    public static function logo(Worksheet $ws, string $which, string $cell, int $offsetX): void
     {
         $path = public_path('images/brand/'.($which === 'ccs' ? 'ccs.png' : 'cspc.png'));
         if (! is_file($path)) {

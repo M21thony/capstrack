@@ -157,9 +157,9 @@ class StudentGradesReportTest extends TestCase
         $rows = IOFactory::load($path)->getActiveSheet()->toArray();
         unlink($path);
 
-        $this->assertSame('Student Grades', $rows[0][0]);
-        $this->assertSame(['Student no.', 'Section', 'Name', 'Team', 'Title Defense', 'Pre-oral', 'Final', 'Average'], array_slice($rows[3], 0, 8));
-        $this->assertSame([$leader->student_number, 'BSIT-3A', $leader->l_name.', '.$leader->f_name, 'Alpha', '—', '—', '80', '80%'], array_map('strval', array_slice($rows[4], 0, 8)));
+        $this->assertSame('Student Grades', $rows[6][0]);
+        $this->assertSame(['Student no.', 'Section', 'Name', 'Team', 'Title Defense', 'Pre-oral', 'Final', 'Average'], array_slice($rows[9], 0, 8));
+        $this->assertSame([$leader->student_number, 'BSIT-3A', $leader->l_name.', '.$leader->f_name, 'Alpha', '—', '—', '80', '80%'], array_map('strval', array_slice($rows[10], 0, 8)));
     }
 
     public function test_it_is_on_the_reports_list_and_shows_only_her_sections_with_requirements_done(): void

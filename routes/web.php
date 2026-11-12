@@ -306,6 +306,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::get('/reports/builder/{table}', [ReportBuilderController::class, 'show'])->name('reports.builder');
         Route::get('/reports/data', [ReportBuilderController::class, 'data'])->name('reports.data');
         Route::post('/reports/tables', [ReportBuilderController::class, 'store'])->name('reports.tables.store');
+        Route::post('/reports/tables/export', [ReportController::class, 'exportTable'])->name('reports.tables.export');
         Route::put('/reports/tables/{table}', [ReportBuilderController::class, 'update'])->name('reports.tables.update');
         Route::delete('/reports/tables/{table}', [ReportBuilderController::class, 'destroy'])->name('reports.tables.destroy');
         Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show')

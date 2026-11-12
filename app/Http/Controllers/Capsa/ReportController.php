@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\TableReportController;
 use App\Models\ReportTable;
 use App\Support\CapsaReports;
+use App\Support\GradingSheetWorkbook;
 use App\Support\SectionScope;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -181,16 +182,7 @@ class ReportController extends Controller
                 return $this->excel($name, $scope, $sheet, $fileName.'.xlsx');
             }
 
-            $pdf = Pdf::loadView('capsa.reports.pdf', ['name' => $name, 'scope' => $scope, 'sheet' => $sheet, 'by' => auth('expert')->user()->name ?? 'the CaPSA/TSA'])
-                ->setPaper('letter', 'landscape');
-            // The page count is only known once laid out, so the numbers are drawn after rendering.
-            $pdf->render();
-            $dom = $pdf->getDomPDF();
-            $canvas = $dom->getCanvas();
-            $canvas->page_text($canvas->get_width() - 104, $canvas->get_height() - 23, 'Page {PAGE_NUM} of {PAGE_COUNT}',
-                $dom->getFontMetrics()->getFont('DejaVu Sans'), 7, [0.33, 0.33, 0.33]);
-
-            return $request->boolean('inline') ? $pdf->stream($fileName.'.pdf') : $pdf->download($fileName.'.pdf');
+            return $this->pdf($name, $scope, $sheet, $fileName.'.pdf', $request->boolean('inline'));
         }
 
         $mergeable = $teamReport ? array_values(array_diff(CapsaReports::TEAM_REPORTS, [$report])) : [];
@@ -398,8 +390,59 @@ class ReportController extends Controller
     }
 
     /**
-     * Title and scope on top, merged reports' bands, a gold heading row kept
-     * in view with the first column, the rows, and the total.
+     * A report built in the Reports Builder, downloaded as Excel or PDF: the
+     * page sends the columns and rows it is showing, already as text.
+     */
+    public function exportTable(Request $request): Response
+    {
+        $data = $request->validate([
+            'format' => ['required', 'in:xlsx,pdf'],
+            'name' => ['required', 'string', 'max:120'],
+            'scope' => ['nullable', 'string', 'max:300'],
+            'headings' => ['required', 'array', 'min:1', 'max:40'],
+            'headings.*' => ['nullable', 'string', 'max:120'],
+            'rows' => ['present', 'array', 'max:5000'],
+        ]);
+        // ponytail: the rows come from the browser, so the file is only what the user's own page showed;
+        // rebuild them here from the saved report if a download ever has to stand as proof of the data.
+        $width = count($data['headings']);
+        $cell = fn ($v) => ['text' => Str::limit(is_scalar($v) ? (string) $v : '', 2000, ''), 'tone' => null, 'bold' => false];
+        $rows = array_map(fn ($row) => array_map(fn ($i) => $cell($row[$i] ?? ''), range(0, $width - 1)),
+            array_values(array_filter($data['rows'], 'is_array')));
+        $sheet = [
+            'headings' => array_map(fn ($h) => (string) $h, array_values($data['headings'])),
+            'right' => array_fill(0, $width, false),
+            'bands' => [], 'notes' => [], 'total' => null,
+            'rows' => $rows,
+            'summary' => count($rows).' '.Str::plural('row', count($rows)),
+            'empty' => 'Nothing to show.',
+        ];
+        $fileName = (Str::slug($data['name']) ?: 'report').'_'.now()->toDateString();
+        $scope = $data['scope'] ?? '';
+
+        return $data['format'] === 'xlsx'
+            ? $this->excel($data['name'], $scope, $sheet, $fileName.'.xlsx')
+            : $this->pdf($data['name'], $scope, $sheet, $fileName.'.pdf');
+    }
+
+    private function pdf(string $name, string $scope, array $sheet, string $fileName, bool $inline = false): Response
+    {
+        $pdf = Pdf::loadView('capsa.reports.pdf', ['name' => $name, 'scope' => $scope, 'sheet' => $sheet, 'by' => auth('expert')->user()->name ?? 'the CaPSA/TSA'])
+            ->setPaper('letter', 'landscape');
+        // The page count is only known once laid out, so the numbers are drawn after rendering.
+        $pdf->render();
+        $dom = $pdf->getDomPDF();
+        $canvas = $dom->getCanvas();
+        $canvas->page_text($canvas->get_width() - 104, $canvas->get_height() - 23, 'Page {PAGE_NUM} of {PAGE_COUNT}',
+            $dom->getFontMetrics()->getFont('DejaVu Sans'), 7, [0.33, 0.33, 0.33]);
+
+        return $inline ? $pdf->stream($fileName) : $pdf->download($fileName);
+    }
+
+    /**
+     * The school's letterhead with both logos, then title and scope, merged
+     * reports' bands, a gold heading row kept in view with the first column,
+     * the rows, and the total.
      */
     private function excel(string $title, string $scope, array $sheetData, string $fileName): Response
     {
@@ -410,12 +453,24 @@ class ReportController extends Controller
         $put = fn ($c, $r, $value) => $sheet->setCellValueExplicit([$c, $r], $value, DataType::TYPE_STRING);
         $fill = fn ($range, $rgb) => $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB($rgb);
 
-        $put(1, 1, $title);
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $put(1, 2, $scope.' · Generated '.now()->format('M j, Y'));
-        $sheet->getStyle('A2')->getFont()->getColor()->setRGB('6B7280');
+        // The grading sheet's letterhead: both logos over column A, the lines beside them.
+        GradingSheetWorkbook::logo($sheet, 'cspc', 'A1', 4);
+        GradingSheetWorkbook::logo($sheet, 'ccs', 'A1', 62);
+        foreach (['Republic of the Philippines', 'Camarines Sur Polytechnic Colleges', 'Nabua, Camarines Sur', 'ISO 9001:2015 Certified', 'COLLEGE of COMPUTER STUDIES'] as $i => $line) {
+            $put(2, $i + 1, $line);
+        }
+        $sheet->getStyle('B1:B5')->getFont()->setSize(8);
+        $sheet->getStyle('B2')->getFont()->setBold(true);
+        $sheet->getStyle('B4')->getFont()->setItalic(true);
+        $sheet->getStyle('B5')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A5:L5')->getBorders()->getBottom()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM)->getColor()->setRGB('C9A82C');
 
-        $head = 4;
+        $put(1, 7, $title);
+        $sheet->getStyle('A7')->getFont()->setBold(true)->setSize(14);
+        $put(1, 8, ($scope !== '' ? $scope.' · ' : '').'Generated '.now()->format('M j, Y'));
+        $sheet->getStyle('A8')->getFont()->getColor()->setRGB('6B7280');
+
+        $head = 10;
         // Lines a report carries above its table, like the Expert Load's "Enough experts?".
         foreach ($sheetData['notes'] as $note) {
             $put(1, $head++, $note);
@@ -474,7 +529,8 @@ class ReportController extends Controller
         foreach (range(1, $width) as $c) {
             $texts = [$sheetData['headings'][$c - 1] ?? '', ...array_map(fn ($l) => $l[$c - 1]['text'] ?? '', $lines)];
             $longest = max(array_map(fn ($s) => max(array_map('mb_strlen', explode("\n", (string) $s))), $texts));
-            $sheet->getColumnDimensionByColumn($c)->setWidth(min(60, max(10, $longest + 3)));
+            // The first column is at least as wide as the two logos above it.
+            $sheet->getColumnDimensionByColumn($c)->setWidth(min(60, max($c === 1 ? 17 : 10, $longest + 3)));
 
             if ($sheetData['right'][$c - 1] ?? false) {
                 $sheet->getStyle([$c, $head, $c, $last])->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);

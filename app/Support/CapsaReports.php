@@ -410,8 +410,8 @@ class CapsaReports
             ->map(fn ($sy) => $sy->student)->filter()->unique('student_id')
             ->sortBy(fn ($s) => [(int) $s->student_id !== (int) $team->leader_id, mb_strtolower($s->l_name.' '.$s->f_name)])->values()]);
         $receipts = $this->feeBoard->receipts($posts->pluck('id'), $students->flatten()->pluck('student_id'));
-        $byStage = collect(self::GRADED_STAGES)->map(fn ($stage) => $this->schedulesFor($teams, $stage)->load('grades.rubric'));
-        $text = fn ($cell) => is_array($cell) ? $cell[1] : $cell;
+        $byStage = collect(self::GRADED_STAGES)->map(fn ($stage) => $this->schedulesFor($teams, $stage)->load('grades.rubric', 'grades.expert'));
+        $text =fn ($cell) => is_array($cell) ? $cell[1] : $cell;
 
         $rows = [];
         foreach ($teams as $team) {
@@ -449,6 +449,13 @@ class CapsaReports
                 'finalgrade' => $text($this->scoreCell($held['fod'])),
                 'avggrade' => $shares->isEmpty() ? self::DASH : DefenseScores::format(round($shares->avg(), 2)).'%',
             ];
+            // Per stage: what each panelist gave, and how that defense ended.
+            foreach (['title' => 'title', 'pod' => 'pre', 'fod' => 'final'] as $stageKey => $field) {
+                $h = $held[$stageKey];
+                $base[$field.'scores'] = ($h?->submittedGrades() ?? collect())
+                    ->map(fn ($g) => ($g->expert?->name ?? 'Panelist').': '.DefenseScores::format((float) $g->total_score))->implode("\n") ?: self::DASH;
+                $base[$field.'verdict'] = $h ? ($h->outcome ? DefenseOutcome::label($h->outcome, $h->defense_type) : 'No result yet') : self::DASH;
+            }
 
             $statuses = $students[$team->team_id]->map(function ($st) use ($program, $posts, $stage, $receipts) {
                 $post = $posts->get(($program ?: (string) $st->course).'|'.$stage);
@@ -468,6 +475,8 @@ class CapsaReports
                     'course' => $course ?: self::DASH,
                     'year' => $n ? ([1 => '1st', 2 => '2nd', 3 => '3rd'][$n] ?? $n.'th').' year' : self::DASH,
                     'fee' => number_format($status === 'verified' ? (float) $post->amount : 0, 2, '.', ''),
+                    'orno' => ($post ? ($receipts[$post->id.':'.$st->student_id]['or'] ?? null) : null) ?: self::DASH,
+                    'paidon' => ($post ? ($receipts[$post->id.':'.$st->student_id]['on'] ?? null) : null) ?: self::DASH,
                     'receiptstatus' => ! $post ? 'No fee' : match ($status) {
                         'verified' => 'Verified', 'pending' => 'Waiting', 'sent_back' => 'Sent back', default => 'Not uploaded',
                     },

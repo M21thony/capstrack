@@ -280,13 +280,13 @@ class ReportsTest extends TestCase
         $rows = $sheet->toArray();
 
         // Title and scope on top, then the headings in the order picked, less the hidden ones.
-        $this->assertSame('Team Progress', $rows[0][0]);
+        $this->assertSame('Team Progress', $rows[6][0]);
         // Section rides beside the team, since a sorted sheet loses the page's section rows.
-        $this->assertSame(['Team', 'Section', 'Status', 'Requirements done'], array_slice($rows[3], 0, 4));
-        $this->assertNull($rows[3][4] ?? null);
-        $this->assertSame('Alpha', $rows[4][0]);
-        $this->assertSame('C9A82C', $sheet->getStyle('A4')->getFill()->getStartColor()->getRGB());
-        $this->assertSame('B5', $sheet->getFreezePane());
+        $this->assertSame(['Team', 'Section', 'Status', 'Requirements done'], array_slice($rows[9], 0, 4));
+        $this->assertNull($rows[9][4] ?? null);
+        $this->assertSame('Alpha', $rows[10][0]);
+        $this->assertSame('C9A82C', $sheet->getStyle('A10')->getFill()->getStartColor()->getRGB());
+        $this->assertSame('B11', $sheet->getFreezePane());
     }
 
     private function engage(Team $team, string $roleName, string $first, string $last): CapstoneExpert

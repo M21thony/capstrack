@@ -39,20 +39,20 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content rb">
-    <div class="heading"><h1>Report builder</h1><button class="primary" id="new-table">＋ New table</button></div>
+    <div class="heading"><h1>Report builder</h1><button class="primary" id="new-table">＋ New report</button></div>
     <section class="card work">
       <div class="workspace-head">
         <div class="title-tools">
           <span style="color:var(--blue)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg></span>
-          <select class="saved-select" id="saved-table" aria-label="Saved table"></select>
+          <select class="saved-select" id="saved-table" aria-label="Saved report"></select>
           <span class="saved-state" id="save-state">Saved</span>
           <div class="menu-wrap">
-            <button id="table-options" aria-label="Table options" aria-expanded="false">⋯</button>
+            <button id="table-options" aria-label="Report options" aria-expanded="false">⋯</button>
             <div class="menu" id="table-menu" hidden>
-              <button id="rename-table">Rename table</button>
-              <button id="duplicate-table">Duplicate table</button>
+              <button id="rename-table">Rename report</button>
+              <button id="duplicate-table">Duplicate report</button>
               <button id="split-columns">Split combined columns</button>
-              <button class="danger" id="delete-table">Delete saved table</button>
+              <button class="danger" id="delete-table">Delete saved report</button>
             </div>
           </div>
         </div>
@@ -61,8 +61,8 @@
           <div class="menu-wrap">
             <button class="primary" id="export" aria-expanded="false">Export <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
             <div class="menu" id="export-menu" hidden>
-              <button id="export-csv">Download CSV (Excel)</button>
-              <button id="export-print">Print / Save as PDF</button>
+              <button id="export-xlsx">Excel (.xlsx)</button>
+              <button id="export-pdf">PDF</button>
             </div>
           </div>
         </div>
@@ -76,8 +76,8 @@
       </div>
       <div class="table-tools">
         <button id="edit-columns" aria-expanded="false" aria-controls="column-editor">Edit columns <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-        <label class="row-mode">Rows
-          <select id="row-mode"><option value="students">Students</option><option value="teams">Teams (grouped)</option><option value="experts">Experts</option></select>
+        <label class="row-mode">One row per
+          <select id="row-mode"><option value="students">Student</option><option value="teams">Team</option><option value="experts">Expert</option></select>
         </label>
         <input class="search" id="search" type="search" aria-label="Search report" placeholder="Search student ID, name, or team">
       </div>
@@ -85,11 +85,10 @@
         <div class="editor-label"><strong>Visible columns</strong></div>
         <div class="chips" id="chips"></div>
         <div class="editor-actions">
-          <div><span class="muted" id="selected-count">No fields selected</span><button id="combine" class="small" disabled>Combine selected</button><button id="clear-selection" class="ghost small">Clear selection</button></div>
+          <div><span class="muted" id="selected-count">No columns selected</span><button id="combine" class="small" disabled>Combine selected</button><button id="clear-selection" class="ghost small">Clear selection</button></div>
           <button id="done-columns" class="ghost small">Done</button>
         </div>
       </div>
-      <div class="print-title" hidden><h1 id="print-title"></h1><p id="print-meta"></p></div>
       <div class="scroll-area" id="report-scroll" tabindex="0" aria-label="Report table">
         <table id="report"><thead id="table-head"></thead><tbody id="table-body"></tbody></table>
         <div class="empty" id="empty" hidden>No records match these filters.</div>
@@ -114,11 +113,11 @@
 <script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var $ = RB.$, esc = RB.esc, toast = RB.toast, openDialog = RB.openDialog, closeDialog = RB.closeDialog;
-  var tables = @json($tables), fields = @json($fields), urlFilters = @json($urlFilters);
+  var tables = @json($tables), fields = @json($fields), groups = @json(\App\Models\ReportTable::GROUPS), urlFilters = @json($urlFilters);
   var URLS = {
     data: @json(route('capsa.reports.data')), store: @json(route('capsa.reports.tables.store')),
     builder: @json(route('capsa.reports.builder', '__ID__')), update: @json(route('capsa.reports.tables.update', '__ID__')),
-    destroy: @json(route('capsa.reports.tables.destroy', '__ID__'))
+    destroy: @json(route('capsa.reports.tables.destroy', '__ID__')), export: @json(route('capsa.reports.tables.export'))
   };
   var FILTERS = ['year', 'term', 'program', 'section'];
   var EXPERT_KEYS = ['expert', 'email', 'role', 'load', 'team', 'course', 'section'];
@@ -209,8 +208,8 @@
         + '<span class="grip" aria-hidden="true">⠿</span><span>' + esc(c.label) + '</span>'
         + (c.sources.length > 1 ? '<span class="combined">' + c.sources.length + ' fields</span>' : '')
         + '<button class="remove" data-remove="' + esc(c.key) + '" aria-label="Hide ' + esc(c.label) + ' column">×</button></div>';
-    }).join('') + '<button id="add-field" class="small">＋ Field</button>';
-    $('selected-count').textContent = selection.size ? selection.size + ' fields selected' : 'No fields selected';
+    }).join('') + '<button id="add-field" class="small">＋ Add column</button>';
+    $('selected-count').textContent = selection.size ? selection.size + ' columns selected' : 'No columns selected';
     $('combine').disabled = selection.size < 2;
   }
   function render(all) {
@@ -278,13 +277,18 @@
   });
 
   function addFields() {
-    openDialog('Add fields', '<div class="check-grid">' + fieldKeys().map(function (k) {
-      var inTable = state.columns.some(function (c) { return c.key === k; });
-      return '<label><input type="checkbox" value="' + k + '"' + (inTable ? ' disabled' : '') + '>' + esc(fields[k]) + '</label>';
-    }).join('') + '</div>', '<button data-close>Cancel</button><button class="primary" id="apply-fields">Add selected fields</button>');
+    // Under plain headings, so "Title Defense average" is found under Title Defense, not in one long list.
+    var allowed = fieldKeys();
+    openDialog('Add columns', '<div class="check-groups">' + Object.keys(groups).map(function (g) {
+      var keys = groups[g].filter(function (k) { return allowed.indexOf(k) !== -1; });
+      return !keys.length ? '' : '<h4>' + esc(g) + '</h4><div class="check-grid">' + keys.map(function (k) {
+        var inTable = state.columns.some(function (c) { return c.key === k; });
+        return '<label><input type="checkbox" value="' + k + '"' + (inTable ? ' disabled checked' : '') + '>' + esc(fields[k]) + '</label>';
+      }).join('') + '</div>';
+    }).join('') + '</div>', '<button data-close>Cancel</button><button class="primary" id="apply-fields">Add selected columns</button>');
     $('apply-fields').addEventListener('click', function () {
-      var chosen = Array.from($('modal').querySelectorAll('input:checked'));
-      if (!chosen.length) return toast('Select at least one field.');
+      var chosen = Array.from($('modal').querySelectorAll('input:checked:not(:disabled)'));
+      if (!chosen.length) return toast('Select at least one column.');
       chosen.forEach(function (el) { state.columns.push({key: el.value, label: fields[el.value], sources: [el.value], separator: ' · '}); });
       markDirty(); closeDialog(); render();
     });
@@ -346,14 +350,14 @@
     return RB.api('PUT', url('update', state.id), body(state)).then(function (d) {
       saved = d.table; state.name = saved.name;
       tables = tables.map(function (t) { return t.id === saved.id ? saved : t; });
-      setDirty(false); refreshSaved(); toast('Table saved.');
+      setDirty(false); refreshSaved(); toast('Report saved.');
     }).catch(function (e) { $('save-table').disabled = false; toast(e.message); throw e; });
   }
   $('save-table').addEventListener('click', function () { save().catch(function () {}); });
   function go(href) { setDirty(false); location.href = href; }
   function withUnsaved(action) {
     if (!dirty) return action();
-    openDialog('Unsaved changes', '<p>Save your current table before continuing?</p>', '<button id="discard">Discard changes</button><button id="save-continue" class="primary">Save &amp; continue</button>');
+    openDialog('Unsaved changes', '<p>Save your current report before continuing?</p>', '<button id="discard">Discard changes</button><button id="save-continue" class="primary">Save &amp; continue</button>');
     $('discard').addEventListener('click', function () { closeDialog(); action(); });
     $('save-continue').addEventListener('click', function () { save().then(function () { closeDialog(); action(); }).catch(function () {}); });
   }
@@ -364,15 +368,15 @@
   });
 
   function nameDialog(mode) {
-    var titles = {rename: 'Rename table', 'new': 'Create custom table', duplicate: 'Duplicate table'};
+    var titles = {rename: 'Rename report', 'new': 'New report', duplicate: 'Duplicate report'};
     var start = mode === 'rename' ? state.name : unique(mode === 'new' ? 'Untitled report' : state.name + ' — copy');
-    openDialog(titles[mode], '<label>Table name<input id="table-name" maxlength="70" value="' + esc(start) + '"></label>',
-      '<button data-close>Cancel</button><button id="confirm-name" class="primary">' + (mode === 'rename' ? 'Rename' : 'Create table') + '</button>');
+    openDialog(titles[mode], '<label>Report name<input id="table-name" maxlength="70" value="' + esc(start) + '"></label>',
+      '<button data-close>Cancel</button><button id="confirm-name" class="primary">' + (mode === 'rename' ? 'Rename' : 'Create report') + '</button>');
     $('confirm-name').addEventListener('click', function () {
       var btn = this, name = $('table-name').value.trim();
       if (!name) return $('table-name').focus();
-      if (taken(name, mode === 'rename' ? state.id : null)) return toast('A saved table already has that name.');
-      if (mode === 'rename') { state.name = name; markDirty(); refreshSaved(); closeDialog(); return toast('Table renamed. Save changes to keep it.'); }
+      if (taken(name, mode === 'rename' ? state.id : null)) return toast('A saved report already has that name.');
+      if (mode === 'rename') { state.name = name; markDirty(); refreshSaved(); closeDialog(); return toast('Report renamed. Save changes to keep it.'); }
       var copy = mode === 'new'
         ? {name: name, mode: 'students', columns: RB.columns(['id', 'student', 'team', 'course', 'section'], fields), filters: state.filters}
         : Object.assign(body(state), {name: name});
@@ -385,7 +389,7 @@
   $('duplicate-table').addEventListener('click', function () { closeMenus(); nameDialog('duplicate'); });
   $('delete-table').addEventListener('click', function () {
     closeMenus();
-    openDialog('Delete saved table?', '<p>Delete “' + esc(saved.name) + '”?</p>', '<button data-close>Cancel</button><button class="danger" id="confirm-delete">Delete table</button>');
+    openDialog('Delete saved report?', '<p>Delete “' + esc(saved.name) + '”?</p>', '<button data-close>Cancel</button><button class="danger" id="confirm-delete">Delete report</button>');
     $('confirm-delete').addEventListener('click', function () {
       RB.api('DELETE', url('destroy', state.id)).then(function (d) { go(d.url); }).catch(function (e) { toast(e.message); });
     });
@@ -398,7 +402,7 @@
       count++;
       return c.sources.map(function (k) { return {key: k, label: fields[k], sources: [k], separator: ' · '}; });
     })).filter(function (c) { if (seen.has(c.key)) return false; seen.add(c.key); return true; });
-    if (!count) return toast('There are no combined columns in this table.');
+    if (!count) return toast('There are no combined columns in this report.');
     markDirty(); render(); toast('Combined columns split back into separate fields.');
   });
 
@@ -418,28 +422,32 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenus(); });
 
   // ---- export -------------------------------------------------------------
-  // A leading = + @ - would run as a formula in Excel.
-  function csvCell(v) { var s = String(v == null ? '' : v); if (/^[=+@-]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; }
-  $('export-csv').addEventListener('click', function () {
+  // The server draws the file (letterhead with both logos) from what this page shows: every filtered row, all pages.
+  // Fetched, not a form post, so unsaved changes do not raise the "leave page?" prompt.
+  function exportAs(format) {
     closeMenus();
     var rows = reportRows();
-    var csv = '﻿' + [state.columns.map(function (c) { return csvCell(c.label); }).join(',')].concat(rows.map(function (r) {
-      return state.columns.map(function (c) { return csvCell(value(r, c)); }).join(',');
-    })).join('\r\n');
-    var href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8;'})), a = document.createElement('a');
-    a.href = href; a.download = (state.name.replace(/[^a-z0-9 -]/gi, '').trim() || 'report') + '.csv'; a.click();
-    setTimeout(function () { URL.revokeObjectURL(href); }, 1000);
-    toast('Exported all ' + rows.length + ' filtered records.');
-  });
-  $('export-print').addEventListener('click', function () {
-    closeMenus();
     var picked = FILTERS.map(function (k) { var s = $('f-' + k); return s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : ''; });
-    $('print-title').textContent = state.name;
-    $('print-meta').textContent = picked.concat($('record-count').textContent).filter(Boolean).join(' · ');
-    render(true);
-    requestAnimationFrame(function () { window.print(); });
-  });
-  window.addEventListener('afterprint', function () { render(); });
+    toast('Preparing the file…');
+    fetch(URLS.export, {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content},
+      body: JSON.stringify({
+        format: format, name: state.name, scope: picked.filter(Boolean).join(' · '),
+        headings: state.columns.map(function (c) { return c.label; }),
+        rows: rows.map(function (r) { return state.columns.map(function (c) { return value(r, c); }); })
+      })
+    }).then(function (r) { if (!r.ok) throw new Error('Could not make the file. Try again.'); return r.blob(); })
+      .then(function (blob) {
+        var href = URL.createObjectURL(blob), a = document.createElement('a');
+        a.href = href; a.download = (state.name.replace(/[^a-z0-9 -]/gi, '').trim() || 'report') + '.' + format; a.click();
+        setTimeout(function () { URL.revokeObjectURL(href); }, 1000);
+        toast('Downloaded all ' + rows.length + ' rows.');
+      })
+      .catch(function (e) { toast(e.message); });
+  }
+  $('export-xlsx').addEventListener('click', function () { exportAs('xlsx'); });
+  $('export-pdf').addEventListener('click', function () { exportAs('pdf'); });
 
   // ---- horizontal scroll bar ---------------------------------------------
   var scroller = $('report-scroll'), track = $('scroll-track'), thumb = $('scroll-thumb'), thumbStart = null;

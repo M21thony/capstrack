@@ -98,9 +98,9 @@ class ExpertListReportTest extends TestCase
         $hide = collect(array_keys(CapsaReports::EXPERT_LIST_COLUMNS))->diff(['expert', 'roles', 'email'])->implode(',');
         $rows = $this->sheet(['hide' => $hide]);
 
-        $this->assertSame('Expert List', $rows[0][0]);
-        $this->assertSame(['Name', 'Email', 'Role(s)'], array_slice($rows[3], 0, 3));
-        $this->assertNull($rows[3][3] ?? null);
+        $this->assertSame('Expert List', $rows[6][0]);
+        $this->assertSame(['Name', 'Email', 'Role(s)'], array_slice($rows[9], 0, 3));
+        $this->assertNull($rows[9][3] ?? null);
         $this->assertSame([$ana->name, $ana->email, 'Adviser'], array_slice($this->rowOf($rows, $ana->name), 0, 3));
     }
 
@@ -114,7 +114,7 @@ class ExpertListReportTest extends TestCase
         $hide = collect(array_keys(CapsaReports::EXPERT_LIST_COLUMNS))->diff(['expert', 'accepts', 'expertise'])->implode(',');
         $rows = $this->sheet(['hide' => $hide, 'order' => 'expert,accepts,expertise']);
 
-        $this->assertSame(['Name', 'Slots', 'Expertise'], array_slice($rows[3], 0, 3));
+        $this->assertSame(['Name', 'Slots', 'Expertise'], array_slice($rows[9], 0, 3));
         $this->assertSame([$ana->name, '0 of 5 · any program', 'Databases'], array_slice($this->rowOf($rows, $ana->name), 0, 3));
     }
 
@@ -126,8 +126,8 @@ class ExpertListReportTest extends TestCase
 
         $rows = $this->sheet(['hide' => implode(',', array_keys(CapsaReports::EXPERT_LIST_COLUMNS))]);
 
-        $this->assertSame('Name', $rows[3][0]);
-        $this->assertNull($rows[3][1] ?? null);
+        $this->assertSame('Name', $rows[9][0]);
+        $this->assertNull($rows[9][1] ?? null);
     }
 
     public function test_deactivated_experts_are_listed_and_marked_but_the_admin_and_unapproved_are_not(): void
