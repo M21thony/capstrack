@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneExpert;
+use App\Models\DefenseSchedule;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
 use App\Models\Notification;
+use App\Models\StudentSchoolYear;
+use App\Support\DefenseOutcome;
 use App\Support\MilestoneProgress;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -45,6 +48,21 @@ class BluebookTest extends TestCase
 
         $file = CapstoneDocument::where('deliverable_id', $paper->id)->first();
         $this->get(route('student.bluebook.file', $file))->assertOk();
+    }
+
+    /** Passing Final Oral Defense does not finish a team: it moves into the new year until the dean clears it. */
+    public function test_a_team_not_yet_cleared_is_carried_into_the_new_school_year(): void
+    {
+        $capsa = $this->capsaFor();
+        [$team, $student] = $this->teamInSection('CapsTrack');
+        $checklist = $this->emptyChecklist($capsa, milestone: 'Bluebook Clearance');
+        $this->addDeliverable($checklist, ['title' => 'Bluebook Clearance', 'kind' => Deliverable::BLUEBOOK, 'template_key' => Deliverable::BLUEBOOK_CLEARANCE]);
+        DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Final Oral Defense', 'attempt' => 1, 'outcome' => DefenseOutcome::PASSED]);
+
+        $this->actingAs(CapstoneExpert::factory()->create(['is_admin' => true, 'approved_status' => true]), 'expert')
+            ->put(route('admin.settings.update'), ['current_school_year' => '2040-2041'])->assertSessionHasNoErrors();
+
+        $this->assertSame($team->team_id, StudentSchoolYear::where('student_id', $student->student_id)->value('team_id'));
     }
 
     public function test_the_dean_accepts_sends_back_then_clears_the_team(): void

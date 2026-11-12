@@ -8,7 +8,9 @@ use App\Models\DefenseSchedule;
 use App\Models\Setting;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use App\Models\Term;
+use App\Support\Bluebook;
 use App\Support\DefenseOutcome;
 use App\Support\SectionCatalog;
 use App\Support\TeamChecklist;
@@ -221,6 +223,11 @@ class SettingsController extends Controller
     {
         $done = DefenseSchedule::where('defense_type', 'Final Oral Defense')
             ->whereIn('outcome', [DefenseOutcome::PASSED, DefenseOutcome::PASSED_WITH_REVISION])
+            ->pluck('team_id');
+
+        // Passing the last defense is not the end: the team stays until its Bluebook is cleared.
+        $done = Team::whereIn('team_id', $done)->get()
+            ->filter(fn (Team $team) => Bluebook::of($team)?->cleared ?? true)
             ->pluck('team_id');
 
         return StudentSchoolYear::where(fn ($q) => $q->whereNull('team_id')->orWhereNotIn('team_id', $done))->get();
