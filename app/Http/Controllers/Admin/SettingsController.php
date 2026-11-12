@@ -91,6 +91,7 @@ class SettingsController extends Controller
         StudentSchoolYear::acrossAllTerms()->whereNull('term_id')->update(['term_id' => ($old ?? $new)->term_id]);
 
         $have = StudentSchoolYear::forTerm($new->term_id)->pluck('student_id')->all();
+        $passed = $this->passedFinal();
 
         foreach ($carry as $row) {
             if (! in_array($row->student_id, $have)) {
@@ -99,7 +100,8 @@ class SettingsController extends Controller
                     'term_id' => $new->term_id,
                     'team_id' => $row->team_id,
                     's_role_id' => $row->s_role_id,
-                    'school_year' => $year,
+                    // A team only waiting on its Bluebook keeps the year of its own batch.
+                    'school_year' => $passed->contains($row->team_id) ? $row->school_year : $year,
                     'program' => $row->program,
                     'student_status' => $row->student_status,
                 ]);
@@ -219,14 +221,17 @@ class SettingsController extends Controller
     }
 
     /** This semester's enrolment rows, minus the teams that have passed Final Oral Defense. */
-    private function unfinished(): Collection
+    private function passedFinal(): Collection
     {
-        $done = DefenseSchedule::where('defense_type', 'Final Oral Defense')
+        return DefenseSchedule::where('defense_type', 'Final Oral Defense')
             ->whereIn('outcome', [DefenseOutcome::PASSED, DefenseOutcome::PASSED_WITH_REVISION])
             ->pluck('team_id');
+    }
 
+    private function unfinished(): Collection
+    {
         // Passing the last defense is not the end: the team stays until its Bluebook is cleared.
-        $done = Team::whereIn('team_id', $done)->get()
+        $done = Team::whereIn('team_id', $this->passedFinal())->get()
             ->filter(fn (Team $team) => Bluebook::of($team)?->cleared ?? true)
             ->pluck('team_id');
 

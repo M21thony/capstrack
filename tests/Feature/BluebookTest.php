@@ -59,10 +59,15 @@ class BluebookTest extends TestCase
         $this->addDeliverable($checklist, ['title' => 'Bluebook Clearance', 'kind' => Deliverable::BLUEBOOK, 'template_key' => Deliverable::BLUEBOOK_CLEARANCE]);
         DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Final Oral Defense', 'attempt' => 1, 'outcome' => DefenseOutcome::PASSED]);
 
+        $was = StudentSchoolYear::where('student_id', $student->student_id)->value('school_year');
+
         $this->actingAs(CapstoneExpert::factory()->create(['is_admin' => true, 'approved_status' => true]), 'expert')
             ->put(route('admin.settings.update'), ['current_school_year' => '2040-2041'])->assertSessionHasNoErrors();
 
-        $this->assertSame($team->team_id, StudentSchoolYear::where('student_id', $student->student_id)->value('team_id'));
+        // Still reachable for the dean, but under its own batch's year, not the new one.
+        $row = StudentSchoolYear::where('student_id', $student->student_id)->first();
+        $this->assertSame($team->team_id, $row->team_id);
+        $this->assertSame($was, $row->school_year);
     }
 
     public function test_the_dean_accepts_sends_back_then_clears_the_team(): void
