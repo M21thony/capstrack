@@ -2,9 +2,11 @@
 
 namespace App\Support;
 
+use App\Models\DefenseSchedule;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\Term;
 use Illuminate\Support\Collection;
 
 /**
@@ -53,11 +55,28 @@ class SectionScope
             $label = Student::computeSectionLabel($sy->student->course, $sy->student->year_section);
 
             if ($label) {
-                return $label;
+                // A team that passed its last defense in an earlier school year is only
+                // waiting on its Bluebook: it carries that year, so no CaPSA/TSA of the
+                // new batch's section of the same name counts it as theirs.
+                $year = $this->late()->get($team->team_id);
+
+                return $year ? $label.' ('.$year.')' : $label;
             }
         }
 
         return '';
+    }
+
+    private ?Collection $late = null;
+
+    /** Teams that passed Final Oral Defense in a school year before this one: team id => that year. */
+    private function late(): Collection
+    {
+        return $this->late ??= DefenseSchedule::where('defense_type', 'Final Oral Defense')
+            ->whereIn('outcome', [DefenseOutcome::PASSED, DefenseOutcome::PASSED_WITH_REVISION])
+            ->join('terms', 'terms.term_id', '=', 'defense_schedule.term_id')
+            ->where('terms.school_year', '!=', Term::currentSchoolYear())
+            ->pluck('terms.school_year', 'defense_schedule.team_id');
     }
 
     /**

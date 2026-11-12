@@ -9,7 +9,9 @@ use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
+use App\Support\Bluebook;
 use App\Support\DefenseOutcome;
+use App\Support\SectionScope;
 use App\Support\MilestoneProgress;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -53,8 +55,8 @@ class BluebookTest extends TestCase
     /** Passing Final Oral Defense does not finish a team: it moves into the new year until the dean clears it. */
     public function test_a_team_not_yet_cleared_is_carried_into_the_new_school_year(): void
     {
-        $capsa = $this->capsaFor();
-        [$team, $student] = $this->teamInSection('CapsTrack');
+        $capsa = $this->capsaFor(['BSIT-4A']);
+        [$team, $student] = $this->teamInSection('CapsTrack', yearSection: '4th · A');
         $checklist = $this->emptyChecklist($capsa, milestone: 'Bluebook Clearance');
         $this->addDeliverable($checklist, ['title' => 'Bluebook Clearance', 'kind' => Deliverable::BLUEBOOK, 'template_key' => Deliverable::BLUEBOOK_CLEARANCE]);
         DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Final Oral Defense', 'attempt' => 1, 'outcome' => DefenseOutcome::PASSED]);
@@ -68,6 +70,11 @@ class BluebookTest extends TestCase
         $row = StudentSchoolYear::where('student_id', $student->student_id)->first();
         $this->assertSame($team->team_id, $row->team_id);
         $this->assertSame($was, $row->school_year);
+
+        // Not in the new batch's section of the same name, yet its list and Bluebook are still found.
+        $this->assertSame('BSIT-4A ('.$was.')', app(SectionScope::class)->sectionFor($team));
+        $this->assertFalse(app(SectionScope::class)->covers($capsa->fresh()->sections, app(SectionScope::class)->sectionFor($team)));
+        $this->assertNotNull(Bluebook::of($team->fresh()));
     }
 
     public function test_the_dean_accepts_sends_back_then_clears_the_team(): void

@@ -115,6 +115,9 @@ class TeamChecklist
             return null;
         }
 
+        // "BSIT-4A (2026-2027)", a team only waiting on its Bluebook, still answers to BSIT-4A's.
+        $section = explode(' ', $section)[0];
+
         return CapstoneExpert::whereNotNull('sections')->orderBy('expert_id')->get()
             ->first(fn (CapstoneExpert $capsa) => in_array($section, $capsa->sections ?? [], true));
     }
