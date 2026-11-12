@@ -151,7 +151,7 @@ function awayLine(t) {
 function panelButton(t, big = false) {
   const sm = big ? '' : ' sm';
   if (isFinal(t)) {
-    return `<button type="button" class="btn ghost${sm} lockbtn" data-act="cantsit" data-id="${t.id}" title="Final since ${t.panel_final_since ? fmtDay(t.panel_final_since) : 'it was finalized'}. This panel sits every defense through Final Oral. If someone can't make it, mark them away or replace them.">${ICON.lock}Panelist can't sit</button>`;
+    return `<button type="button" class="btn ghost${sm}" data-act="cantsit" data-id="${t.id}" title="Final since ${t.panel_final_since ? fmtDay(t.panel_final_since) : 'it was finalized'}. This panel sits every defense through Final Oral. If someone can't make it, mark them away or replace them.">Replace panelist</button>`;
   }
   if (!isPre()) return '';
   if (isDraft(t)) return `<button type="button" class="btn ghost${sm}" data-act="assign-one" data-id="${t.id}">Change panel</button>`;
@@ -235,7 +235,7 @@ function renderBoard() {
           : t.panel ? `<div class="draftcell"><span class="st wait">Draft</span>${panelHtml(t)}</div>`
           : '<span class="st none">No panel yet</span>';
         const acts = miss ? `<button type="button" class="btn ghost sm" disabled title="${esc(miss.text)} first">Assign panel</button>`
-          : t.panel ? `<button type="button" class="btn ghost sm" data-act="assign-one" data-id="${t.id}">Change</button><button type="button" class="btn gold sm" data-act="finalize" data-id="${t.id}">Finalize</button>`
+          : t.panel ? `<button type="button" class="btn ghost sm" data-act="assign-one" data-id="${t.id}">Change panel</button><button type="button" class="btn gold sm" data-act="finalize" data-id="${t.id}">Finalize</button>`
           : `<button type="button" class="btn gold sm" data-act="assign-one" data-id="${t.id}">Assign panel</button>`;
         return `<tr class="${P.picked.has(t.id) ? 'picked' : ''}"><td style="width:36px"><input type="checkbox" data-pick="${t.id}"${P.picked.has(t.id) ? ' checked' : ''}${miss ? ' disabled' : ''} aria-label="Select ${esc(t.name)}"></td>`
           + `<td>${teamCell(t)}</td>${titleCell(t)}<td>${cell}</td><td>${expertsHtml(t)}</td><td><div class="acts">${acts}</div></td></tr>`;
@@ -397,10 +397,10 @@ function openDrawer(id) {
 let A = null;
 function openAssign(ids) {
   const first = ids.length === 1 ? T(ids[0]) : null;
-  A = { teams: new Set(ids), seats: first?.panel ? { ...first.panel } : { chair: null, m1: null, m2: null }, active: 'chair', q: '', tq: '' };
+  A = { teams: new Set(ids), one: first, seats: first?.panel ? { ...first.panel } : { chair: null, m1: null, m2: null }, active: 'chair', q: '', tq: '' };
   if (A.seats.chair) A.active = !A.seats.m1 ? 'm1' : !A.seats.m2 ? 'm2' : 'chair';
-  openDialog(head('Assign panel', 'Saved as a draft: you can change it, or move panelists to another team, until you finalize it. A final panel sits all four defenses, and any redefense.')
-    + '<div class="db" id="aBody"></div><div class="df"><span class="sum" id="aSum"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="button" class="btn gold" id="aSave" data-act="assign-save">Save panel</button></div>', 'wide');
+  openDialog(head(first?.panel ? 'Change panel' : 'Assign panel', 'A draft can still be changed. A final panel sits all four defenses, and any redefense.')
+    + '<div class="db" id="aBody"></div><div class="df"><span class="sum" id="aSum"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="button" class="btn ghost" id="aSave" data-act="assign-save">Save as draft</button><button type="button" class="btn gold" id="aFinal" data-act="assign-final">Save and finalize</button></div>', 'wide');
   drawAssign();
 }
 
@@ -409,7 +409,14 @@ const suggested = e => [...A.teams].some(id => T(id)?.suggested.includes(e.id));
 
 function drawAssign() {
   const own = ownOf();
-  SEATS.forEach(([k]) => { if (own.has(A.seats[k])) A.seats[k] = null; });
+  // A seated panelist who advises or consults a team just ticked leaves the seat, and the window says so.
+  const gone = SEATS.filter(([k]) => own.has(A.seats[k])).map(([k, label]) => {
+    const id = A.seats[k];
+    const t = [...A.teams].map(T).find(x => [x?.adviser?.id, x?.consultant?.id].includes(id));
+    A.seats[k] = null;
+    return `${nameOf(id)} was removed as ${label}: adviser or consultant of ${t.name}.`;
+  });
+  if (gone.length) A.note = gone.join(' ');
   const teams = TEAMS.filter(t => !A.tq || `${t.name} ${t.title || ''}`.toLowerCase().includes(A.tq.toLowerCase()));
   const left = `<div><div class="col-h"><span>Teams</span><span>${A.teams.size} picked</span></div>`
     + `<label class="search" for="aTq" style="max-width:none;margin-bottom:8px">${ICON.search}<span class="sr">Search teams</span><input id="aTq" type="search" placeholder="Search teams" value="${esc(A.tq)}"></label>`
@@ -444,10 +451,13 @@ function drawAssign() {
       const why = A.active === 'chair' && !e.chair ? 'Needs a Master\'s to chair' : taken.includes(e.id) ? 'Already ' + where[1] : '';
       return `<button type="button" class="ex${on ? ' on' : ''}" data-act="pick-ex" data-id="${e.id}"${why ? ' disabled' : ''}><span class="av">${esc(initials(e.name))}</span><span class="grow"><b>${suggested(e) ? '<span class="star" title="Matches the teams\' project tags">★</span>' : ''}${esc(e.name)}${e.degree ? ` <span class="deg">${esc(e.degree)}</span>` : ''}${LEAVE(e)}</b><span>${esc(why || e.tags.join(', ') || 'No expertise listed')}</span>${!why && strongIn(e) ? `<span class="strong">Strong in ${esc(strongIn(e))}</span>` : ''}</span><span class="use">${on ? 'Picked' : why ? '' : 'Set as ' + SEAT_ROLE[A.active]}</span></button>`;
     }).join('') || '<div class="empty">No expert matches.</div>'}</div></div>`;
-  $('aBody').innerHTML = `<div class="assign">${left}${right}</div>`;
+  $('aBody').innerHTML = A.one
+    ? `<div class="pick" style="cursor:default;margin-bottom:14px"><span class="tbadge">${esc(initials(A.one.name))}</span><span class="grow"><b>${esc(A.one.name)} <span class="muted" style="font-weight:500">${esc(A.one.section)}</span></b><span>${esc(A.one.title || '')}</span></span></div>${right}`
+    : `<div class="assign">${left}${right}</div>`;
   const n = A.teams.size;
-  $('aSum').textContent = !n ? 'Tick at least one team.' : !A.seats.chair ? 'A Panel Chair is required.' : `Saves this panel for ${n} ${n === 1 ? 'team' : 'teams'}, as a draft.`;
-  $('aSave').disabled = !n || !A.seats.chair;
+  $('aSum').style.color = A.note ? 'var(--amber)' : '';
+  $('aSum').textContent = A.note ? A.note : !n ? 'Tick at least one team.' : !A.seats.chair ? 'A Panel Chair is required.' : n > 1 ? `For ${n} teams.` : '';
+  $('aSave').disabled = $('aFinal').disabled = !n || !A.seats.chair;
 }
 
 /* Finalize: a draft panel becomes the team's panel through Final Oral. */
@@ -466,7 +476,7 @@ function openFinalize(ids) {
 let RP = null;
 function openCantSit(id) {
   RP = { team: T(id), seat: null, mode: null, from: '', to: '', why: AWAY_REASONS[0], reason: null, other: '', pick: null, q: '' };
-  openDialog(head(`Panelist can't sit · ${esc(RP.team.name)}`, 'The panel stays the same through Final Oral. Someone away for a few days keeps the seat.')
+  openDialog(head(`Replace panelist · ${esc(RP.team.name)}`, 'The panel stays the same through Final Oral. Someone away for a few days keeps the seat.')
     + '<div class="db" id="rpBody"></div><div class="df"><span class="sum" id="rpSum"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="button" class="btn gold" id="rpSave" data-act="cantsit-save" disabled>Save</button></div>', 'wide');
   drawCantSit();
 }
@@ -733,6 +743,7 @@ const ACT = {
   seat: el => { A.active = el.dataset.seat; drawAssign(); },
   'pick-ex': el => {
     A.seats[A.active] = +el.dataset.id;
+    A.note = '';
     const next = SEATS.find(([k]) => !A.seats[k]);
     if (next) A.active = next[0];
     drawAssign();
@@ -741,6 +752,20 @@ const ACT = {
     const done = res.data.assigned.length, skipped = res.data.skipped;
     return `Draft panel saved for ${done} ${done === 1 ? 'team' : 'teams'}. Finalize it when it is set.` + (skipped.length ? ` Skipped ${skipped.map(s => `${s.team_name} (${s.reason})`).join('; ')}` : '');
   }),
+  'assign-final': async el => {
+    if (!confirm('Finalize this panel? It cannot be changed after this. It sits every defense through Final Oral.')) return;
+    el.disabled = true;
+    try {
+      const saved = await api('POST', URLS.bulk, { team_ids: [...A.teams], chair_expert_id: A.seats.chair, member1_expert_id: A.seats.m1, member2_expert_id: A.seats.m2 });
+      // Only the teams this save reached: a skipped team may still hold an older draft.
+      const ids = saved.data.assigned.map(a => a.team_id), skipped = saved.data.skipped;
+      const res = ids.length ? await api('POST', URLS.finalize, { team_ids: ids }) : { message: 'No panel saved.' };
+      reloadWith(res.message + (skipped.length ? ` Skipped ${skipped.map(x => `${x.team_name} (${x.reason})`).join('; ')}` : ''));
+    } catch (e) {
+      toast(e.message, 'error');
+      el.disabled = false;
+    }
+  },
   finalize: el => openFinalize([+el.dataset.id]),
   'finalize-all': () => openFinalize(TEAMS.filter(t => isDraft(t) && matches(t)).map(t => t.id)),
   'finalize-picked': () => openFinalize([...P.picked].filter(id => T(id) && isDraft(T(id)))),
