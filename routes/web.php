@@ -582,8 +582,6 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/bluebook', [\App\Http\Controllers\Student\BluebookController::class, 'index'])->name('student.bluebook');
             Route::post('/bluebook/{deliverable}', [\App\Http\Controllers\Student\BluebookController::class, 'store'])->name('student.bluebook.store');
             Route::get('/bluebook/files/{document}', [\App\Http\Controllers\Student\BluebookController::class, 'file'])->name('student.bluebook.file');
-            Route::patch('/progress/milestones', [StudentProgressController::class, 'markDone'])->name('student.progress.milestones.mark-done');
-            Route::put('/progress/milestones/picture', [StudentProgressController::class, 'updatePicture'])->name('student.progress.milestones.update-picture');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
             Route::post('/financial/receipts', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
             Route::get('/resources', [StudentResourceController::class, 'index'])->name('student.resources');

@@ -405,7 +405,8 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->assertDone(\App\Models\Deliverable::ARCHIVE_ENTRY);
 
         $progress = MilestoneProgress::forTeam($this->checklist->fresh(), $this->team->team_id);
-        $open = $progress->items->reject(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
+        // Bluebook Clearance comes after all this and is walked in BluebookTest.
+        $open = $progress->items->reject(fn ($row) => $row->item->kind === \App\Models\Deliverable::BLUEBOOK)->reject(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
             ->map(fn ($row) => $row->item->template_key)->values()->all();
         $this->assertSame([], $open, 'every line on the checklist is closed');
     }

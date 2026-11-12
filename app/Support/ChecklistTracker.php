@@ -182,6 +182,8 @@ class ChecklistTracker
             'role' => $item->role,
             'by_recommendation' => $item->closesOnTitleRecommendation(),
             'by_archive' => $item->closesOnArchiveEntry(),
+            // Who the CaPSA/TSA chose to approve it, as the pop-up names them.
+            'sends_to' => array_map(fn ($role) => SubmissionRecipients::LABELS[$role], $item->sendsTo() ?? []),
             'state' => $row->state,
             'waiting_on' => $row->waiting_on,
             'to_check' => self::toCheck($row),

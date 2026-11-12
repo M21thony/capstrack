@@ -26,12 +26,19 @@ const TEAM = 'PW Milestones';
 const NEW = 'PW Prototype demo';
 const GONE = 'PW Throwaway';
 const UPLOAD = 'PW Demo video';
+const ADVISER = 'pw-ms-adviser@cspc.edu.ph';
 
 const CLEAN = `
   $ids = App\\Models\\Student::where('email', '${LEADER}')->pluck('student_id');
   $team = App\\Models\\Team::where('team_name', '${TEAM}')->value('team_id');
   $capsa = App\\Models\\CapstoneExpert::withTrashed()->where('email', '${CAPSA}')->value('expert_id');
   if ($team) { App\\Models\\DeliverableCheck::where('team_id', $team)->delete(); }
+  $adviser = App\\Models\\CapstoneExpert::withTrashed()->where('email', '${ADVISER}')->value('expert_id');
+  if ($adviser) {
+    App\\Models\\TeamExpertAssignment::where('expert_id', $adviser)->forceDelete();
+    Illuminate\\Support\\Facades\\DB::table('expert_roles')->where('expert_id', $adviser)->delete();
+    App\\Models\\CapstoneExpert::withTrashed()->where('expert_id', $adviser)->forceDelete();
+  }
   App\\Models\\StudentSchoolYear::whereIn('student_id', $ids)->delete();
   App\\Models\\Team::where('team_name', '${TEAM}')->delete();
   App\\Models\\Student::whereIn('student_id', $ids)->delete();
@@ -62,6 +69,8 @@ test.afterAll(() => php(`${CLEAN} echo '@@1';`));
 // Every page under test must load without a script error.
 test.beforeEach(({ page }) => {
   page.on('pageerror', (e) => { throw e; });
+  // A page's own tour opens on the first visit and covers the page: skipped, as she would.
+  return page.addLocatorHandler(page.getByRole('button', { name: 'Skip tour' }), (skip) => skip.click());
 });
 
 async function as(page, url) {
@@ -107,14 +116,14 @@ test('a new milestone is refused without a name, then made, opened and given a r
   await page.goto(LIST);
   await page.getByRole('link', { name: 'New milestone' }).first().click();
 
-  await page.getByRole('button', { name: 'Create milestone' }).click();
+  await page.getByRole('button', { name: 'Add milestone' }).click();
   await expect(page.locator('#ml-err')).toHaveText('Give the milestone a name.');
 
   await page.fill('[name=name]', NEW);
   await page.fill('[name=description]', 'Show the working system to the panel.');
   await page.fill('[name=due_on]', '2026-12-15');
   await shot(page, testInfo, 'new-milestone');
-  await page.getByRole('button', { name: 'Create milestone' }).click();
+  await page.getByRole('button', { name: 'Add milestone' }).click();
 
   await expect(page.locator('h1')).toHaveText(NEW);
   await page.getByRole('button', { name: 'Open to teams' }).click();
@@ -123,7 +132,7 @@ test('a new milestone is refused without a name, then made, opened and given a r
   await page.getByRole('link', { name: 'Add requirement' }).click();
   await page.fill('[name=title]', UPLOAD);
   await page.getByRole('button', { name: 'Add requirement' }).click();
-  await expect(page.locator('.ms-req', { hasText: UPLOAD })).toContainText('Upload file');
+  await expect(page.locator('tr', { hasText: UPLOAD })).toContainText('Upload file');
   await shot(page, testInfo, 'milestone-page');
 });
 
@@ -132,11 +141,11 @@ test('the delete sheet opens, cancels, and deletes', async ({ page }, testInfo) 
   await page.goto(LIST);
   await page.getByRole('link', { name: 'New milestone' }).first().click();
   await page.fill('[name=name]', GONE);
-  await page.getByRole('button', { name: 'Create milestone' }).click();
+  await page.getByRole('button', { name: 'Add milestone' }).click();
   await expect(page.locator('h1')).toHaveText(GONE);
 
   await page.getByRole('link', { name: 'Edit milestone' }).click();
-  await page.getByRole('button', { name: 'Delete milestone' }).click();
+  await page.locator('#ml-delete').click();
   const sheet = page.locator('dialog[open]');
   await expect(sheet).toBeVisible();
   await expect(sheet).toContainText(GONE);
@@ -144,7 +153,7 @@ test('the delete sheet opens, cancels, and deletes', async ({ page }, testInfo) 
   await sheet.getByRole('button', { name: 'Cancel' }).click();
   await expect(page.locator('dialog[open]')).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Delete milestone' }).click();
+  await page.locator('#ml-delete').click();
   await page.locator('dialog[open]').getByRole('button', { name: 'Delete milestone' }).click();
   await expect(page).toHaveURL(/tab=milestone_list/);
   await expect(page.locator('.mlx-name', { hasText: GONE })).toHaveCount(0);
@@ -157,4 +166,29 @@ test('the team sees the opened milestone and its requirement', async ({ page }, 
   await line.evaluate((el) => el.closest('details')?.setAttribute('open', ''));
   await expect(line).toBeVisible();
   await shot(page, testInfo, 'student-tracker');
+});
+
+test('who approves a requirement shows on her tracker, and the adviser sees the same, read-only', async ({ page }, testInfo) => {
+  php(`
+    App\\Models\\Deliverable::where('title', '${UPLOAD}')->first()->update(['recipients' => ['grammarian']]);
+    $a = App\\Models\\CapstoneExpert::create(['email' => '${ADVISER}', 'first_name' => 'Ada', 'last_name' => 'Reyes', 'approved_status' => true, 'is_admin' => false]);
+    $a->forceFill(['tour_completed_at' => now()])->save();
+    $role = Illuminate\\Support\\Facades\\DB::table('expert_roles')->insertGetId(['expert_id' => $a->expert_id,
+      'role_id' => Illuminate\\Support\\Facades\\DB::table('roles')->where('role_name', 'adviser')->value('role_id')]);
+    App\\Models\\TeamExpertAssignment::create(['team_id' => App\\Models\\Team::where('team_name', '${TEAM}')->value('team_id'),
+      'expert_id' => $a->expert_id, 'expert_role_id' => $role, 'status' => 'approved']);
+    echo '@@1';`);
+
+  await as(page, `/__dev-login-expert/capsa?email=${CAPSA}`);
+  await page.goto('/capsa/team-management?tab=milestones');
+  await page.locator('#ms-tracker').getByText('Open team').click();
+  await expect(page.locator('#ms-tracker')).toContainText('Closes when approved by: Grammarian');
+  await shot(page, testInfo, 'capsa-tracker');
+
+  await as(page, `/__dev-login-expert/adviser/progress?email=${ADVISER}`);
+  await expect(page.locator('#ms-tracker')).toContainText(TEAM);
+  await page.locator('#ms-tracker').getByText('Open team').click();
+  await expect(page.locator('#ms-tracker')).toContainText('Closes when approved by: Grammarian');
+  await expect(page.locator('#ms-tracker button', { hasText: /^Check/ })).toHaveCount(0);
+  await shot(page, testInfo, 'adviser-tracker');
 });

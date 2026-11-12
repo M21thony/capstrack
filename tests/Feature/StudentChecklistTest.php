@@ -45,7 +45,7 @@ class StudentChecklistTest extends TestCase
         $this->get('/student/progress')
             ->assertOk()
             ->assertSee('Checklist Team')
-            ->assertSee('0 of 48 closed')
+            ->assertSee('0 of 53 closed')
             ->assertSee('Pre-proposal Defense')
             ->assertSee('Signed Project Team Assignment Form')
             ->assertSee('Chapter 1 Draft');
@@ -77,7 +77,7 @@ class StudentChecklistTest extends TestCase
         $form = $this->line($this->checklist(), 'team_assignment_form');
         DeliverableCheck::create(['deliverable_id' => $form->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()->subDays(3)]);
 
-        $this->get('/student/progress')->assertOk()->assertSee('1 of 48 closed');
+        $this->get('/student/progress')->assertOk()->assertSee('1 of 53 closed');
     }
 
     /** The question a team has is who is holding a thing up. */
@@ -94,9 +94,9 @@ class StudentChecklistTest extends TestCase
 
         $this->get('/student/progress')
             ->assertOk()
-            ->assertSee('With your adviser')
+            ->assertSee('With your CaPA')
             // and the draft is not closed until adviser and consultant approve it
-            ->assertSee('0 of 48 closed');
+            ->assertSee('0 of 53 closed');
     }
 
     public function test_a_paper_sent_back_shows_the_capsas_note(): void
@@ -122,7 +122,7 @@ class StudentChecklistTest extends TestCase
         $this->get('/student/progress')
             ->assertOk()
             ->assertDontSee('Signed (Noted) TD RSC')
-            ->assertSee('0 of 47 closed');
+            ->assertSee('0 of 52 closed');
     }
 
     public function test_a_team_with_no_checklist_is_told_so(): void

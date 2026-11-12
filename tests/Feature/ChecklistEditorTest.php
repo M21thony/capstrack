@@ -48,7 +48,7 @@ class ChecklistEditorTest extends TestCase
     {
         $this->postJson(route('capsa.checklists.store'), ['program' => 'BSIT'])
             ->assertCreated()
-            ->assertJsonCount(6, 'milestones');
+            ->assertJsonCount(7, 'milestones');
 
         $this->postJson(route('capsa.checklists.store'), ['program' => 'BSIT'])->assertStatus(422);
         $this->postJson(route('capsa.checklists.store'), ['program' => 'BLIS'])->assertStatus(422);
@@ -61,7 +61,7 @@ class ChecklistEditorTest extends TestCase
         $this->getJson(route('capsa.checklists.show', $theirs))->assertForbidden();
         $this->postJson(route('capsa.checklists.milestones.store', $theirs), ['name' => 'Mine now'])->assertForbidden();
         $this->deleteJson(route('capsa.deliverables.destroy_many'), ['ids' => [$theirs->deliverables()->first()->id]])->assertForbidden();
-        $this->assertSame(48, $theirs->deliverables()->count());
+        $this->assertSame(53,$theirs->deliverables()->count());
     }
 
     public function test_a_drag_saves_the_whole_order_and_a_stale_one_is_refused(): void
@@ -69,7 +69,7 @@ class ChecklistEditorTest extends TestCase
         $checklist = $this->departmentChecklist($this->capsa);
         $order = $checklist->milestones->map(fn (ChecklistMilestone $m) => ['id' => $m->id, 'deliverables' => $m->deliverables->pluck('id')->all()])->all();
 
-        // The last milestone (Archive Entry) to the top, and the Team Assignment Form into it.
+        // The last milestone (Bluebook Clearance) to the top, and the Team Assignment Form into it.
         $moved = array_shift($order[0]['deliverables']);
         $last = array_pop($order);
         $last['deliverables'][] = $moved;
@@ -77,10 +77,10 @@ class ChecklistEditorTest extends TestCase
 
         $this->putJson(route('capsa.checklists.order.update', $checklist), ['milestones' => $order])
             ->assertOk()
-            ->assertJsonPath('milestones.0.name', 'Archive Entry');
+            ->assertJsonPath('milestones.0.name', 'Bluebook Clearance');
 
         $form = Deliverable::find($moved);
-        $this->assertSame('Archive Entry', $form->milestone->name);
+        $this->assertSame('Bluebook Clearance', $form->milestone->name);
 
         // Leaving a deliverable out is refused, so a stale window cannot drop a line.
         array_pop($order[0]['deliverables']);
@@ -234,11 +234,11 @@ class ChecklistEditorTest extends TestCase
 
         $this->deleteJson(route('capsa.checklist_milestones.destroy', $milestone))->assertOk();
         $this->deleteJson(route('capsa.deliverables.destroy_many'), ['ids' => [$form->id]])->assertOk();
-        $this->getJson(route('capsa.checklists.show', $checklist))->assertJsonCount(5, 'milestones');
+        $this->getJson(route('capsa.checklists.show', $checklist))->assertJsonCount(6, 'milestones');
 
         $this->putJson(route('capsa.removals.update'), ['milestones' => [$milestone->id], 'deliverables' => [$form->id]])->assertOk();
 
-        $this->assertSame(48, $checklist->deliverables()->count());
+        $this->assertSame(53,$checklist->deliverables()->count());
     }
 
     public function test_removed_things_are_purged_for_good_after_five_days(): void

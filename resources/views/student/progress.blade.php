@@ -430,7 +430,7 @@
                 $row->waiting_on === 'team' && (bool) $row->note => 'Sent back by your CaPSA/TSA',
                 $row->waiting_on === 'team' => $ord(max(1, $row->revision)).' revision requested',
                 $row->waiting_on === 'signed_copy' => 'Approved — upload the signed copy',
-                in_array($row->waiting_on, ['adviser', 'consultant', 'grammarian', 'panel'], true) => 'With your '.$row->waiting_on,
+                in_array($row->waiting_on, ['adviser', 'consultant', 'grammarian', 'panel'], true) => 'With your '.($row->waiting_on === 'adviser' ? 'CaPA' : $row->waiting_on),
                 $row->waiting_on === 'subject_adviser' => 'With your CaPSA/TSA to approve',
                 $row->waiting_on === 'redefense' => 'Re-defense needed — the panel asked for another defense',
                 $item->kind === 'defense' && $row->revision > 0 => 'Re-defense scheduled',

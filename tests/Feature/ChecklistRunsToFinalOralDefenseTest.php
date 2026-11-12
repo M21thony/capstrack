@@ -86,7 +86,7 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
     public function test_the_department_checklist_carries_on_into_capstone_2(): void
     {
         $this->assertSame(
-            ['Pre-proposal Defense', 'Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Archive Entry'],
+            ['Pre-proposal Defense', 'Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Archive Entry', 'Bluebook Clearance'],
             $this->checklist->milestones->pluck('name')->all(),
         );
         $this->assertSame(
@@ -112,7 +112,8 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
         for ($guard = 0; $guard < 60; $guard++) {
             $next = $this->progress()->items->first(fn ($r) => ! in_array($r->state, MilestoneProgress::COMPLETE_STATES, true));
 
-            if (! $next) {
+            // The Bluebook lines are the dean's to close (BluebookTest).
+            if (! $next || $next->item->kind === Deliverable::BLUEBOOK) {
                 break;
             }
 
@@ -134,7 +135,6 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
             ['Pre-proposal Defense', 'Title Defense', 'Pre Oral Defense', 'Final Oral Defense', 'Public Presentation', 'Archive Entry'],
             array_values(array_unique($order)),
         );
-        $this->assertSame(100, $this->progress()->percent);
     }
 
     /** Pre Oral Defense cannot be put on the calendar while Chapter 4 is open. */
@@ -156,13 +156,13 @@ class ChecklistRunsToFinalOralDefenseTest extends TestCase
     {
         $old = $this->emptyChecklist(CapstoneExpert::factory()->create(['approved_status' => true]));
 
-        $this->assertSame(4, MilestoneTemplate::appendCapstone2($old));
+        $this->assertSame(5, MilestoneTemplate::appendCapstone2($old));
         $this->assertSame(0, MilestoneTemplate::appendCapstone2($old));
         $this->assertSame(['Capstone 1', 'Pre Oral Defense'], $old->milestones()->orderBy('position')->take(2)->pluck('name')->all());
 
         // The department checklist already carries it, so the migration adds nothing there.
         (require base_path('database/migrations/2026_09_24_085415_add_capstone_2_to_existing_checklists.php'))->up();
-        $this->assertSame(48, $this->checklist->deliverables()->count());
+        $this->assertSame(53, $this->checklist->deliverables()->count());
         $this->assertSame(1, $old->deliverables()->where('deliverables.template_key', 'final_oral_defense')->count());
     }
 }

@@ -555,14 +555,14 @@ class PreProposalControllerTest extends TestCase
         $response = $this->get(route('student.duplication'));
 
         $response->assertOk();
-        $response->assertDontSee('Choose This One');
+        $response->assertDontSee('>Choose This One</button>', false);
         $response->assertSee('your team leader needs to pick');
 
         $this->actingAs($leader, 'web');
         $response = $this->get(route('student.duplication'));
 
         $response->assertOk();
-        $response->assertSee('Choose This One');
+        $response->assertSee('>Choose This One</button>', false);
     }
 
     // A team is only ever "complete" by having submitted, and a submitted set

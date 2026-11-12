@@ -323,37 +323,6 @@ class MilestoneProgress
     }
 
     /**
-     * The one-line note beside an item: what it is waiting for, or when it
-     * was due. Said the same way on the team page and in the student's list.
-     */
-    public static function itemNote(object $item, bool $locked = false, ?string $requires = null): string
-    {
-        $due = $item->due_on ? Carbon::parse($item->due_on)->format('M j, Y') : null;
-
-        if ($locked) {
-            return $requires ? 'Waits for '.$requires : 'Waits for the milestone before it';
-        }
-
-        return match ($item->state) {
-            self::HANDED_IN => match (true) {
-                $item->waiting_on === self::WAITING_ON_TEAM => 'Waiting on the revised version',
-                $item->waiting_on === self::WAITING_ON_SIGNED_COPY => 'Waiting on the signed copy',
-                $item->waiting_on === self::WAITING_ON_CAPSA => 'Waiting on your check',
-                $item->waiting_on === 'subject_adviser' => 'Waiting on your approval',
-                $item->waiting_on === self::WAITING_ON_REDEFENSE => 'Waiting on the next defense date',
-                $item->waiting_on === self::WAITING_ON_TITLE_REVIEW => 'Waiting on your title recommendation',
-                $item->item->kind === Deliverable::DEFENSE => 'Scheduled',
-                $item->waiting_on !== null => 'Waiting on the '.$item->waiting_on,
-                default => 'Waiting on your check',
-            },
-            self::OVERDUE => $due ? 'Was due '.$due : 'Overdue',
-            self::DONE_LATE => $due ? 'Handed in after '.$due : 'Handed in late',
-            self::NOT_STARTED => $due ? 'Due '.$due : '',
-            default => '',
-        };
-    }
-
-    /**
      * Where an item is in its own lifecycle, as a list of named steps.
      *
      * Derived from the state and who it waits on, both of which are already
@@ -642,8 +611,7 @@ class MilestoneProgress
             return [null, true, self::WAITING_ON_TEAM, true];
         }
 
-        // Everyone the latest upload went to, panelists one by one. A role
-        // with nobody to send to (no grammarian yet) has nobody to wait on.
+        // Everyone the latest upload went to, panelists one by one.
         $onLatest = $reviews->where('file_id', $own->last()->file_id);
 
         foreach ($roles as $role) {
@@ -652,8 +620,8 @@ class MilestoneProgress
             }
         }
 
-        // Nobody to send it to at all: only the CaPSA/TSA's check can close it.
-        if ($onLatest->isEmpty()) {
+        // Someone she chose has nobody to send it to: only her check can close it.
+        if ($onLatest->isEmpty() || collect($roles)->contains(fn ($role) => $onLatest->where('role', $role)->isEmpty())) {
             return [null, true, self::WAITING_ON_CAPSA, false];
         }
 

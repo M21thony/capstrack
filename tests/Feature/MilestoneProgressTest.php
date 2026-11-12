@@ -122,6 +122,23 @@ class MilestoneProgressTest extends TestCase
         $this->assertSame(MilestoneProgress::DONE, $this->progressOf($checklist, $this->team, $draft)->state);
     }
 
+    /** She chose the grammarian too, the team has none: the adviser's approval alone must not close it. */
+    public function test_a_chosen_recipient_the_team_does_not_have_leaves_it_to_the_capsa(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $draft = $this->addDeliverable($checklist, ['title' => 'Manuscript', 'kind' => Deliverable::DOCUMENT, 'recipients' => ['adviser', 'grammarian']]);
+
+        CapstoneDocumentReview::create([
+            'file_id' => $this->upload($this->student, $draft), 'expert_id' => CapstoneExpert::factory()->create(['approved_status' => true])->expert_id,
+            'role' => 'adviser', 'review_status' => CapstoneDocumentReview::REVIEWED,
+            'verdict' => CapstoneDocumentReview::APPROVED, 'verdict_at' => now(),
+        ]);
+
+        $state = $this->progressOf($checklist, $this->team, $draft);
+        $this->assertSame(MilestoneProgress::HANDED_IN, $state->state);
+        $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $state->waiting_on);
+    }
+
     /**
      * There is no e-signing, so a CLF is paper: the adviser approving the
      * draft only means the signed copy can follow. The CaPSA/TSA's check closes it.
@@ -307,12 +324,12 @@ class MilestoneProgressTest extends TestCase
     public function test_archived_deliverables_and_milestones_are_not_counted(): void
     {
         $checklist = $this->departmentChecklist($this->capsa);
-        $this->assertSame(48, MilestoneProgress::forTeam($checklist, $this->team->team_id)->total);
+        $this->assertSame(53, MilestoneProgress::forTeam($checklist, $this->team->team_id)->total);
 
         $this->line($checklist, 'td_rsc')->update(['archived_at' => now()]);
         $checklist->milestones()->where('name', 'Pre-proposal Defense')->update(['archived_at' => now()]);
 
-        $this->assertSame(48 - 1 - 7, MilestoneProgress::forTeam($checklist, $this->team->team_id)->total);
+        $this->assertSame(53 - 1 - 7, MilestoneProgress::forTeam($checklist, $this->team->team_id)->total);
     }
 
     public function test_the_department_checklist_has_the_papers_kinds(): void

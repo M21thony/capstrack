@@ -3,15 +3,12 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\Milestone;
 use App\Models\Student;
-use App\Models\StudentMilestone;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Support\MilestoneProgress;
 use App\Support\SectionScope;
 use App\Support\StudentTeam;
-use Illuminate\Http\Request;
 
 class ProgressController extends Controller
 {
@@ -79,84 +76,5 @@ class ProgressController extends Controller
                 ->sortBy(fn ($row) => $row->due_on)
                 ->first(),
         ]);
-    }
-
-    public function markDone(Request $request)
-    {
-        $data = $request->validate([
-            'milestone_id' => 'required|integer|exists:milestones,id',
-            'file' => 'required|image|max:5120',
-        ]);
-
-        /** @var Student $student */
-        $student = auth()->user();
-        $teamId = StudentTeam::idFor($student->student_id);
-
-        if (! $teamId) {
-            return back()->with('error', 'No team found.');
-        }
-
-        $exists = StudentMilestone::where('milestone_id', $data['milestone_id'])
-            ->where('team_id', $teamId)
-            ->exists();
-
-        if ($exists) {
-            return back()->with('error', 'Already marked as done.');
-        }
-
-        $path = $request->file('file')->store('milestones', 'public');
-
-        StudentMilestone::create([
-            'milestone_id' => $data['milestone_id'],
-            'team_id' => $teamId,
-            'student_id' => $student->student_id,
-            'file_path' => $path,
-            'is_verified' => false,
-        ]);
-
-        $milestone = Milestone::find($data['milestone_id']);
-        if ($milestone && $milestone->status === 'todo') {
-            $milestone->update(['status' => 'in_progress']);
-        }
-
-        return back()->with('success', 'Milestone marked as done. Waiting for admin verification.');
-    }
-
-    public function updatePicture(Request $request)
-    {
-        $data = $request->validate([
-            'milestone_id' => 'required|integer|exists:milestones,id',
-            'file' => 'required|image|max:5120',
-        ]);
-
-        $student = auth()->user();
-        $teamId = StudentTeam::idFor($student->student_id);
-
-        if (! $teamId) {
-            return back()->with('error', 'No team found.');
-        }
-
-        $submission = StudentMilestone::where('milestone_id', $data['milestone_id'])
-            ->where('team_id', $teamId)
-            ->first();
-
-        if (! $submission) {
-            return back()->with('error', 'No submission found.');
-        }
-
-        $path = $request->file('file')->store('milestones', 'public');
-
-        $submission->update([
-            'file_path' => $path,
-            'is_verified' => false,
-            'verified_at' => null,
-        ]);
-
-        $milestone = Milestone::find($data['milestone_id']);
-        if ($milestone) {
-            $milestone->update(['status' => 'in_progress']);
-        }
-
-        return back()->with('success', 'Submission picture updated.');
     }
 }

@@ -460,8 +460,12 @@ function start(root) {
       case 'title_review': return CAPSA ? 'Titles waiting for your recommendation' : "Titles waiting for the CaPSA/TSA's recommendation";
       case 'team': return r.note ? 'Sent back' : ordinal(Math.max(1, r.revision)) + ' revision requested';
       case 'signed_copy': return 'Approved, signed copy not uploaded';
-      case 'adviser':
-      case 'consultant': return 'With the ' + r.waiting_on;
+      case 'adviser': return 'With the CaPA';
+      case 'consultant':
+      case 'grammarian':
+      case 'panel': return 'With the ' + r.waiting_on;
+      case 'subject_adviser': return CAPSA ? 'Waiting for your approval' : "Waiting for the CaPSA/TSA's approval";
+      case 'dean': return "With the Dean's Office";
       case 'redefense': return r.revision > 1 ? `Re-defense needed (${ordinal(r.revision)} time)` : 'Re-defense needed';
       default: return r.kind === 'defense' && r.revision ? 'Re-defense scheduled' : 'Scheduled';
     }
@@ -478,6 +482,8 @@ function start(root) {
     const signer = (r.role === 'consultant' ? t.consultant : t.adviser) || 'the ' + (r.role || 'adviser');
     if (r.by_recommendation) return `Closed when ${CAPSA ? 'you recommend' : 'the CaPSA/TSA recommends'} one of the team's titles`;
     if (r.by_archive) return `Closes when ${CAPSA ? 'you publish' : 'the CaPSA/TSA publishes'} it in the Archive`;
+    if (r.sends_to?.length) return 'Closes when approved by: ' + r.sends_to.join(', ');
+    if (r.kind === 'bluebook') return "Closes when the Dean's Office accepts it";
     return {
       form: `Closed when ${who} the signed form`,
       approval: `Closed when ${who} the CLF signed by ${signer}`,
