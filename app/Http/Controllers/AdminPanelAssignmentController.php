@@ -478,7 +478,8 @@ class AdminPanelAssignmentController extends Controller
 
         $validated = $request->validate([
             'schedule_date' => ['required', 'date'],
-            'start_time' => ['required', 'string', 'in:'.implode(',', DefenseBoard::slots($minutes))],
+            // A redefense is held when the team and its panel are free, not on the slot grid.
+            'start_time' => ['required', 'string', $defense->isRedefense() ? 'date_format:H:i' : 'in:'.implode(',', DefenseBoard::slots($minutes))],
             'venue' => ['required', 'string', 'in:'.implode(',', self::VENUES)],
             'confirm' => ['nullable', 'boolean'],
         ]);
@@ -828,11 +829,14 @@ class AdminPanelAssignmentController extends Controller
         $open = $rows->reject(fn ($row) => $row['schedule']);
 
         // Requirements still owed don't hold a team back; the panel follows them up.
-        $readyIds = $open->filter(fn ($row) => DefenseBoard::hardBlockers($row['blockers']) === [])->pluck('defense_id');
+        // A redefense is never placed here: the team finds a time with its
+        // panel and the CaPSA/TSA enters it by hand.
+        $leftOut = fn ($row) => $row['attempt'] > 1 || DefenseBoard::hardBlockers($row['blockers']) !== [];
+        $readyIds = $open->reject($leftOut)->pluck('defense_id');
         $ready = DefenseSchedule::whereIn('defense_id', $readyIds)->with(['panels.expert', 'team.members'])->orderBy('defense_id')->get();
 
-        $notReady = $open->filter(fn ($row) => DefenseBoard::hardBlockers($row['blockers']) !== [])
-            ->map(fn ($row) => ['team_id' => $row['id'], 'team_name' => $row['name'], 'reason' => DefenseBoard::hardBlockers($row['blockers'])[0]['text'].'.'])
+        $notReady = $open->filter($leftOut)
+            ->map(fn ($row) => ['team_id' => $row['id'], 'team_name' => $row['name'], 'reason' => (DefenseBoard::hardBlockers($row['blockers'])[0]['text'] ?? 'Redefense, scheduled by hand').'.'])
             ->values()->all();
 
         return [$ready, $notReady, $alreadyScheduled];
@@ -1036,6 +1040,7 @@ class AdminPanelAssignmentController extends Controller
     private function waitingTeams(string $type, array $except): Collection
     {
         return DefenseSchedule::where('defense_type', $type)
+            ->where('attempt', 1) // no slot is held for a redefense, its date is arranged by the team
             ->whereNull('venue')
             ->whereNull('outcome')
             ->whereHas('panels')

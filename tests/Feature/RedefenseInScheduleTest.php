@@ -18,8 +18,8 @@ use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
- * Panel comment 18: teams up for a redefense go into the same Generate
- * schedule as everyone else, and the draft says which try it is.
+ * A redefense is dated by hand: the team finds a time with its panel and
+ * tells the CaPSA/TSA. Generate schedule leaves it out.
  */
 class RedefenseInScheduleTest extends TestCase
 {
@@ -76,52 +76,38 @@ class RedefenseInScheduleTest extends TestCase
             ->assertOk()->json('data.draft'))->keyBy('team_name');
     }
 
-    public function test_a_redefense_team_is_in_the_draft_as_try_two(): void
+    private function schedule(DefenseSchedule $schedule, string $date, string $time)
     {
-        $this->attempt($this->team('Again'), 2);
-
-        $this->assertSame(2, $this->draft()['Again']['attempt']);
+        return $this->actingAs($this->capsa, 'expert')
+            ->putJson(route('api.admin.panel_assignment.schedule.update', $schedule), ['schedule_date' => $date, 'start_time' => $time, 'venue' => 'Mac Lab']);
     }
 
-    public function test_a_first_try_team_is_in_the_draft_as_try_one(): void
-    {
-        $this->attempt($this->team('Fresh'), 1);
-
-        $this->assertSame(1, $this->draft()['Fresh']['attempt']);
-    }
-
-    public function test_redefense_and_first_try_teams_share_one_draft(): void
+    public function test_generate_leaves_a_redefense_out_and_says_why(): void
     {
         $this->attempt($this->team('Fresh'), 1);
         $this->attempt($this->team('Again'), 2);
 
-        $draft = $this->draft();
+        $data = $this->actingAs($this->capsa, 'expert')
+            ->postJson(route('api.admin.panel_assignment.schedule-drafts.store'), ['defense_type' => self::STAGE])
+            ->assertOk()->json('data');
 
-        $this->assertEqualsCanonicalizing(['Fresh', 'Again'], $draft->keys()->all());
-        $this->assertNotSame($draft['Fresh']['date'].$draft['Fresh']['start_time'].$draft['Fresh']['venue'], $draft['Again']['date'].$draft['Again']['start_time'].$draft['Again']['venue']);
+        $this->assertSame(['Fresh'], array_column($data['draft'], 'team_name'));
+        $this->assertSame(['Again'], array_column($data['not_ready'], 'team_name'));
+        $this->assertSame('Redefense, scheduled by hand.', $data['not_ready'][0]['reason']);
     }
 
-    public function test_a_third_try_is_labelled_try_three(): void
+    /** The team arranged it with its panel: outside the window, off the slot grid. */
+    public function test_a_redefense_is_dated_by_hand_at_any_weekday_time(): void
     {
-        $this->attempt($this->team('Third'), 3);
+        $current = $this->attempt($this->team('Again'), 2);
 
-        $row = $this->draft()['Third'];
+        $this->schedule($current, '2027-04-07', '15:30')->assertOk();
 
-        $this->assertSame(3, $row['attempt']);
-        $this->assertSame(DefenseSchedule::where('attempt', 3)->value('defense_id'), $row['defense_id']);
+        $this->assertSame('2027-04-07 15:30', $current->fresh()->schedule_date->format('Y-m-d H:i'));
     }
 
-    public function test_saving_a_redefense_dates_the_new_try_and_leaves_the_old_one(): void
+    public function test_a_first_try_still_needs_a_slot_time(): void
     {
-        $team = $this->team('Again');
-        $current = $this->attempt($team, 2);
-        $row = $this->draft()['Again'];
-
-        $this->actingAs($this->capsa, 'expert')
-            ->putJson(route('api.admin.panel_assignment.schedules.update'), ['defense_type' => self::STAGE, 'items' => [['defense_id' => $row['defense_id'], 'date' => $row['date'], 'start_time' => $row['start_time'], 'venue' => $row['venue']]]])
-            ->assertOk();
-
-        $this->assertSame($row['date'], $current->fresh()->schedule_date->toDateString());
-        $this->assertSame('2027-02-01', DefenseSchedule::where('team_id', $team->team_id)->where('attempt', 1)->first()->schedule_date->toDateString());
+        $this->schedule($this->attempt($this->team('Fresh'), 1), '2027-03-15', '15:30')->assertStatus(422);
     }
 }

@@ -570,7 +570,10 @@ function drawSchedule() {
   const panel = panelIds(SC.team);
   let html = `<div><span class="lbl">Venue</span><div class="seg">${S.venues.map(v => `<button type="button" data-act="venue" data-v="${esc(v)}" aria-pressed="${SC.venue === v}">${esc(v)}</button>`).join('')}</div></div>`;
   const days = windowDays();
-  if (!days.length) {
+  if (SC.team.attempt > 1) {
+    // A redefense is held when the team and its panel are free: any weekday, any time.
+    html += `<div class="two"><div><label class="lbl" for="scD">Date</label><input class="field" type="date" id="scD" value="${SC.date || ''}" min="${TODAY}" style="width:100%"></div><div><label class="lbl" for="scT">Start time</label><input class="field" type="time" id="scT" value="${SC.time || ''}" style="width:100%"></div></div>`;
+  } else if (!days.length) {
     html += `<div class="banner gold">${ICON.info}<span class="txt">No ${SHORT[S.stage]} window yet. Set the window first.</span></div>`;
   } else {
     html += `<div><span class="lbl">Pick a free slot · gold is free</span><div class="days">${days.map(d => `<div class="day"><span class="day-l">${fmtDay(d)}</span><div class="slots">${slots().map(time => {
@@ -582,8 +585,13 @@ function drawSchedule() {
   }
   html += `<div class="banner red" id="scWarn" hidden>${ICON.info}<span class="txt" id="scWarnT"></span></div>`;
   $('scBody').innerHTML = html;
-  $('scSum').textContent = SC.date ? `${fmtDay(SC.date)}, ${slotLabel(SC.time, endOf(SC.time))} · ${SC.venue}` : 'Pick a free slot. Hover a grey one to see why it is taken.';
-  $('scSave').disabled = !SC.date;
+  sumSchedule();
+}
+
+function sumSchedule() {
+  const set = SC.date && SC.time;
+  $('scSum').textContent = set ? `${fmtDay(SC.date)}, ${slotLabel(SC.time, endOf(SC.time))} · ${SC.venue}` : SC.team.attempt > 1 ? 'Enter the date and time the team arranged with its panel.' : 'Pick a free slot. Hover a grey one to see why it is taken.';
+  $('scSave').disabled = !set;
 }
 
 /* Move one scheduled defense. */
@@ -660,7 +668,7 @@ function drawGenerate() {
   // The window's weekdays spelled out, since a date box shows 12/10/2026 - October 12 or December 10?
   const days = windowDays(min, w.end_date);
   const dayOptions = x => (days.includes(x.date) ? days : [x.date, ...days]).map(d => `<option value="${d}"${d === x.date ? ' selected' : ''}>${fmtDay(d)}</option>`).join('');
-  let html = G.rows.length ? `<div class="tablewrap"><table class="draft"><thead><tr><th></th><th>Team</th><th>Panel</th><th>Date</th><th>Time</th><th>Venue</th></tr></thead><tbody>${G.rows.map((x, i) => `<tr data-i="${i}"><td><input type="checkbox" data-g="on"${x.on ? ' checked' : ''} aria-label="Include ${esc(x.team.name)}"></td><td><b>${esc(x.team.name)}</b>${x.attempt > 1 ? `<span class="redo">Redefense</span>` : ''}<br><span class="muted" style="font-size:12px">${esc(x.team.section)}</span>${x.skipped ? `<span class="muted" style="display:block;font-size:11.5px" data-skip>${esc(x.skipped)}</span>` : ''}<span class="clash-note" data-clash></span></td><td>${panelHtml(x.team)}</td>`
+  let html = G.rows.length ? `<div class="tablewrap"><table class="draft"><thead><tr><th></th><th>Team</th><th>Panel</th><th>Date</th><th>Time</th><th>Venue</th></tr></thead><tbody>${G.rows.map((x, i) => `<tr data-i="${i}"><td><input type="checkbox" data-g="on"${x.on ? ' checked' : ''} aria-label="Include ${esc(x.team.name)}"></td><td><b>${esc(x.team.name)}</b><br><span class="muted" style="font-size:12px">${esc(x.team.section)}</span>${x.skipped ? `<span class="muted" style="display:block;font-size:11.5px" data-skip>${esc(x.skipped)}</span>` : ''}<span class="clash-note" data-clash></span></td><td>${panelHtml(x.team)}</td>`
     + `<td><select data-g="date" aria-label="Date">${dayOptions(x)}</select></td>`
     + `<td><select data-g="time" aria-label="Time">${G.time_slots.map(s => `<option value="${s}"${s === x.time ? ' selected' : ''}>${slotLabel(s, addMinutes(s, G.minutes))}</option>`).join('')}</select></td>`
     + `<td><select data-g="venue" aria-label="Venue">${G.venues.map(v => `<option${v === x.venue ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`
@@ -685,8 +693,7 @@ function checkGenerate() {
     clashes += c ? 1 : 0;
   });
   const n = on.length;
-  const redo = on.filter(x => x.attempt > 1).length;
-  $('gSum').textContent = n ? `${n} ${n === 1 ? 'team' : 'teams'}${redo ? ` (${redo} ${redo === 1 ? 'redefense' : 'redefenses'})` : ''} will be scheduled, added to each panelist's Google Calendar, and told by email.${clashes ? ` Fix ${clashes} ${clashes === 1 ? 'clash' : 'clashes'} first.` : ''}` : 'Tick at least one team.';
+  $('gSum').textContent = n ? `${n} ${n === 1 ? 'team' : 'teams'} will be scheduled, added to each panelist's Google Calendar, and told by email.${clashes ? ` Fix ${clashes} ${clashes === 1 ? 'clash' : 'clashes'} first.` : ''}` : 'Tick at least one team.';
   $('gSave').disabled = !n || clashes > 0;
   $('gSave').textContent = n ? `Save schedule for ${n} ${n === 1 ? 'team' : 'teams'}` : 'Save schedule';
 }
@@ -785,7 +792,7 @@ const ACT = {
     }
   },
   schedule: el => openSchedule(+el.dataset.id),
-  venue: el => { SC.venue = el.dataset.v; SC.date = null; SC.time = null; SC.confirm = false; drawSchedule(); },
+  venue: el => { SC.venue = el.dataset.v; if (!(SC.team.attempt > 1)) { SC.date = null; SC.time = null; } SC.confirm = false; drawSchedule(); },
   slot: el => { SC.date = el.dataset.d; SC.time = el.dataset.t; SC.confirm = false; drawSchedule(); },
   'sched-save': async el => {
     el.disabled = true;
@@ -908,6 +915,7 @@ root.addEventListener('change', async e => {
   if (t.id === 'secF') { P.section = t.value; renderBoard(); }
   else if (t.id === 'reasonF' || t.id === 'kindF') { P.reason = t.value; renderBoard(); }
   else if (t.id === 'othersT') { P.others = t.checked; renderBoard(); }
+  else if (t.id === 'scD' || t.id === 'scT') { SC.date = $('scD').value || null; SC.time = $('scT').value || null; SC.confirm = false; $('scWarn').hidden = true; sumSchedule(); }
   else if (t.id === 'pickAll') {
     TEAMS.filter(x => stepOf(x) === 'panel' && !missingExperts(x) && matches(x)).forEach(x => (t.checked ? P.picked.add(x.id) : P.picked.delete(x.id)));
     renderBoard();
