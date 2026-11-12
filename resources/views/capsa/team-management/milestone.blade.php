@@ -112,11 +112,11 @@
     <a class="ms-btn" href="{{ route('capsa.team_management.milestones.edit', $milestone) }}">{!! $pencil !!}Edit milestone</a>
     @if ($milestone->archived_at)
     @elseif (! $milestone->isOpened())
-      <button class="ms-btn p" type="button" id="ml-close" data-body='{"opened":true}'>Open to teams</button>
+      <button class="ms-btn p" type="button" id="ml-close" data-body='{"opened":true}'>Open milestone</button>
     @elseif ($milestone->isClosed())
-      <button class="ms-btn" type="button" id="ml-close" data-body='{"closed":false}'>Reopen</button>
+      <button class="ms-btn" type="button" id="ml-close" data-body='{"closed":false}'>Open milestone</button>
     @else
-      <button class="ms-btn" type="button" id="ml-close" data-body='{"closed":true}'><x-tm-icon n="check" s="14" />Mark finished</button>
+      <button class="ms-btn" type="button" id="ml-close" data-body='{"closed":true}'><x-tm-icon n="check" s="14" />Close milestone</button>
     @endif
   </div>
 

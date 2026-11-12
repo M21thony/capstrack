@@ -126,8 +126,8 @@ test('a new milestone is refused without a name, then made, opened and given a r
   await page.getByRole('button', { name: 'Add milestone' }).click();
 
   await expect(page.locator('h1')).toHaveText(NEW);
-  await page.getByRole('button', { name: 'Open to teams' }).click();
-  await expect(page.getByRole('button', { name: 'Mark finished' })).toBeVisible();
+  await page.getByRole('button', { name: 'Open milestone' }).click();
+  await expect(page.getByRole('button', { name: 'Close milestone' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Add requirement' }).click();
   await page.fill('[name=title]', UPLOAD);

@@ -1171,7 +1171,7 @@ return [
         'steps' => [
             ['Read the requirements', 'teams must hand in for it.'],
             ['Press Add requirement', 'to add one.'],
-            ['Press Mark finished', 'when the milestone is over.'],
+            ['Press Close milestone', 'when the milestone is over.'],
         ],
         'tour' => [
             ['The milestone', 'Its **name and due date**.', '.ms-head'],

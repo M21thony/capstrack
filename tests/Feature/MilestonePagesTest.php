@@ -55,7 +55,7 @@ class MilestonePagesTest extends TestCase
             ->assertSee('Chapter 1-3 Submission')
             ->assertSee('Manage milestones')
             ->assertSee('Edit milestone')
-            ->assertSee('Mark finished')
+            ->assertSee('Close milestone')
             ->assertSee('Signed endorsement form')
             ->assertSee('Upload file')->assertDontSee('of 2 done')
             ->assertSee('Old draft')
