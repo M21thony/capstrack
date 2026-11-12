@@ -51,7 +51,7 @@ class AdminProfileController extends Controller
 
         $allAvailableSections = self::getAllAvailableSections();
 
-        $schoolYear = Setting::get('current_school_year');
+        $schoolYear = \App\Models\Term::currentSchoolYear();
 
         // Research areas per side: each expert role they hold, and panels -
         // the same lists their expert profile panel edits.

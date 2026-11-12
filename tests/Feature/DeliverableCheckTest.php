@@ -69,6 +69,21 @@ class DeliverableCheckTest extends TestCase
         $this->assertSame(1, DeliverableCheck::count());
     }
 
+    /** A paper checked under last year's list is not asked for again under the list the team follows now. */
+    public function test_work_done_under_another_list_stays_done(): void
+    {
+        $old = $this->addDeliverable($this->checklist, ['title' => 'Signed form']);
+        $this->upload($this->student, $old);
+        $this->putJson($this->url($old), ['status' => DeliverableCheck::COMPLETE])->assertOk();
+
+        $now = $this->emptyChecklist($this->capsa);
+        $same = $this->addDeliverable($now, ['title' => 'signed form ']);
+        $new = $this->addDeliverable($now, ['title' => 'Something new']);
+
+        $this->assertSame(MilestoneProgress::DONE, $this->progressOf($now, $this->team, $same)->state);
+        $this->assertNotSame(MilestoneProgress::DONE, $this->progressOf($now, $this->team, $new)->state);
+    }
+
     public function test_undo_takes_the_check_away(): void
     {
         $clf = $this->addDeliverable($this->checklist, ['title' => 'Signed CLF Approving Chapter 1', 'kind' => Deliverable::APPROVAL, 'role' => 'adviser']);

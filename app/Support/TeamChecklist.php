@@ -7,6 +7,7 @@ use App\Models\Checklist;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\Term;
 use Illuminate\Support\Collection;
 
 /**
@@ -49,7 +50,7 @@ class TeamChecklist
         foreach ($filtered['teams'] as $team) {
             $section = $filtered['teamSections'][$team->team_id];
 
-            if (self::programOf($section) !== $checklist->program) {
+            if ($this->forSection($section)?->id !== $checklist->id) {
                 continue;
             }
 
@@ -63,9 +64,48 @@ class TeamChecklist
     {
         $capsa = $this->capsaFor($section);
 
-        return $capsa
-            ? Checklist::where('capsa_id', $capsa->expert_id)->where('program', self::programOf($section))->oldest('id')->first()
-            : null;
+        if (! $capsa) {
+            return null;
+        }
+
+        // A 3rd-year section follows this year's list, a 4th-year one the list
+        // its batch started on last year; with neither, the oldest there is.
+        [$from, $to] = array_map('intval', explode('-', Term::currentSchoolYear()));
+        $batch = str_contains($section, '-4') ? ($from - 1).'-'.($to - 1) : $from.'-'.$to;
+
+        return Checklist::where('capsa_id', $capsa->expert_id)->where('program', self::programOf($section))
+            ->orderByRaw('school_year = ? desc', [$batch])->oldest('id')->first();
+    }
+
+    /**
+     * A new school year: each CaPSA/TSA's list is copied for the new batch,
+     * with no deadlines and nothing closed. Last year's list stays as it is
+     * for the teams that started on it.
+     */
+    public static function startYear(string $from, string $to): void
+    {
+        foreach (Checklist::where('school_year', $from)->with('milestones.deliverables')->get() as $old) {
+            if (Checklist::where(['capsa_id' => $old->capsa_id, 'program' => $old->program, 'school_year' => $to])->exists()) {
+                continue;
+            }
+
+            $new = $old->replicate()->fill(['school_year' => $to]);
+            $new->save();
+
+            foreach ($old->milestones as $milestone) {
+                $copy = $milestone->replicate()->fill([
+                    'checklist_id' => $new->id,
+                    'due_on' => null,
+                    'closed_at' => null,
+                    'opened_at' => in_array($milestone->name, MilestoneTemplate::OPEN_FROM_THE_START, true) ? now() : null,
+                ]);
+                $copy->save();
+
+                foreach ($milestone->deliverables as $deliverable) {
+                    $deliverable->replicate()->fill(['checklist_milestone_id' => $copy->id, 'due_date' => null, 'closed_at' => null])->save();
+                }
+            }
+        }
     }
 
     /** The CaPSA/TSA who handles a section, or null when nobody does. */

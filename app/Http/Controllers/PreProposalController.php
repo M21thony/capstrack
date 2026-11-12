@@ -418,7 +418,7 @@ class PreProposalController extends Controller
         // scan straight back, and Clear looked like it did nothing.
         $cleared = DuplicationCheck::whereIn(
             'student_s_y_id',
-            StudentSchoolYear::where('student_id', $request->user()->student_id)->select('s_y_id')
+            StudentSchoolYear::acrossAllTerms()->where('student_id', $request->user()->student_id)->select('s_y_id')
         )
             ->where('id', '<', $check->id)
             ->whereNotIn('id', CapstonePreProposal::whereNotNull('duplication_check_id')->select('duplication_check_id'))
@@ -450,10 +450,10 @@ class PreProposalController extends Controller
     {
         $team = $this->currentTeam($request);
 
-        return ($team && StudentSchoolYear::where('team_id', $team->team_id)
+        return ($team && StudentSchoolYear::acrossAllTerms()->where('team_id', $team->team_id)
             ->where('s_y_id', $check->student_s_y_id)
             ->exists())
-            || StudentSchoolYear::where('student_id', $request->user()->student_id)
+            || StudentSchoolYear::acrossAllTerms()->where('student_id', $request->user()->student_id)
                 ->where('s_y_id', $check->student_s_y_id)
                 ->exists();
     }
@@ -1039,7 +1039,7 @@ class PreProposalController extends Controller
     {
         $latest = DuplicationCheck::whereIn(
             'student_s_y_id',
-            StudentSchoolYear::where('student_id', $request->user()->student_id)->select('s_y_id')
+            StudentSchoolYear::acrossAllTerms()->where('student_id', $request->user()->student_id)->select('s_y_id')
         )
             ->latest('id')
             ->first();

@@ -164,7 +164,7 @@ class AdminDashboardController extends Controller
             'capsas' => $capsas->count(),
             'uncovered' => $uncovered,
             'noSections' => count($noSections),
-            'schoolYear' => Setting::get('current_school_year'),
+            'schoolYear' => \App\Models\Term::currentSchoolYear(),
         ];
     }
 }

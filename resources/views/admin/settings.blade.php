@@ -35,7 +35,7 @@
   .opt input{width:16px;height:16px;accent-color:var(--accent3);margin:0;cursor:pointer}
   .opt:has(input:checked){border-color:var(--accent);background:var(--accent-light);color:var(--accent3)}
   .opt:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
-  .st-range{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .st-range{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
   .st-range .input{width:100%}
   .st-range .input[readonly]{background:var(--bg3);color:var(--text2)}
 
@@ -110,17 +110,24 @@
       <div class="card" style="border-color:var(--green);background:var(--green-bg);margin-bottom:14px;padding:12px 16px;color:var(--green);font-size:13px">{{ session('success') }}</div>
     @endif
 
+    @error('section')
+      <div class="card" style="border-color:var(--red);margin-bottom:14px;padding:12px 16px;color:var(--red);font-size:13px">{{ $message }}</div>
+    @enderror
+
     <div id="stMain">
       <section class="card sy-card" aria-labelledby="sy-h">
         <h2 class="st-h" id="sy-h"><svg class="st-ic" style="color:#d9480f" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18"/></svg>School year</h2>
-        <form class="sy-form" method="POST" action="{{ route('admin.settings.update') }}">
+        <form class="sy-form" id="syForm" method="POST" action="{{ route('admin.settings.update') }}">
           @csrf
           @method('PUT')
           <label class="tk-vh" for="current_school_year">School year</label>
           <input class="input" type="text" id="current_school_year" name="current_school_year" value="{{ old('current_school_year', $currentSchoolYear) }}" placeholder="2026-2027">
+          @foreach ([1 => '1st semester', 2 => '2nd semester'] as $n => $text)
+            <label class="opt"><input type="radio" name="semester" value="{{ $n }}" @checked((int) old('semester', $semester) === $n)>{{ $text }}</label>
+          @endforeach
           <button type="submit" class="tk-btn tk-btn-dark">Save changes</button>
         </form>
-        <span class="st-meta sy-now">Current <b>{{ $currentSchoolYear ?: '—' }}</b></span>
+        <span class="st-meta sy-now">Current <b>{{ $currentSchoolYear ? $currentSchoolYear.' · '.($semester === 1 ? '1st' : '2nd').' semester' : '—' }}</b></span>
       </section>
       @error('current_school_year')<p class="st-err">{{ $message }}</p>@enderror
 
@@ -145,18 +152,11 @@
 
               <div class="st-range">
                 <label><span class="st-label">Year level</span><input class="input" readonly value="{{ $ordinal($years[0]) }} year"></label>
-                <label><span class="st-label">From</span>
-                  <select class="input" name="from" id="fromLetter" onchange="previewSections()">
-                    @foreach ($letters as $l)<option @selected($l === 'A')>{{ $l }}</option>@endforeach
-                  </select>
-                </label>
-                <label><span class="st-label">To</span>
-                  <select class="input" name="to" id="toLetter" onchange="previewSections()">
-                    @foreach ($letters as $l)<option @selected($l === 'D')>{{ $l }}</option>@endforeach
-                  </select>
+                <label><span class="st-label">Sections per program</span>
+                  <input class="input" type="number" name="count" id="sectionCount" min="1" max="26" value="{{ old('count', 4) }}" oninput="previewSections()">
                 </label>
               </div>
-              @error('from')<p class="st-err">{{ $message }}</p>@enderror
+              @error('count')<p class="st-err">{{ $message }}</p>@enderror
 
               <div class="st-preview" id="sectionPreview" aria-live="polite"></div>
             </div>
@@ -169,7 +169,7 @@
 
         <section class="card st-card" aria-labelledby="list-h">
           <header class="st-head">
-            <h2 class="st-h" id="list-h"><svg class="st-ic" style="color:#7c3aed"><use href="#st-folder"/></svg>Sections</h2>
+            <h2 class="st-h" id="list-h"><svg class="st-ic" style="color:#7c3aed"><use href="#st-folder"/></svg>Sections{{ $currentSchoolYear ? ' · '.$currentSchoolYear : '' }}</h2>
             <span class="st-meta">{{ count($sections) }} {{ Str::plural('section', count($sections)) }} · {{ $programCount }} {{ Str::plural('program', $programCount) }}</span>
           </header>
           <div class="tk-toolbar">
@@ -203,6 +203,33 @@
           <div class="tk-foot"><span id="stShown"></span></div>
         </section>
       </div>
+
+      @if ($past)
+        <section class="card st-card" style="margin-top:14px" aria-labelledby="past-h">
+          <header class="st-head" style="padding:10px 20px">
+            <h2 class="st-h" id="past-h">Past school years</h2>
+            <span class="st-meta">{{ count($past) }} {{ Str::plural('school year', count($past)) }}</span>
+          </header>
+          <table class="table st-table">
+            <thead><tr><th style="width:16%">School year</th><th style="width:16%">Semesters</th><th>Sections</th><th style="width:10%">Total</th></tr></thead>
+            <tbody>
+              @foreach ($past as $y => $row)
+                @php
+                  // BSIT-3A, BSIT-3B, BSIT-3C read back as "BSIT 3A–3C".
+                  $runs = [];
+                  foreach ($row['sections'] as $s) { $runs[substr($s, 0, -1)][] = substr($s, -1); }
+                @endphp
+                <tr>
+                  <td><span class="sec-prog">{{ $y }}</span></td>
+                  <td>{{ $row['semesters'] ?: '—' }}</td>
+                  <td class="st-secs">{{ collect($runs)->map(fn ($l, $k) => str_replace('-', ' ', $k).$l[0].(count($l) > 1 ? '–'.substr($k, -1).end($l) : ''))->implode(' · ') ?: '—' }}</td>
+                  <td class="st-total">{{ count($row['sections']) }}</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </section>
+      @endif
     </div>
 
     <div id="stDetail" hidden>
@@ -232,41 +259,71 @@
 var SECTION_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 var EXISTING = @json($sections);
 var START_YEAR = @json($years[0]);
+var IN_USE = @json($inUse);
+var NOW = { year: @json($currentSchoolYear), sem: @json($semester), stay: @json($notPromoted), rep: @json($repeaters) };
 var year = 3;
 
-/** What the range would add, per program, with the ones already listed taken out. */
+/** What the number would do to each ticked program: add the missing ones, take the last ones off. */
 function previewSections(){
   var programs = [].map.call(document.querySelectorAll('input[name="programs[]"]:checked'), function (i) { return i.value; });
-  var from = SECTION_LETTERS.indexOf(document.getElementById('fromLetter').value);
-  var to = SECTION_LETTERS.indexOf(document.getElementById('toLetter').value);
+  var n = +document.getElementById('sectionCount').value;
   var box = document.getElementById('sectionPreview');
   var button = document.getElementById('addSections');
-  var total = 0, skip = 0, lines = '';
+  var add = 0, drop = 0, busy = [], lines = '';
 
-  if (!programs.length || from > to) {
-    box.innerHTML = from > to
-      ? '<span style="color:var(--red)">Choose an end letter after or equal to the start letter.</span>'
-      : '<span>Select at least one program.</span>';
+  if (!programs.length || !(n >= 1 && n <= SECTION_LETTERS.length)) {
+    box.innerHTML = '<span>' + (programs.length ? 'Enter a number from 1 to 26.' : 'Select at least one program.') + '</span>';
     button.disabled = true;
     button.textContent = 'Add sections';
     return;
   }
 
   programs.forEach(function (p) {
-    var fresh = 0;
-    for (var i = from; i <= to; i++) EXISTING.indexOf(p + '-' + START_YEAR + SECTION_LETTERS[i]) === -1 ? fresh++ : skip++;
-    total += fresh;
-    lines += '<div class="st-line"><span><b>' + p + '</b> · ' + START_YEAR + SECTION_LETTERS[from]
-      + (to > from ? '–' + START_YEAR + SECTION_LETTERS[to] : '') + '</span>'
-      + '<span class="st-new' + (fresh ? '' : ' none') + '">' + fresh + ' new</span></div>';
+    var pre = p + '-' + START_YEAR, fresh = 0, gone = 0;
+    for (var i = 0; i < n; i++) if (EXISTING.indexOf(pre + SECTION_LETTERS[i]) === -1) fresh++;
+    EXISTING.forEach(function (s) {
+      if (s.indexOf(pre) !== 0 || SECTION_LETTERS.indexOf(s.slice(pre.length)) < n) return;
+      gone++;
+      if (IN_USE.indexOf(s) !== -1) busy.push(s);
+    });
+    add += fresh;
+    drop += gone;
+    lines += '<div class="st-line"><span><b>' + p + '</b> · ' + START_YEAR + 'A'
+      + (n > 1 ? '–' + START_YEAR + SECTION_LETTERS[n - 1] : '') + '</span>'
+      + '<span class="st-new' + (fresh || gone ? '' : ' none') + '">'
+      + ([fresh ? fresh + ' new' : '', gone ? gone + ' to remove' : ''].filter(Boolean).join(', ') || 'No change') + '</span></div>';
   });
 
-  var noun = ' section' + (total === 1 ? '' : 's');
-  box.innerHTML = '<div class="st-preview-h"><b>Preview</b><span>' + total + ' new' + noun + '</span></div>' + lines
-    + (skip ? '<p class="st-skip">' + skip + ' already listed, skipped.</p>' : '');
-  button.disabled = !total;
-  button.textContent = 'Add ' + total + noun;
+  var said = function (k) { return k + ' section' + (k === 1 ? '' : 's'); };
+  box.innerHTML = '<div class="st-preview-h"><b>Preview</b></div>' + lines
+    + (busy.length ? '<p class="st-skip" style="color:var(--red)">In use, cannot be removed: ' + busy.join(', ') + '</p>' : '');
+  button.disabled = busy.length > 0 || !(add + drop);
+  button.textContent = add && drop ? 'Save sections' : drop ? 'Remove ' + said(drop) : 'Add ' + said(add);
 }
+
+/** Changing the year or semester moves everybody, so it is asked first. */
+document.getElementById('syForm').addEventListener('submit', function (e) {
+  var form = this, y = form.current_school_year.value.trim(), s = +form.semester.value;
+  if (!NOW.year || (y === NOW.year && s === NOW.sem)) return;
+  e.preventDefault();
+  var newYear = y !== NOW.year;
+  confirmSheet({
+    title: 'Switch to ' + y + ', ' + (s === 1 ? '1st' : '2nd') + ' semester?',
+    names: newYear ? [
+      'The section list starts empty for ' + y + '.',
+      'CaPSA/TSA assignments on 3rd-year sections are cleared. 4th-year ones stay.',
+      NOW.year + ' moves to Past school years.',
+      'Unfinished students and teams carry over. Teams that passed FOD stay in ' + NOW.year + '.',
+    ].concat(NOW.rep ? [NOW.rep + ' repeater' + (NOW.rep === 1 ? '' : 's') + ' carry over. Their section is set by the CaPSA.'] : []) : [
+      'The section list stays as it is.',
+      'CaPSA/TSA assignments stay.',
+      'Unfinished students and teams carry over.',
+    ],
+    note: newYear && NOW.stay ? NOW.stay + ' student' + (NOW.stay === 1 ? ' is' : 's are') + ' not promoted and will stay in 3rd year.' : '',
+    noteWarn: true,
+    confirmLabel: newYear ? 'Start ' + y : 'Switch semester',
+  }).then(function (yes) { if (yes) form.submit(); });
+});
 
 function pickYear(y){
   year = y;

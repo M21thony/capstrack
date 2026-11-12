@@ -61,6 +61,11 @@ class YearPromotionController extends Controller
             foreach ($plan as $section) {
                 foreach ($section['students'] as $s) {
                     if (in_array($s['id'], $leaveOut, true)) {
+                        // Left behind while their class moves up, with a team already: a repeater.
+                        if ($s['team']) {
+                            Student::whereKey($s['id'])->update(['is_returnee' => true]);
+                        }
+
                         continue;
                     }
 

@@ -13,7 +13,13 @@ class Checklist extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['capsa_id', 'program', 'title'];
+    protected $fillable = ['capsa_id', 'program', 'title', 'school_year'];
+
+    /** A new list is for the batch starting in the running school year. */
+    protected static function booted(): void
+    {
+        static::creating(fn (Checklist $checklist) => $checklist->school_year ??= Term::currentSchoolYear());
+    }
 
     public function milestones()
     {

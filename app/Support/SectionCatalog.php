@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\CapstoneExpert;
 use App\Models\Setting;
+use App\Models\Term;
 
 /**
  * The sections the department runs.
@@ -41,9 +42,12 @@ class SectionCatalog
      *
      * @return string[]
      */
-    public static function defined(): array
+    public static function defined(?string $year = null): array
     {
-        $raw = Setting::get(self::KEY);
+        // One list per school year. The list written before years existed
+        // (the bare key) stands in for the current year until it is saved.
+        $raw = Setting::get(self::KEY.':'.($year ?? Term::currentSchoolYear()))
+            ?? ($year === null ? Setting::get(self::KEY) : null);
 
         if (! $raw) {
             return [];
@@ -57,7 +61,7 @@ class SectionCatalog
     /** @param  string[]  $sections */
     public static function store(array $sections): void
     {
-        Setting::set(self::KEY, json_encode(self::tidy($sections)));
+        Setting::set(self::KEY.':'.Term::currentSchoolYear(), json_encode(self::tidy($sections)));
     }
 
     /**

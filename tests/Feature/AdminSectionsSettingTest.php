@@ -53,8 +53,7 @@ class AdminSectionsSettingTest extends TestCase
         // Adding one range of sections is the whole of the fix.
         $this->post(route('admin.settings.sections.store'), [
             'programs' => ['BSIT'],
-            'from' => 'A',
-            'to' => 'B',
+            'count' => 2,
         ])->assertRedirect();
 
         $this->assertSame(['BSIT-3A', 'BSIT-3B'], AdminProfileController::getAllAvailableSections());
@@ -97,8 +96,7 @@ class AdminSectionsSettingTest extends TestCase
 
         $this->post(route('admin.settings.sections.store'), [
             'programs' => ['BSIT', 'BSIS'],
-            'from' => 'A',
-            'to' => 'B',
+            'count' => 2,
         ])->assertRedirect();
 
         $this->assertSame(['BSIS-3A', 'BSIS-3B', 'BSIT-3A', 'BSIT-3B'], SectionCatalog::defined());
@@ -113,7 +111,7 @@ class AdminSectionsSettingTest extends TestCase
     {
         $this->actingAs($this->admin(), 'expert');
 
-        $payload = ['programs' => ['BSIT'], 'from' => 'A', 'to' => 'C'];
+        $payload = ['programs' => ['BSIT'], 'count' => 3];
 
         $this->post(route('admin.settings.sections.store'), $payload);
         $this->post(route('admin.settings.sections.store'), $payload);
@@ -127,7 +125,7 @@ class AdminSectionsSettingTest extends TestCase
         $this->actingAs($this->admin(), 'expert');
 
         $this->post(route('admin.settings.sections.store'), [
-            'programs' => ['BSIT'], 'years' => [1], 'from' => 'A', 'to' => 'A',
+            'programs' => ['BSIT'], 'years' => [1], 'count' => 1,
         ])->assertRedirect();
 
         $this->assertSame(['BSIT-3A'], SectionCatalog::defined());
@@ -210,7 +208,7 @@ class AdminSectionsSettingTest extends TestCase
         $this->actingAs($capsa, 'expert');
 
         $this->post(route('admin.settings.sections.store'), [
-            'programs' => ['BSIT'], 'from' => 'A', 'to' => 'B',
+            'programs' => ['BSIT'], 'count' => 2,
         ])->assertForbidden();
 
         $this->assertSame([], SectionCatalog::defined());
@@ -222,7 +220,7 @@ class AdminSectionsSettingTest extends TestCase
         $this->actingAs($this->admin(), 'expert');
 
         $this->post(route('admin.settings.sections.store'), [
-            'programs' => ['BSHM'], 'from' => 'A', 'to' => 'B',
+            'programs' => ['BSHM'], 'count' => 2,
         ])->assertSessionHasErrors('programs.0');
 
         $this->assertSame([], SectionCatalog::defined());

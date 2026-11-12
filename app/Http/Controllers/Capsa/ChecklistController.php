@@ -35,7 +35,10 @@ class ChecklistController extends Controller
         $mine = Checklist::where('capsa_id', $capsa->expert_id)->orderBy('program')->get();
 
         return response()->json([
-            'checklists' => $mine->map(fn (Checklist $checklist) => $this->summary($checklist))->values(),
+            // An earlier batch's list is shown only while a section still follows it.
+            'checklists' => $mine->map(fn (Checklist $checklist) => $this->summary($checklist) + ['year' => $checklist->school_year])
+                ->reject(fn (array $c) => $c['used_by'] === 'No sections' && $c['year'] !== \App\Models\Term::currentSchoolYear())
+                ->values(),
             'missing' => collect($capsa->handledPrograms())
                 ->diff($mine->pluck('program'))
                 ->values()
@@ -156,7 +159,7 @@ class ChecklistController extends Controller
     private function usedBy(Checklist $checklist): string
     {
         $sections = collect($checklist->capsa?->sections ?? [])
-            ->filter(fn ($section) => TeamChecklist::programOf($section) === $checklist->program)
+            ->filter(fn ($section) => app(TeamChecklist::class)->forSection($section)?->id === $checklist->id)
             ->values();
 
         if ($sections->isEmpty()) {

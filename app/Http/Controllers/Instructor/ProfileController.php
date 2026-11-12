@@ -55,7 +55,7 @@ class ProfileController extends Controller
             // name, and for a CaPSA/TSA the sections the Admin gave them.
             'canEditName' => $expert->is_staff,
             'capsaSections' => $expert->is_capsa ? ($expert->sections ?? []) : null,
-            'schoolYear' => Setting::get('current_school_year'),
+            'schoolYear' => \App\Models\Term::currentSchoolYear(),
             'emailGroups' => $emailGroups,
             'bellTypes' => $bellTypes,
         ]);

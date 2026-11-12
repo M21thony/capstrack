@@ -118,7 +118,7 @@ final class DashboardStats
 
         // Active means enrolled this school year.
         $students = Student::count();
-        $year = Setting::get('current_school_year') ?: $perYear->keys()->last();
+        $year = \App\Models\Term::currentSchoolYear() ?: $perYear->keys()->last();
         $active = (int) ($perYear[$year] ?? 0);
 
         $teams = Team::query();

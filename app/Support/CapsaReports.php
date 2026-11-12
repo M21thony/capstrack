@@ -125,7 +125,7 @@ class CapsaReports
 
         $terms = Term::where('school_year', $year)->orderBy('semester')->orderBy('capstone_stage')->get();
         $termOptions = ['' => 'Whole school year']
-            + $terms->mapWithKeys(fn (Term $t) => [(string) $t->term_id => $t->semesterLabel().' · Capstone '.$t->capstone_stage])->all();
+            + $terms->mapWithKeys(fn (Term $t) => [(string) $t->term_id => $t->semesterLabel()])->all();
         // The running term is only the first visit's default; "Whole school year" is a choice too.
         $defaultTerm = (string) $terms->firstWhere('is_active', true)?->term_id;
         $term = $pick('term', array_map('strval', array_keys($termOptions)), array_key_exists('term', $query) ? '' : $defaultTerm);

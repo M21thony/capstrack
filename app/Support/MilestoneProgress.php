@@ -102,6 +102,8 @@ class MilestoneProgress
             ->values();
 
         $uploads = self::uploadsFor($teamIds, $deliverables);
+        $same = self::sameLines($deliverables, $uploads->flatten(1)->pluck('deliverable_id'));
+        $uploads->flatten(1)->each(fn ($upload) => $upload->deliverable_id = $same[$upload->deliverable_id] ?? $upload->deliverable_id);
         $reviews = self::reviewsFor($uploads);
         $defenses = self::defensesFor($teamIds, $deliverables);
         $checks = self::checksFor($teamIds, $deliverables);
@@ -907,9 +909,37 @@ class MilestoneProgress
             return collect();
         }
 
-        return DeliverableCheck::whereIn('deliverable_id', $deliverables->pluck('id')->all())
-            ->whereIn('team_id', $teamIds->all())
-            ->get()
-            ->keyBy(fn (DeliverableCheck $check) => $check->deliverable_id.'|'.$check->team_id);
+        $checks = DeliverableCheck::whereIn('team_id', $teamIds->all())->get();
+        $same = self::sameLines($deliverables, $checks->pluck('deliverable_id'));
+
+        // A check made on this list's own line is keyed last, so it wins.
+        return $checks->sortBy(fn (DeliverableCheck $check) => isset($same[$check->deliverable_id]) ? 0 : 1)
+            ->keyBy(fn (DeliverableCheck $check) => ($same[$check->deliverable_id] ?? $check->deliverable_id).'|'.$check->team_id);
+    }
+
+    /**
+     * Work a team did under another list - last year's, or another CaPSA/TSA's -
+     * is not done again: a line there stands for the line here of the same name.
+     *
+     * ponytail: matched by title, so a renamed line does not carry over; match
+     * on a shared key if lists start to drift apart in wording.
+     *
+     * @return array<int, int> their line id => this list's line id
+     */
+    private static function sameLines(Collection $deliverables, Collection $ids): array
+    {
+        $foreign = $ids->filter()->map(fn ($id) => (int) $id)->unique()->diff($deliverables->pluck('id'));
+
+        if ($foreign->isEmpty()) {
+            return [];
+        }
+
+        $key = fn (Deliverable $d) => mb_strtolower(trim((string) $d->title));
+        $here = $deliverables->keyBy($key);
+
+        return Deliverable::withTrashed()->whereIn('id', $foreign->all())->get()
+            ->filter(fn (Deliverable $d) => $here->has($key($d)))
+            ->mapWithKeys(fn (Deliverable $d) => [$d->id => $here[$key($d)]->id])
+            ->all();
     }
 }

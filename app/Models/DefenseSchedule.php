@@ -49,6 +49,9 @@ class DefenseSchedule extends Model
      */
     protected static function booted(): void
     {
+        // The semester it was set in, so a past semester's defenses can be told apart.
+        static::creating(fn (DefenseSchedule $schedule) => $schedule->term_id ??= Term::activeId());
+
         static::deleting(function (DefenseSchedule $schedule) {
             $schedule->grades()->delete();
             $schedule->panels()->delete();
