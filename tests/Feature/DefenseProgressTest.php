@@ -103,6 +103,16 @@ class DefenseProgressTest extends TestCase
         $this->assertSame(DefenseProgress::FAILED, $this->progress->stageStatus($team, 'Title Defense'));
     }
 
+    public function test_a_redefense_still_to_be_held_is_not_failed_by_the_window(): void
+    {
+        $team = $this->makeTeam();
+        $this->window('Title Defense', now()->subDay()->toDateString());
+        $this->attempt($team, 'Title Defense', DefenseOutcome::REDEFENSE, 1);
+        $this->attempt($team, 'Title Defense', null, 2);
+
+        $this->assertSame(DefenseProgress::IN_PROGRESS, $this->progress->stageStatus($team, 'Title Defense'));
+    }
+
     // The reason this is derived: extending the deadline has to take effect
     // on its own, with no stored flag to go back and clear.
     public function test_extending_the_deadline_un_fails_a_team(): void

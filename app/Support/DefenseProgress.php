@@ -61,6 +61,12 @@ class DefenseProgress
             return self::NOT_SCHEDULED;
         }
 
+        // A redefense still to be held is dated by hand, outside the window.
+        $latest = $attempts->sortByDesc('attempt')->first();
+        if ($latest->attempt > 1 && ! $latest->outcome) {
+            return self::IN_PROGRESS;
+        }
+
         // Still time on the clock, or the CAPSA has extended it.
         return $deadlinePassed ? self::FAILED : self::IN_PROGRESS;
     }
