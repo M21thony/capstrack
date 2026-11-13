@@ -182,6 +182,24 @@ class ExpertEvaluationTest extends TestCase
         $this->get($page)->assertOk()->assertDontSee('Replies late at night.');
     }
 
+    public function test_an_expert_replaced_after_the_defense_is_the_one_evaluated_for_it(): void
+    {
+        $this->template();
+        $this->template(stage: DefenseOutcome::TITLE_DEFENSE, roles: ['adviser']);
+        $first = $this->decide();
+        $old = $this->experts['adviser'];
+
+        Carbon::setTestNow(now()->addDay());
+        TeamExpertAssignment::where('expert_id', $old->expert_id)->firstOrFail()->delete();
+        $new = $this->engage('adviser');
+
+        $advisers = fn () => $this->due()->where('role', 'adviser')->map(fn ($r) => [$r->defense_id, $r->expert_id])->values()->all();
+        $this->assertSame([[$first->defense_id, $old->expert_id]], $advisers(), 'the adviser who was there, not the new one');
+
+        $second = $this->decide(stage: DefenseOutcome::TITLE_DEFENSE);
+        $this->assertSame([[$first->defense_id, $old->expert_id], [$second->defense_id, $new->expert_id]], $advisers());
+    }
+
     public function test_nothing_is_owed_until_a_defense_is_passed(): void
     {
         $this->template();

@@ -40,6 +40,25 @@ class TeamExpertAssignment extends Model
     protected $casts = ['meet_asked_at' => 'datetime'];
 
     /**
+     * An engaged expert who leaves is remembered, so the leader still
+     * evaluates them for a defense they were there for
+     * (ExpertEvaluations::engagedExperts).
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (self $assignment) {
+            if ($assignment->status === 'approved' && ($role = $assignment->engaged_role_name)) {
+                \Illuminate\Support\Facades\DB::table('team_expert_departures')->insert([
+                    'team_id' => $assignment->team_id,
+                    'expert_id' => $assignment->expert_id,
+                    'role' => strtolower(trim($role)),
+                    'left_at' => now(),
+                ]);
+            }
+        });
+    }
+
+    /**
      * The consultation the team has with this expert after they asked to
      * meet first: one still coming up (even if booked before the ask - the
      * team can hold only one per expert), or one held since. A cancelled one

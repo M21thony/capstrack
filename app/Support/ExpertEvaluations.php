@@ -126,7 +126,17 @@ class ExpertEvaluations
                 $newest = fn (Collection $set) => $set->sortByDesc(fn (EvaluationTemplate $t) => [$t->updated_at?->getTimestamp() ?? 0, $t->id])->first();
                 $current = $forStage->where('capsa_id', $newest($forStage)->capsa_id);
 
-                foreach ($experts->get($teamId, collect()) as $expert) {
+                $ofTeam = $experts->get($teamId, collect());
+
+                foreach ($ofTeam as $expert) {
+                    // Whoever was there for the defense is evaluated: not an
+                    // expert who had left by then, and not one who came after
+                    // it in place of an expert who was there.
+                    if ($expert->left ? $expert->left <= $decided
+                        : $expert->since > $decided && $ofTeam->contains(fn ($o) => $o->role === $expert->role && $o->left > $decided)) {
+                        continue;
+                    }
+
                     $covering = $current->filter(fn (EvaluationTemplate $t) => $t->covers($expert->role));
 
                     // Owed only if an evaluation for this role was there when
@@ -408,17 +418,36 @@ class ExpertEvaluations
      */
     private static function engagedExperts(Collection $teamIds): Collection
     {
-        return TeamExpertAssignment::whereIn('team_id', $teamIds)
+        $current = TeamExpertAssignment::whereIn('team_id', $teamIds)
             ->where('status', 'approved')
             ->with(['expert', 'expertRole.role'])
             ->get()
+            ->map(fn (TeamExpertAssignment $a) => (object) [
+                'team_id' => (int) $a->team_id,
+                'expert_id' => (int) $a->expert_id,
+                'name' => $a->expert?->name ?? 'Expert',
+                'role' => strtolower(trim((string) $a->engaged_role_name)),
+                // ponytail: when they applied, not when they were accepted -
+                // add an accepted_at column if that gap ever matters.
+                'since' => $a->created_at,
+                'left' => null,
+            ]);
+
+        // The ones who have left, each with when (TeamExpertAssignment::booted).
+        $gone = DB::table('team_expert_departures')->whereIn('team_id', $teamIds)->get();
+        $names = CapstoneExpert::whereIn('expert_id', $gone->pluck('expert_id'))->get()->keyBy('expert_id');
+
+        return $current
+            ->concat($gone->map(fn ($g) => (object) [
+                'team_id' => (int) $g->team_id,
+                'expert_id' => (int) $g->expert_id,
+                'name' => $names->get($g->expert_id)?->name ?? 'Expert',
+                'role' => $g->role,
+                'since' => null,
+                'left' => Carbon::parse($g->left_at),
+            ]))
             ->groupBy('team_id')
             ->map(fn ($rows) => $rows
-                ->map(fn (TeamExpertAssignment $a) => (object) [
-                    'expert_id' => (int) $a->expert_id,
-                    'name' => $a->expert?->name ?? 'Expert',
-                    'role' => strtolower(trim((string) $a->engaged_role_name)),
-                ])
                 ->filter(fn ($e) => array_key_exists($e->role, ExpertEvaluation::ROLES))
                 ->unique(fn ($e) => $e->expert_id.'|'.$e->role)
                 ->values());
