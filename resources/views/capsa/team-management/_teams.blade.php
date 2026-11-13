@@ -14,10 +14,10 @@
   $waitsBy = $todo->groupBy('teamId');
 
   // Said once, so the Status column and the sort cannot disagree.
-  $statusOf = fn ($r) => $r->failedStage ? 'Missed deadline'
+  $statusOf = fn ($r) => $r->failedStage ? 'Did not pass'
     : ($r->team->is_confirmed ? 'Verified' : ($r->awaitingVerification ? 'To verify' : ucfirst($r->team->team_status)));
-  $statusTone = ['Verified' => 'green', 'To verify' => 'amber', 'Missed deadline' => 'red'];
-  $statusRank = ['Missed deadline' => 0, 'To verify' => 1, 'Verified' => 3];
+  $statusTone = ['Verified' => 'green', 'To verify' => 'amber', 'Did not pass' => 'red'];
+  $statusRank = ['Did not pass' => 0, 'To verify' => 1, 'Verified' => 3];
 
   $quick = array_filter([
     'all' => ['All teams', $rows->count()],
@@ -101,7 +101,7 @@
           [$next, $when] = match (true) {
             $waits->isNotEmpty() => [$waits->first()->what.($waits->count() > 1 ? ' +'.($waits->count() - 1).' more' : ''), null],
             (bool) $nextDefense => [$nextDefense->defense_type, Carbon::parse($nextDefense->schedule_date)->format('M j, Y')],
-            $row->failedStage !== null => ['Missed the '.$row->failedStage.' window', null],
+            $row->failedStage !== null => ['Did not pass the '.$row->failedStage, null],
             (bool) $current => [$current->milestone->name, $current->due_on ? 'Due '.Carbon::parse($current->due_on)->format('M j, Y') : null],
             $milestones->isNotEmpty() => ['All milestones done', null],
             default => [$row->currentStage ?: 'Nothing scheduled', null],

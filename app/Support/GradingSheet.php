@@ -64,7 +64,7 @@ class GradingSheet
             'total' => (float) $rubric->total_points,
             'levelCount' => max(1, (int) collect($sections)->max(fn ($s) => count($s['levelTotals']))),
             'sections' => $sections,
-            'outcomes' => array_map(fn ($o) => DefenseOutcome::label($o, $defense->defense_type), DefenseOutcome::forStage($defense->defense_type)),
+            'outcomes' => array_map(fn ($o) => DefenseOutcome::label($o, $defense->defense_type), DefenseOutcome::forStage($defense->defense_type, (int) $defense->attempt)),
             'signatures' => $signatures,
             // Written on the sheet so the right defense is found when the scores are typed in.
             'reference' => 'Defense #'.$defense->defense_id,

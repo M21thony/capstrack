@@ -182,6 +182,22 @@ class DefenseOutcomeTest extends TestCase
         $this->assertNull($attempts->last()->outcome);
     }
 
+    /** After the pre-proposal a team gets one redefense: it passes or fails, and no third try is opened. */
+    public function test_a_redefense_after_the_pre_proposal_ends_in_passed_or_failed(): void
+    {
+        [$team, $first, $chair, $member] = $this->makeDefense('Title Defense');
+        $first->update(['outcome' => DefenseOutcome::REDEFENSE]);
+        $redefense = app(\App\Services\DefenseOutcomeRecorder::class)->openNextAttempt($first);
+        $this->grade($redefense, $chair);
+        $this->grade($redefense, $member);
+
+        $this->recordOutcome($chair, $redefense, DefenseOutcome::REDEFENSE)->assertStatus(422);
+        $this->recordOutcome($chair, $redefense, DefenseOutcome::FAILED)->assertStatus(200);
+
+        $this->assertSame(2, DefenseSchedule::where('team_id', $team->team_id)->count());
+        $this->assertSame(\App\Support\DefenseProgress::FAILED, (new \App\Support\DefenseProgress)->stageStatus($team, 'Title Defense'));
+    }
+
     public function test_passing_does_not_open_another_attempt(): void
     {
         [$team, $schedule, $chair, $member] = $this->makeDefense();

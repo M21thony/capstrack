@@ -263,7 +263,7 @@ class GradingController extends Controller
             'gradingFor' => $who['grader'] === (int) $expert->expert_id
                 ? collect($who['panel'])->whereIn('id', $who['joined'])->values()->all()
                 : [],
-            'outcomeOptions' => DefenseOutcome::forStage($defense->defense_type),
+            'outcomeOptions' => DefenseOutcome::forStage($defense->defense_type, (int) $defense->attempt),
             'gradesIn' => $defense->gradesInCount(),
             'panelSize' => $defense->panelSize(),
             // Who the decision is still waiting on, by name, for the chair.
@@ -537,7 +537,7 @@ class GradingController extends Controller
 
         // The options depend on the stage - only a pre-proposal can be sent
         // back for a whole new title.
-        if (! DefenseOutcome::allowedForStage($defense->defense_type, $validated['outcome'])) {
+        if (! DefenseOutcome::allowedForStage($defense->defense_type, $validated['outcome'], (int) $defense->attempt)) {
             return response()->json([
                 'success' => false,
                 'message' => 'That is not a possible outcome for a '.$defense->defense_type.'.',

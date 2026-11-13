@@ -63,6 +63,9 @@ class DefenseProgress
 
         // A redefense still to be held is dated by hand, outside the window.
         $latest = $attempts->sortByDesc('attempt')->first();
+        if ($latest->outcome === DefenseOutcome::FAILED) {
+            return self::FAILED;
+        }
         if ($latest->attempt > 1 && ! $latest->outcome) {
             return self::IN_PROGRESS;
         }
@@ -129,7 +132,7 @@ class DefenseProgress
         return match ($status) {
             self::PASSED => 'Passed',
             self::IN_PROGRESS => 'In progress',
-            self::FAILED => 'Missed the deadline',
+            self::FAILED => 'Did not pass',
             self::NOT_SCHEDULED => 'Not scheduled',
             default => 'Unknown',
         };

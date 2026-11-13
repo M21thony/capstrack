@@ -29,6 +29,9 @@ class DefenseOutcome
 
     public const REDEFENSE_NEW_TITLE = 'redefense_new_title';
 
+    /** The redefense was not passed either: no further try at this stage. */
+    public const FAILED = 'failed';
+
     /**
      * Not a panel's decision: set when the CaPA says "Not ready", before or on
      * the defense day. (Older rows were also set on the day by an automatic
@@ -48,8 +51,13 @@ class DefenseOutcome
      *
      * @return array<int, string>
      */
-    public static function forStage(?string $defenseType): array
+    public static function forStage(?string $defenseType, int $attempt = 1): array
     {
+        // One redefense only after the pre-proposal: the second try passes or fails.
+        if ($defenseType !== self::PRE_PROPOSAL && $attempt > 1) {
+            return [self::PASSED, self::FAILED];
+        }
+
         // Only the pre-proposal stage can send a team back to the drawing
         // board for a new title, or pass one subject to revisions. Later
         // stages either pass or come back.
@@ -65,9 +73,9 @@ class DefenseOutcome
         return [self::PASSED, self::REDEFENSE];
     }
 
-    public static function allowedForStage(?string $defenseType, ?string $outcome): bool
+    public static function allowedForStage(?string $defenseType, ?string $outcome, int $attempt = 1): bool
     {
-        return $outcome !== null && in_array($outcome, self::forStage($defenseType), true);
+        return $outcome !== null && in_array($outcome, self::forStage($defenseType, $attempt), true);
     }
 
     /** @return array<int, string> */
@@ -86,6 +94,7 @@ class DefenseOutcome
             self::REDEFENSE => $defenseType === self::PRE_PROPOSAL ? 'Redefense with major revision' : 'Redefense',
             self::REDEFENSE_NEW_TITLE => 'Redefense with a new title',
             self::CANCELLED => 'Cancelled',
+            self::FAILED => 'Failed',
             default => 'Not decided yet',
         };
     }
@@ -98,6 +107,7 @@ class DefenseOutcome
             self::REDEFENSE => 'The team defends this stage again with the same title.',
             self::REDEFENSE_NEW_TITLE => 'The team starts over with a new title, and submits fresh pre-proposals.',
             self::CANCELLED => 'The defense was cancelled. The team waits for a new date.',
+            self::FAILED => 'The team did not pass this stage.',
             default => '',
         };
     }
@@ -117,7 +127,7 @@ class DefenseOutcome
         return match ($outcome) {
             self::PASSED, self::PASSED_WITH_REVISION => 'pass',
             self::REDEFENSE => 'major',
-            self::REDEFENSE_NEW_TITLE, self::CANCELLED => 'fail',
+            self::REDEFENSE_NEW_TITLE, self::CANCELLED, self::FAILED => 'fail',
             default => 'none',
         };
     }
