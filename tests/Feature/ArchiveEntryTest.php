@@ -65,13 +65,13 @@ class ArchiveEntryTest extends TestCase
         ]);
     }
 
-    public function test_it_is_its_own_milestone_at_the_end(): void
+    public function test_it_is_its_own_milestone_just_before_the_bluebook_clearance(): void
     {
         $milestone = $this->entry->milestone;
 
         $this->assertSame('Archive Entry', $milestone->name);
         $this->assertSame(1, $milestone->deliverables()->count());
-        $this->assertSame($milestone->id, $this->checklist->milestones()->reorder('position', 'desc')->value('id'));
+        $this->assertSame($milestone->id, $this->checklist->milestones()->reorder('position', 'desc')->pluck('id')[1]);
     }
 
     public function test_an_older_checklist_gets_it_once(): void

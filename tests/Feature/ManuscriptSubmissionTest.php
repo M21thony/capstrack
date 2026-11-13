@@ -148,7 +148,7 @@ class ManuscriptSubmissionTest extends TestCase
 
         $this->actingAs($leader, 'web')->get(route('student.archive'))
             ->assertOk()
-            ->assertDontSee('Submit to Archive')
+            ->assertDontSee('id="open-manuscript"', false)
             ->assertDontSee('id="manuscript-modal"', false);
     }
 
