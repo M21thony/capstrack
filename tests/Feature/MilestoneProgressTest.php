@@ -321,6 +321,24 @@ class MilestoneProgressTest extends TestCase
         $this->assertNull($state->note);
     }
 
+    public function test_a_team_back_at_the_start_of_capstone_1_does_its_milestones_again(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $form = $this->addDeliverable($checklist, ['title' => 'Signed Title Defense Hearing Notice']);
+        $this->upload($this->student, $form, now()->subDays(2)->toDateTimeString());
+        $this->check($form, DeliverableCheck::COMPLETE, now()->subDay()->toDateTimeString());
+        $this->assertContains($this->progressOf($checklist, $this->team, $form)->state, MilestoneProgress::COMPLETE_STATES);
+
+        $this->team->update(['restarted_at' => now()]);
+
+        $this->assertNotContains($this->progressOf($checklist, $this->team, $form)->state, MilestoneProgress::COMPLETE_STATES);
+        $this->assertSame(1, DB::table('capstone_documents')->count(), 'The old file is kept.');
+
+        $this->upload($this->student, $form, now()->addMinute()->toDateTimeString());
+        $this->check($form, DeliverableCheck::COMPLETE, now()->addMinutes(2)->toDateTimeString());
+        $this->assertContains($this->progressOf($checklist, $this->team, $form)->state, MilestoneProgress::COMPLETE_STATES);
+    }
+
     public function test_archived_deliverables_and_milestones_are_not_counted(): void
     {
         $checklist = $this->departmentChecklist($this->capsa);

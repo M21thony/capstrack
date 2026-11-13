@@ -101,13 +101,22 @@ class MilestoneProgress
                 ->each(fn (Deliverable $deliverable) => $deliverable->setRelation('milestone', $milestone)))
             ->values();
 
-        $uploads = self::uploadsFor($teamIds, $deliverables);
+        // A team sent back to the start of Capstone 1 does its milestones again.
+        // What it did before stays stored, with its dates, and is not counted.
+        // ponytail: only this tracker skips the old work; pages that list a
+        // team's files still show them all.
+        $restarts = DB::table('team')->whereIn('team_id', $teamIds->all())->whereNotNull('restarted_at')->pluck('restarted_at', 'team_id');
+        $counts = fn ($teamId, $at) => ! isset($restarts[$teamId]) || Carbon::parse($at)->gte($restarts[$teamId]);
+
+        $uploads = self::uploadsFor($teamIds, $deliverables)
+            ->map(fn (Collection $rows, $teamId) => $rows->filter(fn ($upload) => $counts($teamId, $upload->created_at))->values());
         $same = self::sameLines($deliverables, $uploads->flatten(1)->pluck('deliverable_id'));
         $uploads->flatten(1)->each(fn ($upload) => $upload->deliverable_id = $same[$upload->deliverable_id] ?? $upload->deliverable_id);
         $reviews = self::reviewsFor($uploads);
         $defenses = self::defensesFor($teamIds, $deliverables);
-        $checks = self::checksFor($teamIds, $deliverables);
-        $titles = self::titlesFor($teamIds, $deliverables);
+        $checks = self::checksFor($teamIds, $deliverables)
+            ->filter(fn (DeliverableCheck $check) => $counts($check->team_id, $check->checked_at ?? $check->created_at));
+        $titles = self::titlesFor($teamIds, $deliverables, $counts);
         $archives = self::archivesFor($teamIds, $deliverables);
         $owed = ExpertEvaluations::owedForTeams($teamIds);
 
@@ -827,7 +836,7 @@ class MilestoneProgress
      *
      * @return Collection<int, object{submitted_at: mixed, recommended_at: mixed, in_review: bool}> keyed by team id
      */
-    private static function titlesFor(Collection $teamIds, Collection $deliverables): Collection
+    private static function titlesFor(Collection $teamIds, Collection $deliverables, \Closure $counts): Collection
     {
         if (! $deliverables->contains(fn (Deliverable $d) => $d->closesOnTitleRecommendation())) {
             return collect();
@@ -836,6 +845,7 @@ class MilestoneProgress
         return CapstonePreProposal::whereIn('team_id', $teamIds->all())
             ->whereNotNull('submitted_at')
             ->get(['team_id', 'approved_status', 'rejection_reason', 'submitted_at', 'retired_at', 'updated_at'])
+            ->filter(fn (CapstonePreProposal $p) => $counts($p->team_id, $p->submitted_at))
             ->groupBy('team_id')
             ->map(fn (Collection $proposals) => (object) [
                 'submitted_at' => $proposals->min('submitted_at'),

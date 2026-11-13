@@ -527,9 +527,33 @@ class Team extends Model
         'panel_status',
         'panel_finalized_at',
         'panel_finalized_by',
+        'restarted_at',
+        'returnee_stage',
     ];
 
+    /**
+     * The stages a team that did not pass $failed can retake on their own, as
+     * a returnee: Pre Oral and Final Oral, up to the one it failed. Anything
+     * earlier - Title Defense included - means starting Capstone 1 again.
+     *
+     * @return list<string>
+     */
+    public function sendBackStages(string $failed): array
+    {
+        $stages = $this->defenseStages();
+        $upTo = array_slice($stages, 0, array_search($failed, $stages, true) + 1);
+
+        return array_values(array_diff($upTo, array_slice(DefenseProgress::STAGES, 0, 2)));
+    }
+
+    /** "Returnee (POD)" or "Returnee (FOD)" for a team retaking only that stage. */
+    public function returneeLabel(): ?string
+    {
+        return $this->returnee_stage ? 'Returnee ('.preg_replace('/[^A-Z]/', '', $this->returnee_stage).')' : null;
+    }
+
     protected $casts = [
+        'restarted_at' => 'datetime',
         'is_confirmed' => 'boolean',
         'member_count' => 'integer',
         'panel_finalized_at' => 'datetime',

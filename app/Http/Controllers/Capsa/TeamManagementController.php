@@ -293,15 +293,31 @@ class TeamManagementController extends Controller
         $stages = $team->defenseStages();
 
         $data = $request->validate([
-            'stage' => ['required', \Illuminate\Validation\Rule::in(array_slice($stages, 0, array_search($failed, $stages, true) + 1))],
+            'stage' => ['required', \Illuminate\Validation\Rule::in(['start', ...$team->sendBackStages($failed)])],
         ]);
+        $restart = $data['stage'] === 'start';
 
-        DefenseSchedule::where('team_id', $team->team_id)
-            ->whereIn('defense_type', array_slice($stages, array_search($data['stage'], $stages, true)))
-            ->update(['voided' => \Illuminate\Support\Facades\DB::raw('defense_id')]);
+        $old = DefenseSchedule::where('team_id', $team->team_id)
+            ->when(! $restart, fn ($q) => $q->whereIn('defense_type', array_slice($stages, array_search($data['stage'], $stages, true))))
+            ->orderBy('attempt')
+            ->get();
 
-        if ($request->boolean('new_title')) {
+        DefenseSchedule::whereKey($old->modelKeys())->update(['voided' => \Illuminate\Support\Facades\DB::raw('defense_id')]);
+
+        if ($restart) {
+            // The start of Capstone 1: a new title, and the milestones done again.
             $recorder->reopenPreProposals($team);
+            $team->update(['restarted_at' => now(), 'returnee_stage' => null]);
+        } else {
+            // A returnee retakes the stage with the panel it had. Not once the
+            // stage's window has closed: an undated first try past the deadline
+            // reads Failed, so there the stage is left unscheduled instead.
+            $progress = new \App\Support\DefenseProgress;
+            $old->groupBy('defense_type')->reject(fn ($attempts, $stage) => $progress->deadlineHasPassed($stage))
+                ->each(fn ($attempts) => $recorder->openNextAttempt($attempts->last()));
+            $team->update(['returnee_stage' => $data['stage']]);
+            \App\Models\Student::whereIn('student_id', \App\Models\StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id'))
+                ->update(['is_returnee' => true]);
         }
 
         return redirect()->route('capsa.team_management.show', $team->team_id);

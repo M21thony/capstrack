@@ -82,7 +82,8 @@ class DefenseOutcomeRecorder
             'attempt' => $next,
         ]);
 
-        foreach ($defense->panels()->get() as $panel) {
+        // Also when $defense no longer counts: a returnee keeps the panel of the defense it retakes.
+        foreach ($defense->panels()->withoutGlobalScopes()->get() as $panel) {
             DefensePanel::create([
                 'defense_id' => $redefense->defense_id,
                 'expert_id' => $panel->expert_id,

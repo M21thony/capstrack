@@ -125,6 +125,7 @@
               <a class="tn" href="{{ $href }}">{{ $team->team_name }}</a>
               <span class="tt" title="{{ $team->project_title ?: $untitled }}">@if ($team->project_title){{ $team->project_title }}@else<i>{{ $untitled }}</i>@endif</span>
               @if ($row->myRole && ($twoHats || ! $capsaPortal))<small><b class="hat">{{ ucfirst($row->myRole) }}</b></small>@endif
+              @if ($team->returneeLabel())<small><b class="hat">{{ $team->returneeLabel() }}</b></small>@endif
             </div>
           </div></td>
           <td class="c-sec" data-label="Section">{{ $row->section }}</td>

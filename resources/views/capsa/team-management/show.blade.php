@@ -240,6 +240,9 @@
         @if ($asCapsa && $titled && $row->proposals->isNotEmpty())
           <span>·</span> <a href="{{ route('capsa.team_management.pre_proposals', $team->team_id) }}">See all {{ $row->proposals->count() }} submitted titles</a>
         @endif
+        @if ($team->returneeLabel())
+          <span>·</span> <b>{{ $team->returneeLabel() }}</b>
+        @endif
       </div>
       <dl class="tp-facts">
         <div><dt>Section</dt><dd>{{ $row->section }}</dd></div>
@@ -249,15 +252,17 @@
     </div>
     <div class="tp-acts">
       @if ($asCapsa && $row->failedStage)
-        <form method="POST" action="{{ route('capsa.team_management.send_back', $team->team_id) }}" class="tp-acts" style="align-items:center">
+        <form method="POST" action="{{ route('capsa.team_management.send_back', $team->team_id) }}" class="tp-acts" style="align-items:center"
+              data-confirm-title="Send {{ $team->team_name }} back?"
+              data-confirm="Its defenses from the chosen stage on stop counting. Going back to the start of Capstone 1 also clears its title and its milestone work."
+              data-confirm-ok="Send back" data-confirm-tone="warn">
           @csrf @method('PATCH')
           <select class="sel" name="stage" aria-label="Send back to">
-            @foreach (array_keys($row->stages) as $stage)
+            <option value="start">Back to the start of Capstone 1</option>
+            @foreach ($team->sendBackStages($row->failedStage) as $stage)
               <option value="{{ $stage }}" @selected($stage === $row->failedStage)>Send back to {{ $stage }}</option>
-              @break($stage === $row->failedStage)
             @endforeach
           </select>
-          <label><input type="checkbox" name="new_title" value="1"> New title required</label>
           <button type="submit" class="btn btn-p">Send back</button>
         </form>
       @endif
@@ -538,6 +543,7 @@
     </div>
   </section>
 </div>
+@include('partials.confirm-dialog')
 @endsection
 
 @push('scripts')
