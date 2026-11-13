@@ -93,6 +93,20 @@ class SimilarityVerdictParsingTest extends TestCase
         $this->assertSame('Narrow the scope.', $verdict['suggestion']);
     }
 
+    /** The real reply that left SPHERE "Not scored" - the same on every retry. */
+    public function test_a_stray_closing_bracket_does_not_lose_the_verdict(): void
+    {
+        $verdict = $this->read(
+            '{"matches": false, "score": 25, "reason": "Both manage facilities.", '
+            .'"similarities": "Centralized platform", '
+            .'"differences": "target users vary (PPFMS vs. event management)"], '
+            .'"suggestion": "Define your users."}'
+        );
+
+        $this->assertSame(25, $verdict['score'] ?? null);
+        $this->assertSame('Define your users.', $verdict['suggestion']);
+    }
+
     public function test_a_trailing_comma_is_tolerated(): void
     {
         $verdict = $this->read(

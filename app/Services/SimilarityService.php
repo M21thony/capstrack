@@ -1045,6 +1045,10 @@ PROMPT;
         // matches a newline, so the pattern does not need one spelled out.
         $json = preg_replace('/"\s+"([a-z_]+)"\s*:/i', '", "$1":', $json);
 
+        // A stray ] or } closing a plain text field: "...text"], "suggestion":
+        // Only reached when the answer did not parse, so a real array is safe.
+        $json = preg_replace('/"\s*[\]\}]\s*,\s*"([a-z_]+)"\s*:/i', '", "$1":', $json);
+
         // A trailing comma before the closing brace.
         return preg_replace('/,\s*\}/', '}', $json);
     }
