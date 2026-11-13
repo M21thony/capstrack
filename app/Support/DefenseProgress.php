@@ -132,7 +132,7 @@ class DefenseProgress
         return match ($status) {
             self::PASSED => 'Passed',
             self::IN_PROGRESS => 'In progress',
-            self::FAILED => 'Did not pass',
+            self::FAILED => 'Failed',
             self::NOT_SCHEDULED => 'Not scheduled',
             default => 'Unknown',
         };
