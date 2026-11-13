@@ -15,6 +15,7 @@ class DefenseWindow extends Model
 
     protected $fillable = [
         'defense_type',
+        'program',
         'start_date',
         'end_date',
         'duration_minutes',
@@ -30,6 +31,18 @@ class DefenseWindow extends Model
         'duration_minutes' => 'integer',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * Each stage's window for one course, keyed by stage. A course with no
+     * window of its own gets the one set before windows were per course.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<string, self>
+     */
+    public static function forProgram(?string $program)
+    {
+        return static::where('program', $program)->orWhereNull('program')->get()
+            ->sortBy(fn (self $w) => $w->program !== null)->keyBy('defense_type');
+    }
 
     public function updatedBy(): BelongsTo
     {

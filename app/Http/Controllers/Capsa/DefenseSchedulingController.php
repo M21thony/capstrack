@@ -70,10 +70,10 @@ class DefenseSchedulingController extends Controller
                 'names' => DefenseBoard::names($rows, $other),
                 'sections' => $capsa->sections ?? [],
                 'other' => $other,
-                'windows' => $this->board->windows(),
+                'windows' => $this->board->windows($capsa->windowProgram()),
                 'has_rubric' => DefenseBoard::hasRubric($stage, $capsa->handledPrograms()),
                 'rubric_missing_programs' => DefenseBoard::programsWithoutRubric($stage, $capsa->handledPrograms()),
-                'slots' => DefenseBoard::slots(DefenseBoard::minutesFor($stage)),
+                'slots' => DefenseBoard::slots(DefenseBoard::minutesFor($stage, $capsa->windowProgram())),
                 'venues' => DefenseBoard::VENUES,
                 'away' => $this->board->awayDates(),
                 'away_reasons' => ExpertAwayDate::REASONS,
@@ -91,7 +91,7 @@ class DefenseSchedulingController extends Controller
     {
         $rows = app(DefenseScheduleExport::class)->rows($capsa, $stage);
         $scope = $capsa->sections ? implode(', ', $capsa->sections) : 'All sections';
-        $book = (new DefenseScheduleWorkbook)->build($rows, $stage, $scope, $this->board->windows()[$stage] ?? null);
+        $book = (new DefenseScheduleWorkbook)->build($rows, $stage, $scope, $this->board->windows($capsa->windowProgram())[$stage] ?? null);
 
         $filename = str_replace(' ', '_', $stage).'_'.now()->format('Y-m-d').'.xlsx';
 

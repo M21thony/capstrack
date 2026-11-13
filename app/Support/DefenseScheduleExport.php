@@ -56,14 +56,14 @@ class DefenseScheduleExport
 
         $experts = $this->expertsFor($teams->pluck('team_id'));
         $paidStudentIds = in_array($stage, DefenseBoard::PAID_STAGES, true) ? $this->paidStudentIds($teams, $stage) : null;
-        $deadline = $this->progress->deadlineFor($stage);
         $cancelled = DefenseCancellation::whereIn('team_id', $teams->pluck('team_id'))
             ->where('defense_type', $stage)
             ->orderByDesc('was_scheduled_at')
             ->get()
             ->groupBy('defense_id');
 
-        return $teams->flatMap(function (Team $team) use ($stage, $sections, $experts, $paidStudentIds, $deadline, $cancelled) {
+        return $teams->flatMap(function (Team $team) use ($stage, $sections, $experts, $paidStudentIds, $cancelled) {
+            $deadline = $this->progress->deadlineFor($stage, $team);
             $attempts = $team->defenseSchedules->where('defense_type', $stage)->sortBy('attempt');
             $schedule = $attempts->last();
             $lastCancelled = $schedule && ! $schedule->schedule_date ? $cancelled->get($schedule->defense_id)?->first() : null;

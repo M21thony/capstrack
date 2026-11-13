@@ -92,9 +92,9 @@ class DefenseBoard
     }
 
     /** How long this stage's defenses run, from its window. */
-    public static function minutesFor(string $stage): int
+    public static function minutesFor(string $stage, ?string $program = null): int
     {
-        return DefenseWindow::where('defense_type', $stage)->value('duration_minutes') ?? self::DEFAULT_MINUTES;
+        return DefenseWindow::forProgram($program)->get($stage)?->duration_minutes ?? self::DEFAULT_MINUTES;
     }
 
     // Team tags are picked from a fixed list, but an expert's expertise is
@@ -484,9 +484,9 @@ class DefenseBoard
     }
 
     /** @return array<string, array{start: ?string, end: ?string}> */
-    public function windows(): array
+    public function windows(?string $program = null): array
     {
-        $windows = DefenseWindow::whereIn('defense_type', self::STAGES)->with('updatedBy')->get()->keyBy('defense_type');
+        $windows = DefenseWindow::forProgram($program)->load('updatedBy');
 
         return collect(self::STAGES)->mapWithKeys(function ($stage) use ($windows) {
             $minutes = $windows->get($stage)?->duration_minutes ?? self::DEFAULT_MINUTES;

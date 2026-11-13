@@ -478,6 +478,13 @@ class CapstoneExpert extends Authenticatable
      *
      * @return array<int, string>
      */
+    /** The course whose defense window this CaPSA/TSA sets and schedules within. */
+    public function windowProgram(): ?string
+    {
+        // ponytail: the first course only; a CaPSA/TSA covering two courses needs a course choice on the window.
+        return $this->handledPrograms()[0] ?? null;
+    }
+
     public function handledPrograms(): array
     {
         return collect($this->sections ?? [])

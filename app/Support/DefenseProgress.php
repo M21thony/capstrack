@@ -28,8 +28,11 @@ class DefenseProgress
     public const FAILED = 'failed';
     public const NOT_SCHEDULED = 'not_scheduled';
 
-    /** @var Collection<string, DefenseWindow>|null */
+    /** @var Collection<string, Collection<int, DefenseWindow>>|null every window, by stage */
     private ?Collection $windows = null;
+
+    /** @var array<int, string> each team's course, looked up once */
+    private array $programs = [];
 
     /** The stages a capstone runs through, in order. */
     public const STAGES = [
@@ -52,7 +55,7 @@ class DefenseProgress
             return self::PASSED;
         }
 
-        $deadlinePassed = $this->deadlineHasPassed($stage);
+        $deadlinePassed = $this->deadlineHasPassed($stage, $team);
 
         if ($attempts->isEmpty()) {
             // Never scheduled. Kept separate from "failed" on purpose: a team
@@ -111,11 +114,18 @@ class DefenseProgress
         return $this->stageStatus($team, $stage, $schedules) === self::PASSED;
     }
 
-    public function deadlineFor(string $stage): ?Carbon
+    /** The last day of the stage's window for the team's course. */
+    public function deadlineFor(string $stage, ?Team $team = null): ?Carbon
     {
-        $this->windows ??= DefenseWindow::all()->keyBy('defense_type');
+        $this->windows ??= DefenseWindow::all()->groupBy('defense_type');
+        $windows = $this->windows->get($stage) ?? collect();
 
-        $end = $this->windows->get($stage)?->end_date;
+        // The team's course is only looked up when some course has its own window for the stage.
+        $program = $team && $windows->contains(fn ($w) => $w->program !== null)
+            ? ($this->programs[$team->team_id] ??= $team->program() ?? '')
+            : null;
+
+        $end = ($windows->first(fn ($w) => $w->program === $program) ?? $windows->first(fn ($w) => $w->program === null))?->end_date;
 
         return $end ? Carbon::parse($end)->endOfDay() : null;
     }
@@ -124,9 +134,9 @@ class DefenseProgress
      * A stage with no window set has no deadline, so nobody can miss it -
      * an unset date is not the same as a date in the past.
      */
-    public function deadlineHasPassed(string $stage): bool
+    public function deadlineHasPassed(string $stage, ?Team $team = null): bool
     {
-        $deadline = $this->deadlineFor($stage);
+        $deadline = $this->deadlineFor($stage, $team);
 
         return $deadline !== null && $deadline->isPast();
     }

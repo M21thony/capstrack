@@ -489,7 +489,7 @@ class TeamManagementController extends Controller
 
         return [
             'defenses' => $defenses,
-            'windows' => DefenseWindow::all()->keyBy('defense_type'),
+            'windows' => DefenseWindow::forProgram(auth('expert')->user()?->windowProgram()),
             'stages' => $defenses->pluck('type')->unique()->values(),
         ];
     }

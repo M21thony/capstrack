@@ -319,7 +319,7 @@ class DefenseAnalytics
             // A past year is closed: whatever was not passed by then was not
             // passed. Only the running year still has a clock, and that is the
             // stage's defense window (see DefenseProgress).
-            $closed = $year !== $current || $decisive->outcome === DefenseOutcome::FAILED || $this->progress->deadlineHasPassed($stage);
+            $closed = $year !== $current || $decisive->outcome === DefenseOutcome::FAILED || $this->progress->deadlineHasPassed($stage, $team);
 
             $status = match (true) {
                 $closed => 'missed',

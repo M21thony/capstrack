@@ -171,7 +171,7 @@ function render() {
   }).join('');
 
   const w = win();
-  $('windowChip').innerHTML = ICON.cal + `<span${w.set_by ? ` title="${esc(`Every section shares this window. Last set by ${w.set_by}${w.set_on ? ' on ' + fmtDay(w.set_on) : ''}.`)}"` : ''}>${SHORT[S.stage]} window: <b>${w.start ? `${fmtDay(w.start)} – ${fmtDay(w.end)}` : 'not set'}</b>${w.start ? ` · ${w.minutes >= 60 && w.minutes % 30 === 0 ? (w.minutes / 60) + ' hr' : w.minutes + ' min'} each` : ''}${w.set_by ? ' · All sections' : ''}</span>`
+  $('windowChip').innerHTML = ICON.cal + `<span${w.set_by ? ` title="${esc(`Every section of your course shares this window. Last set by ${w.set_by}${w.set_on ? ' on ' + fmtDay(w.set_on) : ''}.`)}"` : ''}>${SHORT[S.stage]} window: <b>${w.start ? `${fmtDay(w.start)} – ${fmtDay(w.end)}` : 'not set'}</b>${w.start ? ` · ${w.minutes >= 60 && w.minutes % 30 === 0 ? (w.minutes / 60) + ' hr' : w.minutes + ' min'} each` : ''}${w.set_by ? ' · All sections' : ''}</span>`
     + `<button type="button" data-act="window">${w.start ? 'Change' : 'Set dates'}</button>`;
 
   $('genBtn').disabled = !w.start;
@@ -633,16 +633,16 @@ function drawCapa() {
   $('cpSum').textContent = CP.answer ? '' : 'Did the CaPA give the go?';
 }
 
-/* Defense window: shared by every section. */
+/* Defense window: shared by every section of the CaPSA/TSA's course. */
 function openWindow() {
   const w = win();
   const m = w.minutes || 120;
   const preset = [60, 90, 120].includes(m);
-  openDialog(head(`${SHORT[S.stage]} window`, `Every section shares this window, as agreed at the CaPSA/TSA meeting.${w.set_by ? ` Last set by ${esc(w.set_by)}${w.set_on ? ' on ' + fmtDay(w.set_on) : ''}.` : ''}`)
+  openDialog(head(`${SHORT[S.stage]} window`, `Every section of your course shares this window, as agreed at the CaPSA/TSA meeting.${w.set_by ? ` Last set by ${esc(w.set_by)}${w.set_on ? ' on ' + fmtDay(w.set_on) : ''}.` : ''}`)
     + `<div class="db"><div class="two"><div><label class="lbl" for="wS">First day</label><input class="field" type="date" id="wS" value="${w.start || ''}" min="${TODAY}"></div><div><label class="lbl" for="wE">Last day</label><input class="field" type="date" id="wE" value="${w.end || ''}" min="${TODAY}"></div></div>`
     + `<div><span class="lbl">Length of each defense</span><div class="seg" id="wLen">${[[60, '1 hour'], [90, '1½ hours'], [120, '2 hours']].map(o => `<button type="button" data-act="len" data-min="${o[0]}" aria-pressed="${m === o[0]}">${o[1]}</button>`).join('')}<button type="button" data-act="len" data-min="custom" aria-pressed="${!preset}">Custom</button></div>`
     + `<div id="wCustom" style="margin-top:8px"${preset ? ' hidden' : ''}><label class="lbl" for="wM">Minutes per defense (30–240)</label><input class="field" type="number" id="wM" min="30" max="240" step="5" value="${m}" style="width:140px"></div></div>`
-    + '<p class="muted" style="margin:0;font-size:12.5px">Weekdays, 8 AM – 5 PM, with lunch from 12 to 1 kept free. Saving changes it for every section and tells the other CaPSA/TSAs. Nobody is scheduled until someone uses Generate schedule.</p></div>'
+    + '<p class="muted" style="margin:0;font-size:12.5px">Weekdays, 8 AM – 5 PM, with lunch from 12 to 1 kept free. Saving changes it for every section of your course and tells its other CaPSA/TSAs. Nobody is scheduled until someone uses Generate schedule.</p></div>'
     + '<div class="df"><button type="button" class="btn ghost" data-act="close">Cancel</button><button type="button" class="btn gold" data-act="window-save">Save window</button></div>');
 }
 
@@ -847,7 +847,7 @@ const ACT = {
       S.windows[S.stage] = { start: res.data.start_date, end: res.data.end_date, minutes: res.data.duration_minutes, slots: res.data.slots, set_by: res.data.set_by, set_on: res.data.set_on };
       closeDlg();
       render();
-      toast(`${SHORT[S.stage]} window saved for every section. The other CaPSA/TSAs are told.`);
+      toast(`${SHORT[S.stage]} window saved for your course. Its other CaPSA/TSAs are told.`);
     } catch (e) {
       toast(e.message, 'error');
       el.disabled = false;

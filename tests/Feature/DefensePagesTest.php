@@ -88,6 +88,20 @@ class DefensePagesTest extends TestCase
         $this->assertNull($schedule->fresh()->schedule_date, 'Nobody is scheduled until Generate schedule is saved.');
     }
 
+    public function test_each_course_has_its_own_window(): void
+    {
+        $url = route('api.admin.panel_assignment.windows.update', DefenseOutcome::TITLE_DEFENSE);
+        $this->actingAs($this->capsa, 'expert')->putJson($url, ['start_date' => '2027-03-15', 'end_date' => '2027-03-19'])->assertOk();
+        $this->actingAs($this->capsaFor(['BSCS-3A']), 'expert')->putJson($url, ['start_date' => '2027-04-05', 'end_date' => '2027-04-09'])->assertOk();
+
+        $this->assertSame('2027-03-19', DefenseWindow::forProgram('BSIT')->get(DefenseOutcome::TITLE_DEFENSE)->end_date->toDateString());
+        $this->assertSame('2027-04-09', DefenseWindow::forProgram('BSCS')->get(DefenseOutcome::TITLE_DEFENSE)->end_date->toDateString());
+
+        [$team] = $this->teamInSection('Mine');
+        $this->assertSame('BSIT', $team->program());
+        $this->assertSame('2027-03-19', app(\App\Support\DefenseProgress::class)->deadlineFor(DefenseOutcome::TITLE_DEFENSE, $team)->toDateString());
+    }
+
     public function test_another_sections_booking_cannot_be_overruled(): void
     {
         [$mine] = $this->teamInSection('Mine');

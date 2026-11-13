@@ -67,10 +67,10 @@ class AdminPanelAssignmentController extends Controller
             'names' => DefenseBoard::names($rows, $other),
             'sections' => $capsa->sections ?? [],
             'other' => $other,
-            'windows' => $this->board->windows(),
+            'windows' => $this->board->windows($capsa->windowProgram()),
             'has_rubric' => DefenseBoard::hasRubric($stage, $capsa->handledPrograms()),
             'rubric_missing_programs' => DefenseBoard::programsWithoutRubric($stage, $capsa->handledPrograms()),
-            'slots' => DefenseBoard::slots(DefenseBoard::minutesFor($stage)),
+            'slots' => DefenseBoard::slots(DefenseBoard::minutesFor($stage, $capsa->windowProgram())),
             'venues' => DefenseBoard::VENUES,
             'away' => $this->board->awayDates(),
             'progress' => $this->board->stageProgress($capsa),
@@ -474,7 +474,7 @@ class AdminPanelAssignmentController extends Controller
      */
     public function updateSchedule(Request $request, DefenseSchedule $defense): JsonResponse
     {
-        $minutes = DefenseBoard::minutesFor($defense->defense_type);
+        $minutes = DefenseBoard::minutesFor($defense->defense_type, $defense->team?->program());
 
         $validated = $request->validate([
             'schedule_date' => ['required', 'date'],
@@ -664,7 +664,7 @@ class AdminPanelAssignmentController extends Controller
     public function draftSchedule(Request $request): JsonResponse
     {
         $type = $request->validate(['defense_type' => ['required', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)]])['defense_type'];
-        $window = DefenseWindow::where('defense_type', $type)->first();
+        $window = DefenseWindow::forProgram($this->capsa()->windowProgram())->get($type);
 
         if (! $window) {
             return response()->json(['success' => false, 'message' => 'Set the '.$type.' window first - the dates this stage is defended within.'], 422);
@@ -739,7 +739,7 @@ class AdminPanelAssignmentController extends Controller
         ]);
 
         $type = $validated['defense_type'];
-        $window = DefenseWindow::where('defense_type', $type)->first();
+        $window = DefenseWindow::forProgram($this->capsa()->windowProgram())->get($type);
 
         if (! $window) {
             return response()->json(['success' => false, 'message' => 'Set the '.$type.' window first.'], 422);
@@ -846,14 +846,14 @@ class AdminPanelAssignmentController extends Controller
 
     public function indexWindows(): JsonResponse
     {
-        $data = collect($this->board->windows())->map(fn ($w, $type) => ['defense_type' => $type, 'start_date' => $w['start'], 'end_date' => $w['end'], 'duration_minutes' => $w['minutes']])->values();
+        $data = collect($this->board->windows($this->capsa()->windowProgram()))->map(fn ($w, $type) => ['defense_type' => $type, 'start_date' => $w['start'], 'end_date' => $w['end'], 'duration_minutes' => $w['minutes']])->values();
 
         return response()->json(['success' => true, 'data' => $data]);
     }
 
     /**
      * PUT /panel_assignment/windows/{defenseType} - the dates a stage is
-     * defended within, shared by every section. Saving only stores them;
+     * defended within, shared by every section of the course. Saving only stores them;
      * nobody is scheduled until Generate schedule is reviewed and saved.
      */
     public function updateWindow(Request $request, string $defenseType): JsonResponse
@@ -867,14 +867,18 @@ class AdminPanelAssignmentController extends Controller
         ]);
 
         $capsa = $this->capsa();
-        $before = DefenseWindow::where('defense_type', $defenseType)->first();
-        $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], array_filter($validated, fn ($v) => $v !== null) + ['updated_by' => $capsa->expert_id, 'updated_at' => now()]);
+        $program = $capsa->windowProgram();
+        // A course's first save starts from the shared window's length, not the default.
+        $before = DefenseWindow::forProgram($program)->get($defenseType);
+        $validated['duration_minutes'] ??= $before?->duration_minutes;
+        $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType, 'program' => $program], array_filter($validated, fn ($v) => $v !== null) + ['updated_by' => $capsa->expert_id, 'updated_at' => now()]);
 
-        // Every section shares the window, so the other CaPSA/TSAs hear when it moves.
+        // Every section of the course shares the window, so its other CaPSA/TSAs hear when it moves.
         if (! $before || ! $before->start_date->equalTo($window->start_date) || ! $before->end_date->equalTo($window->end_date)) {
             CapstoneExpert::whereHas('roles', fn ($q) => $q->where('role_name', CapstoneExpert::CAPSA_ROLE))->where('expert_id', '!=', $capsa->expert_id)->get()
+                ->filter(fn (CapstoneExpert $other) => $program === null || in_array($program, $other->handledPrograms(), true))
                 ->each(fn (CapstoneExpert $other) => Notifier::toExpert($other, 'defense_window', $defenseType.' window: '.$window->start_date->format('M j').' – '.$window->end_date->format('M j'),
-                    $capsa->name.' set the '.$defenseType.' window for every section.', route('capsa.defenses', ['defense_type' => $defenseType])));
+                    $capsa->name.' set the '.$defenseType.' window for every '.($program ? $program.' ' : '').'section.', route('capsa.defenses', ['defense_type' => $defenseType])));
         }
 
         return response()->json([
