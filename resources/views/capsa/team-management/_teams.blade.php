@@ -101,7 +101,7 @@
           [$next, $when] = match (true) {
             $waits->isNotEmpty() => [$waits->first()->what.($waits->count() > 1 ? ' +'.($waits->count() - 1).' more' : ''), null],
             (bool) $nextDefense => [$nextDefense->defense_type, Carbon::parse($nextDefense->schedule_date)->format('M j, Y')],
-            $row->failedStage !== null => ['Failed the '.$row->failedStage, null],
+            $row->failedStage !== null => ['Did not pass the '.$row->failedStage, null],
             (bool) $current => [$current->milestone->name, $current->due_on ? 'Due '.Carbon::parse($current->due_on)->format('M j, Y') : null],
             $milestones->isNotEmpty() => ['All milestones done', null],
             default => [$row->currentStage ?: 'Nothing scheduled', null],
