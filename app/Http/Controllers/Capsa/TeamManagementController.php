@@ -320,7 +320,9 @@ class TeamManagementController extends Controller
                 ->update(['is_returnee' => true]);
         }
 
-        return redirect()->route('capsa.team_management.show', $team->team_id);
+        return redirect()->route('capsa.team_management.show', $team->team_id)->with('success', $restart
+            ? $team->team_name.' is back at the start of Capstone 1.'
+            : $team->team_name.' will retake the '.$data['stage'].'.');
     }
 
     private function teamRow(Team $team, bool $asCapsa = true): object

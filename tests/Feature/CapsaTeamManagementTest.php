@@ -798,7 +798,7 @@ class CapsaTeamManagementTest extends TestCase
         // Failing a later stage never sends a team back to the Title Defense alone.
         $send('Title Defense')->assertSessionHasErrors('stage');
 
-        $send('Pre Oral Defense')->assertRedirect();
+        $send('Pre Oral Defense')->assertRedirect()->assertSessionHas('success', 'Sent Back will retake the Pre Oral Defense.');
 
         $progress = new \App\Support\DefenseProgress;
         $this->assertSame('in_progress', $progress->stageStatus($team, 'Pre Oral Defense'));

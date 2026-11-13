@@ -74,6 +74,17 @@
 </div>
 @include($portal === 'capsa' ? 'capsa.partials.skeleton-toggle' : 'instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
 <div id="tm-toast" class="toast"></div>
+@if (session('success'))
+<script nonce="{{ Vite::cspNonce() }}">
+  (function () {
+    var el = document.getElementById('tm-toast');
+    el.textContent = @json(session('success'));
+    el.style.borderLeftColor = 'var(--green)';
+    el.classList.add('show');
+    setTimeout(function () { el.classList.remove('show'); }, 4000);
+  })();
+</script>
+@endif
 @stack('scripts')
 @include('partials.escape-closes-modals')
 @include('partials.app-scrollbar')
