@@ -71,7 +71,11 @@ class DefenseProgress
         }
 
         // Still time on the clock, or the CAPSA has extended it.
-        return $deadlinePassed ? self::FAILED : self::IN_PROGRESS;
+        // ponytail: a returnee is never failed by a missed window, only by an outcome.
+        $returnee = $team->returnee_stage
+            && array_search($stage, self::STAGES, true) >= array_search($team->returnee_stage, self::STAGES, true);
+
+        return $deadlinePassed && ! $returnee ? self::FAILED : self::IN_PROGRESS;
     }
 
     /** @return array<string, string> stage => status */

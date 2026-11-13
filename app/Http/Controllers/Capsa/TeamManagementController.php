@@ -309,12 +309,8 @@ class TeamManagementController extends Controller
             $recorder->reopenPreProposals($team);
             $team->update(['restarted_at' => now(), 'returnee_stage' => null]);
         } else {
-            // A returnee retakes the stage with the panel it had. Not once the
-            // stage's window has closed: an undated first try past the deadline
-            // reads Failed, so there the stage is left unscheduled instead.
-            $progress = new \App\Support\DefenseProgress;
-            $old->groupBy('defense_type')->reject(fn ($attempts, $stage) => $progress->deadlineHasPassed($stage))
-                ->each(fn ($attempts) => $recorder->openNextAttempt($attempts->last()));
+            // A returnee retakes the stage with the panel it had.
+            $old->groupBy('defense_type')->each(fn ($attempts) => $recorder->openNextAttempt($attempts->last()));
             $team->update(['returnee_stage' => $data['stage']]);
             \App\Models\Student::whereIn('student_id', \App\Models\StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id'))
                 ->update(['is_returnee' => true]);

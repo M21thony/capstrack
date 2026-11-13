@@ -100,6 +100,20 @@ class GenerateDefenseScheduleTest extends TestCase
         $this->assertNull($schedule->fresh()->schedule_date, 'a draft saves nothing');
     }
 
+    public function test_the_regular_batch_is_placed_before_returnees(): void
+    {
+        $chair = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $returnee = $this->team('Returnee');
+        $returnee->update(['returnee_stage' => self::STAGE]);
+        $this->panel($returnee, $chair);
+        $this->panel($this->team('Regular'), $chair);
+
+        $draft = $this->draft()->assertOk()->json('data.draft');
+
+        $this->assertSame(['Regular', 'Returnee'], array_column($draft, 'team_name'));
+        $this->assertStringContainsString('Returnee (', collect($this->board()->json('data.teams'))->firstWhere('name', 'Returnee')['returnee_label']);
+    }
+
     /** Two teams in one draft never get the same slot, though neither is saved yet. */
     public function test_teams_in_one_draft_never_share_a_slot(): void
     {

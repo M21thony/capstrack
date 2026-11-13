@@ -103,7 +103,7 @@ function expertsHtml(t) {
 function teamCell(t) {
   const r = t.member_list.filter(m => m.returnee);
   return `<div class="team"><span class="tbadge">${esc(initials(t.name))}</span><span class="meta"><button type="button" data-act="drawer" data-id="${t.id}">${esc(t.name)}</button><span>${esc(t.section)} · ${t.members} ${t.members === 1 ? 'member' : 'members'}</span>`
-    + (r.length ? `<span class="ret" title="${esc('Returnee' + (r.length > 1 ? 's' : '') + ': ' + r.map(m => m.name).join('; '))}">↺ ${r.length > 1 ? r.length + ' returnees' : 'Returnee'}</span>` : '') + '</span></div>';
+    + (r.length ? `<span class="ret" title="${esc('Returnee' + (r.length > 1 ? 's' : '') + ': ' + r.map(m => m.name).join('; '))}">↺ ${esc(t.returnee_label || (r.length > 1 ? r.length + ' returnees' : 'Returnee'))}</span>` : '') + '</span></div>';
 }
 
 const titleCell = t => `<td><span class="clamp">${esc(t.title || '—')}</span></td>`;

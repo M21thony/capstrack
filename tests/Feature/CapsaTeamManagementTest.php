@@ -798,10 +798,12 @@ class CapsaTeamManagementTest extends TestCase
         // Failing a later stage never sends a team back to the Title Defense alone.
         $send('Title Defense')->assertSessionHasErrors('stage');
 
+        // The stage's window has closed: the returnee still keeps its panel.
+        \App\Models\DefenseWindow::create(['defense_type' => 'Pre Oral Defense', 'start_date' => '2020-01-01', 'end_date' => '2020-01-02']);
         $send('Pre Oral Defense')->assertRedirect()->assertSessionHas('success', 'Sent Back will retake the Pre Oral Defense.');
 
         $progress = new \App\Support\DefenseProgress;
-        $this->assertSame('in_progress', $progress->stageStatus($team, 'Pre Oral Defense'));
+        $this->assertSame('in_progress', $progress->stageStatus($team->fresh(), 'Pre Oral Defense'));
         $this->assertTrue($team->fresh()->isTeamLocked(), 'The Title Defense pass still counts.');
         $this->assertSame('Old Title', $team->fresh()->project_title);
         $this->assertSame(4, DB::table('defense_schedule')->count(), 'The earlier defenses are kept.');

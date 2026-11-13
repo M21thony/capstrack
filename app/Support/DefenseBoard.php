@@ -214,6 +214,7 @@ class DefenseBoard
                         'name' => trim($student->l_name.', '.$student->f_name),
                         'returnee' => (bool) $student->is_returnee,
                     ])->sortBy('name')->values()->all(),
+                'returnee_label' => $team->returneeLabel(),
                 'adviser' => $roles->get('adviser'),
                 'consultant' => $roles->get('consultant'),
                 'grammarian' => $roles->get('grammarian')['name'] ?? null,

@@ -833,7 +833,9 @@ class AdminPanelAssignmentController extends Controller
         // panel and the CaPSA/TSA enters it by hand.
         $leftOut = fn ($row) => $row['attempt'] > 1 || DefenseBoard::hardBlockers($row['blockers']) !== [];
         $readyIds = $open->reject($leftOut)->pluck('defense_id');
-        $ready = DefenseSchedule::whereIn('defense_id', $readyIds)->with(['panels.expert', 'team.members'])->orderBy('defense_id')->get();
+        $ready = DefenseSchedule::whereIn('defense_id', $readyIds)->with(['panels.expert', 'team.members'])->orderBy('defense_id')->get()
+            // The regular batch gets its slots first; returnees take what is left.
+            ->sortBy(fn (DefenseSchedule $s) => (bool) $s->team->returnee_stage)->values();
 
         $notReady = $open->filter($leftOut)
             ->map(fn ($row) => ['team_id' => $row['id'], 'team_name' => $row['name'], 'reason' => (DefenseBoard::hardBlockers($row['blockers'])[0]['text'] ?? 'Redefense, scheduled by hand').'.'])
