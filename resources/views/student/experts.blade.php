@@ -766,6 +766,10 @@
                           @endforeach
                         </tbody>
                       </table>
+                      <div class="xh-field">
+                        <label for="xh-ev-c-{{ $defenseId }}-{{ $key }}">Comment (optional)</label>
+                        <textarea id="xh-ev-c-{{ $defenseId }}-{{ $key }}" name="evaluations[{{ $key }}][comment]" rows="2" maxlength="500">{{ $isOld ? old('evaluations.'.$key.'.comment') : '' }}</textarea>
+                      </div>
                       @if($next)
                         <div class="xh-ex-next"><button type="button" class="xh-btn xh-gold xh-sm" data-next>Next: {{ $next->expert }} ›</button></div>
                       @endif
@@ -802,7 +806,8 @@
                     @endforeach
                   </ul>
                 </details>
-              @elseif($ev->comment)
+              @endif
+              @if($ev->comment)
                 <p>{{ $ev->comment }}</p>
               @endif
             </div>

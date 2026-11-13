@@ -542,6 +542,8 @@ dl.xh-rows{margin:0;display:flex;flex-direction:column}
 .xh-ex-miss{display:none;margin-top:2px;font-size:12px;font-weight:600;color:var(--xh-amber)}
 .xh-ev-q.is-missing th{box-shadow:inset 3px 0 0 var(--xh-amber)}
 .xh-ev-q.is-missing .xh-ex-miss{display:block}
+.xh-ex-body .xh-field{margin-top:12px}
+.xh-ex-body textarea{font:inherit;color:inherit}
 .xh-ex-next{display:flex;justify-content:flex-end;margin-top:12px}
 .xh-ex-next .xh-btn{min-height:44px}
 .xh-ev-phase > .xh-ev-foot{padding:14px 16px;border-top:1px solid var(--border);background:var(--bg3)}

@@ -155,6 +155,33 @@ class ExpertEvaluationTest extends TestCase
         }
     }
 
+    public function test_a_comment_reaches_the_expert_only_after_the_capsa_approves_it(): void
+    {
+        $template = $this->template();
+        $defense = $this->decide();
+        $expert = $this->experts['adviser'];
+        $this->answer($this->leader, $defense, $expert, 'adviser', $template, overrides: ['comment' => 'Replies late at night.'])
+            ->assertSessionHas('evaluation_saved');
+
+        $row = ExpertEvaluation::firstOrFail();
+        $seen = fn () => \App\Support\EvaluationResults::responses(collect([$row->fresh()]))->first();
+        $this->assertNull($seen()->comment, 'waiting: the expert does not see it');
+
+        $page = route('capsa.evaluations.expert', $expert->expert_id);
+        $this->actingAs($this->capsa, 'expert')->get($page)->assertOk()->assertSee('Replies late at night.')->assertSee('Approve comment');
+
+        $other = $this->capsaFor();
+        $this->actingAs($other, 'expert')->patch(route('capsa.evaluations.comment', $row->getKey()), ['approve' => 1])->assertNotFound();
+        $this->assertNull($seen()->comment, 'only the CaPSA/TSA whose evaluation it is decides');
+
+        $this->actingAs($this->capsa, 'expert')->patch(route('capsa.evaluations.comment', $row->getKey()), ['approve' => 1])->assertRedirect();
+        $this->assertSame('Replies late at night.', $seen()->comment);
+
+        $this->patch(route('capsa.evaluations.comment', $row->getKey()), ['approve' => 0]);
+        $this->assertNull($seen()->comment, 'removed: gone for the expert');
+        $this->get($page)->assertOk()->assertDontSee('Replies late at night.');
+    }
+
     public function test_nothing_is_owed_until_a_defense_is_passed(): void
     {
         $this->template();

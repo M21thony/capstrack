@@ -345,6 +345,21 @@ class EvaluationTemplateController extends Controller
         }
     }
 
+    /**
+     * PATCH /capsa/evaluations/comments/{evaluation} - approve a leader's
+     * comment so the expert can read it, or remove it. Her own evaluations only.
+     */
+    public function comment(Request $request, int $evaluation): RedirectResponse
+    {
+        ExpertEvaluation::whereKey($evaluation)
+            ->whereNotNull('comment')
+            ->whereHas('template', fn ($q) => $q->where('capsa_id', $this->capsa()->expert_id))
+            ->firstOrFail()
+            ->update(['comment_approved' => $request->boolean('approve')]);
+
+        return back();
+    }
+
     private function own(EvaluationTemplate $template): void
     {
         abort_unless((int) $template->capsa_id === (int) $this->capsa()->expert_id, 404);

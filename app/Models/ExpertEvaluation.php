@@ -31,6 +31,7 @@ class ExpertEvaluation extends Model
         'checklist_milestone_id',
         'role',
         'answers',
+        'comment_approved',
         'rating',
         'comment',
         'student_id',
@@ -43,6 +44,8 @@ class ExpertEvaluation extends Model
             'rating' => 'float',
             // Each question as it was worded, with its 1-5 score.
             'answers' => 'array',
+            // null: waiting for the CaPSA/TSA. true: the expert may read it. false: removed.
+            'comment_approved' => 'boolean',
         ];
     }
 

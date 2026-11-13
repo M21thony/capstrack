@@ -102,7 +102,7 @@
 
       <section class="ev-sum-card ev-lk-card" aria-labelledby="ev-lk-c">
         <h2 id="ev-lk-c">What teams said</h2>
-        @include('partials.evaluation-responses', ['responses' => $x->responses])
+        @include('partials.evaluation-responses', ['responses' => $x->responses, 'moderate' => true])
       </section>
     </div>
   </main>

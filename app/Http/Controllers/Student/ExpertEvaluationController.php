@@ -25,6 +25,7 @@ class ExpertEvaluationController extends Controller
             'role' => ['required', Rule::in(array_keys(ExpertEvaluation::ROLES))],
             'answers' => ['required', 'array'],
             'answers.*' => ['required', 'integer', 'between:1,5'],
+            'comment' => ['nullable', 'string', 'max:500'],
         ], [
             'answers.required' => 'Answer every question from 1 to 5.',
             'answers.*.between' => 'Answer every question from 1 to 5.',
@@ -48,6 +49,7 @@ class ExpertEvaluationController extends Controller
             (int) $data['expert_id'],
             $data['role'],
             $data['answers'],
+            $data['comment'] ?? null,
         );
 
         if ($refused) {
@@ -71,6 +73,7 @@ class ExpertEvaluationController extends Controller
             'evaluations.*.role' => ['required', Rule::in(array_keys(ExpertEvaluation::ROLES))],
             'evaluations.*.answers' => ['required', 'array'],
             'evaluations.*.answers.*' => ['required', 'integer', 'between:1,5'],
+            'evaluations.*.comment' => ['nullable', 'string', 'max:500'],
         ], [
             'evaluations.*.answers.required' => 'Answer every question from 1 to 5.',
             'evaluations.*.answers.*.between' => 'Answer every question from 1 to 5.',
@@ -90,7 +93,7 @@ class ExpertEvaluationController extends Controller
         $sent = 0;
         $refusals = [];
         foreach ($data['evaluations'] as $row) {
-            $refused = $evaluations->submit($student, $team, (int) $data['defense_id'], (int) $row['expert_id'], $row['role'], $row['answers']);
+            $refused = $evaluations->submit($student, $team, (int) $data['defense_id'], (int) $row['expert_id'], $row['role'], $row['answers'], $row['comment'] ?? null);
             $refused ? $refusals[] = $refused : $sent++;
         }
 

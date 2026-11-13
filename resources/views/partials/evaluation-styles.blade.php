@@ -122,7 +122,8 @@
 .ev-resp ul{list-style:none;margin-top:6px;display:flex;flex-direction:column;gap:5px}
 .ev-resp li{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;line-height:1.4;color:var(--text2)}
 .ev-resp li b{flex-shrink:0;color:var(--text)}
-.ev-resp p{margin-top:8px;font-size:12.5px;line-height:1.5;color:var(--text2)}
+.ev-resp p{margin-top:8px;font-size:12.5px;line-height:1.5;color:var(--text2);overflow-wrap:anywhere}
+.ev-resp form{display:flex;gap:8px;margin-top:8px}
 .ev-none{padding:36px 20px;text-align:center;border:1.5px dashed var(--border2);border-radius:14px;background:var(--bg2);color:var(--text2);font-size:13.5px;line-height:1.5}
 .ev-none svg{width:32px;height:32px;color:var(--accent);margin-bottom:6px}
 .ev-none b{display:block;color:var(--text);font-size:15px;margin-bottom:4px}

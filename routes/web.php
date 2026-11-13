@@ -320,6 +320,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::get('/evaluations', [EvaluationTemplateController::class, 'index'])->name('evaluations');
         Route::get('/evaluations/new', [EvaluationTemplateController::class, 'create'])->name('evaluations.create');
         Route::get('/evaluations/experts/{expert}', [EvaluationTemplateController::class, 'expert'])->whereNumber('expert')->name('evaluations.expert');
+        Route::patch('/evaluations/comments/{evaluation}', [EvaluationTemplateController::class, 'comment'])->whereNumber('evaluation')->name('evaluations.comment');
         Route::post('/evaluations', [EvaluationTemplateController::class, 'store'])->name('evaluations.store');
         Route::get('/evaluations/{template}/edit', [EvaluationTemplateController::class, 'edit'])->name('evaluations.edit');
         Route::put('/evaluations/{template}', [EvaluationTemplateController::class, 'update'])->name('evaluations.update');

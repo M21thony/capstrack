@@ -179,7 +179,7 @@ class ExpertEvaluations
      * @param  array<int|string, mixed>  $answers  question id => 1..5
      * @return string|null why it was refused, or null when it was saved
      */
-    public function submit(Student $leader, Team $team, int $defenseId, int $expertId, string $role, array $answers): ?string
+    public function submit(Student $leader, Team $team, int $defenseId, int $expertId, string $role, array $answers, ?string $comment = null): ?string
     {
         if ((int) $team->leader_id !== (int) $leader->student_id) {
             return 'Only your team leader evaluates the experts.';
@@ -221,6 +221,8 @@ class ExpertEvaluations
             'role' => $role,
             'answers' => $scored,
             'rating' => round(collect($scored)->avg('score'), 2),
+            // Waits for the CaPSA/TSA before the expert can read it.
+            'comment' => trim((string) $comment) ?: null,
             'student_id' => $leader->student_id,
         ]);
 

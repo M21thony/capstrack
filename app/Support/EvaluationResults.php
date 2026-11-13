@@ -86,7 +86,10 @@ class EvaluationResults
                 'role_label' => ExpertEvaluation::ROLES[$e->role] ?? ucfirst((string) $e->role),
                 'rating' => (float) $e->rating,
                 'answers' => $e->answers ?? [],
-                'comment' => $e->comment,
+                // Only what the CaPSA/TSA approved; one still waiting is hers alone to see.
+                'comment' => $e->comment_approved ? $e->comment : null,
+                'pending' => $e->comment_approved === null ? $e->comment : null,
+                'id' => $e->getKey(),
             ])
             ->values();
     }

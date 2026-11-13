@@ -22,8 +22,17 @@
             @endforeach
           </ul>
         </details>
-      @elseif($r->comment)
+      @endif
+      @if($r->comment)
         <p>{{ $r->comment }}</p>
+      @elseif(($moderate ?? false) && $r->pending)
+        <p>{{ $r->pending }}</p>
+        <form method="POST" action="{{ route('capsa.evaluations.comment', $r->id) }}">
+          @csrf
+          @method('PATCH')
+          <button type="submit" name="approve" value="1" class="ev-btn sm">Approve comment</button>
+          <button type="submit" name="approve" value="0" class="ev-btn sm danger">Remove comment</button>
+        </form>
       @endif
     </li>
   @endforeach
