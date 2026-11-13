@@ -139,6 +139,18 @@ class ChecklistGatesDefenseSchedulingTest extends TestCase
         $this->assertArrayNotHasKey('Bravo', $this->owed(DefenseOutcome::TITLE_DEFENSE)->all());
     }
 
+    /** A course whose list has no Pre-proposal goes straight to its Title Defense. */
+    public function test_a_course_without_a_pre_proposal_starts_at_the_title_defense(): void
+    {
+        $team = $this->readyTeam('Delta', DefenseOutcome::TITLE_DEFENSE);
+        $checklist = $this->emptyChecklist($this->capsa);
+        $this->addDeliverable($checklist, ['title' => 'Title Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => DefenseOutcome::TITLE_DEFENSE]);
+
+        $this->assertSame([DefenseOutcome::TITLE_DEFENSE], $team->defenseStages());
+        $this->assertArrayNotHasKey('Delta', $this->notReady(DefenseOutcome::TITLE_DEFENSE)->all());
+        $this->assertArrayNotHasKey('Delta', $this->notReady(DefenseOutcome::PRE_PROPOSAL)->all());
+    }
+
     /** A team whose section has no checklist has not been given this gate. */
     public function test_a_team_with_no_checklist_is_not_held_up_by_one(): void
     {

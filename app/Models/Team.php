@@ -6,6 +6,7 @@ use App\Jobs\SyncConsultationCancellation;
 use App\Services\GoogleCalendarService;
 use App\Services\Notifier;
 use App\Support\DefenseOutcome;
+use App\Support\DefenseProgress;
 use App\Support\MilestoneProgress;
 use App\Support\ProjectTags;
 use App\Support\SectionScope;
@@ -469,6 +470,25 @@ class Team extends Model
             ->map(fn ($row) => $row->item->title)
             ->values()
             ->all();
+    }
+
+    private ?array $defenseStages = null;
+
+    /**
+     * The defenses this team's course has, in order: the defense lines on its
+     * milestone list. With no list, or no defense line on it, all four.
+     *
+     * @return array<int, string>
+     */
+    public function defenseStages(): array
+    {
+        $list = app(TeamChecklist::class)->for($this);
+
+        return $this->defenseStages ??= array_values(array_intersect(
+            DefenseProgress::STAGES,
+            $list ? Deliverable::active()->whereRelation('milestone', 'checklist_id', $list->id)
+                ->where('kind', Deliverable::DEFENSE)->pluck('defense_type')->all() : []
+        )) ?: DefenseProgress::STAGES;
     }
 
     public function progressSummary(): object

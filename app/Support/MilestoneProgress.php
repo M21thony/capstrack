@@ -389,6 +389,7 @@ class MilestoneProgress
 
         // Signed on the title the panel passed: before that pass, an upload or a check for it does not count.
         $awaitsDefense = $deliverable->template_key === TitleRevision::FINAL_TITLE_FORM
+            && $all->contains(fn (Deliverable $d) => $d->kind === Deliverable::DEFENSE && $d->defense_type === DefenseOutcome::PRE_PROPOSAL)
             && ! $defenses->get(DefenseOutcome::PRE_PROPOSAL)?->passed_at;
 
         if ($awaitsDefense) {

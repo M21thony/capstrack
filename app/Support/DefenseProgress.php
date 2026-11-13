@@ -71,7 +71,7 @@ class DefenseProgress
         $schedules ??= DefenseSchedule::where('team_id', $team->team_id)->get();
 
         $out = [];
-        foreach (self::STAGES as $stage) {
+        foreach ($team->defenseStages() as $stage) {
             $out[$stage] = $this->stageStatus($team, $stage, $schedules);
         }
 

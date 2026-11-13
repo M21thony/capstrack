@@ -397,7 +397,7 @@ class AdminPanelAssignmentController extends Controller
 
         $schedules = [];
 
-        foreach (self::DEFENSE_TYPES as $stage) {
+        foreach ($team->defenseStages() as $stage) {
             $existing = DefenseSchedule::where('team_id', $team->team_id)
                 ->where('defense_type', $stage)
                 ->latestAttempt()

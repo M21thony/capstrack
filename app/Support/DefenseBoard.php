@@ -191,6 +191,10 @@ class DefenseBoard
             ->get()
             ->groupBy('team_id');
 
+        // A course without this defense is not listed under it, unless a team already has a date or result there.
+        $teams = $teams->filter(fn (Team $t) => in_array($stage, $t->defenseStages(), true)
+            || $t->defenseSchedules->where('defense_type', $stage)->contains(fn (DefenseSchedule $s) => $s->schedule_date || $s->outcome));
+
         return $teams->map(function (Team $team) use ($stage, $sections, $experts, $paid, $panelists, $cancellations) {
             $schedule = $team->defenseSchedules->where('defense_type', $stage)->sortByDesc('attempt')->first();
             $tries = $this->triesOf($team, $stage, $schedule, $cancellations->get($team->team_id, collect()));
@@ -258,8 +262,9 @@ class DefenseBoard
     private function blockers(Team $team, string $stage, Collection $roles, ?DefenseSchedule $schedule, Collection $paid): array
     {
         $missing = array_values(array_diff(Team::PANEL_EXPERT_ROLES, $roles->keys()->all()));
-        $at = array_search($stage, self::STAGES, true);
-        $previous = $at > 0 ? self::STAGES[$at - 1] : null;
+        $stages = $team->defenseStages();
+        $at = array_search($stage, $stages, true);
+        $previous = $at > 0 ? $stages[$at - 1] : null;
         $out = [];
 
         if ($missing !== []) {
@@ -336,7 +341,7 @@ class DefenseBoard
      */
     private function journeyOf(Team $team): array
     {
-        return collect(self::STAGES)->map(function (string $stage) use ($team) {
+        return collect($team->defenseStages())->map(function (string $stage) use ($team) {
             $s = $team->defenseSchedules->where('defense_type', $stage)->sortByDesc('attempt')->first();
 
             return [
@@ -382,7 +387,7 @@ class DefenseBoard
         return collect(self::STAGES)->mapWithKeys(fn (string $stage) => [$stage => [
             'done' => $teams->filter(fn (Team $t) => $t->defenseSchedules->where('defense_type', $stage)
                 ->contains(fn (DefenseSchedule $s) => $s->schedule_date || $s->outcome))->count(),
-            'of' => $teams->count(),
+            'of' => $teams->filter(fn (Team $t) => in_array($stage, $t->defenseStages(), true))->count(),
         ]])->all();
     }
 
