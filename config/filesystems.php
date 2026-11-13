@@ -7,12 +7,12 @@
 // a separate bucket keeps that address from ever reaching a private file.
 $s3 = [
     'driver' => 's3',
-    'key' => env('AWS_ACCESS_KEY_ID'),
-    'secret' => env('AWS_SECRET_ACCESS_KEY'),
-    'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
-    'bucket' => env('AWS_BUCKET'),
-    'endpoint' => env('AWS_ENDPOINT'),
-    'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+    'key' => env('SILO_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+    'secret' => env('SILO_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+    'region' => env('SILO_DEFAULT_REGION', env('AWS_DEFAULT_REGION', 'us-east-1')),
+    'bucket' => env('SILO_BUCKET', env('AWS_BUCKET')),
+    'endpoint' => env('SILO_ENDPOINT', env('AWS_ENDPOINT')),
+    'use_path_style_endpoint' => env('SILO_USE_PATH_STYLE_ENDPOINT', env('AWS_USE_PATH_STYLE_ENDPOINT', false)),
     // Hand big files over as they arrive; the default loads the whole file into memory first.
     'stream_reads' => true,
     'throw' => false,
@@ -58,7 +58,7 @@ return [
         ],
 
         'public' => env('FILES_ON_S3', false) ? [
-            'bucket' => env('AWS_PUBLIC_BUCKET'),
+            'bucket' => env('SILO_PUBLIC_BUCKET', env('AWS_PUBLIC_BUCKET')),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
         ] + $s3 : [
             'driver' => 'local',

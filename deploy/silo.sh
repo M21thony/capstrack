@@ -53,8 +53,10 @@ install)
     sudo install -d -o silo -g silo -m 750 /var/lib/silo
 
     # Made once: a second run must not lock the site out of its own files.
-    key=$(env_get AWS_ACCESS_KEY_ID)
-    secret=$(env_get AWS_SECRET_ACCESS_KEY)
+    key=$(env_get SILO_ACCESS_KEY_ID)
+    [ -n "$key" ] || key=$(env_get AWS_ACCESS_KEY_ID)  # the name before the rename
+    secret=$(env_get SILO_SECRET_ACCESS_KEY)
+    [ -n "$secret" ] || secret=$(env_get AWS_SECRET_ACCESS_KEY)  # the name before the rename
     [ -n "$key" ] || key=$(openssl rand -hex 10)
     [ -n "$secret" ] || secret=$(openssl rand -hex 20)
 
@@ -87,13 +89,13 @@ EOF
     done
     curl -fs "$ENDPOINT/minio/health/live" > /dev/null || { echo "Silo did not start: journalctl -u silo" >&2; exit 1; }
 
-    env_set AWS_ENDPOINT "$ENDPOINT"
-    env_set AWS_ACCESS_KEY_ID "$key"
-    env_set AWS_SECRET_ACCESS_KEY "$secret"
-    env_set AWS_DEFAULT_REGION us-east-1
-    env_set AWS_BUCKET capstrack-private
-    env_set AWS_PUBLIC_BUCKET capstrack-public
-    env_set AWS_USE_PATH_STYLE_ENDPOINT true
+    env_set SILO_ENDPOINT "$ENDPOINT"
+    env_set SILO_ACCESS_KEY_ID "$key"
+    env_set SILO_SECRET_ACCESS_KEY "$secret"
+    env_set SILO_DEFAULT_REGION us-east-1
+    env_set SILO_BUCKET capstrack-private
+    env_set SILO_PUBLIC_BUCKET capstrack-public
+    env_set SILO_USE_PATH_STYLE_ENDPOINT true
     env_set FILES_ON_S3 false
     echo "Silo is running. The site still uses the disk."
     ;;

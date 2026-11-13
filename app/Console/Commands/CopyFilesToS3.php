@@ -30,7 +30,7 @@ class CopyFilesToS3 extends Command
     public function handle(): int
     {
         if (config('filesystems.disks.local.driver') !== 's3') {
-            $this->error('Set FILES_ON_S3=true (and the AWS_* settings) first.');
+            $this->error('Set FILES_ON_S3=true (and the SILO_* settings) first.');
 
             return self::FAILURE;
         }

@@ -1,6 +1,6 @@
 # CapsTrack: four containers - system, db, ollama, storage.
 #   cp deploy/env.production.example .env   (fill it in, set APP_KEY, DB_PASSWORD, DB_ROOT_PASSWORD,
-#                                            AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+#                                            SILO_ACCESS_KEY_ID, SILO_SECRET_ACCESS_KEY)
 #   docker compose up -d --build
 services:
   capstrack-system:
@@ -11,8 +11,8 @@ services:
       OLLAMA_URL: http://capstrack-ollama:11434
       # Uploaded files go to the storage container, not this one's disk.
       FILES_ON_S3: "true"
-      AWS_ENDPOINT: http://capstrack-storage:9000
-      AWS_USE_PATH_STYLE_ENDPOINT: "true"
+      SILO_ENDPOINT: http://capstrack-storage:9000
+      SILO_USE_PATH_STYLE_ENDPOINT: "true"
     ports:
       - "80:80"
     volumes:
@@ -63,8 +63,8 @@ services:
     image: pgsty/silo:RELEASE.2026-10-26T00-00-00Z
     command: server /data
     environment:
-      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
-      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
+      MINIO_ROOT_USER: ${SILO_ACCESS_KEY_ID:-${AWS_ACCESS_KEY_ID:-}}
+      MINIO_ROOT_PASSWORD: ${SILO_SECRET_ACCESS_KEY:-${AWS_SECRET_ACCESS_KEY:-}}
     volumes:
       - storage-data:/data
     restart: unless-stopped
