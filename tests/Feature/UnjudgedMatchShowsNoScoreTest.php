@@ -51,7 +51,7 @@ class UnjudgedMatchShowsNoScoreTest extends TestCase
             $this->archived("Capstone {$n}");
         }
 
-        $verdict = json_encode(['matches' => true, 'score' => 71, 'reason' => 'Same subject.']);
+        $verdict = json_encode(['matches' => true, 'score' => 12, 'reason' => 'Different subject.']);
 
         $ollama = $this->mock(OllamaSSHClient::class);
         $ollama->shouldReceive('embed')->andReturn(array_fill(0, 8, 0.5));
@@ -80,8 +80,10 @@ class UnjudgedMatchShowsNoScoreTest extends TestCase
         $this->assertCount(4, $unassessed, 'the four past the limit are not');
 
         foreach ($assessed as $m) {
-            $this->assertSame(71, $m['score'], 'a judged candidate keeps the score it was given');
+            $this->assertSame(12, $m['score'], 'a judged candidate keeps the score it was given');
         }
+
+        $this->assertSame([true, true], array_column(array_slice($matches, 0, 2), 'assessed'), 'a low judged score still ranks above a row with no score');
 
         foreach ($unassessed as $m) {
             $this->assertStringContainsString('Not assessed', $m['reason']);

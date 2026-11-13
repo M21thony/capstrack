@@ -755,7 +755,7 @@ PROMPT;
         }
         unset($match);
 
-        usort($matches, fn ($a, $b) => $b['score'] <=> $a['score']);
+        usort($matches, fn ($a, $b) => [$b['assessed'], $b['score']] <=> [$a['assessed'], $a['score']]);
 
         return $matches;
     }
@@ -903,7 +903,8 @@ PROMPT;
         // (e.g. another capstone titling system) above one that shares
         // nothing but generic wording (e.g. a smart door lock), instead of
         // just bucketing everything into two tiers.
-        usort($topCandidates, fn ($a, $b) => $b['score'] <=> $a['score']);
+        // Judged rows first: an unjudged one has no score to be ranked by.
+        usort($topCandidates, fn ($a, $b) => [$b['assessed'], $b['score']] <=> [$a['assessed'], $a['score']]);
 
         return $topCandidates;
     }
