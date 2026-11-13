@@ -1217,7 +1217,6 @@ PROMPT;
     {
         $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
-        $r = json_decode($this->firstJsonObject($cleaned) ?? $cleaned, true);
         $object = $this->firstJsonObject($cleaned) ?? $cleaned;
         $r = json_decode($object, true);
 
@@ -1226,6 +1225,13 @@ PROMPT;
         }
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($r)) {
+            // The only record of why a match ends up "Not scored".
+            Log::warning('Judge answer could not be read', [
+                'why' => $cleaned === '' ? 'empty' : 'not JSON',
+                'length' => strlen($raw),
+                'answer' => mb_substr($raw, 0, 500),
+            ]);
+
             return null;
         }
 
