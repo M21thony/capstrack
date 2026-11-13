@@ -214,9 +214,10 @@ test('evaluations the team sends show up for the CaPSA/TSA', async ({ page, brow
   await tidy(page);
   const form = page.locator('.xh-ev-form').first();
   await expect(form, 'the sheet is waiting').toBeVisible();
-  // Every expert on the sheet: open it, pick "Very good" on each row.
-  for (const card of await form.locator('.xh-ex').all()) {
-    if (!(await card.getAttribute('open') !== null)) { await card.locator('summary').click(); }
+  // Every expert on the sheet: show it from the list, pick "Very good" on each row.
+  const steps = form.locator('[data-step]');
+  for (const [i, card] of (await form.locator('.xh-ex').all()).entries()) {
+    await steps.nth(i).click();
     for (const q of await card.locator('.xh-ev-q').all()) { await q.locator('td').nth(3).locator('label').click(); }
   }
   await shot(page, testInfo, '4a-student-filled-sheet');

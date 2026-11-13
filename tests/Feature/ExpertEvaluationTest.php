@@ -490,8 +490,8 @@ class ExpertEvaluationTest extends TestCase
 
         $this->actingAs($this->leader, 'web')->get(route('student.experts', ['tab' => 'evaluations']))
             ->assertOk()
-            ->assertSee('of 2 experts done')
-            ->assertDontSee('of 3 experts done');
+            ->assertSee('Expert 1 of 2')
+            ->assertDontSee('Expert 1 of 3');
         $this->assertTrue($this->chaptersGateOpensAfter(['adviser', 'consultant'], $theirs->fresh('questions')));
     }
 

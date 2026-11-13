@@ -55,29 +55,28 @@ test('the student rates every expert on one sheet and the counts keep up', async
   const cards = form.locator('.xh-ex');
   const experts = await cards.count();
   expect(experts).toBeGreaterThan(0);
-  await expect(form.locator('[data-done]')).toHaveText('0');
   await expect(form.locator('[data-left]')).toHaveText(/^0 of \d+ questions answered$/);
 
-  // Only the first expert starts open.
-  await expect(cards.first()).toHaveAttribute('open', '');
-  if (experts > 1) { await expect(cards.nth(1)).not.toHaveAttribute('open', ''); }
+  // Only the first expert is shown.
+  await expect(cards.first()).toBeVisible();
+  if (experts > 1) { await expect(cards.nth(1)).toBeHidden(); }
 
-  // Answer every row of the first expert: that expert reads Done, the sheet counts it.
+  // Answer every row of the first expert: the list on the left keeps count.
   const first = cards.first();
+  const status = form.locator('[data-status]').first();
   const rows = first.locator('.xh-ev-q');
   const n = await rows.count();
   await rows.first().locator('label').nth(3).click();
-  await expect(first.locator('[data-status]')).toHaveText(n === 1 ? 'Done' : `${n - 1} left`);
+  await expect(status).toHaveText(n === 1 ? '1 of 1 ✓' : `1 of ${n}`);
   for (let i = 1; i < n; i++) { await rows.nth(i).locator('label').nth(4).click(); }
-  await expect(first.locator('[data-status]')).toHaveText('Done');
-  await expect(form.locator('[data-done]')).toHaveText('1');
+  await expect(status).toHaveText(`${n} of ${n} ✓`);
   await expect(form.locator('[data-left]')).toHaveText(new RegExp(`^${n} of \\d+ questions answered$`));
 
-  // "Next" opens the following expert and closes this one.
+  // "Next" shows the following expert instead of this one.
   if (experts > 1) {
-    await first.locator('[data-next]').click();
-    await expect(cards.nth(1)).toHaveAttribute('open', '');
-    await expect(first).not.toHaveAttribute('open', '');
+    await form.locator('[data-next]').click();
+    await expect(cards.nth(1)).toBeVisible();
+    await expect(first).toBeHidden();
   }
   await shot(page, testInfo, 'student-sheet');
 });

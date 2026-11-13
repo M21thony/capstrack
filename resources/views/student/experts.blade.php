@@ -686,65 +686,60 @@
       @if(! $team)
         <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Join or create a team first. After each defense your team passes, your leader evaluates your experts here.</span></div>
       @else
-      <div class="xh-split">
-        <div class="xh-grow xh-ev">
-          <div class="xh-ev-head">
-            <h2>To evaluate</h2>
-            <span>{{ $evaluationsDue->count() }} waiting · once per defense: Pre-proposal, Title, Pre-oral and Final</span>
-          </div>
-
-          <div class="xh-ev-anon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-            <span><b>Anonymous.</b> Your CaPSA/TSA and the expert see the answers, never who sent them. Answer honestly: 1 is Poor, 5 is Excellent.</span>
-          </div>
-
-          @if($evaluationsDue->isEmpty())
-            <div class="xh-card xh-hint xh-ev-empty">
-              {!! str_replace('<svg ', '<svg fill="none" stroke="currentColor" stroke-width="1.8" ', $star) !!}
-              <b>Nothing to evaluate right now</b>
-              <p>When your team passes a defense, {{ $isLeader ? 'you answer' : 'your leader answers' }} your CaPSA/TSA's questions about your adviser, consultant and grammarian here. The next phase opens once it is done.</p>
-            </div>
-          @elseif(! $isLeader)
-            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your team leader evaluates the experts. <b>{{ $evaluationsDue->count() }}</b> {{ $evaluationsDue->count() === 1 ? 'evaluation is' : 'evaluations are' }} waiting for {{ $evalByDefense->map(fn ($rows) => $rows->first()->stage)->implode(', ') }}.</span></div>
-          @else
-            @foreach($evalByDefense as $defenseId => $rows)
-              @php
-                $isOld = old('form_key') === (string) $defenseId;
-                $rows = $rows->filter(fn ($r) => $evaluationTemplates->has($r->template_id))->values();
-                $totalQs = $rows->sum(fn ($r) => $evaluationTemplates->get($r->template_id)->questions->count());
-              @endphp
-              @continue($rows->isEmpty())
-              {{-- One sheet per defense: each expert a card of 1-5 rows, all sent together. --}}
-              <form class="xh-card xh-ev-phase xh-ev-form" method="POST" action="{{ route('student.evaluations.store_all') }}" novalidate data-stage="{{ $rows->first()->stage }}">
-                @csrf
-                <input type="hidden" name="form_key" value="{{ $defenseId }}">
-                <input type="hidden" name="defense_id" value="{{ $defenseId }}">
-                <header class="xh-ev-phase-head">
-                  <div>
+      @php
+        $anonLine = '<div class="xh-ev-anon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'
+          .'<span><b>Anonymous.</b> Your CaPSA/TSA and the expert see the answers, never who sent them. Answer honestly: 1 is Poor, 5 is Excellent.</span></div>';
+        // Only the leader answers, and only what the CaPSA/TSA has questions for.
+        $evForms = $isLeader ? $evalByDefense->map(fn ($rows) => $rows->filter(fn ($r) => $evaluationTemplates->has($r->template_id))->values())->filter(fn ($rows) => $rows->isNotEmpty()) : collect();
+      @endphp
+      @if($evForms->isNotEmpty())
+        <div class="xh-ev">
+          @foreach($evForms as $defenseId => $rows)
+            @php
+              $isOld = old('form_key') === (string) $defenseId;
+              $totalQs = $rows->sum(fn ($r) => $evaluationTemplates->get($r->template_id)->questions->count());
+            @endphp
+            {{-- One sheet per defense: the experts listed on the left, one expert's 1-5 rows on the right, all sent together. --}}
+            <form class="xh-ev-form xh-evf" method="POST" action="{{ route('student.evaluations.store_all') }}" novalidate data-stage="{{ $rows->first()->stage }}">
+              @csrf
+              <input type="hidden" name="form_key" value="{{ $defenseId }}">
+              <input type="hidden" name="defense_id" value="{{ $defenseId }}">
+              <div class="xh-evf-left">
+                <nav class="xh-card xh-evf-steps" aria-label="Experts to rate">
+                  <div class="xh-evf-top">
                     <span class="xh-ev-kicker">Defense passed</span>
-                    <h3>Rate your experts — {{ $rows->first()->stage }}</h3>
-                    <p class="xh-ev-sub">Open one expert at a time and pick one circle per row.</p>
+                    <h3>{{ $rows->first()->stage }}</h3>
                   </div>
-                  <span class="xh-ev-done"><b data-done>0</b> of {{ $rows->count() }} {{ $rows->count() === 1 ? 'expert' : 'experts' }} done</span>
-                </header>
+                  @foreach($rows as $i => $row)
+                    @php $ex = $evalExperts->get($row->expert_id); @endphp
+                    <button type="button" class="xh-evf-step" data-step="{{ $i }}" @if($i === 0) aria-current="true" @endif>
+                      <span class="xh-av r-{{ $row->role }}" aria-hidden="true">{{ $ex?->avatarInitials() }}@if($ex?->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                      <span class="xh-evf-who"><b>{{ $row->expert }}</b><small>{{ $row->role_label }}</small></span>
+                      <span class="xh-ex-status" data-status>Not started</span>
+                    </button>
+                  @endforeach
+                </nav>
+                @if($loop->first)
+                  @include('student.partials.eval-history')
+                @endif
+              </div>
+              <section class="xh-card xh-evf-panel">
                 @foreach($rows as $i => $row)
                   @php
                     $key = $row->expert_id.'-'.$row->role;
                     $ex = $evalExperts->get($row->expert_id);
                     $template = $evaluationTemplates->get($row->template_id);
-                    $next = $rows->get($i + 1);
                   @endphp
-                  <details class="xh-ex" data-expert="{{ $row->expert }}" data-role="{{ $row->role_label }}" @if($i === 0) open @endif>
-                    <summary>
-                      <span class="xh-ex-num" aria-hidden="true">{{ $i + 1 }}</span>
+                  <div class="xh-ex" data-expert="{{ $row->expert }}" data-role="{{ $row->role_label }}" @if($i > 0) hidden @endif>
+                    <header class="xh-evf-head">
                       <span class="xh-av r-{{ $row->role }}" aria-hidden="true">{{ $ex?->avatarInitials() }}@if($ex?->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
-                      <span class="xh-ex-who"><b>{{ $row->expert }}</b> · {{ $row->role_label }}</span>
-                      <span class="xh-ex-status" data-status>Not started</span>
-                      <svg class="xh-ex-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-                    </summary>
+                      <span class="xh-evf-who"><b>{{ $row->expert }}</b><small>{{ $row->role_label }}</small></span>
+                      <span class="xh-evf-count">Expert {{ $i + 1 }} of {{ $rows->count() }}</span>
+                    </header>
                     <input type="hidden" name="evaluations[{{ $key }}][expert_id]" value="{{ $row->expert_id }}">
                     <input type="hidden" name="evaluations[{{ $key }}][role]" value="{{ $row->role }}">
                     <div class="xh-ex-body">
+                      {!! $anonLine !!}
                       <table class="xh-ex-grid">
                         <thead>
                           <tr>
@@ -770,52 +765,45 @@
                         <label for="xh-ev-c-{{ $defenseId }}-{{ $key }}">Comment (optional)</label>
                         <textarea id="xh-ev-c-{{ $defenseId }}-{{ $key }}" name="evaluations[{{ $key }}][comment]" rows="2" maxlength="500">{{ $isOld ? old('evaluations.'.$key.'.comment') : '' }}</textarea>
                       </div>
-                      @if($next)
-                        <div class="xh-ex-next"><button type="button" class="xh-btn xh-gold xh-sm" data-next>Next: {{ $next->expert }} ›</button></div>
-                      @endif
                     </div>
-                  </details>
+                  </div>
                 @endforeach
                 <div class="xh-ev-foot">
                   <span class="xh-ev-left" data-left><b>0</b> of {{ $totalQs }} questions answered</span>
+                  @if($rows->count() > 1)
+                    <button type="button" class="xh-btn xh-ghost" data-prev disabled>‹ Previous</button>
+                    <button type="button" class="xh-btn xh-ghost" data-next>Next: {{ $rows->get(1)->expert }} ›</button>
+                  @endif
                   <button type="submit" class="xh-btn xh-gold">Send all {{ $rows->count() }} {{ $rows->count() === 1 ? 'evaluation' : 'evaluations' }}</button>
                 </div>
-              </form>
-            @endforeach
+              </section>
+            </form>
+          @endforeach
+        </div>
+      @else
+      <div class="xh-split">
+        <div class="xh-grow xh-ev">
+          <div class="xh-ev-head">
+            <h2>To evaluate</h2>
+            <span>{{ $evaluationsDue->count() }} waiting · once per defense: Pre-proposal, Title, Pre-oral and Final</span>
+          </div>
+
+          {!! $anonLine !!}
+
+          @if($evaluationsDue->isEmpty())
+            <div class="xh-card xh-hint xh-ev-empty">
+              {!! str_replace('<svg ', '<svg fill="none" stroke="currentColor" stroke-width="1.8" ', $star) !!}
+              <b>Nothing to evaluate right now</b>
+              <p>When your team passes a defense, {{ $isLeader ? 'you answer' : 'your leader answers' }} your CaPSA/TSA's questions about your adviser, consultant and grammarian here. The next phase opens once it is done.</p>
+            </div>
+          @elseif(! $isLeader)
+            <div class="xh-banner xh-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="xh-banner-text">Your team leader evaluates the experts. <b>{{ $evaluationsDue->count() }}</b> {{ $evaluationsDue->count() === 1 ? 'evaluation is' : 'evaluations are' }} waiting for {{ $evalByDefense->map(fn ($rows) => $rows->first()->stage)->implode(', ') }}.</span></div>
           @endif
         </div>
 
-        <aside class="xh-card xh-rail xh-rail-card xh-ev-history" aria-labelledby="xh-ev-history-h">
-          <div class="xh-ev-head">
-            <h2 id="xh-ev-history-h">Sent evaluations</h2>
-            <span>{{ $evaluationHistory->count() }}</span>
-          </div>
-          @forelse($evaluationHistory as $ev)
-            <div class="xh-ev-sent r-{{ $ev->role }}">
-              <div class="xh-ev-sent-top">
-                <b>{{ $ev->expert?->name ?? 'Former expert' }}</b>
-                <span class="xh-ev-score"><span class="xh-stars" role="img" aria-label="{{ $fmtRating($ev->rating) }} out of 5">{!! $starsOf((float) $ev->rating) !!}</span>{{ $fmtRating($ev->rating) }}</span>
-              </div>
-              <div class="xh-ev-sent-meta">{{ \App\Models\ExpertEvaluation::ROLES[$ev->role] ?? ucfirst($ev->role) }} · {{ $ev->defense?->defense_type ?? 'Earlier phase' }} · {{ $ev->created_at?->format('M j, Y') }}</div>
-              @if($ev->answers)
-                <details class="xh-ev-answers">
-                  <summary>Your answers</summary>
-                  <ul>
-                    @foreach($ev->answers as $a)
-                      <li><span>{{ $a['question'] ?? '' }}</span><b>{{ $a['score'] ?? '' }}</b></li>
-                    @endforeach
-                  </ul>
-                </details>
-              @endif
-              @if($ev->comment)
-                <p>{{ $ev->comment }}</p>
-              @endif
-            </div>
-          @empty
-            <p class="xh-ev-none">No evaluations sent yet.</p>
-          @endforelse
-        </aside>
+        @include('student.partials.eval-history')
       </div>
+      @endif
       @endif
     </section>
   </div>
@@ -1996,22 +1984,19 @@ document.querySelector('.xh-seg').addEventListener('keydown', function (e) {
 });
 // Each expert card says how far it is, and the sheet counts the answers.
 function evalTally(form) {
-  var done = 0, picked = 0, total = 0;
-  form.querySelectorAll('.xh-ex').forEach(function (card) {
+  var picked = 0, total = 0;
+  var statuses = form.querySelectorAll('[data-status]');
+  form.querySelectorAll('.xh-ex').forEach(function (card, i) {
     var rows = card.querySelectorAll('.xh-ev-q');
     var n = 0;
     rows.forEach(function (q) {
       if (q.querySelector('input:checked')) { q.classList.remove('is-missing'); n++; }
     });
-    var status = card.querySelector('[data-status]');
     var left = rows.length - n;
-    status.textContent = !left ? 'Done' : n ? left + ' left' : 'Not started';
-    status.className = 'xh-ex-status' + (!left ? ' is-done' : n ? ' is-part' : '');
-    if (!left) { done++; }
+    statuses[i].textContent = n ? n + ' of ' + rows.length + (left ? '' : ' ✓') : 'Not started';
+    statuses[i].className = 'xh-ex-status' + (!left ? ' is-done' : n ? ' is-part' : '');
     picked += n; total += rows.length;
   });
-  var d = form.querySelector('[data-done]');
-  if (d) { d.textContent = done; }
   var left = form.querySelector('[data-left]');
   if (left) {
     left.innerHTML = '<b>' + picked + '</b> of ' + total + ' questions answered';
@@ -2024,20 +2009,26 @@ document.addEventListener('change', function (e) {
   if (form && /^evaluations\[/.test(e.target.name || '')) { evalTally(form); }
 });
 document.querySelectorAll('.xh-ev-form').forEach(evalTally);
-// One expert open at a time; "Next" moves on to the following card.
-document.addEventListener('toggle', function (e) {
-  var card = e.target;
-  if (!card.classList || !card.classList.contains('xh-ex') || !card.open) { return; }
-  card.closest('.xh-ev-form').querySelectorAll('.xh-ex[open]').forEach(function (c) { if (c !== card) { c.open = false; } });
-}, true);
-document.addEventListener('click', function (e) {
-  var b = e.target.closest('[data-next]');
-  if (!b) { return; }
-  var next = b.closest('.xh-ex').nextElementSibling;
-  if (next && next.classList.contains('xh-ex')) {
-    next.open = true;
-    next.scrollIntoView({ block: 'start', behavior: 'smooth' });
+// One expert shown at a time: the list on the left, Previous and Next move between them.
+function evalShow(form, at) {
+  var cards = form.querySelectorAll('.xh-ex');
+  cards.forEach(function (c, i) { c.hidden = i !== at; });
+  form.querySelectorAll('[data-step]').forEach(function (s, i) {
+    if (i === at) { s.setAttribute('aria-current', 'true'); } else { s.removeAttribute('aria-current'); }
+  });
+  var prev = form.querySelector('[data-prev]'), next = form.querySelector('[data-next]');
+  if (prev) { prev.disabled = at === 0; }
+  if (next) {
+    next.hidden = at === cards.length - 1;
+    if (!next.hidden) { next.textContent = 'Next: ' + cards[at + 1].dataset.expert + ' ›'; }
   }
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-step], [data-prev], [data-next]');
+  var form = b && b.closest('.xh-ev-form');
+  if (!form) { return; }
+  var at = Array.prototype.indexOf.call(form.querySelectorAll('.xh-ex'), form.querySelector('.xh-ex:not([hidden])'));
+  evalShow(form, b.dataset.step !== undefined ? Number(b.dataset.step) : at + (b.hasAttribute('data-next') ? 1 : -1));
 });
 
 // Sending: every question answered first - the first expert with gaps opens
@@ -2050,7 +2041,7 @@ document.addEventListener('submit', function (e) {
   var missing = Array.prototype.filter.call(form.querySelectorAll('.xh-ev-q'), function (q) { return !q.querySelector('input:checked'); });
   form.querySelectorAll('.xh-ev-q').forEach(function (q) { q.classList.toggle('is-missing', missing.indexOf(q) !== -1); });
   if (missing.length) {
-    missing[0].closest('.xh-ex').open = true;
+    evalShow(form, Array.prototype.indexOf.call(form.querySelectorAll('.xh-ex'), missing[0].closest('.xh-ex')));
     missing[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
     var first = missing[0].querySelector('input');
     if (first) { first.focus({ preventScroll: true }); }

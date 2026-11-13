@@ -504,35 +504,37 @@ dl.xh-rows{margin:0;display:flex;flex-direction:column}
 .xh-ev-empty svg{width:30px;height:30px;color:var(--accent)}
 .xh-ev-empty b{color:var(--text);font-size:14px}
 .xh-ev-empty p{margin:0;max-width:440px;line-height:1.5}
-.xh-ev-phase{padding:0;overflow:hidden}
-.xh-ev-phase-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.xh-evf{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px;align-items:start}
+.xh-evf-left{display:grid;gap:14px;min-width:0}
+.xh-evf-steps,.xh-evf-panel{padding:0;overflow:hidden}
+.xh-evf-top{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.xh-evf-top h3{margin:2px 0 0;font-size:14.5px;color:var(--text)}
 .xh-ev-kicker{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--xh-green)}
-.xh-ev-phase-head h3{margin:2px 0 0;font-size:15.5px;color:var(--text)}
-.xh-ev-sub{margin:4px 0 0;font-size:13px;line-height:1.45;color:var(--text2)}
-.xh-ev-done{flex-shrink:0;font-size:13px;color:var(--text2)}
-.xh-ev-done b{color:var(--text);font-variant-numeric:tabular-nums}
-.xh-ex{border-top:1px solid var(--border)}
-.xh-ev-phase-head + .xh-ex{border-top:0}
-.xh-ex[open]{box-shadow:inset 0 0 0 2px var(--accent)}
-.xh-ex summary{display:flex;align-items:center;gap:12px;min-height:44px;padding:12px 16px;cursor:pointer;list-style:none}
-.xh-ex summary::-webkit-details-marker{display:none}
-.xh-ex summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.xh-ex-num{width:16px;font-size:13px;font-weight:700;color:var(--xh-ink-3);text-align:center}
-.xh-ex-who{flex:1;min-width:0;font-size:13.5px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.xh-ex-who b{color:var(--text)}
-.xh-ex-status{flex-shrink:0;font-size:13px;font-weight:700;color:var(--text2)}
+.xh-evf-step{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:10px 14px;border:0;border-top:1px solid var(--border);background:none;font:inherit;font-size:13.5px;color:var(--text);text-align:left;cursor:pointer}
+.xh-evf-top + .xh-evf-step{border-top:0}
+.xh-evf-step:hover,.xh-evf-step[aria-current]{background:var(--bg3)}
+.xh-evf-step[aria-current]{box-shadow:inset 3px 0 0 var(--accent)}
+.xh-evf-step:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.xh-evf-who{flex:1;min-width:0}
+.xh-evf-who b,.xh-evf-who small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xh-evf-who small{font-size:12.5px;color:var(--text2)}
+.xh-evf-head{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.xh-evf-head b{font-size:15.5px;color:var(--text)}
+.xh-evf-count{flex-shrink:0;font-size:13px;color:var(--text2)}
+.xh-evf .xh-ev-history{max-height:320px}
+.xh-ex-status{flex-shrink:0;font-size:12.5px;font-weight:700;color:var(--text2);white-space:nowrap}
 .xh-ex-status.is-part{color:var(--xh-amber)}
 .xh-ex-status.is-done{color:var(--xh-green)}
-.xh-ex-chev{width:18px;height:18px;flex-shrink:0;color:var(--xh-ink-3);transition:transform .15s}
-.xh-ex[open] .xh-ex-chev{transform:rotate(180deg)}
-.xh-ex-body{padding:0 16px 16px}
-.xh-ex-grid{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;font-size:13.5px}
+/* The questions scroll in their own box so the Send bar never leaves the screen. */
+.xh-ex-body{padding:14px 16px;max-height:max(300px,calc(100vh - 345px));overflow:auto}
+.xh-ex-body .xh-ev-anon{margin-bottom:12px}
+.xh-ex-grid{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;font-size:13.5px}
 .xh-ex-grid thead th{background:#18191f;color:#fff;padding:10px 8px;font-size:13px;font-weight:700;text-align:center;line-height:1.25}
 .xh-ex-grid thead th:first-child{width:46%;text-align:left;padding-left:14px}
 .xh-ex-grid thead th span{display:block;font-size:12px;font-weight:500;color:#c8cad4}
 .xh-ex-grid tbody th{padding:10px 14px;text-align:left;font-weight:500;line-height:1.45;color:var(--text);border-top:1px solid var(--border)}
 .xh-ex-grid td{padding:0;border-top:1px solid var(--border);text-align:center}
-.xh-ex-grid td label{display:flex;align-items:center;justify-content:center;min-height:52px;cursor:pointer}
+.xh-ex-grid td label{display:flex;align-items:center;justify-content:center;min-height:46px;cursor:pointer}
 .xh-ex-grid td label:hover{background:var(--bg3)}
 .xh-ex-grid input{position:absolute;opacity:0;width:1px;height:1px}
 .xh-ex-dot{width:24px;height:24px;box-sizing:border-box;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center}
@@ -544,11 +546,8 @@ dl.xh-rows{margin:0;display:flex;flex-direction:column}
 .xh-ev-q.is-missing .xh-ex-miss{display:block}
 .xh-ex-body .xh-field{margin-top:12px}
 .xh-ex-body textarea{font:inherit;color:inherit}
-.xh-ex-next{display:flex;justify-content:flex-end;margin-top:12px}
-.xh-ex-next .xh-btn{min-height:44px}
-.xh-ev-phase > .xh-ev-foot{padding:14px 16px;border-top:1px solid var(--border);background:var(--bg3)}
-.xh-ev-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.xh-ev-left{font-size:12.5px;color:var(--xh-ink-3)}
+.xh-ev-foot{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg3)}
+.xh-ev-left{margin-right:auto;font-size:12.5px;color:var(--xh-ink-3)}
 .xh-ev-left b{color:var(--text)}
 .xh-ev-left.is-ready{color:var(--xh-green);font-weight:700}
 .xh-ev-left.is-bad{color:var(--xh-red,#dc2626);font-weight:700}
@@ -576,11 +575,15 @@ dl.xh-rows{margin:0;display:flex;flex-direction:column}
 .xh-ev-answers li{display:flex;justify-content:space-between;gap:10px;line-height:1.4;color:var(--text2)}
 .xh-ev-answers li b{flex-shrink:0;color:var(--text)}
 .xh-ev-none{margin:0;font-size:13px;color:var(--xh-ink-3)}
+@media (max-width: 900px){
+  .xh-evf{grid-template-columns:minmax(0,1fr)}
+  .xh-ex-body{max-height:none}
+}
 @media (max-width: 560px){
   .xh-seg button{gap:5px;padding:0 6px;font-size:12.5px}
   .xh-seg button svg{display:none}
-  .xh-ev-phase-head{flex-direction:column;align-items:flex-start}
-  .xh-ex-body{padding:0 8px 12px;overflow-x:auto}
+  .xh-ex-body{padding:12px 8px;max-height:none}
+  .xh-ex-grid thead th:first-child{width:38%}
   .xh-ex-grid thead th span{display:none}
   .xh-ev-foot{flex-direction:column;align-items:stretch}
   .xh-ev-foot .xh-btn{width:100%}
