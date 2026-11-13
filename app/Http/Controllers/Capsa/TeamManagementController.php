@@ -282,6 +282,31 @@ class TeamManagementController extends Controller
      * their similar studies - also need the team to be in her sections, not
      * only one she advises.
      */
+    /**
+     * A team that did not pass goes back to a stage of its course. Its
+     * defenses from that stage on are kept but stop counting, so the stage
+     * reads Not scheduled and can be given a date again.
+     */
+    public function sendBack(Request $request, Team $team, \App\Services\DefenseOutcomeRecorder $recorder): RedirectResponse
+    {
+        $failed = $this->teamRow($team)->failedStage ?? abort(404);
+        $stages = $team->defenseStages();
+
+        $data = $request->validate([
+            'stage' => ['required', \Illuminate\Validation\Rule::in(array_slice($stages, 0, array_search($failed, $stages, true) + 1))],
+        ]);
+
+        DefenseSchedule::where('team_id', $team->team_id)
+            ->whereIn('defense_type', array_slice($stages, array_search($data['stage'], $stages, true)))
+            ->update(['voided' => \Illuminate\Support\Facades\DB::raw('defense_id')]);
+
+        if ($request->boolean('new_title')) {
+            $recorder->reopenPreProposals($team);
+        }
+
+        return redirect()->route('capsa.team_management.show', $team->team_id);
+    }
+
     private function teamRow(Team $team, bool $asCapsa = true): object
     {
         /** @var CapstoneExpert $capsa */

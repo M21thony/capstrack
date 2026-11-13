@@ -24,6 +24,12 @@ class DefensePanel extends Model
         'created_at' => 'datetime',
     ];
 
+    /** A seat on a defense that no longer counts is not a seat. */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('live', fn ($query) => $query->whereHas('schedule'));
+    }
+
     public function schedule()
     {
         return $this->belongsTo(DefenseSchedule::class, 'defense_id', 'defense_id');

@@ -806,6 +806,7 @@ class MilestoneProgress
 
         return DB::table('defense_schedule')
             ->whereIn('team_id', $teamIds->all())
+            ->where('voided', 0)
             ->select('team_id', 'defense_type', 'attempt', 'outcome', 'outcome_recorded_at')
             ->get()
             ->groupBy(fn ($row) => (int) $row->team_id)

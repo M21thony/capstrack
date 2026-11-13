@@ -49,6 +49,9 @@ class DefenseSchedule extends Model
      */
     protected static function booted(): void
     {
+        // A defense from before the team was sent back is kept, but nothing counts it.
+        static::addGlobalScope('live', fn ($query) => $query->where($query->qualifyColumn('voided'), 0));
+
         // The semester it was set in, so a past semester's defenses can be told apart.
         static::creating(fn (DefenseSchedule $schedule) => $schedule->term_id ??= Term::activeId());
 
@@ -68,12 +71,13 @@ class DefenseSchedule extends Model
      */
     public static function removeForTeams(array $teamIds): int
     {
-        $defenseIds = self::whereIn('team_id', $teamIds)->pluck('defense_id');
+        // Voided ones too: nothing of a removed team stays behind.
+        $defenseIds = self::withoutGlobalScopes()->whereIn('team_id', $teamIds)->pluck('defense_id');
 
         PanelGrade::whereIn('defense_id', $defenseIds)->delete();
-        DefensePanel::whereIn('defense_id', $defenseIds)->delete();
+        DefensePanel::withoutGlobalScopes()->whereIn('defense_id', $defenseIds)->delete();
 
-        return self::whereIn('defense_id', $defenseIds)->delete();
+        return self::withoutGlobalScopes()->whereIn('defense_id', $defenseIds)->delete();
     }
 
     /**

@@ -776,4 +776,59 @@ class CapsaTeamManagementTest extends TestCase
         $match->assertSee('The earlier one had no mobile client.', false);
         $match->assertSee('Narrow the scope to the mobile side.', false);
     }
+
+    public function test_a_failed_team_is_sent_back_to_a_stage_and_can_defend_it_again(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Sent Back', ['project_title' => 'Old Title']);
+        $try = fn (string $stage, int $attempt, string $outcome) => DefenseSchedule::create([
+            'team_id' => $team->team_id, 'defense_type' => $stage, 'attempt' => $attempt, 'outcome' => $outcome,
+        ]);
+        $try('Title Defense', 1, \App\Support\DefenseOutcome::PASSED);
+        $try('Pre Oral Defense', 1, \App\Support\DefenseOutcome::REDEFENSE);
+        $failed = $try('Pre Oral Defense', 2, \App\Support\DefenseOutcome::FAILED);
+        DefensePanel::create(['defense_id' => $failed->defense_id, 'expert_id' => 1, 'panel_role' => 'Panel Chair', 'created_at' => now()]);
+
+        $send = fn (string $stage) => $this->patch(route('capsa.team_management.send_back', $team->team_id), ['stage' => $stage]);
+
+        $this->get(route('capsa.team_management.show', $team->team_id))->assertSee('Send back to Pre Oral Defense');
+        // Not past the stage it failed.
+        $send('Final Oral Defense')->assertSessionHasErrors('stage');
+
+        $send('Pre Oral Defense')->assertRedirect();
+
+        $progress = new \App\Support\DefenseProgress;
+        $this->assertSame('not_scheduled', $progress->stageStatus($team, 'Pre Oral Defense'));
+        $this->assertTrue($team->fresh()->isTeamLocked(), 'The Title Defense pass still counts.');
+        $this->assertSame('Old Title', $team->fresh()->project_title);
+        $this->assertSame(0, DefensePanel::count(), 'A seat on a voided defense is not listed.');
+        $this->assertSame(3, DB::table('defense_schedule')->count(), 'The earlier defenses are kept.');
+        $try('Pre Oral Defense', 1, \App\Support\DefenseOutcome::PASSED);
+
+        // No longer failed, so there is nothing to send back.
+        $send('Title Defense')->assertNotFound();
+
+        // Another section's CaPSA cannot reach the team at all.
+        $try('Final Oral Defense', 1, \App\Support\DefenseOutcome::REDEFENSE);
+        $try('Final Oral Defense', 2, \App\Support\DefenseOutcome::FAILED);
+        $this->makeCapsaWithSections(['BSIT-4Z']);
+        $send('Final Oral Defense')->assertNotFound();
+    }
+
+    public function test_sending_back_with_a_new_title_clears_the_title_and_unlocks_the_team(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, , $sy] = $this->makeTeamInSection('New Title', ['project_title' => 'Old Title']);
+        $this->addProposal($team, $sy, 1, true);
+        foreach (['Title Defense' => \App\Support\DefenseOutcome::PASSED, 'Pre Oral Defense' => \App\Support\DefenseOutcome::REDEFENSE] as $stage => $outcome) {
+            DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => $stage, 'attempt' => 1, 'outcome' => $outcome]);
+        }
+        DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Pre Oral Defense', 'attempt' => 2, 'outcome' => \App\Support\DefenseOutcome::FAILED]);
+
+        $this->patch(route('capsa.team_management.send_back', $team->team_id), ['stage' => 'Title Defense', 'new_title' => 1])
+            ->assertRedirect();
+
+        $this->assertNull($team->fresh()->project_title);
+        $this->assertFalse($team->fresh()->isTeamLocked());
+    }
 }

@@ -248,6 +248,19 @@
       </dl>
     </div>
     <div class="tp-acts">
+      @if ($asCapsa && $row->failedStage)
+        <form method="POST" action="{{ route('capsa.team_management.send_back', $team->team_id) }}" class="tp-acts" style="align-items:center">
+          @csrf @method('PATCH')
+          <select class="sel" name="stage" aria-label="Send back to">
+            @foreach (array_keys($row->stages) as $stage)
+              <option value="{{ $stage }}" @selected($stage === $row->failedStage)>Send back to {{ $stage }}</option>
+              @break($stage === $row->failedStage)
+            @endforeach
+          </select>
+          <label><input type="checkbox" name="new_title" value="1"> New title required</label>
+          <button type="submit" class="btn btn-p">Send back</button>
+        </form>
+      @endif
       @if ($asCapsa && $row->canVerify)
         <a class="btn btn-p" href="{{ route('capsa.team_management.pre_proposals', $team->team_id) }}"><x-tm-icon n="shield" s="14" />Verify team</a>
       @endif

@@ -103,7 +103,7 @@ class DefenseOutcomeRecorder
      * the usual duplication check, and cannot resubmit a title the panel has
      * just sent back. The team keeps its adviser, consultant and grammarian.
      */
-    private function reopenPreProposals(Team $team): bool
+    public function reopenPreProposals(Team $team): bool
     {
         $proposals = $team->preProposals();
 

@@ -261,6 +261,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // One page per level of detail, each an ordinary URL, so the browser's
         // Back button, a reload, a new tab and a bookmark all work on their own.
         Route::get('/team-management/{team}', [TeamManagementController::class, 'show'])->name('team_management.show');
+        Route::patch('/team-management/{team}/send-back', [TeamManagementController::class, 'sendBack'])->name('team_management.send_back');
         Route::get('/team-management/{team}/pre-proposals', [TeamManagementController::class, 'preProposals'])->name('team_management.pre_proposals');
         Route::get('/team-management/{team}/pre-proposals/{preProposal}', [TeamManagementController::class, 'title'])->name('team_management.title');
         Route::get('/team-management/{team}/pre-proposals/{preProposal}/similar/{rank}', [TeamManagementController::class, 'similar'])->whereNumber('rank')->name('team_management.similar');
