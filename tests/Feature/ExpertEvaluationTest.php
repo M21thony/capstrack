@@ -169,6 +169,8 @@ class ExpertEvaluationTest extends TestCase
 
         $page = route('capsa.evaluations.expert', $expert->expert_id);
         $this->actingAs($this->capsa, 'expert')->get($page)->assertOk()->assertSee('Replies late at night.')->assertSee('Approve comment');
+        $results = route('capsa.evaluations', ['tab' => 'results']);
+        $this->get($results)->assertOk()->assertSee('1 comment to check');
 
         $other = $this->capsaFor();
         $this->actingAs($other, 'expert')->patch(route('capsa.evaluations.comment', $row->getKey()), ['approve' => 1])->assertNotFound();
@@ -176,6 +178,7 @@ class ExpertEvaluationTest extends TestCase
 
         $this->actingAs($this->capsa, 'expert')->patch(route('capsa.evaluations.comment', $row->getKey()), ['approve' => 1])->assertRedirect();
         $this->assertSame('Replies late at night.', $seen()->comment);
+        $this->get($results)->assertOk()->assertDontSee('comment to check');
 
         $this->patch(route('capsa.evaluations.comment', $row->getKey()), ['approve' => 0]);
         $this->assertNull($seen()->comment, 'removed: gone for the expert');

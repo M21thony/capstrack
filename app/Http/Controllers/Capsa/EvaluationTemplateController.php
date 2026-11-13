@@ -125,6 +125,8 @@ class EvaluationTemplateController extends Controller
             'average' => $x->average,
             'teamsAnswered' => $answeredBy->get($x->expert_id)->pluck('team_id')->unique()->count(),
             'teams' => $teamsOf($x->expert_id),
+            // Comments still to approve or remove.
+            'waiting' => $answeredBy->get($x->expert_id)->filter(fn ($e) => $e->comment !== null && $e->comment_approved === null)->count(),
         ]);
         // Experts nobody has answered for yet still get a row.
         foreach ($owedBy->except($experts->pluck('expert_id')->all()) as $id => $rows) {

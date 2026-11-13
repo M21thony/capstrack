@@ -213,7 +213,7 @@
                 @else
                   <div class="ev-sum-x">
                 @endif
-                    <span><b>{{ $x->name }}</b><span class="ev-sum-roles">{{ $roleLabel($x->roles) }}</span></span>
+                    <span><b>{{ $x->name }}</b><span class="ev-sum-roles">{{ $roleLabel($x->roles) }}{{ ($x->waiting ?? 0) ? ' · '.$x->waiting.' '.($x->waiting === 1 ? 'comment' : 'comments').' to check' : '' }}</span></span>
                     <span class="ev-sum-track" aria-hidden="true"><span class="ev-sum-fill" style="width:{{ $x->average !== null ? round($x->average / 5 * 100) : 0 }}%"></span></span>
                     <span @class(['ev-sum-score', 'is-none' => $x->average === null])>{{ $x->average !== null ? $fmt($x->average) : '—' }}</span>
                     <span class="ev-sum-teams {{ $teamsClass }}">{{ $x->teamsAnswered }} of {{ $x->teams }} {{ $x->teams === 1 ? 'team' : 'teams' }}</span>
