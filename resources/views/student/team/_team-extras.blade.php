@@ -28,9 +28,6 @@
       @if ($myRecruitment->tagLabels() !== [])
         <div class="ts-chips"><span class="ts-chips-k">Needs</span>@foreach ($myRecruitment->tagLabels() as $label)<span class="ts-chip">{{ $label }}</span>@endforeach</div>
       @endif
-      @if ($myRecruitment->skills)
-        <div class="feed-post-skills ts-skills"><b>Skills</b>{{ implode(', ', $myRecruitment->skills) }}</div>
-      @endif
     </section>
   @endif
 

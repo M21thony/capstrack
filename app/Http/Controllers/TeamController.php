@@ -62,9 +62,8 @@ class TeamController extends Controller
     {
         $student = $request->user();
         $goal = (string) $request->query('goal', 'all');
-        $skill = $request->query('skill') ?: null;
         $feed = TeamSelectionFeed::for($student);
-        $page = $feed->page($goal, $skill, (int) $request->query('page', 1));
+        $page = $feed->page($goal, (int) $request->query('page', 1));
 
         return response()->json([
             'html' => view('student.team._post-cards', ['posts' => $page->items()] + TeamManagementPage::forCards($student))->render(),

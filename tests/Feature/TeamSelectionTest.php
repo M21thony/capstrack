@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 /**
  * Team selection: the section's recruitment posts, eight at a time, filtered
- * by what the post is for (building a team or finding one) and by skill.
+ * by what the post is for (building a team or finding one).
  */
 class TeamSelectionTest extends TestCase
 {
@@ -40,10 +40,10 @@ class TeamSelectionTest extends TestCase
     }
 
     /** A student looking for a team, with a post. */
-    private function seeker(array $skills = []): Student
+    private function seeker(): Student
     {
         $student = $this->classmate();
-        Recruitment::create(['student_id' => $student->student_id, 'recruitment_goal' => 'find_a_team', 'introduction' => 'Hi', 'looking_for' => 'Hi', 'member_count' => 5, 'skills' => $skills]);
+        Recruitment::create(['student_id' => $student->student_id, 'recruitment_goal' => 'find_a_team', 'introduction' => 'Hi', 'looking_for' => 'Hi', 'member_count' => 5]);
 
         return $student;
     }
@@ -92,16 +92,15 @@ class TeamSelectionTest extends TestCase
         $this->assertCount(3, $feed->page('find_a_team')->items());
     }
 
-    public function test_posts_can_be_narrowed_to_a_skill(): void
+    public function test_a_card_of_someone_looking_for_a_team_names_their_primary_and_secondary_role(): void
     {
         $viewer = $this->classmate();
-        $designer = $this->seeker(['UI/UX Design', 'Web Development']);
-        $this->seeker(['Database Systems']);
+        Recruitment::where('student_id', $this->seeker()->student_id)->first()->update(['role_tags' => ['nd_primary', 'qa_secondary']]);
 
-        $feed = TeamSelectionFeed::for($viewer);
+        $html = $this->actingAs($viewer)->getJson(route('student.team.posts', ['goal' => 'find_a_team']))->json('html');
 
-        $this->assertSame([$designer->student_id], collect($feed->page('all', 'UI/UX Design')->items())->pluck('student_id')->all());
-        $this->assertSame(['Web Development', 'Database Systems', 'UI/UX Design'], $feed->skills());
+        $this->assertStringContainsString('Network Designer / UI Designer (Primary)', $html);
+        $this->assertStringContainsString('QA Tester / Documentation (Secondary)', $html);
     }
 
     public function test_load_more_returns_the_next_eight_as_cards(): void

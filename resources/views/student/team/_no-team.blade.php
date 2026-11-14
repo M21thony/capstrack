@@ -40,9 +40,6 @@
         @if ($myRecruitment->tagLabels() !== [])
           <div class="nt-mypost-tags">@foreach ($myRecruitment->tagLabels() as $label)<span>{{ $label }}</span>@endforeach</div>
         @endif
-        @if ($myRecruitment->skills)
-          <div class="feed-post-skills"><b>Skills</b>{{ implode(', ', $myRecruitment->skills) }}</div>
-        @endif
       </div>
     @endif
     @if ($capstoneStage === 1)

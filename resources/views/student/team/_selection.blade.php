@@ -2,7 +2,7 @@
   Team selection. It scrolls with the page: the header with the filters
   stays at the top while the cards go past, and Load more adds the next
   eight from TeamController::posts(). $selection comes from
-  TeamManagementPage: page, counts, skills, goal.
+  TeamManagementPage: page, counts, goal.
 --}}
 @php
   $page = $selection['page'];
@@ -38,16 +38,6 @@
           <button type="button" class="ts-tab" data-ts-goal="{{ $goal }}" aria-pressed="{{ $selection['goal'] === $goal ? 'true' : 'false' }}"><i class="ts-dot ts-dot-{{ $goal }}"></i>{{ $label }}<span class="ts-tab-n">{{ $selection['counts'][$goal] }}</span></button>
         @endforeach
       </div>
-      @if ($selection['skills'] !== [])
-        <div class="feed-filter ts-skill">
-          <select class="feed-filter-select" id="feed-skill-filter" aria-label="Filter by skill">
-            <option value="">Any skill</option>
-            @foreach ($selection['skills'] as $skill)
-              <option value="{{ $skill }}">{{ $skill }}</option>
-            @endforeach
-          </select>
-        </div>
-      @endif
     </div>
   </div>
 
@@ -92,14 +82,12 @@
   var empty = root.querySelector('[data-ts-empty]');
   var moreRow = root.querySelector('[data-ts-more-row]');
   var more = root.querySelector('[data-ts-more]');
-  var skillSelect = root.querySelector('#feed-skill-filter');
   var goal = root.getAttribute('data-ts-goal');
 
   function load(page, append) {
     var url = new URL(root.getAttribute('data-ts-url'), location.href);
     url.searchParams.set('goal', goal);
     url.searchParams.set('page', page);
-    if (skillSelect && skillSelect.value) url.searchParams.set('skill', skillSelect.value);
     more.disabled = true;
     return fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
       .then(function (r) { if (!r.ok) throw new Error('Could not load posts.'); return r.json(); })
@@ -127,7 +115,6 @@
       load(1, false);
     });
   });
-  if (skillSelect) skillSelect.addEventListener('change', function () { load(1, false); });
   more.addEventListener('click', function () { load(+more.getAttribute('data-ts-next'), true); });
 })();
 </script>

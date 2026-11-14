@@ -255,7 +255,6 @@ class TeamManagementPage
                 'page' => $otherRecruitments,
                 'goal' => $selectionGoal,
                 'counts' => $feed->counts(),
-                'skills' => $feed->skills(),
                 'subtitle' => $selectionGoal === 'find_a_team'
                     ? 'Classmates looking for a team can be invited to your open slots'
                     : 'Find teammates or a capstone team within your section',

@@ -28,7 +28,6 @@ class Recruitment extends Model
         'recruitment_goal',
         'roles',
         'role_tags',
-        'skills',
         'looking_for',
         'introduction',
         'member_count',
@@ -39,7 +38,6 @@ class Recruitment extends Model
         return [
             'member_count' => 'integer',
             'role_tags' => 'array',
-            'skills' => 'array',
         ];
     }
 

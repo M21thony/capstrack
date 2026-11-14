@@ -14,7 +14,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
  * Posts from the same course, section and school year, never the student's
  * own, and never a team that has reached the CaPSA/TSA's limit. They come eight
  * at a time, narrowed by what the post is for - building a team or finding
- * one - and by skill. The page shows the first eight; Load more asks for the
+ * one. The page shows the first eight; Load more asks for the
  * next through the same query, so the two can't disagree.
  */
 class TeamSelectionFeed
@@ -37,9 +37,9 @@ class TeamSelectionFeed
      * One page of posts, newest first. A team's post carries open_slots:
      * how many members it can still take under its section's limit.
      */
-    public function page(string $goal = 'all', ?string $skill = null, int $page = 1): LengthAwarePaginator
+    public function page(string $goal = 'all', int $page = 1): LengthAwarePaginator
     {
-        $posts = $this->posts($goal, $skill)
+        $posts = $this->posts($goal)
             ->with(['student.team'])
             ->latest()
             ->paginate(self::PER_PAGE, ['*'], 'page', max(1, $page));
@@ -72,20 +72,7 @@ class TeamSelectionFeed
         ];
     }
 
-    /**
-     * The skills some post here names, in catalogue order: what the skill
-     * filter offers.
-     *
-     * @return list<string>
-     */
-    public function skills(): array
-    {
-        $used = $this->posts()->pluck('skills')->flatten()->filter()->unique();
-
-        return collect(SkillCatalog::allSkills())->intersect($used)->values()->all();
-    }
-
-    private function posts(string $goal = 'all', ?string $skill = null): Builder
+    private function posts(string $goal = 'all'): Builder
     {
         $student = $this->student;
 
@@ -101,7 +88,6 @@ class TeamSelectionFeed
                     ->where('students.course', $student->course)
                     ->where('students.year_section', $student->year_section);
             })
-            ->when(isset(self::GOALS[$goal]) && $goal !== 'all', fn ($q) => $q->where('recruitment_goal', $goal))
-            ->when($skill, fn ($q) => $q->whereJsonContains('skills', $skill));
+            ->when(isset(self::GOALS[$goal]) && $goal !== 'all', fn ($q) => $q->where('recruitment_goal', $goal));
     }
 }

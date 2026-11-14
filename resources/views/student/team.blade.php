@@ -138,13 +138,7 @@
   .feed-post-text{font-size:12.5px;color:var(--text2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:0}
   .feed-post-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
   .feed-post-tags .expert-tag{display:inline-block;background:var(--bg3);color:var(--text2);font-size:10px;padding:3px 9px;border-radius:7px;border:1px solid var(--border);font-weight:600}
-  .feed-post-skills{font-size:11.5px;color:var(--text2);line-height:1.5}
-  .feed-post-skills b{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin-right:6px}
   .feed-filters{display:flex;gap:8px;flex-wrap:wrap}
-  .skill-pick{max-height:200px;overflow:auto;display:grid;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);margin-bottom:25px}
-  .skill-pick-group b{display:block;font-size:11px;color:var(--text3);margin-bottom:4px}
-  .skill-pick-group div{display:flex;flex-wrap:wrap;gap:4px 14px}
-  .skill-pick label{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--text);cursor:pointer}
   .feed-empty{grid-column:1 / -1;text-align:center;padding:36px;color:var(--text3);font-size:13px;border:1px dashed var(--border2);border-radius:12px}
   .goal-lead{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#16a34a}
   .goal-member{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#3b82f6}
@@ -547,22 +541,6 @@
         </div>
         <div class="tag-suggestions-box" id="tag-suggestions" style="display: none;"></div>
       </div>
-      {{-- The same catalogue experts pick from on their profile, narrowed to
-           the student's programme; grammar is the grammarian's, not a member's. --}}
-      <label id="skills-label" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Skills we need</label>
-      <p style="margin:-2px 0 8px;font-size:11px;color:var(--text3);line-height:1.5">Optional. The same list experts pick from on their profile.</p>
-      <div class="skill-pick" id="skill-pick">
-        @foreach(collect(\App\Support\SkillCatalog::groupsForPrograms(array_filter([$mySchoolYear?->program])))->except('Language & Editing (Grammarian)') as $group => $items)
-          <div class="skill-pick-group">
-            <b>{{ \Illuminate\Support\Str::before($group, ' (') }}</b>
-            <div>
-              @foreach($items as $skill)
-                <label><input type="checkbox" value="{{ $skill }}"> {{ $skill }}</label>
-              @endforeach
-            </div>
-          </div>
-        @endforeach
-      </div>
       <div class="modal-actions modal-actions--dual" style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
         <form method="POST" action="{{ route('recruitment.store') }}" style="width:100%;" id="recruitment-form" onsubmit="publishPost(event)">
           @csrf
@@ -576,7 +554,6 @@
                read from the setting. --}}
           <input type="hidden" name="member_count" id="member-count-input" value="{{ $memberCount }}">
           <input type="hidden" name="tags" id="tags-hidden-input" value="">
-          <input type="hidden" name="skills" id="skills-hidden-input" value="[]">
           <button type="submit" class="btn-primary" style="width: 100%; background: var(--blue-bg); color: var(--blue); border: 1.5px solid rgba(29,78,216,0.25); box-shadow: none;" id="form-submit-btn">Publish Post</button>
         </form>
         <button class="google-btn" style="width:100%;border:none;background:transparent;color:var(--text);" onclick="closePostModal()">Cancel</button>
@@ -2091,7 +2068,6 @@ function openEditModal() {
 
     activeTags = @json($myRecruitment->tagKeyList());
     renderActiveTags();
-    setPickedSkills(@json($myRecruitment->skills ?? []));
 
     syncRecruitmentSelectLabels();
     document.getElementById('postModal').classList.add('active');
@@ -2114,17 +2090,8 @@ function resetPostModal() {
     document.getElementById('individual-intro').value = '';
     activeTags = [];
     renderActiveTags();
-    setPickedSkills([]);
     document.getElementById('post-goal').value = 'leader';
     updateModalUI();
-}
-
-function pickedSkills() {
-    return Array.from(document.querySelectorAll('#skill-pick input:checked')).map(function (el) { return el.value; });
-}
-
-function setPickedSkills(skills) {
-    document.querySelectorAll('#skill-pick input').forEach(function (el) { el.checked = skills.indexOf(el.value) !== -1; });
 }
 
 // goal: 'individual' opens the form on "Find a team" (the hero's second button).
@@ -2335,7 +2302,7 @@ function updateModalUI() {
     document.getElementById('modal-title').textContent = isLeader ? 'Build a Team' : 'Find a Team';
     document.getElementById('modal-note-text').innerHTML = isLeader 
         ? 'Your team can have up to {{ $memberCount }} members including you (the leader). Slots are filled automatically as members join.' 
-        : 'Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
+        : 'Highlight your best technical strengths. Teams read this when filling up their empty slots.';
     
     // A closed goal says so at once, and hides its fields so nothing gets typed for nothing.
     const closedMsg = isLeader ? (CREATION_ALLOWED ? null : CREATION_CLOSED_MSG) : (JOINING_ALLOWED ? null : JOINING_CLOSED_MSG);
@@ -2351,7 +2318,6 @@ function updateModalUI() {
         submitBtn.style.cursor = closedMsg ? 'not-allowed' : 'pointer';
     }
 
-    document.getElementById('skills-label').textContent = isLeader ? 'Skills we need' : 'Skills you have';
     document.getElementById('leader-fields').style.display = isLeader && !closedMsg ? 'block' : 'none';
     document.getElementById('individual-fields').style.display = !isLeader && !closedMsg ? 'block' : 'none';
     document.getElementById('recruitment-goal-input').value = isLeader ? 'build_a_team' : 'find_a_team';
@@ -2491,7 +2457,6 @@ function publishPost(event) {
     }
     document.getElementById('member-count-input').value = {{ $memberCount }};
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
-    document.getElementById('skills-hidden-input').value = JSON.stringify(pickedSkills());
 
     if (isEditing) {
         event.preventDefault();

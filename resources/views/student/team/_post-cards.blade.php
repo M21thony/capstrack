@@ -23,7 +23,7 @@
         $owner->student_id, $ownerTeam->team_id ?? null, $owner->avatarUrl(), $recruit->introduction ?? '',
     ];
   @endphp
-  <article class="ts-card{{ $building ? ' is-building' : ' is-seeking' }}" data-goal="{{ $recruit->recruitment_goal }}" data-skills="{{ implode('|', $recruit->skills ?? []) }}">
+  <article class="ts-card{{ $building ? ' is-building' : ' is-seeking' }}" data-goal="{{ $recruit->recruitment_goal }}">
     <span class="goal-label" hidden>{{ $building ? 'BUILD A TEAM' : 'Find a Team' }}</span>
     <div class="ts-card-head">
       <span class="ts-avatar" aria-hidden="true">
@@ -43,9 +43,8 @@
     @endif
     @if ($building && $recruit->roles)
       <div class="ts-chips"><span class="ts-chips-k">Needs</span>@foreach ($recruit->roles as $role)<span class="ts-chip">{{ str_replace('/', ' / ', $role) }}</span>@endforeach</div>
-    @endif
-    @if ($recruit->skills)
-      <div class="feed-post-skills ts-skills"><b>Skills</b>{{ implode(', ', $recruit->skills) }}</div>
+    @elseif (! $building && $recruit->tagLabels() !== [])
+      <div class="ts-chips"><span class="ts-chips-k">Roles</span>@foreach ($recruit->tagLabels() as $label)<span class="ts-chip">{{ str_replace('/', ' / ', $label) }}</span>@endforeach</div>
     @endif
     <div class="ts-actions">
       <button type="button" class="ts-btn" onclick="viewPostDetails(this.closest('.ts-card'), ...{{ Js::from($details) }})">View post</button>
