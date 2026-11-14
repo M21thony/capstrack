@@ -47,3 +47,4 @@ storage/app/playwright-videos/
 /zz_test.php
 /check_team*.php
 /how --stat*
+.env.docker
