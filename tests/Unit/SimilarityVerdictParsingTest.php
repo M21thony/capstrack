@@ -44,6 +44,19 @@ class SimilarityVerdictParsingTest extends TestCase
         $this->assertStringContainsString('campus repairs', $verdict['reason']);
     }
 
+    /** Qwen 3.5 did this on 8 of 12 matches of one real scan. */
+    public function test_backslashed_quotes_around_the_last_field_are_read(): void
+    {
+        $verdict = $this->read(
+            '{"things":"repairs vs bookings","matches":false,"score":8,"reason":"Different things.",'
+            .'"similarities":"both digital","differences":"repairs vs billing",'
+            .'"suggestion\":\"Focus on the AR feature.\""}'
+        );
+
+        $this->assertSame(8, $verdict['score'] ?? null);
+        $this->assertSame('Focus on the AR feature.', $verdict['suggestion']);
+    }
+
     public function test_a_second_object_after_the_first_is_ignored(): void
     {
         $verdict = $this->read(

@@ -1051,6 +1051,10 @@ PROMPT;
         // Only reached when the answer did not parse, so a real array is safe.
         $json = preg_replace('/"\s*[\]\}]\s*,\s*"([a-z_]+)"\s*:/i', '", "$1":', $json);
 
+        // Qwen 3.5 backslashes the quotes around its last field:
+        // "suggestion\":\"text\"} and once \""}.
+        $json = preg_replace(['/\\\\""?(\s*[:,}])/', '/([:,{]\s*)\\\\"/'], ['"$1', '$1"'], $json);
+
         // A trailing comma before the closing brace.
         return preg_replace('/,\s*\}/', '}', $json);
     }
@@ -1198,8 +1202,17 @@ PROMPT;
                 ."differently the two are worded, and regardless of extra features on either side.\n"
                 .'Base this on what each one actually DOES, per its problem statement/solution/abstract '
                 ."below - not just its title.\n\n"
-                ."Return ONLY a JSON object. No markdown, no array, no extra text.\n"
-                .'{"matches":true|false,"score":<0-100>,"reason":"one sentence about core concept match or mismatch",'
+                // Asked first, so the model has named both things before it
+                // scores: left to go straight to a number it gave 75 to
+                // infrastructure projects against jail inmate records.
+                ."Return ONLY a JSON object. No markdown, no array, no extra text. Fill the fields in this order.\n"
+                .'"things" names what each system handles, in concrete nouns - never "records", "projects", '
+                .'"information" or "data" alone, say OF WHAT, and never just repeat a title. If the two things '
+                ."are different, \"matches\" is false and the score is under 30.\n"
+                .'Do not use the words system, management, monitoring, tracking, notification or integrated in "things" '
+                ."- only the real-world objects, like \"medicines of a health unit vs cement and tools of a hardware store\".\n"
+                .'{"things":"<objects the pre-proposal handles> vs <objects the archived system handles>",'
+                .'"matches":true|false,"score":<0-100>,"reason":"one sentence about core concept match or mismatch",'
                 .'"similarities":"short phrase, under 12 words, on what genuinely overlaps - or that there is none '
                 .'beyond generic wording","differences":"short phrase, under 12 words, on what specific features/scope '
                 .'actually differ","suggestion":"one clear, specific sentence of actionable advice"}'

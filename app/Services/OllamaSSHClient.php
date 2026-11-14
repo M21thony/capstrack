@@ -254,6 +254,9 @@ class OllamaSSHClient
             'model' => $model ?: config('services.ollama.model', 'qwen2.5:7b'),
             'prompt' => $prompt,
             'stream' => false,
+            // Qwen 3.5 thinks out loud first unless told not to, and the answer
+            // then comes back empty. Models that cannot think ignore this.
+            'think' => false,
             // Without this Ollama drops the model five minutes after the last
             // call and reads it back off disk on the next one. A check runs
             // one call per candidate, so the model was being reloaded partway
@@ -315,6 +318,7 @@ class OllamaSSHClient
                 'model' => $model ?: config('services.ollama.model', 'qwen2.5:7b'),
                 'prompt' => $prompt,
                 'stream' => false,
+                'think' => false,
                 'keep_alive' => config('services.ollama.keep_alive', '30m'),
                 'options' => [
                     'num_predict' => $maxTokens,
