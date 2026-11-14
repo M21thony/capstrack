@@ -372,7 +372,7 @@ See `docs/DEPLOYMENT.md` and the `deploy/` folder.
 ```bash
 composer install
 npm install
-cp .env.example .env       # then fill in DB, Google, reCAPTCHA, Ollama, VAPID values
+# create a .env file with the DB, Google, reCAPTCHA, Ollama, VAPID values
 php artisan key:generate
 php artisan migrate
 npm run build              # or: npm run dev
