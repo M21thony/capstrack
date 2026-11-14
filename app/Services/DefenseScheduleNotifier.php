@@ -96,7 +96,7 @@ class DefenseScheduleNotifier
         if (DefenseBoard::needsCapaGo($schedule->defense_type) && $schedule->capa_answer === null) {
             Notifier::toExpert(
                 app(RecipientResolver::class)->resolveTeamRoleExpert((int) $team->team_id, 'adviser'),
-                'defense_scheduled',
+                'defense_go_request',
                 'Is '.$team->team_name.' ready? '.$schedule->defense_type.' on '.$schedule->schedule_date->format('M j'),
                 'Give the go, or say the team is not ready and the date is cancelled.',
                 route('instructor.teams', ['tab' => 'todo']),

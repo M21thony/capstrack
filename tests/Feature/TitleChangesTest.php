@@ -2,19 +2,23 @@
 
 namespace Tests\Feature;
 
+use App\Mail\NotificationMail;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DefenseSchedule;
 use App\Models\DuplicationCheck;
+use App\Models\Notification;
 use App\Models\Role;
-use App\Models\TeamExpertAssignment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\TeamExpertAssignment;
 use App\Support\DefenseOutcome;
+use App\Support\PreProposalPayload;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
@@ -139,6 +143,18 @@ class TitleChangesTest extends TestCase
         return [$team->fresh(), $old, $new->fresh(), $adviser];
     }
 
+    /** The title waits on the adviser, so the adviser is told - once, by bell and email. */
+    public function test_the_adviser_is_emailed_that_a_new_title_waits_for_them(): void
+    {
+        Mail::fake();
+        [, , , $adviser] = $this->newTitleApprovedByCapsa();
+
+        $this->assertSame(1, Notification::where('expert_id', $adviser->expert_id)->where('type', 'title_to_confirm')->count());
+        $this->assertCount(1, Mail::queued(NotificationMail::class, fn (NotificationMail $mail) => $mail->hasTo($adviser->email)
+            && $mail->headline === 'New title to confirm'
+            && str_contains($mail->body, self::REVISED)));
+    }
+
     public function test_a_new_title_approved_by_the_capsa_is_the_teams_once_the_adviser_confirms_it(): void
     {
         [$team, $old, $new, $adviser] = $this->newTitleApprovedByCapsa();
@@ -180,7 +196,7 @@ class TitleChangesTest extends TestCase
         $this->assertSame('approved', TeamExpertAssignment::where('expert_id', $adviser->expert_id)->value('status'));
 
         // The CaPSA/TSA's review window still shows the title, with the adviser's note.
-        $shown = collect(\App\Support\PreProposalPayload::forTeam($team->fresh()))->firstWhere('id', $new->id);
+        $shown = collect(PreProposalPayload::forTeam($team->fresh()))->firstWhere('id', $new->id);
         $this->assertTrue($shown['set_aside']);
         $this->assertSame('declined', $shown['adviser']['status']);
         $this->assertSame('Talk to your consultant about the scope first.', $shown['adviser']['note']);
@@ -230,7 +246,7 @@ class TitleChangesTest extends TestCase
     {
         [$team, , $new, $adviser] = $this->newTitleApprovedByCapsa();
 
-        $shown = collect(\App\Support\PreProposalPayload::forTeam($team))->firstWhere('id', $new->id);
+        $shown = collect(PreProposalPayload::forTeam($team))->firstWhere('id', $new->id);
         $this->assertSame('pending', $shown['adviser']['status']);
         $this->assertSame($adviser->name, $shown['adviser']['name']);
     }

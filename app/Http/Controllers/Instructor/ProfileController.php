@@ -78,6 +78,7 @@ class ProfileController extends Controller
             'teams' => ['Teams', 'A team applies to you, a student asks to leave or be removed, or (CaPSA/TSA) teams outnumber the free expert slots', ['expert_application', 'leave_request_received', 'expert_slots_short']],
             'consultations' => ['Consultations', 'Bookings, cancellations, and a reminder on the day', ['consultation_booked', 'consultation_cancelled', 'consultation_reminder']],
             'documents' => ['Documents', 'Documents and signed papers to review, and a reminder when they wait', ['document_submitted', 'paper_to_check', 'review_reminder']],
+            'titles' => ['Titles and defenses', 'A team turns in its titles (CaPSA/TSA), a title waits for your approval, you are asked whether your team is ready to defend, or your panel seat changes', ['titles_submitted', 'title_change_requested', 'defense_go_request', 'defense_panel']],
             'announcements' => ['Announcements', 'Important or urgent announcements from a CaPSA/TSA', ['announcement']],
         ];
         $grouped = array_merge(...array_column($byGroup, 2));

@@ -202,14 +202,14 @@ class InstructorProfileTest extends TestCase
 
         $response = $this->actingAs($expert->fresh(), 'expert')->get(route('instructor.profile'))->assertOk();
 
-        $response->assertSeeInOrder(['Email notifications', 'Teams', 'Consultations', 'Documents', 'Announcements'])
+        $response->assertSeeInOrder(['Email notifications', 'Teams', 'Consultations', 'Documents', 'Titles and defenses', 'Announcements'])
             ->assertSee('id="notifications"', false)
             ->assertSee('Turn on')
             ->assertDontSee('Notify me at all')
             ->assertDontSee('class="notif-prefs"', false);
 
         $groups = $response->viewData('emailGroups');
-        $this->assertSame(['teams', 'consultations', 'documents', 'announcements'], array_keys($groups), 'every expert email has a group');
+        $this->assertSame(['teams', 'consultations', 'documents', 'titles', 'announcements'], array_keys($groups), 'every expert email has a group');
         $this->assertFalse($groups['teams']['on'], 'both team emails are off');
         $this->assertTrue($groups['documents']['on'], 'one documents email is still on');
     }

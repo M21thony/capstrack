@@ -6,6 +6,7 @@ use App\Models\ArchivedDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
+use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TitleChangeRequest;
@@ -880,6 +881,8 @@ class PreProposalController extends Controller
         // only now, and Team::hasSubmittedPreProposals() answers the rest.
         $drafts->update(['submitted_at' => now()]);
 
+        $this->tellCapsaTitlesAreIn($team, $count);
+
         $held = $team->preProposals()->whereNull('submitted_at')->count();
 
         return redirect()->route('student.duplication')
@@ -1003,6 +1006,39 @@ class PreProposalController extends Controller
      * saves new titles and submits again. Counting the rejected ones kept the
      * page on "Submitted for checking" with no way forward.
      */
+    /**
+     * One notice per turn-in, however many titles are in it. A team that
+     * takes its titles back and turns them in again does not send a second
+     * while the first is still unread - the CaPSA/TSA already knows to look.
+     */
+    private function tellCapsaTitlesAreIn(Team $team, int $count): void
+    {
+        $capsaId = app(RecipientResolver::class)->resolveSubjectAdviserAdmin((int) $team->team_id);
+
+        if (! $capsaId) {
+            return;
+        }
+
+        $alreadyWaiting = Notification::where('expert_id', $capsaId)
+            ->where('type', 'titles_submitted')
+            ->where('is_read', false)
+            ->where('data->team_id', $team->team_id)
+            ->exists();
+
+        if ($alreadyWaiting) {
+            return;
+        }
+
+        Notifier::toExpert(
+            $capsaId,
+            'titles_submitted',
+            'Titles to check: '.$team->team_name,
+            '<strong>'.e($team->team_name).'</strong> turned in '.$count.' '.Str::plural('title', $count).' for you to check. They cannot ask for an adviser until you recommend one.',
+            route('capsa.team_management.pre_proposals', $team->team_id),
+            ['team_id' => $team->team_id],
+        );
+    }
+
     private function isTurnedIn(Team $team): bool
     {
         return $team->preProposals()

@@ -57,6 +57,26 @@ final class NotificationTypes
             'label' => 'A team hands in a signed paper for me to check',
             'email' => true,
         ],
+        // One per turn-in, not one per title - and not again while the last
+        // one is still unread (PreProposalController::submit).
+        'titles_submitted' => [
+            'label' => 'A team turns in its titles for me to check (CaPSA/TSA)',
+            'email' => true,
+        ],
+        'title_change_requested' => [
+            'label' => 'A team\'s title is waiting for my approval (adviser)',
+            'email' => true,
+        ],
+        // The date is cancelled without an answer, so this one is emailed
+        // though the schedule itself already is.
+        'defense_go_request' => [
+            'label' => 'I am asked whether my team is ready for its defense (adviser)',
+            'email' => true,
+        ],
+        'defense_panel' => [
+            'label' => 'I am put on, or replaced on, a team\'s defense panel',
+            'email' => true,
+        ],
         'review_reminder' => [
             'label' => 'Documents are still waiting on my review',
             'email' => true,
@@ -103,6 +123,11 @@ final class NotificationTypes
         ],
         // One email per round, sent when the last title has its decision -
         // never one per title while the CaPSA/TSA is still reading them.
+        // Both wait on the student to send a corrected copy.
+        'paper_sent_back' => [
+            'label' => 'A paper or receipt of ours is sent back to fix',
+            'email' => true,
+        ],
         'titles_checked' => [
             'label' => 'Our CaPSA/TSA finishes checking our titles',
             'email' => true,
@@ -225,6 +250,8 @@ final class NotificationTypes
         'title_pick_required' => 'titles_checked',
         'titles_rejected' => 'titles_checked',
         'title_awaiting_adviser' => 'titles_checked',
+        'receipt_sent_back' => 'paper_sent_back',
+        'title_to_confirm' => 'title_change_requested',
     ];
 
     public static function for(string $audience): array

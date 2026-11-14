@@ -8,6 +8,8 @@ use App\Models\DefenseSchedule;
 use App\Models\DeliverableCheck;
 use App\Models\Team;
 use App\Models\TitleChangeRequest;
+use App\Services\Notifier;
+use App\Services\RecipientResolver;
 
 /**
  * When a team's title may change, read off its Pre-proposal Defense.
@@ -37,6 +39,19 @@ class TitleRevision
     public static function askAdviser(CapstonePreProposal $proposal): void
     {
         $proposal->update(['adviser_status' => self::PENDING, 'adviser_note' => null, 'adviser_decided_at' => null]);
+
+        // The title cannot become the team's until the adviser answers, and
+        // nothing else tells them it is waiting.
+        $team = $proposal->team;
+
+        Notifier::toExpert(
+            app(RecipientResolver::class)->resolveTeamRoleExpert((int) $team->team_id, 'adviser'),
+            'title_to_confirm',
+            'New title to confirm',
+            '<strong>'.e($team->team_name).'</strong> has a new title for you to confirm: <strong>'.e($proposal->title).'</strong>.',
+            route('instructor.teams', ['tab' => 'todo']),
+            ['team_id' => $team->team_id, 'pre_proposal_id' => $proposal->id],
+        );
     }
 
     /** The new title the team's adviser is still to confirm, if any. */
