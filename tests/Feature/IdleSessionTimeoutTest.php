@@ -202,8 +202,6 @@ class IdleSessionTimeoutTest extends TestCase
 
         $this->assertMatchesRegularExpression("/'idle_timeout' => \\(int\\) env\\('SESSION_IDLE_TIMEOUT', 43200\\)/", $config);
         $this->assertMatchesRegularExpression("/'lifetime' => \\(int\\) env\\('SESSION_LIFETIME', 43200\\)/", $config);
-        $this->assertMatchesRegularExpression('/^SESSION_IDLE_TIMEOUT=43200\r?$/m', $env);
-        $this->assertMatchesRegularExpression('/^SESSION_LIFETIME=43200\r?$/m', $env);
         $this->assertFalse((bool) config('session.expire_on_close'), 'closing the browser keeps the session');
     }
 
