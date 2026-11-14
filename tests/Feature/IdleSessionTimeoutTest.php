@@ -193,15 +193,19 @@ class IdleSessionTimeoutTest extends TestCase
     }
 
     /**
-     * Thirty days unless an install says otherwise, and the session cookie lasts as long, so
+     * Thirty days unless an install says otherwise - here and in the example
+     * env a server is set up from - and the session cookie lasts as long, so
      * it is not the cookie that signs anyone out first.
      */
     public function test_the_idle_limit_is_thirty_days_by_default(): void
     {
         $config = file_get_contents(config_path('session.php'));
+        $env = file_get_contents(base_path('.env.example'));
 
         $this->assertMatchesRegularExpression("/'idle_timeout' => \\(int\\) env\\('SESSION_IDLE_TIMEOUT', 43200\\)/", $config);
         $this->assertMatchesRegularExpression("/'lifetime' => \\(int\\) env\\('SESSION_LIFETIME', 43200\\)/", $config);
+        $this->assertMatchesRegularExpression('/^SESSION_IDLE_TIMEOUT=43200\r?$/m', $env);
+        $this->assertMatchesRegularExpression('/^SESSION_LIFETIME=43200\r?$/m', $env);
         $this->assertFalse((bool) config('session.expire_on_close'), 'closing the browser keeps the session');
     }
 
