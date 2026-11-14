@@ -92,6 +92,28 @@ class TeamController extends Controller
             return $this->roleAnswer($request, false, 'Join a team before choosing a role.');
         }
 
+        // The secondary role: one of the member roles, not the one already
+        // held, and it takes no seat. Set once, like the main one.
+        if ($request->has('secondary_role_id')) {
+            $roleId = (int) $request->input('secondary_role_id');
+
+            if (! $studentSy->s_role_id) {
+                return $this->roleAnswer($request, false, 'Choose your main role first.');
+            }
+
+            if ($studentSy->secondary_role_id) {
+                return $this->roleAnswer($request, false, 'Your secondary role is already set for this semester.');
+            }
+
+            if ($roleId === (int) $studentSy->s_role_id || ! StudentRole::memberRoles()->contains('s_role_id', $roleId)) {
+                return $this->roleAnswer($request, false, 'Pick a role different from your main one.');
+            }
+
+            $studentSy->update(['secondary_role_id' => $roleId]);
+
+            return $this->roleAnswer($request, true, 'Your secondary role is '.StudentRole::find($roleId)->s_role_name.'.');
+        }
+
         if ((int) $team->leader_id === (int) $studentId) {
             return $this->roleAnswer($request, false, 'The team leader is the Project Head.');
         }
@@ -439,7 +461,7 @@ class TeamController extends Controller
 
         StudentSchoolYear::where('team_id', $teamId)->update([
             'team_id' => null,
-            's_role_id' => null,
+            's_role_id' => null, 'secondary_role_id' => null,
         ]);
         $team->delete();
 
@@ -495,7 +517,7 @@ class TeamController extends Controller
                 ->with('error', 'That student is not in your team.');
         }
 
-        $memberSy->update(['team_id' => null, 's_role_id' => null]);
+        $memberSy->update(['team_id' => null, 's_role_id' => null, 'secondary_role_id' => null]);
         $myTeam->reopenIfRoom();
 
         Recruitment::where('student_id', $student->student_id)->delete();
@@ -705,6 +727,8 @@ class TeamController extends Controller
         $newLeaderPreviousRoleId = StudentSchoolYear::where('student_id', $newLeaderId)->value('s_role_id');
 
         StudentSchoolYear::where('student_id', $oldLeaderId)->update(['s_role_id' => $newLeaderPreviousRoleId]);
+        // A secondary has to differ from the role held, and theirs may now be the same.
+        StudentSchoolYear::where('student_id', $oldLeaderId)->where('secondary_role_id', $newLeaderPreviousRoleId)->update(['secondary_role_id' => null]);
         StudentSchoolYear::where('student_id', $newLeaderId)->update(['s_role_id' => StudentRole::leaderRoleId()]);
 
         $oldLeader = Student::find($oldLeaderId);

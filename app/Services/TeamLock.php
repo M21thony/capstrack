@@ -99,7 +99,7 @@ class TeamLock
 
         StudentSchoolYear::where('student_id', $request->student_id)
             ->where('team_id', $request->team_id)
-            ->update(['team_id' => null, 's_role_id' => null]);
+            ->update(['team_id' => null, 's_role_id' => null, 'secondary_role_id' => null]);
         $team->reopenIfRoom();
 
         Recruitment::where('student_id', $request->student_id)->delete();

@@ -58,8 +58,9 @@ class TeamManagementPage
             $teamLeaderId = (int) $myTeam?->leader_id;
             $teamMembers = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
                 ->leftJoin('student_roles', 'student_s_y.s_role_id', '=', 'student_roles.s_role_id')
+                ->leftJoin('student_roles as secondary', 'student_s_y.secondary_role_id', '=', 'secondary.s_role_id')
                 ->where('student_s_y.team_id', $teamId)
-                ->select('students.*', 'student_s_y.s_role_id', 'student_roles.s_role_name')
+                ->select('students.*', 'student_s_y.s_role_id', 'student_roles.s_role_name', 'secondary.s_role_name as secondary_role_name')
                 ->get()
                 ->sortBy(function ($member) use ($studentId, $teamLeaderId) {
                     $isLeader = (int) $member->student_id === $teamLeaderId;
@@ -186,6 +187,11 @@ class TeamManagementPage
         }
 
         $userRole = $studentSy?->role?->s_role_name;
+        $secondaryRole = $studentSy?->secondaryRole?->s_role_name;
+        // Offered until picked: the member roles other than the one they hold.
+        $secondaryChoices = $myTeam && $studentSy?->s_role_id && ! $secondaryRole
+            ? StudentRole::memberRoles()->where('s_role_id', '!=', $studentSy->s_role_id)->values()
+            : collect();
 
         // A member who has joined but not yet said what they do. The team
         // page asks them once, and only once - a role is settled for the
@@ -291,6 +297,8 @@ class TeamManagementPage
             // out: that seat belongs to whoever leads the team.
             'memberRoleNames' => StudentRole::memberRoles()->pluck('s_role_name')->all(),
             'needsRole' => $needsRole,
+            'secondaryRole' => $secondaryRole,
+            'secondaryChoices' => $secondaryChoices,
             'roleChoices' => $roleChoices,
             'teamMembers' => $teamMembers,
             'myRecruitment' => $myRecruitment,

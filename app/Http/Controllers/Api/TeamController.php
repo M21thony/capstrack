@@ -243,7 +243,7 @@ class TeamController extends Controller
             // Solo leader — terminate the team
             StudentSchoolYear::where('team_id', $team->team_id)->update([
                 'team_id' => null,
-                's_role_id' => null,
+                's_role_id' => null, 'secondary_role_id' => null,
             ]);
             $team->delete();
 
@@ -456,6 +456,8 @@ class TeamController extends Controller
         $newLeaderPreviousRoleId = StudentSchoolYear::where('student_id', $newLeaderId)->value('s_role_id');
 
         StudentSchoolYear::where('student_id', $oldLeaderId)->update(['s_role_id' => $newLeaderPreviousRoleId]);
+        // A secondary has to differ from the role held, and theirs may now be the same.
+        StudentSchoolYear::where('student_id', $oldLeaderId)->where('secondary_role_id', $newLeaderPreviousRoleId)->update(['secondary_role_id' => null]);
         StudentSchoolYear::where('student_id', $newLeaderId)->update(['s_role_id' => StudentRole::leaderRoleId()]);
 
         $oldLeader = Student::find($oldLeaderId);
@@ -523,7 +525,7 @@ class TeamController extends Controller
             return response()->json(['message' => 'That student is not in your team.'], 422);
         }
 
-        $memberSy->update(['team_id' => null, 's_role_id' => null]);
+        $memberSy->update(['team_id' => null, 's_role_id' => null, 'secondary_role_id' => null]);
         $team->reopenIfRoom();
 
         Recruitment::where('student_id', $student->student_id)->delete();

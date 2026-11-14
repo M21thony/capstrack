@@ -100,6 +100,7 @@ class SettingsController extends Controller
                     'term_id' => $new->term_id,
                     'team_id' => $row->team_id,
                     's_role_id' => $row->s_role_id,
+                    'secondary_role_id' => $row->secondary_role_id,
                     // A team only waiting on its Bluebook keeps the year of its own batch.
                     'school_year' => $passed->contains($row->team_id) ? $row->school_year : $year,
                     'program' => $row->program,

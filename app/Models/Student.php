@@ -269,7 +269,7 @@ class Student extends Authenticatable
                 ->whereNotNull('team_id');
             $teamIds = (clone $rows)->pluck('team_id')->unique()->all();
 
-            $rows->update(['team_id' => null, 's_role_id' => null]);
+            $rows->update(['team_id' => null, 's_role_id' => null, 'secondary_role_id' => null]);
 
             Team::whereIn('team_id', $teamIds)->get()->each->reopenIfRoom();
         });

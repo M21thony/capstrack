@@ -256,6 +256,35 @@ class MemberChoosesTheirRoleTest extends TestCase
         $this->assertSame(self::DESIGNER, $this->roleOf($joiner));
     }
 
+    /** A secondary is a different member role, set once, and shown on the team page. */
+    public function test_a_secondary_role_is_a_different_role_set_once(): void
+    {
+        [$leader, $team] = $this->team();
+        [$joiner, $invite] = $this->inviteeOf($team, $leader);
+        $this->actingAs($joiner, 'web')->patch(route('invitations.update', $invite), ['status' => 'accepted']);
+        $this->actingAs($joiner, 'web')->put(route('team.role.update'), ['role_id' => $this->roleId(self::DESIGNER)]);
+
+        $secondary = fn (Student $who) => StudentSchoolYear::where('student_id', $who->student_id)->value('secondary_role_id');
+
+        // Not the role they already hold, and not a seat nobody is offered.
+        foreach ([self::DESIGNER, self::PROGRAMMER, StudentRole::LEADER_ROLE_NAME] as $refused) {
+            $this->actingAs($joiner, 'web')->put(route('team.role.update'), ['secondary_role_id' => $this->roleId($refused)]);
+            $this->assertNull($secondary($joiner));
+        }
+
+        $this->actingAs($joiner, 'web')->put(route('team.role.update'), ['secondary_role_id' => $this->roleId(self::TESTER)]);
+        $this->assertSame($this->roleId(self::TESTER), (int) $secondary($joiner));
+        $this->assertSame(self::DESIGNER, $this->roleOf($joiner));
+
+        // The leader picks one too, and it cannot be changed afterwards.
+        $this->actingAs($leader, 'web')->put(route('team.role.update'), ['secondary_role_id' => $this->roleId(self::DESIGNER)]);
+        $this->actingAs($leader, 'web')->put(route('team.role.update'), ['secondary_role_id' => $this->roleId(self::TESTER)]);
+        $this->assertSame($this->roleId(self::DESIGNER), (int) $secondary($leader));
+
+        $this->actingAs($leader, 'web')->get(route('student.team'))->assertOk()
+            ->assertSee('Secondary: QA Tester / Documentation Writer');
+    }
+
     /** Project Head belongs to the leader and cannot be taken. */
     public function test_nobody_can_take_the_project_head_seat(): void
     {

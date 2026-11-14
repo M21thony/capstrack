@@ -57,6 +57,24 @@
       <dt>Your role</dt>
       <dd>{{ $isLeader ? 'Leader' : ($roleLabel($userRole) ?? 'Not picked yet') }}</dd>
     </div>
+    @if ($secondaryRole || $secondaryChoices->isNotEmpty())
+      <div>
+        <dt>Secondary role</dt>
+        <dd>
+          @if ($secondaryRole)
+            {{ $roleLabel($secondaryRole) }}
+          @else
+            <form method="POST" action="{{ route('team.role.update') }}" onsubmit="return confirm('Set this as your secondary role? It stays for the semester.')" style="display:flex;gap:6px;flex-wrap:wrap">
+              @csrf
+              @method('PUT')
+              @foreach ($secondaryChoices as $choice)
+                <button type="submit" name="secondary_role_id" value="{{ $choice->s_role_id }}" class="btn btn-secondary btn-sm">{{ $roleLabel($choice->s_role_name) }}</button>
+              @endforeach
+            </form>
+          @endif
+        </dd>
+      </div>
+    @endif
     @if ($screen === \App\Support\TeamManagementPage::LEADER_OPEN)
       <div>
         <dt>Invites sent</dt>
@@ -128,7 +146,7 @@
             </span>
             <b>{{ $memberName }}</b>
           </span>
-          <span class="tm-role" role="cell">{{ $roleLabel($member->s_role_name) ?? 'Picking a role' }}</span>
+          <span class="tm-role" role="cell">{{ $roleLabel($member->s_role_name) ?? 'Picking a role' }}@if ($member->secondary_role_name)<small style="display:block;opacity:.7">Secondary: {{ $roleLabel($member->secondary_role_name) }}</small>@endif</span>
           <span class="tm-tags" role="cell">
             @if ($isTeamLeader)<span class="tm-tag is-leader">LEADER</span>@endif
             @if ($isMe)<span class="tm-tag is-you">YOU</span>@endif

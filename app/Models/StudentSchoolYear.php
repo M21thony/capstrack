@@ -18,6 +18,7 @@ class StudentSchoolYear extends Model
         'term_id',
         'team_id',
         's_role_id',
+        'secondary_role_id',
         'school_year',
         'program',
         'student_status',
@@ -173,6 +174,11 @@ class StudentSchoolYear extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class, 'team_id', 'team_id');
+    }
+
+    public function secondaryRole(): BelongsTo
+    {
+        return $this->belongsTo(StudentRole::class, 'secondary_role_id', 's_role_id');
     }
 
     public function role(): BelongsTo
