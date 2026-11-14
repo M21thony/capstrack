@@ -123,9 +123,14 @@ final class NotificationTypes
         ],
         // One email per round, sent when the last title has its decision -
         // never one per title while the CaPSA/TSA is still reading them.
-        // Both wait on the student to send a corrected copy.
+        // Papers sent back in one sitting go out as one "Document Review"
+        // email (SendSentBackDigest), not one each.
         'paper_sent_back' => [
-            'label' => 'A paper or receipt of ours is sent back to fix',
+            'label' => 'Papers of ours are sent back to fix (one Document Review email)',
+            'email' => true,
+        ],
+        'receipt_sent_back' => [
+            'label' => 'A receipt of mine is sent back to fix',
             'email' => true,
         ],
         'titles_checked' => [
@@ -250,7 +255,6 @@ final class NotificationTypes
         'title_pick_required' => 'titles_checked',
         'titles_rejected' => 'titles_checked',
         'title_awaiting_adviser' => 'titles_checked',
-        'receipt_sent_back' => 'paper_sent_back',
         'title_to_confirm' => 'title_change_requested',
     ];
 

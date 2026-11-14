@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendSentBackDigest;
 use App\Mail\NotificationMail;
 use App\Models\CapstoneExpert;
 use App\Models\Notification;
@@ -30,6 +31,14 @@ class NotificationMailer
         $person = $notification->expert_id
             ? CapstoneExpert::find($notification->expert_id)
             : Student::find($notification->student_id);
+
+        // Papers are sent back one after another, so they wait a little
+        // and go out together as one email rather than one each.
+        if ($person instanceof Student && $notification->type === SendSentBackDigest::TYPE) {
+            SendSentBackDigest::dispatch($person->student_id)->delay(now()->addMinutes(SendSentBackDigest::WAIT_MINUTES));
+
+            return;
+        }
 
         if ($person) {
             self::send($person, $notification->type, $notification->title, $notification->message, $notification->link);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendSentBackDigest;
 use App\Mail\NotificationMail;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
@@ -14,6 +15,7 @@ use App\Models\Team;
 use App\Services\Notifier;
 use App\Support\NotificationTypes;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Mail;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -79,17 +81,116 @@ class PeopleWhoMustActAreEmailedTest extends TestCase
         Mail::assertQueued(NotificationMail::class, fn (NotificationMail $mail) => $mail->hasTo($student->email));
     }
 
-    /** Both kinds of "sent back" are one switch, and switching it off is respected. */
-    public function test_the_sent_back_email_can_be_switched_off(): void
+    public function test_the_sent_back_emails_can_be_switched_off(): void
     {
         Mail::fake();
-        $student = Student::factory()->withCompleteProfile()->create(['notification_prefs' => ['email.paper_sent_back' => false]]);
+        $student = Student::factory()->withCompleteProfile()->create([
+            'notification_prefs' => ['email.paper_sent_back' => false, 'email.receipt_sent_back' => false],
+        ]);
 
         Notifier::toStudent($student, 'paper_sent_back', 'Sent back', 'Send a corrected copy.');
         Notifier::toStudent($student, 'receipt_sent_back', 'Sent back', 'Upload a corrected photo.');
 
         Mail::assertNothingQueued();
         $this->assertSame(2, Notification::where('student_id', $student->student_id)->count());
+    }
+
+    // -- Papers sent back go out as one Document Review email ----------------
+
+    private function sendBack(Student $student, string $paper, string $note): void
+    {
+        Notifier::toStudent(
+            $student, 'paper_sent_back', 'Sent back: '.$paper,
+            'Your CaPSA/TSA sent back <strong>'.$paper.'</strong>: “'.$note.'” Your file is kept - replace it with a corrected copy.',
+            route('student.progress'), ['team_id' => 1],
+        );
+    }
+
+    /** Nothing is emailed the moment a paper is sent back: it waits for the rest. */
+    public function test_a_paper_sent_back_waits_instead_of_emailing_at_once(): void
+    {
+        Mail::fake();
+        Bus::fake([SendSentBackDigest::class]);
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        $this->sendBack($student, 'Chapter 1', 'Fix the margins.');
+
+        Mail::assertNothingQueued();
+        Bus::assertDispatched(SendSentBackDigest::class, fn (SendSentBackDigest $job) => $job->studentId === $student->student_id
+            && $job->delay !== null
+            && now()->addMinutes(SendSentBackDigest::WAIT_MINUTES)->diffInSeconds($job->delay, true) < 5);
+        $this->assertSame(1, Notification::where('student_id', $student->student_id)->count(), 'The bell is still told right away.');
+    }
+
+    public function test_three_papers_sent_back_are_one_document_review_email(): void
+    {
+        Mail::fake();
+        Bus::fake([SendSentBackDigest::class]);
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        $this->sendBack($student, 'Chapter 1', 'Fix the margins.');
+        $this->sendBack($student, 'Chapter 2', 'Cite your sources.');
+        $this->sendBack($student, 'Signed Title Form', 'The adviser has not signed.');
+
+        (new SendSentBackDigest($student->student_id))->handle();
+
+        Mail::assertQueuedCount(1);
+        Mail::assertQueued(NotificationMail::class, fn (NotificationMail $mail) => $mail->hasTo($student->email)
+            && $mail->envelope()->subject === 'CapsTrack: Document Review: 3 papers sent back'
+            && str_contains($mail->body, 'Chapter 1') && str_contains($mail->body, 'Fix the margins.')
+            && str_contains($mail->body, 'Chapter 2') && str_contains($mail->body, 'Cite your sources.')
+            && str_contains($mail->body, 'Signed Title Form')
+            && ! str_contains($mail->body, '<strong>')
+            && $mail->url === route('student.progress'));
+
+        // Already in an email: a later run does not send them again.
+        (new SendSentBackDigest($student->student_id))->handle();
+
+        Mail::assertQueuedCount(1);
+    }
+
+    public function test_one_paper_sent_back_is_still_a_document_review_email(): void
+    {
+        Mail::fake();
+        Bus::fake([SendSentBackDigest::class]);
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        $this->sendBack($student, 'Chapter 1', 'Fix the margins.');
+        (new SendSentBackDigest($student->student_id))->handle();
+
+        Mail::assertQueued(NotificationMail::class, fn (NotificationMail $mail) => $mail->envelope()->subject === 'CapsTrack: Document Review: 1 paper sent back');
+    }
+
+    /** One sent back after the email went out starts the next email, with only itself in it. */
+    public function test_a_paper_sent_back_later_goes_in_the_next_email_alone(): void
+    {
+        Mail::fake();
+        Bus::fake([SendSentBackDigest::class]);
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        $this->sendBack($student, 'Chapter 1', 'Fix the margins.');
+        (new SendSentBackDigest($student->student_id))->handle();
+
+        $this->sendBack($student, 'Chapter 3', 'Add the diagram.');
+        (new SendSentBackDigest($student->student_id))->handle();
+
+        Mail::assertQueuedCount(2);
+        Mail::assertQueued(NotificationMail::class, fn (NotificationMail $mail) => str_contains($mail->body, 'Chapter 3') && ! str_contains($mail->body, 'Chapter 1'));
+    }
+
+    /** One they already opened in CapsTrack is left out; with none left, no email. */
+    public function test_a_paper_already_read_in_capstrack_is_not_emailed(): void
+    {
+        Mail::fake();
+        Bus::fake([SendSentBackDigest::class]);
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        $this->sendBack($student, 'Chapter 1', 'Fix the margins.');
+        Notification::where('student_id', $student->student_id)->update(['is_read' => true]);
+
+        (new SendSentBackDigest($student->student_id))->handle();
+
+        Mail::assertNothingQueued();
     }
 
     /** News that asks nothing of anyone stays in the bell. */
