@@ -97,7 +97,14 @@ final class NotificationTypes
             'web' => false,
         ],
         'team_verified' => [
-            'label' => 'The administrator verifies our team',
+            'label' => 'Our team is verified',
+            'email' => true,
+            'web' => false,
+        ],
+        // One email per round, sent when the last title has its decision -
+        // never one per title while the CaPSA/TSA is still reading them.
+        'titles_checked' => [
+            'label' => 'Our CaPSA/TSA finishes checking our titles',
             'email' => true,
             'web' => false,
         ],
@@ -214,6 +221,10 @@ final class NotificationTypes
         'expert_removal_declined' => 'expert_removal',
         'expert_accepted' => 'expert_rejected',
         'expert_meet_first' => 'expert_rejected',
+        'title_approved' => 'titles_checked',
+        'title_pick_required' => 'titles_checked',
+        'titles_rejected' => 'titles_checked',
+        'title_awaiting_adviser' => 'titles_checked',
     ];
 
     public static function for(string $audience): array

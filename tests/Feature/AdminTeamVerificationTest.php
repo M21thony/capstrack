@@ -3,15 +3,20 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\PreProposalController;
+use App\Mail\NotificationMail;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
+use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Support\TeamVerification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class AdminTeamVerificationTest extends TestCase
@@ -120,15 +125,13 @@ class AdminTeamVerificationTest extends TestCase
         );
     }
 
-    // verify() now requires the title question to already be resolved -
-    // creates a minimal approved-and-selected pre-proposal for the team.
-    private function selectFinalTitleForTeam(Team $team, Student $leader): CapstonePreProposal
+    /** Recommend or reject a title, the way the title page does. */
+    private function decide(CapstonePreProposal $proposal, string $status, ?string $reason = null): TestResponse
     {
-        $proposal = $this->submittedProposalFor($team, $leader, ['approved_status' => true]);
-
-        $team->update(['selected_pre_proposal_id' => $proposal->id]);
-
-        return $proposal;
+        return $this->patchJson(
+            route('capsa.verify_teams.pre_proposals.update', $proposal->id),
+            array_filter(['status' => $status, 'reason' => $reason]),
+        );
     }
 
     private function updateTeam(Team $team, string $status): void
@@ -157,68 +160,277 @@ class AdminTeamVerificationTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($team->team_name);
-        $response->assertSee('To verify');
+        $response->assertSee('Title pending');
+        $response->assertDontSee('To verify');
         $response->assertDontSee($onGoing->team_name);
     }
 
-    public function test_admin_can_verify_a_complete_team(): void
+    /**
+     * Verifying used to be a second button pressed after the title was already
+     * settled. Recommending the only title is the whole decision, so it is
+     * also what verifies the team.
+     */
+    public function test_recommending_the_only_title_verifies_the_team(): void
     {
-        $this->createAdmin();
+        $admin = $this->createAdmin();
         $leader = $this->createLeader();
         $member = $this->createMember();
         $team = $this->createCompleteTeam($leader);
-        $this->selectFinalTitleForTeam($team, $leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
 
         StudentSchoolYear::create([
             'student_id' => $member->student_id,
             'team_id' => $team->team_id,
         ]);
 
-        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
-
-        $response->assertRedirect(route('capsa.verify_teams'));
-        $response->assertSessionHas('status');
+        $this->decide($proposal, 'approved')
+            ->assertOk()
+            ->assertJsonPath('is_verified', true)
+            ->assertJsonPath('message', 'Proposal recommended. The team is now verified.');
 
         $this->assertDatabaseHas('team', [
             'team_id' => $team->team_id,
             'is_confirmed' => true,
+            'selected_pre_proposal_id' => $proposal->id,
         ]);
 
-        $this->assertDatabaseHas('notifications', [
-            'student_id' => $leader->student_id,
-            'type' => 'team_verified',
-        ]);
+        // One notice says both: the title, and that the team is verified.
+        foreach ([$leader, $member] as $student) {
+            $notices = Notification::where('student_id', $student->student_id)->get();
 
-        $this->assertDatabaseHas('notifications', [
-            'student_id' => $member->student_id,
-            'type' => 'team_verified',
-        ]);
+            $this->assertCount(1, $notices);
+            $this->assertSame('title_approved', $notices[0]->type);
+            $this->assertStringContainsString('Your team is now verified', $notices[0]->message);
+        }
 
         $this->assertDatabaseHas('activity_log', [
+            'student_id' => $admin->expert_id,
             'type' => 'team_verified',
             'description' => 'Verified team <strong>'.$team->team_name.'</strong>',
         ]);
     }
 
-    public function test_admin_cannot_verify_a_team_not_marked_complete(): void
+    /** The team is told once, not again on every later visit or decision. */
+    public function test_a_verified_team_is_not_verified_twice(): void
     {
         $this->createAdmin();
         $leader = $this->createLeader();
-        $team = Team::create([
-            'team_name' => 'Team Not Complete',
-            'team_status' => 'Active',
-            'leader_id' => $leader->student_id,
+        $team = $this->createCompleteTeam($leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+
+        $this->decide($proposal, 'approved')->assertOk();
+
+        $this->assertFalse(TeamVerification::onceTitleIsSettled($team->fresh()));
+        $this->assertSame(1, Notification::where('student_id', $leader->student_id)->count());
+    }
+
+    /** With titles still unread nothing is settled, so nothing is verified. */
+    public function test_a_team_is_not_verified_while_titles_are_still_undecided(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
+
+        $this->decide($first, 'approved')->assertOk()->assertJsonPath('is_verified', false);
+        $this->decide($second, 'rejected', 'Too broad')->assertOk()->assertJsonPath('is_verified', false);
+
+        $this->assertFalse($team->fresh()->is_confirmed);
+        $this->assertDatabaseCount('notifications', 0);
+
+        // The last decision leaves exactly one recommended: settled, verified.
+        $this->decide($third, 'rejected', 'Duplicate')
+            ->assertOk()
+            ->assertJsonPath('is_verified', true)
+            ->assertJsonPath('message', 'Proposal rejected. The team is now verified.');
+
+        $this->assertTrue($team->fresh()->is_confirmed);
+    }
+
+    /** Two recommended means the team picks - and their pick is what verifies. */
+    public function test_the_team_choosing_between_two_recommended_titles_verifies_it(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
+
+        $this->decide($first, 'approved')->assertOk();
+        $this->decide($second, 'approved')->assertOk();
+        $this->decide($third, 'rejected', 'No')->assertOk()->assertJsonPath('is_verified', false);
+
+        $this->assertFalse($team->fresh()->is_confirmed, 'Verified before the team had picked its title.');
+
+        $this->actingAs($leader, 'web')
+            ->post(route('student.pre-proposal.choose', $second->id))
+            ->assertSessionHas('status', 'Final title chosen. Your team is now verified.');
+
+        $team->refresh();
+        $this->assertTrue($team->is_confirmed);
+        $this->assertSame($second->id, $team->selected_pre_proposal_id);
+        $this->assertDatabaseHas('notifications', [
+            'student_id' => $leader->student_id,
+            'type' => 'team_verified',
         ]);
+    }
 
-        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
+    // -- One email when the review is over, not one per title ----------------
 
-        $response->assertRedirect(route('capsa.verify_teams'));
-        $response->assertSessionHas('error');
+    /** @return array<int, string> the subject of every email queued to this address */
+    private function subjectsMailedTo(Student $student): array
+    {
+        return Mail::queued(NotificationMail::class, fn (NotificationMail $mail) => $mail->hasTo($student->email))
+            ->map(fn (NotificationMail $mail) => $mail->envelope()->subject)
+            ->values()
+            ->all();
+    }
 
-        $this->assertDatabaseHas('team', [
-            'team_id' => $team->team_id,
-            'is_confirmed' => false,
-        ]);
+    /**
+     * A CaPSA/TSA reads a team's titles one at a time. Nothing is emailed
+     * until the last one has its decision, and then each member gets one.
+     */
+    public function test_the_team_is_emailed_once_when_every_title_has_been_checked(): void
+    {
+        Mail::fake();
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $member = $this->createMember();
+        $team = $this->createCompleteTeam($leader);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+        [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
+
+        $this->decide($first, 'approved')->assertOk();
+        $this->decide($second, 'rejected', 'Too broad')->assertOk();
+
+        Mail::assertNothingQueued();
+
+        $this->decide($third, 'rejected', 'Duplicate')->assertOk();
+
+        // Recommended and verified arrive together, in one email each.
+        $this->assertSame(['CapsTrack: Title Recommended'], $this->subjectsMailedTo($leader));
+        $this->assertSame(['CapsTrack: Title Recommended'], $this->subjectsMailedTo($member));
+        Mail::assertQueued(NotificationMail::class, fn (NotificationMail $mail) => $mail->hasTo($leader->email)
+            && str_contains($mail->body, 'finished checking your titles')
+            && str_contains($mail->body, 'First Title')
+            && str_contains($mail->body, 'Your team is now verified')
+            && $mail->url === route('student.duplication'));
+    }
+
+    public function test_the_team_is_emailed_once_when_it_has_to_choose_between_titles(): void
+    {
+        Mail::fake();
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
+
+        $this->decide($first, 'approved')->assertOk();
+        $this->decide($second, 'approved')->assertOk();
+
+        Mail::assertNothingQueued();
+
+        $this->decide($third, 'rejected', 'No')->assertOk();
+
+        $this->assertSame(['CapsTrack: Choose Your Final Title'], $this->subjectsMailedTo($leader));
+    }
+
+    public function test_the_team_is_emailed_once_when_no_title_is_recommended(): void
+    {
+        Mail::fake();
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+
+        foreach ($this->threeSubmittedTitles($team, $leader) as $proposal) {
+            $this->decide($proposal, 'rejected', 'No')->assertOk();
+        }
+
+        $this->assertSame(['CapsTrack: Titles Not Recommended'], $this->subjectsMailedTo($leader));
+    }
+
+    /** The bell still tells them; the email is theirs to switch off. */
+    public function test_a_member_who_switched_the_titles_email_off_is_not_emailed(): void
+    {
+        Mail::fake();
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $leader->forceFill(['notification_prefs' => ['email.titles_checked' => false]])->save();
+        $team = $this->createCompleteTeam($leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+
+        $this->decide($proposal, 'approved')->assertOk();
+
+        Mail::assertNothingQueued();
+        $this->assertDatabaseHas('notifications', ['student_id' => $leader->student_id, 'type' => 'title_approved']);
+    }
+
+    /** Rejecting everything leaves no title, so there is nothing to verify. */
+    public function test_rejecting_every_title_does_not_verify_the_team(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+
+        foreach ($this->threeSubmittedTitles($team, $leader) as $proposal) {
+            $this->decide($proposal, 'rejected', 'No')->assertOk()->assertJsonPath('is_verified', false);
+        }
+
+        $this->assertFalse($team->fresh()->is_confirmed);
+        $this->assertDatabaseMissing('notifications', ['type' => 'team_verified']);
+    }
+
+    public function test_the_verify_button_and_its_route_are_gone(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $this->threeSubmittedTitles($team, $leader);
+
+        $this->assertFalse(Route::has('capsa.verify_teams.verify'));
+
+        $this->get(route('capsa.team_management.pre_proposals', $team->team_id))
+            ->assertOk()
+            ->assertSee('Not verified yet')
+            ->assertSee('verified on its own')
+            ->assertDontSee('Verify Team');
+    }
+
+    /** Once it is verified the page says so, with nothing left to press. */
+    public function test_the_pre_proposals_page_says_the_team_is_verified(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+
+        $this->decide($proposal, 'approved')->assertOk();
+
+        $this->get(route('capsa.team_management.pre_proposals', $team->team_id))
+            ->assertOk()
+            ->assertSee('Team verified')
+            ->assertDontSee('Not verified yet')
+            ->assertDontSee('Verify Team');
+    }
+
+    /** A team waiting on its own choice is not something waiting on her. */
+    public function test_nothing_is_left_in_to_do_once_every_title_is_decided(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
+
+        $this->get(route('capsa.team_management'))->assertOk()->assertSee('Review 3 titles');
+
+        $this->decide($first, 'approved')->assertOk();
+        $this->decide($second, 'approved')->assertOk();
+        $this->decide($third, 'rejected', 'No')->assertOk();
+
+        $this->get(route('capsa.team_management'))
+            ->assertOk()
+            ->assertDontSee('Review 3 titles')
+            ->assertDontSee('Verify the team')
+            ->assertDontSee('Teams to verify');
     }
 
     // A team waits for verification because it turned its pre-proposals in,
@@ -239,7 +451,7 @@ class AdminTeamVerificationTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($team->team_name);
-        $response->assertDontSee('To verify');
+        $response->assertDontSee('Title pending');
     }
 
     public function test_resubmitting_puts_a_team_back_in_the_verification_queue(): void
@@ -270,7 +482,7 @@ class AdminTeamVerificationTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($team->team_name);
-        $response->assertSee('To verify');
+        $response->assertSee('Title pending');
     }
 
     public function test_student_confirm_route_was_removed(): void
@@ -339,12 +551,17 @@ class AdminTeamVerificationTest extends TestCase
         $response->assertSee($teamB->team_name);
     }
 
-    public function test_admin_cannot_verify_team_outside_assigned_sections(): void
+    /**
+     * Only a team's own CaPSA/TSA could press Verify. Deciding its titles is
+     * what verifies it now, so that is where the same rule is kept.
+     */
+    public function test_admin_cannot_decide_titles_for_a_team_outside_assigned_sections(): void
     {
         $this->createAdmin(['BSIT-3A']);
 
         $leaderA = $this->createLeader();
         $teamA = $this->createCompleteTeam($leaderA, 'Team BSCS');
+        $proposalA = $this->createPendingProposal($teamA, $leaderA, 1, self::PROJECT_TITLE);
 
         $leaderB = Student::factory()->withCompleteProfile()->create([
             'email' => 'leader.b@my.cspc.edu.ph',
@@ -352,27 +569,16 @@ class AdminTeamVerificationTest extends TestCase
             'year_section' => '3rd · A',
         ]);
         $teamB = $this->createCompleteTeam($leaderB, 'Team BSIT');
-        $this->selectFinalTitleForTeam($teamB, $leaderB);
+        $proposalB = $this->createPendingProposal($teamB, $leaderB, 1, 'A Different Title For The Other Team To Propose');
 
-        $response = $this->patch(route('capsa.verify_teams.verify', $teamA->team_id));
+        $this->decide($proposalA, 'approved')->assertForbidden();
 
-        $response->assertRedirect(route('capsa.verify_teams'));
-        $response->assertSessionHas('error');
+        $this->assertFalse($proposalA->fresh()->approved_status);
+        $this->assertDatabaseHas('team', ['team_id' => $teamA->team_id, 'is_confirmed' => false]);
 
-        $this->assertDatabaseHas('team', [
-            'team_id' => $teamA->team_id,
-            'is_confirmed' => false,
-        ]);
+        $this->decide($proposalB, 'approved')->assertOk();
 
-        $response = $this->patch(route('capsa.verify_teams.verify', $teamB->team_id));
-
-        $response->assertRedirect(route('capsa.verify_teams'));
-        $response->assertSessionHas('status');
-
-        $this->assertDatabaseHas('team', [
-            'team_id' => $teamB->team_id,
-            'is_confirmed' => true,
-        ]);
+        $this->assertDatabaseHas('team', ['team_id' => $teamB->team_id, 'is_confirmed' => true]);
     }
 
     public function test_admin_without_assigned_sections_sees_no_teams(): void
@@ -389,56 +595,24 @@ class AdminTeamVerificationTest extends TestCase
         $response->assertSee('You have no sections assigned yet');
     }
 
-    public function test_admin_without_assigned_sections_cannot_verify_team(): void
+    public function test_admin_without_assigned_sections_cannot_decide_titles(): void
     {
         $this->createAdmin([]);
 
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
 
-        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
+        $this->decide($proposal, 'rejected', 'No')->assertForbidden();
 
-        $response->assertRedirect(route('capsa.verify_teams'));
-        $response->assertSessionHas('error');
-
-        $this->assertDatabaseHas('team', [
-            'team_id' => $team->team_id,
-            'is_confirmed' => false,
-        ]);
-    }
-
-    public function test_admin_can_verify_team_when_logged_in_via_expert_guard(): void
-    {
-        $admin = $this->makeCapsa(CapstoneExpert::create([
-            'email' => 'admin.guard@test.com',
-            'first_name' => 'Admin',
-            'last_name' => 'Guard',
-            'is_admin' => true,
-            'approved_status' => true,
-            'sections' => ['BSCS-4A'],
-        ]));
-
-        Auth::guard('expert')->login($admin);
-
-        $leader = $this->createLeader();
-        $team = $this->createCompleteTeam($leader);
-        $this->selectFinalTitleForTeam($team, $leader);
-
-        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
-
-        $response->assertRedirect(route('capsa.verify_teams'));
-        $response->assertSessionHas('status');
-
-        $this->assertDatabaseHas('team', [
-            'team_id' => $team->team_id,
-            'is_confirmed' => true,
-        ]);
+        $this->assertNull($proposal->fresh()->rejection_reason);
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'is_confirmed' => false]);
     }
 
     // Verification is no longer a place of its own. Every team is on the one
     // list and carries its own status, so "did I already do that one?" is
     // answered by the row rather than by clicking between two tabs.
-    public function test_the_team_list_marks_each_team_verified_or_to_verify(): void
+    public function test_the_team_list_marks_each_team_verified_or_title_pending(): void
     {
         $this->createAdmin();
 
@@ -457,7 +631,7 @@ class AdminTeamVerificationTest extends TestCase
 
         // The status sits on the same row as the team, so neither can be read
         // off against the wrong one.
-        $this->assertMatchesRegularExpression('/data-q="[^"]*team pending[^"]*" data-st="To verify"/', $html);
+        $this->assertMatchesRegularExpression('/data-q="[^"]*team pending[^"]*" data-st="Title pending"/', $html);
         $this->assertMatchesRegularExpression('/data-q="[^"]*team done[^"]*" data-st="Verified"/', $html);
     }
 
@@ -587,19 +761,6 @@ class AdminTeamVerificationTest extends TestCase
         $response->assertOk();
         $this->assertSame('rejected', $proposal->fresh()->status);
         $this->assertSame('Too similar to an existing capstone.', $proposal->fresh()->rejection_reason);
-    }
-
-    public function test_verify_is_rejected_until_a_final_title_is_selected(): void
-    {
-        $this->createAdmin();
-        $leader = $this->createLeader();
-        $team = $this->createCompleteTeam($leader);
-        $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
-
-        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
-
-        $response->assertSessionHas('error');
-        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'is_confirmed' => false]);
     }
 
     public function test_the_title_page_surfaces_pre_proposal_content(): void
@@ -774,7 +935,7 @@ class AdminTeamVerificationTest extends TestCase
         $response->assertJsonPath('success', true);
         $response->assertJsonCount(3, 'proposals');
         $response->assertJsonPath('proposals.0.status', 'approved');
-        // Still mid-review, so no title and nothing to verify yet.
+        // Still mid-review, so no title and not verified yet.
         $response->assertJsonPath('project_title', null);
         $response->assertJsonPath('selected_pre_proposal_id', null);
 

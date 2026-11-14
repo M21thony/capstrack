@@ -67,7 +67,6 @@ class AdminDashboardController extends Controller
             ->whereNotNull('submitted_at')->whereNull('retired_at')
             ->where('approved_status', false)->whereNull('rejection_reason')
             ->distinct('team_id')->count('team_id');
-        $toVerify = $teams->filter(fn ($t) => $t->team_status === 'complete' && ! $t->is_confirmed)->count();
         $unscheduled = $stats['defenses']['unscheduled'];
         $receipts = FinancialRecord::whereIn('student_id', $studentIds)
             ->whereNull('verified_at')->whereNotNull('receipt_image')
@@ -90,9 +89,6 @@ class AdminDashboardController extends Controller
                 ['label' => 'Titles Awaiting Review', 'count' => $titles, 'icon' => 'doc', 'tone' => 't-blue',
                     'detail' => $titles === 1 ? '1 proposal needs a decision' : "{$titles} proposals need decisions",
                     'href' => route('capsa.team_management', ['tab' => 'pre_proposals'])],
-                ['label' => 'Unverified Teams', 'count' => $toVerify, 'icon' => 'team', 'tone' => 't-purple',
-                    'detail' => $count($toVerify, 'team').' awaiting verification',
-                    'href' => route('capsa.team_management', ['tab' => 'verification'])],
                 ['label' => 'Unscheduled Defenses', 'count' => $unscheduled, 'icon' => 'cal', 'tone' => 't-orange',
                     'detail' => $count($unscheduled, 'team').' without a date',
                     'href' => route('capsa.defenses')],

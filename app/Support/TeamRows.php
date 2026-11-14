@@ -352,15 +352,12 @@ class TeamRows
             // When the newest title still waiting for her came in.
             'lastSubmittedAt' => $inSections ? $pending->max('submitted_at') : null,
             'needsCapsa' => $inSections && ($pending->isNotEmpty()
-                || ($submitted && ! $team->is_confirmed)
                 || $unchecked->isNotEmpty()),
             'approvedProposalCount' => $approved->count(),
             'titleState' => $titleState,
-            'awaitingVerification' => $submitted && ! $team->is_confirmed,
-            'canVerify' => $inSections
-                && $submitted
-                && ! $team->is_confirmed
-                && (bool) $team->selected_pre_proposal_id,
+            // Titles are in but none is final yet. The team is verified by
+            // the title settling, so there is no separate step to wait on.
+            'titlePending' => $submitted && ! $team->is_confirmed,
         ];
     }
 }

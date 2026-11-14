@@ -50,17 +50,6 @@
         session()->put('admin_seen_verified_team_ids', array_unique(array_merge($seenVerifiedTeamIds, $verifiedTeamIds)));
     }
 
-    $pendingVerifyTeamIds = App\Models\Team::where('team_status', 'complete')
-        ->where('is_confirmed', false)
-        ->pluck('team_id')
-        ->toArray();
-    $seenPendingVerifyTeamIds = session('admin_seen_pending_verify_team_ids', []);
-    $unseenPendingVerifyTeamCount = count(array_diff($pendingVerifyTeamIds, $seenPendingVerifyTeamIds));
-
-    if ($currentRoute === 'capsa.team_management') {
-        session()->put('admin_seen_pending_verify_team_ids', array_unique(array_merge($seenPendingVerifyTeamIds, $pendingVerifyTeamIds)));
-    }
-
     $archivedCount = App\Models\ArchivedDocument::count();
 
     $pendingReceiptIds = App\Models\FinancialRecord::query()
@@ -169,10 +158,10 @@
       $isAdmin = (bool) $admin?->is_admin;
       $isExpert = $adminHasExpertRole;
 
-      // Waiting on this CaPSA/TSA inside Team Management: teams to verify, and
-      // members asking to leave a team that passed Title Defense.
+      // Waiting on this CaPSA/TSA inside Team Management: members asking to
+      // leave a team that passed Title Defense.
       $pendingLeaveRequests = $isCapsa ? App\Models\MemberLeaveRequest::pendingCountFor($admin) : 0;
-      $teamManagementBadge = $unseenPendingVerifyTeamCount + $pendingLeaveRequests + ($adminHasExpertRole ? $unseenExpertAssignmentCount : 0);
+      $teamManagementBadge = $pendingLeaveRequests + ($adminHasExpertRole ? $unseenExpertAssignmentCount : 0);
       $badge = fn (int $n) => $n > 99 ? '99+' : $n;
       // Defense stages coming up in this CaPSA/TSA's sections with no expert
       // evaluation yet - the badge here and the popup below.

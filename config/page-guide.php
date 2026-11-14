@@ -1031,9 +1031,9 @@ return [
 
     'capsa.team_management' => [
         'title' => 'Team Management',
-        'summary' => 'Verify teams, check their papers, and follow their milestones and ratings.',
+        'summary' => 'Review titles, check papers, and follow each team\'s milestones and ratings.',
         'steps' => [
-            ['Start with To do', 'for teams to verify and papers to check. Days waiting show in red.'],
+            ['Start with To do', 'for titles to review and papers to check. Days waiting show in red.'],
             ['Open Teams', 'and press a team to see its members, experts and progress.'],
             ['Open Milestones', 'to set up and follow what each team must finish.'],
         ],
@@ -1049,7 +1049,7 @@ return [
             ['Read', 'Opens what the team sent, so you can read it **before you answer**.', '.todo .btn.rd', 'one'],
             ['Decline', 'Asks for your **reason**, and says what will happen, **before anything is sent**. **The team sees the reason.**', '.todo [data-decide="decline"]', 'one'],
             ['Approve', 'Shows what will happen and asks you to **confirm**. **The team is told.**', '.todo [data-decide="approve"]', 'one'],
-            ['The main button', 'Goes to **where this is done**, like a team to verify or a paper to check.', '.todo a.btn.p', 'one'],
+            ['The main button', 'Goes to **where this is done**, like a title to review or a paper to check.', '.todo a.btn.p', 'one'],
             ['See overdue teams', 'With **nothing to do**, this opens Teams showing the teams that are **behind**.', 'a[data-quick-go="behind"]'],
             ['Team Applications', '**Click it** to see the teams **asking for you**.', '.hub-tabs [data-hub-tab="applications"]'],
             ['Teams', '**Click it** to see **every team in your sections**.', '.hub-tabs [data-hub-tab="teams"]'],
@@ -1070,12 +1070,12 @@ return [
         'steps' => [
             ['Check the members and experts', 'on the left.'],
             ['Follow Progress', 'to see the milestones done.'],
-            ['Press Verify team', 'once its titles are settled.'],
+            ['Review its titles', 'the team is verified once one is final.'],
         ],
         'tour' => [
             ['The team', 'Its **title, section** and what is **due next**.', '.tp-head'],
             ['Previous and next team', 'Moves to the team **before or after** this one.', 'a.btn.btn-o', 'one'],
-            ['First thing waiting', 'Goes to what this team **needs from you first**, like **Verify team**. The rest are in **To do**.', '.btn.btn-p', 'one'],
+            ['First thing waiting', 'Goes to what this team **needs from you first**, like **a title to review**. The rest are in **To do**.', '.btn.btn-p', 'one'],
             ['People', 'The **members**, the team\'s **experts** and its **defense panel**.', 'div.tp-panel'],
             ['Progress', '**Every milestone** in order.', 'section.tp-panel', 'one'],
             ['A milestone', '**Click one** to see its **requirements**.', 'a[href*="milestone="]', 'one'],
@@ -1112,11 +1112,10 @@ return [
         'steps' => [
             ['Press a title', 'to read its form and similarity report.'],
             ['Filter', 'to recommended or rejected titles.'],
-            ['Press Verify Team', 'once every title has a decision.'],
+            ['Decide every title', 'the team is verified on its own once one is final.'],
         ],
         'tour' => [
-            ['Verify this team', 'Ready once **every title has a decision** and the team has **one final title**. If you recommend two, **the team picks first**.', 'section.card.vfb'],
-            ['Verify Team', 'Settles the team\'s **members and title** for the semester, and makes it **eligible for a panel**.', '.vfb .btn.btn-p'],
+            ['Verified or not', 'The team is **verified on its own** once **every title has a decision** and it has **one final title**. If you recommend two, **the team picks first**. That settles its **members and title** and makes it **eligible for a panel**.', 'section.card.vfb'],
             ['The titles', 'Each proposed title and its **decision**.', 'section.card.ppc'],
             ['Search', 'Finds a **title**.', '#ppq'],
             ['Show', 'All titles, only the **recommended** ones, or only the **rejected** ones.', '[data-f="all"]'],

@@ -31,7 +31,7 @@ return [
         ['key' => 'sections', 'label' => 'Your student lists', 'target' => ['capsa.sections'],
             'body' => 'Upload each section\'s **class list** so every student lands in the **right section**.'],
         ['key' => 'teams', 'label' => 'Teams, milestones and requests', 'target' => ['capsa.team_management'],
-            'body' => '**Verify teams**, follow their **checklist**, and decide on **leave requests** - all from **one page**.'],
+            'body' => '**Review titles**, follow their **checklist**, and decide on **leave requests** - all from **one page**.'],
         ['key' => 'defenses', 'label' => 'Panels and defense dates', 'target' => ['capsa.defenses'],
             'body' => 'Give each team its **panel** and **make it final**, then set **dates, times and venues** - rooms and panelists are **never double-booked**, across every section.'],
         ['key' => 'rubrics', 'label' => 'Grading rubrics', 'target' => ['capsa.rubric_management'],

@@ -23,13 +23,13 @@ use Illuminate\Support\Str;
 /**
  * Everything waiting on one person, in one list.
  *
- * Titles to review, teams to verify, papers to check, leave and expert
+ * Titles to review, papers to check, leave and expert
  * requests, invitations, chapters to review and score sheets due used to sit
  * on as many screens. Each item names its team, says why it is here and
  * links to - or carries - the one action that clears it.
  *
  * An item is an object with:
- *   kind     go|go_given|title|verify|paper|signed|leave|expert|invite|adviser_title|title_change|review|grade
+ *   kind     go|go_given|title|paper|signed|leave|expert|invite|adviser_title|title_change|review|grade
  *   group    the heading it is listed under
  *   hat      capsa, or the seat the person holds on the team as an expert
  *   teamId, teamName, section, teamUrl
@@ -49,7 +49,6 @@ class TeamTodo
         'title' => 'Titles',
         'adviser_title' => 'Titles',
         'title_change' => 'Titles',
-        'verify' => 'Teams to verify',
         'paper' => 'Papers',
         'signed' => 'Papers',
         'review' => 'Papers',
@@ -91,18 +90,6 @@ class TeamTodo
                     'at' => $pending->max('submitted_at'),
                     'label' => 'Review titles',
                     'url' => route('capsa.team_management.title', [$team->team_id, $pending->sortBy('slot')->first()->id]),
-                ]));
-            }
-
-            if ($row->canVerify) {
-                $adviser = $row->engagedRoles->get('adviser');
-                $items->push($item([
-                    'kind' => 'verify', 'hat' => 'capsa',
-                    'what' => 'Verify the team',
-                    'why' => $row->members->count().' members · '.($adviser ? 'adviser '.$adviser->name : 'no adviser yet').' · final title chosen',
-                    'at' => $team->updated_at,
-                    'label' => 'Verify',
-                    'url' => route('capsa.team_management.pre_proposals', $team->team_id),
                 ]));
             }
 

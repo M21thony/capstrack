@@ -32,18 +32,15 @@
     <div class="tx"><b>Team verified</b>Confirmed for this semester. Its members and title are settled.</div>
   </section>
 @else
+  {{-- No button: the team is verified by its title settling. --}}
   <section class="card vfb">
     <span class="ic"><x-tm-icon n="shield" s="18" /></span>
-    <div class="tx"><b>Verify this team</b>{{ ! $pending && $final
-      ? 'Every title has a decision and the team has its final title. Verifying settles its members and title for the semester and makes it eligible for a panel.'
-      : 'Opens once every title has a decision and the team has one final title. If you recommend two, the team picks first.' }}</div>
-    <form method="POST" action="{{ route('capsa.verify_teams.verify', $team->team_id) }}">
-      @csrf
-      @method('PATCH')
-      <button class="btn btn-p" type="submit" @disabled($pending || ! $final)>
-        <x-tm-icon n="check" s="14" />Verify Team
-      </button>
-    </form>
+    <div class="tx"><b>Not verified yet</b>{{ match (true) {
+      (bool) $pending => 'This team is verified on its own once every title has a decision and one is final. Nothing else to press.',
+      $recommended >= 2 => 'You recommended '.$recommended.' titles, so the team picks one. It is verified the moment they do.',
+      $recommended === 0 => 'No title was recommended. The team is verified once a new title they turn in is recommended.',
+      default => 'The team is verified as soon as its recommended title becomes final.',
+    } }}</div>
   </section>
 @endif
 

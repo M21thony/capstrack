@@ -15,9 +15,9 @@
 
   // Said once, so the Status column and the sort cannot disagree.
   $statusOf = fn ($r) => $r->failedStage ? 'Failed'
-    : ($r->team->is_confirmed ? 'Verified' : ($r->awaitingVerification ? 'To verify' : ucfirst($r->team->team_status)));
-  $statusTone = ['Verified' => 'green', 'To verify' => 'amber', 'Failed' => 'red'];
-  $statusRank = ['Failed' => 0, 'To verify' => 1, 'Verified' => 3];
+    : ($r->team->is_confirmed ? 'Verified' : ($r->titlePending ? 'Title pending' : ucfirst($r->team->team_status)));
+  $statusTone = ['Verified' => 'green', 'Title pending' => 'amber', 'Failed' => 'red'];
+  $statusRank = ['Failed' => 0, 'Title pending' => 1, 'Verified' => 3];
 
   $quick = array_filter([
     'all' => ['All teams', $rows->count()],

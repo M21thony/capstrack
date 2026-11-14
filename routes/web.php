@@ -276,7 +276,6 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // A team changing an expert who already took them on - the CaPSA/TSA decides.
         Route::patch('/expert-removal-requests/{expertRemovalRequest}', [ExpertRemovalRequestController::class, 'update'])->name('expert_removal_requests.update');
         Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management'))->name('verify_teams');
-        Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
         Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
         Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');
         // A CaPSA/TSA's checklists, edited in the Edit milestones window on the

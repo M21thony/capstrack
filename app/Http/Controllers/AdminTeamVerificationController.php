@@ -9,78 +9,25 @@ use App\Models\Team;
 use App\Services\RecipientResolver;
 use App\Support\PreProposalPayload;
 use App\Support\SectionScope;
+use App\Support\TeamVerification;
 use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * The pre-proposal and verification ACTIONS.
+ * The pre-proposal ACTIONS.
  *
  * The listing page that used to live here is now a tab on Team Management
  * (Capsa\TeamManagementController) - these actions keep their original route
  * names so every link and redirect to them still resolves.
+ *
+ * There is no verify action: a team is verified when its title settles
+ * (TeamVerification), which for a single recommended title happens here.
  */
 class AdminTeamVerificationController extends Controller
 {
-    public function __construct(private SectionScope $sections) {}
-
-    public function verify(Request $request, Team $team): RedirectResponse
-    {
-        $admin = auth('expert')->user();
-        $team->refresh();
-
-        if (! $team->hasSubmittedPreProposals()) {
-            return redirect()->route('capsa.verify_teams')
-                ->with('error', 'This team has not submitted their pre-proposals for checking yet, so it cannot be verified.');
-        }
-
-        if ($team->is_confirmed) {
-            return redirect()->route('capsa.verify_teams')
-                ->with('error', 'Team <strong>'.e($team->team_name).'</strong> is already verified.');
-        }
-
-        if (! $team->selected_pre_proposal_id) {
-            return redirect()->route('capsa.verify_teams')
-                ->with('error', 'This team\'s final title hasn\'t been resolved yet - recommend one of their pre-proposals first.');
-        }
-
-        $adminSections = $admin->sections ?? [];
-        $section = $this->sections->sectionFor($team);
-
-        if (! $this->sections->covers($adminSections, $section)) {
-            return redirect()->route('capsa.verify_teams')
-                ->with('error', 'You can only verify teams assigned to your sections.');
-        }
-
-        $team->update(['is_confirmed' => true]);
-
-        $this->logActivity(
-            $admin->expert_id,
-            'team_verified',
-            'Verified team <strong>'.e($team->team_name).'</strong>',
-            ['team_id' => $team->team_id, 'verified_by' => $admin->expert_id]
-        );
-
-        $memberIds = StudentSchoolYear::where('team_id', $team->team_id)
-            ->pluck('student_id');
-
-        foreach ($memberIds as $memberId) {
-            Notification::create([
-                'student_id' => $memberId,
-                'type' => 'team_verified',
-                'title' => 'Team Verified',
-                'message' => 'Your team <strong>'.e($team->team_name).'</strong> has been verified by the administrator!',
-                'link' => route('student.team'),
-            ]);
-        }
-
-        return redirect()->route('capsa.verify_teams')
-            ->with('status', 'Team <strong>'.e($team->team_name).'</strong> has been verified.');
-    }
-
     // Mirrors AdminApprovalController::approve() exactly - same shape
     // (approved_status + rejection_reason), same guards.
     /**
@@ -90,6 +37,20 @@ class AdminTeamVerificationController extends Controller
      */
     public function updatePreProposal(Request $request, CapstonePreProposal $preProposal): JsonResponse
     {
+        // Deciding the last title is what verifies a team, so the rule that
+        // used to guard the Verify button guards the decisions that lead to
+        // it. A verified team's new title after a redefense is left as it was.
+        $team = $preProposal->team;
+        $sections = app(SectionScope::class);
+
+        if (! $team->is_confirmed
+            && ! $sections->covers(auth('expert')->user()->sections ?? [], $sections->sectionFor($team))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only decide titles for teams assigned to your sections.',
+            ], 403);
+        }
+
         return $request->validate([
             'status' => ['required', 'in:approved,rejected'],
             // Recommending may come with a suggestion for the team. Rejecting
@@ -123,11 +84,15 @@ class AdminTeamVerificationController extends Controller
             'capsa_note' => $note === '' ? null : $note,
         ]);
 
+        $wasVerified = (bool) $preProposal->team->is_confirmed;
+
         $this->resolveTitleIfSettled($preProposal->team);
 
         return response()->json([
             'success' => true,
-            'message' => 'Proposal recommended.',
+            'message' => $preProposal->team->fresh()->is_confirmed && ! $wasVerified
+                ? 'Proposal recommended. The team is now verified.'
+                : 'Proposal recommended.',
         ] + $this->reviewState($preProposal->team));
     }
 
@@ -168,11 +133,15 @@ class AdminTeamVerificationController extends Controller
 
         // A rejection is half of the decision. Rejecting the last undecided
         // proposal is what settles the title, so this has to run here too.
+        $wasVerified = (bool) $preProposal->team->is_confirmed;
+
         $this->resolveTitleIfSettled($preProposal->team);
 
         return response()->json([
             'success' => true,
-            'message' => 'Proposal rejected.',
+            'message' => $preProposal->team->fresh()->is_confirmed && ! $wasVerified
+                ? 'Proposal rejected. The team is now verified.'
+                : 'Proposal rejected.',
         ] + $this->reviewState($preProposal->team));
     }
 
@@ -193,6 +162,7 @@ class AdminTeamVerificationController extends Controller
             'proposals' => PreProposalPayload::forTeam($team),
             'selected_pre_proposal_id' => $team->selected_pre_proposal_id,
             'project_title' => $team->project_title,
+            'is_verified' => (bool) $team->is_confirmed,
         ];
     }
 
@@ -214,8 +184,8 @@ class AdminTeamVerificationController extends Controller
     {
         $team->refresh();
 
-        // Already finalized (admin clicked "Verify Team") - a late approval
-        // shouldn't retroactively change a decision that's already locked in.
+        // Already verified with its title - a late approval shouldn't
+        // retroactively change a decision that's already locked in.
         // Unless the team has no title: a verified team the panel sent back for
         // a new one is choosing again, and its new title has to land.
         if ($team->is_confirmed && $team->selected_pre_proposal_id) {
@@ -269,13 +239,24 @@ class AdminTeamVerificationController extends Controller
                 return;
             }
 
-            if ($team->selected_pre_proposal_id !== $winner->id) {
+            $newlyChosen = $team->selected_pre_proposal_id !== $winner->id;
+
+            if ($newlyChosen) {
                 $team->update([
                     'selected_pre_proposal_id' => $winner->id,
                     'project_title' => $winner->title,
                 ]);
+            }
 
-                $this->notifyTeam($team, 'title_approved', 'Title Recommended', 'Your CaPSA/TSA recommended your title <strong>'.e($winner->title).'</strong>.');
+            // One final title is what verifying used to wait for, so it is
+            // the verification - no second button to come back and press.
+            // The team hears both in the one notice below, not in two.
+            $verified = TeamVerification::onceTitleIsSettled($team, auth('expert')->id(), tellTheTeam: false);
+
+            if ($newlyChosen || $verified) {
+                $this->notifyTeam($team, 'title_approved', 'Title Recommended',
+                    'Your CaPSA/TSA finished checking your titles and recommended <strong>'.e($winner->title).'</strong>.'
+                    .($verified ? ' Your team is now verified, so you can ask for an adviser.' : ''));
             }
 
             return;
@@ -292,7 +273,7 @@ class AdminTeamVerificationController extends Controller
                 ]);
             }
 
-            $this->notifyTeam($team, 'title_pick_required', 'Choose Your Final Title', 'More than one of your submitted titles was recommended - please choose which one to proceed with.');
+            $this->notifyTeam($team, 'title_pick_required', 'Choose Your Final Title', 'Your CaPSA/TSA finished checking your titles and recommended more than one. Your leader chooses which one to proceed with.');
 
             return;
         }
@@ -306,7 +287,7 @@ class AdminTeamVerificationController extends Controller
             ]);
         }
 
-        $this->notifyTeam($team, 'titles_rejected', 'Titles Not Recommended', 'Your CaPSA/TSA did not recommend any of the titles you submitted. Save new titles and submit them for checking again.');
+        $this->notifyTeam($team, 'titles_rejected', 'Titles Not Recommended', 'Your CaPSA/TSA finished checking your titles and did not recommend any of them. Save new titles and submit them for checking again.');
     }
 
     private function notifyTeam(Team $team, string $type, string $title, string $message): void

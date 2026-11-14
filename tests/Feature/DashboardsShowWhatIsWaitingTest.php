@@ -44,12 +44,13 @@ class DashboardsShowWhatIsWaitingTest extends TestCase
         $this->actingAs($capsa, 'expert')
             ->get(route('capsa.dashboard'))
             ->assertOk()
-            ->assertSee('Unverified Teams')
+            // Teams are verified by their title settling, so none wait on her.
+            ->assertDontSee('Unverified Teams')
             ->assertDontSee('Capstones Submitted per Year')
             ->assertViewHas('capsa', function ($c) {
                 $issues = collect($c['issues'])->keyBy('label');
 
-                return $issues['Unverified Teams']['count'] === 1 && $issues['Titles Awaiting Review']['count'] === 1;
+                return ! $issues->has('Unverified Teams') && $issues['Titles Awaiting Review']['count'] === 1;
             })
             ->assertViewHas('admin', null);
     }

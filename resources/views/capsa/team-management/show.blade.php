@@ -177,7 +177,7 @@
   $initials = fn ($name) => collect(preg_split('/\s+/', trim((string) $name)))
       ->reject(fn ($w) => $w === '' || str_ends_with($w, '.'))->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))
       ->pipe(fn ($c) => $c->count() > 1 ? $c->first().$c->last() : $c->implode(''));
-  // What she does here as CaPSA/TSA - titles, verifying, checks - only on a team
+  // What she does here as CaPSA/TSA - titles, checks - only on a team
   // in her sections; on a team she only advises, the page is an expert's.
   $asCapsa = $portal === 'capsa' && $row->inSections;
   $showRoute = $portal === 'capsa' ? 'capsa.team_management.show' : 'instructor.teams.show';
@@ -229,8 +229,8 @@
       <h1>{{ $team->team_name }}
         @if ($team->is_confirmed)
           <span class="tp-st ok">Verified</span>
-        @elseif ($row->awaitingVerification)
-          <span class="tp-st warn">To verify</span>
+        @elseif ($row->titlePending)
+          <span class="tp-st warn">Title pending</span>
         @else
           <span class="tp-st">{{ ucfirst($team->team_status) }}</span>
         @endif
@@ -266,9 +266,6 @@
           <button type="submit" class="btn btn-p">Send back</button>
         </form>
       @endif
-      @if ($asCapsa && $row->canVerify)
-        <a class="btn btn-p" href="{{ route('capsa.team_management.pre_proposals', $team->team_id) }}"><x-tm-icon n="shield" s="14" />Verify team</a>
-      @endif
       @if ($previousTeam)
         <a class="btn btn-o" href="{{ route($showRoute, $previousTeam->team_id) }}" aria-label="Previous team, {{ $previousTeam->team_name }}">← {{ $previousTeam->team_name }}</a>
         <a class="btn btn-o" href="{{ route($showRoute, $nextTeam->team_id) }}" aria-label="Next team, {{ $nextTeam->team_name }}">{{ $nextTeam->team_name }} →</a>
@@ -279,7 +276,7 @@
   @if ($waiting->isNotEmpty())
     @php
       $first = $waiting->first();
-      $needIcons = ['title' => 'flag', 'verify' => 'shield', 'paper' => 'file', 'signed' => 'star', 'review' => 'file'];
+      $needIcons = ['title' => 'flag', 'paper' => 'file', 'signed' => 'star', 'review' => 'file'];
     @endphp
     <div class="tp-needs">
       <div class="tp-needs-h">Waiting on you

@@ -18,6 +18,7 @@ use App\Support\ResearchAgenda;
 use App\Support\SimilarityBand;
 use App\Support\StudentTeam;
 use App\Support\SustainableDevelopmentGoals;
+use App\Support\TeamVerification;
 use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -790,8 +791,12 @@ class PreProposalController extends Controller
             'project_title' => $preProposal->title,
         ]);
 
+        // Choosing between two recommended titles settles the title, and a
+        // settled title is what verifies the team.
+        $verified = TeamVerification::onceTitleIsSettled($team);
+
         return redirect()->route('student.duplication')
-            ->with('status', 'Final title chosen.');
+            ->with('status', $verified ? 'Final title chosen. Your team is now verified.' : 'Final title chosen.');
     }
 
     // Lets a team drop a pending or rejected proposal, freeing its slot back
