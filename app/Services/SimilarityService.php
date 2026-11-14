@@ -1130,6 +1130,7 @@ PROMPT;
                 // its own stated reason for a match, despite this exact
                 // rule being in the prompt at the time).
                 ."- IGNORE generic institution-TYPE words (they only describe HOW something is organized, not WHAT it does or WHO for): college, department, polytechnic, CICT, BSIT, high school, national high school, elementary school, academy, institute, learning center\n"
+                ."- The TYPE of system is not the concept either: inventory, monitoring, tracking, information, record-keeping, reservation, booking, point-of-sale. Two systems of the same type are similar only if they handle the same THING for the same users.\n"
                 ."- Focus ONLY on: core domain, problem being solved, target users, system purpose\n"
                 ."- If they are NOT actually similar in core concept, say so clearly\n"
                 ."- The IGNORE list above is for catching FAKE matches (two unrelated things that both\n"
@@ -1166,6 +1167,10 @@ PROMPT;
                 .'- "Student Management System" vs. "Employee Management System": BOTH are "a management '
                 .'system", but one manages students and the other manages employees - completely different '
                 ."subjects and users. Score ~5-10, NOT high.\n"
+                .'- "Hardware Inventory Management System" vs. "Medicine Inventory Management System": BOTH are '
+                .'inventory systems, but "inventory" is only the type of system. One tracks construction supplies '
+                .'for a store, the other tracks medicines and expiry dates for health workers - a different thing '
+                ."tracked, for different users. Score ~10-15, NOT high.\n"
                 .'- "CapsTrack: Capstone Project Management System" vs. "Web-Based Management System for '
                 .'Production and Auxiliary Services with Inventory and Sales Tracking": one manages capstone '
                 .'project workflow (advisers, submissions, duplication checking) for students; the other manages '
