@@ -20,9 +20,9 @@ class SimilarityService
     /**
      * Below this, shared words may only be the pre-proposal form's own
      * headings: two unrelated scans shared up to 30% that way, and two copies
-     * of one document 100%.
+     * of one document 100%. 40 leaves a margin above that 30.
      */
-    public const EXACT_WORDS_MIN = 50;
+    public const EXACT_WORDS_MIN = 40;
 
     public function __construct(private OllamaSSHClient $ollama) {}
 
@@ -745,6 +745,8 @@ PROMPT;
             if (! $match['assessed'] || $exact > $match['score']) {
                 $match['score'] = $exact;
                 $match['assessed'] = true;
+                // The judge's reason explains a lower score than the one now shown.
+                $match['reason'] = $exact.'% of its wording is the same as yours.';
             }
 
             // The judge wrote this without knowing, and it still lists differences.

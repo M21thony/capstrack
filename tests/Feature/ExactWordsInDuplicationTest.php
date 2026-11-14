@@ -67,6 +67,19 @@ class ExactWordsInDuplicationTest extends TestCase
         $this->assertTrue($match['assessed']);
     }
 
+    public function test_a_partly_copied_text_says_so_in_its_reason(): void
+    {
+        $words = explode(' ', self::TEXT);
+        $abstract = implode(' ', array_slice($words, 0, 30)).' '.implode(' ', array_map(fn ($n) => "other{$n}", range(1, 12)));
+
+        $match = $this->scan($abstract);
+
+        $this->assertGreaterThan(40, $match['score']);
+        $this->assertLessThan(100, $match['score']);
+        $this->assertSame($match['exact_score'], $match['score']);
+        $this->assertSame($match['score'].'% of its wording is the same as yours.', $match['reason']);
+    }
+
     public function test_a_little_shared_wording_is_shown_but_does_not_move_the_score(): void
     {
         $words = explode(' ', self::TEXT);
