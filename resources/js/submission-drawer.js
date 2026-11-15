@@ -67,11 +67,18 @@ function chapterInName(name) {
 /** A draw.io or Visio file, sent as itself and read as its diagram pages. */
 const isDiagram = (name) => ['drawio', 'vsdx'].includes(ext(name));
 
+/** A file this drawer cannot draw: a ZIP, a TXT, a DOCX. It goes up as it is, unread. */
+const isOther = (name) => !['pdf', 'jpg', 'jpeg', 'png'].includes(ext(name)) && !isDiagram(name);
+
+/** The accept list as the file picker reads it; any file is no list at all. */
+const acceptAttr = () => (S.plan?.accept || ['pdf']).filter((e) => e !== '*').map((e) => '.' + e).join(',');
+
 /** What is wrong with this file for this line, in words that say how to fix it; null when nothing is. */
 function problemWith(file, accept) {
   const e = ext(file.name);
   const name = `<b>${esc(file.name)}`;
-  if (!accept.includes(e)) {
+  if (!accept.includes('*') && !accept.includes(e)) {
+    if (S.plan?.kinds) return `${name} can’t be sent here.</b> This requirement takes ${esc(S.plan.kinds)} only.`;
     if (['doc', 'docx'].includes(e)) return `${name} is a Word file.</b> Save it as PDF (File → Save As → PDF), then add it here.`;
     if (['ppt', 'pptx'].includes(e)) return `${name} is a PowerPoint file.</b> Export it as PDF (File → Export → PDF), then add it here.`;
     if (['jpg', 'jpeg', 'png', 'heic', 'webp'].includes(e)) return `${name} is a photo.</b> This goes up as a PDF. Only signed papers can be photos.`;
@@ -243,7 +250,7 @@ async function takeFile(file) {
   render();
 
   // A diagram has nothing to read here: the reviewer's screen draws it.
-  const reading = ext(file.name) === 'pdf' ? readPdf(file) : isDiagram(file.name) ? null : readImage(file);
+  const reading = ext(file.name) === 'pdf' ? readPdf(file) : isDiagram(file.name) || isOther(file.name) ? null : readImage(file);
   await Promise.all([reading, serverCheck(file), guessVersion(file)]);
   if (S?.file === file) {
     S.checking = false;
@@ -494,13 +501,12 @@ function remarkHtml() {
 }
 
 function dropHtml() {
-  const kinds = S.plan?.accept?.includes('png') ? 'PDF, JPG or PNG · up to 25 MB · a clear phone photo is fine' : `PDF, or a diagram (.drawio, .vsdx) · up to ${MAX_MB} MB`;
-  const accept = (S.plan?.accept || ['pdf']).map((e) => '.' + e).join(',');
+  const kinds = S.plan?.kinds ? `${esc(S.plan.kinds)} · up to ${MAX_MB} MB` : S.plan?.accept?.includes('png') ? 'PDF, JPG or PNG · up to 25 MB · a clear phone photo is fine' : `PDF, or a diagram (.drawio, .vsdx) · up to ${MAX_MB} MB`;
   return `<div class="up-drop${S.problem ? ' bad' : ''}" role="button" tabindex="0" data-act="browse" aria-describedby="up-drop-kinds">
       <span class="up-drop-ic">${svg('upload', 18)}</span>
       <b>Drop your file here or <span class="up-link">browse</span></b>
       <span id="up-drop-kinds">${kinds}</span>
-      <input type="file" id="up-file" accept="${accept}" hidden>
+      <input type="file" id="up-file" accept="${acceptAttr()}" hidden>
     </div>` + (S.problem ? note('error', S.problem) : '');
 }
 
@@ -567,7 +573,7 @@ function checksHtml() {
   const f = S.file;
   const isPdf = ext(f.name) === 'pdf';
   const items = [];
-  items.push(['ok', `${isPdf ? 'PDF' : isDiagram(f.name) ? 'Diagram' : 'Photo'}, ${mb(f.size)}`]);
+  items.push(['ok', `${isPdf ? 'PDF' : isDiagram(f.name) ? 'Diagram' : isOther(f.name) ? ext(f.name).toUpperCase() + ' file' : 'Photo'}, ${mb(f.size)}`]);
   if (isPdf) {
     if (S.broken) items.push(['bad', 'This PDF won’t open']);
     else if (S.pages == null) items.push(['wait', 'Reading the pages…']);
@@ -588,7 +594,7 @@ function checksHtml() {
 function fileCardHtml() {
   const f = S.file;
   const isPdf = ext(f.name) === 'pdf';
-  const diagram = isDiagram(f.name);
+  const diagram = isDiagram(f.name) || isOther(f.name);
   const thumb = S.thumbUrl
     ? `<img src="${S.thumbUrl}" alt="" style="transform:rotate(${S.rotation}deg)">`
     : `<span class="up-thumb-blank">${S.broken || diagram ? svg(diagram ? 'file' : 'alert', 20) : '<i class="up-spin"></i>'}</span>`;
@@ -607,7 +613,7 @@ function fileCardHtml() {
         ${checksHtml()}
         <div class="up-tools">${tools}</div>
       </div>
-      <input type="file" id="up-file" accept="${(S.plan?.accept || ['pdf']).map((e) => '.' + e).join(',')}" hidden>
+      <input type="file" id="up-file" accept="${acceptAttr()}" hidden>
     </div>`;
 }
 
@@ -801,7 +807,7 @@ function onKeydown(e) {
 let pv = null;
 
 async function openPreview() {
-  if (!S?.file || S.broken || isDiagram(S.file.name)) return;
+  if (!S?.file || S.broken || isDiagram(S.file.name) || isOther(S.file.name)) return;
   const isPdf = ext(S.file.name) === 'pdf';
   pv = { page: 1, zoom: 1, total: isPdf ? (S.pages || 1) : 1 };
   const box = document.createElement('dialog');

@@ -117,12 +117,14 @@ class SubmissionController extends Controller
         // it is as good as a scan. Anything else goes to a reviewer's
         // annotator, which reads documents.
         $isPaper = $item && ! $item->sendsTo() && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
-        $allowed = $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', 'doc', 'docx', 'ppt', 'pptx', ...self::DIAGRAM_TYPES];
+        // A paper takes the file type the CaPSA/TSA picked for the line, if any.
+        $picked = $isPaper ? $item->fileWords() : null;
+        $allowed = $isPaper ? $item->accepts(['pdf', 'jpg', 'jpeg', 'png']) : ['pdf', 'doc', 'docx', 'ppt', 'pptx', ...self::DIAGRAM_TYPES];
 
-        if ($item && ! in_array($originalExt, $allowed, true)) {
+        if ($item && $allowed !== ['*'] && ! in_array($originalExt, $allowed, true)) {
             return response()->json([
                 'success' => false,
-                'message' => $isPaper ? 'Upload the signed paper as a PDF, JPG or PNG.' : 'Upload this requirement as a PDF, or a draw.io or Visio diagram.',
+                'message' => $picked ? "This requirement takes {$picked} only." : ($isPaper ? 'Upload the signed paper as a PDF, JPG or PNG.' : 'Upload this requirement as a PDF, or a draw.io or Visio diagram.'),
             ], 422);
         }
 
@@ -157,7 +159,11 @@ class SubmissionController extends Controller
                 'message' => "This is the same file as version {$same}. Pick your edited copy.",
             ], 422);
         }
-        $storedPath = $file->store('submissions', 'local'); // adjust disk as needed
+        // A picked type keeps the file's own ending: a guessed one would save a
+        // DOCX as a zip. Only a plain ending is kept.
+        $storedPath = $picked && preg_match('/^[a-z0-9]{1,8}$/', $originalExt)
+            ? $file->storeAs('submissions', pathinfo($file->hashName(), PATHINFO_FILENAME).'.'.$originalExt, 'local')
+            : $file->store('submissions', 'local');
 
         // No title/chapter form fields anymore - students just attach a file
         // and submit. Falls back to the uploaded file's own name so every
@@ -404,7 +410,9 @@ class SubmissionController extends Controller
             // The paper a revision of a file for no line is the next version of.
             'paper' => $revises ? ($revises->chapter ?: $revises->file_name) : null,
             'round' => $version > 1 ? self::ordinal($version - 1).' revision' : null,
-            'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', ...self::DIAGRAM_TYPES],
+            'accept' => $isPaper ? $item->accepts(['pdf', 'jpg', 'jpeg', 'png']) : ['pdf', ...self::DIAGRAM_TYPES],
+            // The file type picked for this line, in words; null for the usual files.
+            'kinds' => $isPaper ? $item->fileWords() : null,
             'locked' => $plan['locked'],
             // The CaPSA/TSA chose who gets this line, so the student has nothing to pick.
             'set' => (bool) $item?->sendsTo(),

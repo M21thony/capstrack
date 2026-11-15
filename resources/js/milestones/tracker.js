@@ -555,7 +555,9 @@ function start(root) {
     head.append(who, close);
 
     const scan = el('div', 'ms-scan');
-    if (r.file_is_image) {
+    if (r.file_is_other) {
+      // Nothing to draw: the link below saves the file.
+    } else if (r.file_is_image) {
       const img = el('img');
       img.src = r.file_url;
       img.alt = 'Uploaded scan of ' + r.title;
@@ -566,7 +568,7 @@ function start(root) {
       // After the window opens, so the pages are drawn at its real width.
       requestAnimationFrame(() => drawPdf(pages, r.file_url, 'Uploaded scan of ' + r.title));
     }
-    const newTab = el('a', 'ms-scan-open', 'Open in a new tab');
+    const newTab = el('a', 'ms-scan-open', r.file_is_other ? 'Download the file' : 'Open in a new tab');
     newTab.href = r.file_url;
     newTab.target = '_blank';
     newTab.rel = 'noopener';

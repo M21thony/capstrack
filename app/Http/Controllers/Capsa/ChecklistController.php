@@ -121,6 +121,7 @@ class ChecklistController extends Controller
             'title' => $deliverable->title,
             'kind' => $deliverable->kind,
             'role' => $deliverable->role,
+            'file_type' => $deliverable->file_type,
             'due' => $deliverable->due_date?->toDateString(),
             'archived' => (bool) $deliverable->archived_at,
         ];

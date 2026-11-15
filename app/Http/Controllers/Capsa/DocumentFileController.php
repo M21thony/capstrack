@@ -28,7 +28,14 @@ class DocumentFileController extends Controller
         abort_unless($team && $this->sections->covers($capsa->sections ?? [], $this->sections->sectionFor($team)), 403);
         abort_unless($document->file_path && Storage::disk('local')->exists($document->file_path), 404);
 
-        $type = match (strtolower(pathinfo($document->file_path, PATHINFO_EXTENSION))) {
+        $ending = strtolower(pathinfo($document->file_path, PATHINFO_EXTENSION));
+
+        // A ZIP, a TXT, a DOCX: saved to her computer, never opened in the browser.
+        if (! in_array($ending, ['pdf', 'jpg', 'jpeg', 'png'], true)) {
+            return Storage::disk('local')->download($document->file_path, $document->file_name.'.'.$ending);
+        }
+
+        $type = match ($ending) {
             'jpg', 'jpeg' => 'image/jpeg',
             'png' => 'image/png',
             default => 'application/pdf',

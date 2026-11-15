@@ -58,7 +58,22 @@ class Deliverable extends Model
      */
     public const BLUEBOOK_CLEARANCE = 'bluebook_clearance';
 
+    /**
+     * The file type a CaPSA/TSA can pick for a line: what the choice is called,
+     * and the file endings it takes. '*' is any file; a link takes no file.
+     */
+    public const FILE_TYPES = [
+        'pdf' => ['PDF', ['pdf']],
+        'jpg' => ['JPG or PNG', ['jpg', 'jpeg', 'png']],
+        'link' => ['Link', []],
+        'txt' => ['TXT', ['txt']],
+        'zip' => ['ZIP', ['zip']],
+        'docx' => ['DOCX', ['docx']],
+        'any' => ['Any file', ['*']],
+    ];
+
     protected $fillable = [
+        'file_type',
         'checklist_milestone_id',
         'template_key',
         'title',
@@ -96,6 +111,34 @@ class Deliverable extends Model
         return $this->recipients && ! $special && in_array($this->kind, [self::FORM, self::DOCUMENT, self::CUSTOM], true)
             ? array_values($this->recipients)
             : null;
+    }
+
+    /**
+     * The file type picked for this line, or null for the usual files. A link
+     * is only taken by a Dean's check, the one place a link can be handed in.
+     */
+    public function fileType(): ?string
+    {
+        $type = $this->file_type;
+
+        return isset(self::FILE_TYPES[$type]) && ($type !== 'link' || $this->kind === self::BLUEBOOK) ? $type : null;
+    }
+
+    /**
+     * The file endings this line takes: the picked type's, or the usual ones.
+     *
+     * @param  array<int, string>  $usual
+     * @return array<int, string>
+     */
+    public function accepts(array $usual): array
+    {
+        return ($type = $this->fileType()) ? self::FILE_TYPES[$type][1] : $usual;
+    }
+
+    /** The picked type in words ("ZIP", "Any file"), or null for the usual files. */
+    public function fileWords(): ?string
+    {
+        return ($type = $this->fileType()) ? self::FILE_TYPES[$type][0] : null;
     }
 
     public function milestone()

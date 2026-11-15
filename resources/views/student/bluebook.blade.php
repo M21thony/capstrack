@@ -98,9 +98,21 @@
         @unless ($done || $row->locked)
           <form class="bs-form" method="POST" action="{{ route('student.bluebook.store', $row->item) }}" enctype="multipart/form-data">
             @csrf
-            <input type="file" name="file" accept=".pdf,.docx" aria-label="PDF or DOCX for {{ $row->item->title }}">
-            <span class="bs-or">or</span>
-            <input type="url" name="link" placeholder="Google Drive video link" aria-label="Drive link for {{ $row->item->title }}">
+            @php
+              $type = $row->item->fileType();
+              $endings = array_diff($row->item->accepts(['pdf', 'docx']), ['*']);
+              $takesFile = $type !== 'link';
+              $takesLink = in_array($type, [null, 'link', 'any'], true);
+            @endphp
+            @if ($takesFile)
+              <input type="file" name="file" accept="{{ implode(',', array_map(fn ($e) => '.'.$e, $endings)) }}" aria-label="{{ $row->item->fileWords() ?? 'PDF or DOCX' }} for {{ $row->item->title }}">
+            @endif
+            @if ($takesFile && $takesLink)
+              <span class="bs-or">or</span>
+            @endif
+            @if ($takesLink)
+              <input type="url" name="link" placeholder="Google Drive video link" aria-label="Drive link for {{ $row->item->title }}">
+            @endif
             <button class="btn btn-primary" type="submit">{{ $row->file ? 'Send again' : 'Send' }}</button>
           </form>
         @endunless

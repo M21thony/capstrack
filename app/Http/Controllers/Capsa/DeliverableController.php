@@ -46,6 +46,7 @@ class DeliverableController extends Controller
             'due_date' => ['nullable', ...self::DATE_RULE],
             'recipients' => ['nullable', 'array'],
             'recipients.*' => [Rule::in(SubmissionRecipients::ROLES)],
+            'file_type' => ['nullable', Rule::in(array_keys(Deliverable::FILE_TYPES))],
         ], self::DATE_MESSAGES);
 
         $next = (int) $milestone->deliverables()->withTrashed()->max('position') + 1;
@@ -58,6 +59,7 @@ class DeliverableController extends Controller
             'instructions' => $data['instructions'] ?? null,
             'due_date' => $data['due_date'] ?? null,
             'recipients' => ($data['recipients'] ?? null) ?: null,
+            'file_type' => $data['file_type'] ?? null,
             'position' => $next + $i,
         ]));
 
@@ -207,13 +209,14 @@ class DeliverableController extends Controller
             'recipients' => ['sometimes', 'nullable', 'array'],
             'recipients.*' => [Rule::in(SubmissionRecipients::ROLES)],
             'closed' => ['sometimes', 'boolean'],
+            'file_type' => ['sometimes', 'nullable', Rule::in(array_keys(Deliverable::FILE_TYPES))],
         ];
     }
 
     /** Validated input as columns. A CLF always says who signs it; nothing else does. */
     private function changes(array $data): array
     {
-        $out = array_intersect_key($data, array_flip(['title', 'instructions', 'kind', 'role', 'defense_type', 'due_date']));
+        $out = array_intersect_key($data, array_flip(['title', 'instructions', 'kind', 'role', 'defense_type', 'due_date', 'file_type']));
 
         if (isset($out['title'])) {
             $out['title'] = trim($out['title']);

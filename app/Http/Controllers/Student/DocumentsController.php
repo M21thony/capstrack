@@ -78,8 +78,15 @@ class DocumentsController extends Controller
         abort_unless($document->file_path && ! $document->isDiagram(), 404);
         abort_unless(Storage::disk('local')->exists($document->file_path), 404);
 
+        $ending = strtolower(pathinfo($document->file_path, PATHINFO_EXTENSION));
+
+        // A ZIP, a TXT, a DOCX: saved to the computer, never opened in the browser.
+        if (! in_array($ending, ['pdf', 'jpg', 'jpeg', 'png'], true)) {
+            return Storage::disk('local')->download($document->file_path, $document->file_name.'.'.$ending);
+        }
+
         // A signed paper may be a phone photo; everything else here is a PDF.
-        $isPhoto = in_array(strtolower(pathinfo($document->file_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png'], true);
+        $isPhoto = in_array($ending, ['jpg', 'jpeg', 'png'], true);
 
         return Storage::disk('local')->response($document->file_path, null, $isPhoto ? [] : [
             'Content-Type' => 'application/pdf',

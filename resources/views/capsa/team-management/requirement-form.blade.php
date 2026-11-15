@@ -62,6 +62,17 @@
         </div>
       </div>
     @endif
+    @unless ($deliverable?->kind === \App\Models\Deliverable::DOCUMENT)
+      <label class="mdg-f" id="ml-files" @if ($defense || (! $role && $sendTo)) hidden @endif>File type
+        <select class="mdg-in" name="file_type">
+          <option value="">{{ $bluebook ? 'PDF, DOCX or link' : 'PDF, JPG or PNG' }}</option>
+          @foreach (\App\Models\Deliverable::FILE_TYPES as $value => [$label])
+            @continue($value === 'link' && ! $bluebook)
+            <option value="{{ $value }}" @selected($deliverable?->file_type === $value)>{{ $value === 'any' ? 'All files' : ($value === 'jpg' ? 'JPG' : $label) }}</option>
+          @endforeach
+        </select>
+      </label>
+    @endunless
     <label class="mdg-f">Due date
       <input class="mdg-in" type="date" name="due_date" value="{{ $deliverable?->due_date?->toDateString() }}">
     </label>
@@ -93,7 +104,11 @@
     const isDefense = () => field('type').value === 'defense';
 
     const send = document.getElementById('ml-send');
-    const showSend = () => { if (send) { send.hidden = isDefense() || !!field('role').value; } };
+    // The file type is for a paper the CaPSA/TSA checks: not a defense, not a line sent to reviewers.
+    const files = document.getElementById('ml-files');
+    const showFiles = () => { if (files) { files.hidden = isDefense() || !!(send && !send.hidden && send.querySelector('input:checked')); } };
+    const showSend = () => { if (send) { send.hidden = isDefense() || !!field('role').value; } showFiles(); };
+    send?.addEventListener('change', showFiles);
     field('role').addEventListener('change', showSend);
     field('type').addEventListener('change', () => {
       document.getElementById('ml-stage').hidden = !isDefense();
@@ -121,6 +136,9 @@
       }
       if (send && !send.hidden) {
         body.recipients = [...send.querySelectorAll('input:checked')].map(box => box.value);
+      }
+      if (files) {
+        body.file_type = files.hidden ? null : field('file_type').value || null;
       }
       if (field('closed')) {
         body.closed = field('closed').checked;

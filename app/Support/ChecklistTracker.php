@@ -193,6 +193,9 @@ class ChecklistTracker
             'file_url' => $checkable && $row->file_id ? route('capsa.documents.file', $row->file_id) : null,
             'file_is_image' => $row->file_path !== null
                 && in_array(strtolower(pathinfo($row->file_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png'], true),
+            // A ZIP, a TXT, a DOCX: nothing the check window can draw, only download.
+            'file_is_other' => $row->file_path !== null
+                && ! in_array(strtolower(pathinfo($row->file_path, PATHINFO_EXTENSION)), ['pdf', 'jpg', 'jpeg', 'png'], true),
             'check_url' => $checkable ? route('capsa.deliverables.checks.update', [$item->id, $teamId]) : null,
         ];
     }

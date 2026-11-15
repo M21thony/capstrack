@@ -334,6 +334,27 @@ class SubmissionGoesToTest extends TestCase
             ->assertJsonPath('people.0.name', $this->capsa->name);
     }
 
+    public function test_a_line_set_to_zip_takes_a_zip_and_refuses_anything_else(): void
+    {
+        $task = $this->addDeliverable($this->checklist, ['title' => 'Source code', 'kind' => Deliverable::CUSTOM, 'file_type' => 'zip']);
+        $send = fn (string $name) => $this->actingAs($this->student)->postJson(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->createWithContent($name, 'bytes of '.$name),
+            'deliverable_id' => $task->id,
+        ]);
+
+        $this->actingAs($this->student)->getJson(route('student.submission.plan', ['item' => $task->id]))
+            ->assertJsonPath('accept', ['zip'])
+            ->assertJsonPath('kinds', 'ZIP');
+
+        $send('code.pdf')->assertStatus(422)->assertJsonPath('message', 'This requirement takes ZIP only.');
+        $send('code.zip')->assertOk();
+        $this->assertStringEndsWith('.zip', CapstoneDocument::where('deliverable_id', $task->id)->value('file_path'));
+
+        // A link is a Dean's check thing: on a task it falls back to the usual files.
+        $task->update(['file_type' => 'link']);
+        $this->assertNull($task->fileType());
+    }
+
     public function test_the_team_sees_the_capsa_by_that_name(): void
     {
         $this->assertSame('CaPSA/TSA', StudentReviewController::roleLabel('subject_adviser'));

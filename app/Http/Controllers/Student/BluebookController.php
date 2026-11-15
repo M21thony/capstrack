@@ -31,14 +31,34 @@ class BluebookController extends Controller
         $line = $bluebook->lines->first(fn ($row) => (int) $row->item->id === (int) $deliverable->id) ?? abort(404);
         abort_if($bluebook->locked || $line->locked || Bluebook::done($line), 403);
 
+        // The file type the CaPSA/TSA picked for this line: a link only, one
+        // kind of file only, or anything. None picked keeps PDF, DOCX or a link.
+        $type = $deliverable->fileType();
+        $endings = $deliverable->accepts(['pdf', 'docx']);
+        $takesFile = $type !== 'link';
+        $takesLink = in_array($type, [null, 'link', 'any'], true);
+
         $request->validate([
-            'file' => ['required_without:link', 'nullable', 'file', 'mimes:pdf,docx', 'max:25600'],
-            'link' => ['required_without:file', 'nullable', 'url', 'max:500'],
-        ], ['required_without' => 'Choose a file or paste a Drive link.']);
+            'file' => $takesFile
+                ? [$takesLink ? 'required_without:link' : 'required', 'nullable', 'file', ...($endings === ['*'] ? [] : ['mimes:'.implode(',', $endings)]), 'max:25600']
+                : ['prohibited'],
+            'link' => $takesLink ? [$takesFile ? 'required_without:file' : 'required', 'nullable', 'url', 'max:500'] : ['prohibited'],
+        ], [
+            'required_without' => 'Choose a file or paste a Drive link.',
+            'file.required' => 'Choose a file.',
+            'link.required' => 'Paste a Drive link.',
+            'mimes' => 'This requirement takes '.$deliverable->fileWords().' only.',
+            'prohibited' => 'This requirement takes '.$deliverable->fileWords().' only.',
+        ]);
 
         if ($request->hasFile('file')) {
-            $name = $request->file('file')->getClientOriginalName();
-            $path = $request->file('file')->store('bluebook', 'local');
+            $file = $request->file('file');
+            $name = $file->getClientOriginalName();
+            $ending = strtolower($file->getClientOriginalExtension());
+            // A picked type keeps the file's own ending; a guessed one would save a DOCX as a zip.
+            $path = $type && preg_match('/^[a-z0-9]{1,8}$/', $ending)
+                ? $file->storeAs('bluebook', pathinfo($file->hashName(), PATHINFO_FILENAME).'.'.$ending, 'local')
+                : $file->store('bluebook', 'local');
         } else {
             $id = Bluebook::driveId($request->input('link'))
                 ?? throw ValidationException::withMessages(['link' => 'Paste a Google Drive link to the video.']);
