@@ -108,6 +108,7 @@ class EvaluateDuplicationCheckerTest extends TestCase
         $output = $this->run_evaluation();
 
         $this->assertMatchesRegularExpression('/Score shown\s+\|\s+none in the set\s+\|\s+1 of 1 \(100%\)/', $output);
+        $this->assertStringContainsString('p1 (30%): Wrongly called different.', $output);
     }
 
     public function test_a_pair_the_judge_could_not_answer_is_counted_as_not_scored_and_never_as_close(): void

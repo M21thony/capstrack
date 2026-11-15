@@ -728,7 +728,7 @@ PROMPT;
      * left out: a labelled pair has no PDF to compare.
      *
      * @param  array<string, mixed>  $concepts
-     * @return array{cosine: float, embedding_score: int, judge_score: int|null, is_relevant: bool, assessed: bool, score: int}
+     * @return array{cosine: float, embedding_score: int, judge_score: int|null, is_relevant: bool, assessed: bool, score: int, reason: string}
      */
     public function scorePair(array $concepts, ArchivedDocument $other): array
     {
@@ -753,6 +753,7 @@ PROMPT;
             'is_relevant' => $match['is_relevant'],
             'assessed' => $match['assessed'],
             'score' => $match['score'],
+            'reason' => $match['reason'],
         ];
     }
 

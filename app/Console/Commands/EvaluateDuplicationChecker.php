@@ -78,6 +78,7 @@ class EvaluateDuplicationChecker extends Command
         $this->newLine(2);
 
         $this->reportPairs($results);
+        $this->reportDisagreements($results);
         $this->reportSeparation($results);
         $this->reportErrors($results);
 
@@ -157,6 +158,29 @@ class EvaluateDuplicationChecker extends Command
                 SimilarityBand::of($r['shown']) === self::EXPECTED_BAND[$r['label']] ? 'yes' : 'NO',
             ], $results),
         );
+    }
+
+    /**
+     * What the judge said about each pair it did not score as labelled: the
+     * place to look for why, before changing anything.
+     *
+     * @param  array<int, array<string, mixed>>  $results
+     */
+    private function reportDisagreements(array $results): void
+    {
+        $disagreements = array_filter($results, fn (array $r) => SimilarityBand::of($r['shown']) !== self::EXPECTED_BAND[$r['label']]);
+
+        if ($disagreements === []) {
+            return;
+        }
+
+        $this->line('Not as labelled, and the reason given');
+
+        foreach ($disagreements as $r) {
+            $this->line("  {$r['id']} (".($r['shown'] === null ? 'not scored' : $r['shown'].'%')."): {$r['reason']}");
+        }
+
+        $this->newLine();
     }
 
     /**
