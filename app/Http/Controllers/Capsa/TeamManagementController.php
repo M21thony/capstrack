@@ -452,7 +452,8 @@ class TeamManagementController extends Controller
             ->get()
             ->map(function (DefenseSchedule $defense) use ($sections, &$rubrics) {
                 $program = $defense->team?->program();
-                $max = $rubrics[$defense->defense_type.'|'.$program] ??= GradingRubric::forStage($defense->defense_type, $program)?->total_points;
+                $rubric = $rubrics[$defense->defense_type.'|'.$program] ??= GradingRubric::forStage($defense->defense_type, $program) ?? false;
+                $max = $rubric ? $rubric->total_points : null;
                 $records = GradesController::records($defense);
                 $panelSize = $defense->panels->count();
                 $grader = collect($records)->first(fn ($r) => count($r['roles']) > 1);
@@ -475,6 +476,7 @@ class TeamManagementController extends Controller
                     'recorder' => $grader ? $grader['names'][0] : null,
                     'records' => $records,
                     'max' => $max !== null ? (float) $max : null,
+                    'cats' => $rubric ? $rubric->categories() : [],
                     'sheet' => $defense->signed_sheets_path ? route('capsa.grades.sheet', $defense->defense_id) : null,
                     'average' => $defense->panelAverage(),
                     'in' => $in,

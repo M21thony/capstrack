@@ -2,7 +2,7 @@
     // Someone else on the panel grades for this panelist: this is that grade.
     $grader = $grade->gradedBy;
     $criteriaCount = $rubric->criteria()->count();
-    $scored = count($grade->scores ?? []);
+    $scored = count(\Illuminate\Support\Arr::except($grade->scores ?? [], 'categories'));
     $turnedIn = in_array($grade->status, [\App\Models\PanelGrade::SUBMITTED, \App\Models\PanelGrade::ABSTAINED], true);
     $fmt = fn ($n) => rtrim(rtrim(number_format((float) $n, 2), '0'), '.');
     $status = match ($grade->status) {

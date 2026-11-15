@@ -68,4 +68,16 @@ class GradingRubric extends Model
             ->latest('rubric_id')
             ->first();
     }
+
+    /**
+     * The rubric's categories in sheet order, each with the most it can score.
+     *
+     * @return array<string, float>
+     */
+    public function categories(): array
+    {
+        return $this->criteria->sortBy('sort_order')->groupBy(fn ($c) => $c->category ?? 'General')
+            ->map(fn ($items) => (float) ($items->first()->category_max_points ?? $items->sum('max_points')))
+            ->all();
+    }
 }

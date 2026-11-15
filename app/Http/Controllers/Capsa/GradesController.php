@@ -58,6 +58,30 @@ class GradesController extends Controller
         }
 
         $totals = $validator->validated()['totals'];
+
+        // Optional: a record's score per category, in the rubric's order. The
+        // total is then their sum, whatever total came with it.
+        $cats = $rubric->categories();
+        $byCategory = [];
+
+        foreach ((array) $request->input('categories', []) as $id => $values) {
+            $values = array_values((array) $values);
+
+            if (count($values) !== count($cats)) {
+                return response()->json(['success' => false, 'message' => 'Type a score for every category.'], 422);
+            }
+
+            foreach (array_keys($cats) as $i => $name) {
+                if (! is_numeric($values[$i]) || $values[$i] < 0 || $values[$i] > $cats[$name]) {
+                    return response()->json(['success' => false, 'message' => $name.' has to be a number from 0 to '.$cats[$name].'.'], 422);
+                }
+
+                $byCategory[$id][$name] = (float) $values[$i];
+            }
+
+            $totals[$id] = array_sum($byCategory[$id]);
+        }
+
         $submit = $request->boolean('submit');
         $open = collect(self::records($defense))->where('own', false);
 
@@ -82,7 +106,7 @@ class GradesController extends Controller
                     'joined_at' => null,
                     'joined_set_by' => null,
                     'rubric_id' => $rubric->rubric_id,
-                    'scores' => [],
+                    'scores' => isset($byCategory[$record['id']]) ? ['categories' => $byCategory[$record['id']]] : [],
                     'total_score' => (float) $value,
                     'verdict' => null,
                     'remarks' => PanelGrade::FROM_PAPER.$capsa->name.' (CaPSA/TSA).',
@@ -177,6 +201,7 @@ class GradesController extends Controller
                 'abstained' => (bool) $grade?->isAbstained(),
                 'status' => $grade?->status,
                 'total' => $grade?->total_score !== null ? (float) $grade->total_score : null,
+                'cats' => $grade?->scores['categories'] ?? null,
             ];
         }
 

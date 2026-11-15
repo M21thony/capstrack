@@ -142,6 +142,24 @@ class PaperGradesTest extends TestCase
         return PanelGrade::where('defense_id', $this->defense->defense_id)->where('expert_id', $this->id($who))->first();
     }
 
+    public function test_scores_typed_by_category_add_up_to_the_total(): void
+    {
+        GradingRubric::first()->criteria()->create([
+            'criterion_name' => 'Delivery', 'category' => 'Oral Presentation', 'category_max_points' => 40,
+            'max_points' => 40, 'score_levels' => '[]', 'sort_order' => 1,
+        ]);
+        $send = fn (array $scores) => $this->actingAs($this->capsa, 'expert')->postJson('/capsa/grades/'.$this->defense->defense_id, [
+            'totals' => [$this->id('one') => 5], 'categories' => [$this->id('one') => $scores],
+        ]);
+
+        $send([60, 41])->assertStatus(422);
+        $this->assertNull($this->gradeOf('one'));
+
+        $send([60, 30])->assertOk();
+        $this->assertEquals(90, (float) $this->gradeOf('one')->total_score);
+        $this->assertEquals(['All' => 60, 'Oral Presentation' => 30], $this->gradeOf('one')->scores['categories']);
+    }
+
     public function test_capsa_saves_drafts_then_submits_without_waiting_for_the_signed_sheets(): void
     {
         $this->encode(['chair' => 90, 'one' => 90])->assertOk()->assertJson(['message' => 'Drafts saved.']);

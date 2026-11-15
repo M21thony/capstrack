@@ -95,6 +95,9 @@
   .tm-hub .tr-all .gs{border-left:2px solid var(--line)}
   .tm-hub .tr-all th:last-child,.tm-hub .tr-all td:last-child{width:auto}
   .tm-hub .tr-all td:first-child{min-width:170px}
+  .tm-hub .tr-all .tr-sc{font:inherit;color:inherit;background:none;border:0;padding:2px 6px;margin:-2px -6px;border-radius:6px;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+  .tm-hub .tr-all .tr-sc:hover{background:var(--gold-bg)}
+  .tr-dlg .rub.sc td:last-child,.tr-dlg .rub.sc th:last-child{text-align:right;width:170px}
   .tm-hub .tr-all tr.grp td{background:var(--gold-bg);font-weight:700;font-size:13px;padding:7px 14px}
   .tm-hub .tr-all tr.grp:hover td{background:var(--gold-bg)}
   .tm-hub .tr-all tr.grp .muted{font-weight:500}
@@ -240,7 +243,7 @@
   <div class="card tr-a">
     <div class="tr-ch">
       <h2>All students</h2>
-      <span class="t2">Each score is the average of what teammates gave them, out of {{ $max }}. Point at a score to see its 7 criteria.</span>
+      <span class="t2">Each score is the average of what teammates gave them, out of {{ $max }}.</span>
     </div>
     @if ($rows->isEmpty() || $teams->isEmpty())
       <div class="empty">Scores show here once a rating opens and students submit.</div>
@@ -279,8 +282,7 @@
                     @foreach ($r['form']->items as $item)
                       @php $c = $mine[$item->id] ?? null; @endphp
                       @if ($c)
-                        <td @class(['num', 'gs' => $loop->first, 'red b' => $c['avg'] < $max / 2])
-                            title="{{ $item->label }} · rated by {{ $c['n'] }}{{ collect($criteria)->map(fn ($n, $i) => "\n".$n.': '.number_format($c['criteria'][$i], 1))->implode('') }}">{{ number_format($c['avg'], 1) }}</td>
+                        <td @class(['num', 'gs' => $loop->first, 'red b' => $c['avg'] < $max / 2])><button type="button" class="tr-sc" data-who="{{ $name($s) }}" data-what="{{ $r['form']->name }} · {{ $item->label }}" data-n="{{ $c['n'] }}" data-avg="{{ number_format($c['avg'], 1) }}" data-c="{{ json_encode(array_values($c['criteria'])) }}">{{ number_format($c['avg'], 1) }}</button></td>
                       @else
                         <td @class(['num muted', 'gs' => $loop->first])>—</td>
                       @endif
@@ -516,6 +518,16 @@
   }
 
   const R = id => TR.ratings[id];
+  // One score, opened up: what the teammates gave on each of the 7 criteria.
+  function score(d) {
+    const pts = JSON.parse(d.c);
+    open(head(esc(d.who), `${esc(d.what)} · rated by ${plural(+d.n, 'teammate', 'teammates')}`) +
+      `<div class="db"><table class="rub sc"><thead><tr><th>Criteria</th><th>Average, out of 10</th></tr></thead><tbody>
+      ${Object.keys(RUBRIC).map((c, i) => `<tr><td>${esc(c)}</td><td>${(+pts[i]).toFixed(1)}</td></tr>`).join('')}
+      <tr><td><b>Total</b></td><td><b>${esc(d.avg)} / {{ $max }}</b></td></tr></tbody></table></div>
+      <div class="df"><button class="btn btn-p" type="button" data-close>Close</button></div>`);
+  }
+  document.querySelector('.tr-all')?.addEventListener('click', e => { const b = e.target.closest('.tr-sc'); if (b) score(b.dataset); });
   document.getElementById('tr-rub').onclick = rubric;
   document.getElementById('tr-new').onclick = () => create();
   document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => create(R(b.dataset.add)));

@@ -129,7 +129,7 @@
                     <td>{{ $category }}</td>
                     <td class="ds-max">{{ $fmt($items->first()->category_max_points ?? $items->sum('max_points')) }}</td>
                     @foreach ($sheets as $sheet)
-                      <td>{{ $abstained($sheet->seat) ? '—' : $fmt($items->sum(fn ($c) => (float) $scoreOf($sheet->seat, $c))) }}</td>
+                      <td>{{ $abstained($sheet->seat) ? '—' : $fmt($gradeOf->get($sheet->seat->expert_id)?->scores['categories'][$category] ?? $items->sum(fn ($c) => (float) $scoreOf($sheet->seat, $c))) }}</td>
                     @endforeach
                   </tr>
                   @foreach ($items as $c)

@@ -21,6 +21,9 @@
       'sheet' => (bool) $d->sheet,
       'open' => collect($d->records)->where('own', false)->pluck('id')->values(),
       'submitted' => $state($d)[0] === 'Submitted',
+      'cats' => collect($d->cats)->map(fn ($max, $name) => [$name, $max])->values(),
+      'saved' => collect($d->records)->filter(fn ($r) => $r['cats'])
+          ->mapWithKeys(fn ($r) => [$r['id'] => array_map(fn ($n) => $r['cats'][$n] ?? null, array_keys($d->cats))]),
   ]]);
 @endphp
 
@@ -57,6 +60,10 @@
   .tm-hub .gr-rec input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,44,.22)}
   .tm-hub .gr-rec input.bad{border-color:var(--bad)}
   .tm-hub .gr-rec input:disabled{background:var(--tint);color:var(--ink2)}
+  .tm-hub .gr-recs:has(.gr-cat){grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .tm-hub .gr-rec:has(.gr-cat){grid-template-columns:minmax(0,1fr) 78px auto}
+  .tm-hub .gr-cat{font:inherit;font-size:12px;font-weight:600;color:var(--ink2);background:var(--surface);border:1px solid var(--line2);border-radius:7px;padding:4px 9px;cursor:pointer;white-space:nowrap}
+  .tm-hub .gr-cat:hover{border-color:var(--gold)}
   .tm-hub .gr-rec .fixed{text-align:right;font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
   .tm-hub .gr-pdf{display:flex;gap:6px;align-items:center;white-space:nowrap}
   .tm-hub .gr-pdf .btn{padding:4px 10px;font-size:12px}
@@ -78,6 +85,8 @@
   .gr-dlg table{width:100%;border-collapse:collapse;font-size:13px}
   .gr-dlg th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#d4d6de;padding:8px 10px;background:#18191f}
   .gr-dlg td{padding:7px 10px;border-bottom:1px solid var(--border)}
+  .gr-dlg td input{width:110px;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:7px;font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+  .gr-dlg td input:invalid{border-color:#dc2626}
   .gr-dlg .num{text-align:right;font-variant-numeric:tabular-nums}
   .gr-dlg .x{margin-left:auto;border:0;background:none;font-size:22px;line-height:1;color:var(--text3);cursor:pointer;width:32px;height:32px;border-radius:8px}
   .gr-dlg .dh{display:flex;gap:12px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--border)}
@@ -135,6 +144,9 @@
                                  data-rec="{{ $r['id'] }}" value="{{ $r['total'] !== null ? $trim($r['total']) : '' }}"
                                  placeholder="{{ $d->max ? 'of '.$trim($d->max) : 'No rubric' }}" @disabled($d->decided || ! $d->max)
                                  aria-label="Total for {{ implode(' and ', $r['names']) }}">
+                          @if (count($d->cats) > 1 && (! $d->decided || $r['cats']))
+                            <button class="gr-cat" type="button" data-cat="{{ $r['id'] }}" data-who="{{ implode(' + ', $r['names']) }}">By category</button>
+                          @endif
                         @endif
                       </label>
                     @endforeach
@@ -207,6 +219,9 @@
   const D = @json($js);
   const WIN = @json($windows->map(fn ($w) => $w->start_date && $w->end_date ? $w->start_date->format('M j').' – '.$w->end_date->format('M j, Y') : null));
   const dlg = document.getElementById('gr-dlg');
+  // 'defense:record' -> that record's category scores, in the rubric's order.
+  const CAT = {};
+  Object.entries(D).forEach(([id, d]) => Object.entries(d.saved).forEach(([rec, v]) => { CAT[id + ':' + rec] = v; }));
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
 
@@ -237,7 +252,7 @@
   // What each visible row would send.
   const rows = () => [...document.querySelectorAll('[data-pane="encode"] tbody tr[data-id]')].filter(tr => !tr.hidden);
   const read = tr => {
-    const totals = {}, vals = []; let typed = 0, bad = false, live = false, changed = false;
+    const totals = {}, categories = {}, vals = []; let typed = 0, bad = false, live = false, changed = false;
     tr.querySelectorAll('input[data-rec]').forEach(i => {
       if (i.disabled) return;
       live = true;
@@ -246,10 +261,12 @@
       bad = bad || wrong;
       totals[i.dataset.rec] = v === '' ? null : Number(v);
       if (v !== '') { typed++; vals.push(v); }
-      changed = changed || i.value !== i.defaultValue;
+      changed = changed || i.value !== i.defaultValue || Boolean(i.dataset.dirty);
+      const c = CAT[tr.dataset.id + ':' + i.dataset.rec];
+      if (c && c.every(x => x !== null)) categories[i.dataset.rec] = c;
     });
     const d = D[tr.dataset.id];
-    return { d, totals, vals, typed, bad, live, changed, full: live && typed === d.open.length };
+    return { d, totals, categories, vals, typed, bad, live, changed, full: live && typed === d.open.length };
   };
   // A submitted row counts again only once a total is changed.
   const ready = () => rows().map(read).filter(r => r.full && !r.bad && (r.changed || !r.d.submitted));
@@ -261,13 +278,49 @@
     review.textContent = n ? 'Review ' + plural(n, 'result', 'results') : 'Review & submit';
     review.disabled = !n;
   }
-  document.querySelectorAll('input[data-rec]').forEach(i => i.addEventListener('input', note));
+  // A total typed by hand stands alone: the category scores behind the old one go.
+  document.querySelectorAll('input[data-rec]').forEach(i => i.addEventListener('input', () => {
+    delete CAT[i.closest('tr').dataset.id + ':' + i.dataset.rec];
+    i.dataset.dirty = 1;
+    note();
+  }));
+
+  // Optional: type one record's score per category and the total adds itself up.
+  document.querySelector('[data-pane="encode"]')?.addEventListener('click', e => {
+    const b = e.target.closest('.gr-cat');
+    if (!b) return;
+    const tr = b.closest('tr'), d = D[tr.dataset.id], key = tr.dataset.id + ':' + b.dataset.cat;
+    const total = tr.querySelector(`input[data-rec="${b.dataset.cat}"]`), have = CAT[key] || [], locked = total.disabled;
+    dlg.innerHTML = `<div class="dh"><div><h2 id="gr-dlg-h">Scores by category</h2><div class="sub">${esc(d.team)} · ${esc(b.dataset.who)}</div></div><button class="x" type="button" data-close aria-label="Close">×</button></div>
+      <div class="db"><table><thead><tr><th>Category</th><th class="num">Score</th></tr></thead><tbody>
+      ${d.cats.map(([name, max], i) => `<tr><td>${esc(name)}</td><td class="num"><input type="number" inputmode="decimal" step="0.01" min="0" max="${max}" value="${have[i] ?? ''}" placeholder="of ${max}" aria-label="${esc(name)}" ${locked ? 'disabled' : ''}></td></tr>`).join('')}
+      <tr><td><b>Total</b></td><td class="num"><b id="gr-sum"></b></td></tr></tbody></table></div>
+      <div class="df"><button class="btn" type="button" data-close>${locked ? 'Close' : 'Cancel'}</button>${locked ? '' : '<button class="btn btn-p" type="button" id="gr-use">Use this total</button>'}</div>`;
+    const ins = [...dlg.querySelectorAll('td input')], use = dlg.querySelector('#gr-use');
+    const sum = () => {
+      const t = Math.round(ins.reduce((a, i) => a + (Number(i.value) || 0), 0) * 100) / 100;
+      dlg.querySelector('#gr-sum').textContent = t + ' / ' + total.max;
+      if (use) use.disabled = !ins.every(i => i.value.trim() !== '' && i.checkValidity());
+      return t;
+    };
+    ins.forEach(i => i.addEventListener('input', sum));
+    sum();
+    dlg.querySelectorAll('[data-close]').forEach(x => x.addEventListener('click', () => dlg.close()));
+    use?.addEventListener('click', () => {
+      CAT[key] = ins.map(i => Number(i.value));
+      total.value = sum();
+      total.dataset.dirty = 1;
+      note();
+      dlg.close();
+    });
+    dlg.showModal();
+  });
 
   async function post(list, submit, btn, label) {
     const was = btn.textContent;
     btn.disabled = true; btn.textContent = label;
     try {
-      for (const r of list) await mlSend(r.d.encode, 'POST', { totals: r.totals, submit });
+      for (const r of list) await mlSend(r.d.encode, 'POST', { totals: r.totals, categories: r.categories, submit });
       done(submit ? plural(list.length, 'result', 'results') + ' submitted' : 'Drafts saved');
     } catch (error) { btn.disabled = false; btn.textContent = was; dlg.close(); mlFail(error); }
   }
