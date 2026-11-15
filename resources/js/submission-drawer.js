@@ -186,6 +186,7 @@ export async function openSubmission(itemId, from, revises) {
 }
 
 async function loadPlan() {
+  const mine = S; // closed (or reopened) while this loads: the answer is for a drawer that is gone
   S.plan = null;
   S.loadError = null;
   render();
@@ -197,11 +198,12 @@ async function loadPlan() {
     const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'This could not be opened.');
-    S.plan = data;
-    S.picked = new Set(data.people.filter((p) => p.on).map((p) => p.role));
+    mine.plan = data;
+    mine.picked = new Set(data.people.filter((p) => p.on).map((p) => p.role));
   } catch (e) {
-    S.loadError = e.message || 'This could not be opened. Reload the page and try again.';
+    mine.loadError = e.message || 'This could not be opened. Reload the page and try again.';
   }
+  if (S !== mine) return;
   render();
   focusFirst();
 }
