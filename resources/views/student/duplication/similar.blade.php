@@ -44,6 +44,8 @@
   // (SimilarityService::enrichWithReasons). Checks run before they were saved have neither.
   $emb = $match['embedding_score'] ?? null;
   $judge = $match['judge_score'] ?? null;
+  // Checks run before the judge answered questions have a number and no answers.
+  $answers = $match['answers'] ?? null;
   $exact = $match['exact_score'] ?? null;
   $exactUsed = $exact !== null && $exact >= SimilarityService::EXACT_WORDS_MIN && $exact === $score;
   // An exact copy is scored even when the judge's call failed.
@@ -214,7 +216,12 @@
                 Not read. Only the {{ config('services.ollama.judge_limit') }} closest titles from step 1 go to the judge.
               @else
                 CapsTrack's judge model (<code>{{ config('services.ollama.judge_model') ?: config('services.ollama.model') }}</code>) reads both and compares the problem, users and features.
-                It said: <b>{{ $same ? 'same kind of study' : 'not the same study' }}</b>{{ $judge !== null ? ', '.$judge.'%' : ', with no number' }}.
+                @if ($answers && $judge !== null)
+                  It answered three questions: same thing handled, <b>{{ $answers['things'] }}</b>; same users, <b>{{ $answers['users'] }}</b>; same features, <b>{{ $answers['features'] }}</b>.
+                  Those answers are worth {{ $judge }}%, so it is <b>{{ $same ? 'the same kind of study' : 'not the same study' }}</b>.
+                @else
+                  It said: <b>{{ $same ? 'same kind of study' : 'not the same study' }}</b>{{ $judge !== null ? ', '.$judge.'%' : ', with no number' }}.
+                @endif
               @endif
             </p>
           </div>

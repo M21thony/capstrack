@@ -122,6 +122,20 @@ class EvaluateDuplicationCheckerTest extends TestCase
         $this->assertMatchesRegularExpression('/Score shown\s+\|\s+0 of 1 \(0%\)/', $output);
     }
 
+    public function test_the_judges_answers_decide_the_score_and_its_own_number_is_shown_beside_it(): void
+    {
+        $this->goldSet([$this->pair('p1', 'duplicate', 'Rural Health Unit Records')]);
+        $this->fakeModel([
+            'Rural Health Unit Records' => '{"same_things": "yes", "same_users": "yes", "same_features": "yes", "matches": false, "score": 15, "reason": "One covers more."}',
+        ]);
+
+        $output = $this->run_evaluation();
+
+        $this->assertMatchesRegularExpression('/p1\s+\|\s+duplicate\s+\|\s+1\.00\s+\|\s+100%\s+\|\s+yes \/ yes \/ yes\s+\|\s+15%\s+\|\s+95%\s+\|\s+95%/', $output);
+        $this->assertMatchesRegularExpression('/Score shown\s+\|\s+none in the set\s+\|\s+0 of 1 \(0%\)/', $output);
+        $this->assertMatchesRegularExpression("/The model's own number\s+\|\s+none in the set\s+\|\s+1 of 1 \(100%\)/", $output);
+    }
+
     public function test_the_cosine_range_of_each_label_is_reported(): void
     {
         $this->goldSet([$this->pair('p1', 'duplicate', 'Rural Health Unit Records')]);

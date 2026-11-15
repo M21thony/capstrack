@@ -25,6 +25,20 @@ class SimilarityService
      */
     public const EXACT_WORDS_MIN = 40;
 
+    /**
+     * Score by the judge's answers: same thing handled, then same work done on it.
+     *
+     * @var array<string, array<string, int>>
+     */
+    private const RUBRIC = [
+        'yes' => ['yes' => 90, 'partly' => 55, 'no' => 40],
+        'partly' => ['yes' => 50, 'partly' => 35, 'no' => 20],
+        'no' => ['yes' => 20, 'partly' => 10, 'no' => 5],
+    ];
+
+    /** From this score up, the answers say the two are the same kind of study. */
+    private const RUBRIC_MATCH = 55;
+
     public function __construct(private OllamaSSHClient $ollama) {}
 
     // ── 1. Extract raw text from uploaded PDF ─────────────────────────
@@ -728,7 +742,7 @@ PROMPT;
      * left out: a labelled pair has no PDF to compare.
      *
      * @param  array<string, mixed>  $concepts
-     * @return array{cosine: float, embedding_score: int, judge_score: int|null, is_relevant: bool, assessed: bool, score: int, reason: string}
+     * @return array{cosine: float, embedding_score: int, judge_score: int|null, is_relevant: bool, assessed: bool, score: int, reason: string, answers: array{things: string, users: string, features: string}|null, own_score: int|null}
      */
     public function scorePair(array $concepts, ArchivedDocument $other): array
     {
@@ -754,6 +768,8 @@ PROMPT;
             'assessed' => $match['assessed'],
             'score' => $match['score'],
             'reason' => $match['reason'],
+            'answers' => $match['answers'],
+            'own_score' => $match['own_score'],
         ];
     }
 
@@ -906,6 +922,10 @@ PROMPT;
             $item['is_relevant'] = $verdict['matches'] ?? true;
             // The judge's own number, kept even when the shown score is not it.
             $item['judge_score'] = $verdict['score'] ?? null;
+            // What that number was worked out from, and the number the model
+            // would have given on its own.
+            $item['answers'] = $verdict['answers'] ?? null;
+            $item['own_score'] = $verdict['own_score'] ?? null;
 
             // Whether a "false" verdict's own score is even worth
             // considering: only a HIGH score contradicts a rejection (the
@@ -1252,11 +1272,26 @@ PROMPT;
                 // infrastructure projects against jail inmate records.
                 ."Return ONLY a JSON object. No markdown, no array, no extra text. Fill the fields in this order.\n"
                 .'"things" names what each system handles, in concrete nouns - never "records", "projects", '
-                .'"information" or "data" alone, say OF WHAT, and never just repeat a title. If the two things '
-                ."are different, \"matches\" is false and the score is under 30.\n"
+                .'"information" or "data" alone, say OF WHAT, and never just repeat a title.'."\n"
                 .'Do not use the words system, management, monitoring, tracking, notification or integrated in "things" '
                 ."- only the real-world objects, like \"medicines of a health unit vs cement and tools of a hardware store\".\n"
+                // Three answers, and the code works the score out from them
+                // (rubricScore()). Asked for a number alone, the model wrote
+                // "both systems track graduates" and still gave 15, because
+                // one of the two covered more: a narrower or wider scope read
+                // to it as a different thing.
+                .'Then answer three questions, each with exactly "yes", "partly" or "no":'."\n"
+                .'"same_things": are those the same kind of real-world object? "yes" even when one system covers more '
+                .'or fewer of them, or does different work on them (patients of a health unit vs patients of a health '
+                .'unit; graduates of a school vs graduates of a school). "no" when the objects differ (patients vs '
+                ."medicines; pets vs dental patients; cacao vs sweet potato).\n"
+                .'"same_users": is it built for the same kind of people?'."\n"
+                .'"same_features": is the same work done on those things? "yes" when the main features of one are all '
+                .'in the other, even if worded differently or one has extra features. "partly" when some main features '
+                .'are shared and others are not. "no" when the work is different.'."\n"
+                .'If "same_things" is "no", "matches" is false and the score is under 30.'."\n"
                 .'{"things":"<objects the pre-proposal handles> vs <objects the archived system handles>",'
+                .'"same_things":"yes|partly|no","same_users":"yes|partly|no","same_features":"yes|partly|no",'
                 .'"matches":true|false,"score":<0-100>,"reason":"one sentence about core concept match or mismatch",'
                 .'"similarities":"short phrase, under 12 words, on what genuinely overlaps - or that there is none '
                 .'beyond generic wording","differences":"short phrase, under 12 words, on what specific features/scope '
@@ -1308,14 +1343,70 @@ PROMPT;
             ? max(0, min(100, (int) round($r['score'])))
             : null;
 
+        // A reply without the three answers (an older fine-tune set as the
+        // judge) is still read by its own number, as before.
+        $answers = $this->rubricAnswers($r);
+        $rubricScore = $answers === null ? null : self::rubricScore($answers);
+
         return [
             'reason' => $r['reason'] ?? '',
             'similarities' => $r['similarities'] ?? '',
             'differences' => $r['differences'] ?? '',
             'suggestion' => $r['suggestion'] ?? '',
-            'matches' => array_key_exists('matches', $r) ? (bool) $r['matches'] : true,
-            'score' => $aiScore,
+            'matches' => match (true) {
+                $rubricScore !== null => $rubricScore >= self::RUBRIC_MATCH,
+                array_key_exists('matches', $r) => (bool) $r['matches'],
+                default => true,
+            },
+            'score' => $rubricScore ?? $aiScore,
+            'own_score' => $aiScore,
+            'answers' => $answers,
         ];
+    }
+
+    /**
+     * The judge's three answers, or null when any is missing or unreadable.
+     *
+     * @param  array<string, mixed>  $reply
+     * @return array{things: string, users: string, features: string}|null
+     */
+    private function rubricAnswers(array $reply): ?array
+    {
+        $answers = [];
+
+        foreach (['things', 'users', 'features'] as $question) {
+            $answer = $reply['same_'.$question] ?? null;
+            $answer = is_bool($answer) ? ($answer ? 'yes' : 'no') : strtolower(trim((string) $answer));
+            $answer = ['partial' => 'partly', 'partially' => 'partly'][$answer] ?? $answer;
+
+            if (! in_array($answer, ['yes', 'partly', 'no'], true)) {
+                return null;
+            }
+
+            $answers[$question] = $answer;
+        }
+
+        return $answers;
+    }
+
+    /**
+     * The similarity score the three answers stand for, so the same answers
+     * always give the same percentage and each percentage can be explained.
+     *
+     * The thing handled decides the range, the work done on it places the
+     * score inside that range, and the users move it by five either way.
+     * The numbers follow the judge prompt's own worked examples: a different
+     * thing stays under 30, the same thing with different features sits in
+     * the 40s to 50s, and the same thing with the same features is 90 up.
+     *
+     * @param  array{things: string, users: string, features: string}  $answers
+     */
+    public static function rubricScore(array $answers): int
+    {
+        $score = self::RUBRIC[$answers['things']][$answers['features']]
+            + ['yes' => 5, 'partly' => 0, 'no' => -5][$answers['users']];
+
+        return max(0, min(100, $score));
     }
 
     // ── 5. Cosine similarity between two float vectors ─────────────────

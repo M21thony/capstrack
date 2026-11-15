@@ -146,12 +146,14 @@ class EvaluateDuplicationChecker extends Command
     private function reportPairs(array $results): void
     {
         $this->table(
-            ['Pair', 'Label', 'Cosine', 'Embedding', 'Judge', 'Shown', 'Band', 'As labelled'],
+            ['Pair', 'Label', 'Cosine', 'Embedding', 'Thing/Users/Features', 'Own number', 'Judge', 'Shown', 'Band', 'As labelled'],
             array_map(fn (array $r) => [
                 $r['id'],
                 $r['label'],
                 number_format($r['cosine'], 2),
                 $r['embedding_score'].'%',
+                $r['answers'] === null ? '-' : implode(' / ', $r['answers']),
+                $r['own_score'] === null ? '-' : $r['own_score'].'%',
                 $r['judge_score'] === null ? '-' : $r['judge_score'].'%',
                 $r['shown'] === null ? '-' : $r['shown'].'%',
                 SimilarityBand::label($r['shown']),
@@ -216,6 +218,7 @@ class EvaluateDuplicationChecker extends Command
             ['', 'False positives', 'Missed duplicates'],
             [
                 $this->errorRow('Score shown', $duplicates, $others, fn (array $r) => $r['shown']),
+                $this->errorRow("The model's own number", $duplicates, $others, fn (array $r) => $r['own_score']),
                 $this->errorRow('Embedding alone', $duplicates, $others, fn (array $r) => $r['embedding_score']),
             ],
         );

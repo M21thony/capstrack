@@ -121,7 +121,7 @@ class ScoreWorkedOutTest extends TestCase
             $mock->shouldReceive('isPreProposal')->andReturn(['is_pre_proposal' => true, 'reason' => '']);
             $mock->shouldReceive('extractKeyConcepts')->andReturn(self::CONCEPTS);
             $mock->shouldReceive('findSimilarDocuments')->andReturn([
-                ['document' => $doc, 'score' => 71, 'embedding_score' => 85, 'judge_score' => 71, 'reason' => 'Close.', 'is_relevant' => true, 'assessed' => true, 'matched_on' => []],
+                ['document' => $doc, 'score' => 71, 'embedding_score' => 85, 'judge_score' => 71, 'answers' => ['things' => 'yes', 'users' => 'yes', 'features' => 'partly'], 'reason' => 'Close.', 'is_relevant' => true, 'assessed' => true, 'matched_on' => []],
             ]);
             $mock->shouldReceive('suggestInstructors')->andReturn([]);
             $mock->shouldReceive('extractHighlightWords')->andReturn(['records']);
@@ -134,6 +134,7 @@ class ScoreWorkedOutTest extends TestCase
         $saved = DuplicationCheck::latest('id')->first()->matches[0];
         $this->assertSame(85, $saved['embedding_score']);
         $this->assertSame(71, $saved['judge_score']);
+        $this->assertSame(['things' => 'yes', 'users' => 'yes', 'features' => 'partly'], $saved['answers']);
     }
 
     public function test_the_match_page_shows_the_three_steps_with_this_titles_numbers_and_the_sources(): void
@@ -145,6 +146,29 @@ class ScoreWorkedOutTest extends TestCase
             ->assertSee('Sentence-BERT')
             ->assertSee('arXiv:2402.01613')
             ->assertSee('Judging LLM-as-a-Judge');
+    }
+
+    public function test_the_match_page_shows_the_judges_three_answers_and_what_they_are_worth(): void
+    {
+        $this->page([
+            'score' => 60, 'embedding_score' => 81, 'judge_score' => 60, 'assessed' => true, 'is_relevant' => true,
+            'answers' => ['things' => 'yes', 'users' => 'yes', 'features' => 'partly'],
+        ])->assertSeeInOrder([
+            'AI judge', 'same thing handled, <b>yes</b>', 'same users, <b>yes</b>', 'same features, <b>partly</b>',
+            'Those answers are worth 60%', 'the same kind of study',
+        ], false);
+    }
+
+    public function test_answers_decide_the_score_of_a_check_and_are_kept_with_the_match(): void
+    {
+        $judged = $this->judgedWhenJudgeSays(['same_things' => 'yes', 'same_users' => 'yes', 'same_features' => 'yes', 'matches' => false, 'score' => 15]);
+
+        foreach ($judged as $m) {
+            $this->assertSame(['things' => 'yes', 'users' => 'yes', 'features' => 'yes'], $m['answers']);
+            $this->assertSame(95, $m['judge_score']);
+            $this->assertSame(95, $m['score']);
+            $this->assertTrue($m['is_relevant']);
+        }
     }
 
     public function test_the_match_page_explains_a_cut_score_an_unread_title_and_an_older_check(): void
