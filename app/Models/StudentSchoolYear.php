@@ -156,6 +156,31 @@ class StudentSchoolYear extends Model
     }
 
     /** Every term this student has been enrolled for, newest first. */
+    /**
+     * The active term's rows, for a query that reaches student_s_y by a join
+     * or DB::table() - where the model's own scope does not apply.
+     *
+     * The table holds a row per student per term, and both semesters of a
+     * school year carry the same school_year. Without this, every student
+     * read twice once the 2nd semester started: a team of three showed six
+     * members, a classmate came up twice, a paper was listed twice.
+     *
+     *   Student::join('student_s_y', ...)->where(StudentSchoolYear::inActiveTerm())
+     *   ->join('student_s_y as sy', fn ($j) => $j->on(...)->where(StudentSchoolYear::inActiveTerm('sy')))
+     */
+    public static function inActiveTerm(string $table = 'student_s_y'): \Closure
+    {
+        return function ($query) use ($table) {
+            $activeTermId = Term::activeId();
+
+            if (! $activeTermId) {
+                return;
+            }
+
+            $query->where(fn ($q) => $q->where($table.'.term_id', $activeTermId)->orWhereNull($table.'.term_id'));
+        };
+    }
+
     public function scopeAcrossAllTerms($query)
     {
         return $query->withoutGlobalScope(self::ACTIVE_TERM_SCOPE);

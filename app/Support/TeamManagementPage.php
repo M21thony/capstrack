@@ -60,6 +60,7 @@ class TeamManagementPage
                 ->leftJoin('student_roles', 'student_s_y.s_role_id', '=', 'student_roles.s_role_id')
                 ->leftJoin('student_roles as secondary', 'student_s_y.secondary_role_id', '=', 'secondary.s_role_id')
                 ->where('student_s_y.team_id', $teamId)
+                ->where(StudentSchoolYear::inActiveTerm())
                 ->select('students.*', 'student_s_y.s_role_id', 'student_roles.s_role_name', 'secondary.s_role_name as secondary_role_name')
                 ->get()
                 ->sortBy(function ($member) use ($studentId, $teamLeaderId) {

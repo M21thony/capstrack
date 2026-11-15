@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamRating;
 use App\Models\TeamRatingForm;
@@ -172,6 +173,7 @@ class TeamRatingController extends Controller
         $mates = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
             ->leftJoin('student_roles', 'student_s_y.s_role_id', '=', 'student_roles.s_role_id')
             ->where('student_s_y.team_id', $team->team_id)
+            ->where(StudentSchoolYear::inActiveTerm())
             ->where('students.student_id', '!=', $me->student_id)
             ->select('students.*', 'student_roles.s_role_name')
             ->orderByRaw('students.student_id = ? desc', [(int) $team->leader_id])

@@ -243,7 +243,7 @@ class TeamRows
 
         return DB::table('capstone_document_review as r')
             ->join('capstone_documents as d', 'd.file_id', '=', 'r.file_id')
-            ->join('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
+            ->join('student_s_y as sy', fn ($join) => $join->on('sy.student_id', '=', 'd.student_id')->where(StudentSchoolYear::inActiveTerm('sy')))
             ->leftJoin('deliverables as dl', 'dl.id', '=', 'd.deliverable_id')
             ->leftJoin('checklist_milestones as cm', 'cm.id', '=', 'dl.checklist_milestone_id')
             ->where('r.expert_id', $viewerId)

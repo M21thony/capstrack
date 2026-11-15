@@ -6,6 +6,7 @@ use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Deliverable;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\Notifier;
 use App\Services\RecipientResolver;
@@ -59,9 +60,12 @@ class SubmissionController extends Controller
         $studentId = Auth::id(); // adjust guard if students use a named guard
 
         // Resolve the student's current team + program from student_s_y
+        // This semester's row: both semesters of a year share its school_year,
+        // so ordering by it picked either one.
         $studentYear = DB::table('student_s_y')
             ->where('student_id', $studentId)
-            ->orderByDesc('school_year')
+            ->where(StudentSchoolYear::inActiveTerm())
+            ->orderByDesc('term_id')
             ->first();
 
         if (! $studentYear || ! $studentYear->team_id) {
@@ -344,7 +348,8 @@ class SubmissionController extends Controller
     {
         $studentYear = DB::table('student_s_y')
             ->where('student_id', Auth::id())
-            ->orderByDesc('school_year')
+            ->where(StudentSchoolYear::inActiveTerm())
+            ->orderByDesc('term_id')
             ->first();
         $teamId = $studentYear?->team_id ? (int) $studentYear->team_id : null;
 

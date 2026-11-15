@@ -166,6 +166,7 @@ class DashboardController extends Controller
 
         $teamMembers = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
             ->where('student_s_y.team_id', $teamId)
+            ->where(StudentSchoolYear::inActiveTerm())
             ->get()
             ->sortBy(function ($member) use ($leaderStudentId, $student) {
                 if ($member->student_id === $leaderStudentId) {

@@ -902,6 +902,7 @@ class TeamController extends Controller
 
         $classmates = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
             ->where('student_s_y.school_year', $currentSchoolYear)
+            ->where(StudentSchoolYear::inActiveTerm())
             ->where('students.course', $student->course)
             ->where('students.year_section', $student->year_section)
             ->where('students.student_id', '!=', $studentId)
@@ -914,6 +915,7 @@ class TeamController extends Controller
         if ($classmates->isEmpty() && $currentSchoolYear !== $computedSchoolYear) {
             $classmates = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
                 ->where('student_s_y.school_year', $computedSchoolYear)
+                ->where(StudentSchoolYear::inActiveTerm())
                 ->where('students.course', $student->course)
                 ->where('students.year_section', $student->year_section)
                 ->where('students.student_id', '!=', $studentId)

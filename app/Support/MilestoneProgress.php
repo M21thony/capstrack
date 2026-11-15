@@ -9,6 +9,7 @@ use App\Models\Checklist;
 use App\Models\ChecklistMilestone;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
+use App\Models\StudentSchoolYear;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -767,7 +768,7 @@ class MilestoneProgress
         $ids = $teamIds->all();
 
         return DB::table('capstone_documents as d')
-            ->leftJoin('student_s_y as sy', fn ($join) => $join->on('sy.student_id', '=', 'd.student_id')->whereNull('d.team_id'))
+            ->leftJoin('student_s_y as sy', fn ($join) => $join->on('sy.student_id', '=', 'd.student_id')->whereNull('d.team_id')->where(StudentSchoolYear::inActiveTerm('sy')))
             ->leftJoin('team as t', 't.team_id', '=', 'sy.team_id')
             ->where(fn ($q) => $q->whereIn('d.team_id', $ids)
                 ->orWhere(fn ($q) => $q->whereNull('d.team_id')->whereIn('sy.team_id', $ids)->whereColumn('d.created_at', '>=', 't.created_at')))
