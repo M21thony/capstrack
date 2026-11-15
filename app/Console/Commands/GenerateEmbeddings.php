@@ -20,7 +20,7 @@ class GenerateEmbeddings extends Command
     // genuinely-related document score the same as a completely unrelated
     // one - the embedding model needs those words to tell projects apart.
     // Must match SimilarityService::removeStopWords()'s list exactly.
-    private array $stopWords = [
+    private const STOP_WORDS = [
         // Articles & prepositions
         'a', 'an', 'the', 'of', 'for', 'and', 'or', 'in', 'to', 'is', 'are',
         'with', 'that', 'this', 'on', 'at', 'by', 'from', 'it', 'its', 'be',
@@ -74,16 +74,7 @@ class GenerateEmbeddings extends Command
 
         foreach ($docs as $doc) {
             try {
-                $raw = $doc->title.' '.($doc->abstract ?? '');
-                $text = $this->cleanText($raw);
-
-                if (strlen(trim($text)) < 5) {
-                    $text = $this->cleanText($doc->title);
-                }
-
-                $text = mb_substr($text, 0, 4000);
-
-                $embedding = $ollama->embed($text);
+                $embedding = $ollama->embed(self::textFor($doc));
 
                 if (! empty($embedding)) {
                     $doc->embedding = json_encode($embedding);
@@ -106,7 +97,19 @@ class GenerateEmbeddings extends Command
         $this->info("Done! Success: {$success} | Failed: {$failed}");
     }
 
-    private function cleanText(string $text): string
+    /** The text an archive row is embedded from: its title and abstract, cleaned. */
+    public static function textFor(ArchivedDocument $doc): string
+    {
+        $text = self::cleanText($doc->title.' '.($doc->abstract ?? ''));
+
+        if (strlen(trim($text)) < 5) {
+            $text = self::cleanText($doc->title);
+        }
+
+        return mb_substr($text, 0, 4000);
+    }
+
+    private static function cleanText(string $text): string
     {
         // Lowercase
         $text = strtolower($text);
@@ -118,7 +121,7 @@ class GenerateEmbeddings extends Command
         $words = explode(' ', $text);
         $filtered = array_filter(
             $words,
-            fn ($w) => ! in_array(trim($w), $this->stopWords)
+            fn ($w) => ! in_array(trim($w), self::STOP_WORDS)
                    && strlen(trim($w)) > 2
                    && ! is_numeric(trim($w))
         );

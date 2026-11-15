@@ -131,3 +131,5 @@ Do the phases in order. Each one is measured with the Phase 0 command before and
 4. What an unjudged match should show: "Not scored" as now, or be left out of the list.
 
 ## Comments
+
+**2026-11-15.** Phase 0 step 2 is in: `php artisan duplication:evaluate` scores each labelled pair with `SimilarityService::scorePair()`, the same embedding text, judge prompt and score rules a real check uses, and prints false positives, missed duplicates, the cosine range per label, unscored pairs and seconds per pair. It works pair by pair, so it needs Ollama but not the archive; recall@10 against the archive is not measured yet. The gold set itself (step 1) is still owed: copy `tests/Fixtures/duplication-gold-set.example.json` to `tests/Fixtures/duplication-gold-set.json` and replace its three made-up pairs with 30 to 40 labelled by a person. No numbers have been run: the session that wrote the command had no Ollama. Decision 3 is settled by commits `8afbe2a` and `ad9ebfc`: the judge is now the base Qwen 3.5 4B, not the fine-tune.

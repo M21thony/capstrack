@@ -1,0 +1,53 @@
+[
+    {
+        "id": "example-duplicate",
+        "label": "duplicate",
+        "pre_proposal": {
+            "title": "Barangay Health Center Patient Records and Appointment System",
+            "main_topic": "Patient records and appointment scheduling for a barangay health center",
+            "domain": "Healthcare",
+            "keywords": ["patient records", "appointment scheduling", "health center"],
+            "problem_statement": "The health center keeps patient records on paper, so records are lost and patients wait a long time to be seen.",
+            "proposed_solution": "A system where staff record patient visits and patients book an appointment ahead of time.",
+            "scope": "One barangay health center, its staff and its patients."
+        },
+        "other": {
+            "title": "Patient Information and Appointment Scheduling System for a Rural Health Unit",
+            "abstract": "This study developed a system that stores the patient records of a rural health unit and lets patients schedule their consultations in advance, replacing the paper logbook."
+        }
+    },
+    {
+        "id": "example-related",
+        "label": "related",
+        "pre_proposal": {
+            "title": "Barangay Health Center Patient Records and Appointment System",
+            "main_topic": "Patient records and appointment scheduling for a barangay health center",
+            "domain": "Healthcare",
+            "keywords": ["patient records", "appointment scheduling", "health center"],
+            "problem_statement": "The health center keeps patient records on paper, so records are lost and patients wait a long time to be seen.",
+            "proposed_solution": "A system where staff record patient visits and patients book an appointment ahead of time.",
+            "scope": "One barangay health center, its staff and its patients."
+        },
+        "other": {
+            "title": "Medicine Inventory Monitoring System for a Rural Health Unit",
+            "abstract": "This study developed a system that tracks the stock and expiry dates of medicines in a rural health unit and warns the staff when a medicine is running low."
+        }
+    },
+    {
+        "id": "example-unrelated",
+        "label": "unrelated",
+        "pre_proposal": {
+            "title": "Barangay Health Center Patient Records and Appointment System",
+            "main_topic": "Patient records and appointment scheduling for a barangay health center",
+            "domain": "Healthcare",
+            "keywords": ["patient records", "appointment scheduling", "health center"],
+            "problem_statement": "The health center keeps patient records on paper, so records are lost and patients wait a long time to be seen.",
+            "proposed_solution": "A system where staff record patient visits and patients book an appointment ahead of time.",
+            "scope": "One barangay health center, its staff and its patients."
+        },
+        "other": {
+            "title": "Automated Fish Feeder with Water Quality Monitoring for Tilapia Ponds",
+            "abstract": "This study built a device that feeds tilapia on a schedule and reports the temperature and acidity of the pond water to the farmer's phone."
+        }
+    }
+]

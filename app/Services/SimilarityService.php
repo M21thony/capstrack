@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Console\Commands\GenerateEmbeddings;
 use App\Models\ArchivedDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
@@ -602,19 +603,7 @@ PROMPT;
      */
     public function findSimilarDocuments(array $concepts, int $topN = 10, ?int $excludeTeamId = null, string $pdfText = ''): array
     {
-        // Build a rich text representation — strip stop words before embedding
-        $rawQueryText = implode("\n", array_filter([
-            $concepts['title'] ?? '',
-            $concepts['main_topic'] ?? '',
-            $concepts['domain'] ?? '',
-            implode(', ', $concepts['keywords'] ?? []),
-            $concepts['problem_statement'] ?? '',
-            $concepts['proposed_solution'] ?? '',
-            $concepts['scope'] ?? '',
-        ]));
-
-        // FIX: Apply stop words to query text for cleaner embedding
-        $queryText = $this->removeStopWords($rawQueryText);
+        $queryText = $this->queryTextFor($concepts);
 
         // ── Phase 1: Generate embedding for the uploaded document ─────
         // A missing OLLAMA_EMBED_MODEL is a setup mistake, not a server
@@ -653,10 +642,7 @@ PROMPT;
                 continue;
             }
 
-            $similarity = $this->cosineSimilarity($queryEmbedding, $storedEmbedding);
-
-            // Convert cosine similarity (–1 to 1) → percentage (0–100)
-            $score = (int) round((($similarity + 1) / 2) * 100);
+            $score = $this->embeddingPercent($this->cosineSimilarity($queryEmbedding, $storedEmbedding));
 
             // FIX: Skip weak matches — below 40% are likely noise from generic words
             if ($score < 40) {
@@ -710,6 +696,64 @@ PROMPT;
         }
 
         return $enriched;
+    }
+
+    /** The pre-proposal as the embedding model is given it: its concepts joined, stop words removed. */
+    private function queryTextFor(array $concepts): string
+    {
+        return $this->removeStopWords(implode("\n", array_filter([
+            $concepts['title'] ?? '',
+            $concepts['main_topic'] ?? '',
+            $concepts['domain'] ?? '',
+            implode(', ', $concepts['keywords'] ?? []),
+            $concepts['problem_statement'] ?? '',
+            $concepts['proposed_solution'] ?? '',
+            $concepts['scope'] ?? '',
+        ])));
+    }
+
+    /** Cosine similarity (-1 to 1) as the percentage (0 to 100) a check works with. */
+    private function embeddingPercent(float $cosine): int
+    {
+        return (int) round((($cosine + 1) / 2) * 100);
+    }
+
+    /**
+     * One pre-proposal against one other study, scored the way a real check
+     * scores a match, so the checker can be measured against pairs a person
+     * has labelled (see the duplication:evaluate command).
+     *
+     * Both sides are embedded here, the other study with the text
+     * embeddings:generate stores for an archive row. The exact-words step is
+     * left out: a labelled pair has no PDF to compare.
+     *
+     * @param  array<string, mixed>  $concepts
+     * @return array{cosine: float, embedding_score: int, judge_score: int|null, is_relevant: bool, assessed: bool, score: int}
+     */
+    public function scorePair(array $concepts, ArchivedDocument $other): array
+    {
+        $cosine = $this->cosineSimilarity(
+            $this->ollama->embed($this->queryTextFor($concepts)),
+            $this->ollama->embed(GenerateEmbeddings::textFor($other)),
+        );
+        $embeddingScore = $this->embeddingPercent($cosine);
+
+        [$match] = $this->enrichWithReasons($concepts, [[
+            'document' => $other,
+            'recommended' => null,
+            'pre_proposal_id' => null,
+            'score' => $embeddingScore,
+            'embedding_score' => $embeddingScore,
+        ]]);
+
+        return [
+            'cosine' => $cosine,
+            'embedding_score' => $embeddingScore,
+            'judge_score' => $match['judge_score'],
+            'is_relevant' => $match['is_relevant'],
+            'assessed' => $match['assessed'],
+            'score' => $match['score'],
+        ];
     }
 
     /**
