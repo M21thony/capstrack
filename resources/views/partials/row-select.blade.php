@@ -51,6 +51,7 @@
   // DOMContentLoaded instead, the tick box column arrived after the page was
   // on screen, and every row narrowed, re-wrapped and moved.
   let started = false;
+  let fill = null;
   if (document.readyState === 'loading') {
     const pastTable = function () {
       const table = document.querySelector(@json($table));
@@ -63,7 +64,11 @@
       if (pastTable()) { watch.disconnect(); start(); }
     });
     watch.observe(document.documentElement, { childList: true, subtree: true });
-    document.addEventListener('DOMContentLoaded', function () { watch.disconnect(); start(); });
+    document.addEventListener('DOMContentLoaded', function () {
+      watch.disconnect();
+      start();
+      if (fill) fill();
+    });
   } else {
     start();
   }
@@ -91,8 +96,6 @@ function start() {
 
   // A row the page marked as not yours to change gets no checkbox at all -
   // offering one and refusing the action afterwards is worse than not offering.
-  const rows = Array.from(table.querySelectorAll('tbody tr'));
-
   const head = table.querySelector('thead');
   const headRow = head.querySelector('tr');
 
@@ -116,15 +119,24 @@ function start() {
   barRow.appendChild(barCell);
   head.appendChild(barRow);
 
-  rows.forEach(function (tr) {
-    if (tr.dataset.noSelect === '1') {
-      const spacer = document.createElement('td');
-      spacer.className = 'rs-cell';
-      tr.insertBefore(spacer, tr.firstElementChild);
-      return;
-    }
-    tr.insertBefore(cell(false, false), tr.firstElementChild);
-  });
+  // Safe to run twice: the early start can fire while the table is still
+  // arriving (anything a script adds after one of the table's parents looks
+  // like "the table has ended"), and the rows that came in afterwards were
+  // left without a tick box cell, one column short of the heading.
+  fill = function () {
+    table.querySelectorAll('tbody tr').forEach(function (tr) {
+      const first = tr.firstElementChild;
+      if (first && first.classList.contains('rs-cell')) return;
+      if (tr.dataset.noSelect === '1') {
+        const spacer = document.createElement('td');
+        spacer.className = 'rs-cell';
+        tr.insertBefore(spacer, first);
+        return;
+      }
+      tr.insertBefore(cell(false, false), first);
+    });
+  };
+  fill();
 
   function boxes() {
     return Array.from(table.querySelectorAll('tbody input[type=checkbox]'));
