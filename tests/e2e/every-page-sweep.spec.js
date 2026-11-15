@@ -65,7 +65,10 @@ function inPage() {
     }
     const r = panel.getBoundingClientRect();
     const scrolls = (e) => /(auto|scroll)/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight;
-    const canScroll = [el, panel, ...panel.querySelectorAll('*')].some(scrolls);
+    // The scrolling box can sit between the backdrop and the panel (a side sheet holding a taller card).
+    const between = [];
+    for (let p = panel.parentElement; p && p !== el; p = p.parentElement) between.push(p);
+    const canScroll = [el, panel, ...between, ...panel.querySelectorAll('*')].some(scrolls);
     if (r.left < -1 || r.right > innerWidth + 1) problems.push(`sticks out sideways (${Math.round(r.left)}..${Math.round(r.right)} of ${innerWidth})`);
     if (r.top < -1) problems.push(`top cut off (${Math.round(r.top)})`);
     if (r.bottom > innerHeight + 1 && !canScroll) problems.push(`bottom cut off and cannot scroll (${Math.round(r.bottom)} of ${innerHeight})`);
@@ -94,7 +97,8 @@ for (const [role, pages] of Object.entries(PAGES)) {
 
         await context.route('**/*', (route) => (['GET', 'HEAD', 'OPTIONS'].includes(route.request().method()) ? route.continue() : route.abort()));
         page.on('dialog', (d) => d.dismiss().catch(() => {}));
-        page.on('pageerror', (e) => issues.push({ kind: 'script error', detail: e.message.slice(0, 200) }));
+        // Saves are blocked above, so a page complaining that its own save did not go through is the sweep's doing.
+        page.on('pageerror', (e) => /Failed to fetch|NetworkError/i.test(e.message) || issues.push({ kind: 'script error', detail: e.message.slice(0, 200) }));
         page.on('console', (m) => {
           if (m.type() === 'error' && !/ERR_FAILED|Failed to fetch|NetworkError|aborted|Failed to load resource: net::/i.test(m.text())) {
             issues.push({ kind: 'console error', detail: m.text().slice(0, 200) });
