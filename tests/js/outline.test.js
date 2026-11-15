@@ -2,7 +2,23 @@
 // Run with `npm run test:js` - Node's own test runner, nothing to install.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readOutline } from "../../resources/js/component/reader/outline.js";
+import { readOutline, sectionAt } from "../../resources/js/component/reader/outline.js";
+
+test("a page's section is its chapter and the sub-heading it sits under", () => {
+  const flat = [
+    { id: 0, title: "Abstract", page: 2, path: [] },
+    { id: 1, title: "CHAPTER II - REVIEW", page: 10, path: [] },
+    { id: 2, title: "2.1 Related Literature", page: 11, path: [1] },
+    { id: 3, title: "2.1.1 Local", page: 12, path: [1, 2] },
+    { id: 4, title: "Chapter 3", page: 20, path: [] },
+  ];
+  assert.equal(sectionAt(flat, 1), "");
+  assert.equal(sectionAt(flat, 5), "Abstract");
+  assert.equal(sectionAt(flat, 10), "Chapter 2");
+  assert.equal(sectionAt(flat, 15), "Chapter 2 › 2.1 Related Literature › 2.1.1 Local");
+  assert.equal(sectionAt(flat, 25), "Chapter 3");
+  assert.equal(sectionAt([], 3), "");
+});
 
 // Stands in for the PDF reader: page references are objects, named places are strings.
 const pdf = (outline) => ({

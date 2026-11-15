@@ -3,8 +3,9 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import {
   FigureZoom, Highlights, KINDS, PageStrip, ReaderTools, RemarksPanel, SectionPicker,
-  kindOf, mergeRectsByLine, numberRemarks, rectStyle, usePageColumn,
+  kindOf, mergeRectsByLine, numberRemarks, rectStyle, useOutline, usePageColumn,
 } from "../reader/Reader";
+import { sectionAt } from "../reader/outline";
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
 import { figureMarks, oldOverlayRect, overlayRect, tints } from "../reader/figureDiff";
 import FigureCrop from "../reader/FigureCrop";
@@ -185,6 +186,7 @@ function PDFChecker({
   const Holder = pdfUrl ? Document : DiagramsOnly;
   // Diagram pages after a PDF are easy to miss, so they are marked and listed.
   const firstDiagramPage = numPages && drawings.pages.length ? numPages + 1 : null;
+  const outline = useOutline(pdf);
   const [flashPage, setFlashPage] = useState(null);
   const openDiagram = (n) => {
     col.goToPage(n);
@@ -350,7 +352,8 @@ function PDFChecker({
     // After editing an older Format or Good remark, a new one starts as an offered kind.
     setKind((k) => (OFFERED_KINDS.some((o) => o.id === k) ? k : "pink"));
     setText("");
-    setSection("");
+    // The section starts as where the page sits in the PDF's bookmarks; an attached diagram's page has none.
+    setSection(d.pageNumber <= (numPages ?? 0) ? sectionAt(outline, d.pageNumber) : "");
     setFigure(label);
     setDiagramType(onFigure ? guessDiagramType(figures.find((f) => f.label === label)?.title) : "");
     setPopPos(null);

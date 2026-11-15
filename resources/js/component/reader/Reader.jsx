@@ -603,7 +603,7 @@ export function RemarksPanel({
  * The page strip: one small page per page, with how many remarks are on it.
  * Diagram pages, from firstDiagramPage on, sit under a "Diagrams" divider.
  */
-function useOutline(pdf) {
+export function useOutline(pdf) {
   const [outline, setOutline] = useState([]);
   useEffect(() => {
     let alive = true;
