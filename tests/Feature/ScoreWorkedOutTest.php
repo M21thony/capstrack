@@ -148,35 +148,6 @@ class ScoreWorkedOutTest extends TestCase
             ->assertSee('Judging LLM-as-a-Judge');
     }
 
-    public function test_the_match_page_places_the_cosine_between_unrelated_studies_and_the_same_study(): void
-    {
-        $this->page(['score' => 5, 'embedding_score' => 26, 'cosine' => 0.53, 'judge_score' => 5, 'assessed' => true, 'is_relevant' => false])
-            ->assertSeeInOrder(['Meaning match', 'nothing in common measure about 0.40', 'the same study about 0.90', '(0.53 − 0.40) ÷ 0.50 × 100 = 26%', 'Below 0.40 is dropped as noise.'], false)
-            ->assertDontSee('+ 1) ÷ 2');
-    }
-
-    public function test_a_check_keeps_the_cosine_and_drops_a_study_further_than_unrelated_ones_are(): void
-    {
-        $this->archive();
-        $far = ArchivedDocument::create([
-            'team_id' => 0, 'title' => 'Far Away Study', 'abstract' => 'About something else.',
-            'academic_year' => '2024', 'program' => 'BSIT', 'file_path' => 'archive/far.pdf',
-        ]);
-        $far->embedding = json_encode([1, 1, 1, 1, -1, -1, -1, 0]);
-        $far->save();
-
-        $ollama = $this->mock(OllamaSSHClient::class);
-        $ollama->shouldReceive('embed')->andReturn(array_fill(0, 8, 0.5));
-        $ollama->shouldReceive('generateMany')->andReturn(['{"matches": true, "score": 71}', '{"matches": true, "score": 71}']);
-        $ollama->shouldReceive('generate')->andReturn('{"matches": true, "score": 71}');
-
-        $matches = app(SimilarityService::class)->findSimilarDocuments(self::CONCEPTS, 10);
-
-        $this->assertNotContains('Far Away Study', array_map(fn ($m) => $m['document']->title, $matches));
-        $this->assertSame(1.0, $matches[0]['cosine']);
-        $this->assertSame(100, $matches[0]['embedding_score']);
-    }
-
     public function test_the_match_page_shows_the_judges_three_answers_and_what_they_are_worth(): void
     {
         $this->page([

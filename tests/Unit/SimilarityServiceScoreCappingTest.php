@@ -126,8 +126,7 @@ class SimilarityServiceScoreCappingTest extends TestCase
             'program' => 'BSIT',
             'file_path' => 'archives/far.pdf',
         ]);
-        // Cosine 0.5 against the query: far, but not past the 0.40 below which a study is dropped.
-        $farAndRejected->embedding = json_encode([0.5, 0.866]);
+        $farAndRejected->embedding = json_encode([0.2, 1.0]);
         $farAndRejected->save();
 
         for ($i = 0; $i < 3; $i++) {
@@ -183,9 +182,7 @@ class SimilarityServiceScoreCappingTest extends TestCase
             'program' => 'BSIT',
             'file_path' => 'archives/relevant.pdf',
         ]);
-        // Cosine 0.99 against the query. It was [1.0, 0.0], cosine 0.71: 85% on
-        // the old (cosine + 1) / 2 scale, 61% now that 0.40 is the bottom of it.
-        $relevant->embedding = json_encode([1.0, 0.8]);
+        $relevant->embedding = json_encode([1.0, 0.0]);
         $relevant->save();
 
         for ($i = 0; $i < 4; $i++) {

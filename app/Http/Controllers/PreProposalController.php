@@ -274,7 +274,6 @@ class PreProposalController extends Controller
                 'score' => $m['score'],
                 // The numbers the score is worked out from, for the match page.
                 'embedding_score' => $m['embedding_score'] ?? null,
-                'cosine' => $m['cosine'] ?? null,
                 'judge_score' => $m['judge_score'] ?? null,
                 // The judge's three answers that number is worked out from.
                 'answers' => $m['answers'] ?? null,
