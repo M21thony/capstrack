@@ -20,7 +20,9 @@ COPY deploy/php.ini /usr/local/etc/php/conf.d/99-capstrack.ini
 COPY deploy/docker/nginx.conf /etc/nginx/sites-available/default
 COPY deploy/docker/supervisord.conf /etc/supervisor/conf.d/capstrack.conf
 COPY deploy/docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# nginx has no type for .mjs; without it the browser refuses the PDF reader's worker and no PDF opens.
+RUN chmod +x /entrypoint.sh \
+    && sed -i 's/ js;/ js mjs;/' /etc/nginx/mime.types && grep -q ' js mjs;' /etc/nginx/mime.types
 
 WORKDIR /var/www/capstrack
 COPY composer.json composer.lock ./
