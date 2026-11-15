@@ -37,7 +37,17 @@ class TableExportTest extends TestCase
         $rows = IOFactory::load($path)->getActiveSheet()->toArray();
         unlink($path);
 
-        return $rows;
+        // Every export opens with the letterhead; the title, scope and table follow from row 7.
+        $this->assertSame('COLLEGE of COMPUTER STUDIES', $rows[4][1]);
+        $trim = function (array $row) {
+            while ($row && end($row) === null) {
+                array_pop($row);
+            }
+
+            return $row;
+        };
+
+        return array_map($trim, array_slice($rows, 6));
     }
 
     public function test_the_tables_on_the_capsa_and_admin_pages_carry_the_buttons(): void

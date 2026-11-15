@@ -36,7 +36,7 @@ class TableExportController extends Controller
             array_values($data['rows']),
         );
 
-        $scope = trim(($data['scope'] ?? '').' · Generated '.now()->format('M j, Y'), ' ·');
+        $scope = trim($data['scope'] ?? '');
         $book = TableWorkbook::build($data['title'], $scope, $headings, $rows);
         $fileName = Str::slug($data['title']).'_'.now()->toDateString().'.xlsx';
 

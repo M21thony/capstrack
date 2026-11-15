@@ -39,23 +39,27 @@
   .tm-hub .gr-win{font-size:12.5px;color:var(--mut)}
   .tm-hub .gr-page tbody tr{cursor:default}
   .tm-hub .gr-page tbody tr:hover td{background:none}
-  .tm-hub .gr-page td{padding:9px 14px;vertical-align:top}
+  .tm-hub .gr-page td{padding:7px 14px;vertical-align:middle}
   .tm-hub .gr-page .b{font-weight:700;color:var(--ink)}
-  .tm-hub .gr-page .sub{font-size:11.5px;color:var(--mut);margin-top:2px}
+  .tm-hub .gr-page .sub{font-size:11.5px;color:var(--mut);margin-top:1px}
+  /* Short rows: the title keeps to one line, panelists sit side by side. */
+  .tm-hub .gr-page td:first-child{width:26%;max-width:0}
+  .tm-hub .gr-page td:nth-child(4){width:48%}
+  .tm-hub .gr-page td:first-child .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tm-hub .gr-page .nw{white-space:nowrap}
   .tm-hub .gr-page .num{text-align:right;font-variant-numeric:tabular-nums}
   .tm-hub .gr-tag{font-size:12.5px;font-weight:700;color:var(--ink2)}
-  .tm-hub .gr-recs{display:grid;gap:6px;min-width:260px}
-  .tm-hub .gr-rec{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:10px;align-items:center;margin:0;cursor:default}
-  .tm-hub .gr-rec .who{font-size:12.5px;color:var(--ink2);line-height:1.3}
-  .tm-hub .gr-rec .who i{font-style:normal;color:var(--mut);font-size:11.5px;display:block}
-  .tm-hub .gr-rec input{width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--line2);border-radius:7px;font:inherit;font-size:13px;text-align:right;background:var(--surface);color:var(--ink);font-variant-numeric:tabular-nums}
+  .tm-hub .gr-recs{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:5px 18px;min-width:230px}
+  .tm-hub .gr-rec{display:grid;grid-template-columns:minmax(0,1fr) 78px;gap:8px;align-items:center;margin:0;cursor:default}
+  .tm-hub .gr-rec .who{font-size:12.5px;color:var(--ink2);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tm-hub .gr-rec .who i{font-style:normal;color:var(--mut);font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis}
+  .tm-hub .gr-rec input{width:100%;box-sizing:border-box;padding:4px 8px;border:1px solid var(--line2);border-radius:7px;font:inherit;font-size:13px;text-align:right;background:var(--surface);color:var(--ink);font-variant-numeric:tabular-nums}
   .tm-hub .gr-rec input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,44,.22)}
   .tm-hub .gr-rec input.bad{border-color:var(--bad)}
   .tm-hub .gr-rec input:disabled{background:var(--tint);color:var(--ink2)}
   .tm-hub .gr-rec .fixed{text-align:right;font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
-  .tm-hub .gr-pdf{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
-  .tm-hub .gr-pdf .btn{padding:5px 10px;font-size:12px}
+  .tm-hub .gr-pdf{display:flex;gap:6px;align-items:center;white-space:nowrap}
+  .tm-hub .gr-pdf .btn{padding:4px 10px;font-size:12px}
   .tm-hub .gr-pdf .none{font-size:12px;color:var(--bad);font-weight:600}
   .tm-hub .gr-st{font-weight:700;font-size:12.5px;white-space:nowrap}
   .tm-hub .gr-st.ok{color:var(--ok)}
@@ -65,14 +69,14 @@
   .tm-hub .gr-page .foot .grow{flex:1;color:var(--bad);font-weight:600}
   .tm-hub .gr-page .foot .btn{padding:7px 14px}
   .tm-hub .gr-page .btn:disabled{opacity:.5;cursor:not-allowed}
-  .tm-hub .gr-res{display:grid;gap:3px;font-size:12.5px;color:var(--ink2);min-width:220px}
+  .tm-hub .gr-res{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 22px;font-size:12.5px;color:var(--ink2);min-width:220px}
   .tm-hub .gr-res span{display:flex;justify-content:space-between;gap:14px}
   .tm-hub .gr-res b{font-variant-numeric:tabular-nums;color:var(--ink)}
   .tm-hub .gr-res b.p{color:var(--mut);font-weight:500}
   .tm-hub .gr-avg{font-size:15px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
   dialog.gr-dlg{width:min(560px,calc(100% - 32px));max-width:none;margin:auto}
   .gr-dlg table{width:100%;border-collapse:collapse;font-size:13px}
-  .gr-dlg th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);padding:8px 10px;background:var(--bg3)}
+  .gr-dlg th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#d4d6de;padding:8px 10px;background:#18191f}
   .gr-dlg td{padding:7px 10px;border-bottom:1px solid var(--border)}
   .gr-dlg .num{text-align:right;font-variant-numeric:tabular-nums}
   .gr-dlg .x{margin-left:auto;border:0;background:none;font-size:22px;line-height:1;color:var(--text3);cursor:pointer;width:32px;height:32px;border-radius:8px}

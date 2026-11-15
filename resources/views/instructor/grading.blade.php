@@ -19,7 +19,7 @@
   .gl-filter button[aria-pressed="true"]{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
   .gl-scroll{overflow:auto;min-height:0}
   .gl table{width:100%;border-collapse:collapse}
-  .gl th{position:sticky;top:0;background:var(--bg3);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);text-align:left;padding:8px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+  .gl th{position:sticky;top:0;background:#18191f;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#d4d6de;text-align:left;padding:8px 14px;border-bottom:0;white-space:nowrap}
   .gl td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
   .gl tr:last-child td{border-bottom:0}
   .gl tbody tr:hover td{background:var(--bg3)}

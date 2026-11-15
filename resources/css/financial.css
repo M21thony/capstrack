@@ -95,7 +95,7 @@
 .fx-bulk .fx-btn:not(.fx-btn-ok):hover{background:#2e3240}
 .fx-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
 .fx table{width:100%;border-collapse:collapse;table-layout:fixed}
-.fx thead th{position:sticky;top:0;z-index:2;background:var(--fx-surface);text-align:left;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--fx-muted);padding:8px 10px;border-bottom:1px solid var(--fx-line2)}
+.fx thead th{position:sticky;top:0;z-index:2;background:#18191f;text-align:left;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#d4d6de;padding:8px 10px;border-bottom:0}
 .fx tbody td{padding:0 10px;height:44px;border-bottom:1px solid var(--fx-line);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fx th:first-child,.fx td:first-child{padding-left:20px}
 .fx tbody tr.fx-row{cursor:pointer;transition:background .12s}

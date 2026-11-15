@@ -156,7 +156,7 @@ class TeamRatingController extends Controller
 
         return response()->streamDownload(
             fn () => (new Xlsx($book))->save('php://output'),
-            'team-ratings-'.now()->format('Y-m-d').'.xlsx',
+            'team-ratings_'.now()->format('Y-m-d').'.xlsx',
             ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
         );
     }

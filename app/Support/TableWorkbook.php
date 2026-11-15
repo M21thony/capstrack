@@ -32,12 +32,7 @@ final class TableWorkbook
         // Typed explicitly, so a cell reading "=SUM(...)" stays text instead of becoming a formula.
         $put = fn (int $column, int $row, string $value) => $sheet->setCellValueExplicit([$column, $row], $value, DataType::TYPE_STRING);
 
-        $put(1, 1, $title);
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $put(1, 2, $scope);
-        $sheet->getStyle('A2')->getFont()->getColor()->setRGB('6B7280');
-
-        $head = 4;
+        $head = self::letterhead($sheet, $title, $scope);
         foreach ($headings as $i => $heading) {
             $put($i + 1, $head, $heading);
         }
@@ -64,6 +59,34 @@ final class TableWorkbook
         return $book;
     }
 
+    /**
+     * The top of every Excel file the system makes: the school's letterhead with
+     * both logos, the title, then the scope and the day it was made. Returns the
+     * row the table starts on.
+     */
+    public static function letterhead(Worksheet $sheet, string $title, string $scope): int
+    {
+        $put = fn (int $row, string $value) => $sheet->setCellValueExplicit([$row < 6 ? 2 : 1, $row], $value, DataType::TYPE_STRING);
+
+        GradingSheetWorkbook::logo($sheet, 'cspc', 'A1', 4);
+        GradingSheetWorkbook::logo($sheet, 'ccs', 'A1', 62);
+        foreach (['Republic of the Philippines', 'Camarines Sur Polytechnic Colleges', 'Nabua, Camarines Sur', 'ISO 9001:2015 Certified', 'COLLEGE of COMPUTER STUDIES'] as $i => $line) {
+            $put($i + 1, $line);
+        }
+        $sheet->getStyle('B1:B5')->getFont()->setSize(8);
+        $sheet->getStyle('B2')->getFont()->setBold(true);
+        $sheet->getStyle('B4')->getFont()->setItalic(true);
+        $sheet->getStyle('B5')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A5:L5')->getBorders()->getBottom()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setRGB('C9A82C');
+
+        $put(7, $title);
+        $sheet->getStyle('A7')->getFont()->setBold(true)->setSize(14);
+        $put(8, ($scope !== '' ? $scope.' · ' : '').'Generated '.now()->format('M j, Y'));
+        $sheet->getStyle('A8')->getFont()->getColor()->setRGB('6B7280');
+
+        return 10;
+    }
+
     /** @param  list<list<string>>  $rows */
     private static function widths(Worksheet $sheet, array $headings, array $rows, int $width): void
     {
@@ -71,7 +94,7 @@ final class TableWorkbook
         foreach (range(1, $width) as $c) {
             $texts = [$headings[$c - 1] ?? '', ...array_map(fn ($line) => $line[$c - 1] ?? '', $rows)];
             $longest = max(array_map(fn ($s) => max(array_map('mb_strlen', explode("\n", $s))), $texts));
-            $sheet->getColumnDimensionByColumn($c)->setWidth(min(60, max(10, $longest + 3)));
+            $sheet->getColumnDimensionByColumn($c)->setWidth(min(60, max($c === 1 ? 18 : 10, $longest + 3))); // column A holds both logos
         }
     }
 

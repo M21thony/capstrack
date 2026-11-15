@@ -1324,7 +1324,7 @@ loadRubrics();
 .mk-check input{accent-color:var(--accent3)}
 .mk-scroll{overflow:auto;min-height:0;flex:1}
 table.mk-t{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
-.mk-t th{position:sticky;top:0;background:var(--bg3);text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);padding:10px 12px;border-bottom:1px solid var(--border);z-index:1}
+.mk-t th{position:sticky;top:0;background:#18191f;text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#d4d6de;padding:10px 12px;border-bottom:0;z-index:1}
 .mk-t td{padding:14px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text2)}
 .mk-t tr:hover td{background:var(--accent-light)}
 .mk-t .nm{font-weight:700;color:var(--text);font-size:14px}
@@ -1371,7 +1371,7 @@ table.mk-t{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
 .mk-dh-btns{display:flex;gap:8px}
 
 .mk-matrix{table-layout:fixed}
-.mk-matrix th{padding:10px 12px}
+.mk-matrix th{padding:10px 12px;background:var(--bg3);color:var(--text3);border-bottom:1px solid var(--border)}
 .mk-matrix th.lv{color:var(--c)}
 .mk-matrix td{padding:10px 12px;vertical-align:top}
 .mk-matrix tr:hover td{background:transparent}

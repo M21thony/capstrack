@@ -127,7 +127,7 @@
 
 /* The teams, one line each, counted in milestones. */
 .ms-table { width: 100%; border-collapse: collapse; }
-.ms-table th { position: sticky; top: 0; z-index: 1; background: var(--bg3); text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text3); font-weight: 600; padding: 7px 14px; border-bottom: 1px solid var(--border); }
+.ms-table th { position: sticky; top: 0; z-index: 1; background: #18191f; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #d4d6de; font-weight: 600; padding: 7px 14px; border-bottom: 0; }
 .ms-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .ms-team-row { cursor: pointer; }
 .ms-team-row:hover td { background: var(--bg3); }

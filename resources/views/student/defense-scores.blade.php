@@ -30,9 +30,9 @@
 .ds-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:start}
 .ds-sheet{background:var(--bg2);border:1px solid var(--border);border-radius:11px;overflow:auto;max-height:calc(100vh - 290px);max-height:calc(100dvh - 290px)}
 .ds-sheet table{width:100%;border-collapse:collapse;font-size:13px}
-.ds-sheet th{position:sticky;top:0;background:var(--bg3);text-align:right;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);white-space:nowrap}
+.ds-sheet th{position:sticky;top:0;background:#18191f;text-align:right;padding:8px 12px;border-bottom:0;font-size:12px;color:#d4d6de;white-space:nowrap}
 .ds-sheet th:first-child{text-align:left}
-.ds-sheet th small{display:block;font-weight:500;color:var(--text3);font-size:11px}
+.ds-sheet th small{display:block;font-weight:500;color:#9a9daa;font-size:11px}
 .ds-sheet td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums}
 .ds-sheet td:first-child{text-align:left;font-variant-numeric:normal}
 .ds-cat td{background:var(--bg3);font-weight:700;color:var(--text)}

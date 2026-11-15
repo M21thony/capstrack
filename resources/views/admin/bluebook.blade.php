@@ -52,7 +52,7 @@
 .bb-tools{display:contents}
 .bb-scroll{flex:1;min-height:0;overflow:auto}
 .bb-scroll table{width:100%;border-collapse:collapse}
-.bb .bb-scroll th{position:sticky;top:0;z-index:1;height:30px;padding:0 10px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:11.5px;font-weight:700;letter-spacing:.4px;text-align:left;text-transform:uppercase;color:var(--text2);white-space:nowrap}
+.bb .bb-scroll th{position:sticky;top:0;z-index:1;height:30px;padding:0 10px;background:#18191f;border-bottom:0;font-size:11.5px;font-weight:600;letter-spacing:.4px;text-align:left;text-transform:uppercase;color:#d4d6de;white-space:nowrap}
 .bb .bb-scroll td{height:32px;padding:0 10px;border-bottom:1px solid var(--bg4);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .bb .bb-scroll td.t{max-width:0;width:40%;overflow:hidden;text-overflow:ellipsis;color:var(--text2)}
 .bb .bb-scroll td a{color:inherit;font-weight:600;text-decoration:none}

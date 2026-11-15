@@ -90,8 +90,8 @@
   /* All students: two header rows that stay put together. */
   .tm-hub .tr-all thead{position:sticky;top:0;z-index:2}
   .tm-hub .tr-all th{position:static}
-  .tm-hub .tr-all th.rg{text-align:center;color:var(--gold-ink);text-transform:none;letter-spacing:0;font-size:12px}
-  .tm-hub .tr-all th.soon{color:var(--line2)}
+  .tm-hub .tr-all th.rg{text-align:center;color:#e2c14d;text-transform:none;letter-spacing:0;font-size:12px}
+  .tm-hub .tr-all th.soon{color:#7d8190}
   .tm-hub .tr-all .gs{border-left:2px solid var(--line)}
   .tm-hub .tr-all th:last-child,.tm-hub .tr-all td:last-child{width:auto}
   .tm-hub .tr-all td:first-child{min-width:170px}
@@ -111,7 +111,7 @@
   .tr-dlg .x:hover{background:var(--bg3);color:var(--text)}
   .tr-dlg .dh{display:flex;gap:12px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--border)}
   .tr-dlg table{width:100%;border-collapse:collapse;font-size:13px}
-  .tr-dlg th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);padding:8px 10px;background:var(--bg3);position:sticky;top:0;z-index:1}
+  .tr-dlg th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#d4d6de;padding:8px 10px;background:#18191f;position:sticky;top:0;z-index:1}
   .tr-dlg td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top}
   .tr-dlg .t2{color:var(--text3)}
   .tr-dlg .b{font-weight:700}
@@ -133,7 +133,11 @@
   .tr-dlg .df .l{margin-right:auto;font-size:12.5px;color:var(--text3);align-self:center}
   .tr-dlg .df .l b{color:var(--text)}
   .tr-dlg .df .btn-r.fill{background:#dc2626;color:#fff}
-  .tr-dlg .rub td{font-size:12.5px;line-height:1.45;color:var(--text2)}
+  /* Five even level columns; the hub's "last cell stays on one line" rule must not reach in here. */
+  .tr-dlg .rub{table-layout:fixed}
+  .tr-dlg .rub th{width:auto}
+  .tr-dlg .rub th:first-child{width:160px}
+  .tr-dlg .rub td{font-size:12.5px;line-height:1.45;color:var(--text2);white-space:normal}
   .tr-dlg .rub td:first-child{font-weight:600;color:var(--text);width:160px}
   .tr-dlg .cm-top{display:grid;grid-template-columns:minmax(0,1fr) auto 110px;gap:20px;align-items:start;flex:none}
   .tr-dlg .inl{display:flex;gap:18px;min-height:38px;align-items:center;flex-wrap:wrap}

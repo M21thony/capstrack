@@ -453,24 +453,8 @@ class ReportController extends Controller
         $put = fn ($c, $r, $value) => $sheet->setCellValueExplicit([$c, $r], $value, DataType::TYPE_STRING);
         $fill = fn ($range, $rgb) => $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB($rgb);
 
-        // The grading sheet's letterhead: both logos over column A, the lines beside them.
-        GradingSheetWorkbook::logo($sheet, 'cspc', 'A1', 4);
-        GradingSheetWorkbook::logo($sheet, 'ccs', 'A1', 62);
-        foreach (['Republic of the Philippines', 'Camarines Sur Polytechnic Colleges', 'Nabua, Camarines Sur', 'ISO 9001:2015 Certified', 'COLLEGE of COMPUTER STUDIES'] as $i => $line) {
-            $put(2, $i + 1, $line);
-        }
-        $sheet->getStyle('B1:B5')->getFont()->setSize(8);
-        $sheet->getStyle('B2')->getFont()->setBold(true);
-        $sheet->getStyle('B4')->getFont()->setItalic(true);
-        $sheet->getStyle('B5')->getFont()->setBold(true)->setSize(11);
-        $sheet->getStyle('A5:L5')->getBorders()->getBottom()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM)->getColor()->setRGB('C9A82C');
-
-        $put(1, 7, $title);
-        $sheet->getStyle('A7')->getFont()->setBold(true)->setSize(14);
-        $put(1, 8, ($scope !== '' ? $scope.' · ' : '').'Generated '.now()->format('M j, Y'));
-        $sheet->getStyle('A8')->getFont()->getColor()->setRGB('6B7280');
-
-        $head = 10;
+        // The same letterhead every Excel file gets.
+        $head = \App\Support\TableWorkbook::letterhead($sheet, $title, $scope);
         // Lines a report carries above its table, like the Expert Load's "Enough experts?".
         foreach ($sheetData['notes'] as $note) {
             $put(1, $head++, $note);
