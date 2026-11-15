@@ -13,6 +13,7 @@ use App\Models\TeamRatingForm;
 use App\Support\PeerRatingRubric;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Smalot\PdfParser\Parser;
 use Tests\TestCase;
 
 /**
@@ -325,5 +326,32 @@ class TeamRatingTest extends TestCase
         // Only the two who have not submitted, and only once.
         $this->assertSame(2, DB::table('notifications')->where('type', 'team_rating_reminder')->count());
         $this->assertNotNull($form->fresh()->reminded_at);
+    }
+
+    public function test_export_shows_every_rating_as_a_pdf_first(): void
+    {
+        $form = $this->openForm(['Chapter 1', 'Chapter 2']);
+        [$a, $b, $c] = $this->members;
+        $this->rateAll($a, $form, 7);
+        $this->actingAs($a)->postJson(route('student.team_rating.submit', $form))->assertOk();
+
+        $response = $this->actingAs($this->capsa, 'expert')
+            ->get(route('capsa.team_ratings.export', ['format' => 'pdf', 'inline' => 1]))
+            ->assertOk();
+
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+        $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
+        $text = preg_replace('/\s+/', ' ', (new Parser)->parseContent($response->getContent())->getText());
+
+        $this->assertStringContainsString('COLLEGE of COMPUTER STUDIES', $text);
+        $this->assertStringContainsString('MIDTERM TEAM PARTICIPATION RATING', $text);
+        $this->assertStringContainsString('each activity out of 70', $text);
+        $this->assertStringContainsString('Chapter 1 Chapter 2 Rating % Submitted', $text);
+        $this->assertStringContainsString(trim($b->f_name.' '.$b->l_name).' 49 49 70%', $text, 'what A gave B, averaged');
+
+        $page = $this->actingAs($this->capsa, 'expert')->get(route('capsa.team_management', ['tab' => 'team_ratings']))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/id="tr-export"[^>]*>.*?Export\s*<\/a>/s', $page);
+        $this->assertStringContainsString("url + '?format=pdf&inline=1'", $page);
+        $this->assertStringContainsString("downloadLabel: 'Download PDF'", $page);
     }
 }

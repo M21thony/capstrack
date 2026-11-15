@@ -199,9 +199,9 @@
       <span class="t2">Students rate each teammate once per rating, with a score for every activity it covers. Only you see the results.</span>
       <div class="r">
         <button class="btn" type="button" id="tr-rub">View rubric</button>
-        <a class="btn" href="{{ route('capsa.team_ratings.export') }}">
+        <a class="btn" id="tr-export" href="{{ route('capsa.team_ratings.export') }}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-          Export to Excel
+          Export
         </a>
         <button class="btn p" type="button" id="tr-new">+ Create a rating</button>
       </div>
@@ -534,6 +534,27 @@
   }
   document.querySelector('.tr-all')?.addEventListener('click', e => { const b = e.target.closest('.tr-sc'); if (b) score(b.dataset); });
   document.getElementById('tr-rub').onclick = rubric;
+
+  // Export: every rating as a PDF in the PDF window first, with Download PDF and
+  // Download Excel there. The link itself is the Excel file, if the window is missing.
+  document.getElementById('tr-export').addEventListener('click', e => {
+    if (!window.PdfViewer) return;
+    e.preventDefault();
+    const url = @json(route('capsa.team_ratings.export'));
+    const excel = document.createElement('a');
+    excel.className = 'tx-btn';
+    excel.href = url;
+    excel.setAttribute('download', '');
+    excel.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Download Excel';
+    window.PdfViewer.open({
+      url: url + '?format=pdf&inline=1',
+      download: url + '?format=pdf',
+      downloadLabel: 'Download PDF',
+      title: 'Team Ratings',
+      meta: 'Every rating, one to a page',
+      actions: [excel],
+    });
+  });
   document.getElementById('tr-new').onclick = () => create();
   document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => create(R(b.dataset.add)));
   document.querySelectorAll('[data-due]').forEach(b => b.onclick = () => due(R(b.dataset.due)));

@@ -14,12 +14,15 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
+use Smalot\PdfParser\Parser as PdfParser;
 use Tests\TestCase;
 
 /**
- * "Export to Excel" on Defenses: the same address as the page itself, with
- * ?export=xlsx, streaming a spreadsheet with the department's own columns in
- * CapsTrack's look (App\Support\DefenseScheduleWorkbook) instead of the view.
+ * Export on Defenses: the same address as the page itself, with ?export=xlsx,
+ * streaming a spreadsheet with the department's own columns in CapsTrack's
+ * look (App\Support\DefenseScheduleWorkbook) instead of the view - or with
+ * ?export=pdf, the same rows on the school's letterhead, which Export shows
+ * in the PDF window first.
  *
  * These read the actual bytes that come back, the way a CaPSA/TSA would open
  * them in Excel - not just that a controller method ran.
@@ -115,6 +118,49 @@ class DefenseScheduleXlsxExportTest extends TestCase
         $sheet = $this->download(DefenseOutcome::PRE_PROPOSAL)->getActiveSheet();
 
         $this->assertSame('Payment', $sheet->getCell('F5')->getValue());
+    }
+
+    public function test_export_shows_the_schedule_as_a_pdf_first_with_the_same_rows(): void
+    {
+        $team = $this->team('Aptenodytes');
+        $this->schedule($team, '2027-01-15 08:00:00', DefenseOutcome::PASSED);
+        $this->team('Spheniscus');
+
+        $response = $this->actingAs($this->capsa, 'expert')
+            ->get(route('capsa.defense_scheduling', ['defense_type' => self::STAGE, 'export' => 'pdf', 'inline' => 1]))
+            ->assertOk();
+
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+        $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'), 'shown in the PDF window, not saved');
+        $text = preg_replace('/\s+/', ' ', (new PdfParser)->parseContent($response->getContent())->getText());
+
+        $this->assertStringContainsString('COLLEGE of COMPUTER STUDIES', $text, 'the school\'s letterhead');
+        $this->assertStringContainsString('Title Defense Schedule', $text);
+        $this->assertStringContainsString('FRIDAY, JANUARY 15, 2027 · 1 defense', $text);
+        $this->assertStringContainsString('Aptenodytes Title', $text);
+        $this->assertStringContainsString('8:00 AM – 10:00 AM', $text);
+        $this->assertStringContainsString('WAITING FOR A DATE · 1 team', $text);
+        $this->assertStringContainsString('Spheniscus', $text);
+
+        // Without inline it is the download.
+        $this->actingAs($this->capsa, 'expert')
+            ->get(route('capsa.defense_scheduling', ['defense_type' => self::STAGE, 'export' => 'pdf']))
+            ->assertOk()->assertDownload('Title_Defense_'.now()->format('Y-m-d').'.pdf');
+    }
+
+    public function test_the_export_button_previews_and_offers_both_files(): void
+    {
+        $html = $this->actingAs($this->capsa, 'expert')
+            ->get(route('capsa.defense_scheduling', ['defense_type' => self::STAGE]))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/id="exportBtn"[^>]*>.*?<\/svg>Export<\/a>/s', $html);
+        $this->assertSame(1, substr_count($html, 'id="previewDialog"'), 'the PDF window is on the page');
+
+        $script = file_get_contents(resource_path('js/defenses/defenses.js'));
+        $this->assertStringContainsString("$('exportBtn').addEventListener('click', previewExport);", $script);
+        $this->assertStringContainsString("url: exportUrl('pdf', true)", $script);
+        $this->assertStringContainsString("excel.href = exportUrl('xlsx');", $script);
+        $this->assertStringContainsString("downloadLabel: 'Download PDF'", $script);
     }
 
     public function test_a_teams_block_carries_its_section_venue_title_and_status(): void

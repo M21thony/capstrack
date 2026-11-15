@@ -53,6 +53,7 @@ const ICON = {
   edit: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
   lock: svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', 'width="13" height="13"'),
   spark: svg('<path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/>'),
+  down: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>'),
 };
 
 /* ---------------- where a team is ---------------- */
@@ -87,6 +88,28 @@ const range = (from, to) => (from === to ? fmtDay(from) : `${fmtDay(from)} – $
 function matches(t) {
   const q = P.q.trim().toLowerCase();
   return (!q || `${t.name} ${t.title || ''}`.toLowerCase().includes(q)) && (!P.section || t.section === P.section);
+}
+
+/** The schedule of the stage in view as a file: 'xlsx', or 'pdf' (inline for the preview). */
+const exportUrl = (format, inline = false) => `${URLS.self}?defense_type=${encodeURIComponent(S.stage)}&export=${format}${inline ? '&inline=1' : ''}`;
+
+/* Export: the PDF in the PDF window first, with Download PDF and Download Excel there. */
+function previewExport(event) {
+  if (!window.PdfViewer) return; // no viewer: the link downloads the Excel file as it is
+  event.preventDefault();
+  const excel = document.createElement('a');
+  excel.className = 'tx-btn';
+  excel.href = exportUrl('xlsx');
+  excel.setAttribute('download', '');
+  excel.innerHTML = `${ICON.down}Download Excel`;
+  window.PdfViewer.open({
+    url: exportUrl('pdf', true),
+    download: exportUrl('pdf'),
+    downloadLabel: 'Download PDF',
+    title: `${S.stage} Schedule`,
+    meta: (S.sections || []).join(', ') || 'All sections',
+    actions: [excel],
+  });
 }
 
 /* ---------------- small pieces ---------------- */
@@ -183,7 +206,7 @@ function render() {
 
   $('genBtn').disabled = !w.start;
   $('genBtn').title = w.start ? 'Generate schedule (G)' : 'Set the defense window first';
-  $('exportBtn').href = `${URLS.self}?defense_type=${encodeURIComponent(S.stage)}&export=xlsx`;
+  $('exportBtn').href = exportUrl('xlsx');
 
   const warn = $('rubricWarn');
   warn.hidden = !!S.has_rubric;
@@ -875,6 +898,8 @@ const ACT = {
     }
   },
 };
+
+$('exportBtn').addEventListener('click', previewExport);
 
 root.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');

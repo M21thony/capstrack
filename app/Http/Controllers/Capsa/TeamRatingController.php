@@ -8,13 +8,14 @@ use App\Models\Deliverable;
 use App\Models\TeamRatingForm;
 use App\Models\TeamRatingItem;
 use App\Models\TeamRatingRubric;
+use App\Support\LetterheadPdf;
 use App\Support\TableWorkbook;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * A CaPSA/TSA's named team ratings: create one, add activities while it waits to
@@ -118,14 +119,48 @@ class TeamRatingController extends Controller
         return response()->json(['reminded' => $form->remind()]);
     }
 
-    /** Every rating of this CaPSA/TSA, one sheet each, laid out like FINALS-PARTICIPATION.xlsx. */
-    public function export(): StreamedResponse
+    /**
+     * Every rating of this CaPSA/TSA: one sheet each in Excel, laid out like
+     * FINALS-PARTICIPATION.xlsx, or one page each on the letterhead in a PDF -
+     * the one Export shows first (?format=pdf, &inline=1 for the preview).
+     */
+    public function export(Request $request): Response
+    {
+        $sheets = $this->sheets();
+        $name = 'team-ratings_'.now()->format('Y-m-d');
+
+        if ($request->query('format') === 'pdf') {
+            return LetterheadPdf::response('capsa.team-ratings-pdf', ['sheets' => $sheets], $name.'.pdf', $request->boolean('inline'));
+        }
+
+        $book = null;
+        foreach ($sheets as $s) {
+            $sheet = TableWorkbook::build($s['title'], $s['scope'], $s['headings'], $s['rows']);
+            $book ? $book->addExternalSheet($sheet->getActiveSheet()) : $book = $sheet;
+        }
+
+        $book ??= TableWorkbook::build('Team Ratings', 'No ratings yet', ['Team', 'Section', 'Student'], []);
+
+        return response()->streamDownload(
+            fn () => (new Xlsx($book))->save('php://output'),
+            $name.'.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        );
+    }
+
+    /**
+     * Each rating as a table: a row per student with what their teammates
+     * gave them per activity, their rating as a percent, and whether they
+     * have rated their own teammates.
+     *
+     * @return list<array{title: string, scope: string, headings: list<string>, rows: list<list<string>>}>
+     */
+    private function sheets(): array
     {
         $forms = TeamRatingForm::with('items.milestone.deliverables', 'items.deliverable')
             ->where('capsa_id', auth('expert')->user()->expert_id)->orderBy('id')->get();
-        $book = null;
 
-        foreach ($forms as $form) {
+        return $forms->map(function (TeamRatingForm $form) {
             $results = $form->results();
             $done = $form->submittedRaterIds();
             $rows = [];
@@ -145,22 +180,13 @@ class TeamRatingController extends Controller
                 }
             }
 
-            $sheet = TableWorkbook::build(
-                $form->name,
-                implode(', ', $form->sections).' · '.$form->opensOn()->format('M j').' to '.$form->dueOn()->format('M j, Y').' · each activity out of '.$form->rubric()->max(),
-                ['Team', 'Section', 'Student', ...$form->items->pluck('label')->all(), 'Rating %', 'Submitted'],
-                $rows,
-            );
-            $book ? $book->addExternalSheet($sheet->getActiveSheet()) : $book = $sheet;
-        }
-
-        $book ??= TableWorkbook::build('Team Ratings', 'No ratings yet', ['Team', 'Section', 'Student'], []);
-
-        return response()->streamDownload(
-            fn () => (new Xlsx($book))->save('php://output'),
-            'team-ratings_'.now()->format('Y-m-d').'.xlsx',
-            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-        );
+            return [
+                'title' => $form->name,
+                'scope' => implode(', ', $form->sections).' · '.$form->opensOn()->format('M j').' to '.$form->dueOn()->format('M j, Y').' · each activity out of '.$form->rubric()->max(),
+                'headings' => ['Team', 'Section', 'Student', ...$form->items->pluck('label')->all(), 'Rating %', 'Submitted'],
+                'rows' => $rows,
+            ];
+        })->values()->all();
     }
 
     private function own(TeamRatingForm $form): void

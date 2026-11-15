@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\TableReportController;
 use App\Models\ReportTable;
 use App\Support\CapsaReports;
-use App\Support\GradingSheetWorkbook;
+use App\Support\LetterheadPdf;
 use App\Support\SectionScope;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\TableWorkbook;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -442,16 +442,7 @@ class ReportController extends Controller
 
     private function pdf(string $name, string $scope, array $sheet, string $fileName, bool $inline = false): Response
     {
-        $pdf = Pdf::loadView('capsa.reports.pdf', ['name' => $name, 'scope' => $scope, 'sheet' => $sheet, 'by' => auth('expert')->user()->name ?? 'the CaPSA/TSA'])
-            ->setPaper('letter', 'landscape');
-        // The page count is only known once laid out, so the numbers are drawn after rendering.
-        $pdf->render();
-        $dom = $pdf->getDomPDF();
-        $canvas = $dom->getCanvas();
-        $canvas->page_text($canvas->get_width() - 104, $canvas->get_height() - 23, 'Page {PAGE_NUM} of {PAGE_COUNT}',
-            $dom->getFontMetrics()->getFont('DejaVu Sans'), 7, [0.33, 0.33, 0.33]);
-
-        return $inline ? $pdf->stream($fileName) : $pdf->download($fileName);
+        return LetterheadPdf::response('capsa.reports.pdf', ['name' => $name, 'scope' => $scope, 'sheet' => $sheet], $fileName, $inline);
     }
 
     /**
@@ -469,7 +460,7 @@ class ReportController extends Controller
         $fill = fn ($range, $rgb) => $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB($rgb);
 
         // The same letterhead every Excel file gets.
-        $head = \App\Support\TableWorkbook::letterhead($sheet, $title, $scope);
+        $head = TableWorkbook::letterhead($sheet, $title, $scope);
         // Lines a report carries above its table, like the Expert Load's "Enough experts?".
         foreach ($sheetData['notes'] as $note) {
             $put(1, $head++, $note);

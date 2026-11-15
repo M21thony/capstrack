@@ -55,10 +55,13 @@
         </div>
         <div class="head-acts">
           <button type="button" class="btn ghost keys-btn" data-act="keys" title="Keyboard shortcuts (?)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>Shortcuts</button>
-          {{-- Every defense for the stage in view, in the department's spreadsheet
-               layout (App\Support\DefenseScheduleWorkbook). Kept in step with the
-               stage in JS, since the stage switches without a reload. --}}
-          <a class="btn ghost" id="exportBtn" href="{{ route('capsa.defenses', ['defense_type' => $state['stage'], 'export' => 'xlsx']) }}" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export to Excel</a>
+          {{-- Every defense for the stage in view. Export shows it as a PDF first
+               (capsa/defenses-pdf), with Download PDF and Download Excel - the
+               department's spreadsheet layout, App\Support\DefenseScheduleWorkbook -
+               in the preview. The link is the Excel file, for a page whose script
+               has not loaded; kept in step with the stage in JS, since the stage
+               switches without a reload. --}}
+          <a class="btn ghost" id="exportBtn" href="{{ route('capsa.defenses', ['defense_type' => $state['stage'], 'export' => 'xlsx']) }}" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export</a>
           <button type="button" class="btn gold" data-act="generate" id="genBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/></svg>Generate schedule</button>
         </div>
       </div>

@@ -8,11 +8,11 @@ use App\Models\ExpertAwayDate;
 use App\Support\DefenseBoard;
 use App\Support\DefenseScheduleExport;
 use App\Support\DefenseScheduleWorkbook;
+use App\Support\LetterheadPdf;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Defenses: one page for a team's panel and its defense dates. A team moves
@@ -50,9 +50,10 @@ class DefenseSchedulingController extends Controller
         $stage = $this->board->openingStage($capsa, $request->query('defense_type'));
 
         // Same address as the page itself, the way Analytics' own CSV
-        // download works: ?export=xlsx asks for the file instead of the view.
-        if ($request->query('export') === 'xlsx') {
-            return $this->export($capsa, $stage);
+        // download works: ?export=xlsx or ?export=pdf asks for the file
+        // instead of the view (&inline=1 for the PDF window's preview).
+        if (in_array($request->query('export'), ['xlsx', 'pdf'], true)) {
+            return $this->export($capsa, $stage, $request->query('export'), $request->boolean('inline'));
         }
 
         $rows = $this->board->rows($capsa, $stage);
@@ -84,20 +85,27 @@ class DefenseSchedulingController extends Controller
 
     /**
      * The schedule as a spreadsheet, in the department's own layout (see
-     * DefenseScheduleWorkbook). Scoped the same way the page is: a CaPSA/TSA gets
-     * her own sections, the Admin gets every team.
+     * DefenseScheduleWorkbook), or as the same rows on the school's
+     * letterhead in a PDF - the one Export shows first. Scoped the same way
+     * the page is: a CaPSA/TSA gets her own sections, the Admin gets every team.
      */
-    private function export(CapstoneExpert $capsa, string $stage): StreamedResponse
+    private function export(CapstoneExpert $capsa, string $stage, string $format, bool $inline): Response
     {
         $rows = app(DefenseScheduleExport::class)->rows($capsa, $stage);
         $scope = $capsa->sections ? implode(', ', $capsa->sections) : 'All sections';
-        $book = (new DefenseScheduleWorkbook)->build($rows, $stage, $scope, $this->board->windows($capsa->windowProgram())[$stage] ?? null);
+        $window = $this->board->windows($capsa->windowProgram())[$stage] ?? null;
+        $name = str_replace(' ', '_', $stage).'_'.now()->format('Y-m-d');
 
-        $filename = str_replace(' ', '_', $stage).'_'.now()->format('Y-m-d').'.xlsx';
+        if ($format === 'pdf') {
+            // Legal paper: eleven columns, three of them lists of names.
+            return LetterheadPdf::response('capsa.defenses-pdf', compact('rows', 'stage', 'scope', 'window'), $name.'.pdf', $inline, 'legal');
+        }
+
+        $book = (new DefenseScheduleWorkbook)->build($rows, $stage, $scope, $window);
 
         return response()->streamDownload(function () use ($book) {
             (new Xlsx($book))->save('php://output');
-        }, $filename, [
+        }, $name.'.xlsx', [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
