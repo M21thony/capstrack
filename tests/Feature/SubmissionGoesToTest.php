@@ -369,6 +369,26 @@ class SubmissionGoesToTest extends TestCase
         $this->assertSame(MilestoneProgress::DONE, $state()->state);
     }
 
+    public function test_any_requirement_sent_to_the_panel_reaches_the_teams_newest_panel(): void
+    {
+        $line = $this->addDeliverable($this->checklist, ['title' => 'Slides', 'kind' => Deliverable::FORM, 'recipients' => ['panel']]);
+
+        $this->assertFalse($this->plan($line)['panel']['available']);
+
+        $panelist = fn (string $defense) => tap(CapstoneExpert::factory()->create(['approved_status' => true]), fn ($p) => DefensePanel::create([
+            'defense_id' => DefenseSchedule::create(['team_id' => $this->team->team_id, 'defense_type' => $defense, 'attempt' => 1])->defense_id,
+            'expert_id' => $p->expert_id, 'panel_role' => 'Panel Chair', 'created_at' => now(),
+        ]));
+        $panelist('Title Defense');
+        $preOral = $panelist('Pre-Oral Defense');
+
+        $this->send($line, [])->assertOk();
+        $this->assertSame(['panel:'.$preOral->expert_id], $this->reviewsOfLatest());
+
+        // It lands on the panelist's Document Review page.
+        $this->actingAs($preOral, 'expert')->get(route('instructor.docreview'))->assertOk()->assertSee($this->team->team_name);
+    }
+
     public function test_a_requirement_the_capsa_closed_takes_no_uploads(): void
     {
         $line = $this->addDeliverable($this->checklist, ['title' => 'Signed form', 'kind' => Deliverable::FORM, 'closed_at' => now()]);

@@ -198,19 +198,20 @@ class SubmissionRecipients
     }
 
     /**
-     * The panelists of the team's latest try at a defense.
+     * The panelists of the team's latest try at a defense. A line that is not
+     * a manuscript names no defense: it goes to the newest panel the team has,
+     * whichever defense that is for.
      *
      * @return array<int, int>
      */
     private function panelFor(int $teamId, ?string $defenseType): array
     {
-        if (! $defenseType) {
-            return [];
-        }
-
         $schedule = DefenseSchedule::where('team_id', $teamId)
-            ->where('defense_type', $defenseType)
-            ->latestAttempt()
+            ->when(
+                $defenseType,
+                fn ($q) => $q->where('defense_type', $defenseType)->latestAttempt(),
+                fn ($q) => $q->whereHas('panels')->orderByDesc('defense_id'),
+            )
             ->first();
 
         return $schedule
