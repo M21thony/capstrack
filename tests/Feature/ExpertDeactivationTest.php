@@ -145,17 +145,30 @@ class ExpertDeactivationTest extends TestCase
         $this->assertNull($expert->deactivationBlocker());
     }
 
+    /** Another CaPSA/TSA's account is the admin's to switch off, so the menu does not offer it. */
+    public function test_a_capsa_cannot_deactivate_another_capsa(): void
+    {
+        $otherCapsa = $this->capsa();
+        $viewer = $this->capsa();
+
+        $this->actingAs($viewer, 'expert')
+            ->deleteJson(route('capsa.experts.destroy', $otherCapsa))
+            ->assertStatus(422)
+            ->assertSee('Only the admin');
+        $this->assertNotNull(CapstoneExpert::find($otherCapsa->expert_id));
+
+        $this->actingAs($viewer, 'expert')->get(route('capsa.experts'))
+            ->assertOk()
+            ->assertDontSee('removeOneExpert('.$otherCapsa->expert_id.',', false);
+    }
+
     /** Their sections' checklist and requests would reach nobody. */
     public function test_a_capsa_still_holding_sections_cannot_be_deactivated(): void
     {
         $otherCapsa = $this->capsa();
         $otherCapsa->update(['sections' => ['BSIT-4B']]);
 
-        $this->actingAs($this->capsa(), 'expert')
-            ->deleteJson(route('capsa.experts.destroy', $otherCapsa))
-            ->assertStatus(422)
-            ->assertSee('BSIT-4B');
-        $this->assertNotNull(CapstoneExpert::find($otherCapsa->expert_id));
+        $this->assertStringContainsString('BSIT-4B', $otherCapsa->deactivationBlocker());
     }
 
     public function test_it_can_be_switched_back_on(): void

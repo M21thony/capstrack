@@ -658,7 +658,7 @@
                         <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg> Copy email
                       </button>
                     @endif
-                    @if ($isOff || ! $isMe)
+                    @if ($isOff || ! ($isMe || $expert->is_capsa))
                       <div class="rowmenu-sep"></div>
                     @endif
                     @if ($isOff)
@@ -666,8 +666,8 @@
                               onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }})">
                         <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Reactivate
                       </button>
-                    @elseif (! $isMe)
-                    {{-- Never on your own row: nobody would be left to switch you back on. --}}
+                    @elseif (! $isMe && ! $expert->is_capsa)
+                    {{-- Never on your own row: nobody would be left to switch you back on. Never on another CaPSA/TSA: that is the admin's to do. --}}
                     <button type="button" class="rowmenu-item danger"
                             onclick="removeOneExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }})">
                       <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate

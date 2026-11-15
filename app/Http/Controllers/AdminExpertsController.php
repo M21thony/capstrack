@@ -445,6 +445,11 @@ class AdminExpertsController extends Controller
             ], 422);
         }
 
+        // A CaPSA/TSA's account is the admin's to switch off, not another CaPSA/TSA's.
+        if ($expert->is_capsa && ! Auth::guard('expert')->user()?->is_admin) {
+            return response()->json(['success' => false, 'message' => 'Only the admin can deactivate a CaPSA/TSA account.'], 422);
+        }
+
         if ($blocker = $expert->deactivationBlocker()) {
             return response()->json(['success' => false, 'message' => $blocker], 422);
         }
