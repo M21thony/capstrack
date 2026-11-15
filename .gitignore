@@ -56,6 +56,12 @@ storage/app/playwright-videos/
 /.junie/
 /graphify-out/
 /docs/
+/TODO.md
+/AGENTS.md
+/.github/skills/
+/tests/e2e/__screenshots__/
+.env.example
+/deploy/env.production.example
 /jmeter-*
 /capstrack-zap*.html
 /undefined
