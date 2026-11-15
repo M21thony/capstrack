@@ -796,6 +796,7 @@
       $required = $covPrograms->keys()->sum(fn ($p) => $teamCount[$p]);
       $needed = $rows->sum('need');
       return [
+          'programNeeded' => $rows->sum('programNeed'),
           'label' => $label,
           'required' => $required,
           'needed' => $needed,
@@ -931,8 +932,8 @@
                   <td><span class="program-name">{{ $p }}<small>{{ $teamCount[$p] }} {{ $teamCount[$p] === 1 ? 'team' : 'teams' }}</small></span></td>
                   <td class="matrix-team-count">{{ $teamCount[$p] }}</td>
                   @foreach ($covRoles as $role => $label)
-                    @php $r = $roleRow($rows, $role); [$tone, $mark, $text] = $chip($r['need'], $r['free']); @endphp
-                    <td data-label="{{ $label }}"><span class="coverage-value"><button type="button" class="cell-status {{ $tone }}" data-cov-teams data-program="{{ $p }}" data-role="{{ $role }}">{{ $mark }} {{ $text }}</button><span class="cell-detail">{{ $r['need'] }} needed · {{ $openText($r['free']) }}</span></span></td>
+                    @php $r = $roleRow($rows, $role); [$tone, $mark, $text] = $chip($r['programNeed'], $r['free']); $others = $r['programNeed'] - $r['need']; @endphp
+                    <td data-label="{{ $label }}"><span class="coverage-value"><button type="button" class="cell-status {{ $tone }}" data-cov-teams data-program="{{ $p }}" data-role="{{ $role }}">{{ $mark }} {{ $text }}</button><span class="cell-detail">{{ $r['need'] }} needed{{ $others > 0 ? ' · '.$others.' in other sections' : '' }} · {{ $openText($r['free']) }}</span></span></td>
                   @endforeach
                 </tr>
               @endforeach
@@ -944,7 +945,7 @@
             <tbody>
               @foreach ($roleTotals as $role => $t)
                 @php
-                  [$tone, $mark, $text] = $t['short']->isNotEmpty() ? ['red', '!', 'Short by '.$t['short']->sum('count')] : $chip($t['needed'], $t['free']);
+                  [$tone, $mark, $text] = $t['short']->isNotEmpty() ? ['red', '!', 'Short by '.$t['short']->sum('count')] : $chip($t['programNeeded'], $t['free']);
                 @endphp
                 <tr class="{{ $tone === 'red' ? 'has-shortage' : '' }}">
                   <td class="role-name">{{ $t['label'] }}</td>
@@ -1011,7 +1012,7 @@
       });
       document.getElementById('cov-dialog-title').textContent = program ? program + ' teams needing ' + (label || 'experts') : (label ? 'Teams needing ' + label : 'Teams needing experts');
       document.getElementById('cov-dialog-body').innerHTML = rows.length
-        ? '<table><thead><tr><th>Team</th><th>Program</th><th>Section</th><th>Missing expert role</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>'
+        ? '<table><thead><tr><th>Team</th><th>Program</th><th>Section</th><th>Still needs</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>'
         : '<div class="empty">All assignments in this scope are filled.</div>';
       dialog.showModal();
     });

@@ -179,6 +179,12 @@ class ExpertCapacityTest extends TestCase
         $this->assertSame(['consultant', 'grammarian'], $missing[$alpha->team_id]['missing']);
         $this->assertSame(['adviser', 'consultant', 'grammarian'], $missing[$bravo->team_id]['missing']);
 
+        // Own teams only: the list and "need" narrow, the program's need does not.
+        $own = [$bravo->team_id];
+        $this->assertSame([$bravo->team_id], array_keys(app(ExpertCapacity::class)->teamsMissing(['BSIT'], $own)));
+        $adviserRow = app(ExpertCapacity::class)->forPrograms(['BSIT'], $own)['BSIT'][0];
+        $this->assertSame([1, 2], [$adviserRow['need'], $adviserRow['programNeed']]);
+
         $this->actingAs($capsa, 'expert')->get(route('capsa.experts', ['tab' => 'coverage']))
             ->assertOk()
             ->assertSee('aria-selected="true">Expert coverage', false)

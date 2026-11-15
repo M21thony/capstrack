@@ -93,16 +93,19 @@ class AdminExpertsController extends Controller
             )
         )->all();
 
-        // The Expert coverage tab: the same counts as the dashboard's card,
-        // plus each team still missing a role so the chips can list them.
+        // The Expert coverage tab: the viewer's own teams, as on the dashboard's
+        // card, each with the roles it still needs so the chips can list them.
+        // Slots and shortages stay program-wide: other sections share them.
         $coverage = [];
         $coverageTeams = [];
 
         if ($isCapsaOnly) {
             $capacity = app(ExpertCapacity::class);
             $programs = $viewer->handledPrograms();
-            $coverage = $capacity->forPrograms($programs);
-            $missing = $capacity->teamsMissing($programs);
+            // The CaPSA/TSA's own teams, the same list the dashboard card counts.
+            $own = app(\App\Support\CapsaReports::class)->context($viewer, [])['teams']->pluck('team_id')->all();
+            $coverage = $capacity->forPrograms($programs, $own);
+            $missing = $capacity->teamsMissing($programs, $own);
             $coverageTeams = Team::whereIn('team_id', array_keys($missing))->orderBy('team_name')->get()
                 ->map(fn (Team $team) => [
                     'name' => $team->team_name,

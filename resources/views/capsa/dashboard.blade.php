@@ -113,7 +113,7 @@
               </div>
               <ul class="db-legend">
                 <li><i style="background:var(--green)"></i><span>Fully Covered</span><b>{{ $c['covered'] }}</b></li>
-                <li><i style="background:var(--red)"></i><span>Missing Experts</span><b>{{ $c['teams'] - $c['covered'] }}</b></li>
+                <li><i style="background:var(--red)"></i><span>Needs Experts</span><b>{{ $c['teams'] - $c['covered'] }}</b></li>
                 @foreach ($c['coverage'] as $role)
                   <li class="sub"><span>{{ $role['label'] }}</span><b>{{ $role['have'] }} / {{ $c['teams'] }}</b></li>
                 @endforeach

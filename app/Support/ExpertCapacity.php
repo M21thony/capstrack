@@ -39,10 +39,15 @@ final class ExpertCapacity
      * by every role they hold, so the per-role free counts overlap and can all
      * look fine while the experts together are still short.
      *
+     * With $ownTeamIds, "need" counts only those teams (a CaPSA/TSA's own
+     * sections). "programNeed" is always the whole program, and the shortage
+     * is worked out from it: the other sections' teams take the same slots.
+     *
      * @param  list<string>  $programs
-     * @return array<string, list<array{role: string, label: string, need: int, free: int|null, short: int, status: string}>>
+     * @param  list<int>|null  $ownTeamIds
+     * @return array<string, list<array{role: string, label: string, need: int, programNeed: int, free: int|null, short: int, status: string}>>
      */
-    public function forPrograms(array $programs): array
+    public function forPrograms(array $programs, ?array $ownTeamIds = null): array
     {
         if (! $programs) {
             return [];
@@ -60,12 +65,13 @@ final class ExpertCapacity
             $rows = [];
 
             foreach (self::ROLES as $role => $label) {
-                $need = count(array_filter($teams, fn ($teamId) => ! in_array($role, $filled[$teamId] ?? [], true)));
+                $needing = array_filter($teams, fn ($teamId) => ! in_array($role, $filled[$teamId] ?? [], true));
+                $need = count($ownTeamIds === null ? $needing : array_intersect($needing, $ownTeamIds));
                 $holders = array_filter($accepting, fn ($e) => in_array($role, $e['roles'], true));
-                $rows[] = $this->row($role, $label, $need, $this->freeSlots($holders, $program));
+                $rows[] = $this->row($role, $label, $need, count($needing), $this->freeSlots($holders, $program));
             }
 
-            $rows[] = $this->row('all', 'All roles', array_sum(array_column($rows, 'need')), $this->freeSlots($accepting, $program));
+            $rows[] = $this->row('all', 'All roles', array_sum(array_column($rows, 'need')), array_sum(array_column($rows, 'programNeed')), $this->freeSlots($accepting, $program));
 
             $result[$program] = $rows;
         }
@@ -78,11 +84,16 @@ final class ExpertCapacity
      * the same "needs" forPrograms() counts, team by team.
      *
      * @param  list<string>  $programs
+     * @param  list<int>|null  $ownTeamIds  only these teams, when given
      * @return array<int, array{program: string, missing: list<string>}>
      */
-    public function teamsMissing(array $programs): array
+    public function teamsMissing(array $programs, ?array $ownTeamIds = null): array
     {
         $teamPrograms = array_filter($this->teamPrograms(), fn ($p) => in_array($p, $programs, true));
+
+        if ($ownTeamIds !== null) {
+            $teamPrograms = array_intersect_key($teamPrograms, array_flip($ownTeamIds));
+        }
         $filled = $this->filledRoles(array_keys($teamPrograms));
         $out = [];
 
@@ -119,18 +130,19 @@ final class ExpertCapacity
         return $lines;
     }
 
-    /** @return array{role: string, label: string, need: int, free: int|null, short: int, status: string} */
-    private function row(string $role, string $label, int $need, ?int $free): array
+    /** @return array{role: string, label: string, need: int, programNeed: int, free: int|null, short: int, status: string} */
+    private function row(string $role, string $label, int $need, int $programNeed, ?int $free): array
     {
-        $short = $free === null ? 0 : max(0, $need - $free);
+        $short = $free === null ? 0 : max(0, $programNeed - $free);
 
         return [
             'role' => $role,
             'label' => $label,
             'need' => $need,
+            'programNeed' => $programNeed,
             'free' => $free,
             'short' => $short,
-            'status' => $short > 0 ? self::SHORT : ($need > 0 && $free === $need ? self::JUST_ENOUGH : self::OK),
+            'status' => $short > 0 ? self::SHORT : ($programNeed > 0 && $free === $programNeed ? self::JUST_ENOUGH : self::OK),
         ];
     }
 
