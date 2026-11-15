@@ -126,6 +126,21 @@ class ReportController extends Controller
         }
         $rows = array_map(fn ($line) => ['id' => null, 'cells' => array_combine(array_keys($columns), $line)], $saved['rows']);
 
+        // Viewed, it is the report builder's screen with this table in it; ?download= below still makes the files.
+        if (! in_array($request->query('download'), ['pdf', 'xlsx'], true)) {
+            return view('capsa.reports.builder', [
+                'tables' => [[
+                    'id' => 'page', 'name' => $saved['title'], 'mode' => 'students', 'filters' => (object) [],
+                    'columns' => array_map(fn ($k) => ['key' => $k, 'label' => $columns[$k]['label'], 'sources' => [$k], 'separator' => ' · '], array_keys($columns)),
+                ]],
+                'current' => 'page',
+                'fields' => array_map(fn ($c) => $c['label'], $columns),
+                'groups' => ['Columns' => array_keys($columns)],
+                'urlFilters' => (object) [],
+                'page' => ['rows' => array_column($rows, 'cells'), 'scope' => $saved['scope'], 'back' => $saved['back'], 'portal' => $saved['portal']],
+            ]);
+        }
+
         return $this->present($request, [
             'report' => 'snapshot',
             'name' => $saved['title'],

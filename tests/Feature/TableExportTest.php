@@ -159,9 +159,9 @@ class TableExportTest extends TestCase
         $this->get($url)->assertOk()
             ->assertSee('Activity Log')
             ->assertSee('Ana Cruz')
-            ->assertSee('Preview PDF')
+            ->assertSee('id="export"', false)
             ->assertSee('Download')
-            ->assertSee('id="cols-btn"', false)
+            ->assertSee('id="edit-columns"', false)
             ->assertSee('Back to the page')
             ->assertSee('Sign Out');
     }
@@ -175,7 +175,7 @@ class TableExportTest extends TestCase
 
         $this->get($url)->assertOk()
             ->assertSee('Ben Reyes')
-            ->assertSee('id="cols-btn"', false)
+            ->assertSee('id="edit-columns"', false)
             ->assertSee('href="/instructor/grading"', false)
             // The Expert portal's own frame: its stylesheet, its sidebar, its bell.
             ->assertSee('css/expert.css', false)
@@ -204,6 +204,27 @@ class TableExportTest extends TestCase
             ->assertSee('Ben Reyes')
             ->assertSee('Sign Out')
             ->assertSee('Activity Log');
+    }
+
+    public function test_expert_management_view_report_opens_one_saved_expert_list_in_the_builder(): void
+    {
+        $expert = $this->everyHat();
+        $this->actingAs($expert, 'expert');
+
+        $this->get(route('capsa.reports.template', 'experts'))->assertRedirect();
+        $this->get(route('capsa.reports.template', 'experts'))->assertRedirect();
+
+        $this->assertSame(1, \App\Models\ReportTable::where('expert_id', $expert->expert_id)->where('name', 'Expert list')->count());
+    }
+
+    public function test_export_makes_the_pdf_shown_in_the_preview(): void
+    {
+        $pdf = $this->actingAs($this->everyHat(), 'expert')->post(route('table.report.export'), [
+            'format' => 'pdf', 'name' => 'Teams', 'scope' => '1 row',
+            'headings' => ['Team'], 'rows' => [['Alpha']],
+        ])->assertOk();
+
+        $this->assertStringStartsWith('%PDF', $pdf->getContent());
     }
 
     public function test_the_report_downloads_as_excel_and_pdf_with_the_columns_picked_in_order(): void

@@ -85,7 +85,7 @@ class AdminDashboardController extends Controller
             'issues' => [
                 ['label' => 'Insufficient Experts', 'count' => $shortages->sum('short'), 'critical' => true, 'icon' => 'team', 'tone' => 't-red',
                     'detail' => $shortages->map(fn ($s) => "{$s['program']} · Short by {$s['who']}")->implode(', '),
-                    'href' => route('capsa.reports.show', 'expert_list')],
+                    'href' => route('capsa.reports.template', 'experts')],
                 ['label' => 'Titles Awaiting Review', 'count' => $titles, 'icon' => 'doc', 'tone' => 't-blue',
                     'detail' => $titles === 1 ? '1 proposal needs a decision' : "{$titles} proposals need decisions",
                     'href' => route('capsa.team_management', ['tab' => 'pre_proposals'])],

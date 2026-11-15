@@ -403,7 +403,7 @@
            table as a report: View Report opens it with the column picker,
            Download Excel asks which columns first. --}}
       <div class="tk-actions">
-        <a class="tk-btn tk-btn-ghost" href="{{ route('capsa.reports.show', 'expert_list') }}" title="View Report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg><span class="tk-lbl">View Report</span></a>
+        <a class="tk-btn tk-btn-ghost" href="{{ route('capsa.reports.template', 'experts') }}" title="View Report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg><span class="tk-lbl">View Report</span></a>
         <button type="button" class="tk-btn tk-btn-ghost" onclick="openExpertExportModal()" title="Download Excel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span class="tk-lbl">Download Excel</span></button>
         <button type="button" class="tk-btn" onclick="openExpertRosterModal()" title="Upload List"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg><span class="tk-lbl">Upload List</span></button>
         <button type="button" class="tk-btn tk-btn-pri" onclick="openAddExpertModal()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add Expert</button>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ReportTable;
 use App\Support\CapsaReports;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -32,6 +33,19 @@ class ReportBuilderController extends Controller
             // Filters picked on Reports Home win over the saved ones, until saved.
             'urlFilters' => (object) $request->only(self::FILTER_KEYS),
         ]);
+    }
+
+    /** A link to a template (Expert Management's View Report): their saved copy of it, made the first time. */
+    public function template(string $template): RedirectResponse
+    {
+        $t = collect(ReportTable::TEMPLATES)->firstWhere('key', $template) ?? abort(404);
+        $table = ReportTable::firstOrCreate(['expert_id' => auth('expert')->id(), 'name' => $t['name']], [
+            'mode' => $t['mode'],
+            'columns' => array_map(fn ($k) => ['key' => $k, 'label' => ReportTable::FIELDS[$k], 'sources' => [$k], 'separator' => ' · '], $t['fields']),
+            'filters' => [],
+        ]);
+
+        return redirect()->route('capsa.reports.builder', $table);
     }
 
     /** The rows and filter choices for one period, for the builder's script. */

@@ -104,7 +104,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
   // The table as it is on screen right now: its columns, and the rows not
   // hidden by a filter. Columns with no heading, a checkbox or "Action" are
   // controls rather than data and are left out.
-  function readTable(table) {
+  function readTable(table, all) {
     var headRow = table.tHead && table.tHead.rows.length ? table.tHead.rows[table.tHead.rows.length - 1] : null;
     if (!headRow) {
       headRow = Array.prototype.find.call(table.rows, function (r) { return r.querySelector('th'); }) || null;
@@ -123,7 +123,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
     var rows = [];
     Array.prototype.forEach.call(table.tBodies, function (body) {
       Array.prototype.forEach.call(body.rows, function (tr) {
-        if (tr.hidden || getComputedStyle(tr).display === 'none') { return; }
+        if (!all && (tr.hidden || getComputedStyle(tr).display === 'none')) { return; }
         var cells = tr.cells;
         // A row that is a message or a group heading spans the table; it is not data.
         if (!cells.length || cells.length !== headings.length) { return; }
@@ -226,6 +226,44 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
     return match ? match[1] : 'report.xlsx';
   }
 
+  function save(file) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(file.blob);
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  // ---- Export with a look first: the Reports Builder's PDF (letterhead) in the
+  // viewer, its Download for the PDF and Download Excel beside it, same template.
+  var URL_TABLE = @json(route('table.report.export', [], false));
+  window.txPreview = function (title, scope, headings, rows) {
+    var get = function (format) {
+      return post(URL_TABLE, { format: format, name: title, scope: scope, headings: headings, rows: rows }).then(function (r) {
+        if (!r.ok) { throw new Error('failed'); }
+        return r.blob().then(function (blob) { return { blob: blob, name: fileName(r) }; });
+      });
+    };
+    var fail = function () { window.ctToast('Could not make the file. Try again.', 'error'); };
+    return get('pdf').then(function (pdf) {
+      var excel = el('button', 'tx-btn', ICON_DOWN + 'Download Excel');
+      excel.type = 'button';
+      excel.addEventListener('click', function () {
+        excel.disabled = true;
+        get('xlsx').then(save, fail).then(function () { excel.disabled = false; });
+      });
+      window.PdfViewer.open({ file: pdf.blob, title: title, meta: scope, fileName: pdf.name, download: URL.createObjectURL(pdf.blob), actions: [excel] });
+    }, fail);
+  };
+  // A whole table: rows hidden by its search or "show more" included.
+  window.txPreviewTable = function (table) {
+    var data = readTable(table, true);
+    return window.txPreview(titleOf(table), scopeOf(data.rows.length),
+      data.columns.map(function (c) { return c.label; }),
+      data.rows.map(function (row) { return data.columns.map(function (c) { return row[c.index]; }); }));
+  };
+
   function download() {
     var cols = chosenColumns();
     if (!cols.length) { return; }
@@ -243,12 +281,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
       if (!response.ok) { throw new Error('failed'); }
       return response.blob().then(function (blob) { return { blob: blob, name: fileName(response) }; });
     }).then(function (file) {
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(file.blob);
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      save(file);
       dlg.close();
     }).catch(function () {
       msg.textContent = 'Could not make the Excel file. Try again.';

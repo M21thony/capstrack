@@ -304,6 +304,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::get('/reports', [ReportController::class, 'index'])->name('reports');
         Route::get('/reports/section/{section}', [ReportController::class, 'section'])->name('reports.section');
         Route::get('/reports/builder/{table}', [ReportBuilderController::class, 'show'])->name('reports.builder');
+        Route::get('/reports/template/{template}', [ReportBuilderController::class, 'template'])->name('reports.template');
         Route::get('/reports/data', [ReportBuilderController::class, 'data'])->name('reports.data');
         Route::post('/reports/tables', [ReportBuilderController::class, 'store'])->name('reports.tables.store');
         Route::post('/reports/tables/export', [ReportController::class, 'exportTable'])->name('reports.tables.export');
@@ -624,6 +625,10 @@ Route::post('table-export', [TableExportController::class, 'download'])
 Route::post('table-report', [TableReportController::class, 'store'])
     ->middleware(['expert.auth'])
     ->name('table.report.store');
+// The builder's Export and the preview's downloads, for every portal: the page sends the rows it shows.
+Route::post('table-report/export', [ReportController::class, 'exportTable'])
+    ->middleware(['expert.auth'])
+    ->name('table.report.export');
 Route::get('table-report/{token}', [ReportController::class, 'snapshot'])
     ->middleware(['expert.auth', 'no.cache'])
     ->name('table.report.show');

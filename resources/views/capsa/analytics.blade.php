@@ -259,10 +259,10 @@
     <div class="page-title">Analytics</div>
     <div class="topbar-actions">
       @include('capsa.partials.notification-dropdown')
-      <a class="btn btn-ghost-nav" href="{{ request()->fullUrlWithQuery(['export' => 'csv']) }}" title="Download the team table below as a spreadsheet">
+      <button type="button" class="btn btn-ghost-nav" id="an-export" title="Preview the team table below, then download it">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>
         Export report
-      </a>
+      </button>
     </div>
   </div>
 
@@ -730,6 +730,15 @@
     });
   });
 
+  // Export report: the Reports Builder's PDF of the whole team table, previewed first.
+  var exportBtn = document.getElementById('an-export');
+  exportBtn.addEventListener('click', function () {
+    var table = document.getElementById('an-team-table');
+    if (!table) return window.ctToast('There are no teams to export.', 'error');
+    exportBtn.disabled = true;
+    window.txPreviewTable(table).then(function () { exportBtn.disabled = false; });
+  });
+
   // Team table: search, and reveal the rows past the first page.
   var search = document.getElementById('an-team-search');
   var more = document.getElementById('an-team-more');
@@ -843,6 +852,7 @@ function closeSidebar() {
 }
 </script>
 
+@include('partials.pdf-viewer')
 @include('partials.escape-closes-modals')
 @include('partials.app-scrollbar')
 </body>

@@ -1,4 +1,7 @@
 @php($table = collect($tables)->firstWhere('id', $current))
+{{-- $page: a table sent from another page's View Report - shown and exported here, not saved. --}}
+@php($page = $page ?? null)
+@php($portal = $page['portal'] ?? 'capsa')
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +10,7 @@
 <title>{{ $table['name'] }} - Reports - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
-<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url($portal === 'instructor' ? 'css/expert.css' : 'css/admin.css') }}"/>
 <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/report-builder.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 @include('capsa.reports._styles')
@@ -15,7 +18,7 @@
 </head>
 <body>
 
-@include('capsa._sidebar')
+@include($portal === 'instructor' ? 'instructor.partials.sidebar' : 'capsa._sidebar', $portal === 'instructor' ? ['currentPage' => ''] : [])
 @include('partials.sidebar-toggle')
 <div class="main">
   <div class="topbar">
@@ -23,12 +26,16 @@
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <nav class="crumbs" aria-label="Breadcrumb">
+      @if($page)
+      <a href="{{ $page['back'] ?? url('/') }}" data-back>&larr; Back to the page</a>
+      @else
       <a href="{{ route('capsa.reports') }}">Reports</a>
+      @endif
       <span class="sep">›</span>
       <span class="here" aria-current="page" id="crumb-name">{{ $table['name'] }}</span>
     </nav>
     <div class="topbar-actions">
-      @include('capsa.partials.notification-dropdown')
+      @include($portal === 'instructor' ? 'instructor.partials.notification-dropdown' : 'capsa.partials.notification-dropdown')
     </div>
   </div>
 
@@ -39,14 +46,15 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content rb">
-    <div class="heading"><h1>Report builder</h1><button class="primary" id="new-table">＋ New report</button></div>
+    <div class="heading"><h1>Report builder</h1><button class="primary" id="new-table" @if($page) hidden @endif>＋ New report</button></div>
     <section class="card work">
       <div class="workspace-head">
         <div class="title-tools">
           <span style="color:var(--blue)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg></span>
-          <select class="saved-select" id="saved-table" aria-label="Saved report"></select>
-          <span class="saved-state" id="save-state">Saved</span>
-          <div class="menu-wrap">
+          @if($page)<strong>{{ $table['name'] }}</strong>@endif
+          <select class="saved-select" id="saved-table" aria-label="Saved report" @if($page) hidden @endif></select>
+          <span class="saved-state" id="save-state" @if($page) hidden @endif>Saved</span>
+          <div class="menu-wrap" @if($page) hidden @endif>
             <button id="table-options" aria-label="Report options" aria-expanded="false">⋯</button>
             <div class="menu" id="table-menu" hidden>
               <button id="rename-table">Rename report</button>
@@ -57,17 +65,11 @@
           </div>
         </div>
         <div class="actions">
-          <button id="save-table" disabled>Save changes</button>
-          <div class="menu-wrap">
-            <button class="primary" id="export" aria-expanded="false">Export <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-            <div class="menu" id="export-menu" hidden>
-              <button id="export-xlsx">Excel (.xlsx)</button>
-              <button id="export-pdf">PDF</button>
-            </div>
-          </div>
+          <button id="save-table" disabled @if($page) hidden @endif>Save changes</button>
+          <button class="primary" id="export">Export</button>
         </div>
       </div>
-      <div class="filters">
+      <div class="filters" @if($page) hidden @endif>
         <label><span>School year</span><select id="f-year"></select></label>
         <label><span>Semester</span><select id="f-term"></select></label>
         <label><span>Program</span><select id="f-program"></select></label>
@@ -76,10 +78,10 @@
       </div>
       <div class="table-tools">
         <button id="edit-columns" aria-expanded="false" aria-controls="column-editor">Edit columns <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-        <label class="row-mode">One row per
+        <label class="row-mode" @if($page) hidden @endif>One row per
           <select id="row-mode"><option value="students">Student</option><option value="teams">Team</option><option value="experts">Expert</option></select>
         </label>
-        <input class="search" id="search" type="search" aria-label="Search report" placeholder="Search student ID, name, or team">
+        <input class="search" id="search" type="search" aria-label="Search report" placeholder="{{ $page ? 'Search' : 'Search student ID, name, or team' }}">
       </div>
       <div class="column-editor" id="column-editor" hidden>
         <div class="editor-label"><strong>Visible columns</strong></div>
@@ -113,7 +115,8 @@
 <script nonce="{{ Vite::cspNonce() }}">
 (function () {
   var $ = RB.$, esc = RB.esc, toast = RB.toast, openDialog = RB.openDialog, closeDialog = RB.closeDialog;
-  var tables = @json($tables), fields = @json($fields), groups = @json(\App\Models\ReportTable::GROUPS), urlFilters = @json($urlFilters);
+  var tables = @json($tables), fields = @json($fields), groups = @json($groups ?? \App\Models\ReportTable::GROUPS), urlFilters = @json($urlFilters);
+  var PAGE = @json($page);
   var URLS = {
     data: @json(route('capsa.reports.data')), store: @json(route('capsa.reports.tables.store')),
     builder: @json(route('capsa.reports.builder', '__ID__')), update: @json(route('capsa.reports.tables.update', '__ID__')),
@@ -138,7 +141,7 @@
     $('save-state').classList.toggle('dirty', on);
     $('save-table').disabled = !on;
   }
-  function markDirty() { setDirty(snapshot(state) !== snapshot(saved)); }
+  function markDirty() { if (!PAGE) setDirty(snapshot(state) !== snapshot(saved)); }
   function refreshSaved() {
     $('saved-table').innerHTML = tables.map(function (t) { return '<option value="' + t.id + '">' + esc(t.id === state.id ? state.name : t.name) + '</option>'; }).join('');
     $('saved-table').value = state.id;
@@ -153,6 +156,7 @@
 
   // ---- data from the server --------------------------------------------
   function load() {
+    if (PAGE) { data = {rows: PAGE.rows, expertRows: []}; render(); return Promise.resolve(); }
     var q = new URLSearchParams();
     FILTERS.forEach(function (k) { if (state.filters[k] != null && state.filters[k] !== '') q.set(k, state.filters[k]); });
     var mine = ++loading;
@@ -222,7 +226,7 @@
       return '<tr>' + state.columns.map(function (c) { return '<td data-key="' + esc(c.key) + '">' + esc(value(r, c)) + '</td>'; }).join('') + '</tr>';
     }).join('');
     $('empty').hidden = !data || rows.length > 0;
-    if (data) $('record-count').textContent = rows.length + ' ' + ({students: 'students', teams: 'teams', experts: 'experts'})[state.mode];
+    if (data) $('record-count').textContent = rows.length + ' ' + (PAGE ? 'rows' : ({students: 'students', teams: 'teams', experts: 'experts'})[state.mode]);
     $('column-count').textContent = state.columns.length + ' columns';
     $('page-label').textContent = rows.length ? 'Showing ' + ((page - 1) * pageSize + 1) + '–' + Math.min(page * pageSize, rows.length) : '0 records';
     $('current-page').textContent = page;
@@ -408,9 +412,9 @@
 
   // ---- menus ------------------------------------------------------------
   function closeMenus() {
-    [['table-options', 'table-menu'], ['export', 'export-menu']].forEach(function (p) { $(p[1]).hidden = true; $(p[0]).setAttribute('aria-expanded', 'false'); });
+    [['table-options', 'table-menu']].forEach(function (p) { $(p[1]).hidden = true; $(p[0]).setAttribute('aria-expanded', 'false'); });
   }
-  [['table-options', 'table-menu'], ['export', 'export-menu']].forEach(function (p) {
+  [['table-options', 'table-menu']].forEach(function (p) {
     $(p[0]).addEventListener('click', function () {
       var open = $(p[1]).hidden;
       closeMenus();
@@ -423,31 +427,16 @@
 
   // ---- export -------------------------------------------------------------
   // The server draws the file (letterhead with both logos) from what this page shows: every filtered row, all pages.
-  // Fetched, not a form post, so unsaved changes do not raise the "leave page?" prompt.
-  function exportAs(format) {
-    closeMenus();
-    var rows = reportRows();
-    var picked = FILTERS.map(function (k) { var s = $('f-' + k); return s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : ''; });
-    toast('Preparing the file…');
-    fetch(URLS.export, {
-      method: 'POST', credentials: 'same-origin',
-      headers: {'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content},
-      body: JSON.stringify({
-        format: format, name: state.name, scope: picked.filter(Boolean).join(' · '),
-        headings: state.columns.map(function (c) { return c.label; }),
-        rows: rows.map(function (r) { return state.columns.map(function (c) { return value(r, c); }); })
-      })
-    }).then(function (r) { if (!r.ok) throw new Error('Could not make the file. Try again.'); return r.blob(); })
-      .then(function (blob) {
-        var href = URL.createObjectURL(blob), a = document.createElement('a');
-        a.href = href; a.download = (state.name.replace(/[^a-z0-9 -]/gi, '').trim() || 'report') + '.' + format; a.click();
-        setTimeout(function () { URL.revokeObjectURL(href); }, 1000);
-        toast('Downloaded all ' + rows.length + ' rows.');
-      })
-      .catch(function (e) { toast(e.message); });
-  }
-  $('export-xlsx').addEventListener('click', function () { exportAs('xlsx'); });
-  $('export-pdf').addEventListener('click', function () { exportAs('pdf'); });
+  // It opens in the PDF viewer first; Download there, or Download Excel beside it.
+  $('export').addEventListener('click', function () {
+    var btn = this, rows = reportRows();
+    var picked = PAGE ? [PAGE.scope] : FILTERS.map(function (k) { var s = $('f-' + k); return s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : ''; });
+    btn.disabled = true;
+    window.txPreview(state.name, picked.filter(Boolean).join(' · '),
+      state.columns.map(function (c) { return c.label; }),
+      rows.map(function (r) { return state.columns.map(function (c) { return value(r, c); }); })
+    ).then(function () { btn.disabled = false; });
+  });
 
   // ---- horizontal scroll bar ---------------------------------------------
   var scroller = $('report-scroll'), track = $('scroll-track'), thumb = $('scroll-thumb'), thumbStart = null;
@@ -485,6 +474,20 @@
   load();
 })();
 </script>
+{{-- Back to the page it was opened from: the page before this one is stepped back to, so it returns as it was. --}}
+<script nonce="{{ Vite::cspNonce() }}">
+document.querySelectorAll('a[data-back]').forEach(function (link) {
+  link.addEventListener('click', function (e) {
+    try {
+      if (history.length > 1 && document.referrer && new URL(document.referrer).pathname === new URL(link.href, location.href).pathname) {
+        e.preventDefault();
+        history.back();
+      }
+    } catch (err) { /* follow the link */ }
+  });
+});
+</script>
+@include('partials.pdf-viewer')
 @include('partials.escape-closes-modals')
 @include('partials.app-scrollbar')
 </body>
