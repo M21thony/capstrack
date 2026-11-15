@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\ArchivedDocument;
 use App\Services\SimilarityService;
+use App\Support\SimilarityBand;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use Tests\TestCase;
@@ -51,9 +52,9 @@ class SimilarityJudgeRubricTest extends TestCase
 
     public function test_a_different_thing_is_not_a_match_whatever_number_the_model_gave(): void
     {
-        $verdict = $this->read($this->reply('no', 'no', 'yes', ownScore: 85, matches: true));
+        $verdict = $this->read($this->reply('no', 'yes', 'yes', ownScore: 85, matches: true));
 
-        $this->assertSame(15, $verdict['score']);
+        $this->assertSame(25, $verdict['score']);
         $this->assertFalse($verdict['matches']);
     }
 
@@ -62,12 +63,13 @@ class SimilarityJudgeRubricTest extends TestCase
     {
         return [
             'same thing, users and features' => ['yes', 'yes', 'yes', 95],
-            'same thing, some features shared' => ['yes', 'yes', 'partly', 60],
-            'same thing, different features' => ['yes', 'yes', 'no', 45],
-            'same thing and features, other users' => ['yes', 'no', 'yes', 85],
-            'partly the same thing, same features' => ['partly', 'yes', 'yes', 55],
+            'same thing, some features extra or missing' => ['yes', 'yes', 'partly', 75],
+            'same thing, different features' => ['yes', 'yes', 'no', 50],
+            'same thing and features, other users' => ['yes', 'no', 'yes', 70],
+            'same thing, some features, other users' => ['yes', 'no', 'partly', 50],
+            'partly the same thing, same features' => ['partly', 'yes', 'yes', 60],
             'partly the same thing, some features' => ['partly', 'partly', 'partly', 35],
-            'same kind of system for another thing' => ['no', 'no', 'yes', 15],
+            'same kind of system for another thing' => ['no', 'yes', 'yes', 25],
             'nothing in common' => ['no', 'no', 'no', 0],
         ];
     }
@@ -82,10 +84,38 @@ class SimilarityJudgeRubricTest extends TestCase
     public function test_the_thing_handled_outweighs_the_features(): void
     {
         $differentThing = SimilarityService::rubricScore(['things' => 'no', 'users' => 'yes', 'features' => 'yes']);
-        $sameThing = SimilarityService::rubricScore(['things' => 'yes', 'users' => 'no', 'features' => 'no']);
+        $sameThing = SimilarityService::rubricScore(['things' => 'yes', 'users' => 'yes', 'features' => 'no']);
 
         $this->assertLessThan(30, $differentThing);
         $this->assertGreaterThan($differentThing, $sameThing);
+    }
+
+    /**
+     * Measured on the gold set: the judge answered "partly" on the features
+     * of nine of twelve duplicates, and at 60 all nine were missed.
+     */
+    public function test_the_same_thing_for_the_same_users_is_close_even_when_only_some_features_are_shared(): void
+    {
+        $this->assertGreaterThanOrEqual(
+            SimilarityBand::CLOSE,
+            SimilarityService::rubricScore(['things' => 'yes', 'users' => 'yes', 'features' => 'partly']),
+        );
+    }
+
+    public function test_the_same_thing_for_other_users_with_only_some_features_shared_is_not_close(): void
+    {
+        $score = SimilarityService::rubricScore(['things' => 'yes', 'users' => 'no', 'features' => 'partly']);
+
+        $this->assertSame('some', SimilarityBand::of($score));
+    }
+
+    public function test_a_different_thing_is_never_more_than_little_overlap(): void
+    {
+        foreach (['yes', 'partly', 'no'] as $users) {
+            foreach (['yes', 'partly', 'no'] as $features) {
+                $this->assertSame('little', SimilarityBand::of(SimilarityService::rubricScore(['things' => 'no'] + compact('users', 'features'))));
+            }
+        }
     }
 
     public function test_answers_written_loosely_are_still_read(): void
@@ -93,7 +123,7 @@ class SimilarityJudgeRubricTest extends TestCase
         $verdict = $this->read($this->reply(true, ' Yes ', 'Partially'));
 
         $this->assertSame(['things' => 'yes', 'users' => 'yes', 'features' => 'partly'], $verdict['answers']);
-        $this->assertSame(60, $verdict['score']);
+        $this->assertSame(75, $verdict['score']);
     }
 
     public function test_a_reply_without_the_answers_keeps_the_models_own_number(): void

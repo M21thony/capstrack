@@ -31,10 +31,13 @@ class SimilarityService
      * @var array<string, array<string, int>>
      */
     private const RUBRIC = [
-        'yes' => ['yes' => 90, 'partly' => 55, 'no' => 40],
-        'partly' => ['yes' => 50, 'partly' => 35, 'no' => 20],
+        'yes' => ['yes' => 90, 'partly' => 70, 'no' => 45],
+        'partly' => ['yes' => 55, 'partly' => 40, 'no' => 20],
         'no' => ['yes' => 20, 'partly' => 10, 'no' => 5],
     ];
+
+    /** What the users answer adds: a study for other people is not the same study. */
+    private const RUBRIC_USERS = ['yes' => 5, 'partly' => -5, 'no' => -20];
 
     /** From this score up, the answers say the two are the same kind of study. */
     private const RUBRIC_MATCH = 55;
@@ -1394,17 +1397,24 @@ PROMPT;
      * always give the same percentage and each percentage can be explained.
      *
      * The thing handled decides the range, the work done on it places the
-     * score inside that range, and the users move it by five either way.
-     * The numbers follow the judge prompt's own worked examples: a different
-     * thing stays under 30, the same thing with different features sits in
-     * the 40s to 50s, and the same thing with the same features is 90 up.
+     * score inside that range, and the users move it: up five when they are
+     * the same, down twenty when they are not. The numbers follow the judge
+     * prompt's own worked examples: a different thing stays under 30, the
+     * same thing with different features sits around 50, the same thing
+     * with some features extra or missing is in the 70s, and the same thing
+     * with the same features is 90 up.
+     *
+     * "Partly" the same features has to count as close. On the gold set the
+     * judge gave that answer for nine of twelve duplicates, since a
+     * pre-proposal never lists exactly the features of a finished study;
+     * priced at 60 it put all nine under the line.
      *
      * @param  array{things: string, users: string, features: string}  $answers
      */
     public static function rubricScore(array $answers): int
     {
         $score = self::RUBRIC[$answers['things']][$answers['features']]
-            + ['yes' => 5, 'partly' => 0, 'no' => -5][$answers['users']];
+            + self::RUBRIC_USERS[$answers['users']];
 
         return max(0, min(100, $score));
     }
