@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * A new install starts with one admin and one CaPSA/TSA who can sign in,
+ * A new install starts with its admins, a CaPSA/TSA and an expert who can sign in,
  * and running it again on every start changes nothing.
  */
 class StartingAccountsSeederTest extends TestCase
@@ -22,10 +22,14 @@ class StartingAccountsSeederTest extends TestCase
         $this->seed(StartingAccountsSeeder::class);
 
         $admin = CapstoneExpert::where('email', 'markanthonybalilla@gmail.com')->firstOrFail();
-        $capsa = CapstoneExpert::where('email', 'markanthonybalilla21@gmail.com')->firstOrFail();
+        $dean = CapstoneExpert::where('email', 'ccs@cspc.edu.ph')->firstOrFail();
+        $capsa = CapstoneExpert::where('email', 'hellscreamgrom9@gmail.com')->firstOrFail();
+        $expert = CapstoneExpert::where('email', 'markanthonybalilla21@gmail.com')->firstOrFail();
 
         $this->assertTrue($admin->is_admin && $admin->approved_status && ! $admin->is_capsa);
+        $this->assertTrue($dean->is_admin && $dean->approved_status && ! $dean->is_capsa);
         $this->assertTrue($capsa->is_capsa && $capsa->approved_status && ! $capsa->is_admin);
+        $this->assertTrue($expert->approved_status && ! $expert->is_capsa && ! $expert->is_admin);
 
         // Something changed in the app afterwards must survive the next start.
         $capsa->update(['first_name' => 'Mark']);
@@ -33,7 +37,7 @@ class StartingAccountsSeederTest extends TestCase
 
         $this->seed(StartingAccountsSeeder::class);
 
-        $this->assertSame(2, CapstoneExpert::withTrashed()->count());
+        $this->assertSame(4, CapstoneExpert::withTrashed()->count());
         $this->assertSame('Mark', $capsa->fresh()->first_name);
         $this->assertNull(CapstoneExpert::where('email', 'markanthonybalilla@gmail.com')->first());
     }

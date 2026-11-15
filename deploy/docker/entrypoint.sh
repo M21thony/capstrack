@@ -3,7 +3,7 @@ set -e
 cd /var/www/capstrack
 chown -R www-data:www-data storage bootstrap/cache
 php artisan migrate --force
-# The roles, and the first admin, CaPSA/TSA and student. Leaves an existing account alone.
+# The roles, and the first admins, CaPSA/TSA, expert and student. Leaves an existing account alone.
 php artisan db:seed --class=StartingAccountsSeeder --force
 # With the storage container: wait for it, make its two buckets, and move over
 # any files an earlier run kept on this disk. On a fresh install it copies nothing.

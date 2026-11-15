@@ -20,9 +20,11 @@ use Illuminate\Support\Facades\DB;
  */
 class StartingAccountsSeeder extends Seeder
 {
-    private const ADMIN = 'markanthonybalilla@gmail.com';
+    private const ADMINS = ['ccs@cspc.edu.ph', 'markanthonybalilla@gmail.com'];
 
-    private const CAPSA = 'markanthonybalilla21@gmail.com';
+    private const CAPSA = 'hellscreamgrom9@gmail.com';
+
+    private const EXPERT = 'markanthonybalilla21@gmail.com';
 
     private const STUDENT = 'mabalilla@my.cspc.edu.ph';
 
@@ -31,7 +33,11 @@ class StartingAccountsSeeder extends Seeder
         // No migration puts the roles in, and a CaPSA/TSA is a role.
         $this->call(RoleSeeder::class);
 
-        $this->start(self::ADMIN, ['is_admin' => true]);
+        foreach (self::ADMINS as $admin) {
+            $this->start($admin, ['is_admin' => true]);
+        }
+
+        $this->start(self::EXPERT);
 
         $capsa = $this->start(self::CAPSA);
 
