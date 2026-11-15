@@ -3,13 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\ReportTable;
 use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 /**
- * View Report and Download Excel on the tables of the CaPSA/TSA, Expert and Admin
+ * View Report and Export on the tables of the CaPSA/TSA, Expert and Admin
  * pages: the page sends the table it is showing, the server lays it out.
  */
 class TableExportTest extends TestCase
@@ -81,12 +82,37 @@ class TableExportTest extends TestCase
         foreach (['instructor.grading', 'instructor.teams'] as $route) {
             $this->actingAs($adviser, 'expert')->get(route($route))->assertOk()
                 ->assertSee('id="tx-dialog"', false)
-                ->assertSee('table-export', false);
+                ->assertSee('window.txPreview', false);
         }
 
         // Papers are not something anyone reports on: Document Review has none.
         $this->actingAs($adviser, 'expert')->get(route('instructor.docreview'))->assertOk()
             ->assertDontSee('data-export=', false);
+    }
+
+    /**
+     * Export is a preview first: the column picker's button says Export, it
+     * opens the PDF window (txPreview), and Download PDF and Download Excel
+     * are in that window. The page carries the PDF window itself.
+     */
+    public function test_export_shows_the_pdf_before_anything_is_downloaded(): void
+    {
+        $html = $this->actingAs($this->everyHat(), 'expert')->get(route('capsa.activitylog'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('</svg>Export</button>', $html);
+        $this->assertStringContainsString("var down = el('button', 'tx-btn', ICON_DOWN + 'Export');", $html, 'the button over each table');
+        $this->assertMatchesRegularExpression('/function download\(\) \{.*?window\.txPreview\(/s', $html);
+        $this->assertStringContainsString("downloadLabel: 'Download PDF'", $html);
+        $this->assertStringContainsString("'Download Excel'", $html, 'Download Excel is a button in the preview');
+        $this->assertSame(1, substr_count($html, 'id="previewDialog"'), 'one PDF window');
+    }
+
+    /** A page that shows PDFs of its own (Analytics) still has one PDF window, not two. */
+    public function test_a_page_with_its_own_pdf_window_gets_only_one(): void
+    {
+        $html = $this->actingAs($this->everyHat(), 'expert')->get(route('capsa.analytics'))->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, 'id="previewDialog"'));
     }
 
     public function test_the_excel_file_has_the_title_the_chosen_columns_and_the_rows(): void
@@ -214,7 +240,7 @@ class TableExportTest extends TestCase
         $this->get(route('capsa.reports.template', 'experts'))->assertRedirect();
         $this->get(route('capsa.reports.template', 'experts'))->assertRedirect();
 
-        $this->assertSame(1, \App\Models\ReportTable::where('expert_id', $expert->expert_id)->where('name', 'Expert list')->count());
+        $this->assertSame(1, ReportTable::where('expert_id', $expert->expert_id)->where('name', 'Expert list')->count());
     }
 
     public function test_export_makes_the_pdf_shown_in_the_preview(): void

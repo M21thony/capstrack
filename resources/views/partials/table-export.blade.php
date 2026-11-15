@@ -1,5 +1,5 @@
 {{--
-  View Report and Download Excel for the tables on CaPSA/TSA, Admin and Expert pages.
+  View Report and Export for the tables on CaPSA/TSA, Admin and Expert pages.
 
   Included once, from each staff sidebar, so every page has it. A table opts in
   with data-export="Name of the report". Nothing else needs wiring: the script
@@ -13,9 +13,11 @@
 
   View Report sends the table to TableReportController and opens the Reports'
   own screen over it: column picker (drag to reorder), search and sort, Preview
-  PDF, and a PDF or Excel download. Download Excel asks which columns first and
-  builds the file from the same table (TableExportController).
+  PDF, and a PDF or Excel download. Export asks which columns first, then shows
+  the PDF (the Reports' letterhead) in the PDF window, with Download PDF and
+  Download Excel there - so nothing is downloaded before it has been seen.
 --}}
+@include('partials.pdf-viewer')
 <style nonce="{{ Vite::cspNonce() }}">
 .tx-bar{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin:0 0 8px;flex:none}
 .tx-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:1px solid var(--border,#e2e4ea);background:var(--bg2,#fff);color:var(--text2,#4a4d57);font:600 12px/1 inherit;font-family:inherit;cursor:pointer;white-space:nowrap;text-decoration:none}
@@ -59,7 +61,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
 <dialog class="tx-dialog" id="tx-dialog" aria-labelledby="tx-title">
   <div class="tx-in">
     <div class="tx-head">
-      <div><h2 id="tx-title"></h2><p>Tick the columns you want in the Excel file.</p></div>
+      <div><h2 id="tx-title"></h2><p>Tick the columns you want. You see the PDF first, then download it or the Excel file.</p></div>
       <button type="button" class="tx-x" data-tx-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="tx-cols-wrap">
@@ -70,7 +72,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
     <div class="tx-foot">
       <span class="tx-msg" id="tx-msg" role="alert"></span>
       <button type="button" class="tx-btn" data-tx-close>Close</button>
-      <button type="button" class="tx-btn tx-gold" id="tx-go"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Download Excel</button>
+      <button type="button" class="tx-btn tx-gold" id="tx-go"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export</button>
     </div>
   </div>
 </dialog>
@@ -80,7 +82,6 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
   if (window.__txReady) { return; }
   window.__txReady = true;
 
-  var URL_EXPORT = @json(route('table.export', [], false));
   var URL_REPORT = @json(route('table.report.store', [], false));
   var CSRF = @json(csrf_token());
   var ICON_VIEW = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -181,7 +182,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
     });
   }
 
-  // ---- Download Excel: pick the columns, then the file.
+  // ---- Export: pick the columns, then the PDF preview.
   function chosenColumns() {
     return state.data.columns.filter(function (c) { return state.on[c.index]; });
   }
@@ -253,7 +254,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
         excel.disabled = true;
         get('xlsx').then(save, fail).then(function () { excel.disabled = false; });
       });
-      window.PdfViewer.open({ file: pdf.blob, title: title, meta: scope, fileName: pdf.name, download: URL.createObjectURL(pdf.blob), actions: [excel] });
+      window.PdfViewer.open({ file: pdf.blob, title: title, meta: scope, fileName: pdf.name, download: URL.createObjectURL(pdf.blob), downloadLabel: 'Download PDF', actions: [excel] });
     }, fail);
   };
   // A whole table: rows hidden by its search or "show more" included.
@@ -264,6 +265,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
       data.rows.map(function (row) { return data.columns.map(function (c) { return row[c.index]; }); }));
   };
 
+  // The ticked columns of the table, previewed as a PDF; Download Excel is in the preview.
   function download() {
     var cols = chosenColumns();
     if (!cols.length) { return; }
@@ -272,19 +274,13 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
     go.disabled = true;
     msg.textContent = '';
 
-    post(URL_EXPORT, {
-      title: state.title,
-      scope: scopeOf(state.data.rows.length),
-      headings: cols.map(function (c) { return c.label; }),
-      rows: state.data.rows.map(function (row) { return cols.map(function (c) { return row[c.index]; }); })
-    }).then(function (response) {
-      if (!response.ok) { throw new Error('failed'); }
-      return response.blob().then(function (blob) { return { blob: blob, name: fileName(response) }; });
-    }).then(function (file) {
-      save(file);
-      dlg.close();
-    }).catch(function () {
-      msg.textContent = 'Could not make the Excel file. Try again.';
+    window.txPreview(
+      state.title,
+      scopeOf(state.data.rows.length),
+      cols.map(function (c) { return c.label; }),
+      state.data.rows.map(function (row) { return cols.map(function (c) { return row[c.index]; }); })
+    ).then(function () {
+      if (window.PdfViewer && window.PdfViewer.isOpen()) { dlg.close(); }
     }).then(function () {
       sync();
     });
@@ -295,7 +291,7 @@ dialog.tx-dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px
     bar.setAttribute('role', 'group');
     bar.setAttribute('aria-label', titleOf(table) + ' report');
     var view = el('button', 'tx-btn', ICON_VIEW + 'View Report');
-    var down = el('button', 'tx-btn', ICON_DOWN + 'Download Excel');
+    var down = el('button', 'tx-btn', ICON_DOWN + 'Export');
     view.type = down.type = 'button';
     view.addEventListener('click', function () { viewReport(table, view); });
     down.addEventListener('click', function () { pickColumns(table); });

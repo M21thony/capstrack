@@ -167,7 +167,7 @@
      here. Shared markup/behavior with the other copy of this page. */
   .expert-name-trigger{cursor:pointer}
 
-  /* Download Excel: which columns go in the file. */
+  /* Export: which columns go in the PDF and the Excel file. */
   .xp-cols{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;text-align:left;margin:4px 0 6px}
   .xp-col{display:flex;align-items:center;gap:8px;font-size:13px;color:#1e293b;padding:7px 4px;cursor:pointer}
   .xp-col input{width:15px;height:15px;accent-color:#2563eb;flex-shrink:0}
@@ -401,10 +401,11 @@
       {{-- The list is for a whole faculty at once. Add Expert is for the one
            it missed, so admitting a late arrival is not a spreadsheet. The same
            table as a report: View Report opens it with the column picker,
-           Download Excel asks which columns first. --}}
+           Export asks which columns first, then shows the PDF with Download PDF
+           and Download Excel. --}}
       <div class="tk-actions">
         <a class="tk-btn tk-btn-ghost" href="{{ route('capsa.reports.template', 'experts') }}" title="View Report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg><span class="tk-lbl">View Report</span></a>
-        <button type="button" class="tk-btn tk-btn-ghost" onclick="openExpertExportModal()" title="Download Excel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span class="tk-lbl">Download Excel</span></button>
+        <button type="button" class="tk-btn tk-btn-ghost" onclick="openExpertExportModal()" title="Export"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span class="tk-lbl">Export</span></button>
         <button type="button" class="tk-btn" onclick="openExpertRosterModal()" title="Upload List"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg><span class="tk-lbl">Upload List</span></button>
         <button type="button" class="tk-btn tk-btn-pri" onclick="openAddExpertModal()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add Expert</button>
       </div>
@@ -1266,8 +1267,8 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
       </span>
       <span class="ct-up-head-text">
-        <span class="ct-modal-title">Download Excel</span>
-        <span class="ct-up-sub">Tick the columns you want in the file.</span>
+        <span class="ct-modal-title">Export</span>
+        <span class="ct-up-sub">Tick the columns you want. You see the PDF first, then download it or the Excel file.</span>
       </span>
       <button type="button" class="ct-up-close" onclick="closeExpertExportModal()" aria-label="Close">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1290,7 +1291,7 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
 
     <div class="ct-modal-actions">
       <button type="button" class="ct-btn ct-btn-secondary" onclick="closeExpertExportModal()">Cancel</button>
-      <a id="expertExportGo" class="ct-btn ct-btn-primary" href="#" onclick="closeExpertExportModal()" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Download Excel</a>
+      <button type="button" id="expertExportGo" class="ct-btn ct-btn-primary" onclick="previewExpertExport()">Export</button>
     </div>
   </div>
 </div>
@@ -1393,7 +1394,8 @@ function closeAddExpertModal() {
   addExpertModal.style.display = 'none';
 }
 
-// ── Download Excel: the Expert List report, with only the ticked columns ──
+// ── Export: the Expert List report, with only the ticked columns, as a PDF
+// first; Download PDF and Download Excel are in the preview ──
 const expertExportModal = document.getElementById('expertExportModal');
 const expertExportUrl = @json(route('capsa.reports.show', 'expert_list'));
 
@@ -1411,14 +1413,35 @@ function pickExpertExportCols(all) {
   syncExpertExport();
 }
 
-// The report hides what is named in ?hide=, so the link lists the unticked ones.
-function syncExpertExport() {
+// The report hides what is named in ?hide=, so the address lists the unticked ones.
+function expertExportLink(format, inline) {
   const hidden = Array.from(document.querySelectorAll('#expertExportCols input:not(:disabled)'))
     .filter(function (box) { return !box.checked; })
     .map(function (box) { return box.value; });
-  const query = new URLSearchParams({ download: 'xlsx' });
+  const query = new URLSearchParams({ download: format });
   if (hidden.length) { query.set('hide', hidden.join(',')); }
-  document.getElementById('expertExportGo').href = expertExportUrl + '?' + query.toString();
+  if (inline) { query.set('inline', '1'); }
+  return expertExportUrl + '?' + query.toString();
+}
+
+function syncExpertExport() {
+  document.getElementById('expertExportGo').dataset.href = expertExportLink('pdf', true);
+}
+
+function previewExpertExport() {
+  const excel = document.createElement('a');
+  excel.className = 'tx-btn';
+  excel.href = expertExportLink('xlsx');
+  excel.setAttribute('download', '');
+  excel.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Download Excel';
+  closeExpertExportModal();
+  window.PdfViewer.open({
+    url: expertExportLink('pdf', true),
+    download: expertExportLink('pdf'),
+    downloadLabel: 'Download PDF',
+    title: 'Expert List',
+    actions: [excel],
+  });
 }
 
 function addExpert() {

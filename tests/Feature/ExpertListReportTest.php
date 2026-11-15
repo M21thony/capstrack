@@ -62,15 +62,17 @@ class ExpertListReportTest extends TestCase
         return collect($rows)->slice(4)->first(fn (array $row) => $row[0] === $name) ?? [];
     }
 
-    public function test_the_expert_management_page_offers_view_report_and_download_excel(): void
+    public function test_the_expert_management_page_offers_view_report_and_export(): void
     {
         $capsa = $this->capsaFor();
 
         $this->actingAs($capsa, 'expert')->get(route('capsa.experts'))
             ->assertOk()
-            ->assertSee('href="'.route('capsa.reports.show', 'expert_list').'"', false)
+            ->assertSee('href="'.route('capsa.reports.template', 'experts').'"', false)
             ->assertSee('View Report')
-            ->assertSee('Download Excel')
+            ->assertSee('title="Export"', false)
+            ->assertSee('onclick="previewExpertExport()"', false)
+            ->assertSee(json_encode(route('capsa.reports.show', 'expert_list')), false)
             ->assertSee('id="expertExportModal"', false)
             ->assertSee('value="accepts"', false);
     }

@@ -16,6 +16,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mi
  *     meta,           // the line under it: team, section, date…
  *     fileName,       // for the footer and the downloaded file's name
  *     download,       // where Download points; defaults to url, false for none
+ *     downloadLabel,  // its words when there is more than one file to download ("Download PDF")
  *     side,           // an element shown beside the pages (what to decide)
  *     note, actions,  // a sentence and buttons for the footer
  *     inPage,         // open in the page rather than over everything, so the
@@ -242,6 +243,7 @@ function open(opts) {
   if (download) {
     ui.download.href = download;
     ui.download.setAttribute('download', fileNameOf(opts) || '');
+    ui.download.querySelector('.pv-lbl').textContent = opts.downloadLabel || 'Download';
   } else {
     ui.download.removeAttribute('href');
   }

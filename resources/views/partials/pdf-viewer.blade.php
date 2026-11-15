@@ -6,6 +6,12 @@
 
   The empty window is written here so it is there before the script arrives;
   the script fills it.
+
+  Safe to include twice: the staff sidebars bring it in for Export's preview,
+  and a page that shows PDFs of its own includes it too. Only the first one
+  is written, so there is one window.
 --}}
+@once
 <dialog class="pv" id="previewDialog" aria-label="Document preview"></dialog>
 @vite('resources/js/pdf-viewer.js')
+@endonce
