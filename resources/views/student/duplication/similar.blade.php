@@ -43,6 +43,9 @@
   // How the score above was reached, from the two numbers saved with the match
   // (SimilarityService::enrichWithReasons). Checks run before they were saved have neither.
   $emb = $match['embedding_score'] ?? null;
+  // Saved since the meaning match became a scale from unrelated to the same study.
+  // A check from before has the old (cosine + 1) / 2 percentage and no cosine.
+  $cos = $match['cosine'] ?? null;
   $judge = $match['judge_score'] ?? null;
   // Checks run before the judge answered questions have a number and no answers.
   $answers = $match['answers'] ?? null;
@@ -198,12 +201,17 @@
           <div>
             <b>Meaning match</b>
             <p>Both write-ups are turned into meaning vectors by <code>{{ config('services.ollama.embed_model') }}</code> and compared with cosine similarity.
-              @if ($emb !== null)
+              @if ($cos !== null && $emb !== null)
+                Studies with nothing in common measure about {{ number_format(SimilarityService::COSINE_UNRELATED, 2) }} and the same study about {{ number_format(SimilarityService::COSINE_SAME, 2) }}, so this one's {{ number_format($cos, 2) }} is placed between the two:
+                <code>({{ number_format($cos, 2) }} − {{ number_format(SimilarityService::COSINE_UNRELATED, 2) }}) ÷ {{ number_format(SimilarityService::COSINE_SAME - SimilarityService::COSINE_UNRELATED, 2) }} × 100 = {{ $emb }}%</code>.
+                Below {{ number_format(SimilarityService::COSINE_UNRELATED, 2) }} is dropped as noise.
+              @elseif ($emb !== null)
                 <code>({{ number_format($emb / 50 - 1, 2) }} + 1) ÷ 2 × 100 = {{ $emb }}%</code>.
+                Under 40% is dropped as noise.
               @else
                 This check was run before this number was saved.
               @endif
-              Under 40% is dropped as noise.</p>
+            </p>
           </div>
           <span class="val">{{ $emb !== null ? $emb.'%' : '—' }}</span>
         </li>

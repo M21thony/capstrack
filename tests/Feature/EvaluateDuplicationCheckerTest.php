@@ -137,6 +137,39 @@ class EvaluateDuplicationCheckerTest extends TestCase
         $this->assertMatchesRegularExpression("/The model's own number\s+\|\s+none in the set\s+\|\s+1 of 1 \(100%\)/", $output);
     }
 
+    /**
+     * Measured: unrelated studies sit near cosine 0.40 and the same study near
+     * 0.90. On (cosine + 1) / 2 an unrelated study read as a 77% meaning match.
+     */
+    public function test_the_meaning_match_runs_from_unrelated_studies_to_the_same_study(): void
+    {
+        $this->goldSet([
+            $this->pair('p1', 'unrelated', 'Tilapia Pond Feeder'),
+            $this->pair('p2', 'related', 'Medicine Inventory'),
+            $this->pair('p3', 'duplicate', 'Rural Health Unit Records'),
+        ]);
+        $vectors = ['tilapia' => [0.5, 0.866], 'medicine' => [0.65, 0.76], 'rural' => [0.9, 0.436]];
+
+        $this->mock(OllamaSSHClient::class, function ($mock) use ($vectors) {
+            $mock->shouldReceive('embed')->andReturnUsing(function (string $text) use ($vectors) {
+                foreach ($vectors as $word => $vector) {
+                    if (str_contains($text, $word)) {
+                        return $vector;
+                    }
+                }
+
+                return [1.0, 0.0];
+            });
+            $mock->shouldReceive('generateMany')->andReturn(['{"matches": false, "score": 5}']);
+        });
+
+        $output = $this->run_evaluation();
+
+        $this->assertMatchesRegularExpression('/p1\s+\|\s+unrelated\s+\|\s+0\.50\s+\|\s+20%/', $output);
+        $this->assertMatchesRegularExpression('/p2\s+\|\s+related\s+\|\s+0\.65\s+\|\s+50%/', $output);
+        $this->assertMatchesRegularExpression('/p3\s+\|\s+duplicate\s+\|\s+0\.90\s+\|\s+100%/', $output);
+    }
+
     public function test_the_cosine_range_of_each_label_is_reported(): void
     {
         $this->goldSet([$this->pair('p1', 'duplicate', 'Rural Health Unit Records')]);

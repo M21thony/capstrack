@@ -39,6 +39,16 @@ class SimilarityService
     /** What the users answer adds: a study for other people is not the same study. */
     private const RUBRIC_USERS = ['yes' => 5, 'partly' => -5, 'no' => -20];
 
+    /**
+     * The cosine similarity of a study with nothing in common, and of one
+     * that is the same study, with nomic-embed-text. Measured on 72 labelled
+     * pairs: unrelated ones ran 0.44 to 0.57, related 0.52 to 0.76 and
+     * duplicates 0.73 to 0.91. Another embedding model needs its own two numbers.
+     */
+    public const COSINE_UNRELATED = 0.40;
+
+    public const COSINE_SAME = 0.90;
+
     /** From this score up, the answers say the two are the same kind of study. */
     private const RUBRIC_MATCH = 55;
 
@@ -659,12 +669,14 @@ PROMPT;
                 continue;
             }
 
-            $score = $this->embeddingPercent($this->cosineSimilarity($queryEmbedding, $storedEmbedding));
+            $cosine = $this->cosineSimilarity($queryEmbedding, $storedEmbedding);
 
-            // FIX: Skip weak matches — below 40% are likely noise from generic words
-            if ($score < 40) {
+            // Further apart than studies with nothing in common: noise.
+            if ($cosine < self::COSINE_UNRELATED) {
                 continue;
             }
+
+            $score = $this->embeddingPercent($cosine);
 
             $scored[] = [
                 'document' => $doc,
@@ -673,6 +685,7 @@ PROMPT;
                 'score' => $score,
                 // Step 1 kept apart: the score above is replaced by the judge's.
                 'embedding_score' => $score,
+                'cosine' => round($cosine, 2),
                 'reason' => '',
                 'similarities' => '',
                 'differences' => '',
@@ -681,8 +694,7 @@ PROMPT;
         }
 
         if (empty($scored)) {
-            // No strong matches found — return empty rather than noise
-            Log::info('No matches above 40% threshold — returning empty result.');
+            Log::info('No study is nearer than unrelated ones are - returning empty result.');
 
             return [];
         }
@@ -729,10 +741,19 @@ PROMPT;
         ])));
     }
 
-    /** Cosine similarity (-1 to 1) as the percentage (0 to 100) a check works with. */
+    /**
+     * Cosine similarity as the percentage a check works with: 0 where
+     * unrelated studies sit and 100 where the same study does.
+     *
+     * It used to be (cosine + 1) / 2, which runs from -1 to 1. Two capstones
+     * never point opposite ways, so everything landed between 72% and 96%
+     * and a study with nothing in common read as a 77% meaning match.
+     */
     private function embeddingPercent(float $cosine): int
     {
-        return (int) round((($cosine + 1) / 2) * 100);
+        $share = ($cosine - self::COSINE_UNRELATED) / (self::COSINE_SAME - self::COSINE_UNRELATED);
+
+        return (int) round(max(0, min(1, $share)) * 100);
     }
 
     /**
@@ -1027,7 +1048,7 @@ PROMPT;
     private function judgeCandidates(array $concepts, array $topCandidates): array
     {
         $limit = (int) config('services.ollama.judge_limit', 4);
-        $floor = (int) config('services.ollama.judge_min_score', 40);
+        $floor = (int) config('services.ollama.judge_min_score', 0);
 
         $worthJudging = [];
 

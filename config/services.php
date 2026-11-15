@@ -95,9 +95,16 @@ return [
         // rather than given a number.
         'judge_limit' => env('OLLAMA_JUDGE_LIMIT', 10),
 
-        // ...and how close a candidate has to be to be worth explaining.
+        // ...and how close a candidate has to be to be worth explaining, as
+        // the meaning match percentage (0 is the cosine of unrelated studies,
+        // 100 of the same study; SimilarityService::embeddingPercent()).
         // The top match is always explained whatever it scored.
-        'judge_min_score' => env('OLLAMA_JUDGE_MIN_SCORE', 40),
+        //
+        // 0, so every candidate the retriever keeps is read. The 40 this used
+        // to be was on the old (cosine + 1) / 2 scale, where nothing scored
+        // under 70 and it never held anything back; on this scale 40 would
+        // leave real candidates unread.
+        'judge_min_score' => env('OLLAMA_JUDGE_MIN_SCORE', 0),
     ],
 
     'ssh_tunnel' => [
