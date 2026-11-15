@@ -48,3 +48,13 @@ storage/app/playwright-videos/
 /check_team*.php
 /how --stat*
 .env.docker
+
+# Working files the system does not use: mockups, screenshots, test reports
+/.scratch/
+/capstrackUI/
+/devImg/
+/.junie/
+/graphify-out/
+/jmeter-*
+/capstrack-zap*.html
+/undefined
