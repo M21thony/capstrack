@@ -336,16 +336,7 @@
                 @endforelse
               </div>
               <div class="ad-people">
-                <svg viewBox="0 0 120 76" aria-hidden="true">
-                  <path d="M14 14l2 5 5 2-5 2-2 5-2-5-5-2 5-2Z M106 24l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5Z" fill="#c9a82c"/>
-                  <path d="M12 70c18-4 36-4 48 4 12-8 30-8 48-4v4c-18-4-36-4-48 2-12-6-30-6-48-2Z" fill="#4a5060"/>
-                  <path d="M60 72c-12-8-30-8-44-4V40c14-4 32-4 44 4Z" fill="#f3e3a6"/>
-                  <path d="M60 72c12-8 30-8 44-4V40c-14-4-32-4-44 4Z" fill="#c9a82c"/>
-                  <path d="M24 50c10-2 20-2 28 2M24 58c10-2 20-2 28 2" stroke="#c9a82c" stroke-width="2" fill="none" stroke-linecap="round"/>
-                  <path d="M42 19v9q18 8 36 0v-9l-18 7Z" fill="#2b2d36"/>
-                  <path d="M60 2l34 12-34 12-34-12Z" fill="#18191f"/>
-                  <path d="M60 14l28 4v12" stroke="#c9a82c" stroke-width="1.5" fill="none"/><circle cx="88" cy="32" r="3" fill="#c9a82c"/><circle cx="60" cy="14" r="2" fill="#c9a82c"/>
-                </svg>
+                <img src="{{ asset('images/experts-by-role.png') }}" alt="">
                 Building a stronger academic community.
               </div>
             </div>
