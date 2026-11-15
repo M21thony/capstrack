@@ -387,6 +387,8 @@ class SubmissionGoesToTest extends TestCase
 
         // It lands on the panelist's Document Review page.
         $this->actingAs($preOral, 'expert')->get(route('instructor.docreview'))->assertOk()->assertSee($this->team->team_name);
+        // ...and counts on their dashboard, though they are no expert of the team.
+        $this->actingAs($preOral, 'expert')->get(route('instructor.dashboard'))->assertOk()->assertViewHas('docsForReview', 1);
     }
 
     public function test_a_requirement_the_capsa_closed_takes_no_uploads(): void

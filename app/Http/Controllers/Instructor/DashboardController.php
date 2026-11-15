@@ -34,47 +34,12 @@ class DashboardController extends Controller
             ->where('status', 'pending')
             ->count();
 
-        $docsForReview = CapstoneDocumentReview::whereHas('document', function ($q) use ($expertId) {
-            $q->whereIn('file_id', function ($q) use ($expertId) {
-                $q->select('file_id')
-                    ->from('capstone_documents')
-                    ->whereIn('student_id', function ($q) use ($expertId) {
-                        $q->select('student_id')
-                            ->from('student_s_y')
-                            ->whereIn('team_id', function ($q) use ($expertId) {
-                                $q->select('team_id')
-                                    ->from('capstone_expert_application')
-                                    ->where('expert_id', $expertId)
-                                    ->where('status', 'approved');
-                            });
-                    });
-            });
-        })
-            // 'pending' is not a value this column ever holds, so this counted
-            // nothing. What the chip means is "still on my plate".
-            ->awaitingReview()
-            ->where('expert_id', $expertId)
-            ->count();
-
-        $oldestDocReview = CapstoneDocumentReview::whereHas('document', function ($q) use ($expertId) {
-            $q->whereIn('file_id', function ($q) use ($expertId) {
-                $q->select('file_id')->from('capstone_documents')
-                    ->whereIn('student_id', function ($q) use ($expertId) {
-                        $q->select('student_id')->from('student_s_y')
-                            ->whereIn('team_id', function ($q) use ($expertId) {
-                                $q->select('team_id')->from('capstone_expert_application')
-                                    ->where('expert_id', $expertId)->where('status', 'approved');
-                            });
-                    });
-            });
-        })
-            ->awaitingReview()
-            ->where('expert_id', $expertId)
-            // Oldest by when it arrived, not by reviewed_at: a document still
-            // waiting has not been reviewed, so that column is null for every
-            // row this can return and sorted on nothing.
-            ->orderBy('created_at')
-            ->first();
+        // Every file sent to this expert and still on their plate - the same
+        // list Document Review shows, so a panelist's files count too.
+        $waiting = CapstoneDocumentReview::has('document')->awaitingReview()->where('expert_id', $expertId);
+        $docsForReview = (clone $waiting)->count();
+        // Oldest by when it arrived: reviewed_at is null on every waiting row.
+        $oldestDocReview = $waiting->orderBy('created_at')->first();
 
         $announcements = Announcement::with('admin', 'team', 'milestone')
             ->where('is_active', true)
