@@ -40,7 +40,22 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-strip .rr-strip-tabs button{width:26px;height:26px;display:grid;place-items:center;padding:0;border:1px solid transparent;border-radius:5px;background:none;color:#656b7a;cursor:pointer}
 .rr-strip .rr-strip-tabs button:hover{color:#1e2128}
 .rr-strip .rr-strip-tabs button[aria-pressed="true"]{background:#fff;border-color:#c8cad4;color:#1e2128}
+.rr-strip-tabs button span{display:none}
+.rr-strip.wide .rr-strip-tabs{gap:0;padding:8px}
+.rr-strip.wide .rr-strip-tabs button{flex:1;width:auto;display:flex;align-items:center;justify-content:center;gap:6px;border-color:#c8cad4;border-radius:5px 0 0 5px;font-size:12px;font-weight:600}
+.rr-strip.wide .rr-strip-tabs button + button{margin-left:-1px;border-radius:0 5px 5px 0}
+.rr-strip.wide .rr-strip-tabs button span{display:inline}
+.rr-strip.wide .rr-strip-tabs button[aria-pressed="true"]{position:relative;background:#f5ecd0;border-color:#c9a82c;color:#6b5410}
 .rr-outline{list-style:none;margin:0;padding:8px 6px 0;display:flex;flex-direction:column;gap:1px}
+/* the app's own scroll handle sits over the strip's last 18px */
+.rr-strip.wide .rr-outline,.rr-strip.wide .rr-strip-tabs{padding-right:20px}
+.rr-outline li:not(.sub){margin-top:3px;font-weight:600}
+.rr-outline li.sub .rr-ol-go{font-weight:400;color:#454a57}
+.rr-strip button.rr-ol-fold{border-radius:4px}
+.rr-strip button.rr-ol-fold:hover{background:#ece8dc;color:#1e2128}
+.rr-strip button.rr-ol-fold:focus:not(:focus-visible){outline:0;box-shadow:none}
+.rr-strip .rr-ol-go span:first-child{flex:1;min-width:0}
+.rr-strip .rr-ol-rc{flex:none;align-self:center;min-width:16px;height:16px;display:grid;place-items:center;padding:0 3px;border-radius:3px;background:#f5ecd0;border:1px solid #e3d08f;color:#6b5410;font-size:10px;font-weight:700}
 .rr-outline li{display:flex;align-items:flex-start}
 .rr-strip .rr-ol-fold{flex:none;width:18px;height:25px;display:grid;place-items:center;padding:0;border:0;background:none;color:#656b7a}
 .rr-strip button.rr-ol-fold{cursor:pointer}
@@ -217,6 +232,9 @@ a.rr-chip:hover{border-color:#e3d08f;background:#faf7ed;color:#23242b}
 .rr-page.marking .rr-num,.rr-page.marking .rr-markbtn{cursor:pointer}
 .rr-page.marking .rr-hl.click{pointer-events:none}
 .rr-page.shaping,.rr-page.shaping *{cursor:pointer}
+.rr-canvas.panning,.rr-canvas.panning .rr-page,.rr-canvas.panning .rr-page *{cursor:grab}
+.rr-canvas.panning:active,.rr-canvas.panning:active .rr-page,.rr-canvas.panning:active .rr-page *{cursor:grabbing}
+.rr-canvas.panning .rr-page .rr-num,.rr-canvas.panning .rr-page .rr-markbtn{cursor:pointer}
 .rr-box.hover{border:2px solid #18191f;background:rgba(24,25,31,.06);pointer-events:none}
 /* Red and green mean removed and added on a compared diagram, so remark outlines there are ink. */
 .rr-overlay.ink .rr-box,.rr-overlay.ink .rr-fmark{--kc:#18191f}

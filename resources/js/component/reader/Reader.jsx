@@ -57,6 +57,7 @@ const PATHS = {
   box: <rect x="4" y="5" width="16" height="14" rx="1" strokeDasharray="3 2.5" />,
   pin: (<><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z" /><circle cx="12" cy="10" r="2" /></>),
   shape: (<><rect x="3" y="4" width="8" height="6" rx="1" /><rect x="13" y="14" width="8" height="6" rx="1" /><path d="M7 10v7h6" /></>),
+  hand: (<><path d="M12 3v18" /><path d="M3 12h18" /><polyline points="9 6 12 3 15 6" /><polyline points="9 18 12 21 15 18" /><polyline points="6 9 3 12 6 15" /><polyline points="18 9 21 12 18 15" /></>),
   pages: (<><rect x="5" y="3" width="14" height="18" rx="1.5" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="9" y1="12" x2="15" y2="12" /></>),
   list: (<><line x1="9" y1="6" x2="20" y2="6" /><line x1="9" y1="12" x2="20" y2="12" /><line x1="9" y1="18" x2="20" y2="18" /><line x1="4" y1="6" x2="4.1" y2="6" /><line x1="4" y1="12" x2="4.1" y2="12" /><line x1="4" y1="18" x2="4.1" y2="18" /></>),
 };
@@ -620,29 +621,47 @@ export function PageStrip({ numPages, currentPage, counts, onGo, firstDiagramPag
   if (!numPages) return <nav className="rr-strip" aria-label="Pages" />;
   const sections = tab === "sections" && outline.length > 0;
   const shown = sections ? outline.filter((it) => it.path.every((p) => open.has(p))) : [];
-  const here = shown.findLast((it) => it.page && it.page <= currentPage);
+  // The section being read; folded away, the one it sits under is marked instead.
+  const reading = outline.findLast((it) => it.page && it.page <= currentPage);
+  const hereId = reading ? reading.path.find((p) => !open.has(p)) ?? reading.id : null;
   const toggle = (id) => setOpen((prev) => { const next = new Set(prev); if (!next.delete(id)) next.add(id); return next; });
+  // Remarks from a section's first page up to where the next one at its level (or above) starts.
+  const remarksIn = (it, at) => {
+    if (!it.page) return 0;
+    const next = outline.slice(at + 1).find((o) => o.page && o.path.length <= it.path.length);
+    const end = Math.max(it.page + 1, next?.page ?? firstDiagramPage ?? numPages + 1);
+    let n = 0;
+    for (let p = it.page; p < end; p++) n += counts[p] || 0;
+    return n;
+  };
   return (
     <nav className={`rr-strip${sections ? " wide" : ""}`} aria-label={sections ? "Sections" : "Pages"}>
       {outline.length > 0 && (
         <div className="rr-strip-tabs">
-          <button type="button" aria-pressed={!sections} aria-label="Pages" title="Pages" onClick={() => setTab("pages")}><Icon name="pages" /></button>
-          <button type="button" aria-pressed={sections} aria-label="Sections" title="Sections" onClick={() => setTab("sections")}><Icon name="list" /></button>
+          <button type="button" aria-pressed={!sections} aria-label="Pages" title="Pages" onClick={() => setTab("pages")}><Icon name="pages" /><span>Pages</span></button>
+          <button type="button" aria-pressed={sections} aria-label="Sections" title="Sections" onClick={() => setTab("sections")}><Icon name="list" /><span>Sections</span></button>
         </div>
       )}
       {sections && (
         <ul className="rr-outline">
-          {shown.map((it) => (
-            <li key={it.id} style={{ paddingLeft: Math.min(it.path.length, 3) * 12 }}>
-              {it.kids
-                ? <button type="button" className="rr-ol-fold" aria-expanded={open.has(it.id)} aria-label={`${open.has(it.id) ? "Hide" : "Show"} what is under ${it.title}`} onClick={() => toggle(it.id)}><Icon name={open.has(it.id) ? "down" : "right"} /></button>
-                : <span className="rr-ol-fold" />}
-              <button type="button" className="rr-ol-go" aria-current={it === here} disabled={!it.page} onClick={() => onGo(it.page)}>
-                <span>{it.title}</span>
-                <span className="rr-ol-pn">{it.page}</span>
-              </button>
-            </li>
-          ))}
+          {shown.map((it) => {
+            const c = remarksIn(it, it.id);
+            return (
+              <li key={it.id} className={it.path.length ? "sub" : ""} style={{ paddingLeft: Math.min(it.path.length, 3) * 12 }}>
+                {it.kids
+                  ? <button type="button" className="rr-ol-fold" aria-expanded={open.has(it.id)} aria-label={`${open.has(it.id) ? "Hide" : "Show"} what is under ${it.title}`} onClick={() => toggle(it.id)}><Icon name={open.has(it.id) ? "down" : "right"} /></button>
+                  : <span className="rr-ol-fold" />}
+                <button
+                  type="button" className="rr-ol-go" aria-current={it.id === hereId} disabled={!it.page} onClick={() => onGo(it.page)}
+                  ref={it.id === hereId ? (el) => el?.scrollIntoView({ block: "nearest" }) : undefined}
+                >
+                  <span>{it.title}</span>
+                  {c > 0 && <span className="rr-ol-rc" aria-label={`${c} remark${c === 1 ? "" : "s"}`}>{c}</span>}
+                  <span className="rr-ol-pn">{it.page}</span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
       {!sections && Array.from({ length: numPages }, (_, i) => {
@@ -678,6 +697,7 @@ export function PageStrip({ numPages, currentPage, counts, onGo, firstDiagramPag
 const MODES = [
   ["text", "Select text", "T"], ["box", "Draw a box over a figure", "B"], ["pin", "Pin one spot", "P"],
   ["shape", "Pick a box or arrow on a diagram", "S"],
+  ["hand", "Drag to move around", "H"],
 ];
 
 export function ReaderTools({

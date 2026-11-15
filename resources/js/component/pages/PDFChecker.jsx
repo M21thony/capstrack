@@ -68,6 +68,7 @@ const HINTS = {
   box: "Drag over a figure to add a remark",
   pin: "Click one spot on a figure to add a remark",
   shape: "Click a box or arrow on a diagram page · Shift+click adds another",
+  hand: "Drag the page to move around",
 };
 
 /**
@@ -363,14 +364,14 @@ function PDFChecker({
     setMode(next);
   };
 
-  // T, B, P and S switch how the page is marked; V flips diagrams to the earlier version; Esc finishes adding boxes.
+  // T, B, P and S switch how the page is marked, H drags it around; V flips diagrams to the earlier version; Esc finishes adding boxes.
   useEffect(() => {
     const onKey = (e) => {
       if (document.querySelector("dialog[open]")) return;
       if (e.key === "Escape" && adding) { setAdding(false); setPopPos(null); return; }
       if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.("input, textarea, select")) return;
       if (e.key.toLowerCase() === "v" && hasBefore) { setBeforeView((v) => !v); return; }
-      const next = { t: "text", b: "box", p: "pin", s: "shape" }[e.key.toLowerCase()];
+      const next = { t: "text", b: "box", p: "pin", s: "shape", h: "hand" }[e.key.toLowerCase()];
       if (next) changeMode(next);
     };
     document.addEventListener("keydown", onKey);
@@ -414,8 +415,24 @@ function PDFChecker({
     beginRemark({ type: "shape", pageNumber: n, highlightRects: hit.rects, shape_ref: { file: hit.page.file, page: hit.page.name, cells: [cell] } });
   };
 
+  // Hand mode: dragging anywhere on the document scrolls it, sideways too.
+  const pan = useRef(null);
+  const onPanDown = (e) => {
+    if (mode !== "hand" || e.button !== 0 || e.target.closest(".rr-pop, .rr-num, .rr-markbtn")) return;
+    const c = e.currentTarget;
+    pan.current = { x: e.clientX, y: e.clientY, left: c.scrollLeft, top: c.scrollTop };
+    c.setPointerCapture(e.pointerId);
+  };
+  const onPanMove = (e) => {
+    const p = pan.current;
+    if (!p) return;
+    e.currentTarget.scrollLeft = p.left - (e.clientX - p.x);
+    e.currentTarget.scrollTop = p.top - (e.clientY - p.y);
+  };
+  const onPanEnd = () => { pan.current = null; };
+
   const onMarkDown = (e, n) => {
-    if (mode === "text" || e.button !== 0 || e.target.closest(".rr-num, .rr-markbtn")) return;
+    if (mode === "text" || mode === "hand" || e.button !== 0 || e.target.closest(".rr-num, .rr-markbtn")) return;
     if (mode === "shape") { e.preventDefault(); pickShape(e, n); return; }
     if (adding) {
       if (n !== draft.pageNumber) { notify(`Boxes on one remark stay on one page. Draw on page ${draft.pageNumber}.`, { type: "error" }); return; }
@@ -693,9 +710,13 @@ function PDFChecker({
       <section className="rr-viewer" aria-label="Document">
         <div className="rr-hint">{showChanges && figureDiff.status === "loading" ? figureDiff.note || "Comparing the figures…" : hint}</div>
         <div
-          className="rr-canvas"
+          className={`rr-canvas${mode === "hand" ? " panning" : ""}`}
           ref={col.canvasRef}
           onScroll={col.onScroll}
+          onPointerDown={onPanDown}
+          onPointerMove={onPanMove}
+          onPointerUp={onPanEnd}
+          onPointerCancel={onPanEnd}
           onMouseDown={(e) => {
             if (composingRef.current && !e.target.closest(".rr-pop") && !e.target.closest(".rr-page")) clickAway();
           }}
