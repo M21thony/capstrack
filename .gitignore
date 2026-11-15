@@ -58,6 +58,7 @@ storage/app/playwright-videos/
 /docs/
 /TODO.md
 /AGENTS.md
+/DEFENSE-REVIEWER.md
 /.github/skills/
 /tests/e2e/__screenshots__/
 .env.example

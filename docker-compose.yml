@@ -1,7 +1,8 @@
 # CapsTrack: four containers - system, db, ollama, storage.
-#   cp deploy/env.production.example .env   (fill it in, set APP_KEY, DB_PASSWORD, DB_ROOT_PASSWORD,
-#                                            SILO_ACCESS_KEY_ID, SILO_SECRET_ACCESS_KEY)
+#   Put the .env file in this folder (it sets APP_KEY, DB_PASSWORD, DB_ROOT_PASSWORD,
+#   SILO_ACCESS_KEY_ID, SILO_SECRET_ACCESS_KEY and the rest), then:
 #   docker compose up -d --build
+# The steps are in README.md.
 # On a laptop (WAMP holds port 80, .env is XAMPP's): keep Docker's DB passwords, APP_PORT=8080 and
 # APP_URL=http://localhost:8080 in .env.docker, then: docker compose --env-file .env.docker up -d
 services:
