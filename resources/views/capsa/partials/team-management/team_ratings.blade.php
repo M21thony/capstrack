@@ -105,8 +105,8 @@
   .tr-dlg[open]{display:flex;flex-direction:column}
   .tr-dlg .db{overflow:auto}
   dialog.tr-dlg.wide{width:min(1100px,calc(100% - 32px))}
-  .tr-dlg.cm{height:min(720px,calc(100dvh - 32px))}
-  .tr-dlg.cm .db{flex:1;min-height:0;overflow:hidden;gap:14px}
+  .tr-dlg.tr-cm{height:min(720px,calc(100dvh - 32px))}
+  .tr-dlg.tr-cm .db{flex:1;min-height:0;overflow:hidden;gap:14px}
   .tr-dlg .x{margin-left:auto;border:0;background:none;font-size:22px;line-height:1;color:var(--text3);cursor:pointer;width:32px;height:32px;border-radius:8px;flex:none}
   .tr-dlg .x:hover{background:var(--bg3);color:var(--text)}
   .tr-dlg .dh{display:flex;gap:12px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--border)}
@@ -174,14 +174,14 @@
     .tm-hub .tr-page .card,.tm-hub .tr-page .tr-r{flex:none;max-height:none}
     .tm-hub .tr-page .tscroll{max-height:60vh;max-height:60dvh}
     .tr-dlg .cm-cols,.tr-dlg .cm-top{grid-template-columns:minmax(0,1fr)}
-    .tr-dlg.cm{height:auto}
-    .tr-dlg.cm .db{overflow:auto}
+    .tr-dlg.tr-cm{height:auto}
+    .tr-dlg.tr-cm .db{overflow:auto}
     .tr-dlg .cm-pane{min-height:260px}
   }
   /* A phone: the tables keep their headers and scroll sideways in their box, and dialogs are full sheets. */
   @media (max-width:760px){
     .tm-hub .tr-page thead{display:table-header-group}
-    dialog.tr-dlg,dialog.tr-dlg.wide,dialog.tr-dlg.cm{width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0;margin:0}
+    dialog.tr-dlg,dialog.tr-dlg.wide,dialog.tr-dlg.tr-cm{width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0;margin:0}
     .tr-dlg .cm-when .seg{width:100%}
     .tr-dlg .cm-when .seg button{flex:1;white-space:normal}
   }
@@ -417,7 +417,7 @@
         <section class="cm-pane" id="f-list"><div class="cm-ph"><span class="no">2</span>${base ? 'Adding' : 'Students score each teammate on'}<span class="req" aria-hidden="true">*</span><span class="t2" id="cnt"></span></div>
          <div class="cm-scroll flush" id="sumt"></div><div class="e">Pick at least one activity on the left.</div></section>
        </div></div>
-      <div class="df"><span class="l" id="cm-sum"></span><button class="btn" type="button" data-close>Cancel</button><button class="btn btn-p" type="button" id="ok">${base ? 'Add activities' : 'Create rating'}</button></div>`, 'wide cm');
+      <div class="df"><span class="l" id="cm-sum"></span><button class="btn" type="button" data-close>Cancel</button><button class="btn btn-p" type="button" id="ok">${base ? 'Add activities' : 'Create rating'}</button></div>`, 'wide tr-cm');
 
     const drawMode = () => {
       if (base) return;
