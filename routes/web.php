@@ -89,7 +89,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
-// With files on MinIO there is no public/storage folder for nginx to serve,
+// With files on Silo there is no public/storage folder for nginx to serve,
 // so the same /storage/... links are answered here from the public bucket.
 if (config('filesystems.disks.public.driver') === 's3') {
     Route::get('storage/{path}', function (string $path) {

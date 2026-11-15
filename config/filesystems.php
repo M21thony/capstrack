@@ -2,7 +2,7 @@
 
 // FILES_ON_S3=true moves the two disks the app saves to ("local" for private
 // files, "public" for files anyone with the link may open) onto S3-compatible
-// storage such as MinIO, so the code that names them needs no change. Each
+// storage such as Silo, so the code that names them needs no change. Each
 // gets its own bucket: a public file is served from APP_URL/storage/..., and
 // a separate bucket keeps that address from ever reaching a private file.
 $s3 = [
