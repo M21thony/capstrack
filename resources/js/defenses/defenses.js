@@ -130,8 +130,15 @@ function readyStatus(t) {
   return `<div class="st warn" title="Doesn't stop scheduling. Follow it up before the defense.">${head}${others}</div>`;
 }
 
+/* A date does not clear what the team still owes: the tag stays until it is handed in or the defense is done. */
+function owedLine(t) {
+  if (t.outcome) return '';
+  const req = owed(t).find(b => b.key === 'req');
+  return req ? `<small class="owes" title="The team has a date, but this is still to be handed in before the defense.">⚠ ${esc(req.text)}</small>` : '';
+}
+
 function resultStatus(t) {
-  const more = [capaLine(t), awayLine(t), t.tries.length ? `<small title="${esc(t.tries.map(x => `${x.kind === 'cancelled' ? 'Cancelled' : 'Redefense'} ${fmtShort(x.date)}`).join(', '))}">${t.tries.length} earlier ${t.tries.length === 1 ? 'try' : 'tries'}</small>` : ''].join('');
+  const more = [capaLine(t), owedLine(t), awayLine(t), t.tries.length ? `<small title="${esc(t.tries.map(x => `${x.kind === 'cancelled' ? 'Cancelled' : 'Redefense'} ${fmtShort(x.date)}`).join(', '))}">${t.tries.length} earlier ${t.tries.length === 1 ? 'try' : 'tries'}</small>` : ''].join('');
   if (t.outcome) return `<div class="st ${t.passed ? 'ok' : t.outcome_tone === 'fail' ? 'bad' : 'warn'}">${esc(t.outcome)}${more}</div>`;
   const past = new Date(`${t.schedule.date}T${t.schedule.time}`) < new Date();
   return past ? `<div class="st bad">Awaiting result${t.panel_size ? `<small>${t.graded}/${t.panel_size} graded</small>` : ''}${more}</div>` : `<div class="st wait">Upcoming${more}</div>`;

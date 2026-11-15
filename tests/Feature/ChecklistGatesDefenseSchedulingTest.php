@@ -116,6 +116,35 @@ class ChecklistGatesDefenseSchedulingTest extends TestCase
         $this->assertArrayNotHasKey('Alpha', $this->owed(DefenseOutcome::PRE_PROPOSAL)->all());
     }
 
+    /**
+     * A date does not clear what is owed: the board still names the
+     * requirement for a team that is already scheduled, and the Scheduled
+     * list shows it under the team's status.
+     */
+    public function test_a_team_with_a_date_is_still_tagged_with_what_it_owes(): void
+    {
+        $team = $this->readyTeam('Alpha', DefenseOutcome::PRE_PROPOSAL);
+        $this->departmentChecklist($this->capsa);
+        $team->defenseSchedules()->first()->update([
+            'schedule_date' => '2027-03-15 09:00:00', 'end_date' => '2027-03-15 10:00:00', 'venue' => 'Mac Lab',
+        ]);
+
+        $row = collect($this->actingAs($this->admin, 'expert')
+            ->getJson(route('api.admin.panel_assignment.board', ['defense_type' => DefenseOutcome::PRE_PROPOSAL]))
+            ->assertOk()
+            ->json('data.teams'))->firstWhere('name', 'Alpha');
+
+        $this->assertNotNull($row['schedule'], 'the team has its date');
+        $owed = collect($row['blockers'])->firstWhere('key', 'req');
+        $this->assertStringContainsString('Signed Project Team Assignment Form', $owed['text']);
+        $this->assertTrue($owed['warn'], 'a warning, not something that takes the date away');
+
+        // The Scheduled list draws it: resultStatus() carries owedLine().
+        $script = file_get_contents(resource_path('js/defenses/defenses.js'));
+        $this->assertMatchesRegularExpression('/function resultStatus\(t\) \{\s+const more = \[[^\]]*owedLine\(t\)/', $script);
+        $this->assertStringContainsString("owed(t).find(b => b.key === 'req')", $script);
+    }
+
     public function test_the_title_defense_waits_for_everything_above_it_and_nothing_below(): void
     {
         $team = $this->readyTeam('Bravo', DefenseOutcome::TITLE_DEFENSE);

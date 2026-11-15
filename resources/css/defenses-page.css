@@ -166,6 +166,7 @@
 .dp .st.wait{color:var(--blue)}
 .dp .st.bad{color:var(--red)}
 .dp .st.warn{color:var(--amber)}
+.dp .st small.owes{color:var(--amber);font-weight:600}
 .dp .st.none{color:var(--gold-ink)}
 .dp .acts{display:flex;gap:6px;justify-content:flex-end;align-items:center}
 .dp .when b{display:block;white-space:nowrap}
