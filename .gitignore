@@ -55,6 +55,7 @@ storage/app/playwright-videos/
 /devImg/
 /.junie/
 /graphify-out/
+/docs/
 /jmeter-*
 /capstrack-zap*.html
 /undefined
