@@ -58,17 +58,15 @@ class RecruitmentController extends Controller
             return back()->withErrors(['error' => 'You already have a team, so you cannot publish a recruitment post.']);
         }
 
-        // What the post was tagged with: Create Post's six choices (Leader,
-        // Member, and Primary or Secondary of each member role). Anything else
-        // is dropped - it could never be assigned to whoever joins.
+        // What the post was tagged with: the member roles. Anything else is
+        // dropped - it could never be assigned to whoever joins.
         $tags = self::pickedTags($request);
 
         // The team roles behind those choices, which the join flow matches on.
         // The team roles in the order the student picked them.
         $roles = array_values(array_intersect(Recruitment::rolesForTags(self::pickedTags($request, true)), self::advertisableRoles()));
 
-        if ($tags === []) {
-            $message = 'Choose at least one role.';
+        if ($message = self::roleProblem($validated['recruitment_goal'], $tags)) {
 
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $message], 422);
@@ -97,7 +95,9 @@ class RecruitmentController extends Controller
             return back()->withErrors(['error' => Team::JOINING_CLOSED]);
         }
 
-        $recruitment = DB::transaction(function () use ($validated, $studentId, $roles, $tags): Recruitment {
+        $secondary = self::pickedSecondary($request);
+
+        $recruitment = DB::transaction(function () use ($validated, $studentId, $roles, $tags, $secondary): Recruitment {
             // If goal is build_a_team and team_name is provided, create team and link it
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
                 $team = Team::create([
@@ -125,6 +125,7 @@ class RecruitmentController extends Controller
                 'recruitment_goal' => $validated['recruitment_goal'],
                 'roles' => $roles,
                 'role_tags' => $tags,
+                'skills' => $secondary,
                 'looking_for' => $validated['looking_for'] ?? null,
                 'introduction' => $validated['introduction'] ?? null,
                 'member_count' => 5,
@@ -181,6 +182,37 @@ class RecruitmentController extends Controller
     }
 
     /**
+     * Why the roles picked cannot be posted, or null when they can.
+     *
+     * Someone looking for a team names the one role they will take - their
+     * Primary. A leader building a team names every role the team needs.
+     *
+     * @param  list<string>  $tags
+     */
+    private static function roleProblem(string $goal, array $tags): ?string
+    {
+        if ($tags === []) {
+            return $goal === 'find_a_team' ? 'Choose your primary role.' : 'Choose at least one role.';
+        }
+
+        return $goal === 'find_a_team' && count($tags) > 1 ? 'Choose one primary role only.' : null;
+    }
+
+    /**
+     * The Secondary skills the form sent, as a JSON list or a plain list in
+     * `secondary`. See Recruitment::secondarySkills().
+     *
+     * @return list<string>
+     */
+    private static function pickedSecondary(Request $request): array
+    {
+        $raw = $request->input('secondary');
+        $picked = is_string($raw) ? json_decode($raw, true) : $raw;
+
+        return Recruitment::secondarySkills(is_array($picked) ? $picked : []);
+    }
+
+    /**
      * The roles a recruitment post may ask for.
      *
      * The member roles, straight out of student_roles. Project Head is
@@ -211,14 +243,15 @@ class RecruitmentController extends Controller
 
         $tags = self::pickedTags($request);
 
-        if ($tags === []) {
-            throw ValidationException::withMessages(['roles' => 'Choose at least one role.']);
+        if ($message = self::roleProblem($validated['recruitment_goal'], $tags)) {
+            throw ValidationException::withMessages(['roles' => $message]);
         }
 
         $recruitment->update([
             'recruitment_goal' => $validated['recruitment_goal'],
             'roles' => array_values(array_intersect(Recruitment::rolesForTags(self::pickedTags($request, true)), self::advertisableRoles())),
             'role_tags' => $tags,
+            'skills' => self::pickedSecondary($request),
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,
             'member_count' => 5,

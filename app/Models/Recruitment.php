@@ -28,6 +28,7 @@ class Recruitment extends Model
         'recruitment_goal',
         'roles',
         'role_tags',
+        'skills',
         'looking_for',
         'introduction',
         'member_count',
@@ -38,6 +39,7 @@ class Recruitment extends Model
         return [
             'member_count' => 'integer',
             'role_tags' => 'array',
+            'skills' => 'array',
         ];
     }
 
@@ -65,43 +67,79 @@ class Recruitment extends Model
     }
 
     /**
-     * What Create Post offers, in the order it offers it. 'role' is the team
-     * role the choice stands for - what the join flow matches on - and null
-     * for Leader and Member, which name no particular seat.
+     * The Primary choices on Create Post, in the order offered: the role the
+     * student takes on the team. 'role' is the team role the choice stands
+     * for, which the join flow matches on.
      *
-     * @var array<string, array{label: string, role: ?string}>
+     * Project Head is the leader's and Programmer is everybody's, so neither
+     * is a choice.
+     *
+     * @var array<string, array{label: string, role: string}>
      */
     public const ROLE_OPTIONS = [
-        'leader' => ['label' => 'Leader', 'role' => null],
-        'member' => ['label' => 'Member', 'role' => null],
-        'nd_primary' => ['label' => 'Network Designer/UI Designer (Primary)', 'role' => 'Network Designer/UI Designer'],
-        'nd_secondary' => ['label' => 'Network Designer/UI Designer (Secondary)', 'role' => 'Network Designer/UI Designer'],
-        'qa_primary' => ['label' => 'QA Tester/Documentation (Primary)', 'role' => 'QA Tester/Documentation Writer'],
-        'qa_secondary' => ['label' => 'QA Tester/Documentation (Secondary)', 'role' => 'QA Tester/Documentation Writer'],
+        'nd' => ['label' => 'Network Designer/UI Designer', 'role' => 'Network Designer/UI Designer'],
+        'qa' => ['label' => 'QA Tester/Documentation', 'role' => 'QA Tester/Documentation Writer'],
+    ];
+
+    /**
+     * What older posts were tagged with, when each role came as "(Primary)"
+     * or "(Secondary)". Both read as the role itself now. Leader and Member
+     * named no seat and are no longer shown.
+     *
+     * @var array<string, string>
+     */
+    private const OLDER_TAGS = [
+        'nd_primary' => 'nd',
+        'nd_secondary' => 'nd',
+        'qa_primary' => 'qa',
+        'qa_secondary' => 'qa',
+    ];
+
+    /**
+     * The Secondary choices on Create Post: what else the student can give
+     * the team, beside their role. Kept short, and none of them repeats a
+     * Primary role (no "UI Design", "Testing" or "Documentation").
+     *
+     * @var list<string>
+     */
+    public const SECONDARY_SKILLS = [
+        'Web Development',
+        'Mobile Development',
+        'Database',
+        'IoT / Hardware',
+        'Data Analysis',
+        'AI / Machine Learning',
+        'Cybersecurity',
+        'Graphic Design',
+        'Research',
+        'Presentation',
     ];
 
     /**
      * What a form sent, as option keys - in the order offered, or with
      * $asPicked in the order the student picked them, which is the order the
-     * team roles behind them are kept in. A key, a label or a bare team role
-     * name (older forms, and the API) are all understood; a role name reads
-     * as its Primary. Anything else is dropped.
+     * team roles behind them are kept in. A key, a label, an older tag or a
+     * bare team role name (older forms, and the API) are all understood.
+     * Anything else is dropped.
      *
      * @param  array<int, mixed>  $picked
      * @return list<string>
      */
     public static function tagKeys(array $picked, bool $asPicked = false): array
     {
-        $byLabel = collect(self::ROLE_OPTIONS)->mapWithKeys(fn ($o, $key) => [mb_strtolower($o['label']) => $key]);
-        // A bare role name stands for that role's first choice - its Primary.
-        $byRole = collect(self::ROLE_OPTIONS)->filter(fn ($o) => $o['role'] !== null)
-            ->groupBy(fn ($o) => mb_strtolower($o['role']), preserveKeys: true)
-            ->map(fn ($group) => $group->keys()->first())->all();
+        $byName = [];
+        foreach (self::ROLE_OPTIONS as $key => $option) {
+            $byName[mb_strtolower($option['label'])] = $key;
+            $byName[mb_strtolower($option['role'])] = $key;
+            // The label an older post or client knew the choice by.
+            $byName[mb_strtolower($option['label'].' (Primary)')] = $key;
+            $byName[mb_strtolower($option['label'].' (Secondary)')] = $key;
+        }
 
-        $keys = collect($picked)->filter(fn ($v) => is_string($v))->map(function (string $v) use ($byLabel, $byRole) {
-            $lower = mb_strtolower(trim($v));
+        $keys = collect($picked)->filter(fn ($v) => is_string($v))->map(function (string $v) use ($byName) {
+            $v = trim($v);
 
-            return array_key_exists($v, self::ROLE_OPTIONS) ? $v : ($byLabel[$lower] ?? $byRole[$lower] ?? null);
+            return array_key_exists($v, self::ROLE_OPTIONS) ? $v : (self::OLDER_TAGS[$v] ?? $byName[mb_strtolower($v)] ?? null);
         })->filter()->unique()->values()->all();
 
         return $asPicked ? $keys : array_values(array_intersect(array_keys(self::ROLE_OPTIONS), $keys));
@@ -119,8 +157,19 @@ class Recruitment extends Model
     }
 
     /**
+     * What a form sent as Secondary, kept to the list and in its order.
+     *
+     * @param  array<int, mixed>  $picked
+     * @return list<string>
+     */
+    public static function secondarySkills(array $picked): array
+    {
+        return array_values(array_intersect(self::SECONDARY_SKILLS, array_filter($picked, 'is_string')));
+    }
+
+    /**
      * The post's tags as option keys. A post from before tags existed has
-     * only `roles`; each of those reads as its Primary.
+     * only `roles`.
      *
      * @return list<string>
      */
@@ -132,7 +181,7 @@ class Recruitment extends Model
     }
 
     /**
-     * The post's tags as they are shown.
+     * The post's roles as they are shown.
      *
      * @return list<string>
      */
@@ -144,12 +193,23 @@ class Recruitment extends Model
             return array_map(fn ($key) => self::ROLE_OPTIONS[$key]['label'], $this->tagKeyList());
         }
 
-        // A post from before the six choices: each role it names shows as its
-        // Primary when it is one of them, and as written when it is not - an
-        // old post asking for a "Frontend Developer" still says so.
+        // A post from before the choices: a role it names shows as the choice
+        // when it is one of them, and as written when it is not - an old post
+        // asking for a "Frontend Developer" still says so.
         return collect($this->roles)->filter(fn ($r) => is_string($r) && trim($r) !== '')
             ->map(fn (string $role) => ($key = self::tagKeys([$role])[0] ?? null) ? self::ROLE_OPTIONS[$key]['label'] : trim($role))
             ->unique()->values()->all();
+    }
+
+    /**
+     * The post's Secondary skills as they are shown. Skills saved before the
+     * short list (from the experts' catalogue) are not on it and are left out.
+     *
+     * @return list<string>
+     */
+    public function secondaryLabels(): array
+    {
+        return self::secondarySkills(is_array($this->skills) ? $this->skills : []);
     }
 
     /**

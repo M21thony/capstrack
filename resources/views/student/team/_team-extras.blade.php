@@ -28,6 +28,9 @@
       @if ($myRecruitment->tagLabels() !== [])
         <div class="ts-chips"><span class="ts-chips-k">Needs</span>@foreach ($myRecruitment->tagLabels() as $label)<span class="ts-chip">{{ $label }}</span>@endforeach</div>
       @endif
+      @if ($myRecruitment->secondaryLabels() !== [])
+        <div class="ts-chips"><span class="ts-chips-k">Secondary</span>@foreach ($myRecruitment->secondaryLabels() as $skill)<span class="ts-chip">{{ $skill }}</span>@endforeach</div>
+      @endif
     </section>
   @endif
 

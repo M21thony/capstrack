@@ -21,6 +21,7 @@
         $name, implode(', ', $recruit->tagLabels()), $recruit->looking_for ?? '', $ownerTeam->team_name ?? 'No Team',
         $ownerTeam->project_title ?? 'No project set', (string) $owner->student_number, false, $building ? 'Leader' : 'Individual',
         $owner->student_id, $ownerTeam->team_id ?? null, $owner->avatarUrl(), $recruit->introduction ?? '',
+        $recruit->secondaryLabels(),
     ];
   @endphp
   <article class="ts-card{{ $building ? ' is-building' : ' is-seeking' }}" data-goal="{{ $recruit->recruitment_goal }}">
@@ -44,7 +45,10 @@
     @if ($building && $recruit->roles)
       <div class="ts-chips"><span class="ts-chips-k">Needs</span>@foreach ($recruit->roles as $role)<span class="ts-chip">{{ str_replace('/', ' / ', $role) }}</span>@endforeach</div>
     @elseif (! $building && $recruit->tagLabels() !== [])
-      <div class="ts-chips"><span class="ts-chips-k">Roles</span>@foreach ($recruit->tagLabels() as $label)<span class="ts-chip">{{ str_replace('/', ' / ', $label) }}</span>@endforeach</div>
+      <div class="ts-chips"><span class="ts-chips-k">Primary</span>@foreach ($recruit->tagLabels() as $label)<span class="ts-chip">{{ str_replace('/', ' / ', $label) }}</span>@endforeach</div>
+    @endif
+    @if ($recruit->secondaryLabels() !== [])
+      <div class="ts-chips"><span class="ts-chips-k">Secondary</span>@foreach ($recruit->secondaryLabels() as $skill)<span class="ts-chip">{{ $skill }}</span>@endforeach</div>
     @endif
     <div class="ts-actions">
       <button type="button" class="ts-btn" onclick="viewPostDetails(this.closest('.ts-card'), ...{{ Js::from($details) }})">View post</button>

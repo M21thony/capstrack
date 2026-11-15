@@ -561,7 +561,7 @@ class RecruitmentTest extends TestCase
         $response = $this->put("/recruitment/{$recruitment->recruitment_id}", [
             'recruitment_goal' => 'find_a_team',
             'introduction' => 'Updated introduction',
-            'roles' => ['QA Tester/Documentation Writer', 'Network Designer/UI Designer'],
+            'roles' => ['Network Designer/UI Designer'],
         ]);
 
         $response->assertRedirect();
@@ -570,7 +570,7 @@ class RecruitmentTest extends TestCase
         $recruitment->refresh();
         $this->assertEquals('find_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Updated introduction', $recruitment->introduction);
-        $this->assertEquals(['QA Tester/Documentation Writer', 'Network Designer/UI Designer'], $recruitment->roles);
+        $this->assertEquals(['Network Designer/UI Designer'], $recruitment->roles);
     }
 
     public function test_student_can_update_build_a_team_post(): void

@@ -37,8 +37,8 @@
       <div class="nt-mypost" id="my-post-section">
         <span class="nt-mypost-goal">{{ $postBuilds ? 'Building a team' : 'Looking for a team' }}</span>
         @if ($postText)<p>{{ $postText }}</p>@endif
-        @if ($myRecruitment->tagLabels() !== [])
-          <div class="nt-mypost-tags">@foreach ($myRecruitment->tagLabels() as $label)<span>{{ $label }}</span>@endforeach</div>
+        @if ($myRecruitment->tagLabels() !== [] || $myRecruitment->secondaryLabels() !== [])
+          <div class="nt-mypost-tags">@foreach ($myRecruitment->tagLabels() as $label)<span>{{ $label }}</span>@endforeach @foreach ($myRecruitment->secondaryLabels() as $skill)<span>{{ $skill }}</span>@endforeach</div>
         @endif
       </div>
     @endif

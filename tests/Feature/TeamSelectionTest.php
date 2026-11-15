@@ -92,15 +92,17 @@ class TeamSelectionTest extends TestCase
         $this->assertCount(3, $feed->page('find_a_team')->items());
     }
 
-    public function test_a_card_of_someone_looking_for_a_team_names_their_primary_and_secondary_role(): void
+    public function test_a_card_of_someone_looking_for_a_team_names_their_primary_role_and_secondary_skills(): void
     {
         $viewer = $this->classmate();
-        Recruitment::where('student_id', $this->seeker()->student_id)->first()->update(['role_tags' => ['nd_primary', 'qa_secondary']]);
+        Recruitment::where('student_id', $this->seeker()->student_id)->first()
+            ->update(['role_tags' => ['nd'], 'skills' => ['Web Development', 'Research']]);
 
         $html = $this->actingAs($viewer)->getJson(route('student.team.posts', ['goal' => 'find_a_team']))->json('html');
 
-        $this->assertStringContainsString('Network Designer / UI Designer (Primary)', $html);
-        $this->assertStringContainsString('QA Tester / Documentation (Secondary)', $html);
+        $this->assertMatchesRegularExpression('/Primary<\/span><span class="ts-chip">Network Designer \/ UI Designer</', $html);
+        $this->assertMatchesRegularExpression('/Secondary<\/span><span class="ts-chip">Web Development<\/span><span class="ts-chip">Research</', $html);
+        $this->assertStringNotContainsString('(Primary)', $html);
     }
 
     public function test_load_more_returns_the_next_eight_as_cards(): void

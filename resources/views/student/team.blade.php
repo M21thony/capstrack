@@ -19,6 +19,9 @@
   .custom-tag-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--blue-bg); color: var(--blue); font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(29,78,216,0.25); animation: tagFadeIn 0.15s ease-in-out; }
   .custom-tag-chip-remove { display: inline-flex; align-items: center; justify-content: center; background: rgba(29,78,216,0.15); border: none; color: var(--blue); border-radius: 50%; width: 14px; height: 14px; cursor: pointer; font-size: 10px; padding: 0; transition: background 0.1s; }
   .custom-tag-chip-remove:hover { background: rgba(29,78,216,0.25); }
+  .secondary-picks { display: flex; flex-wrap: wrap; gap: 6px; }
+  .secondary-pick { font: inherit; font-size: 12px; font-weight: 500; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); cursor: pointer; }
+  .secondary-pick[aria-pressed="true"] { background: var(--blue-bg); color: var(--blue); border-color: rgba(29,78,216,0.25); }
   #editTeamModal .edit-team-save-btn { background: var(--bg3) !important; color: var(--text) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
   #editTeamModal .edit-team-save-btn:hover { background: var(--bg4) !important; transform: none !important; box-shadow: none !important; }
   #editTeamModal .edit-team-cancel-btn { background: var(--navy-dark) !important; color: #fff !important; border: 1px solid var(--navy-dark) !important; }
@@ -498,6 +501,11 @@
               <div id="detail-skills" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
           </div>
 
+          <div id="detail-secondary-block" style="margin-bottom: 18px; display: none;">
+              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.5px;">Secondary</div>
+              <div id="detail-secondary" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+          </div>
+
           <button class="btn-primary" style="width: 100%;" id="action-btn-text">Send Request</button>
       </div>
   </div>
@@ -528,18 +536,23 @@
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Short Introduction</label>
         <textarea id="individual-intro" rows="3" placeholder="Briefly introduce what you contribute to the team..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; resize: vertical; margin-bottom: 16px; box-sizing: border-box;"></textarea>
       </div>
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Roles</label>
-      {{-- What the post names decides what the joining student ends up as:
-           one role is given to them on accept, two or more and they pick
-           between exactly these. --}}
-      <p style="margin:-2px 0 8px;font-size:11px;color:var(--text3);line-height:1.5">
-        Leader, Member, or a role marked Primary or Secondary. Name one role and whoever joins becomes that; name both and they choose.
-      </p>
-      <div class="tag-wrapper-box" style="position: relative; margin-bottom: 25px;">
+      <label id="roles-label" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Roles needed</label>
+      {{-- A leader names the roles the team needs: one role is given to
+           whoever joins on accept, both and they pick between them. Someone
+           looking for a team names the one role they will take. --}}
+      <p id="roles-hint" style="margin:-2px 0 8px;font-size:11px;color:var(--text3);line-height:1.5"></p>
+      <div class="tag-wrapper-box" style="position: relative; margin-bottom: 16px;">
         <div class="tag-input-field" id="tag-container" onclick="document.getElementById('tag-search-input').focus()">
           <input type="text" id="tag-search-input" placeholder="" oninput="filterTagSuggestions()" onfocus="filterTagSuggestions()">
         </div>
         <div class="tag-suggestions-box" id="tag-suggestions" style="display: none;"></div>
+      </div>
+      <label id="secondary-label" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Secondary <span style="font-weight:500;text-transform:none">(optional)</span></label>
+      <p id="secondary-hint" style="margin:-2px 0 8px;font-size:11px;color:var(--text3);line-height:1.5"></p>
+      <div class="secondary-picks" id="secondary-picks" role="group" aria-labelledby="secondary-label" style="margin-bottom: 25px;">
+        @foreach (\App\Models\Recruitment::SECONDARY_SKILLS as $skill)
+          <button type="button" class="secondary-pick" data-skill="{{ $skill }}" aria-pressed="false" onclick="toggleSecondary(this.dataset.skill)">{{ $skill }}</button>
+        @endforeach
       </div>
       <div class="modal-actions modal-actions--dual" style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
         <form method="POST" action="{{ route('recruitment.store') }}" style="width:100%;" id="recruitment-form" onsubmit="publishPost(event)">
@@ -554,6 +567,7 @@
                read from the setting. --}}
           <input type="hidden" name="member_count" id="member-count-input" value="{{ $memberCount }}">
           <input type="hidden" name="tags" id="tags-hidden-input" value="">
+          <input type="hidden" name="secondary" id="secondary-hidden-input" value="[]">
           <button type="submit" class="btn-primary" style="width: 100%; background: var(--blue-bg); color: var(--blue); border: 1.5px solid rgba(29,78,216,0.25); box-shadow: none;" id="form-submit-btn">Publish Post</button>
         </form>
         <button class="google-btn" style="width:100%;border:none;background:transparent;color:var(--text);" onclick="closePostModal()">Cancel</button>
@@ -1126,10 +1140,13 @@ const hasPendingRequest = @json($hasPendingRequest ?? false);
 const VIEWER_IS_LEADER = @json((bool) ($isLeader ?? false));
 const VIEWER_TEAM_FULL = @json((bool) ($isTeamFull ?? false));
 let activeTags = [];
+// The Secondary skills picked on Create Post (Recruitment::SECONDARY_SKILLS).
+let activeSecondary = [];
 let isEditing = false;
 let editingId = null;
-// Create Post's six choices: Leader, Member, and Primary or Secondary of each
-// member role (Recruitment::ROLE_OPTIONS). activeTags holds their keys.
+// Create Post's roles: the member roles (Recruitment::ROLE_OPTIONS).
+// activeTags holds their keys - one for someone looking for a team (their
+// Primary), one or more for a leader (what the team needs).
 @php $roleOptionList = collect(\App\Models\Recruitment::ROLE_OPTIONS)->map(fn ($o, $key) => ['key' => $key, 'label' => $o['label']])->values(); @endphp
 const roleOptions = @json($roleOptionList, JSON_UNESCAPED_SLASHES);
 
@@ -2067,7 +2084,10 @@ function openEditModal() {
     }
 
     activeTags = @json($myRecruitment->tagKeyList());
+    if (!isLeader) activeTags = activeTags.slice(0, 1);
     renderActiveTags();
+    activeSecondary = @json($myRecruitment->secondaryLabels(), JSON_UNESCAPED_SLASHES);
+    renderSecondary();
 
     syncRecruitmentSelectLabels();
     document.getElementById('postModal').classList.add('active');
@@ -2090,6 +2110,8 @@ function resetPostModal() {
     document.getElementById('individual-intro').value = '';
     activeTags = [];
     renderActiveTags();
+    activeSecondary = [];
+    renderSecondary();
     document.getElementById('post-goal').value = 'leader';
     updateModalUI();
 }
@@ -2142,7 +2164,7 @@ function sendInviteOrRequest(receiverId, teamId, type) {
     });
 }
 
-function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitle, studentNumber, isOwner, type, postOwnerId, postOwnerTeamId, avatarUrl, introduction) {
+function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitle, studentNumber, isOwner, type, postOwnerId, postOwnerTeamId, avatarUrl, introduction, secondary) {
     const modal = document.getElementById('detailModal');
 
     const goalLabelEl = cardEl.querySelector('.goal-label');
@@ -2288,6 +2310,19 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
         skillContainer.innerHTML = '';
     }
 
+    // Secondary skills come from a fixed list, so they are safe to write as they are.
+    const secondaryList = Array.isArray(secondary) ? secondary : [];
+    const secondaryContainer = document.getElementById('detail-secondary');
+    secondaryContainer.textContent = '';
+    secondaryList.forEach(function (s) {
+        const tag = document.createElement('span');
+        tag.className = 'expertise-tag';
+        tag.style.cssText = 'margin:0; font-size:10px';
+        tag.textContent = s;
+        secondaryContainer.appendChild(tag);
+    });
+    document.getElementById('detail-secondary-block').style.display = secondaryList.length ? 'block' : 'none';
+
     modal.classList.add('active');
 }
 
@@ -2321,9 +2356,34 @@ function updateModalUI() {
     document.getElementById('leader-fields').style.display = isLeader && !closedMsg ? 'block' : 'none';
     document.getElementById('individual-fields').style.display = !isLeader && !closedMsg ? 'block' : 'none';
     document.getElementById('recruitment-goal-input').value = isLeader ? 'build_a_team' : 'find_a_team';
-    
+
+    document.getElementById('roles-label').textContent = isLeader ? 'Roles needed' : 'Primary role';
+    document.getElementById('roles-hint').textContent = isLeader
+        ? 'The roles your team still needs. Name one and whoever joins becomes that; name both and they choose.'
+        : 'The one role you will take on the team.';
+    document.getElementById('secondary-hint').textContent = isLeader
+        ? 'Other skills that would help your team. Pick any that apply.'
+        : 'What else you can give the team. Pick any that apply.';
+
     activeTags = [];
     renderActiveTags();
+}
+
+// Someone looking for a team has one Primary role; a leader may need several.
+function oneRoleOnly() {
+    return document.getElementById('post-goal').value !== 'leader';
+}
+
+function toggleSecondary(skill) {
+    activeSecondary = activeSecondary.includes(skill) ? activeSecondary.filter(s => s !== skill) : activeSecondary.concat(skill);
+    renderSecondary();
+}
+
+function renderSecondary() {
+    document.querySelectorAll('#secondary-picks .secondary-pick').forEach(function (btn) {
+        btn.setAttribute('aria-pressed', activeSecondary.includes(btn.dataset.skill) ? 'true' : 'false');
+    });
+    document.getElementById('secondary-hidden-input').value = JSON.stringify(activeSecondary);
 }
 
   syncRecruitmentSelectLabels();
@@ -2356,7 +2416,10 @@ function roleLabel(key) {
 }
 
 function addTagToken(key) {
-    if (!activeTags.includes(key)) {
+    if (oneRoleOnly()) {
+        // Picking another Primary replaces the one already picked.
+        activeTags = [key];
+    } else if (!activeTags.includes(key)) {
         activeTags.push(key);
     }
     document.getElementById('tag-search-input').value = '';
@@ -2421,7 +2484,7 @@ function publishPost(event) {
     }
     if (activeTags.length === 0) {
         event.preventDefault();
-        showToast('Choose at least one role.', 'error');
+        showToast(oneRoleOnly() ? 'Choose your primary role.' : 'Choose at least one role.', 'error');
         return;
     }
     const goal = document.getElementById('post-goal').value;
@@ -2457,6 +2520,7 @@ function publishPost(event) {
     }
     document.getElementById('member-count-input').value = {{ $memberCount }};
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
+    document.getElementById('secondary-hidden-input').value = JSON.stringify(activeSecondary);
 
     if (isEditing) {
         event.preventDefault();
