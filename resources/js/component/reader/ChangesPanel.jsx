@@ -589,6 +589,8 @@ export default function ChangesPanel({
                             : <span className="rr-tag">Highlighted text</span>}
                           <span className={`rr-tag ${f.tone || ""}`}>{f.tone === "del" ? "Removed" : f.tone ? "Changed" : r.target && !LOST.includes(r.foundBy) ? "No change" : "Not found"}</span>
                           <span className="rr-where">p.{r.page_number} on {base?.round}</span>
+                          {status === "fixed" && <span className="rr-st ok">✓ Fixed</span>}
+                          {status === "not_fixed" && <span className="rr-st warn">○ Not yet</span>}
                         </div>
                         {isFigureRemark(r) && <b className="rr-figname">{figureTitle(r)}</b>}
                         <div className="rr-t">{r.text}</div>
