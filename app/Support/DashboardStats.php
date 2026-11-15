@@ -116,6 +116,21 @@ final class DashboardStats
             ->selectRaw('school_year, count(distinct student_id) as n')
             ->groupBy('school_year')->orderBy('school_year')->pluck('n', 'school_year');
 
+        // The chart: one point per semester, since a student may drop or not
+        // enrol in the next one. A row with no term shows as its year alone.
+        $perSemester = StudentSchoolYear::withoutGlobalScope(StudentSchoolYear::ACTIVE_TERM_SCOPE)
+            ->leftJoin('terms', 'terms.term_id', '=', 'student_s_y.term_id')
+            ->whereNotNull('student_s_y.school_year')
+            ->whereIn('student_s_y.student_id', Student::select('student_id'))
+            ->selectRaw('student_s_y.school_year as school_year, terms.semester as semester, count(distinct student_s_y.student_id) as n')
+            ->groupBy('student_s_y.school_year', 'terms.semester')
+            ->orderBy('student_s_y.school_year')->orderBy('terms.semester')
+            ->toBase()->get()
+            ->map(fn ($row) => [
+                'label' => $row->school_year.($row->semester ? ' · '.(new \App\Models\Term(['semester' => $row->semester]))->semesterLabel() : ''),
+                'value' => (int) $row->n,
+            ])->all();
+
         // Active means enrolled this school year.
         $students = Student::count();
         $year = \App\Models\Term::currentSchoolYear() ?: $perYear->keys()->last();
@@ -128,7 +143,7 @@ final class DashboardStats
             'students' => $students,
             'active' => $active,
             'inactive' => $students - $active,
-            'studentsByYear' => $perYear->map(fn ($n, $label) => ['label' => (string) $label, 'value' => (int) $n])->values()->all(),
+            'studentsByYear' => $perSemester,
             'teams' => (clone $teams)->count(),
             'verifiedTeams' => (clone $teams)->where('is_confirmed', true)->count(),
             'experts' => $experts->count(),

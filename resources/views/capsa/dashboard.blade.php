@@ -230,7 +230,7 @@
         $k = $ad['kpis'];
         $fee = $a['fees'];
 
-        // Students per school year as bars. The axis has three steps, each a round
+        // Students per semester as a line. The axis has three steps, each a round
         // 1, 2 or 5 times a power of ten, the smallest whose top fits the tallest year.
         $series = $a['studentsByYear'];
         $years = count($series);
@@ -301,7 +301,7 @@
                 <div class="ad-chart">
                   <div class="ad-axis"><span>{{ $step * 3 }}</span><span>{{ $step * 2 }}</span><span>{{ $step }}</span><span>0</span></div>
                   @php
-                    // One point per school year, centred over its label below.
+                    // One point per semester, centred over its label below.
                     $pts = collect($series)->values()->map(fn ($row, $i) => [round(($i + 0.5) / $years * 100, 2), round(100 - $row['value'] / ($step * 3) * 100, 2), $row['value']]);
                     $line = $pts->map(fn ($p) => $p[0].','.$p[1])->implode(' ');
                   @endphp

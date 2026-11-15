@@ -115,6 +115,23 @@ class DashboardSummaryTest extends TestCase
         $this->assertSame([['label' => '2026-2027', 'value' => 1]], $stats['studentsByYear']);
     }
 
+    public function test_the_students_chart_has_a_point_per_semester(): void
+    {
+        $admin = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]);
+        [$stays, $drops] = [Student::factory()->withCompleteProfile()->create(), Student::factory()->withCompleteProfile()->create()];
+        $term = fn (int $sem) => \App\Models\Term::firstOrCreate(['school_year' => '2026-2027', 'semester' => $sem, 'capstone_stage' => $sem])->term_id;
+        [$first, $second] = [$term(1), $term(2)];
+
+        foreach ([[$stays, $first], [$drops, $first], [$stays, $second]] as [$student, $termId]) {
+            DB::table('student_s_y')->insert(['student_id' => $student->student_id, 'school_year' => '2026-2027', 'term_id' => $termId]);
+        }
+
+        $this->assertSame(
+            [['label' => '2026-2027 · 1st sem', 'value' => 2], ['label' => '2026-2027 · 2nd sem', 'value' => 1]],
+            app(DashboardStats::class)->admin($admin)['studentsByYear'],
+        );
+    }
+
     public function test_an_expert_sees_their_own_numbers_as_counts(): void
     {
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'max_teams' => 4]);
