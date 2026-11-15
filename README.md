@@ -112,6 +112,20 @@ docker compose up -d --build
 
 Database changes are applied by themselves on start. Data is kept.
 
+### On a laptop that also has XAMPP or WAMP
+
+There the `.env` file belongs to XAMPP, so Docker's settings are kept in `.env.docker`
+(Docker's database passwords, `APP_PORT=8080` and `APP_URL=http://localhost:8080`).
+Always name that file when starting or updating:
+
+```bash
+docker compose --env-file .env.docker up -d --build
+```
+
+Without it the system starts with XAMPP's database settings and keeps restarting
+("Access denied for user 'root'"). Running the command above again fixes it. Data is kept.
+The system then opens at http://localhost:8080.
+
 ## Backup
 
 The data lives in Docker volumes: `db-data` (database), `storage-data` (uploaded files),
