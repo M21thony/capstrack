@@ -26,7 +26,7 @@ class ReportTable extends Model
         'finalgrade' => 'Final Defense average', 'finalscores' => 'Final Defense score per panelist', 'finalverdict' => 'Final Defense verdict',
         'avggrade' => 'Average of all defenses',
         'date' => 'Defense date', 'time' => 'Defense time', 'room' => 'Room', 'chair' => 'Panel chair', 'panel' => 'Panel members',
-        'fee' => 'Fee paid (PHP)', 'orno' => 'OR number', 'paidon' => 'Payment checked on', 'receiptstatus' => 'Receipt status', 'paid' => 'Members paid',
+        'fee' => 'Fee paid (PHP)', 'orno' => 'OR number', 'paidon' => 'Payment checked on', 'receiptstatus' => 'Receipt status', 'paid' => 'Students paid',
         'expert' => 'Expert', 'email' => 'Email', 'role' => 'Expert role', 'load' => 'Teams assigned',
     ];
 
@@ -46,7 +46,7 @@ class ReportTable extends Model
     /** Ready-made reports on Reports Home. */
     public const TEMPLATES = [
         ['key' => 'progress', 'name' => 'Team progress', 'group' => 'Teams', 'description' => 'One line per team: current milestone, requirements completed, overdue items.', 'mode' => 'teams', 'fields' => ['team', 'course', 'section', 'title', 'progress', 'completed', 'overdue']],
-        ['key' => 'master', 'name' => 'Team master list', 'group' => 'Teams', 'description' => 'One line per team: members, project title, CaPA, consultant, grammarian.', 'mode' => 'teams', 'fields' => ['team', 'course', 'section', 'student', 'title', 'capa', 'consultant', 'grammarian']],
+        ['key' => 'master', 'name' => 'Team master list', 'group' => 'Teams', 'description' => 'One line per team: students and their student IDs, project title, CaPA, consultant, grammarian.', 'mode' => 'teams', 'fields' => ['team', 'course', 'section', 'id', 'student', 'title', 'capa', 'consultant', 'grammarian']],
         ['key' => 'titledefense', 'name' => 'Title Defense scores', 'group' => 'Defenses', 'description' => 'One line per team: each panelist\'s score, the average, and the verdict.', 'mode' => 'teams', 'fields' => ['team', 'course', 'section', 'titlescores', 'titlegrade', 'titleverdict']],
         ['key' => 'results', 'name' => 'Defense results', 'group' => 'Defenses', 'description' => 'One line per team: its latest defense, the panel average, and the verdict.', 'mode' => 'teams', 'fields' => ['team', 'course', 'section', 'defense', 'score', 'verdict']],
         ['key' => 'fees', 'name' => 'Fee collection', 'group' => 'Teams', 'description' => 'One line per student: amount paid, OR number, date checked, receipt status.', 'mode' => 'students', 'fields' => ['id', 'student', 'team', 'course', 'section', 'fee', 'orno', 'paidon', 'receiptstatus']],
