@@ -7,7 +7,7 @@ use App\Models\ChecklistMilestone;
 use App\Models\Deliverable;
 use App\Models\TeamRatingForm;
 use App\Models\TeamRatingItem;
-use App\Support\PeerRatingRubric;
+use App\Models\TeamRatingRubric;
 use App\Support\TableWorkbook;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,6 +44,8 @@ class TeamRatingController extends Controller
             'sections' => array_values(array_unique($data['sections'])),
             'follows_checklist' => $data['follows_checklist'],
             'days_to_rate' => $data['days_to_rate'],
+            // Its own copy of the rubric in use, so a later edit leaves this rating as it was made.
+            'rubric' => TeamRatingRubric::inUse()?->asRubric()->toArray(),
         ]);
         $form->setRelation('items', collect($items)->map(fn ($i) => new TeamRatingItem($i)));
         $form->created_at = now();
@@ -131,7 +133,7 @@ class TeamRatingController extends Controller
             foreach ($form->teams() as $t) {
                 foreach ($t['members'] as $s) {
                     $mine = $results[$s->student_id] ?? [];
-                    $pct = TeamRatingForm::percentFor($mine);
+                    $pct = $form->percentFor($mine);
                     $rows[] = [
                         $t['team']->team_name,
                         $t['section'],
@@ -145,7 +147,7 @@ class TeamRatingController extends Controller
 
             $sheet = TableWorkbook::build(
                 $form->name,
-                implode(', ', $form->sections).' · '.$form->opensOn()->format('M j').' to '.$form->dueOn()->format('M j, Y').' · each activity out of '.PeerRatingRubric::MAX,
+                implode(', ', $form->sections).' · '.$form->opensOn()->format('M j').' to '.$form->dueOn()->format('M j, Y').' · each activity out of '.$form->rubric()->max(),
                 ['Team', 'Section', 'Student', ...$form->items->pluck('label')->all(), 'Rating %', 'Submitted'],
                 $rows,
             );

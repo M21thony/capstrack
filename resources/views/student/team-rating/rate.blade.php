@@ -150,17 +150,17 @@
               <div>{{ $current->s_role_name ?: 'Member' }} · teammate {{ $idx + 1 }} of {{ $mates->count() }} · <span class="trr-req">*</span> every score is required</div>
             </div>
             <button type="button" class="trr-btn" id="trr-rub-open">View full rubric</button>
-            <div class="trr-tots" id="trr-tots" aria-label="Totals out of {{ PeerRatingRubric::MAX }}">
+            <div class="trr-tots" id="trr-tots" aria-label="Totals out of {{ $rubric->max() }}">
               @foreach ($items as $item)
                 @php $p = $picks[$item->id]; @endphp
-                <div><span>{{ $item->label }}</span><b data-tot="{{ $item->id }}">{{ PeerRatingRubric::isComplete($p) ? array_sum($p) : '—' }}</b></div>
+                <div><span>{{ $item->label }}</span><b data-tot="{{ $item->id }}">{{ $rubric->complete($p) ? array_sum($p) : '—' }}</b></div>
               @endforeach
             </div>
           </div>
 
           <div class="trr-list" id="trr-list">
             <div class="mx mx-h" aria-hidden="true"><span>Activity</span>@foreach (PeerRatingRubric::LEVELS as $v => $w)<span><b>{{ $v }}</b>{{ $w }}</span>@endforeach</div>
-            @foreach (array_keys(PeerRatingRubric::CRITERIA) as $ci => $crit)
+            @foreach ($rubric->names() as $ci => $crit)
               <div class="trr-crit" id="trr-c{{ $ci }}">
                 <h3><span class="n">{{ $ci + 1 }}</span>{{ $crit }}<span class="trr-req" aria-hidden="true">*</span><span class="err" hidden>Score every activity</span></h3>
                 @foreach ($items as $item)
@@ -203,7 +203,7 @@
       <table>
         <thead><tr><th>Criteria</th>@foreach (PeerRatingRubric::LEVELS as $v => $w)<th>{{ $w }} ({{ $v }})</th>@endforeach</tr></thead>
         <tbody>
-          @foreach (PeerRatingRubric::CRITERIA as $crit => $descs)
+          @foreach ($rubric->criteria() as $crit => $descs)
             <tr><td>{{ $crit }}</td>@foreach ($descs as $d)<td>{{ $d }}</td>@endforeach</tr>
           @endforeach
         </tbody>
@@ -227,7 +227,7 @@ document.querySelectorAll('.nav-item').forEach(function (el) {
 });
 
 (function () {
-  var N = {{ count(PeerRatingRubric::CRITERIA) }}, NEED = {{ $need }};
+  var N = {{ $rubric->count() }}, NEED = {{ $need }};
   var picks = @json($picks);
   var url = @json(route('student.team_rating.draft', [$form, $current->student_id]));
   var csrf = document.querySelector('meta[name="csrf-token"]').content;

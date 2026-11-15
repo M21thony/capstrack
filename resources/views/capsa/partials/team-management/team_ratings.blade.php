@@ -4,8 +4,10 @@
 @include('capsa.partials.team-management._milestone_kit')
 
 @php
-  $max = \App\Support\PeerRatingRubric::MAX;
-  $criteria = array_keys(\App\Support\PeerRatingRubric::CRITERIA);
+  // The rubric new ratings are made with. A rating already made keeps its own copy.
+  $rubricInUse = \App\Models\TeamRatingRubric::inUse()?->asRubric() ?? \App\Support\PeerRatingRubric::default();
+  $maxes = $ratings->map(fn (array $r) => $r['form']->rubric()->max())->unique()->sort()->values();
+  $rubricJs = fn (\App\Support\PeerRatingRubric $rubric) => ['name' => $rubric->name, 'criteria' => $rubric->criteria(), 'max' => $rubric->max()];
   $name = fn ($s) => trim($s->f_name.' '.$s->l_name);
 
   // What the rows and the dialogs need about each rating, worked out once.
@@ -243,7 +245,7 @@
   <div class="card tr-a">
     <div class="tr-ch">
       <h2>All students</h2>
-      <span class="t2">Each score is the average of what teammates gave them, out of {{ $max }}.</span>
+      <span class="t2">Each score is the average of what teammates gave them, out of {{ $maxes->isEmpty() ? $rubricInUse->max() : $maxes->join(', ', ' or ') }}@if ($maxes->count() > 1) (each rating has its own rubric)@endif.</span>
     </div>
     @if ($rows->isEmpty() || $teams->isEmpty())
       <div class="empty">Scores show here once a rating opens and students submit.</div>
@@ -277,12 +279,12 @@
                     @php
                       $in = isset($r['teams'][$teamId]) && $r['status'] !== 'scheduled';
                       $mine = $in ? ($r['results'][$sid] ?? []) : [];
-                      $pct = \App\Models\TeamRatingForm::percentFor($mine);
+                      $pct = $r['form']->percentFor($mine);
                     @endphp
                     @foreach ($r['form']->items as $item)
                       @php $c = $mine[$item->id] ?? null; @endphp
                       @if ($c)
-                        <td @class(['num', 'gs' => $loop->first, 'red b' => $c['avg'] < $max / 2])><button type="button" class="tr-sc" data-who="{{ $name($s) }}" data-what="{{ $r['form']->name }} · {{ $item->label }}" data-n="{{ $c['n'] }}" data-avg="{{ number_format($c['avg'], 1) }}" data-c="{{ json_encode(array_values($c['criteria'])) }}">{{ number_format($c['avg'], 1) }}</button></td>
+                        <td @class(['num', 'gs' => $loop->first, 'red b' => $c['avg'] < $r['form']->rubric()->max() / 2])><button type="button" class="tr-sc" data-form="{{ $r['form']->id }}" data-who="{{ $name($s) }}" data-what="{{ $r['form']->name }} · {{ $item->label }}" data-n="{{ $c['n'] }}" data-avg="{{ number_format($c['avg'], 1) }}" data-c="{{ json_encode(array_values($c['criteria'])) }}">{{ number_format($c['avg'], 1) }}</button></td>
                       @else
                         <td @class(['num muted', 'gs' => $loop->first])>—</td>
                       @endif
@@ -305,7 +307,9 @@
 <script nonce="{{ Vite::cspNonce() }}">
 (() => {
   const TR = @json($js);
-  const RUBRIC = @json(\App\Support\PeerRatingRubric::CRITERIA);
+  // The rubric in use for new ratings, and each rating's own copy by its id.
+  const RUBRIC_IN_USE = @json($rubricJs($rubricInUse));
+  const RUBRICS = @json($ratings->mapWithKeys(fn (array $r) => [$r['form']->id => $rubricJs($r['form']->rubric())]));
   const LEVELS = @json(\App\Support\PeerRatingRubric::LEVELS);
   const dlg = document.getElementById('tr-dlg');
   const $ = s => dlg.querySelector(s);
@@ -334,9 +338,9 @@
   }
 
   function rubric() {
-    open(head("Member's Participation Rubric", 'Each criterion gets 10, 7, 5, 3 or 1 point, for every activity the rating covers.') +
+    open(head(esc(RUBRIC_IN_USE.name), 'The rubric new ratings are made with. Each criterion gets 10, 7, 5, 3 or 1 point, for every activity the rating covers. Change it on Grading Rubrics.') +
       `<div class="db"><table class="rub"><thead><tr><th>Criteria</th>${Object.entries(LEVELS).sort((a, b) => b[0] - a[0]).map(([v, w]) => `<th>${esc(w)} (${v})</th>`).join('')}</tr></thead><tbody>
-      ${Object.entries(RUBRIC).map(([c, ds]) => `<tr><td>${esc(c)}</td>${ds.map(d => `<td>${esc(d)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      ${Object.entries(RUBRIC_IN_USE.criteria).map(([c, ds]) => `<tr><td>${esc(c)}</td>${ds.map(d => `<td>${esc(d)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
       <div class="df"><button class="btn btn-p" type="button" data-close>Close</button></div>`, 'wide');
   }
 
@@ -518,13 +522,14 @@
   }
 
   const R = id => TR.ratings[id];
-  // One score, opened up: what the teammates gave on each of the 7 criteria.
+  // One score, opened up: what the teammates gave on each criterion of that rating's rubric.
   function score(d) {
     const pts = JSON.parse(d.c);
+    const own = RUBRICS[d.form] || RUBRIC_IN_USE;
     open(head(esc(d.who), `${esc(d.what)} · rated by ${plural(+d.n, 'teammate', 'teammates')}`) +
       `<div class="db"><table class="rub sc"><thead><tr><th>Criteria</th><th>Average, out of 10</th></tr></thead><tbody>
-      ${Object.keys(RUBRIC).map((c, i) => `<tr><td>${esc(c)}</td><td>${(+pts[i]).toFixed(1)}</td></tr>`).join('')}
-      <tr><td><b>Total</b></td><td><b>${esc(d.avg)} / {{ $max }}</b></td></tr></tbody></table></div>
+      ${Object.keys(own.criteria).map((c, i) => `<tr><td>${esc(c)}</td><td>${(+(pts[i] ?? 0)).toFixed(1)}</td></tr>`).join('')}
+      <tr><td><b>Total</b></td><td><b>${esc(d.avg)} / ${own.max}</b></td></tr></tbody></table></div>
       <div class="df"><button class="btn btn-p" type="button" data-close>Close</button></div>`);
   }
   document.querySelector('.tr-all')?.addEventListener('click', e => { const b = e.target.closest('.tr-sc'); if (b) score(b.dataset); });

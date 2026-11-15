@@ -9,13 +9,13 @@ use App\Http\Controllers\Admin\GradingRubricController;
 use App\Http\Controllers\Admin\ResourcesController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\StudentAccountsController;
+use App\Http\Controllers\AdminBluebookController;
 use App\Http\Controllers\AdminDashboardController;
-use App\Http\Controllers\AnnouncementEmailOffController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AdminFinancialController;
-use App\Http\Controllers\AdminBluebookController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminTeamVerificationController;
+use App\Http\Controllers\AnnouncementEmailOffController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Capsa\ChecklistController;
 use App\Http\Controllers\Capsa\ChecklistMilestoneController;
@@ -26,6 +26,7 @@ use App\Http\Controllers\Capsa\DocumentFileController;
 use App\Http\Controllers\Capsa\EvaluationTemplateController;
 use App\Http\Controllers\Capsa\ExpertRemovalRequestController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
+use App\Http\Controllers\Capsa\GradesController;
 use App\Http\Controllers\Capsa\MilestonePageController;
 use App\Http\Controllers\Capsa\RemovalController;
 use App\Http\Controllers\Capsa\ReportBuilderController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\Capsa\SectionProgressController;
 use App\Http\Controllers\Capsa\StudentController as CapsaStudentController;
 use App\Http\Controllers\Capsa\StudentRosterController;
 use App\Http\Controllers\Capsa\TeamManagementController;
+use App\Http\Controllers\Capsa\TeamRatingRubricController;
 use App\Http\Controllers\Capsa\TeamRulesController;
 use App\Http\Controllers\Capsa\YearPromotionController;
 use App\Http\Controllers\DashboardController;
@@ -64,6 +66,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\Student\ArchiveController as StudentArchiveController;
+use App\Http\Controllers\Student\BluebookController;
 use App\Http\Controllers\Student\DefenseScoresController;
 use App\Http\Controllers\Student\DocumentsController;
 use App\Http\Controllers\Student\ExpertController as StudentExpertController;
@@ -80,6 +83,7 @@ use App\Http\Controllers\TableExportController;
 use App\Http\Controllers\TableReportController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TeamRatingController;
+use App\Http\Middleware\PreventRequestForgery;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -241,15 +245,19 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // redirects here - it was only ever half of this.
         Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
         // Team ratings live on Team Management's Team Ratings tab; these are its actions.
+        Route::post('/team-rating-rubrics', [TeamRatingRubricController::class, 'store'])->name('team_rating_rubrics.store');
+        Route::put('/team-rating-rubrics/{rubric}', [TeamRatingRubricController::class, 'update'])->whereNumber('rubric')->name('team_rating_rubrics.update');
+        Route::delete('/team-rating-rubrics/{rubric}', [TeamRatingRubricController::class, 'destroy'])->whereNumber('rubric')->name('team_rating_rubrics.destroy');
+        Route::put('/team-rating-rubrics/{rubric}/in-use', [TeamRatingRubricController::class, 'use'])->where('rubric', '[0-9]+|default')->name('team_rating_rubrics.use');
         Route::post('/team-ratings', [App\Http\Controllers\Capsa\TeamRatingController::class, 'store'])->name('team_ratings.store');
         Route::get('/team-ratings/spreadsheet', [App\Http\Controllers\Capsa\TeamRatingController::class, 'export'])->name('team_ratings.export');
         Route::post('/team-ratings/{form}/items', [App\Http\Controllers\Capsa\TeamRatingController::class, 'addItems'])->name('team_ratings.items');
         Route::patch('/team-ratings/{form}', [App\Http\Controllers\Capsa\TeamRatingController::class, 'update'])->name('team_ratings.update');
         Route::post('/team-ratings/{form}/reminders', [App\Http\Controllers\Capsa\TeamRatingController::class, 'remind'])->name('team_ratings.remind');
         // Team Management's Grades tab: totals typed from the paper sheets.
-        Route::post('/grades/{defense}', [App\Http\Controllers\Capsa\GradesController::class, 'encode'])->name('grades.encode');
-        Route::post('/grades/{defense}/sheet', [App\Http\Controllers\Capsa\GradesController::class, 'uploadSheet'])->name('grades.sheet.upload');
-        Route::get('/grades/{defense}/sheet', [App\Http\Controllers\Capsa\GradesController::class, 'sheet'])->name('grades.sheet');
+        Route::post('/grades/{defense}', [GradesController::class, 'encode'])->name('grades.encode');
+        Route::post('/grades/{defense}/sheet', [GradesController::class, 'uploadSheet'])->name('grades.sheet.upload');
+        Route::get('/grades/{defense}/sheet', [GradesController::class, 'sheet'])->name('grades.sheet');
         // Manage milestones: a page per milestone and a page per form. Before
         // the {team} pages, so "milestones" is never read as a team.
         Route::get('/team-management/milestones/setup/{program}', [MilestonePageController::class, 'setup'])->name('team_management.milestones.setup');
@@ -447,7 +455,7 @@ Route::view('/privacy', 'privacy')->name('privacy');
 // with no form token, so it skips the forgery check; the signature guards it.
 Route::match(['get', 'post'], '/email/announcements/off/{who}/{id}', AnnouncementEmailOffController::class)
     ->middleware('signed')
-    ->withoutMiddleware(App\Http\Middleware\PreventRequestForgery::class)
+    ->withoutMiddleware(PreventRequestForgery::class)
     ->name('announcements.email-off');
 Route::post('/login/google', [AuthController::class, 'initiateGoogleLogin'])->name('login.google.initiate');
 Route::get('/login/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('login.google.callback');
@@ -581,9 +589,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/consultation/cancel/{bookingId}', [StudentConsultationController::class, 'cancel'])->name('student.consultation.cancel');
             Route::get('/progress', [StudentProgressController::class, 'index'])->name('student.progress');
             Route::get('/defense-scores', [DefenseScoresController::class, 'index'])->name('student.defense-scores');
-            Route::get('/bluebook', [\App\Http\Controllers\Student\BluebookController::class, 'index'])->name('student.bluebook');
-            Route::post('/bluebook/{deliverable}', [\App\Http\Controllers\Student\BluebookController::class, 'store'])->name('student.bluebook.store');
-            Route::get('/bluebook/files/{document}', [\App\Http\Controllers\Student\BluebookController::class, 'file'])->name('student.bluebook.file');
+            Route::get('/bluebook', [BluebookController::class, 'index'])->name('student.bluebook');
+            Route::post('/bluebook/{deliverable}', [BluebookController::class, 'store'])->name('student.bluebook.store');
+            Route::get('/bluebook/files/{document}', [BluebookController::class, 'file'])->name('student.bluebook.file');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
             Route::post('/financial/receipts', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
             Route::get('/resources', [StudentResourceController::class, 'index'])->name('student.resources');

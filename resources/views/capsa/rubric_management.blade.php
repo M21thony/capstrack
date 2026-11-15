@@ -85,18 +85,8 @@
   </div>
 </div></dialog>
 
-{{-- Team Rating's rubric is fixed, so it is shown here to read, not to edit. --}}
-<dialog class="cm rb-new rb-tr" id="rb-tr-dialog" aria-labelledby="rb-tr-title"><div class="cm-box">
-  <div>
-    <h3 id="rb-tr-title">Team Rating Rubric</h3>
-    <div class="sub">How teammates rate each other. {{ count(\App\Support\PeerRatingRubric::CRITERIA) }} criteria, {{ \App\Support\PeerRatingRubric::MAX }} points. This rubric is the same for every program.</div>
-  </div>
-  <div class="mk-scroll"><table class="mk-t">
-    <thead><tr><th>Criteria</th>@foreach (\App\Support\PeerRatingRubric::LEVELS as $pts => $word)<th>{{ $word }} ({{ $pts }})</th>@endforeach</tr></thead>
-    <tbody>@foreach (\App\Support\PeerRatingRubric::CRITERIA as $name => $levels)<tr><td><b>{{ $name }}</b></td>@foreach ($levels as $d)<td>{{ $d }}</td>@endforeach</tr>@endforeach</tbody>
-  </table></div>
-  <div class="mk-foot"><button type="button" class="mk-btn pri" onclick="this.closest('dialog').close()">Close</button></div>
-</div></dialog>
+{{-- Team Rating rubrics: the department's, and the ones written here. --}}
+@include('capsa.partials.team-rating-rubrics')
 
 <div class="toast" id="toast"></div>
 
@@ -1222,6 +1212,9 @@ function renderList() {
       '<div style="font-weight:600;color:var(--text2);margin-top:8px">No rubrics found</div><div style="font-size:13px;margin-top:2px">Try a different filter or add a new rubric.</div></div></td></tr>';
 }
 
+// The Team Rating tile follows what is written in its window.
+window.addEventListener('team-rating-rubrics', function () { updateStats(); });
+
 function updateStats() {
   document.getElementById('rb-tiles').innerHTML = Object.keys(TYPE_LABEL).map(function (t) {
     var n = rubrics.filter(function (r) { return r.type === t && !r.isArchived; }).length;
@@ -1231,10 +1224,10 @@ function updateStats() {
       '<div class="n">' + n + '<small>' + (n === 1 ? 'rubric' : 'rubrics') + '</small></div>' +
       '<div class="cov' + (cov.ok ? '' : ' none') + '">' + (cov.ok ? ICON.ok : ICON.warn) + '<span>' + escHtml(cov.text) + '</span></div></button>';
   }).join('') +
-    '<button type="button" class="mk-tile" style="--c:#7c3aed" onclick="document.getElementById(\'rb-tr-dialog\').showModal()">' +
+    '<button type="button" class="mk-tile" id="trb-tile" style="--c:#7c3aed" onclick="openTeamRatingRubrics()">' +
       '<div class="top"><span class="mk-ic">' + SVG16 + '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><b>Team Rating</b></div>' +
-      '<div class="n">1<small>rubric</small></div>' +
-      '<div class="cov">' + ICON.ok + '<span>All programs · fixed</span></div></button>';
+      '<div class="n">' + teamRatingRubricSummary().count + '<small>' + (teamRatingRubricSummary().count === 1 ? 'rubric' : 'rubrics') + '</small></div>' +
+      '<div class="cov">' + ICON.ok + '<span>In use: ' + escHtml(teamRatingRubricSummary().inUse) + '</span></div></button>';
 }
 
 function toast(msg, type) {
@@ -1315,10 +1308,6 @@ loadRubrics();
 
 /* stage tiles */
 .mk-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;flex:1}
-dialog.rb-tr .cm-box{max-width:1180px}
-.rb-tr .mk-scroll{overflow:auto;border:1px solid var(--border);border-radius:10px}
-.rb-tr .mk-t td{white-space:normal;vertical-align:top;font-size:12.5px;line-height:1.45}
-.rb-tr .mk-foot{display:flex;justify-content:flex-end}
 .mk-tile{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px 12px 16px;position:relative;cursor:pointer;text-align:left;font:inherit;color:inherit}
 .mk-tile::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--c)}
 .mk-tile.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c) inset}

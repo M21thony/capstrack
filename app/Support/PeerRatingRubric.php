@@ -3,14 +3,110 @@
 namespace App\Support;
 
 /**
- * The one peer-rating rubric, from FINALS-PARTICIPATION.xlsx.
+ * A peer-rating rubric: its criteria, each scored 10/7/5/3/1.
  *
- * Hardcoded like the Title Defense rubric: there is one official rubric, and
- * a builder would let someone change the criteria under ratings already
- * given. Each criterion is scored 10/7/5/3/1, so 70 is a perfect activity.
+ * The constants are the department's rubric, from FINALS-PARTICIPATION.xlsx,
+ * and what a rating uses when the CaPSA/TSA has written none of her own.
+ * Her own (TeamRatingRubric) come through fromArray(). A rating keeps a copy
+ * of the rubric it was made with (TeamRatingForm::rubric()), so editing one
+ * never changes the criteria under ratings already given.
  */
 final class PeerRatingRubric
 {
+    public const DEFAULT_NAME = "Member's Participation Rubric";
+
+    /** How many criteria a rubric may have. */
+    public const MAX_CRITERIA = 12;
+
+    /**
+     * @param  array<string, list<string>>  $criteria  Criterion => its five descriptors, best first.
+     * @param  list<string>  $short  Column headings, one per criterion.
+     */
+    private function __construct(public readonly string $name, private array $criteria, private array $short, public readonly bool $isDefault) {}
+
+    /** The department's rubric. */
+    public static function default(): self
+    {
+        return new self(self::DEFAULT_NAME, self::CRITERIA, self::SHORT, true);
+    }
+
+    /**
+     * A rubric as it is stored: ['name' => ..., 'criteria' => [{name, short,
+     * levels}]]. Nothing usable in it reads as the department's.
+     *
+     * @param  array{name?: string, criteria?: array<int, array{name?: string, short?: string, levels?: array<int, string>}>}|null  $stored
+     */
+    public static function fromArray(?array $stored): self
+    {
+        $criteria = [];
+        $short = [];
+
+        foreach ($stored['criteria'] ?? [] as $row) {
+            $name = trim((string) ($row['name'] ?? ''));
+
+            if ($name === '' || isset($criteria[$name])) {
+                continue;
+            }
+
+            $levels = array_map(fn ($d) => trim((string) $d), array_values((array) ($row['levels'] ?? [])));
+            $criteria[$name] = array_pad(array_slice($levels, 0, count(self::LEVELS)), count(self::LEVELS), '');
+            $short[] = trim((string) ($row['short'] ?? '')) ?: $name;
+        }
+
+        return $criteria === [] ? self::default() : new self(trim((string) ($stored['name'] ?? '')) ?: 'Team Rating rubric', $criteria, $short, false);
+    }
+
+    /** @return array<string, list<string>> Criterion => its five descriptors, best first. */
+    public function criteria(): array
+    {
+        return $this->criteria;
+    }
+
+    /** @return list<string> */
+    public function names(): array
+    {
+        return array_keys($this->criteria);
+    }
+
+    /** @return list<string> */
+    public function short(): array
+    {
+        return $this->short;
+    }
+
+    public function count(): int
+    {
+        return count($this->criteria);
+    }
+
+    /** A perfect activity: the top score on every criterion. */
+    public function max(): int
+    {
+        return $this->count() * max(array_keys(self::LEVELS));
+    }
+
+    /** One valid score for every criterion of this rubric. */
+    public function complete(array $scores): bool
+    {
+        return count($scores) === $this->count() && collect($scores)->every(fn ($s) => self::isScore($s));
+    }
+
+    /**
+     * The form it is stored in, and the copy a rating keeps.
+     *
+     * @return array{name: string, criteria: list<array{name: string, short: string, levels: list<string>}>}
+     */
+    public function toArray(): array
+    {
+        $rows = [];
+
+        foreach ($this->names() as $i => $name) {
+            $rows[] = ['name' => $name, 'short' => $this->short[$i] ?? $name, 'levels' => $this->criteria[$name]];
+        }
+
+        return ['name' => $this->name, 'criteria' => $rows];
+    }
+
     /** Score => level name, best first. Each criterion's descriptors follow the same order. */
     public const LEVELS = [10 => 'Excellent', 7 => 'Good', 5 => 'Fair', 3 => 'Needs Improvement', 1 => 'Poor'];
 
@@ -75,12 +171,5 @@ final class PeerRatingRubric
     public static function isScore(mixed $score): bool
     {
         return is_int($score) && array_key_exists($score, self::LEVELS);
-    }
-
-    /** One valid score for every criterion. */
-    public static function isComplete(array $scores): bool
-    {
-        return count($scores) === count(self::CRITERIA)
-            && collect($scores)->every(fn ($s) => self::isScore($s));
     }
 }

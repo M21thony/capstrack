@@ -21,7 +21,7 @@ use Illuminate\Support\Collection;
 class TeamRatingForm extends Model
 {
     protected $fillable = [
-        'capsa_id', 'name', 'sections', 'follows_checklist', 'days_to_rate',
+        'capsa_id', 'name', 'sections', 'follows_checklist', 'days_to_rate', 'rubric',
         'opens_on', 'due_on', 'date_overridden', 'closed_at', 'opened_notified_at', 'reminded_at',
     ];
 
@@ -29,6 +29,7 @@ class TeamRatingForm extends Model
         'sections' => 'array',
         'follows_checklist' => 'boolean',
         'days_to_rate' => 'integer',
+        'rubric' => 'array',
         'opens_on' => 'date',
         'due_on' => 'date',
         'date_overridden' => 'boolean',
@@ -36,6 +37,15 @@ class TeamRatingForm extends Model
         'opened_notified_at' => 'datetime',
         'reminded_at' => 'datetime',
     ];
+
+    /**
+     * The rubric this rating was made with. A rating from before rubrics
+     * could be written holds none, and was made with the department's.
+     */
+    public function rubric(): PeerRatingRubric
+    {
+        return PeerRatingRubric::fromArray($this->getAttribute('rubric'));
+    }
 
     public function items()
     {
@@ -129,18 +139,19 @@ class TeamRatingForm extends Model
 
     /**
      * What each student's teammates gave them, from submitted ratings only:
-     * [ratee_id][item_id] => ['avg' => out of 70, 'criteria' => 7 averages, 'n' => raters].
+     * [ratee_id][item_id] => ['avg' => out of the rubric's max, 'criteria' => an average each, 'n' => raters].
      */
     public function results(): array
     {
         $out = [];
+        $criteria = $this->rubric()->count();
         $rows = $this->ratings()->whereNotNull('submitted_at')->get()->groupBy(['ratee_id', 'item_id']);
 
         foreach ($rows as $rateeId => $byItem) {
             foreach ($byItem as $itemId => $given) {
                 $out[$rateeId][$itemId] = [
                     'avg' => round($given->avg('total'), 1),
-                    'criteria' => collect(range(0, count(PeerRatingRubric::CRITERIA) - 1))
+                    'criteria' => collect(range(0, $criteria - 1))
                         ->map(fn ($i) => round($given->avg(fn ($r) => $r->scores[$i] ?? 0), 1))->all(),
                     'n' => $given->count(),
                 ];
@@ -151,9 +162,11 @@ class TeamRatingForm extends Model
     }
 
     /** One student's rating as a percent, over the activities someone rated them on; null when nobody has. */
-    public static function percentFor(array $byItem): ?float
+    public function percentFor(array $byItem): ?float
     {
-        return $byItem === [] ? null : round(collect($byItem)->avg(fn ($r) => $r['avg'] / PeerRatingRubric::MAX * 100), 1);
+        $max = $this->rubric()->max();
+
+        return $byItem === [] ? null : round(collect($byItem)->avg(fn ($r) => $r['avg'] / $max * 100), 1);
     }
 
     /** Tells every student in its sections that it is open. Sent once. */

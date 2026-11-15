@@ -307,8 +307,8 @@ class TeamRatingTest extends TestCase
         $this->assertSame(2, $results[$c->student_id][$item]['n']);
         $this->assertSame(35.0, (float) $results[$a->student_id][$item]['avg']);
         $this->assertSame(1, $results[$a->student_id][$item]['n']);
-        $this->assertSame(75.0, TeamRatingForm::percentFor($results[$c->student_id]));
-        $this->assertNull(TeamRatingForm::percentFor([]));
+        $this->assertSame(75.0, $form->percentFor($results[$c->student_id]));
+        $this->assertNull($form->percentFor([]));
         $this->assertEqualsCanonicalizing([$a->student_id, $b->student_id], $form->submittedRaterIds());
     }
 

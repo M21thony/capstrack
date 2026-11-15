@@ -155,7 +155,7 @@
                 </tbody>
               </table>
             </div>
-            <p style="font-size:12.5px;color:var(--text2);margin:8px 0 0">Each total is out of {{ PeerRatingRubric::MAX }}.</p>
+            <p style="font-size:12.5px;color:var(--text2);margin:8px 0 0">Each total is out of {{ $r->form->rubric()->max() }}.</p>
             <div class="warn">You can't change ratings after you submit.</div>
             <div class="err" data-trs-err hidden></div>
           </div>

@@ -45,7 +45,7 @@ class TeamRatingController extends Controller
                 return (object) [
                     'form' => $f,
                     'status' => $f->status(),
-                    'need' => count(PeerRatingRubric::CRITERIA) * $f->items->count(),
+                    'need' => $f->rubric()->count() * $f->items->count(),
                     'submittedAt' => $mine->max('submitted_at'),
                     'mates' => $mates->map(fn ($m) => (object) [
                         'student' => $m,
@@ -72,7 +72,7 @@ class TeamRatingController extends Controller
 
         $picks = $form->items->mapWithKeys(fn ($item) => [$item->id => array_pad(
             $mine->where('ratee_id', $ratee)->firstWhere('item_id', $item->id)?->scores ?? [],
-            count(PeerRatingRubric::CRITERIA),
+            $form->rubric()->count(),
             null,
         )]);
 
@@ -84,7 +84,8 @@ class TeamRatingController extends Controller
             ]),
             'current' => $current,
             'picks' => $picks,
-            'need' => count(PeerRatingRubric::CRITERIA) * $form->items->count(),
+            'rubric' => $form->rubric(),
+            'need' => $form->rubric()->count() * $form->items->count(),
             'savedAt' => $mine->where('ratee_id', $ratee)->max('updated_at'),
         ]);
     }
@@ -97,7 +98,8 @@ class TeamRatingController extends Controller
         $this->stillOpen($form, $me);
 
         $picks = $request->validate(['picks' => ['required', 'array']])['picks'];
-        $n = count(PeerRatingRubric::CRITERIA);
+        $rubric = $form->rubric();
+        $n = $rubric->count();
 
         foreach ($form->items as $item) {
             $scores = array_pad(array_slice(array_values((array) ($picks[$item->id] ?? [])), 0, $n), $n, null);
@@ -115,7 +117,7 @@ class TeamRatingController extends Controller
                     'form_id' => $form->id,
                     'team_id' => $team->team_id,
                     'scores' => $scores,
-                    'total' => PeerRatingRubric::isComplete($scores) ? array_sum($scores) : null,
+                    'total' => $rubric->complete($scores) ? array_sum($scores) : null,
                 ],
             );
         }
@@ -130,7 +132,7 @@ class TeamRatingController extends Controller
         $this->stillOpen($form, $me);
 
         $mine = TeamRating::where('form_id', $form->id)->where('rater_id', $me->student_id)->get();
-        $need = count(PeerRatingRubric::CRITERIA) * $form->items->count();
+        $need = $form->rubric()->count() * $form->items->count();
         $missing = $mates->filter(fn ($m) => self::picked($mine->where('ratee_id', $m->student_id)) < $need);
 
         if ($missing->isNotEmpty()) {
