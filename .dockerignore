@@ -1,6 +1,8 @@
 .git
 .claude
 .kilo
+.scratch
+graphify-out
 node_modules
 vendor
 public/build
