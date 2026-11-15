@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Console\Commands\GenerateEmbeddings;
 use App\Models\ArchivedDocument;
+use App\Models\Team;
 use App\Services\OllamaSSHClient;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
@@ -14,6 +16,8 @@ use Tests\TestCase;
  */
 class EvaluateDuplicationCheckerTest extends TestCase
 {
+    use RefreshDatabase;
+
     private const GOLD_SET = 'storage/framework/testing/duplication-gold-set.json';
 
     protected function tearDown(): void
@@ -154,6 +158,62 @@ class EvaluateDuplicationCheckerTest extends TestCase
         $this->artisan('duplication:evaluate', ['--file' => self::GOLD_SET])
             ->expectsOutputToContain('Pair p1 could not be scored: connection refused')
             ->assertFailed();
+    }
+
+    public function test_a_study_given_by_title_alone_is_read_from_the_archive(): void
+    {
+        $team = Team::create(['team_name' => 'Archive Source Team']);
+        ArchivedDocument::create([
+            'team_id' => $team->team_id,
+            'title' => 'PARKMATE: RFID-Based Parking Management System',
+            'abstract' => 'Vehicles carry a tag that is read at the gate.',
+            'academic_year' => 2025,
+            'program' => 'BSIT',
+            'file_path' => 'archives/parkmate.pdf',
+        ]);
+        $pair = $this->pair('p1', 'duplicate', 'parkmate: rfid based parking management  system');
+        unset($pair['other']['abstract']);
+        $this->goldSet([$pair]);
+
+        $prompts = [];
+        $this->mock(OllamaSSHClient::class, function ($mock) use (&$prompts) {
+            $mock->shouldReceive('embed')->andReturn([1.0, 0.0]);
+            $mock->shouldReceive('generateMany')->andReturnUsing(function (array $sent) use (&$prompts) {
+                $prompts = $sent;
+
+                return ['{"matches": true, "score": 90}'];
+            });
+        });
+
+        $this->artisan('duplication:evaluate', ['--file' => self::GOLD_SET])->assertSuccessful();
+
+        $this->assertStringContainsString('Vehicles carry a tag that is read at the gate.', $prompts[0]);
+    }
+
+    public function test_it_fails_when_a_study_given_by_title_alone_is_not_in_the_archive(): void
+    {
+        $pair = $this->pair('p1', 'duplicate', 'A Study Nobody Archived');
+        unset($pair['other']['abstract']);
+        $this->goldSet([$pair]);
+        $this->fakeModel([]);
+
+        $this->artisan('duplication:evaluate', ['--file' => self::GOLD_SET])
+            ->expectsOutputToContain('Pair p1 has no abstract, and no archived study is titled: A Study Nobody Archived')
+            ->assertFailed();
+    }
+
+    public function test_the_draft_gold_set_has_a_duplicate_a_related_and_an_unrelated_study_for_each_pre_proposal(): void
+    {
+        $pairs = json_decode(file_get_contents(base_path('tests/Fixtures/duplication-gold-set.json')), true);
+        $archived = collect(json_decode(file_get_contents(database_path('seeders/data/archived_authors.json')), true))->pluck('title');
+
+        $this->assertSame(['duplicate' => 12, 'related' => 12, 'unrelated' => 12], array_count_values(array_column($pairs, 'label')));
+
+        foreach ($pairs as $pair) {
+            $this->assertContains($pair['other']['title'], $archived, "{$pair['id']} names a study that is not in the archive.");
+            $this->assertNotEmpty($pair['why']);
+            $this->assertNotEmpty($pair['pre_proposal']['problem_statement']);
+        }
     }
 
     public function test_the_example_gold_set_is_one_the_command_accepts(): void

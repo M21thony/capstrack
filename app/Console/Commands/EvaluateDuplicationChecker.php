@@ -11,7 +11,8 @@ use Illuminate\Console\Command;
  * Measures the duplication checker against pairs a person has labelled.
  *
  * Each pair in the gold set is a pre-proposal, another study, and what a
- * person says they are to each other: duplicate, related or unrelated. Every
+ * person says they are to each other: duplicate, related or unrelated. The
+ * other study is given with its abstract, or by the title of an archived one. Every
  * pair is scored the way a real check scores a match, and the result is
  * counted against the label. A study the checker calls "Close to existing
  * work" that the person did not label a duplicate is a false positive.
@@ -44,13 +45,19 @@ class EvaluateDuplicationChecker extends Command
         $bar->start();
 
         foreach ($pairs as $pair) {
+            $other = $this->otherStudy($pair['other']);
+
+            if ($other === null) {
+                $this->newLine();
+                $this->error("Pair {$pair['id']} has no abstract, and no archived study is titled: {$pair['other']['title']}");
+
+                return self::FAILURE;
+            }
+
             $startedAt = microtime(true);
 
             try {
-                $scored = $similarity->scorePair(
-                    $pair['pre_proposal'] + ['domain' => ''],
-                    new ArchivedDocument(['title' => $pair['other']['title'], 'abstract' => $pair['other']['abstract'] ?? '']),
-                );
+                $scored = $similarity->scorePair($pair['pre_proposal'] + ['domain' => ''], $other);
             } catch (\Throwable $e) {
                 $this->newLine();
                 $this->error("Pair {$pair['id']} could not be scored: {$e->getMessage()}");
@@ -75,6 +82,24 @@ class EvaluateDuplicationChecker extends Command
         $this->reportErrors($results);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The study a pre-proposal is compared with. One given without an
+     * abstract is read from the archive, matched on its title the way
+     * ArchivedAuthorsSeeder matches, so it is found in any copy of the archive.
+     *
+     * @param  array{title: string, abstract?: string}  $other
+     */
+    private function otherStudy(array $other): ?ArchivedDocument
+    {
+        if (isset($other['abstract'])) {
+            return new ArchivedDocument(['title' => $other['title'], 'abstract' => $other['abstract']]);
+        }
+
+        $key = fn (?string $title) => preg_replace('/[^a-z0-9]/', '', mb_strtolower((string) $title));
+
+        return ArchivedDocument::all()->first(fn (ArchivedDocument $doc) => $key($doc->title) === $key($other['title']));
     }
 
     /**

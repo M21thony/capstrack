@@ -1,0 +1,815 @@
+[
+    {
+        "id": "health-unit-duplicate",
+        "label": "duplicate",
+        "why": "Both book patients' appointments and keep their medical records for a rural health unit.",
+        "pre_proposal": {
+            "title": "Online Consultation Booking and Patient Record System for the Baao Rural Health Unit",
+            "main_topic": "Booking consultations and keeping patient records for a rural health unit",
+            "domain": "Healthcare",
+            "keywords": [
+                "patient records",
+                "consultation booking",
+                "rural health unit",
+                "medical history"
+            ],
+            "problem_statement": "Patients line up early in the morning without knowing if the doctor can see them, and their records are kept in folders that are hard to find and sometimes lost.",
+            "proposed_solution": "A system where a patient books a consultation ahead of time and the staff record each visit, diagnosis and treatment in the patient's record.",
+            "scope": "One rural health unit: its doctor, nurses, midwives and patients. It does not handle the stock of medicines."
+        },
+        "other": {
+            "title": "MEDICAL APPOINTMENT AND RECORD MANAGEMENT SYSTEM FOR NABUA RURAL HEALTH UNIT II"
+        }
+    },
+    {
+        "id": "health-unit-related",
+        "label": "related",
+        "why": "Also for a health facility, but it tracks the stock of medicines, not patients' visits.",
+        "pre_proposal": {
+            "title": "Online Consultation Booking and Patient Record System for the Baao Rural Health Unit",
+            "main_topic": "Booking consultations and keeping patient records for a rural health unit",
+            "domain": "Healthcare",
+            "keywords": [
+                "patient records",
+                "consultation booking",
+                "rural health unit",
+                "medical history"
+            ],
+            "problem_statement": "Patients line up early in the morning without knowing if the doctor can see them, and their records are kept in folders that are hard to find and sometimes lost.",
+            "proposed_solution": "A system where a patient books a consultation ahead of time and the staff record each visit, diagnosis and treatment in the patient's record.",
+            "scope": "One rural health unit: its doctor, nurses, midwives and patients. It does not handle the stock of medicines."
+        },
+        "other": {
+            "title": "MEDICARE: A WEB-BASED MEDICAL INVENTORY MANAGEMENT SYSTEM WITH DATA ANALYTICS"
+        }
+    },
+    {
+        "id": "health-unit-unrelated",
+        "label": "unrelated",
+        "why": "A door lock for a computer laboratory. Nothing in common.",
+        "pre_proposal": {
+            "title": "Online Consultation Booking and Patient Record System for the Baao Rural Health Unit",
+            "main_topic": "Booking consultations and keeping patient records for a rural health unit",
+            "domain": "Healthcare",
+            "keywords": [
+                "patient records",
+                "consultation booking",
+                "rural health unit",
+                "medical history"
+            ],
+            "problem_statement": "Patients line up early in the morning without knowing if the doctor can see them, and their records are kept in folders that are hard to find and sometimes lost.",
+            "proposed_solution": "A system where a patient books a consultation ahead of time and the staff record each visit, diagnosis and treatment in the patient's record.",
+            "scope": "One rural health unit: its doctor, nurses, midwives and patients. It does not handle the stock of medicines."
+        },
+        "other": {
+            "title": "PI-LOCK: REFINING DOOR LOCK WITH TIME-BASED AUTHENTICATION USING RASPBERRY PI WITH RFID IN MAC LABORATORY"
+        }
+    },
+    {
+        "id": "parking-duplicate",
+        "label": "duplicate",
+        "why": "Both manage campus parking with RFID tags on vehicles.",
+        "pre_proposal": {
+            "title": "Tag-Based Vehicle Entry and Parking Slot System for a State College Campus",
+            "main_topic": "Controlling which vehicles enter the campus and where they park",
+            "domain": "Campus services",
+            "keywords": [
+                "parking",
+                "RFID tag",
+                "vehicle entry",
+                "parking slots",
+                "campus security"
+            ],
+            "problem_statement": "Guards list every vehicle by hand at the gate, and drivers circle the campus because nobody knows which parking slots are free.",
+            "proposed_solution": "Each registered vehicle gets an RFID tag that is read at the gate, and the system records the entry and shows the parking slots that are still free.",
+            "scope": "The vehicles of students, faculty and staff of one campus, and its parking areas."
+        },
+        "other": {
+            "title": "PARKMATE: RFID-BASED PARKING MANAGEMENT SYSTEM FOR CSPC"
+        }
+    },
+    {
+        "id": "parking-related",
+        "label": "related",
+        "why": "Also about vehicles on campus, but it tracks and reserves the school's own service vehicles, not parking.",
+        "pre_proposal": {
+            "title": "Tag-Based Vehicle Entry and Parking Slot System for a State College Campus",
+            "main_topic": "Controlling which vehicles enter the campus and where they park",
+            "domain": "Campus services",
+            "keywords": [
+                "parking",
+                "RFID tag",
+                "vehicle entry",
+                "parking slots",
+                "campus security"
+            ],
+            "problem_statement": "Guards list every vehicle by hand at the gate, and drivers circle the campus because nobody knows which parking slots are free.",
+            "proposed_solution": "Each registered vehicle gets an RFID tag that is read at the gate, and the system records the entry and shows the parking slots that are still free.",
+            "scope": "The vehicles of students, faculty and staff of one campus, and its parking areas."
+        },
+        "other": {
+            "title": "TRACKCSPC: A SMART CAMPUS VEHICLE TRACKING AND RESERVATION PLATFORM"
+        }
+    },
+    {
+        "id": "parking-unrelated",
+        "label": "unrelated",
+        "why": "Detecting sweet potato disease from pictures. Nothing in common.",
+        "pre_proposal": {
+            "title": "Tag-Based Vehicle Entry and Parking Slot System for a State College Campus",
+            "main_topic": "Controlling which vehicles enter the campus and where they park",
+            "domain": "Campus services",
+            "keywords": [
+                "parking",
+                "RFID tag",
+                "vehicle entry",
+                "parking slots",
+                "campus security"
+            ],
+            "problem_statement": "Guards list every vehicle by hand at the gate, and drivers circle the campus because nobody knows which parking slots are free.",
+            "proposed_solution": "Each registered vehicle gets an RFID tag that is read at the gate, and the system records the entry and shows the parking slots that are still free.",
+            "scope": "The vehicles of students, faculty and staff of one campus, and its parking areas."
+        },
+        "other": {
+            "title": "Sweet Potato Disease Detection Using Convolutional Neural Network"
+        }
+    },
+    {
+        "id": "library-reservation-duplicate",
+        "label": "duplicate",
+        "why": "Both are a mobile app for reserving books in a college library.",
+        "pre_proposal": {
+            "title": "Phone App for Reserving Books at the College Library",
+            "main_topic": "Reserving library books from a phone before going to the library",
+            "domain": "Library",
+            "keywords": [
+                "book reservation",
+                "library",
+                "mobile app",
+                "borrowing"
+            ],
+            "problem_statement": "Students walk to the library only to find that the book they need is already borrowed, and there is no way to hold a book for later.",
+            "proposed_solution": "A mobile app where a student searches the library's books, sees which are available, and reserves one to pick up within the day.",
+            "scope": "The students and librarians of one college library. Reservation and pick-up only, not cataloguing."
+        },
+        "other": {
+            "title": "Mobile Application Based Library Book Reservation In CSPC Library"
+        }
+    },
+    {
+        "id": "library-reservation-related",
+        "label": "related",
+        "why": "Also about the same kind of library, but it is a study of how well the library kiosks work, not a reservation app.",
+        "pre_proposal": {
+            "title": "Phone App for Reserving Books at the College Library",
+            "main_topic": "Reserving library books from a phone before going to the library",
+            "domain": "Library",
+            "keywords": [
+                "book reservation",
+                "library",
+                "mobile app",
+                "borrowing"
+            ],
+            "problem_statement": "Students walk to the library only to find that the book they need is already borrowed, and there is no way to hold a book for later.",
+            "proposed_solution": "A mobile app where a student searches the library's books, sees which are available, and reserves one to pick up within the day.",
+            "scope": "The students and librarians of one college library. Reservation and pick-up only, not cataloguing."
+        },
+        "other": {
+            "title": "Implementation of Delone and McLean Model in the Impact Assessment of CSPC Library Kiosks"
+        }
+    },
+    {
+        "id": "library-reservation-unrelated",
+        "label": "unrelated",
+        "why": "Managing a water refilling station. Nothing in common.",
+        "pre_proposal": {
+            "title": "Phone App for Reserving Books at the College Library",
+            "main_topic": "Reserving library books from a phone before going to the library",
+            "domain": "Library",
+            "keywords": [
+                "book reservation",
+                "library",
+                "mobile app",
+                "borrowing"
+            ],
+            "problem_statement": "Students walk to the library only to find that the book they need is already borrowed, and there is no way to hold a book for later.",
+            "proposed_solution": "A mobile app where a student searches the library's books, sees which are available, and reserves one to pick up within the day.",
+            "scope": "The students and librarians of one college library. Reservation and pick-up only, not cataloguing."
+        },
+        "other": {
+            "title": "NICK’S 2BIG: AN ANDROID BASED WATER REFILLING STATION MANAGEMENT APPLICATION"
+        }
+    },
+    {
+        "id": "flood-warning-duplicate",
+        "label": "duplicate",
+        "why": "Both monitor water level and give an early warning of floods through a web page.",
+        "pre_proposal": {
+            "title": "River Water Level Sensor and Flood Alert System for Riverside Barangays",
+            "main_topic": "Measuring river water level and warning residents before a flood",
+            "domain": "Disaster preparedness",
+            "keywords": [
+                "water level",
+                "flood",
+                "early warning",
+                "sensor",
+                "alert"
+            ],
+            "problem_statement": "Residents near the river only learn that the water is rising when it is already at their doors, because someone has to go and look at the river.",
+            "proposed_solution": "A sensor on the river measures the water level, a web page shows it live, and residents and officials are warned when it passes a danger mark.",
+            "scope": "One river and the barangays beside it. It warns of floods; it does not manage evacuation or relief."
+        },
+        "other": {
+            "title": "WAVES: A WEB-BASED WATER LEVEL MONITORING AND EARLY WARNING SYSTEM FOR FLOOD PREPAREDNESS"
+        }
+    },
+    {
+        "id": "flood-warning-related",
+        "label": "related",
+        "why": "Also about disasters in a town, but it collects and analyses reports after an emergency, with no water level sensor or warning.",
+        "pre_proposal": {
+            "title": "River Water Level Sensor and Flood Alert System for Riverside Barangays",
+            "main_topic": "Measuring river water level and warning residents before a flood",
+            "domain": "Disaster preparedness",
+            "keywords": [
+                "water level",
+                "flood",
+                "early warning",
+                "sensor",
+                "alert"
+            ],
+            "problem_statement": "Residents near the river only learn that the water is rising when it is already at their doors, because someone has to go and look at the river.",
+            "proposed_solution": "A sensor on the river measures the water level, a web page shows it live, and residents and officials are warned when it passes a danger mark.",
+            "scope": "One river and the barangays beside it. It warns of floods; it does not manage evacuation or relief."
+        },
+        "other": {
+            "title": "Design of a Web-based Platform for Management and Analysis of Disaster and Emergency Report in Nabua, Camarines Sur"
+        }
+    },
+    {
+        "id": "flood-warning-unrelated",
+        "label": "unrelated",
+        "why": "Managing a dental clinic. Nothing in common.",
+        "pre_proposal": {
+            "title": "River Water Level Sensor and Flood Alert System for Riverside Barangays",
+            "main_topic": "Measuring river water level and warning residents before a flood",
+            "domain": "Disaster preparedness",
+            "keywords": [
+                "water level",
+                "flood",
+                "early warning",
+                "sensor",
+                "alert"
+            ],
+            "problem_statement": "Residents near the river only learn that the water is rising when it is already at their doors, because someone has to go and look at the river.",
+            "proposed_solution": "A sensor on the river measures the water level, a web page shows it live, and residents and officials are warned when it passes a danger mark.",
+            "scope": "One river and the barangays beside it. It warns of floods; it does not manage evacuation or relief."
+        },
+        "other": {
+            "title": "PERFECT SMILE PORTAL: A MULTI-BRANCH WEB-BASED DENTAL CLINIC MANAGEMENT SYSTEM"
+        }
+    },
+    {
+        "id": "boarding-house-duplicate",
+        "label": "duplicate",
+        "why": "Both manage a boarding house's boarders and payments on the web and send SMS notices.",
+        "pre_proposal": {
+            "title": "Boarding House Tenant and Rent Payment System with Text Reminders",
+            "main_topic": "Managing the tenants, rooms and rent payments of a boarding house",
+            "domain": "Property rental",
+            "keywords": [
+                "boarding house",
+                "tenants",
+                "rent payment",
+                "rooms",
+                "SMS reminder"
+            ],
+            "problem_statement": "The owner writes each boarder's payments in a notebook, forgets who has not paid, and has to knock on doors to remind them.",
+            "proposed_solution": "A web system that lists the rooms and their boarders, records each rent payment, and texts a boarder when the rent is due.",
+            "scope": "One boarding house: its owner, caretaker and boarders."
+        },
+        "other": {
+            "title": "BoarDal: Web-Based Audal Boarding House Management System with SMS Notification via iTexMo"
+        }
+    },
+    {
+        "id": "boarding-house-related",
+        "label": "related",
+        "why": "Also about boarding houses, but it helps a student find and choose one near campus, not run one.",
+        "pre_proposal": {
+            "title": "Boarding House Tenant and Rent Payment System with Text Reminders",
+            "main_topic": "Managing the tenants, rooms and rent payments of a boarding house",
+            "domain": "Property rental",
+            "keywords": [
+                "boarding house",
+                "tenants",
+                "rent payment",
+                "rooms",
+                "SMS reminder"
+            ],
+            "problem_statement": "The owner writes each boarder's payments in a notebook, forgets who has not paid, and has to knock on doors to remind them.",
+            "proposed_solution": "A web system that lists the rooms and their boarders, records each rent payment, and texts a boarder when the rent is due.",
+            "scope": "One boarding house: its owner, caretaker and boarders."
+        },
+        "other": {
+            "title": "Designing an Online Platform for Streamlining Boarding House Selection Near CSPC Campus"
+        }
+    },
+    {
+        "id": "boarding-house-unrelated",
+        "label": "unrelated",
+        "why": "Detecting cacao disease from pictures. Nothing in common.",
+        "pre_proposal": {
+            "title": "Boarding House Tenant and Rent Payment System with Text Reminders",
+            "main_topic": "Managing the tenants, rooms and rent payments of a boarding house",
+            "domain": "Property rental",
+            "keywords": [
+                "boarding house",
+                "tenants",
+                "rent payment",
+                "rooms",
+                "SMS reminder"
+            ],
+            "problem_statement": "The owner writes each boarder's payments in a notebook, forgets who has not paid, and has to knock on doors to remind them.",
+            "proposed_solution": "A web system that lists the rooms and their boarders, records each rent payment, and texts a boarder when the rent is due.",
+            "scope": "One boarding house: its owner, caretaker and boarders."
+        },
+        "other": {
+            "title": "Cacao Detection Disease using VGG16 Architecture"
+        }
+    },
+    {
+        "id": "alumni-duplicate",
+        "label": "duplicate",
+        "why": "Both track a university's alumni on the web.",
+        "pre_proposal": {
+            "title": "Graduate Tracer and Alumni Directory System for a State University",
+            "main_topic": "Keeping track of where a university's graduates are and what work they have",
+            "domain": "Alumni affairs",
+            "keywords": [
+                "alumni",
+                "graduate tracer",
+                "employment status",
+                "directory"
+            ],
+            "problem_statement": "The alumni office loses contact with graduates after graduation and cannot answer how many of them found work, which accreditation asks for.",
+            "proposed_solution": "A web system where graduates update their contact details and employment, and the office sees reports of graduates by batch, course and work.",
+            "scope": "The graduates and the alumni office of one university."
+        },
+        "other": {
+            "title": "CBSTrac: A Web-Based Alumni Tracking System for Central Bicol State University of Agriculture"
+        }
+    },
+    {
+        "id": "alumni-related",
+        "label": "related",
+        "why": "Also about employment, but it matches any local job seeker with employers; it does not track a school's graduates.",
+        "pre_proposal": {
+            "title": "Graduate Tracer and Alumni Directory System for a State University",
+            "main_topic": "Keeping track of where a university's graduates are and what work they have",
+            "domain": "Alumni affairs",
+            "keywords": [
+                "alumni",
+                "graduate tracer",
+                "employment status",
+                "directory"
+            ],
+            "problem_statement": "The alumni office loses contact with graduates after graduation and cannot answer how many of them found work, which accreditation asks for.",
+            "proposed_solution": "A web system where graduates update their contact details and employment, and the office sees reports of graduates by batch, course and work.",
+            "scope": "The graduates and the alumni office of one university."
+        },
+        "other": {
+            "title": "PLJOBS: PILI LOCAL JOB MARKET A WEB-BASED PLATFORM FOR CONNECTING LOCAL JOB SEEKERS AND EMPLOYERS"
+        }
+    },
+    {
+        "id": "alumni-unrelated",
+        "label": "unrelated",
+        "why": "A machine that sorts waste using pictures. Nothing in common.",
+        "pre_proposal": {
+            "title": "Graduate Tracer and Alumni Directory System for a State University",
+            "main_topic": "Keeping track of where a university's graduates are and what work they have",
+            "domain": "Alumni affairs",
+            "keywords": [
+                "alumni",
+                "graduate tracer",
+                "employment status",
+                "directory"
+            ],
+            "problem_statement": "The alumni office loses contact with graduates after graduation and cannot answer how many of them found work, which accreditation asks for.",
+            "proposed_solution": "A web system where graduates update their contact details and employment, and the office sees reports of graduates by batch, course and work.",
+            "scope": "The graduates and the alumni office of one university."
+        },
+        "other": {
+            "title": "RASPBERRY PI WASTE SEGREGATOR USING CONVOLUTIONAL NEURAL NETWORK ALGORITHM"
+        }
+    },
+    {
+        "id": "vet-clinic-duplicate",
+        "label": "duplicate",
+        "why": "Both keep an animal clinic's records, schedule appointments and send SMS notices.",
+        "pre_proposal": {
+            "title": "Pet Patient Records and Visit Scheduling System for an Animal Clinic with Text Alerts",
+            "main_topic": "Keeping pets' medical records and scheduling their clinic visits",
+            "domain": "Veterinary care",
+            "keywords": [
+                "veterinary clinic",
+                "pet records",
+                "appointment",
+                "vaccination",
+                "SMS"
+            ],
+            "problem_statement": "The clinic keeps each pet's vaccinations and treatments on index cards, and owners forget when the next vaccination is due.",
+            "proposed_solution": "A system that keeps each pet's record, lets the owner schedule a visit, and texts the owner before a vaccination or check-up is due.",
+            "scope": "One animal clinic: its veterinarian, staff and the pet owners."
+        },
+        "other": {
+            "title": "Petcare: Rayna Animal Care Clinic Information System with SMS Notification and Appointment Scheduler"
+        }
+    },
+    {
+        "id": "vet-clinic-related",
+        "label": "related",
+        "why": "The same kind of functions, appointments and records, but for a dental clinic and its human patients.",
+        "pre_proposal": {
+            "title": "Pet Patient Records and Visit Scheduling System for an Animal Clinic with Text Alerts",
+            "main_topic": "Keeping pets' medical records and scheduling their clinic visits",
+            "domain": "Veterinary care",
+            "keywords": [
+                "veterinary clinic",
+                "pet records",
+                "appointment",
+                "vaccination",
+                "SMS"
+            ],
+            "problem_statement": "The clinic keeps each pet's vaccinations and treatments on index cards, and owners forget when the next vaccination is due.",
+            "proposed_solution": "A system that keeps each pet's record, lets the owner schedule a visit, and texts the owner before a vaccination or check-up is due.",
+            "scope": "One animal clinic: its veterinarian, staff and the pet owners."
+        },
+        "other": {
+            "title": "F. SANCHEZ LANDAGAN DENTAL CLINIC APPOINTMENT AND RECORDS MANAGEMENT SYSTEM WITH QUICK RESPONSE TECHNOLOGY"
+        }
+    },
+    {
+        "id": "vet-clinic-unrelated",
+        "label": "unrelated",
+        "why": "Finding the shortest path on a campus map. Nothing in common.",
+        "pre_proposal": {
+            "title": "Pet Patient Records and Visit Scheduling System for an Animal Clinic with Text Alerts",
+            "main_topic": "Keeping pets' medical records and scheduling their clinic visits",
+            "domain": "Veterinary care",
+            "keywords": [
+                "veterinary clinic",
+                "pet records",
+                "appointment",
+                "vaccination",
+                "SMS"
+            ],
+            "problem_statement": "The clinic keeps each pet's vaccinations and treatments on index cards, and owners forget when the next vaccination is due.",
+            "proposed_solution": "A system that keeps each pet's record, lets the owner schedule a visit, and texts the owner before a vaccination or check-up is due.",
+            "scope": "One animal clinic: its veterinarian, staff and the pet owners."
+        },
+        "other": {
+            "title": "Shortest Path Finding using Dijkstra Algorithm on 2D Campus Map"
+        }
+    },
+    {
+        "id": "crop-disease-duplicate",
+        "label": "duplicate",
+        "why": "Both detect sweet potato disease with a convolutional neural network.",
+        "pre_proposal": {
+            "title": "Identifying Diseases of Kamote Leaves from Photos Using a Convolutional Neural Network",
+            "main_topic": "Telling which disease a sweet potato plant has from a photo of its leaf",
+            "domain": "Agriculture, image classification",
+            "keywords": [
+                "sweet potato",
+                "leaf disease",
+                "convolutional neural network",
+                "image classification"
+            ],
+            "problem_statement": "Sweet potato farmers notice a disease late and cannot tell which one it is, so they spray the wrong treatment and lose part of the harvest.",
+            "proposed_solution": "A model trained on photos of healthy and diseased sweet potato leaves that names the disease when the farmer takes a photo.",
+            "scope": "Common diseases of sweet potato leaves only."
+        },
+        "other": {
+            "title": "Sweet Potato Disease Detection Using Convolutional Neural Network"
+        }
+    },
+    {
+        "id": "crop-disease-related",
+        "label": "related",
+        "why": "The same technique, disease detection from pictures, but on cacao and not sweet potato.",
+        "pre_proposal": {
+            "title": "Identifying Diseases of Kamote Leaves from Photos Using a Convolutional Neural Network",
+            "main_topic": "Telling which disease a sweet potato plant has from a photo of its leaf",
+            "domain": "Agriculture, image classification",
+            "keywords": [
+                "sweet potato",
+                "leaf disease",
+                "convolutional neural network",
+                "image classification"
+            ],
+            "problem_statement": "Sweet potato farmers notice a disease late and cannot tell which one it is, so they spray the wrong treatment and lose part of the harvest.",
+            "proposed_solution": "A model trained on photos of healthy and diseased sweet potato leaves that names the disease when the farmer takes a photo.",
+            "scope": "Common diseases of sweet potato leaves only."
+        },
+        "other": {
+            "title": "Cacao Detection Disease using VGG16 Architecture"
+        }
+    },
+    {
+        "id": "crop-disease-unrelated",
+        "label": "unrelated",
+        "why": "Records of private lending transactions. Nothing in common.",
+        "pre_proposal": {
+            "title": "Identifying Diseases of Kamote Leaves from Photos Using a Convolutional Neural Network",
+            "main_topic": "Telling which disease a sweet potato plant has from a photo of its leaf",
+            "domain": "Agriculture, image classification",
+            "keywords": [
+                "sweet potato",
+                "leaf disease",
+                "convolutional neural network",
+                "image classification"
+            ],
+            "problem_statement": "Sweet potato farmers notice a disease late and cannot tell which one it is, so they spray the wrong treatment and lose part of the harvest.",
+            "proposed_solution": "A model trained on photos of healthy and diseased sweet potato leaves that names the disease when the farmer takes a photo.",
+            "scope": "Common diseases of sweet potato leaves only."
+        },
+        "other": {
+            "title": "WEB-BASED RECORD MANAGEMENT SYSTEM FOR PRIVATE LENDING TRANSACTIONS"
+        }
+    },
+    {
+        "id": "door-lock-duplicate",
+        "label": "duplicate",
+        "why": "Both are an RFID and Arduino smart door lock with a management system for a college computer laboratory.",
+        "pre_proposal": {
+            "title": "Card-Tap Door Lock with Entry Log for a College Computer Laboratory",
+            "main_topic": "Letting only authorised people into a computer laboratory and recording who entered",
+            "domain": "Access control",
+            "keywords": [
+                "smart door lock",
+                "RFID card",
+                "Arduino",
+                "access log",
+                "laboratory"
+            ],
+            "problem_statement": "The laboratory is opened with one shared key, so nobody knows who went in, and equipment has gone missing.",
+            "proposed_solution": "An Arduino door lock that opens when an authorised RFID card is tapped, with a web page where the laboratory head adds cards and sees who entered and when.",
+            "scope": "The door of one computer laboratory and the faculty and students allowed to use it."
+        },
+        "other": {
+            "title": "Secured Entry: RFID With Arduino Powered Smart Door Lock and Management System for CCS Open Laboratory"
+        }
+    },
+    {
+        "id": "door-lock-related",
+        "label": "related",
+        "why": "Also RFID in a computer laboratory, but it tracks the laboratory's equipment, not who may open the door.",
+        "pre_proposal": {
+            "title": "Card-Tap Door Lock with Entry Log for a College Computer Laboratory",
+            "main_topic": "Letting only authorised people into a computer laboratory and recording who entered",
+            "domain": "Access control",
+            "keywords": [
+                "smart door lock",
+                "RFID card",
+                "Arduino",
+                "access log",
+                "laboratory"
+            ],
+            "problem_statement": "The laboratory is opened with one shared key, so nobody knows who went in, and equipment has gone missing.",
+            "proposed_solution": "An Arduino door lock that opens when an authorised RFID card is tapped, with a web page where the laboratory head adds cards and sees who entered and when.",
+            "scope": "The door of one computer laboratory and the faculty and students allowed to use it."
+        },
+        "other": {
+            "title": "RFID-BASED INTEGRATED COMPUTER LABORATORY EQUIPMENT MANAGEMENT SYSTEM"
+        }
+    },
+    {
+        "id": "door-lock-unrelated",
+        "label": "unrelated",
+        "why": "Managing the rice farmers of a barangay. Nothing in common.",
+        "pre_proposal": {
+            "title": "Card-Tap Door Lock with Entry Log for a College Computer Laboratory",
+            "main_topic": "Letting only authorised people into a computer laboratory and recording who entered",
+            "domain": "Access control",
+            "keywords": [
+                "smart door lock",
+                "RFID card",
+                "Arduino",
+                "access log",
+                "laboratory"
+            ],
+            "problem_statement": "The laboratory is opened with one shared key, so nobody knows who went in, and equipment has gone missing.",
+            "proposed_solution": "An Arduino door lock that opens when an authorised RFID card is tapped, with a web page where the laboratory head adds cards and sees who entered and when.",
+            "scope": "The door of one computer laboratory and the faculty and students allowed to use it."
+        },
+        "other": {
+            "title": "WEB-BASED RICE FARMERS MANAGEMENT SYSTEM OF BARANGAY SAN ISIDRO BUHI CAMARINES SUR"
+        }
+    },
+    {
+        "id": "water-refilling-duplicate",
+        "label": "duplicate",
+        "why": "Both are an Android application for managing a water refilling station.",
+        "pre_proposal": {
+            "title": "Order and Delivery App for a Purified Water Refilling Station",
+            "main_topic": "Taking water gallon orders and managing deliveries for a refilling station",
+            "domain": "Small business",
+            "keywords": [
+                "water refilling station",
+                "orders",
+                "delivery",
+                "android",
+                "gallons"
+            ],
+            "problem_statement": "Customers order by text or by shouting to the delivery boy, orders are forgotten, and the owner cannot tell how many gallons were sold in a day.",
+            "proposed_solution": "An Android app where customers order gallons, the station sees and assigns the deliveries, and the owner sees the day's sales and the containers still out.",
+            "scope": "One water refilling station, its staff and its customers."
+        },
+        "other": {
+            "title": "NICK’S 2BIG: AN ANDROID BASED WATER REFILLING STATION MANAGEMENT APPLICATION"
+        }
+    },
+    {
+        "id": "water-refilling-related",
+        "label": "related",
+        "why": "Also about water, but for a town's waterworks: household water service and its bills, not a refilling shop's orders.",
+        "pre_proposal": {
+            "title": "Order and Delivery App for a Purified Water Refilling Station",
+            "main_topic": "Taking water gallon orders and managing deliveries for a refilling station",
+            "domain": "Small business",
+            "keywords": [
+                "water refilling station",
+                "orders",
+                "delivery",
+                "android",
+                "gallons"
+            ],
+            "problem_statement": "Customers order by text or by shouting to the delivery boy, orders are forgotten, and the owner cannot tell how many gallons were sold in a day.",
+            "proposed_solution": "An Android app where customers order gallons, the station sees and assigns the deliveries, and the owner sees the day's sales and the containers still out.",
+            "scope": "One water refilling station, its staff and its customers."
+        },
+        "other": {
+            "title": "WEB-BASED MANAGEMENT SYSTEM WITH SMS NOTIFICATION FOR BULA MUNICIPAL WATERWORKS"
+        }
+    },
+    {
+        "id": "water-refilling-unrelated",
+        "label": "unrelated",
+        "why": "Detecting hate speech on Facebook. Nothing in common.",
+        "pre_proposal": {
+            "title": "Order and Delivery App for a Purified Water Refilling Station",
+            "main_topic": "Taking water gallon orders and managing deliveries for a refilling station",
+            "domain": "Small business",
+            "keywords": [
+                "water refilling station",
+                "orders",
+                "delivery",
+                "android",
+                "gallons"
+            ],
+            "problem_statement": "Customers order by text or by shouting to the delivery boy, orders are forgotten, and the owner cannot tell how many gallons were sold in a day.",
+            "proposed_solution": "An Android app where customers order gallons, the station sees and assigns the deliveries, and the owner sees the day's sales and the containers still out.",
+            "scope": "One water refilling station, its staff and its customers."
+        },
+        "other": {
+            "title": "Hate Speech and Offensive Language Detection in Facebook using Naive Bayes Algorithm"
+        }
+    },
+    {
+        "id": "incident-report-duplicate",
+        "label": "duplicate",
+        "why": "Both are a web-based barangay incident reporting system that submits the reports to the police.",
+        "pre_proposal": {
+            "title": "Online Blotter and Incident Reporting System for a Barangay with Forwarding to the Police Station",
+            "main_topic": "Reporting incidents to the barangay and passing them on to the police",
+            "domain": "Local government, public safety",
+            "keywords": [
+                "incident report",
+                "barangay blotter",
+                "police",
+                "complaints"
+            ],
+            "problem_statement": "Residents must go to the barangay hall to report an incident, the blotter is a logbook, and a copy has to be carried by hand to the police station.",
+            "proposed_solution": "A web system where a resident files an incident report, the barangay records and acts on it, and the report is sent to the town's police station.",
+            "scope": "One barangay, its officials and residents, and the police station of its town."
+        },
+        "other": {
+            "title": "A WEB-BASED BARANGAY INCIDENT REPORTING SYSTEM WITH INTEGRATED REPORT SUBMISSION TO PNP NABUA"
+        }
+    },
+    {
+        "id": "incident-report-related",
+        "label": "related",
+        "why": "Also a barangay system, but for residents' transactions with the barangay such as requesting documents, not incident reports.",
+        "pre_proposal": {
+            "title": "Online Blotter and Incident Reporting System for a Barangay with Forwarding to the Police Station",
+            "main_topic": "Reporting incidents to the barangay and passing them on to the police",
+            "domain": "Local government, public safety",
+            "keywords": [
+                "incident report",
+                "barangay blotter",
+                "police",
+                "complaints"
+            ],
+            "problem_statement": "Residents must go to the barangay hall to report an incident, the blotter is a logbook, and a copy has to be carried by hand to the police station.",
+            "proposed_solution": "A web system where a resident files an incident report, the barangay records and acts on it, and the report is sent to the town's police station.",
+            "scope": "One barangay, its officials and residents, and the police station of its town."
+        },
+        "other": {
+            "title": "TRANSACTION MANAGEMENT SYSTEM WITH QR CODE IN BARANGAY SAN FRANCISCO BULA CAMARINES SUR"
+        }
+    },
+    {
+        "id": "incident-report-unrelated",
+        "label": "unrelated",
+        "why": "Scheduling a tournament with a genetic algorithm. Nothing in common.",
+        "pre_proposal": {
+            "title": "Online Blotter and Incident Reporting System for a Barangay with Forwarding to the Police Station",
+            "main_topic": "Reporting incidents to the barangay and passing them on to the police",
+            "domain": "Local government, public safety",
+            "keywords": [
+                "incident report",
+                "barangay blotter",
+                "police",
+                "complaints"
+            ],
+            "problem_statement": "Residents must go to the barangay hall to report an incident, the blotter is a logbook, and a copy has to be carried by hand to the police station.",
+            "proposed_solution": "A web system where a resident files an incident report, the barangay records and acts on it, and the report is sent to the town's police station.",
+            "scope": "One barangay, its officials and residents, and the police station of its town."
+        },
+        "other": {
+            "title": "Tournament Scheduling Using Genetic Algorithm"
+        }
+    },
+    {
+        "id": "cemetery-duplicate",
+        "label": "duplicate",
+        "why": "Both manage a cemetery with a GIS map.",
+        "pre_proposal": {
+            "title": "Map-Based Burial Plot Locator and Records System for a Public Cemetery",
+            "main_topic": "Finding graves on a map and keeping the burial records of a cemetery",
+            "domain": "Local government services",
+            "keywords": [
+                "cemetery",
+                "burial records",
+                "GIS",
+                "map",
+                "plot"
+            ],
+            "problem_statement": "Families cannot find a relative's grave, and the caretaker's burial records are in old logbooks with no map of which plots are taken.",
+            "proposed_solution": "A system with a map of the cemetery where each plot shows who is buried there and until when it is paid, and where a name can be searched to find the grave.",
+            "scope": "One cemetery, its caretaker and the families of the dead."
+        },
+        "other": {
+            "title": "GIS- INTEGRATED MANAGEMENT SYSTEM FOR EVANGELICAL CEMETERY IN SANTIAGO, IRIGA CITY"
+        }
+    },
+    {
+        "id": "cemetery-related",
+        "label": "related",
+        "why": "The same technique, mapping places by location, but for farmland and not a cemetery.",
+        "pre_proposal": {
+            "title": "Map-Based Burial Plot Locator and Records System for a Public Cemetery",
+            "main_topic": "Finding graves on a map and keeping the burial records of a cemetery",
+            "domain": "Local government services",
+            "keywords": [
+                "cemetery",
+                "burial records",
+                "GIS",
+                "map",
+                "plot"
+            ],
+            "problem_statement": "Families cannot find a relative's grave, and the caretaker's burial records are in old logbooks with no map of which plots are taken.",
+            "proposed_solution": "A system with a map of the cemetery where each plot shows who is buried there and until when it is paid, and where a name can be searched to find the grave.",
+            "scope": "One cemetery, its caretaker and the families of the dead."
+        },
+        "other": {
+            "title": "BATO FARMLAND GEOLOCATION AND MAPPING SYSTEM"
+        }
+    },
+    {
+        "id": "cemetery-unrelated",
+        "label": "unrelated",
+        "why": "Biometric attendance and payroll for a school. Nothing in common.",
+        "pre_proposal": {
+            "title": "Map-Based Burial Plot Locator and Records System for a Public Cemetery",
+            "main_topic": "Finding graves on a map and keeping the burial records of a cemetery",
+            "domain": "Local government services",
+            "keywords": [
+                "cemetery",
+                "burial records",
+                "GIS",
+                "map",
+                "plot"
+            ],
+            "problem_statement": "Families cannot find a relative's grave, and the caretaker's burial records are in old logbooks with no map of which plots are taken.",
+            "proposed_solution": "A system with a map of the cemetery where each plot shows who is buried there and until when it is paid, and where a name can be searched to find the grave.",
+            "scope": "One cemetery, its caretaker and the families of the dead."
+        },
+        "other": {
+            "title": "BIOMETRIC ATTENDANCE MONITORING WITH PAYROLL SYSTEM IN STO. DOMINGO INSTITUTE"
+        }
+    }
+]
