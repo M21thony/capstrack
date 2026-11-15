@@ -107,6 +107,7 @@ Route::middleware(['web', 'expert.auth'])
             Route::patch('/announcements/{announcement}/submissions/{submission}', [AnnouncementController::class, 'verifySubmission'])->name('api.admin.announcements.submissions.update');
 
             Route::post('/archive', [ArchiveController::class, 'store'])->name('api.admin.archive.store');
+            Route::post('/archive/embeddings', [ArchiveController::class, 'embedMissing'])->name('api.admin.archive.embeddings');
             Route::put('/archive/{archive}', [ArchiveController::class, 'update'])->name('api.admin.archive.update');
             Route::patch('/archive/{archive}/tags', [ArchiveController::class, 'updateTags'])->name('api.admin.archive.tags.update');
             // Publish or decline a manuscript a team handed in itself.

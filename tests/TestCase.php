@@ -2,9 +2,11 @@
 
 namespace Tests;
 
+use App\Jobs\EmbedArchive;
 use App\Models\CapstoneExpert;
 use App\Models\Term;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 
 abstract class TestCase extends BaseTestCase
@@ -19,6 +21,9 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         Term::forgetActive();
+
+        // Archive embeddings come from the AI server; no test should reach it.
+        Bus::fake([EmbedArchive::class]);
     }
 
     /**

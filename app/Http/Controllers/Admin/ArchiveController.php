@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\EmbedArchive;
 use App\Models\ArchivedDocTag;
 use App\Models\ArchivedDocument;
 use App\Support\ArchiveTagGuesser;
@@ -32,6 +33,7 @@ class ArchiveController extends Controller
             'archives' => $archives,
             'tags' => $tags,
             'pending' => $pending,
+            'missingEmbeddings' => ArchivedDocument::published()->whereNull('embedding')->count(),
         ]);
     }
 
@@ -51,6 +53,7 @@ class ArchiveController extends Controller
         ]);
 
         $archive = ArchivedDocument::create($data);
+        EmbedArchive::dispatch($archive->archived_id);
 
         // Every capstone carries at least one tag, so Analytics counts it:
         // none picked means the ones its title and abstract suggest.
@@ -76,7 +79,16 @@ class ArchiveController extends Controller
             'tag_ids.*' => 'exists:archived_doc_tags,tag_id',
         ]);
 
-        $archive->update($data);
+        $archive->fill($data);
+        $reworded = $archive->isDirty(['title', 'abstract']);
+        $archive->save();
+
+        // New words need a new embedding. The old one is cleared first, so if
+        // the AI server is down "Update embeddings" still finds this row.
+        if ($reworded) {
+            $archive->forceFill(['embedding' => null])->save();
+            EmbedArchive::dispatch($archive->archived_id);
+        }
 
         if (isset($data['tag_ids'])) {
             $archive->tags()->sync($data['tag_ids']);
@@ -107,6 +119,7 @@ class ArchiveController extends Controller
 
         if ($data['decision'] === 'published') {
             $archive->update(['submission_status' => ArchivedDocument::PUBLISHED]);
+            EmbedArchive::dispatch($archive->archived_id);
 
             // The kind of project the team said it was on its chosen
             // pre-proposal, so Analytics counts it without anyone retyping it.
@@ -128,6 +141,15 @@ class ArchiveController extends Controller
             'success' => true,
             'message' => 'Submission declined. The team can hand in a new copy.',
         ]);
+    }
+
+    /** "Update embeddings": every published capstone still without one gets it, in the background. */
+    public function embedMissing()
+    {
+        $ids = ArchivedDocument::published()->whereNull('embedding')->pluck('archived_id');
+        $ids->each(fn ($id) => EmbedArchive::dispatch($id));
+
+        return response()->json(['success' => true, 'count' => $ids->count()]);
     }
 
     /** Just the tags, from the tag editor on a capstone's card. */

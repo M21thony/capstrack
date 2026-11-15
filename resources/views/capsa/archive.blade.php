@@ -100,6 +100,9 @@
     <div class="topbar-actions">
       @include('capsa.partials.notification-dropdown')
       @unless ($viewOnly)
+      <button class="btn btn-ghost-nav" id="embed-btn" onclick="updateEmbeddings(this)">
+        <span>Update embeddings{{ $missingEmbeddings ? ' ('.$missingEmbeddings.')' : '' }}</span>
+      </button>
       <button class="btn btn-ghost-nav" id="topbar-action" onclick="showAddArchive()">
         <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span id="action-label">Add Capstone</span>
@@ -343,6 +346,16 @@
 
 <script nonce="{{ Vite::cspNonce() }}">
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
+
+function updateEmbeddings(btn) {
+  var label = btn.querySelector('span'), was = label.textContent;
+  btn.disabled = true;
+  label.textContent = 'Updating…';
+  fetch('/api/admin/archive/embeddings', { method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' } })
+    .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function (body) { label.textContent = body.count ? 'Updating ' + body.count + '…' : 'Embeddings up to date'; })
+    .catch(function () { label.textContent = was; btn.disabled = false; });
+}
 const ABSTRACTS = @json($abstractData);
 
 /* Text only (textContent, never innerHTML): an abstract is whatever a team typed. */
