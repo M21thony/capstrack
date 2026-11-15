@@ -1,0 +1,830 @@
+[
+    {
+        "id": "scholarship-duplicate",
+        "label": "duplicate",
+        "why": "Both are a web portal where students apply for government scholarships.",
+        "pre_proposal": {
+            "title": "Online Application and Screening Portal for Local Government Scholarships",
+            "main_topic": "Applying for a government scholarship online and screening the applicants",
+            "domain": "Education, government services",
+            "keywords": [
+                "scholarship",
+                "application",
+                "screening",
+                "grantees",
+                "requirements"
+            ],
+            "problem_statement": "Students travel to the provincial office to pass paper requirements for a scholarship, wait weeks without news, and the office sorts hundreds of folders by hand.",
+            "proposed_solution": "A web portal where a student applies for a scholarship and uploads the requirements, the office screens and approves applicants, and the student sees the status of the application.",
+            "scope": "The scholarship office of one local government and the students who apply to it."
+        },
+        "other": {
+            "title": "ESCHOLAR: A COMPREHENSIVE WEB-BASED SCHOLARSHIP APPLICATION PORTAL CONNECTING GOVERNMENT AND STUDENTS"
+        }
+    },
+    {
+        "id": "scholarship-related",
+        "label": "related",
+        "why": "Also students applying online, but for admission to a college, not for a scholarship.",
+        "pre_proposal": {
+            "title": "Online Application and Screening Portal for Local Government Scholarships",
+            "main_topic": "Applying for a government scholarship online and screening the applicants",
+            "domain": "Education, government services",
+            "keywords": [
+                "scholarship",
+                "application",
+                "screening",
+                "grantees",
+                "requirements"
+            ],
+            "problem_statement": "Students travel to the provincial office to pass paper requirements for a scholarship, wait weeks without news, and the office sorts hundreds of folders by hand.",
+            "proposed_solution": "A web portal where a student applies for a scholarship and uploads the requirements, the office screens and approves applicants, and the student sees the status of the application.",
+            "scope": "The scholarship office of one local government and the students who apply to it."
+        },
+        "other": {
+            "title": "LICOMSIA: CROSS- PLATFORM STUDENT INFORMATION AND ADMISSION SYSTEM FOR LIBON COMMUNITY COLLEGE"
+        }
+    },
+    {
+        "id": "scholarship-unrelated",
+        "label": "unrelated",
+        "why": "A passcode door lock for a server room. Nothing in common.",
+        "pre_proposal": {
+            "title": "Online Application and Screening Portal for Local Government Scholarships",
+            "main_topic": "Applying for a government scholarship online and screening the applicants",
+            "domain": "Education, government services",
+            "keywords": [
+                "scholarship",
+                "application",
+                "screening",
+                "grantees",
+                "requirements"
+            ],
+            "problem_statement": "Students travel to the provincial office to pass paper requirements for a scholarship, wait weeks without news, and the office sorts hundreds of folders by hand.",
+            "proposed_solution": "A web portal where a student applies for a scholarship and uploads the requirements, the office screens and approves applicants, and the student sees the status of the application.",
+            "scope": "The scholarship office of one local government and the students who apply to it."
+        },
+        "other": {
+            "title": "ENHANCED SECURITY: IMPLEMENTING A PASSCODE- PROTECTED DOOR LOCK SYSTEM FOR CCS SERVER ROOM"
+        }
+    },
+    {
+        "id": "lost-found-duplicate",
+        "label": "duplicate",
+        "why": "Both are a lost and found system for a college with image recognition.",
+        "pre_proposal": {
+            "title": "Campus Lost Item Reporting and Claiming System with Photo Matching",
+            "main_topic": "Reporting lost and found items on campus and matching them by photo",
+            "domain": "Campus services",
+            "keywords": [
+                "lost and found",
+                "image recognition",
+                "claiming",
+                "campus",
+                "mobile"
+            ],
+            "problem_statement": "Lost items are posted on social media or left with the guard, and owners have no single place to check whether their item was found.",
+            "proposed_solution": "A web and mobile system where a finder posts a photo of an item, an owner reports what was lost, and image recognition suggests found items that look like it.",
+            "scope": "The students, staff and security office of one college."
+        },
+        "other": {
+            "title": "CAMARINES SUR POLYTECHNIC COLLEGES WEB AND MOBILE-BASED LOST AND FOUND MANAGEMENT SYSTEM WITH IMAGE RECOGNITION"
+        }
+    },
+    {
+        "id": "lost-found-related",
+        "label": "related",
+        "why": "Also a service for people on the same campus, but for requesting repairs, ICT help and vehicles, not lost items.",
+        "pre_proposal": {
+            "title": "Campus Lost Item Reporting and Claiming System with Photo Matching",
+            "main_topic": "Reporting lost and found items on campus and matching them by photo",
+            "domain": "Campus services",
+            "keywords": [
+                "lost and found",
+                "image recognition",
+                "claiming",
+                "campus",
+                "mobile"
+            ],
+            "problem_statement": "Lost items are posted on social media or left with the guard, and owners have no single place to check whether their item was found.",
+            "proposed_solution": "A web and mobile system where a finder posts a photo of an item, an owner reports what was lost, and image recognition suggests found items that look like it.",
+            "scope": "The students, staff and security office of one college."
+        },
+        "other": {
+            "title": "INTEGRATED CAMPUS REPAIR, ICT, AND VEHICLE REQUEST SYSTEM FOR CAMARINES SUR POLYTECHNIC COLLEGES"
+        }
+    },
+    {
+        "id": "lost-found-unrelated",
+        "label": "unrelated",
+        "why": "Forecasting the sales of a noodle factory. Nothing in common.",
+        "pre_proposal": {
+            "title": "Campus Lost Item Reporting and Claiming System with Photo Matching",
+            "main_topic": "Reporting lost and found items on campus and matching them by photo",
+            "domain": "Campus services",
+            "keywords": [
+                "lost and found",
+                "image recognition",
+                "claiming",
+                "campus",
+                "mobile"
+            ],
+            "problem_statement": "Lost items are posted on social media or left with the guard, and owners have no single place to check whether their item was found.",
+            "proposed_solution": "A web and mobile system where a finder posts a photo of an item, an owner reports what was lost, and image recognition suggests found items that look like it.",
+            "scope": "The students, staff and security office of one college."
+        },
+        "other": {
+            "title": "DATA-DRIVEN SALES FORECASTING AND PRODUCT PROFIT ANALYSIS SYSTEM FOR JM ZORILLA NOODLE FACTORY"
+        }
+    },
+    {
+        "id": "venue-reservation-duplicate",
+        "label": "duplicate",
+        "why": "Both reserve an institution's venues and manage its resources.",
+        "pre_proposal": {
+            "title": "Room and Facility Booking System for a State College",
+            "main_topic": "Reserving the rooms, halls and equipment of a college for activities",
+            "domain": "Campus services",
+            "keywords": [
+                "venue reservation",
+                "facilities",
+                "booking",
+                "equipment",
+                "approval"
+            ],
+            "problem_statement": "Organizations fill out a paper form and walk it to three offices to reserve the gymnasium or a hall, and two groups are sometimes given the same venue on the same day.",
+            "proposed_solution": "A system that shows which venues and equipment are free, takes a reservation request, routes it for approval, and blocks a double booking.",
+            "scope": "The venues and equipment of one college and the offices and organizations that reserve them."
+        },
+        "other": {
+            "title": "UtiliCSPC: AN AUTOMATED VENUE RESERVATION AND RESOURCE MANAGEMENT SYSTEM FOR INSTITUTIONAL USE"
+        }
+    },
+    {
+        "id": "venue-reservation-related",
+        "label": "related",
+        "why": "Also about activities in the same college, but it schedules the events on a calendar; it does not reserve venues.",
+        "pre_proposal": {
+            "title": "Room and Facility Booking System for a State College",
+            "main_topic": "Reserving the rooms, halls and equipment of a college for activities",
+            "domain": "Campus services",
+            "keywords": [
+                "venue reservation",
+                "facilities",
+                "booking",
+                "equipment",
+                "approval"
+            ],
+            "problem_statement": "Organizations fill out a paper form and walk it to three offices to reserve the gymnasium or a hall, and two groups are sometimes given the same venue on the same day.",
+            "proposed_solution": "A system that shows which venues and equipment are free, takes a reservation request, routes it for approval, and blocks a double booking.",
+            "scope": "The venues and equipment of one college and the offices and organizations that reserve them."
+        },
+        "other": {
+            "title": "WEB-BASED EVENT SCHEDULING SYSTEM FOR CAMARINES SUR POLYTECHNIC COLLEGES"
+        }
+    },
+    {
+        "id": "venue-reservation-unrelated",
+        "label": "unrelated",
+        "why": "Classifying banana leaf diseases from pictures. Nothing in common.",
+        "pre_proposal": {
+            "title": "Room and Facility Booking System for a State College",
+            "main_topic": "Reserving the rooms, halls and equipment of a college for activities",
+            "domain": "Campus services",
+            "keywords": [
+                "venue reservation",
+                "facilities",
+                "booking",
+                "equipment",
+                "approval"
+            ],
+            "problem_statement": "Organizations fill out a paper form and walk it to three offices to reserve the gymnasium or a hall, and two groups are sometimes given the same venue on the same day.",
+            "proposed_solution": "A system that shows which venues and equipment are free, takes a reservation request, routes it for approval, and blocks a double booking.",
+            "scope": "The venues and equipment of one college and the offices and organizations that reserve them."
+        },
+        "other": {
+            "title": "IMAGE CLASSIFICATION OF BANANA LEAF DISEASES IN THE PHILIPPINES USING CONVOLUTIONAL NEURAL NETWORK (CNN) ALGORITHM"
+        }
+    },
+    {
+        "id": "youth-council-duplicate",
+        "label": "duplicate",
+        "why": "Both are a web-based Sangguniang Kabataan management system for a barangay.",
+        "pre_proposal": {
+            "title": "Sangguniang Kabataan Records, Projects and Youth Profiling System for a Barangay",
+            "main_topic": "Managing the youth council of a barangay: its members, projects and funds",
+            "domain": "Local government, youth",
+            "keywords": [
+                "Sangguniang Kabataan",
+                "youth profile",
+                "projects",
+                "barangay",
+                "budget"
+            ],
+            "problem_statement": "The SK officers keep the list of the barangay's youth, their projects and their spending in notebooks, so reports to the municipality are late and incomplete.",
+            "proposed_solution": "A web system where the SK profiles the youth of the barangay, plans and records its projects and spending, and prints the reports it must submit.",
+            "scope": "The Sangguniang Kabataan of one barangay and the youth it serves."
+        },
+        "other": {
+            "title": "DEVELOPMENT OF WEB-BASED SANGGUNIANG KABATAAN MANAGEMENT SYSTEM FOR BARANGAY SAGUMAY, NABUA, CAMARINES SUR"
+        }
+    },
+    {
+        "id": "youth-council-related",
+        "label": "related",
+        "why": "Also a barangay governance system, but for the barangay council and its performance indicators, not the youth council.",
+        "pre_proposal": {
+            "title": "Sangguniang Kabataan Records, Projects and Youth Profiling System for a Barangay",
+            "main_topic": "Managing the youth council of a barangay: its members, projects and funds",
+            "domain": "Local government, youth",
+            "keywords": [
+                "Sangguniang Kabataan",
+                "youth profile",
+                "projects",
+                "barangay",
+                "budget"
+            ],
+            "problem_statement": "The SK officers keep the list of the barangay's youth, their projects and their spending in notebooks, so reports to the municipality are late and incomplete.",
+            "proposed_solution": "A web system where the SK profiles the youth of the barangay, plans and records its projects and spending, and prints the reports it must submit.",
+            "scope": "The Sangguniang Kabataan of one barangay and the youth it serves."
+        },
+        "other": {
+            "title": "IBARYO: GOVERNANCE AUTOMATED AND KPI MONITORING SYSTEM FOR PALOYON ORIENTAL, NABUA, CAMARINES SUR"
+        }
+    },
+    {
+        "id": "youth-council-unrelated",
+        "label": "unrelated",
+        "why": "A local weather station using gradient boosting. Nothing in common.",
+        "pre_proposal": {
+            "title": "Sangguniang Kabataan Records, Projects and Youth Profiling System for a Barangay",
+            "main_topic": "Managing the youth council of a barangay: its members, projects and funds",
+            "domain": "Local government, youth",
+            "keywords": [
+                "Sangguniang Kabataan",
+                "youth profile",
+                "projects",
+                "barangay",
+                "budget"
+            ],
+            "problem_statement": "The SK officers keep the list of the barangay's youth, their projects and their spending in notebooks, so reports to the municipality are late and incomplete.",
+            "proposed_solution": "A web system where the SK profiles the youth of the barangay, plans and records its projects and spending, and prints the reports it must submit.",
+            "scope": "The Sangguniang Kabataan of one barangay and the youth it serves."
+        },
+        "other": {
+            "title": "REAL-TIME LOCAL WEATHER STATION USING GRADIENT BOOSTING"
+        }
+    },
+    {
+        "id": "attendance-payroll-duplicate",
+        "label": "duplicate",
+        "why": "Both are biometric attendance monitoring with payroll for a school.",
+        "pre_proposal": {
+            "title": "Fingerprint Timekeeping and Salary Computation System for a Private School",
+            "main_topic": "Recording employees' attendance by fingerprint and computing their pay from it",
+            "domain": "Human resources",
+            "keywords": [
+                "biometric attendance",
+                "payroll",
+                "fingerprint",
+                "employees",
+                "timekeeping"
+            ],
+            "problem_statement": "Teachers sign a logbook, the bookkeeper counts lates and absences by hand, and salaries are released late with frequent mistakes.",
+            "proposed_solution": "Employees time in and out with a fingerprint scanner, and the system computes each one's salary, deductions for lates and absences, and a payslip.",
+            "scope": "The employees and the accounting office of one private school."
+        },
+        "other": {
+            "title": "BIOMETRIC ATTENDANCE MONITORING WITH PAYROLL SYSTEM IN STO. DOMINGO INSTITUTE"
+        }
+    },
+    {
+        "id": "attendance-payroll-related",
+        "label": "related",
+        "why": "Also biometric attendance, but of church members for discipleship, with no payroll.",
+        "pre_proposal": {
+            "title": "Fingerprint Timekeeping and Salary Computation System for a Private School",
+            "main_topic": "Recording employees' attendance by fingerprint and computing their pay from it",
+            "domain": "Human resources",
+            "keywords": [
+                "biometric attendance",
+                "payroll",
+                "fingerprint",
+                "employees",
+                "timekeeping"
+            ],
+            "problem_statement": "Teachers sign a logbook, the bookkeeper counts lates and absences by hand, and salaries are released late with frequent mistakes.",
+            "proposed_solution": "Employees time in and out with a fingerprint scanner, and the system computes each one's salary, deductions for lates and absences, and a payslip.",
+            "scope": "The employees and the accounting office of one private school."
+        },
+        "other": {
+            "title": "CHURCH MONITORING SYSTEM FOR INTENTIONAL DISCIPLESHIP IN BICOL WITH BIOMETRICS ATTENDANCE INTEGRATION"
+        }
+    },
+    {
+        "id": "attendance-payroll-unrelated",
+        "label": "unrelated",
+        "why": "An online marketplace for bamboo crafts. Nothing in common.",
+        "pre_proposal": {
+            "title": "Fingerprint Timekeeping and Salary Computation System for a Private School",
+            "main_topic": "Recording employees' attendance by fingerprint and computing their pay from it",
+            "domain": "Human resources",
+            "keywords": [
+                "biometric attendance",
+                "payroll",
+                "fingerprint",
+                "employees",
+                "timekeeping"
+            ],
+            "problem_statement": "Teachers sign a logbook, the bookkeeper counts lates and absences by hand, and salaries are released late with frequent mistakes.",
+            "proposed_solution": "Employees time in and out with a fingerprint scanner, and the system computes each one's salary, deductions for lates and absences, and a payslip.",
+            "scope": "The employees and the accounting office of one private school."
+        },
+        "other": {
+            "title": "KAWÁYANHUB: THE ONLINE MARKETPLACE FOR BAMBOO CRAFTS IN PAWILI, BULA"
+        }
+    },
+    {
+        "id": "craft-marketplace-duplicate",
+        "label": "duplicate",
+        "why": "Both are an online marketplace for the bamboo crafts of a barangay.",
+        "pre_proposal": {
+            "title": "Online Selling Platform for the Bamboo Products of a Barangay's Craftsmen",
+            "main_topic": "Selling locally made bamboo crafts online",
+            "domain": "E-commerce, livelihood",
+            "keywords": [
+                "bamboo crafts",
+                "online marketplace",
+                "craftsmen",
+                "orders",
+                "livelihood"
+            ],
+            "problem_statement": "The bamboo craftsmen of the barangay sell only to people who pass by, and buyers from other towns cannot see or order what they make.",
+            "proposed_solution": "An online marketplace where each craftsman posts bamboo products, buyers order and pay, and the craftsman tracks orders.",
+            "scope": "The bamboo craft makers of one barangay and their buyers."
+        },
+        "other": {
+            "title": "KAWÁYANHUB: THE ONLINE MARKETPLACE FOR BAMBOO CRAFTS IN PAWILI, BULA"
+        }
+    },
+    {
+        "id": "craft-marketplace-related",
+        "label": "related",
+        "why": "Also selling local products online, but farm harvests located on a map, not bamboo crafts.",
+        "pre_proposal": {
+            "title": "Online Selling Platform for the Bamboo Products of a Barangay's Craftsmen",
+            "main_topic": "Selling locally made bamboo crafts online",
+            "domain": "E-commerce, livelihood",
+            "keywords": [
+                "bamboo crafts",
+                "online marketplace",
+                "craftsmen",
+                "orders",
+                "livelihood"
+            ],
+            "problem_statement": "The bamboo craftsmen of the barangay sell only to people who pass by, and buyers from other towns cannot see or order what they make.",
+            "proposed_solution": "An online marketplace where each craftsman posts bamboo products, buyers order and pay, and the craftsman tracks orders.",
+            "scope": "The bamboo craft makers of one barangay and their buyers."
+        },
+        "other": {
+            "title": "ANITALA: A COMMUNITY-DRIVE N PLANT MAPPING AND GEO-TAGGING WEB APPLICATION FOR HARVEST SELLING AND SHARING"
+        }
+    },
+    {
+        "id": "craft-marketplace-unrelated",
+        "label": "unrelated",
+        "why": "Jail records with electronic head counting. Nothing in common.",
+        "pre_proposal": {
+            "title": "Online Selling Platform for the Bamboo Products of a Barangay's Craftsmen",
+            "main_topic": "Selling locally made bamboo crafts online",
+            "domain": "E-commerce, livelihood",
+            "keywords": [
+                "bamboo crafts",
+                "online marketplace",
+                "craftsmen",
+                "orders",
+                "livelihood"
+            ],
+            "problem_statement": "The bamboo craftsmen of the barangay sell only to people who pass by, and buyers from other towns cannot see or order what they make.",
+            "proposed_solution": "An online marketplace where each craftsman posts bamboo products, buyers order and pay, and the craftsman tracks orders.",
+            "scope": "The bamboo craft makers of one barangay and their buyers."
+        },
+        "other": {
+            "title": "BJMP (Bureau of Jail Management and Penology) Record Management System with Electronic Head Counting"
+        }
+    },
+    {
+        "id": "enrollment-face-duplicate",
+        "label": "duplicate",
+        "why": "Both are a web-based enrollment system with face recognition for a technical-vocational school.",
+        "pre_proposal": {
+            "title": "Online Enrollment System with Face Verification for a Technical-Vocational High School",
+            "main_topic": "Enrolling students online and confirming who they are by their face",
+            "domain": "Education",
+            "keywords": [
+                "enrollment",
+                "face recognition",
+                "students",
+                "registration",
+                "vocational school"
+            ],
+            "problem_statement": "Enrollment takes days of lining up, and the school has had people enrol or claim documents under another student's name.",
+            "proposed_solution": "A web-based enrollment system where a student registers and picks subjects online, and face recognition confirms the student's identity.",
+            "scope": "The students and the registrar of one technical-vocational school."
+        },
+        "other": {
+            "title": "DEVELOPMENT OF WEB-BASED ENROLLMENT SYSTEM WITH FACE RECOGNITION FOR RINCONADA NATIONAL TECHNICAL VOCATIONAL SCHOOL"
+        }
+    },
+    {
+        "id": "enrollment-face-related",
+        "label": "related",
+        "why": "Also student records for a school, but an information system with QR codes and ID printing, not enrollment.",
+        "pre_proposal": {
+            "title": "Online Enrollment System with Face Verification for a Technical-Vocational High School",
+            "main_topic": "Enrolling students online and confirming who they are by their face",
+            "domain": "Education",
+            "keywords": [
+                "enrollment",
+                "face recognition",
+                "students",
+                "registration",
+                "vocational school"
+            ],
+            "problem_statement": "Enrollment takes days of lining up, and the school has had people enrol or claim documents under another student's name.",
+            "proposed_solution": "A web-based enrollment system where a student registers and picks subjects online, and face recognition confirms the student's identity.",
+            "scope": "The students and the registrar of one technical-vocational school."
+        },
+        "other": {
+            "title": "SBESqr: WEB-BASED STUDENT INFORMATION MANAGEMENT SYSTEM WITH EMBEDDED QR CODE AND ID GENERATION FOR STA. BARBARA ELEMENTARY SCHOOL"
+        }
+    },
+    {
+        "id": "enrollment-face-unrelated",
+        "label": "unrelated",
+        "why": "ERP software for a funeral service business. Nothing in common.",
+        "pre_proposal": {
+            "title": "Online Enrollment System with Face Verification for a Technical-Vocational High School",
+            "main_topic": "Enrolling students online and confirming who they are by their face",
+            "domain": "Education",
+            "keywords": [
+                "enrollment",
+                "face recognition",
+                "students",
+                "registration",
+                "vocational school"
+            ],
+            "problem_statement": "Enrollment takes days of lining up, and the school has had people enrol or claim documents under another student's name.",
+            "proposed_solution": "A web-based enrollment system where a student registers and picks subjects online, and face recognition confirms the student's identity.",
+            "scope": "The students and the registrar of one technical-vocational school."
+        },
+        "other": {
+            "title": "Utilizing an Enterprise Resource Plan (ERP) Software for the Optimization of Business Process for Beloro Funeral Services"
+        }
+    },
+    {
+        "id": "class-scheduling-duplicate",
+        "label": "duplicate",
+        "why": "Both generate class schedules with a constraint satisfaction algorithm.",
+        "pre_proposal": {
+            "title": "Automatic Class Timetable Generator Using Constraint Satisfaction",
+            "main_topic": "Generating a class schedule with no conflicts in rooms, teachers and sections",
+            "domain": "Algorithms, scheduling",
+            "keywords": [
+                "class scheduling",
+                "constraint satisfaction",
+                "timetable",
+                "rooms",
+                "faculty load"
+            ],
+            "problem_statement": "The program chair plots class schedules on a spreadsheet for weeks and still ends up with a teacher or a room booked twice at the same hour.",
+            "proposed_solution": "A program that treats rooms, teachers, sections and time slots as constraints and uses a constraint satisfaction algorithm to produce a schedule with no conflicts.",
+            "scope": "The class schedule of one college department for a semester."
+        },
+        "other": {
+            "title": "Constraint Satisfaction Problem (CSP) Algorithm in Class Scheduling"
+        }
+    },
+    {
+        "id": "class-scheduling-related",
+        "label": "related",
+        "why": "Also scheduling by an algorithm, but of campus events with a genetic algorithm, not classes.",
+        "pre_proposal": {
+            "title": "Automatic Class Timetable Generator Using Constraint Satisfaction",
+            "main_topic": "Generating a class schedule with no conflicts in rooms, teachers and sections",
+            "domain": "Algorithms, scheduling",
+            "keywords": [
+                "class scheduling",
+                "constraint satisfaction",
+                "timetable",
+                "rooms",
+                "faculty load"
+            ],
+            "problem_statement": "The program chair plots class schedules on a spreadsheet for weeks and still ends up with a teacher or a room booked twice at the same hour.",
+            "proposed_solution": "A program that treats rooms, teachers, sections and time slots as constraints and uses a constraint satisfaction algorithm to produce a schedule with no conflicts.",
+            "scope": "The class schedule of one college department for a semester."
+        },
+        "other": {
+            "title": "Optimizing CSPC Event Scheduling using a Genetic Algorithm"
+        }
+    },
+    {
+        "id": "class-scheduling-unrelated",
+        "label": "unrelated",
+        "why": "Financial management for a religious organisation. Nothing in common.",
+        "pre_proposal": {
+            "title": "Automatic Class Timetable Generator Using Constraint Satisfaction",
+            "main_topic": "Generating a class schedule with no conflicts in rooms, teachers and sections",
+            "domain": "Algorithms, scheduling",
+            "keywords": [
+                "class scheduling",
+                "constraint satisfaction",
+                "timetable",
+                "rooms",
+                "faculty load"
+            ],
+            "problem_statement": "The program chair plots class schedules on a spreadsheet for weeks and still ends up with a teacher or a room booked twice at the same hour.",
+            "proposed_solution": "A program that treats rooms, teachers, sections and time slots as constraints and uses a constraint satisfaction algorithm to produce a schedule with no conflicts.",
+            "scope": "The class schedule of one college department for a semester."
+        },
+        "other": {
+            "title": "ARGENT: A WEB-BASED FINANCIAL MANAGEMENT SYSTEM FOR PHILIPPINE GOOD NEWS INTERNATIONAL"
+        }
+    },
+    {
+        "id": "birthing-home-duplicate",
+        "label": "duplicate",
+        "why": "Both are an information system for a birthing home with SMS notification.",
+        "pre_proposal": {
+            "title": "Mother and Newborn Records System with Text Reminders for a Lying-In Clinic",
+            "main_topic": "Keeping the records of pregnant mothers and births at a birthing home",
+            "domain": "Healthcare, maternal care",
+            "keywords": [
+                "birthing home",
+                "prenatal",
+                "maternal records",
+                "SMS reminder",
+                "newborn"
+            ],
+            "problem_statement": "The midwife keeps each mother's prenatal check-ups in a paper booklet, and mothers miss check-ups because nobody reminds them.",
+            "proposed_solution": "A system that records each mother's prenatal visits, delivery and newborn details, and texts her before her next check-up.",
+            "scope": "One birthing home: its midwives and the mothers under its care."
+        },
+        "other": {
+            "title": "Queen Hannah Birthing Home Information Management System with SMS Notification"
+        }
+    },
+    {
+        "id": "birthing-home-related",
+        "label": "related",
+        "why": "Also health records for mothers' children at a health center, but it monitors child healthcare, not pregnancy and birth.",
+        "pre_proposal": {
+            "title": "Mother and Newborn Records System with Text Reminders for a Lying-In Clinic",
+            "main_topic": "Keeping the records of pregnant mothers and births at a birthing home",
+            "domain": "Healthcare, maternal care",
+            "keywords": [
+                "birthing home",
+                "prenatal",
+                "maternal records",
+                "SMS reminder",
+                "newborn"
+            ],
+            "problem_statement": "The midwife keeps each mother's prenatal check-ups in a paper booklet, and mothers miss check-ups because nobody reminds them.",
+            "proposed_solution": "A system that records each mother's prenatal visits, delivery and newborn details, and texts her before her next check-up.",
+            "scope": "One birthing home: its midwives and the mothers under its care."
+        },
+        "other": {
+            "title": "A Design Thinking Approach in Analysis and Design of Child Healthcare Monitoring System for Bula Health Center (RHU1)"
+        }
+    },
+    {
+        "id": "birthing-home-unrelated",
+        "label": "unrelated",
+        "why": "Finding the shortest network route with Dijkstra's algorithm. Nothing in common.",
+        "pre_proposal": {
+            "title": "Mother and Newborn Records System with Text Reminders for a Lying-In Clinic",
+            "main_topic": "Keeping the records of pregnant mothers and births at a birthing home",
+            "domain": "Healthcare, maternal care",
+            "keywords": [
+                "birthing home",
+                "prenatal",
+                "maternal records",
+                "SMS reminder",
+                "newborn"
+            ],
+            "problem_statement": "The midwife keeps each mother's prenatal check-ups in a paper booklet, and mothers miss check-ups because nobody reminds them.",
+            "proposed_solution": "A system that records each mother's prenatal visits, delivery and newborn details, and texts her before her next check-up.",
+            "scope": "One birthing home: its midwives and the mothers under its care."
+        },
+        "other": {
+            "title": "IP ROUTING TO FIND OPEN SHORTEST PATH USING DIJKSTRA'S ALGORITHM"
+        }
+    },
+    {
+        "id": "waste-sorting-duplicate",
+        "label": "duplicate",
+        "why": "Both are a Raspberry Pi waste segregator using a convolutional neural network.",
+        "pre_proposal": {
+            "title": "Camera-Based Automatic Trash Sorting Bin Using a Convolutional Neural Network",
+            "main_topic": "A bin that recognises the kind of waste dropped in and sorts it",
+            "domain": "Image classification, embedded systems",
+            "keywords": [
+                "waste segregation",
+                "convolutional neural network",
+                "Raspberry Pi",
+                "camera",
+                "recycling"
+            ],
+            "problem_statement": "People throw all waste into one bin even where segregation is required, and the janitors have to sort it by hand afterwards.",
+            "proposed_solution": "A bin with a camera on a Raspberry Pi that classifies each item as biodegradable, recyclable or residual with a convolutional neural network and drops it into the right compartment.",
+            "scope": "Common household and school waste, tested on one prototype bin."
+        },
+        "other": {
+            "title": "RASPBERRY PI WASTE SEGREGATOR USING CONVOLUTIONAL NEURAL NETWORK ALGORITHM"
+        }
+    },
+    {
+        "id": "waste-sorting-related",
+        "label": "related",
+        "why": "Also a smart trash can with object detection, but it moves to the person by voice and gesture; it does not sort waste.",
+        "pre_proposal": {
+            "title": "Camera-Based Automatic Trash Sorting Bin Using a Convolutional Neural Network",
+            "main_topic": "A bin that recognises the kind of waste dropped in and sorts it",
+            "domain": "Image classification, embedded systems",
+            "keywords": [
+                "waste segregation",
+                "convolutional neural network",
+                "Raspberry Pi",
+                "camera",
+                "recycling"
+            ],
+            "problem_statement": "People throw all waste into one bin even where segregation is required, and the janitors have to sort it by hand afterwards.",
+            "proposed_solution": "A bin with a camera on a Raspberry Pi that classifies each item as biodegradable, recyclable or residual with a convolutional neural network and drops it into the right compartment.",
+            "scope": "Common household and school waste, tested on one prototype bin."
+        },
+        "other": {
+            "title": "DOLLY: A VOICE-ACTIVATED AND GESTURE-RECOGN IZING SMART TRASHCAN UTILIZING THE YOLO ALGORITHM FOR AUTONOMOUS NAVIGATION"
+        }
+    },
+    {
+        "id": "waste-sorting-unrelated",
+        "label": "unrelated",
+        "why": "Appointment scheduling for a municipal agriculture office. Nothing in common.",
+        "pre_proposal": {
+            "title": "Camera-Based Automatic Trash Sorting Bin Using a Convolutional Neural Network",
+            "main_topic": "A bin that recognises the kind of waste dropped in and sorts it",
+            "domain": "Image classification, embedded systems",
+            "keywords": [
+                "waste segregation",
+                "convolutional neural network",
+                "Raspberry Pi",
+                "camera",
+                "recycling"
+            ],
+            "problem_statement": "People throw all waste into one bin even where segregation is required, and the janitors have to sort it by hand afterwards.",
+            "proposed_solution": "A bin with a camera on a Raspberry Pi that classifies each item as biodegradable, recyclable or residual with a convolutional neural network and drops it into the right compartment.",
+            "scope": "Common household and school waste, tested on one prototype bin."
+        },
+        "other": {
+            "title": "APPOINTMENT SCHEDULING SYSTEM WITH SMS NOTIFICATION FOR MUNICIPAL AGRICULTURE OFFICE OF BATO"
+        }
+    },
+    {
+        "id": "plate-recognition-duplicate",
+        "label": "duplicate",
+        "why": "Both recognise vehicle plate numbers with image processing and OCR.",
+        "pre_proposal": {
+            "title": "Reading Vehicle Licence Plates from Camera Images Using Image Processing and OCR",
+            "main_topic": "Recognising the plate number of a vehicle from a picture",
+            "domain": "Image processing",
+            "keywords": [
+                "plate number recognition",
+                "OCR",
+                "image processing",
+                "vehicles",
+                "camera"
+            ],
+            "problem_statement": "Guards write down plate numbers by hand at the gate, which is slow and full of mistakes when many vehicles arrive at once.",
+            "proposed_solution": "A program that finds the plate in a camera image using digital image processing and reads its characters with optical character recognition.",
+            "scope": "Standard Philippine vehicle plates photographed in daylight."
+        },
+        "other": {
+            "title": "Vehicle Plate Number Recognition Using Digital Image Processing and Optical Character Recognition"
+        }
+    },
+    {
+        "id": "plate-recognition-related",
+        "label": "related",
+        "why": "Also computer vision on vehicles, but it detects whether parking slots are taken; it does not read plates.",
+        "pre_proposal": {
+            "title": "Reading Vehicle Licence Plates from Camera Images Using Image Processing and OCR",
+            "main_topic": "Recognising the plate number of a vehicle from a picture",
+            "domain": "Image processing",
+            "keywords": [
+                "plate number recognition",
+                "OCR",
+                "image processing",
+                "vehicles",
+                "camera"
+            ],
+            "problem_statement": "Guards write down plate numbers by hand at the gate, which is slow and full of mistakes when many vehicles arrive at once.",
+            "proposed_solution": "A program that finds the plate in a camera image using digital image processing and reads its characters with optical character recognition.",
+            "scope": "Standard Philippine vehicle plates photographed in daylight."
+        },
+        "other": {
+            "title": "TOLL-BASED PARKING LOT DETECTION USING YOLOV9 AND IMAGE THRESHOLDING"
+        }
+    },
+    {
+        "id": "plate-recognition-unrelated",
+        "label": "unrelated",
+        "why": "Sales management for a gravel and sand trader. Nothing in common.",
+        "pre_proposal": {
+            "title": "Reading Vehicle Licence Plates from Camera Images Using Image Processing and OCR",
+            "main_topic": "Recognising the plate number of a vehicle from a picture",
+            "domain": "Image processing",
+            "keywords": [
+                "plate number recognition",
+                "OCR",
+                "image processing",
+                "vehicles",
+                "camera"
+            ],
+            "problem_statement": "Guards write down plate numbers by hand at the gate, which is slow and full of mistakes when many vehicles arrive at once.",
+            "proposed_solution": "A program that finds the plate in a camera image using digital image processing and reads its characters with optical character recognition.",
+            "scope": "Standard Philippine vehicle plates photographed in daylight."
+        },
+        "other": {
+            "title": "SALES MANAGEMENT SYSTEM FOR ZUÑIGA’S GRAVEL AND SAND TRADING"
+        }
+    },
+    {
+        "id": "guidance-duplicate",
+        "label": "duplicate",
+        "why": "Both are an online appointment and information system for a guidance office.",
+        "pre_proposal": {
+            "title": "Counselling Appointment and Student Information System for a College Guidance Office",
+            "main_topic": "Booking counselling sessions and keeping guidance records of students",
+            "domain": "Student services",
+            "keywords": [
+                "guidance office",
+                "counselling",
+                "appointment",
+                "student records",
+                "online"
+            ],
+            "problem_statement": "Students who need counselling have to walk in and wait, many never come back, and counsellors keep their notes in separate folders.",
+            "proposed_solution": "An online system where a student books a counselling appointment and the guidance office keeps each student's information and session records.",
+            "scope": "The guidance office of one college and its students."
+        },
+        "other": {
+            "title": "E-GUIDANCE: AN ONLINE APPOINTMENT AND INFORMATION SYSTEM FOR THE CENTER FOR GUIDANCE SERVICES"
+        }
+    },
+    {
+        "id": "guidance-related",
+        "label": "related",
+        "why": "Also online appointments for students of the same kind of school, but for registrar transactions, not counselling.",
+        "pre_proposal": {
+            "title": "Counselling Appointment and Student Information System for a College Guidance Office",
+            "main_topic": "Booking counselling sessions and keeping guidance records of students",
+            "domain": "Student services",
+            "keywords": [
+                "guidance office",
+                "counselling",
+                "appointment",
+                "student records",
+                "online"
+            ],
+            "problem_statement": "Students who need counselling have to walk in and wait, many never come back, and counsellors keep their notes in separate folders.",
+            "proposed_solution": "An online system where a student books a counselling appointment and the guidance office keeps each student's information and session records.",
+            "scope": "The guidance office of one college and its students."
+        },
+        "other": {
+            "title": "WEB-BASED REGISTRAR OFFICE TRANSACTION APPOINTMENT SYSTEM FOR CAMARINES SUR POLYTECHNIC COLLEGES: THE IMPLEMENTATION OF POST-DESIGN STAGES"
+        }
+    },
+    {
+        "id": "guidance-unrelated",
+        "label": "unrelated",
+        "why": "Temperature control for a hydroponic garden. Nothing in common.",
+        "pre_proposal": {
+            "title": "Counselling Appointment and Student Information System for a College Guidance Office",
+            "main_topic": "Booking counselling sessions and keeping guidance records of students",
+            "domain": "Student services",
+            "keywords": [
+                "guidance office",
+                "counselling",
+                "appointment",
+                "student records",
+                "online"
+            ],
+            "problem_statement": "Students who need counselling have to walk in and wait, many never come back, and counsellors keep their notes in separate folders.",
+            "proposed_solution": "An online system where a student books a counselling appointment and the guidance office keeps each student's information and session records.",
+            "scope": "The guidance office of one college and its students."
+        },
+        "other": {
+            "title": "Automated Temperature and Humidity Control for Hydroponic Garden using Fuzzy Logic"
+        }
+    }
+]

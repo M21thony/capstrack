@@ -8,6 +8,7 @@ use App\Models\Team;
 use App\Services\OllamaSSHClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -217,18 +218,38 @@ class EvaluateDuplicationCheckerTest extends TestCase
             ->assertFailed();
     }
 
-    public function test_the_draft_gold_set_has_a_duplicate_a_related_and_an_unrelated_study_for_each_pre_proposal(): void
+    /** @return array<string, array{0: string}> */
+    public static function draftGoldSets(): array
     {
-        $pairs = json_decode(file_get_contents(base_path('tests/Fixtures/duplication-gold-set.json')), true);
+        return [
+            'the set the scoring was adjusted on' => ['tests/Fixtures/duplication-gold-set.json'],
+            'the set kept aside to check it' => ['tests/Fixtures/duplication-gold-set-2.json'],
+        ];
+    }
+
+    #[DataProvider('draftGoldSets')]
+    public function test_a_draft_gold_set_has_a_duplicate_a_related_and_an_unrelated_study_for_each_pre_proposal(string $file): void
+    {
+        $pairs = json_decode(file_get_contents(base_path($file)), true);
         $archived = collect(json_decode(file_get_contents(database_path('seeders/data/archived_authors.json')), true))->pluck('title');
 
         $this->assertSame(['duplicate' => 12, 'related' => 12, 'unrelated' => 12], array_count_values(array_column($pairs, 'label')));
+        $this->assertCount(36, array_unique(array_column($pairs, 'id')));
 
         foreach ($pairs as $pair) {
             $this->assertContains($pair['other']['title'], $archived, "{$pair['id']} names a study that is not in the archive.");
             $this->assertNotEmpty($pair['why']);
             $this->assertNotEmpty($pair['pre_proposal']['problem_statement']);
         }
+    }
+
+    public function test_the_set_kept_aside_shares_no_pair_with_the_set_the_scoring_was_adjusted_on(): void
+    {
+        $key = fn (array $pair) => $pair['pre_proposal']['title'].'|'.$pair['other']['title'];
+        $first = array_map($key, json_decode(file_get_contents(base_path('tests/Fixtures/duplication-gold-set.json')), true));
+        $second = array_map($key, json_decode(file_get_contents(base_path('tests/Fixtures/duplication-gold-set-2.json')), true));
+
+        $this->assertSame([], array_intersect($first, $second));
     }
 
     public function test_the_example_gold_set_is_one_the_command_accepts(): void
