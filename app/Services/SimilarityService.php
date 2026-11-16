@@ -1278,6 +1278,9 @@ PROMPT;
                 .'"information" or "data" alone, say OF WHAT, and never just repeat a title.'."\n"
                 .'Do not use the words system, management, monitoring, tracking, notification or integrated in "things" '
                 ."- only the real-world objects, like \"medicines of a health unit vs cement and tools of a hardware store\".\n"
+                // Capped: on a long proposal the model listed objects until
+                // the reply ran out, and nothing after "things" was written.
+                .'Keep "things" to one short line, at most 12 words on each side of "vs".'."\n"
                 // Three answers, and the code works the score out from them
                 // (rubricScore()). Asked for a number alone, the model wrote
                 // "both systems track graduates" and still gave 15, because
@@ -1362,12 +1365,16 @@ PROMPT;
             'similarities' => $r['similarities'] ?? '',
             'differences' => $r['differences'] ?? '',
             'suggestion' => $r['suggestion'] ?? '',
+            // The judge's own number and verdict come first again. The
+            // worked-out rubric gave 15 where the same reply said 42: one
+            // "no" on same_things outweighed everything else it had read.
+            // The rubric only fills in when the reply has no number.
             'matches' => match (true) {
-                $rubricScore !== null => $rubricScore >= self::RUBRIC_MATCH,
                 array_key_exists('matches', $r) => (bool) $r['matches'],
+                $rubricScore !== null => $rubricScore >= self::RUBRIC_MATCH,
                 default => true,
             },
-            'score' => $rubricScore ?? $aiScore,
+            'score' => $aiScore ?? $rubricScore,
             'own_score' => $aiScore,
             'answers' => $answers,
         ];

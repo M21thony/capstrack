@@ -155,13 +155,13 @@ class ScoreWorkedOutTest extends TestCase
             'answers' => ['things' => 'yes', 'users' => 'yes', 'features' => 'partly'],
         ])->assertSeeInOrder([
             'AI judge', 'same thing handled, <b>yes</b>', 'same users, <b>yes</b>', 'same features, <b>partly</b>',
-            'Those answers are worth 60%', 'the same kind of study',
+            'It scored the pair 60%', 'the same kind of study',
         ], false);
     }
 
-    public function test_answers_decide_the_score_of_a_check_and_are_kept_with_the_match(): void
+    public function test_the_judges_own_number_decides_the_score_and_the_answers_are_kept_with_the_match(): void
     {
-        $judged = $this->judgedWhenJudgeSays(['same_things' => 'yes', 'same_users' => 'yes', 'same_features' => 'yes', 'matches' => false, 'score' => 15]);
+        $judged = $this->judgedWhenJudgeSays(['same_things' => 'yes', 'same_users' => 'yes', 'same_features' => 'yes', 'matches' => true, 'score' => 95]);
 
         foreach ($judged as $m) {
             $this->assertSame(['things' => 'yes', 'users' => 'yes', 'features' => 'yes'], $m['answers']);

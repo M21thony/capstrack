@@ -218,7 +218,7 @@
                 CapsTrack's judge model (<code>{{ config('services.ollama.judge_model') ?: config('services.ollama.model') }}</code>) reads both and compares the problem, users and features.
                 @if ($answers && $judge !== null)
                   It answered three questions: same thing handled, <b>{{ $answers['things'] }}</b>; same users, <b>{{ $answers['users'] }}</b>; same features, <b>{{ $answers['features'] }}</b>.
-                  Those answers are worth {{ $judge }}%, so it is <b>{{ $same ? 'the same kind of study' : 'not the same study' }}</b>.
+                  It scored the pair {{ $judge }}%, so it is <b>{{ $same ? 'the same kind of study' : 'not the same study' }}</b>.
                 @else
                   It said: <b>{{ $same ? 'same kind of study' : 'not the same study' }}</b>{{ $judge !== null ? ', '.$judge.'%' : ', with no number' }}.
                 @endif

@@ -10,12 +10,11 @@ use ReflectionMethod;
 use Tests\TestCase;
 
 /**
- * The judge answers three questions and the code works out the score.
+ * The judge answers three questions and also gives its own number.
  *
- * Asked for a number alone, it wrote "both systems track graduates" about a
- * real duplicate and gave it 15, because one of the two covered more. Three
- * of twelve duplicates in the gold set were missed that way. Answers cannot
- * drift like that: the same answers always give the same percentage.
+ * Its own number is the score. The number worked out from the answers only
+ * fills in when a reply has no number: on its own it gave 15 to a pair the
+ * same reply had scored 42, because one "no" outweighed everything else.
  */
 class SimilarityJudgeRubricTest extends TestCase
 {
@@ -27,32 +26,32 @@ class SimilarityJudgeRubricTest extends TestCase
         return $method->invoke(app(SimilarityService::class), $raw);
     }
 
-    private function reply(mixed $things, mixed $users, mixed $features, int $ownScore = 15, bool $matches = false): string
+    private function reply(mixed $things, mixed $users, mixed $features, ?int $ownScore = 15, bool $matches = false): string
     {
-        return json_encode([
+        return json_encode(array_filter([
             'things' => 'graduates of a school vs graduates of a school',
             'same_things' => $things,
             'same_users' => $users,
             'same_features' => $features,
-            'matches' => $matches,
+            'matches' => $ownScore === null ? null : $matches,
             'score' => $ownScore,
             'reason' => 'Both track graduates.',
-        ]);
+        ], fn ($v) => $v !== null));
     }
 
-    public function test_the_same_thing_with_the_same_features_is_a_match_whatever_number_the_model_gave(): void
+    public function test_the_models_own_number_and_verdict_are_used_when_it_gave_them(): void
     {
         $verdict = $this->read($this->reply('yes', 'yes', 'yes', ownScore: 15, matches: false));
 
-        $this->assertSame(95, $verdict['score']);
-        $this->assertTrue($verdict['matches']);
+        $this->assertSame(15, $verdict['score']);
+        $this->assertFalse($verdict['matches']);
         $this->assertSame(15, $verdict['own_score']);
         $this->assertSame(['things' => 'yes', 'users' => 'yes', 'features' => 'yes'], $verdict['answers']);
     }
 
-    public function test_a_different_thing_is_not_a_match_whatever_number_the_model_gave(): void
+    public function test_a_reply_without_a_number_is_scored_from_its_answers(): void
     {
-        $verdict = $this->read($this->reply('no', 'yes', 'yes', ownScore: 85, matches: true));
+        $verdict = $this->read($this->reply('no', 'yes', 'yes', ownScore: null));
 
         $this->assertSame(25, $verdict['score']);
         $this->assertFalse($verdict['matches']);
@@ -78,7 +77,7 @@ class SimilarityJudgeRubricTest extends TestCase
     public function test_each_set_of_answers_has_one_score(string $things, string $users, string $features, int $score): void
     {
         $this->assertSame($score, SimilarityService::rubricScore(compact('things', 'users', 'features')));
-        $this->assertSame($score, $this->read($this->reply($things, $users, $features))['score']);
+        $this->assertSame($score, $this->read($this->reply($things, $users, $features, ownScore: null))['score']);
     }
 
     public function test_the_thing_handled_outweighs_the_features(): void
@@ -120,7 +119,7 @@ class SimilarityJudgeRubricTest extends TestCase
 
     public function test_answers_written_loosely_are_still_read(): void
     {
-        $verdict = $this->read($this->reply(true, ' Yes ', 'Partially'));
+        $verdict = $this->read($this->reply(true, ' Yes ', 'Partially', ownScore: null));
 
         $this->assertSame(['things' => 'yes', 'users' => 'yes', 'features' => 'partly'], $verdict['answers']);
         $this->assertSame(75, $verdict['score']);
