@@ -12,6 +12,7 @@ use App\Models\ExpensePost;
 use App\Models\ExpertRemovalRequest;
 use App\Models\ExpertRole;
 use App\Models\FinancialRecord;
+use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -34,9 +35,12 @@ use Illuminate\Support\Facades\DB;
  *                     BSIT-3A and three in BSIT-3G, sharing two panels - so
  *                     two CaPSAs generating one after the other shows no
  *                     panelist is booked twice. One team per section retakes
- *                     the POD. Needs ScheduleDemoSeeder's panelists.
+ *                     the POD. The second section is the first one the
+ *                     second CaPSA holds.
  *
- * Running it again replaces the demo.
+ * Running it again replaces the demo. On the live site only the Generate
+ * schedule part runs: the others act on whatever teams and experts are
+ * there, and there those are real.
  *
  *   php artisan db:seed --class=FeatureShowcaseDemoSeeder
  *
@@ -63,7 +67,33 @@ class FeatureShowcaseDemoSeeder extends Seeder
         'Syntax Squad' => ['Thesis Book Archive with Search', 'G', 'B', true],
     ];
 
-    /** Panel => chair, member 1, member 2, by the address ScheduleDemoSeeder gave them. */
+    /** Whose first section the 'G' teams go in, where it is not BSIT-3G. */
+    private const SECOND_CAPSA = 92;
+
+    /** Address => [first name, last name, highest degree, degree title, roles]. The same people ScheduleDemoSeeder makes. */
+    private const POD_PEOPLE = [
+        'demo.ramon.delacruz' => ['Ramon', 'Dela Cruz', 'doctorate', 'DIT', ['adviser', 'consultant']],
+        'demo.liza.bautista' => ['Liza', 'Bautista', 'master', 'MIT', ['adviser', 'consultant']],
+        'demo.jomar.reyes' => ['Jomar', 'Reyes', 'bachelor', 'BSIT', ['adviser', 'consultant']],
+        'demo.teresa.villanueva' => ['Teresa', 'Villanueva', 'doctorate', 'PhD', ['adviser', 'consultant']],
+        'demo.carlo.mendoza' => ['Carlo', 'Mendoza', 'master', 'MSCS', ['adviser', 'consultant']],
+        'demo.anna.santos' => ['Anna', 'Santos', 'bachelor', 'BSCS', ['adviser', 'consultant']],
+        'demo.marites.castillo' => ['Marites', 'Castillo', 'master', 'MIT', ['adviser']],
+        'demo.dennis.navarro' => ['Dennis', 'Navarro', 'master', 'MSIT', ['consultant']],
+        'demo.rosario.torres' => ['Rosario', 'Torres', 'master', 'MAEd', ['grammarian']],
+    ];
+
+    /** Three members a team, in team order. No faker: the live site does not install it. */
+    private const POD_STUDENTS = [
+        ['Paolo', 'Abad'], ['Jasmine', 'Belen'], ['Rico', 'Cabrera'],
+        ['Nicole', 'Dizon'], ['Joshua', 'Esguerra'], ['Camille', 'Flores'],
+        ['Adrian', 'Gatdula'], ['Bea', 'Hernandez'], ['Kevin', 'Ilagan'],
+        ['Trisha', 'Jimenez'], ['Marco', 'Katigbak'], ['Erika', 'Lacson'],
+        ['Vince', 'Manalo'], ['Hannah', 'Nolasco'], ['Gino', 'Ocampo'],
+        ['Shane', 'Pascual'], ['Renz', 'Quiambao'], ['Lara', 'Rosales'],
+    ];
+
+    /** Panel => chair, member 1, member 2. */
     private const POD_PANELS = [
         'A' => ['demo.ramon.delacruz', 'demo.liza.bautista', 'demo.jomar.reyes'],
         'B' => ['demo.teresa.villanueva', 'demo.carlo.mendoza', 'demo.anna.santos'],
@@ -75,36 +105,54 @@ class FeatureShowcaseDemoSeeder extends Seeder
     {
         self::clean();
 
-        $this->command?->info('Team ratings: '.$this->ratings());
-        $this->command?->info('Change expert: '.$this->changeExpert());
+        if (! app()->isProduction()) {
+            $this->command?->info('Team ratings: '.$this->ratings());
+            $this->command?->info('Change expert: '.$this->changeExpert());
+
+            foreach (self::RETURNEES as $teamId => $stage) {
+                Team::whereKey($teamId)->update(['returnee_stage' => $stage]);
+                Student::whereIn('student_id', StudentSchoolYear::where('team_id', $teamId)->pluck('student_id'))->update(['is_returnee' => true]);
+            }
+        }
+
         // After the request above, which takes the newest approved expert.
         $this->command?->info('Generate schedule: '.$this->podTeams());
-
-        foreach (self::RETURNEES as $teamId => $stage) {
-            Team::whereKey($teamId)->update(['returnee_stage' => $stage]);
-            Student::whereIn('student_id', StudentSchoolYear::where('team_id', $teamId)->pluck('student_id'))->update(['is_returnee' => true]);
-        }
     }
 
     private function podTeams(): string
     {
-        $expert = fn (string $name) => CapstoneExpert::where('email', $name.'@example.test')->first();
+        $expert = function (string $name) {
+            [$first, $last, $degree, $title, $roles] = self::POD_PEOPLE[$name];
+
+            $person = CapstoneExpert::firstOrCreate(['email' => $name.'@example.test'], [
+                'first_name' => $first, 'last_name' => $last, 'highest_degree' => $degree, 'degree_title' => $title,
+                'is_admin' => false, 'approved_status' => true, 'max_teams' => 4, 'reject_attempts' => 1,
+                'first_login_at' => now(), 'created_at' => now(),
+            ]);
+
+            if ($person->wasRecentlyCreated) {
+                $person->roles()->attach(array_map(fn (string $role) => Role::firstOrCreate(['role_name' => $role])->role_id, $roles));
+            }
+
+            return $person;
+        };
         $panels = array_map(fn (array $names) => array_map($expert, $names), self::POD_PANELS);
         $staff = array_map($expert, self::POD_STAFF);
-
-        if (in_array(null, [...$staff, ...array_merge(...array_values($panels))], true)) {
-            return 'the demo panelists are missing - run ScheduleDemoSeeder first, skipped';
-        }
+        $second = substr(CapstoneExpert::find(self::SECOND_CAPSA)?->sections[0] ?? 'G', -1);
 
         $fee = ExpensePost::where('defense_type', self::POD)->first();
         $number = 0;
 
         foreach (self::POD_TEAMS as $name => [$title, $section, $panel, $returnee]) {
             $number++;
-            $students = collect(range(1, 3))->map(fn (int $i) => Student::factory()->withCompleteProfile()->create([
+            $students = collect(range(1, 3))->map(fn (int $i) => Student::create([
                 'email' => "pod.team{$number}.member{$i}@example.test",
+                'f_name' => self::POD_STUDENTS[$number * 3 - 4 + $i][0],
+                'l_name' => self::POD_STUDENTS[$number * 3 - 4 + $i][1],
+                'p_picture' => 'avatar-01',
+                'student_number' => sprintf('9900%03d%02d', $number, $i),
                 'course' => 'Bachelor of Science in Information Technology',
-                'year_section' => '3rd · '.$section,
+                'year_section' => '3rd · '.($section === 'G' ? $second : $section),
                 'is_returnee' => $returnee,
             ]));
 
@@ -245,6 +293,15 @@ class FeatureShowcaseDemoSeeder extends Seeder
         StudentSchoolYear::whereIn('student_id', $students)->delete();
         Team::whereIn('team_id', $teams)->delete();
         Student::whereIn('student_id', $students)->delete();
+
+        if (app()->isProduction()) {
+            // There the nine people exist only for this demo.
+            $people = CapstoneExpert::whereIn('email', array_map(fn (string $name) => $name.'@example.test', array_keys(self::POD_PEOPLE)))->pluck('expert_id');
+            ExpertRole::whereIn('expert_id', $people)->delete();
+            CapstoneExpert::whereIn('expert_id', $people)->delete();
+
+            return;
+        }
 
         TeamRating::whereIn('team_id', Team::where('team_name', 'like', 'Demo%')->pluck('team_id'))->delete();
         ExpertRemovalRequest::where('reason', self::REASON)->delete();
