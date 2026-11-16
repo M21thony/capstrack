@@ -1331,7 +1331,13 @@ PROMPT;
             $r = json_decode($this->repairJson($object), true);
         }
 
+        // The judge often writes broken JSON (e.g. "reason", with no colon)
+        // but its answers and score are still there, so read those by field.
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($r)) {
+            $r = $this->fieldsByPattern($object);
+        }
+
+        if ($r === null) {
             // The only record of why a match ends up "Not scored".
             Log::warning('Judge answer could not be read', [
                 'why' => $cleaned === '' ? 'empty' : 'not JSON',
@@ -1365,6 +1371,37 @@ PROMPT;
             'own_score' => $aiScore,
             'answers' => $answers,
         ];
+    }
+
+    /**
+     * Lenient read of a judge reply whose JSON is broken: picks each field
+     * out by its name. Null when it has neither the answers nor a score.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function fieldsByPattern(string $text): ?array
+    {
+        $fields = [];
+
+        foreach (['same_things', 'same_users', 'same_features'] as $key) {
+            if (preg_match('/"'.$key.'"\s*:\s*"?(yes|partly|partial|partially|no)"?/i', $text, $m)) {
+                $fields[$key] = strtolower($m[1]);
+            }
+        }
+
+        if (preg_match('/"score"\s*:\s*(\d+)/', $text, $m)) {
+            $fields['score'] = (int) $m[1];
+        }
+
+        if (preg_match('/"matches"\s*:\s*(true|false)/i', $text, $m)) {
+            $fields['matches'] = strtolower($m[1]) === 'true';
+        }
+
+        if (preg_match('/"reason"\s*[:,]\s*"((?:[^"\\\\]|\\\\.)*)"/', $text, $m)) {
+            $fields['reason'] = stripslashes($m[1]);
+        }
+
+        return $fields === [] ? null : $fields;
     }
 
     /**
