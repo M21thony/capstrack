@@ -991,6 +991,9 @@ class CapsaReports
             ->where(fn ($q) => $q->whereNull('defense_schedule.outcome')->orWhere('defense_schedule.outcome', '!=', DefenseOutcome::CANCELLED))
             ->pluck('defense_panels.expert_id')->countBy();
         $busiest = $seats->sortDesc()->keys()->first();
+        // The panel limits experts set on their profile, and who has no seat left.
+        $load = DefenseBoard::panelLoad();
+        $limited = $experts->filter(fn (CapstoneExpert $e) => ! $e->deactivated_at && $e->max_panels !== null);
 
         return [
             'program' => $ctx['program'] !== '' ? $ctx['program'] : $ctx['programOptions'][''],
@@ -1010,6 +1013,8 @@ class CapsaReports
                 'panelists' => $seats->count(),
                 'each' => $seats->count() ? (int) round($seats->sum() / $seats->count()) : 0,
                 'busiest' => $busiest ? [(string) CapstoneExpert::withTrashed()->find($busiest)?->name, $seats[$busiest]] : null,
+                'limited' => $limited->count(),
+                'full' => $limited->filter(fn (CapstoneExpert $e) => ($load[$e->expert_id] ?? 0) >= $e->max_panels)->map->name->values()->all(),
             ],
         ];
     }
@@ -1027,7 +1032,10 @@ class CapsaReports
                 .$this->count($r['takers'], 'expert').' who take it with '.$r['open'].' open slots · now '.$r['now'].' · '.$after.' '.$r['after'], $en['roles']),
             'Requests waiting: '.$en['waiting'].($stuck ? ' · '.$stuck.' with experts who are already full ('.implode(', ', array_map(fn ($s) => $s[0].' '.$s[1], $en['stuck'])).')' : ''),
             'Panel: '.$en['panel']['seats'].' seats · '.$this->count($en['panel']['panelists'], 'expert').' on panels · about '.$en['panel']['each'].' each'
-                .($en['panel']['busiest'] ? ' · busiest: '.$en['panel']['busiest'][0].', '.$en['panel']['busiest'][1] : '').' · no limit on panel seats',
+                .($en['panel']['busiest'] ? ' · busiest: '.$en['panel']['busiest'][0].', '.$en['panel']['busiest'][1] : '')
+                .' · '.($en['panel']['limited']
+                    ? $this->count($en['panel']['limited'], 'expert').' with a panel limit, '.count($en['panel']['full']).' full'.($en['panel']['full'] ? ' ('.implode(', ', $en['panel']['full']).')' : '')
+                    : 'no panel limits set'),
         ];
     }
 

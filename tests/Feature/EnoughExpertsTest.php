@@ -134,26 +134,35 @@ class EnoughExpertsTest extends TestCase
     {
         $capsa = $this->capsaFor(['BSIT-3A']);
         [$alpha] = $this->teamInSection('Alpha');
-        $this->expert('adviser', '2-BSIT', 2, $alpha);
+        $adviser = $this->expert('adviser', '2-BSIT', 2, $alpha);
+        $sheet = function () use ($capsa) {
+            $xlsx = $this->actingAs($capsa, 'expert')
+                ->get(route('capsa.reports.show', ['report' => 'experts', 'download' => 'xlsx']))->assertOk();
+            $path = tempnam(sys_get_temp_dir(), 'rpt');
+            file_put_contents($path, $xlsx->streamedContent());
+            $rows = IOFactory::load($path)->getActiveSheet()->toArray();
+            unlink($path);
 
-        $xlsx = $this->actingAs($capsa, 'expert')
-            ->get(route('capsa.reports.show', ['report' => 'experts', 'download' => 'xlsx']))->assertOk();
-        $path = tempnam(sys_get_temp_dir(), 'rpt');
-        file_put_contents($path, $xlsx->streamedContent());
-        $rows = IOFactory::load($path)->getActiveSheet()->toArray();
-        unlink($path);
+            return $rows;
+        };
+        $rows = $sheet();
 
-        // Title, scope, then the box's lines from row 4, a blank row, then the headings.
-        $this->assertSame('Expert Load', $rows[0][0]);
-        $this->assertStringContainsString('BSIT', (string) $rows[1][0]);
-        $this->assertStringStartsWith('Enough experts? BSIT · 1 team', (string) $rows[3][0]);
-        $this->assertStringStartsWith('Adviser (needed before a panel): 1 teams with one, 0 still need one', (string) $rows[4][0]);
-        $this->assertStringStartsWith('Requests waiting: 0', (string) $rows[7][0]);
-        $this->assertStringContainsString('no limit on panel seats', (string) $rows[8][0]);
-        $headings = $rows[10];
+        // The school's six-line letterhead, title, scope, then the box's lines
+        // from row 10, a blank row, then the headings.
+        $this->assertSame('Expert Load', $rows[6][0]);
+        $this->assertStringContainsString('BSIT', (string) $rows[7][0]);
+        $this->assertStringStartsWith('Enough experts? BSIT · 1 team', (string) $rows[9][0]);
+        $this->assertStringStartsWith('Adviser (needed before a panel): 1 teams with one, 0 still need one', (string) $rows[10][0]);
+        $this->assertStringStartsWith('Requests waiting: 0', (string) $rows[13][0]);
+        $this->assertStringEndsWith('no panel limits set', (string) $rows[14][0]);
+        $headings = $rows[16];
         $this->assertContains('Requests waiting', $headings);
         $this->assertContains('Suggestion', $headings);
         $this->assertSame(array_search('Slots used', $headings) + 1, array_search('Requests waiting', $headings));
+
+        // A limit set on a profile shows up, with who has no seat left.
+        $adviser->update(['max_panels' => 2]);
+        $this->assertStringEndsWith('1 expert with a panel limit, 0 full', (string) $sheet()[14][0]);
     }
 
     private function expert(string $role, ?string $slots, ?int $max, ?Team $team = null): CapstoneExpert
