@@ -14,6 +14,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Support\DefenseBoard;
 use App\Support\DefenseOutcome;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -283,5 +284,60 @@ class DefensePanelRulesTest extends TestCase
             ->assertStatus(423);
 
         $lock->release();
+    }
+
+    public function test_an_expert_full_on_panels_cannot_sit_on_another_team(): void
+    {
+        $chair = $this->panelist();
+        $chair->update(['max_panels' => 1]);
+        $alpha = $this->staffedTeam('Alpha');
+        $beta = $this->staffedTeam('Beta');
+
+        $this->assign($alpha, $chair)->assertOk();
+        $this->assign($beta, $chair)->assertStatus(422)
+            ->assertJsonFragment(['message' => $chair->name.' can sit on 1 team\'s panel and has no seat left.']);
+        $this->assign($alpha, $chair, $this->panelist('bachelor'))->assertOk();
+
+        $seat = app(DefenseBoard::class)->panelists()->firstWhere('id', $chair->expert_id);
+        $this->assertSame([1, 1], [$seat['panels'], $seat['max_panels']]);
+
+        // A team done defending frees the seat.
+        DefenseSchedule::where('team_id', $alpha->team_id)->update(['outcome' => DefenseOutcome::PASSED]);
+        $this->assign($beta, $chair)->assertOk();
+    }
+
+    public function test_no_limit_takes_any_number_and_a_bulk_assign_stops_at_the_limit(): void
+    {
+        $open = $this->panelist();
+        foreach (['A', 'B', 'C'] as $name) {
+            $this->assign($this->staffedTeam($name), $open)->assertOk();
+        }
+
+        $chair = $this->panelist();
+        $chair->update(['max_panels' => 2]);
+        $ids = collect(['D', 'E', 'F'])->map(fn ($name) => $this->staffedTeam($name)->team_id)->all();
+
+        $data = $this->actingAs($this->capsa, 'expert')
+            ->postJson(route('api.admin.panel_assignment.store.bulk'), ['team_ids' => $ids, 'chair_expert_id' => $chair->expert_id])
+            ->assertOk()->json('data');
+
+        $this->assertCount(2, $data['assigned']);
+        $this->assertSame([$chair->name.' can sit on 2 teams\' panels and has no seat left.'], array_column($data['skipped'], 'reason'));
+    }
+
+    public function test_a_replacement_cannot_be_someone_with_no_panel_seat_left(): void
+    {
+        $team = $this->staffedTeam();
+        $this->assign($team, $this->panelist(), $this->panelist('bachelor'))->assertOk();
+        $team->update(['panel_status' => Team::PANEL_FINAL]);
+
+        $full = $this->panelist('bachelor');
+        $full->update(['max_panels' => 1]);
+        $this->assign($this->staffedTeam('Beta'), $this->panelist(), $full)->assertOk();
+
+        $this->actingAs($this->capsa, 'expert')
+            ->postJson(route('api.admin.panel_assignment.replacements.store', $team), ['seat' => 'm1', 'expert_id' => $full->expert_id, 'reason' => 'Resigned from the college'])
+            ->assertStatus(422)->assertJsonFragment(['message' => $full->name.' can sit on 1 team\'s panel and has no seat left.']);
+        $this->assertSame(0, PanelReplacement::count());
     }
 }

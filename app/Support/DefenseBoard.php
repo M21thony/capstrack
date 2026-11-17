@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\CapstoneExpert;
 use App\Models\DefenseCancellation;
+use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\DefenseWindow;
 use App\Models\ExpensePost;
@@ -415,11 +416,12 @@ class DefenseBoard
      * with no name, and nobody to tell about the defense.
      * Grammarians check the writing and never sit on a panel.
      *
-     * @return Collection<int, array{id: int, name: string, degree: string, chair: bool, tags: array<int, string>, strengths: array<int, string>}>
+     * @return Collection<int, array{id: int, name: string, degree: string, chair: bool, tags: array<int, string>, strengths: array<int, string>, panels: int, max_panels: ?int}>
      */
     public function panelists(): Collection
     {
         $roleIds = Role::whereIn('role_name', ['adviser', 'consultant'])->pluck('role_id');
+        $load = self::panelLoad();
 
         return CapstoneExpert::where('approved_status', true)
             ->where(fn ($q) => $q->whereNotNull('first_login_at')->orWhereNotNull('last_seen_at'))
@@ -438,7 +440,27 @@ class DefenseBoard
                 'tags' => $e->expertiseFor('panel')->all(),
                 // Manuscript, system design, software: what they are strongest in.
                 'strengths' => array_values(array_intersect(array_keys(CapstoneExpert::STRENGTHS), $e->panel_strengths ?? [])),
+                'panels' => $load[$e->expert_id] ?? 0,
+                'max_panels' => $e->max_panels,
             ]);
+    }
+
+    /**
+     * expert_id => how many teams' panels they sit on that still have a
+     * defense to come. A team done with every defense no longer counts.
+     *
+     * @return array<int, int>
+     */
+    public static function panelLoad(): array
+    {
+        return DefensePanel::withoutGlobalScopes()
+            ->join('defense_schedule as ds', 'ds.defense_id', '=', 'defense_panels.defense_id')
+            ->whereNull('ds.outcome')
+            ->groupBy('defense_panels.expert_id')
+            ->selectRaw('defense_panels.expert_id, COUNT(DISTINCT ds.team_id) as n')
+            ->pluck('n', 'expert_id')
+            ->map(fn ($n) => (int) $n)
+            ->all();
     }
 
     /** @return array{chair: ?int, m1: ?int, m2: ?int} */

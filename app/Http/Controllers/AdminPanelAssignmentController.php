@@ -312,6 +312,7 @@ class AdminPanelAssignmentController extends Controller
             $sitting->contains($new->expert_id) => $new->name.' is already on this panel.',
             $this->teamAdviserConsultantIds($team)->map(fn ($id) => (int) $id)->contains($new->expert_id) => "This team's adviser or consultant can't also sit on their defense panel.",
             $role === 'Panel Chair' && ! $new->canChairPanel() => 'A Panel Chair needs a Master\'s degree or higher.',
+            (bool) $this->fullPanelist([$new->expert_id], $team) => $this->fullMessage($new),
             default => null,
         };
 
@@ -393,6 +394,10 @@ class AdminPanelAssignmentController extends Controller
 
         if (array_intersect($expertIds, $this->teamAdviserConsultantIds($team)->all())) {
             return ['success' => false, 'message' => "This team's adviser or consultant can't also sit on their defense panel."];
+        }
+
+        if ($full = $this->fullPanelist($expertIds, $team)) {
+            return ['success' => false, 'message' => $this->fullMessage($full)];
         }
 
         $schedules = [];
@@ -1112,6 +1117,28 @@ class AdminPanelAssignmentController extends Controller
     }
 
     // A team's own adviser and consultant can't evaluate them on the panel.
+    /**
+     * The first of these experts already sitting on as many teams' panels as
+     * they said they can. This team does not count against them when they
+     * already sit on its panel, so saving it again is never blocked.
+     */
+    private function fullPanelist(array $expertIds, Team $team): ?CapstoneExpert
+    {
+        $load = DefenseBoard::panelLoad();
+        $here = DefensePanel::whereIn('defense_id', DefenseSchedule::where('team_id', $team->team_id)->whereNull('outcome')->pluck('defense_id'))
+            ->pluck('expert_id')->map(fn ($id) => (int) $id)->all();
+
+        return CapstoneExpert::whereIn('expert_id', $expertIds)->whereNotNull('max_panels')->get()
+            ->first(fn (CapstoneExpert $e) => ! in_array((int) $e->expert_id, $here, true) && ($load[$e->expert_id] ?? 0) >= $e->max_panels);
+    }
+
+    private function fullMessage(CapstoneExpert $expert): string
+    {
+        $n = $expert->max_panels;
+
+        return $expert->name.' can sit on '.$n.' '.($n === 1 ? 'team\'s panel' : 'teams\' panels').' and has no seat left.';
+    }
+
     private function teamAdviserConsultantIds(Team $team): Collection
     {
         return TeamExpertAssignment::where('team_id', $team->team_id)->where('status', 'approved')->pluck('expert_id');

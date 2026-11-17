@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\ExpertExpertise;
 use App\Models\Setting;
+use App\Support\DefenseBoard;
 use App\Support\NotificationTypes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,6 +50,7 @@ class ProfileController extends Controller
             'programSlots' => $programSlots,
             'teamsHandled' => $teamsHandled,
             'slotSuggestion' => $expert->slotSuggestion($teamsHandled),
+            'panelsHeld' => DefenseBoard::panelLoad()[$expert->expert_id] ?? 0,
             // A CaPSA/TSA or Admin who also advises keeps their name and sections
             // on their own portal's profile page.
             // A CaPSA/TSA or Admin who also advises keeps everything here: their
@@ -139,6 +141,8 @@ class ProfileController extends Controller
             'middle_name' => ['nullable', 'string', 'max:50'],
             'panel_strengths' => ['sometimes', 'array'],
             'panel_strengths.*' => ['in:'.implode(',', array_keys(CapstoneExpert::STRENGTHS))],
+            // How many teams' panels they can sit on; blank is no limit.
+            'max_panels' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:30'],
         ]);
 
         $validator->after(function ($v) use ($request) {
@@ -234,11 +238,13 @@ class ProfileController extends Controller
             ? ['panel_strengths' => array_values(array_intersect(array_keys(CapstoneExpert::STRENGTHS), $validated['panel_strengths'] ?? []))]
             : [];
 
-        DB::transaction(function () use ($expert, $accepted, $raw, $bySide, $degree, $name, $strengths) {
+        $panels = $request->exists('max_panels') ? ['max_panels' => $validated['max_panels'] ?? null] : [];
+
+        DB::transaction(function () use ($expert, $accepted, $raw, $bySide, $degree, $name, $strengths, $panels) {
             $expert->update([
                 'program_slots' => $raw,
                 'max_teams' => array_sum($accepted),
-            ] + $degree + $name + $strengths);
+            ] + $degree + $name + $strengths + $panels);
 
             // Replace rather than merge - the panel sends the full list it
             // is showing, so anything missing from it was removed there.

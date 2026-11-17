@@ -82,6 +82,27 @@ class PanelStrengthsTest extends TestCase
             ->assertSee('strengths: ["design"]', false);
     }
 
+    public function test_an_expert_sets_how_many_teams_panels_they_sit_on_and_blank_is_no_limit(): void
+    {
+        $expert = $this->expert();
+
+        $this->save($expert, ['max_panels' => 3])->assertOk();
+        $this->assertSame(3, $expert->fresh()->max_panels);
+
+        $this->save($expert)->assertOk();
+        $this->assertSame(3, $expert->fresh()->max_panels, 'A page that does not send it leaves it.');
+
+        $this->save($expert, ['max_panels' => 0])->assertStatus(422);
+        $this->save($expert, ['max_panels' => 31])->assertStatus(422);
+        $this->assertSame(3, $expert->fresh()->max_panels);
+
+        $this->save($expert, ['max_panels' => null])->assertOk();
+        $this->assertNull($expert->fresh()->max_panels);
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
+            ->assertSee('Panel slots')->assertSee('id="pp-max-panels"', false);
+    }
+
     public function test_the_assign_panel_gets_each_experts_strengths_and_the_three_names(): void
     {
         $strong = $this->expert(['software', 'design']);

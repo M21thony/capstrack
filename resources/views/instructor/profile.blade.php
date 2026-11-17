@@ -70,6 +70,8 @@
   .pp-prog input{width:64px;height:34px;border:1px solid var(--border2);border-radius:8px;padding:0 8px;background:var(--bg2);font:inherit;font-size:14px;font-weight:700;color:var(--text);text-align:center;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
   .pp-prog input::-webkit-outer-spin-button,.pp-prog input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .pp-prog input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .pp-prog #pp-max-panels{width:96px}
+  .pp-prog #pp-max-panels::placeholder{font-weight:500;color:var(--text3)}
   .pp-foot{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px;font-size:12px;color:var(--text3)}
   .pp-foot b{color:var(--text)}
   .pp-foot .pp-warn{color:var(--amber)}
@@ -301,6 +303,18 @@
             </div>
           </section>
 
+          <section class="pp-sec" aria-labelledby="pp-panels-h">
+            <div class="pp-sec-h"><h2 id="pp-panels-h">Panel slots</h2></div>
+            <p class="pp-help">How many teams' defense panels you can sit on. Leave it blank for no limit.</p>
+            <div class="pp-progs">
+              <div class="pp-prog" id="pp-panel-row">
+                <label for="pp-max-panels">Teams</label>
+                <input type="number" id="pp-max-panels" min="1" max="30" step="1" inputmode="numeric" placeholder="No limit" aria-label="Teams whose defense panels you can sit on">
+              </div>
+            </div>
+            <div class="pp-foot"><span id="pp-panels-taken"></span></div>
+          </section>
+
           <section class="pp-sec" aria-labelledby="pp-strong-h">
             <div class="pp-sec-h"><h2 id="pp-strong-h">As a panelist, I'm strongest in</h2></div>
             <p class="pp-help">The CaPSA/TSA sees this when seating a defense panel, so each panel covers all three. Tick one or more.</p>
@@ -376,6 +390,7 @@ function closeSidebar() {
   var SIDES = @json((object) $researchSides);
   var DEGREE_LEVELS = @json($degreeLevels);
   var TEAMS_HANDLED = {{ (int) $teamsHandled }};
+  var PANELS_HELD = {{ (int) $panelsHeld }};
   // A limit saved before slots were set per program: one number, no programs ticked.
   var FLAT_LIMIT = {{ $programSlots ? 0 : (int) ($expert->max_teams ?? 0) }};
   var BELL_TYPES = @json($bellTypes);
@@ -392,6 +407,7 @@ function closeSidebar() {
     programs: PROGRAMS.reduce(function (o, p) { o[p] = 0; return o; }, {}),
     areas: @json((object) $researchAreas),
     strengths: @json(array_values($expert->panel_strengths ?? [])),
+    maxPanels: @json($expert->max_panels),
     email: @json(collect($emailGroups)->map(fn ($group) => $group['on']))
   };
   Object.assign(saved.programs, @json((object) $programSlots));
@@ -414,7 +430,7 @@ function closeSidebar() {
   function make(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
   function renderPrograms() {
-    document.querySelectorAll('.pp-prog').forEach(function (row) {
+    document.querySelectorAll('.pp-prog[data-program]').forEach(function (row) {
       var p = row.dataset.program, n = state.programs[p] || 0, box = row.querySelector('input');
       row.classList.toggle('on', n > 0);
       // Left alone while it is being typed in, so the caret does not jump.
@@ -543,7 +559,29 @@ function closeSidebar() {
     document.querySelectorAll('[data-strength]').forEach(function (box) { box.checked = state.strengths.indexOf(box.dataset.strength) >= 0; });
   }
 
-  function renderAll() { renderPrograms(); renderAreas(); renderDegree(); renderName(); renderStrengths(); renderEmail(); renderSaveBar(); }
+  function renderPanels() {
+    var max = state.maxPanels, box = el('pp-max-panels'), taken = el('pp-panels-taken');
+    var teams = function (n) { return n === 1 ? 'team\'s panel' : 'teams\' panels'; };
+    el('pp-panel-row').classList.toggle('on', max != null);
+    if (document.activeElement !== box) box.value = max == null ? '' : max;
+    taken.className = max != null && PANELS_HELD > max ? 'pp-warn' : '';
+    taken.innerHTML = max == null
+      ? 'You sit on <b>' + PANELS_HELD + '</b> ' + teams(PANELS_HELD) + '.'
+      : (PANELS_HELD > max
+        ? 'You sit on <b>' + PANELS_HELD + '</b> ' + teams(PANELS_HELD) + ', more than your limit of <b>' + max + '</b>. No new panel seat comes to you until you are below it.'
+        : 'You sit on <b>' + PANELS_HELD + '</b> of <b>' + max + '</b> ' + teams(max) + '.');
+  }
+
+  function renderAll() { renderPrograms(); renderPanels(); renderAreas(); renderDegree(); renderName(); renderStrengths(); renderEmail(); renderSaveBar(); }
+
+  el('pp-max-panels').addEventListener('input', function (e) {
+    var n = parseInt(e.target.value, 10);
+    state.maxPanels = isNaN(n) ? null : Math.min(30, Math.max(1, n));
+    changed();
+    renderPanels();
+  });
+  // Tidied once they move on: 40 becomes 30, 0 becomes 1.
+  el('pp-max-panels').addEventListener('blur', renderPanels);
 
   el('pp-name-btn').addEventListener('click', function () {
     editingName = !editingName;
@@ -554,7 +592,7 @@ function closeSidebar() {
     el(f[0]).addEventListener('input', function (e) { state.name[f[1]] = e.target.value; changed(); renderName(); });
   });
 
-  document.querySelectorAll('.pp-prog input').forEach(function (box) {
+  document.querySelectorAll('.pp-prog[data-program] input').forEach(function (box) {
     var p = box.closest('.pp-prog').dataset.program;
     box.addEventListener('input', function () {
       var n = parseInt(box.value, 10);
@@ -615,7 +653,7 @@ function closeSidebar() {
   // been; only the part that changed is sent.
   el('pp-save-btn').addEventListener('click', async function () {
     var btn = this;
-    var profileChanged = part(state, ['name', 'degree', 'programs', 'areas', 'strengths']) !== part(saved, ['name', 'degree', 'programs', 'areas', 'strengths']);
+    var profileChanged = part(state, ['name', 'degree', 'programs', 'areas', 'strengths', 'maxPanels']) !== part(saved, ['name', 'degree', 'programs', 'areas', 'strengths', 'maxPanels']);
     var emailChanged = JSON.stringify(state.email) !== JSON.stringify(saved.email);
     if (CAN_EDIT_NAME && (!state.name.first.trim() || !state.name.last.trim())) {
       editingName = true;
@@ -630,7 +668,7 @@ function closeSidebar() {
     btn.disabled = true;
     try {
       if (profileChanged) {
-        var body = { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null, panel_strengths: state.strengths };
+        var body = { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null, panel_strengths: state.strengths, max_panels: state.maxPanels };
         if (CAN_EDIT_NAME) {
           body.name = { first_name: state.name.first, middle_name: state.name.middle, last_name: state.name.last, suffix: state.name.suffix };
         } else {
@@ -646,6 +684,7 @@ function closeSidebar() {
         saved.programs = copy(state.programs);
         saved.areas = copy(state.areas);
         saved.strengths = copy(state.strengths);
+        saved.maxPanels = state.maxPanels;
       }
       if (emailChanged) {
         // Every bell switch on, and each email as its group says.
