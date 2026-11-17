@@ -25,13 +25,15 @@ class ConsultationLogController extends Controller
             // the checklist item this file was handed in against. It is the only
             // deadline in the system nobody has to type again.
             ->leftJoin('deliverables as dl', 'dl.id', '=', 'd.deliverable_id')
+            // A line with no date of its own is due when its milestone is.
+            ->leftJoin('checklist_milestones as dm', 'dm.id', '=', 'dl.checklist_milestone_id')
             ->where('r.review_id', $reviewId)
             ->select([
                 'r.review_id', 'r.file_id', 'r.reviewed_at', 'r.created_at as review_created_at',
                 'r.verdict', 'r.verdict_at',
                 'd.file_name', 'd.chapter', 'd.student_id',
                 't.team_id', 't.team_name', 't.project_title',
-                'dl.due_date as deadline',
+                DB::raw('COALESCE(dl.due_date, dm.due_on) as deadline'),
             ])
             ->first();
 
@@ -71,19 +73,50 @@ class ConsultationLogController extends Controller
 
         $deadline = $review->deadline;
 
+        // A whole manuscript sent with no "Chapter N" in its name has no chapter
+        // stored. Read it from the name ("Chapters 1-5"), else from the chapters
+        // its remarks were written on.
+        $chapter = $review->chapter;
+        if (! $chapter) {
+            $name = (string) $review->file_name;
+            if (preg_match('/chapters?[\s_-]*1\s*(?:-|–|to)\s*([35])\b/i', $name, $m)) {
+                $chapter = "Chapters 1–{$m[1]}";
+            } elseif (preg_match('/\b(?:final|full)[\s_-]*manus/i', $name)) {
+                $chapter = 'Chapters 1–5';
+            } elseif (preg_match('/\bproposal\b/i', $name)) {
+                $chapter = 'Chapters 1–3';
+            } else {
+                $nums = collect($remarksBySection)->keys()
+                    ->map(fn ($k) => preg_match('/^Chapter\s+(\d+)/i', $k, $m) ? (int) $m[1] : null)
+                    ->filter()->unique()->sort()->values();
+                $chapter = match (true) {
+                    $nums->count() === 1 => "Chapter {$nums[0]}",
+                    $nums->count() > 1 => "Chapters {$nums->first()}–{$nums->last()}",
+                    default => null,
+                };
+            }
+        }
+
         // A file handed in outside the checklist tiles carries no deliverable
         // link, which is most of them. Fall back to the date the CaPSA/TSA set for
         // this chapter on the team's own checklist, so the form still prints a
-        // real deadline instead of the blank line she flagged.
-        if (! $deadline && $review->chapter && $review->team_id) {
-            $chapter = preg_replace('/\D+/', '', (string) $review->chapter);
+        // real deadline instead of the blank line she flagged. Chapters 1-3 is
+        // the Revised Proposal line and 1-5 the Final Manuscript line.
+        if (! $deadline && $chapter && $review->team_id) {
+            $key = match (1) {
+                preg_match('/1\s*[–-]\s*3$/', $chapter) => 'revised',
+                preg_match('/1\s*[–-]\s*5$/', $chapter) => 'final',
+                default => preg_replace('/\D+/', '', (string) $chapter),
+            };
             $checklist = ($team = Team::find($review->team_id)) ? $checklists->for($team) : null;
 
-            if ($checklist && $chapter !== '') {
-                $deadline = Deliverable::whereIn('checklist_milestone_id', $checklist->milestones()->active()->pluck('id'))
-                    ->whereNull('archived_at')
-                    ->where('chapter', $chapter)
-                    ->min('due_date');
+            if ($checklist && $key !== '') {
+                $deadline = Deliverable::query()
+                    ->leftJoin('checklist_milestones as m', 'm.id', '=', 'deliverables.checklist_milestone_id')
+                    ->whereIn('deliverables.checklist_milestone_id', $checklist->milestones()->active()->pluck('id'))
+                    ->whereNull('deliverables.archived_at')
+                    ->where('deliverables.chapter', $key)
+                    ->min(DB::raw('COALESCE(deliverables.due_date, m.due_on)'));
             }
         }
 
@@ -91,7 +124,7 @@ class ConsultationLogController extends Controller
             'projectTitle' => $review->project_title,
             'alias' => $review->team_name,
             'proponents' => $proponents,
-            'chapter' => $review->chapter ?? '—',
+            'chapter' => $chapter ?? '—',
             // What was reviewed: a .drawio or .vsdx sent on its own is a diagram.
             'kind' => CapstoneDocument::find($review->file_id)?->isDiagram() ? 'DIAGRAM' : 'MANUSCRIPT',
             'consultationDate' => $consultationDate,

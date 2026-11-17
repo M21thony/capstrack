@@ -151,8 +151,22 @@
             }
         }
 
-        foreach ($remarksBySection as $section => $items) {
-            $push(true, $section);
+        // "Chapter 2 › 2.1 … › 2.1.1 …" prints as a "Chapter 2" heading once,
+        // then only the section the remark is on.
+        $sections = collect($remarksBySection)->sortKeys(SORT_NATURAL | SORT_FLAG_CASE);
+        $lastChapter = $chapter;
+        foreach ($sections as $section => $items) {
+            $parts = array_values(array_filter(array_map('trim', explode('›', (string) $section)), 'strlen'));
+            if ($parts && preg_match('/^Chapter\s+\d+/i', $parts[0])) {
+                $head = array_shift($parts);
+                if ($head !== $lastChapter) {
+                    $push(true, $head);
+                    $lastChapter = $head;
+                }
+            }
+            if ($parts) {
+                $push(true, end($parts));
+            }
 
             foreach ($items as $item) {
                 $push(false, '• '.$item->printedComment());
