@@ -15,6 +15,12 @@ class OllamaSSHClient
     /** Remembers that the model is loaded, so a scan need not warm it again. */
     private const WARM_KEY = 'ollama:model-warm';
 
+    // Ollama loads 4096 by default and silently drops the start of a longer
+    // prompt (the judge's instructions). A full abstract plus full student
+    // sections is ~3600 tokens before the reply. Every call sends the same
+    // size, or Ollama reloads the model between them.
+    private const NUM_CTX = 8192;
+
     // Always SSH — this client only ever talks to Ollama through the tunnel.
     // Requires: SSH server running + .env SSH_TUNNEL_* values.
 
@@ -206,7 +212,7 @@ class OllamaSSHClient
                 'prompt' => 'hi',
                 'stream' => false,
                 'keep_alive' => config('services.ollama.keep_alive', '30m'),
-                'options' => ['num_predict' => 1],
+                'options' => ['num_predict' => 1, 'num_ctx' => self::NUM_CTX],
             ];
 
             $this->runCurl(json_encode($payload), '/api/generate');
@@ -272,6 +278,7 @@ class OllamaSSHClient
                 // judge off a word it has already written: a third "yes"
                 // came out "partly" and a duplicate scored 75 instead of 95.
                 'presence_penalty' => 0,
+                'num_ctx' => self::NUM_CTX,
             ],
         ];
 
@@ -331,6 +338,7 @@ class OllamaSSHClient
                     'top_p' => 1,
                     'top_k' => 1,
                     'presence_penalty' => 0,
+                    'num_ctx' => self::NUM_CTX,
                 ],
             ];
         }

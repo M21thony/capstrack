@@ -1364,12 +1364,12 @@ PROMPT;
                 ."\nTopic: ".$this->redactLocations($this->dropInstructions($concepts['main_topic'] ?? ''))
                 ."\nDomain: {$concepts['domain']}"
                 ."\nKeywords: {$conceptText}"
-                ."\nProblem Statement: ".$this->redactLocations(mb_substr($this->dropInstructions($concepts['problem_statement'] ?? ''), 0, 600))
-                ."\nProposed Solution: ".$this->redactLocations(mb_substr($this->dropInstructions($concepts['proposed_solution'] ?? ''), 0, 600))
-                ."\nScope: ".$this->redactLocations(mb_substr($this->dropInstructions($concepts['scope'] ?? ''), 0, 400))
+                ."\nProblem Statement: ".$this->redactLocations(mb_substr($this->dropInstructions($concepts['problem_statement'] ?? ''), 0, 1500))
+                ."\nProposed Solution: ".$this->redactLocations(mb_substr($this->dropInstructions($concepts['proposed_solution'] ?? ''), 0, 1500))
+                ."\nScope: ".$this->redactLocations(mb_substr($this->dropInstructions($concepts['scope'] ?? ''), 0, 1500))
                 ."\n\nARCHIVED DOCUMENT:"
                 ."\nTitle: ".$this->redactLocations(mb_substr($doc->title, 0, 150))
-                ."\nAbstract: ".$this->redactLocations(mb_substr($doc->abstract ?? '', 0, 1200));
+                ."\nAbstract: ".$this->redactLocations(mb_substr($doc->abstract ?? '', 0, 3000));
 
         return $prompt;
     }
