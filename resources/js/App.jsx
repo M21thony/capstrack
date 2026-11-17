@@ -340,6 +340,21 @@ function App() {
       (commentsByPage[pageIndex] ||= []).push(comment);
     });
 
+    // Words that ran onto the next page are highlighted there too; the card stays on the page they start on.
+    commentsRef.current.forEach((comment) => (comment.highlightRects || []).forEach((rect) => {
+      const on = rect.page && Number(rect.page) !== Number(comment.page_number) ? pages[Number(rect.page) - 1] : null;
+      if (!on) return;
+      const { width, height } = on.getSize();
+      on.drawRectangle({
+        x: rect.left_position * width,
+        y: height - (rect.top_position + rect.highlight_height) * height,
+        width: rect.highlight_width * width,
+        height: rect.highlight_height * height,
+        color: HIGHLIGHT_COLOR_MAP[comment.color] || HIGHLIGHT_COLOR_MAP.yellow,
+        opacity: 0.25,
+      });
+    }));
+
     Object.entries(commentsByPage).forEach(([pageIndexStr, pageComments]) => {
       const pageIndex = Number(pageIndexStr);
       if (pageIndex < 0 || pageIndex >= pages.length) return;
@@ -361,7 +376,7 @@ function App() {
             console.warn("Error drawing pin:", e);
           }
         }
-        (comment.highlightRects || []).forEach((rect) => {
+        (comment.highlightRects || []).filter((rect) => !rect.page || Number(rect.page) === Number(comment.page_number)).forEach((rect) => {
           try {
             if (comment.type === "box" || comment.type === "shape") {
               // An outline, so the diagram under it stays readable.

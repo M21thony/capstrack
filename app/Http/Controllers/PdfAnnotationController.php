@@ -151,6 +151,8 @@ class PdfAnnotationController extends Controller
             'comments.*.highlightRects.*.left_position' => 'nullable|numeric',
             'comments.*.highlightRects.*.highlight_width' => 'nullable|numeric',
             'comments.*.highlightRects.*.highlight_height' => 'nullable|numeric',
+            // Set on the boxes of words that ran onto a later page.
+            'comments.*.highlightRects.*.page' => 'nullable|integer|min:1',
             'comments.*.y_position' => 'nullable|numeric',
             'comments.*.x_position' => 'nullable|numeric',
             'comments.*.id' => 'nullable',
@@ -188,11 +190,13 @@ class PdfAnnotationController extends Controller
 
             if ($type !== 'pin' && ! empty($rects)) {
                 // The box around all of them, which is what everything that
-                // reads a remark's position already uses.
-                $minTop = min(array_column($rects, 'top_position'));
-                $minLeft = min(array_column($rects, 'left_position'));
-                $maxBottom = max(array_map(fn ($r) => $r['top_position'] + ($r['highlight_height'] ?? 0), $rects));
-                $maxRight = max(array_map(fn ($r) => $r['left_position'] + ($r['highlight_width'] ?? 0), $rects));
+                // reads a remark's position already uses. Only the boxes on the
+                // remark's own page count; the words may run onto the next one.
+                $here = array_filter($rects, fn ($r) => empty($r['page']) || (int) $r['page'] === (int) $comment['page_number']) ?: $rects;
+                $minTop = min(array_column($here, 'top_position'));
+                $minLeft = min(array_column($here, 'left_position'));
+                $maxBottom = max(array_map(fn ($r) => $r['top_position'] + ($r['highlight_height'] ?? 0), $here));
+                $maxRight = max(array_map(fn ($r) => $r['left_position'] + ($r['highlight_width'] ?? 0), $here));
 
                 $remark += [
                     'top_position' => $minTop,

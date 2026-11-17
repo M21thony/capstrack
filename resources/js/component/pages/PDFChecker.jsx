@@ -3,7 +3,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import {
   FigureZoom, Highlights, KINDS, PageStrip, ReaderTools, RemarksPanel, SectionPicker,
-  kindOf, mergeRectsByLine, numberRemarks, rectStyle, useOutline, usePageColumn,
+  kindOf, mergeRectsByLine, numberRemarks, onPage, pageOf, rectStyle, useOutline, usePageColumn,
 } from "../reader/Reader";
 import { sectionAt } from "../reader/outline";
 import ChangesPanel, { useEarlierPdf, useFigureDiff } from "../reader/ChangesPanel";
@@ -502,29 +502,51 @@ function PDFChecker({
     const elOf = (n) => (n.nodeType === 1 ? n : n.parentElement);
     const pageEl = elOf(range.startContainer)?.closest(".rr-page");
     if (!pageEl) return;
-    if (!pageEl.contains(elOf(range.endContainer))) {
-      notify("Select words on one page at a time.", { type: "error" });
-      return;
-    }
-    const selectedText = sel.toString().replace(/\s+/g, " ").trim();
+    // The browser's own text of a selection stops at the end of the first page, so past it the words are read from the pages.
+    const pageText = () => {
+      const frag = range.cloneContents();
+      frag.querySelectorAll("br").forEach((br) => br.replaceWith(" "));
+      return [...frag.querySelectorAll(".textLayer")].map((l) => l.textContent).join(" ");
+    };
+    const selectedText = (pageEl.contains(elOf(range.endContainer)) ? sel.toString() : pageText()).replace(/\s+/g, " ").trim();
     if (selectedText.length < 2) return;
 
-    const box = (pageEl.querySelector(".react-pdf__Page") || pageEl).getBoundingClientRect();
-    const rects = mergeRectsByLine(
-      [...range.getClientRects()]
-        .filter((r) => r.width > 1 && r.height > 1)
-        .map((r) => ({
-          top_position: (r.top - box.top) / box.height,
-          left_position: (r.left - box.left) / box.width,
-          highlight_width: r.width / box.width,
-          highlight_height: r.height / box.height,
-        }))
-    );
-    if (!rects.length) return;
+    // Words can run onto the next page; each box is measured on the page it is on,
+    // and the ones past the first page carry that page's number.
+    const boxes = [...document.querySelectorAll(".rr-page")].map((el) => ({
+      n: Number(el.dataset.page), b: (el.querySelector(".react-pdf__Page") || el).getBoundingClientRect(),
+    }));
+    // Boxes come from the words only: a selection crossing pages also takes in each page's picture, which would cover the whole page.
+    const wordRects = [];
+    const walk = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT);
+    for (let t = walk.currentNode.nodeType === 3 ? walk.currentNode : walk.nextNode(); t; t = walk.nextNode()) {
+      if (!range.intersectsNode(t) || !t.parentElement?.closest(".textLayer")) continue;
+      const part = document.createRange();
+      part.selectNodeContents(t);
+      if (t === range.startContainer) part.setStart(t, range.startOffset);
+      if (t === range.endContainer) part.setEnd(t, range.endOffset);
+      wordRects.push(...part.getClientRects());
+    }
+    const byPage = {};
+    wordRects.filter((r) => r.width > 1 && r.height > 1).forEach((r) => {
+      const mid = (r.top + r.bottom) / 2;
+      const at = boxes.find((x) => mid >= x.b.top && mid <= x.b.bottom);
+      if (!at) return;
+      const box = at.b;
+      (byPage[at.n] ||= []).push({
+        top_position: (r.top - box.top) / box.height,
+        left_position: (r.left - box.left) / box.width,
+        highlight_width: r.width / box.width,
+        highlight_height: r.height / box.height,
+      });
+    });
+    const pages = Object.keys(byPage).map(Number).sort((a, b) => a - b);
+    if (!pages.length) return;
+    const rects = pages.flatMap((n) => mergeRectsByLine(byPage[n]).map((h) => (n === pages[0] ? h : { ...h, page: n })));
 
     sel.removeAllRanges();
     setSelectedId(null);
-    beginRemark({ type: "text", pageNumber: Number(pageEl.dataset.page), selectedText, highlightRects: rects });
+    beginRemark({ type: "text", pageNumber: pages[0], selectedText, highlightRects: rects });
   };
 
   const startEdit = (id) => {
@@ -660,15 +682,35 @@ function PDFChecker({
     e.preventDefault();
     const sel = window.getSelection();
     // Shift+click moves the far end of words already selected, so a selection can be fixed.
-    const anchor = e.shiftKey && !sel.isCollapsed && layer.contains(sel.anchorNode) ? [sel.anchorNode, sel.anchorOffset] : at;
+    const anchor = e.shiftKey && !sel.isCollapsed && sel.anchorNode?.parentElement?.closest(".textLayer") ? [sel.anchorNode, sel.anchorOffset] : at;
     sel.setBaseAndExtent(...anchor, ...at);
     setSelBtn(null);
-    const follow = (m) => {
-      const focus = spotNear(layer, m.clientX, m.clientY);
+    // The drag follows the pointer onto the next page, and holding it at the top or
+    // bottom of the view scrolls the pages, so a paragraph can be carried across a page break.
+    const canvas = col.canvasRef.current;
+    let over = layer;
+    let pointer = null;
+    const extend = () => {
+      if (!pointer) return;
+      const under = document.elementFromPoint(pointer.x, pointer.y)?.closest(".rr-page")?.querySelector(".textLayer");
+      if (under) over = under;
+      const focus = spotNear(over, pointer.x, pointer.y);
       if (focus) sel.setBaseAndExtent(...anchor, ...focus);
     };
+    const follow = (m) => { pointer = { x: m.clientX, y: m.clientY }; extend(); };
+    let frame = requestAnimationFrame(function scroll() {
+      const c = canvas?.getBoundingClientRect();
+      if (pointer && c) canvas.scrollTop += pointer.y > c.bottom - 40 ? 14 : pointer.y < c.top + 40 ? -14 : 0;
+      frame = requestAnimationFrame(scroll);
+    });
     window.addEventListener("mousemove", follow);
-    window.addEventListener("mouseup", () => { window.removeEventListener("mousemove", follow); placeSelBtn(); }, { once: true });
+    canvas?.addEventListener("scroll", extend);
+    window.addEventListener("mouseup", () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("mousemove", follow);
+      canvas?.removeEventListener("scroll", extend);
+      placeSelBtn();
+    }, { once: true });
   };
 
   // Letting go of the mouse leaves the words selected; a bar over them starts
@@ -700,7 +742,8 @@ function PDFChecker({
   const quote = draft?.type === "text" ? draft.selectedText : null;
   const onFigure = draft && draft.type !== "text";
   const draftRemark = draft && { ...draft, page_number: draft.pageNumber, color: kind };
-  const where = draft ? (draft.type === "shape" ? `${shapeLabel(draft.shape_ref)} · page ${draft.pageNumber}` : draft.type === "pin" ? `Pin on page ${draft.pageNumber}` : `${draft.highlightRects.length > 1 ? `${draft.highlightRects.length} boxes` : "Box"} on page ${draft.pageNumber}`) : "";
+  const lastPage = draft ? Math.max(draft.pageNumber, ...(draft.highlightRects || []).map((r) => pageOf(r, draftRemark))) : 0;
+  const where = draft ? (draft.type === "shape" ? `${shapeLabel(draft.shape_ref)} · page ${draft.pageNumber}` : draft.type === "pin" ? `Pin on page ${draft.pageNumber}` : `${draft.highlightRects.length > 1 ? `${draft.highlightRects.length} boxes` : "Box"} on page ${draft.pageNumber}${lastPage > draft.pageNumber ? `–${lastPage}` : ""}`) : "";
   const zoomRemark = zoomId != null ? comments.find((c) => c.id === zoomId) : null;
   const hint = mode === "text"
     ? (selecting ? "Pick a kind above the words, or press Enter · Shift+click changes where it ends" : "Select text to add a remark")
@@ -747,7 +790,7 @@ function PDFChecker({
     const side = Math.max(0, (col.room - width) / 2 - 24);
     const middle = realSize && width < col.room ? { position: "sticky", left: side, right: side } : null;
                 const outline = (c) => c.shape_ref.cells.flatMap((cell) => { const t = pic.targets.find((x) => x.id === cell.id); return t ? shapeRects(t, pic) : []; });
-                const pageRemarks = before ? [] : comments.filter((c) => Number(c.page_number) === n)
+                const pageRemarks = before ? [] : comments.filter((c) => onPage(c, n))
                   .map((c) => (pic && c.type === "shape" && c.shape_ref && outline(c).length ? { ...c, highlightRects: outline(c) } : c));
                 return (
                   <div
@@ -804,13 +847,14 @@ function PDFChecker({
                       )))}
                       <Highlights
                         remarks={pageRemarks}
+                        page={n}
                         numbers={numbers}
                         selectedId={selectedId}
                         onSelect={openRemark}
                         override={editing ? { id: editing.id, kind, rects: draft?.type === "box" || draft?.type === "shape" ? draft.highlightRects : null } : null}
                       />
-                      {draft && !editing && draft.pageNumber === n && draft.type === "text" && draft.highlightRects.map((r, idx) => (
-                        <div key={idx} className={`rr-hl pending c-${kind}`} style={rectStyle(r)} />
+                      {draft && !editing && draft.type === "text" && draft.highlightRects.map((r, idx) => (pageOf(r, draftRemark) === n
+                        && <div key={idx} className={`rr-hl pending c-${kind}`} style={rectStyle(r)} />
                       ))}
                       {mode === "shape" && hoverShape?.n === n && !(draft?.type === "shape" && draft.shape_ref.cells.some((c) => c.id === hoverShape.id)) && (
                         hoverShape.rects.map((r, idx) => <div key={`h${idx}`} className="rr-box hover" style={rectStyle(r)} />)

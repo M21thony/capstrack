@@ -233,15 +233,21 @@ const boxSpots = (b) => {
   return [...corners, ...besideSides, ...besideEnds];
 };
 
+/** The page a highlight box is on: its own, when the words ran onto the next page, else the remark's. */
+export const pageOf = (h, r) => Number(h.page ?? r.page_number);
+/** Whether a remark shows on page n, counting words that ran onto it from the page before. */
+export const onPage = (r, n) => Number(r.page_number) === n || (r.highlightRects || []).some((h) => pageOf(h, r) === n);
+
 /**
  * A page's remarks: the highlighted words with their number in the margin;
  * on a figure, a box (or several) or a pin, marked with its kind's icon on
  * the corner outside the box and its comment beside it.
  */
-export function Highlights({ remarks, numbers, selectedId, onSelect, clickable = false, override = null }) {
+export function Highlights({ remarks, numbers, selectedId, onSelect, clickable = false, override = null, page = null }) {
   return remarks.map((r) => {
     const kind = override && override.id === r.id ? override.kind : kindOf(r.color);
-    const rects = override && override.id === r.id && override.rects ? override.rects : (r.highlightRects || []);
+    const all = override && override.id === r.id && override.rects ? override.rects : (r.highlightRects || []);
+    const rects = page ? all.filter((h) => pageOf(h, r) === page) : all;
     const on = selectedId === r.id;
     const select = (e) => { e.stopPropagation(); onSelect(r.id); };
     const label = `Remark ${numbers[r.id]}: ${r.text}`;
@@ -433,7 +439,7 @@ function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measur
         {isFigureRemark(r)
           ? <span className="rr-tag fig">{{ pin: "Pin", shape: "Shape" }[r.type] || "Figure"}</span>
           : <span className="rr-tag">Highlighted text</span>}
-        <span className="rr-where">p.{r.page_number}{r.section ? ` · ${r.section}` : ""}</span>
+        <span className="rr-where">p.{r.page_number}{(() => { const last = Math.max(...(r.highlightRects || []).map((h) => pageOf(h, r)), r.page_number); return last > r.page_number ? `–${last}` : ""; })()}{r.section ? ` · ${r.section}` : ""}</span>
         {!readOnly && (
           <span className="rr-acts">
             <button type="button" className="rr-btn icon sm ghost" tabIndex={measuring ? -1 : 0} aria-label="Edit remark" onClick={(e) => { e.stopPropagation(); onEdit(r.id); }}><Icon name="edit" /></button>

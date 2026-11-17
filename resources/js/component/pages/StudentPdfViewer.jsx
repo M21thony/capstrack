@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import {
-  FigureZoom, Highlights, PageStrip, ReaderTools, RemarksPanel, numberRemarks, rectStyle, usePageColumn,
+  FigureZoom, Highlights, PageStrip, ReaderTools, RemarksPanel, numberRemarks, onPage, rectStyle, usePageColumn,
 } from "../reader/Reader";
 import { DiagramPage, DiagramsOnly, useDiagramPages, withDiagramPages } from "../reader/diagramPages";
 import { remarkFromServer } from "../reader/figures";
@@ -166,7 +166,8 @@ function StudentPdfViewer({
                       : <div key={`${m.id}-${idx}`} className={`rr-figdiff old ${m.tone || ""}`} data-label={m.label || undefined} style={rectStyle(r)} />
                     )))}
                     <Highlights
-                      remarks={remarks.filter((r) => r.page_number === n)}
+                      remarks={remarks.filter((r) => onPage(r, n))}
+                      page={n}
                       numbers={numbers}
                       selectedId={selectedId}
                       onSelect={open}

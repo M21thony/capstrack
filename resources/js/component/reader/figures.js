@@ -165,6 +165,7 @@ export const remarkFromServer = (r) => {
         left_position: Number(x.left_position),
         highlight_width: Number(x.highlight_width),
         highlight_height: Number(x.highlight_height),
+        ...(x.page ? { page: Number(x.page) } : {}),
       }))
     : type !== "pin" && box.highlight_width > 0 ? [box] : [];
   return {
