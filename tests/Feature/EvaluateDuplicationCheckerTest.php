@@ -123,7 +123,7 @@ class EvaluateDuplicationCheckerTest extends TestCase
         $this->assertMatchesRegularExpression('/Score shown\s+\|\s+0 of 1 \(0%\)/', $output);
     }
 
-    public function test_the_judges_answers_decide_the_score_and_its_own_number_is_shown_beside_it(): void
+    public function test_the_judges_own_number_decides_the_score_and_its_answers_are_shown_beside_it(): void
     {
         $this->goldSet([$this->pair('p1', 'duplicate', 'Rural Health Unit Records')]);
         $this->fakeModel([
@@ -132,8 +132,8 @@ class EvaluateDuplicationCheckerTest extends TestCase
 
         $output = $this->run_evaluation();
 
-        $this->assertMatchesRegularExpression('/p1\s+\|\s+duplicate\s+\|\s+1\.00\s+\|\s+100%\s+\|\s+yes \/ yes \/ yes\s+\|\s+15%\s+\|\s+95%\s+\|\s+95%/', $output);
-        $this->assertMatchesRegularExpression('/Score shown\s+\|\s+none in the set\s+\|\s+0 of 1 \(0%\)/', $output);
+        $this->assertMatchesRegularExpression('/p1\s+\|\s+duplicate\s+\|\s+1\.00\s+\|\s+100%\s+\|\s+yes \/ yes \/ yes\s+\|\s+15%\s+\|\s+15%\s+\|\s+15%/', $output);
+        $this->assertMatchesRegularExpression('/Score shown\s+\|\s+none in the set\s+\|\s+1 of 1 \(100%\)/', $output);
         $this->assertMatchesRegularExpression("/The model's own number\s+\|\s+none in the set\s+\|\s+1 of 1 \(100%\)/", $output);
     }
 

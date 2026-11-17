@@ -1265,8 +1265,11 @@ PROMPT;
                 ."not remove it.\n"
                 .'Silently ask yourself "a management system FOR WHAT, and used by WHO?" for both the '
                 ."pre-proposal and the archived document, then answer it BOTH ways:\n"
-                .'- if the WHAT differs (students vs. inventory, capstones vs. door access, records vs. '
-                ."events), the score must be low regardless of how many words they share;\n"
+                .'- if the WHAT differs and so does the field (students vs. inventory, capstones vs. door access, '
+                ."records vs. events), the score must be low (under 20) regardless of how many words they share;\n"
+                .'- if the WHAT differs but both sit in the same field or setting (bus ticket booking vs. bus '
+                .'fleet maintenance; hotel room booking vs. hotel laundry stock), it is some overlap: score 40-55, '
+                ."matches false;\n"
                 .'- if the WHAT and the WHO are the same, the score must be high regardless of how '
                 ."differently the two are worded, and regardless of extra features on either side.\n"
                 .'Base this on what each one actually DOES, per its problem statement/solution/abstract '
@@ -1296,9 +1299,14 @@ PROMPT;
                 .'"same_features": is the same work done on those things? "yes" when the main features of one are all '
                 .'in the other, even if worded differently or one has extra features. "partly" when some main features '
                 .'are shared and others are not. "no" when the work is different.'."\n"
-                .'If "same_things" is "no", "matches" is false and the score is under 30.'."\n"
+                .'"same_field": do both serve the same field, business or setting (the same kind of shop, office, '
+                .'clinic, service or place), even if they handle different things in it? Sharing only "school", '
+                .'"government" or "a web app" is not the same field.'."\n"
+                .'If "same_things" is "no", "matches" is false; the score is 40-55 when "same_field" is "yes", '
+                .'and under 20 when it is "no".'."\n"
                 .'{"things":"<objects the pre-proposal handles> vs <objects the archived system handles>",'
                 .'"same_things":"yes|partly|no","same_users":"yes|partly|no","same_features":"yes|partly|no",'
+                .'"same_field":"yes|partly|no",'
                 .'"matches":true|false,"score":<0-100>,"reason":"one sentence about core concept match or mismatch",'
                 .'"similarities":"short phrase, under 12 words, on what genuinely overlaps - or that there is none '
                 .'beyond generic wording","differences":"short phrase, under 12 words, on what specific features/scope '
@@ -1409,7 +1417,9 @@ PROMPT;
             $fields['reason'] = stripslashes($m[1]);
         }
 
-        return $fields === [] ? null : $fields;
+        $hasAnswers = isset($fields['same_things'], $fields['same_users'], $fields['same_features']);
+
+        return isset($fields['score']) || $hasAnswers ? $fields : null;
     }
 
     /**
