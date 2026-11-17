@@ -268,6 +268,10 @@ class OllamaSSHClient
                 'min_p' => 0,
                 'top_p' => 1,
                 'top_k' => 1,
+                // qwen3.5 bakes in presence_penalty 1.5, which pushes the
+                // judge off a word it has already written: a third "yes"
+                // came out "partly" and a duplicate scored 75 instead of 95.
+                'presence_penalty' => 0,
             ],
         ];
 
@@ -326,6 +330,7 @@ class OllamaSSHClient
                     'min_p' => 0,
                     'top_p' => 1,
                     'top_k' => 1,
+                    'presence_penalty' => 0,
                 ],
             ];
         }
