@@ -142,9 +142,9 @@ class ChecklistConsolidationTest extends TestCase
         $checklist = MilestoneTemplate::createChecklist($this->capsa->expert_id, 'BSIT');
 
         $this->assertSame('Capstone 1 Checklist', $checklist->title);
-        // Capstone 1's two milestones, and Capstone 2's four after them, the last the Archive Entry.
-        $this->assertSame(6, $checklist->milestones()->count());
-        $this->assertSame(48, $checklist->deliverables()->count());
+        // Capstone 1's two milestones, and Capstone 2's five after them: the Archive Entry, then the Bluebook Clearance.
+        $this->assertSame(7, $checklist->milestones()->count());
+        $this->assertSame(53, $checklist->deliverables()->count());
         $this->assertSame('team_assignment_form', $checklist->milestones->first()->deliverables->first()->template_key);
     }
 
@@ -157,7 +157,7 @@ class ChecklistConsolidationTest extends TestCase
         $titleDefense->deliverables->first()->delete();             // removed
         $preOral->deliverables->first()->update(['archived_at' => now()]);
 
-        $this->assertSame(5, ChecklistMilestone::active()->count());
-        $this->assertSame(48 - 7 - 1 - 1, Deliverable::active()->count());
+        $this->assertSame(6, ChecklistMilestone::active()->count());
+        $this->assertSame(53 - 7 - 1 - 1, Deliverable::active()->count());
     }
 }
