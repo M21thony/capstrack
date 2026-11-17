@@ -1,9 +1,9 @@
 /*
- * The CaPSA/TSA's Financial Records: fees as tabs, every receipt in her sections
- * grouped by team, and the selected receipt shown large with Verify / Send back.
- * A decision moves straight to the next receipt, so a batch needs no mouse.
+ * The CaPSA/TSA's Financial Records: one fee at a time, every student in her
+ * sections in one table, and a receipt opened in a drawer on the right with
+ * Verify / Send back. A decision moves straight to the next receipt for review.
  */
-import { $, esc, peso, statusHtml, barHtml, send, toast, reloadWith, showFlash, wireDialogs } from './shared.js';
+import { $, esc, peso, send, toast, reloadWith, showFlash, wireDialogs } from './shared.js';
 
 const root = document.getElementById('fx-capsa');
 const S = JSON.parse(root.dataset.state);
@@ -13,309 +13,259 @@ const TEAMS = S.teams;
 const R = S.receipts;
 const NAME = {}, TEAM_OF = {};
 TEAMS.forEach(t => t.members.forEach(m => { NAME[m.id] = m.name; TEAM_OF[m.id] = t; }));
-
-// section: null shows the overview of every section; a name shows its receipts.
-let fee = FEES[0]?.id ?? null, show = 'pending', selected = null, sendingBack = false, section = null, overShow = 'all';
-const picked = new Set();
 const SECTIONS = [...new Set([...S.sections, ...TEAMS.map(t => t.section)])].filter(Boolean).sort();
-// Overview states, in the order the list puts them: [status class, label].
-const STATE = { check: ['pending', 'To check'], fix: ['sent_back', 'Needs correction'], ready: ['verified', 'Ready to forward'], fwd: ['fwd', 'Forwarded'], none: ['none', 'No receipts'] };
+
+const state = { fee: FEES[0]?.id ?? null, section: '', search: '', status: 'all', page: 1, pageSize: 10, asc: true };
+let current = null, sendingBack = false;
 
 const rec = (f, m) => R[`${f}:${m}`];
 const st = (f, m) => rec(f, m)?.status || 'none';
-const everyone = () => TEAMS.filter(t => t.section === section).flatMap(t => t.members.map(m => m.id));
-// Verified and not with the dean yet, as [feeId, receipt].
-const unsent = () => Object.entries(R).filter(([, r]) => r.status === 'verified' && !r.sent).map(([key, r]) => [+key.split(':')[0], r]);
-const tally = (f, ids) => { const c = { pending: 0, verified: 0, sent_back: 0, none: 0 }; ids.forEach(m => c[st(f, m)]++); return c; };
+const feeOf = id => FEES.find(x => x.id === id);
+const feeLabel = x => `${x.stage} Fee` + (FEES.filter(y => y.stage === x.stage).length > 1 ? ` · ${x.program}` : '');
+// Verified and not with the dean yet, as [feeId, memberId, receipt].
+const unsent = () => Object.entries(R).filter(([, r]) => r.status === 'verified' && !r.sent).map(([key, r]) => { const [f, m] = key.split(':'); return [+f, +m, r]; });
+const QUICK = ['The OR number does not match the receipt.', 'The photo is blurry.', 'The amount is wrong.', "It isn't the official receipt.", 'The name is a different person.'];
+const today = () => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+// "or 00123 " and "OR 00123" are the same receipt - as the server compares them.
+const normaliseOr = v => v.trim().replace(/\s+/g, ' ').toUpperCase();
 
-function visible() {
-  const team = +$('#c-team').value, q = $('#c-search').value.toLowerCase();
-  return TEAMS.filter(t => t.section === section && (!team || t.id === team))
-    .map(t => ({ t, ids: t.members.map(m => m.id).filter(m => (show === 'all' || st(fee, m) === show) && (!q || NAME[m].toLowerCase().includes(q))) }))
-    .filter(g => g.ids.length);
-}
+const LABEL = { pending: 'For review', verified: 'Verified', sent_back: 'Sent back', none: 'Not uploaded' };
+const CLASS = { pending: 'pending', verified: 'verified', sent_back: 'returned', none: 'missing' };
+const statusHtml = s => `<span class="ct-status ct-status-${CLASS[s]}">${LABEL[s]}</span>`;
+const icon = name => `<svg class="ct-i"><use href="#ct-i-${name}"/></svg>`;
 
-// One line per section, every fee together. A receipt counts once, in the
-// furthest place it has reached: forwarded, checked, waiting or sent back.
-function sectionLine(name) {
-  const c = { name, n: 0, total: 0, at: '', last: 0, pending: 0, back: 0, ready: 0, fwd: 0, amt: { pending: 0, back: 0, ready: 0, fwd: 0 } };
-  TEAMS.filter(t => t.section === name).forEach(t => t.members.forEach(m => FEES.forEach(f => {
-    const r = rec(f.id, m.id);
-    if (!r) return;
-    const k = r.sent ? 'fwd' : r.status === 'verified' ? 'ready' : r.status === 'pending' ? 'pending' : 'back';
-    c[k]++; c.amt[k] += +f.amount; c.n++; c.total += +f.amount;
-    const when = Date.parse(r.at) || 0;
-    if (when > c.last) { c.last = when; c.at = r.at; }
-  })));
-  c.state = c.pending ? 'check' : c.back ? 'fix' : c.ready ? 'ready' : c.fwd ? 'fwd' : 'none';
-  return c;
-}
-
-function renderOver() {
-  const lines = SECTIONS.map(sectionLine), order = Object.keys(STATE), q = $('#c-over-q').value.trim().toLowerCase();
-  const sum = k => lines.reduce((a, l) => a + l[k], 0), amt = k => lines.reduce((a, l) => a + l.amt[k], 0);
-  $('#c-stats').innerHTML = [['pending', 'Receipts to check'], ['ready', 'Checked · ready to forward'], ['fwd', "Forwarded to Dean's Office"]]
-    .map(([k, l]) => `<div class="fx-stat"><div><b class="fx-num">${peso(amt(k))}</b><span>${l}</span></div><small>${sum(k)} ${sum(k) === 1 ? 'receipt' : 'receipts'}</small></div>`).join('');
-  $('#c-over-tabs').innerHTML = [['all', 'All'], ...order.map(k => [k, STATE[k][1]])]
-    .map(([k, l]) => `<button role="tab" data-over="${k}" aria-selected="${k === overShow}">${l}<span class="fx-count">${k === 'all' ? lines.length : lines.filter(x => x.state === k).length}</span></button>`).join('');
-  const shown = lines.filter(l => (overShow === 'all' || l.state === overShow) && l.name.toLowerCase().includes(q))
-    .sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state));
-  $('#c-sec-rows').innerHTML = shown.map(l => `<tr>
-      <td><strong>${esc(l.name)}</strong></td>
-      <td class="fx-num fx-r"><strong>${l.n ? peso(l.total) : '—'}</strong></td>
-      <td class="fx-num">${l.n}</td><td class="fx-num">${l.ready}</td><td class="fx-num">${l.fwd}</td>
-      <td class="fx-num">${esc(l.at || '—')}</td>
-      <td>${statusHtml(...STATE[l.state])}</td>
-      <td class="fx-r">${l.n ? `<button class="fx-btn fx-btn-dark" data-open="${esc(l.name)}">${l.state === 'fwd' ? 'View records' : 'Open section'}</button>` : '—'}</td></tr>`).join('')
-    || '<tr><td colspan="8" class="fx-empty">No sections match.</td></tr>';
-  $('#c-over-foot').innerHTML = `<span>${shown.length} of ${lines.length} sections</span><span>${sum('n')} ${sum('n') === 1 ? 'receipt' : 'receipts'} · ${peso(sum('total'))}</span>`;
-}
+/* ---------------- Rows ---------------- */
+const sectionIds = () => TEAMS.filter(t => !state.section || t.section === state.section).flatMap(t => t.members.map(m => m.id));
+const searchedIds = () => {
+  const q = state.search.trim().toLowerCase();
+  return sectionIds().filter(m => !q || NAME[m].toLowerCase().includes(q) || TEAM_OF[m].name.toLowerCase().includes(q));
+};
+const shownIds = () => searchedIds()
+  .filter(m => state.status === 'all' || st(state.fee, m) === state.status)
+  .sort((a, b) => NAME[a].localeCompare(NAME[b]) * (state.asc ? 1 : -1));
+const tally = ids => { const c = { all: ids.length, pending: 0, verified: 0, sent_back: 0, none: 0 }; ids.forEach(m => c[st(state.fee, m)]++); return c; };
 
 function render() {
-  $('#c-crumb').innerHTML = section ? `<button type="button" data-back>All sections</button><span aria-hidden="true">›</span><b>${esc(section)}</b>` : '<b>All sections</b>';
-  $('#c-over').hidden = !fee || !!section;
-  $('#c-body').hidden = !!fee && !section;
-  $('#c-fees').hidden = !fee || !section;
-  if (!fee) {
-    $('#c-fees').innerHTML = '';
-    // In the page's scrolling area, like the receipt list it stands in for,
-    // so the developers' credit (partials/mobile-tabbar) has an end of the
-    // page to sit at here too.
-    $('#c-body').innerHTML = '<div class="fx-scroll"><div class="fx-empty">No defense fee yet. Create one with <b>New fee</b>: Title, Pre Oral or Final Oral Defense. Pre-proposal Defense has no fee.</div></div>';
-    return;
-  }
-  $('#c-send').disabled = !unsent().length;
-  $('#c-send-n').textContent = unsent().length;
-  if (!section) { renderOver(); return; }
-  const f = FEES.find(x => x.id === fee), all = everyone();
-  $('#c-fees').innerHTML = FEES.map(x => {
-    const w = tally(x.id, all).pending;
-    return `<button role="tab" data-fee="${x.id}" aria-selected="${x.id === fee}">${esc(x.stage)}${FEES.filter(y => y.stage === x.stage).length > 1 ? ` · ${esc(x.program)}` : ''}<span class="fx-count ${w ? 'fx-hot' : ''}">${w}</span></button>`;
+  const f = feeOf(state.fee), sends = unsent();
+  $('#c-send').disabled = !sends.length;
+  $('#c-send-n').textContent = sends.length;
+
+  $('#ct-fee').innerHTML = FEES.map(x => `<option value="${x.id}" ${x.id === state.fee ? 'selected' : ''}>${esc(feeLabel(x))}</option>`).join('');
+  $('#ct-feebar').classList.toggle('is-empty', !f);
+  $('#ct-amount').innerHTML = f ? `<b>${peso(f.amount)}</b> / student` : 'No defense fee yet. Create one with <b>New fee</b>.';
+  const all = sectionIds(), c = tally(all);
+  $('#ct-progress').value = all.length ? c.verified / all.length : 0;
+  $('#ct-progress-label').textContent = f ? `${c.verified} of ${all.length} verified` : '';
+
+  const searched = searchedIds(), counts = tally(searched);
+  root.querySelectorAll('[data-count]').forEach(el => { el.textContent = f ? counts[el.dataset.count] : 0; });
+  root.querySelectorAll('[data-status]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.status === state.status)));
+  $('#ct-student-count').textContent = `${searched.length} ${searched.length === 1 ? 'student' : 'students'}`;
+
+  const ids = f ? shownIds() : [], pages = Math.max(1, Math.ceil(ids.length / state.pageSize));
+  state.page = Math.min(state.page, pages);
+  const from = (state.page - 1) * state.pageSize, slice = ids.slice(from, from + state.pageSize);
+  $('#c-rows').innerHTML = slice.map(m => {
+    const r = rec(state.fee, m), s = st(state.fee, m), t = TEAM_OF[m];
+    return `<tr>
+      <td><div class="ct-student-name">${esc(NAME[m])}${t.leader === m ? ' <span class="ct-leader">Leader</span>' : ''}</div><div class="ct-team-name">${esc(t.name)}</div></td>
+      <td>${esc(t.section)}</td>
+      <td>${r?.at ? esc(r.at) : '<span class="ct-dash">—</span>'}</td>
+      <td>${statusHtml(s)}</td>
+      <td>${r ? `<button class="ct-link" type="button" data-open="${m}">${icon('eye')}View receipt</button>` : '<span class="ct-dash">—</span>'}</td></tr>`;
   }).join('');
-  const c = tally(fee, all), n = Math.max(all.length, 1);
-  $('#c-fee-line').innerHTML = `<strong>${esc(f.stage)} Fee</strong> <span class="fx-num fx-muted">${peso(f.amount)} / member</span>`;
-  $('#c-bar').innerHTML = barHtml(c, n);
-  $('#c-legend').innerHTML = `<span><b>${c.verified}</b> of <b>${all.length}</b> verified</span><span><b>${c.pending}</b> waiting</span><span><b>${c.sent_back}</b> sent back</span><span><b>${c.none}</b> not uploaded</span>`;
+  $('#ct-empty').hidden = slice.length > 0;
+  $('#ct-empty-t').textContent = f ? 'No students found' : 'No defense fee yet';
+  $('#ct-empty-p').textContent = f ? 'Try another name, section, or receipt status.' : 'Create one with New fee.';
+  $('#ct-clear').hidden = !f;
+  $('#ct-export').disabled = !ids.length;
+  $('#ct-report-btn').disabled = !f;
+  $('#ct-sort').closest('th').setAttribute('aria-sort', state.asc ? 'ascending' : 'descending');
 
-  $('#c-chips').innerHTML = [['pending', 'Waiting'], ['sent_back', 'Sent back'], ['none', 'Not uploaded'], ['verified', 'Verified'], ['all', 'All']]
-    .map(([k, l]) => `<button data-show="${k}" aria-pressed="${k === show}">${l}<span class="fx-n">${k === 'all' ? all.length : c[k]}</span></button>`).join('');
-
-  const groups = visible(), flat = groups.flatMap(g => g.ids);
-  if (!flat.includes(selected)) { selected = flat[0] ?? null; sendingBack = false; }
-  [...picked].forEach(m => { if (!flat.includes(m) || st(fee, m) !== 'pending') picked.delete(m); });
-
-  $('#c-rows').innerHTML = groups.map(({ t, ids }) => {
-    const members = t.members.map(m => m.id), tc = tally(fee, members);
-    return `<tr class="fx-group"><td colspan="5"><strong>${esc(t.name)}</strong><span class="fx-bar">${barHtml(tc, members.length)}</span><span class="fx-num">${tc.verified}/${members.length}</span> verified</td></tr>`
-      + ids.map(m => {
-        const r = rec(fee, m), s = st(fee, m);
-        return `<tr class="fx-row" data-id="${m}" aria-selected="${m === selected}">
-          <td>${s === 'pending' ? `<input type="checkbox" data-pick="${m}" ${picked.has(m) ? 'checked' : ''} aria-label="Select ${esc(NAME[m])}">` : ''}</td>
-          <td>${esc(NAME[m])}${m === t.leader ? '<span class="fx-leader">Leader</span>' : ''}</td>
-          <td class="fx-col-team fx-muted">${esc(t.section)}</td>
-          <td class="fx-col-up fx-num fx-muted">${esc(r?.at || '—')}</td>
-          <td>${statusHtml(s)}</td></tr>`;
-      }).join('');
-  }).join('') || `<tr><td colspan="5" class="fx-empty">${show === 'pending' ? 'Nothing waiting. You are caught up.' : 'No one matches.'}</td></tr>`;
-
-  const waitingShown = flat.filter(m => st(fee, m) === 'pending');
-  $('#c-all').disabled = !waitingShown.length;
-  $('#c-all').checked = waitingShown.length > 0 && waitingShown.every(m => picked.has(m));
-  $('#c-bulk').hidden = picked.size === 0;
-  $('#c-bulk-n').textContent = `${picked.size} selected`;
-  renderInspector();
+  $('#ct-range').textContent = ids.length ? `Showing ${from + 1}–${from + slice.length} of ${ids.length} students` : '0 students';
+  // First, last, and the pages either side of this one.
+  const nums = [...new Set([1, state.page - 1, state.page, state.page + 1, pages])].filter(n => n >= 1 && n <= pages).sort((a, b) => a - b);
+  $('#ct-pages').innerHTML = `<button class="ct-page" type="button" data-page="${state.page - 1}" ${state.page === 1 ? 'disabled' : ''} aria-label="Previous page">${icon('left')}</button>`
+    + nums.map((n, i) => (i && n - nums[i - 1] > 1 ? '<span class="ct-gap">…</span>' : '')
+      + `<button class="ct-page" type="button" data-page="${n}" ${n === state.page ? 'aria-current="page"' : ''}>${n}</button>`).join('')
+    + `<button class="ct-page" type="button" data-page="${state.page + 1}" ${state.page === pages ? 'disabled' : ''} aria-label="Next page">${icon('right')}</button>`;
 }
 
-const QUICK = ['The OR number does not match the receipt.', 'The photo is blurry.', 'The amount is wrong.', "It isn't the official receipt.", 'The name is a different person.'];
-function renderInspector() {
-  const el = $('#c-insp');
-  if (!selected) { el.innerHTML = '<div class="fx-insp-none">Pick a receipt from the list.</div>'; return; }
-  const m = selected, r = rec(fee, m), s = st(fee, m), t = TEAM_OF[m], f = FEES.find(x => x.id === fee);
-  const head = `<div class="fx-insp-head"><h2>${esc(NAME[m])}</h2><div class="fx-muted" style="font-size:13px">Team ${esc(t.name)} · ${esc(t.section)}</div></div>`;
-  if (!r) { el.innerHTML = head + `<div class="fx-insp-none">No receipt uploaded for the ${esc(f.stage)} Fee yet.</div>`; return; }
-  const decide = s !== 'pending' ? '' : sendingBack
-    ? `<div class="fx-decide"><label class="fx-lbl" for="c-reason" style="margin:0">Why is it being sent back?</label>
-        <textarea class="fx-field" id="c-reason" placeholder="${esc(NAME[m].split(' ')[0])} sees this."></textarea>
-        <div class="fx-quick">${QUICK.map(q => `<button type="button" data-quick>${q}</button>`).join('')}</div>
-        <div class="fx-pair"><button class="fx-btn" data-cancel>Cancel</button><button class="fx-btn fx-btn-bad" data-confirm-back><svg><use href="#fx-i-undo"/></svg>Send back</button></div></div>`
-    : `<div class="fx-decide">${r.or ? `<label class="fx-or-check"><input type="checkbox" id="c-or-ok"> The OR number on the photo is <b id="c-or-echo">${esc(r.or)}</b></label>` : ''}
-        <div class="fx-pair"><button class="fx-btn fx-btn-bad" data-back><svg><use href="#fx-i-undo"/></svg>Send back</button><button class="fx-btn fx-btn-ok" data-verify ${r.or ? 'disabled' : ''}><svg><use href="#fx-i-check"/></svg>Verify</button></div>
-        <div class="fx-keys"><kbd>V</kbd> verify · <kbd>B</kbd> send back · <kbd>J</kbd><kbd>K</kbd> next / previous</div></div>`;
+/* ---------------- Receipt drawer ---------------- */
+function openDrawer(m) {
+  current = m; sendingBack = false;
+  renderDrawer();
+  const d = $('#ct-drawer');
+  if (!d.open) d.showModal();
+}
+
+function renderDrawer() {
+  const m = current, r = rec(state.fee, m), s = st(state.fee, m), t = TEAM_OF[m], f = feeOf(state.fee);
+  const pending = s === 'pending';
+  $('#ct-drawer-t').textContent = NAME[m];
+  $('#ct-drawer-sub').textContent = `Team ${t.name} · ${t.section}`;
   // The number the student typed, beside the photo it has to match. While
   // the receipt waits, she can put right a number they mistyped; it is
   // saved with the verification.
-  const orRow = r.or && s === 'pending'
-    ? `<dt><label for="c-or">OR number</label></dt><dd><input class="fx-field fx-num fx-or-edit" id="c-or" value="${esc(r.or)}" maxlength="40" autocomplete="off" spellcheck="false" aria-describedby="c-or-hint">
-        <div class="fx-muted fx-or-hint" id="c-or-hint">As the student typed it. Fix it here if it does not match the photo.</div></dd>`
+  const orRow = r.or && pending
+    ? `<dt><label for="c-or">OR number</label></dt><dd><input class="ct-or-edit" id="c-or" value="${esc(r.or)}" maxlength="40" autocomplete="off" spellcheck="false" aria-describedby="c-or-hint">
+        <div class="ct-or-hint" id="c-or-hint">As the student typed it. Fix it here if it does not match the photo.</div></dd>`
     : r.or
-    ? `<dt>OR number</dt><dd class="fx-num fx-or">${esc(r.or)}</dd>`
-    : '<dt>OR number</dt><dd class="fx-muted">Not given (uploaded before OR numbers were asked for)</dd>';
-  const orAlso = r.or && r.or_also?.length
-    ? `<div class="fx-or-warn">This OR number is also on ${esc(r.or_also.join(', '))}'s receipt. Check it is not the same payment claimed twice.</div>`
-    : '';
-  el.innerHTML = head
-    + `<button class="fx-insp-img" data-full="${esc(r.img)}" aria-label="Open full size"><img src="${esc(r.img)}" alt="${esc(NAME[m])}'s receipt"></button>
-       ${orAlso}<dl class="fx-meta">${orRow}<dt>Status</dt><dd>${statusHtml(s)}</dd><dt>Amount due</dt><dd class="fx-num">${peso(f.amount)}</dd><dt>Uploaded</dt><dd class="fx-num">${esc(r.at || '—')}</dd>
-       ${s === 'verified' ? `<dt>Verified</dt><dd class="fx-num">${esc(r.on || '')}</dd>` : ''}${r.sent ? `<dt>Sent to dean</dt><dd class="fx-num">${esc(r.sent)}</dd>` : ''}${s === 'sent_back' ? `<dt>Reason</dt><dd style="color:var(--fx-bad)">${esc(r.reason)}</dd>` : ''}</dl>`
-    + decide;
-  if (sendingBack) $('#c-reason').focus();
+    ? `<dt>OR number</dt><dd class="ct-or">${esc(r.or)}</dd>`
+    : '<dt>OR number</dt><dd class="ct-muted">Not given (uploaded before OR numbers were asked for)</dd>';
+  $('#ct-drawer-body').innerHTML = `
+    <div class="ct-drawer-status">${statusHtml(s)}<span>${esc(feeLabel(f))}</span></div>
+    <button class="ct-receipt" type="button" data-full="${esc(r.img)}" aria-label="Open full size"><img src="${esc(r.img)}" alt="${esc(NAME[m])}'s receipt"></button>
+    ${r.or && r.or_also?.length ? `<div class="ct-or-warn">This OR number is also on ${esc(r.or_also.join(', '))}'s receipt. Check it is not the same payment claimed twice.</div>` : ''}
+    <dl class="ct-details">${orRow}
+      <dt>Amount due</dt><dd>${peso(f.amount)}</dd>
+      <dt>Uploaded</dt><dd>${esc(r.at || '—')}</dd>
+      ${s === 'verified' ? `<dt>Verified</dt><dd>${esc(r.on || '')}</dd>` : ''}
+      ${r.sent ? `<dt>Sent to Dean</dt><dd>${esc(r.sent)}</dd>` : ''}</dl>
+    ${s === 'sent_back' ? `<div class="ct-feedback"><strong>Correction requested</strong>${esc(r.reason)}</div>` : ''}
+    ${pending && r.or ? `<label class="ct-or-check"><input type="checkbox" id="c-or-ok"> The OR number on the photo is <b id="c-or-echo">${esc(r.or)}</b></label>` : ''}`;
+  $('#ct-return-form').hidden = !sendingBack;
+  $('#ct-back-btn').hidden = $('#ct-verify-btn').hidden = !pending || sendingBack;
+  $('#ct-verify-btn').disabled = !!r.or;
+  if (sendingBack) { $('#c-reason').value = ''; $('#c-reason').focus(); }
 }
 
-const today = () => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-// Save, then move straight to the next receipt in the list. A corrected
-// OR number goes with a single verification.
-async function decide(ids, status, reason = '', orNumber = null) {
-  const before = visible().flatMap(g => g.ids), at = before.indexOf(selected);
+// Save, then open the next receipt for review in the list, or close.
+async function decide(m, status, reason = '', orNumber = null) {
+  const before = shownIds(), at = before.indexOf(m);
   try {
-    if (ids.length > 1) {
-      const res = await send('PATCH', URLS.records, { ids: ids.map(m => rec(fee, m).id), status: 'approved' });
-      // Receipts with an OR number stay waiting: they are checked one at a time.
-      const done = new Set(res.data?.verified ?? []);
-      ids = ids.filter(m => done.has(rec(fee, m).id));
-      if (res.data?.skipped?.length) toast(res.message, 'info');
-    } else {
-      await send('PATCH', URLS.record.replace('__ID__', rec(fee, ids[0]).id), status === 'verified'
-        ? { status: 'approved', or_confirmed: true, ...(orNumber !== null ? { receipt_number: orNumber } : {}) }
-        : { status: 'rejected', rejection_reason: reason });
-    }
+    await send('PATCH', URLS.record.replace('__ID__', rec(state.fee, m).id), status === 'verified'
+      ? { status: 'approved', or_confirmed: true, ...(orNumber !== null ? { receipt_number: orNumber } : {}) }
+      : { status: 'rejected', rejection_reason: reason });
   } catch (e) {
-    await outcomeDialog({
-      tone: 'error',
-      title: ids.length > 1 ? 'Those receipts were not updated' : 'That receipt was not updated',
-      reason: e.message,
-      body: 'Nothing changed. The list is exactly as it was before you clicked.',
-      primaryLabel: 'Back to receipts',
-    });
+    await outcomeDialog({ tone: 'error', title: 'That receipt was not updated', reason: e.message, body: 'Nothing changed. The list is exactly as it was before you clicked.', primaryLabel: 'Back to receipts' });
     return false;
   }
-  ids.forEach(m => Object.assign(R[`${fee}:${m}`], status === 'verified' ? { status, on: today(), ...(orNumber !== null ? { or: orNumber } : {}) } : { status, reason }));
-  ids.forEach(m => picked.delete(m));
-  sendingBack = false;
-  const after = visible().flatMap(g => g.ids);
-  selected = after[Math.min(Math.max(at, 0), after.length - 1)] ?? null;
+  Object.assign(R[`${state.fee}:${m}`], status === 'verified' ? { status, on: today(), ...(orNumber !== null ? { or: orNumber } : {}) } : { status, reason });
+  const next = [...before.slice(at + 1), ...before.slice(0, Math.max(at, 0))].find(x => st(state.fee, x) === 'pending');
+  const after = shownIds();
+  if (next) state.page = Math.floor(after.indexOf(next) / state.pageSize) + 1;
   render();
-  document.querySelector(`tr.fx-row[data-id="${selected}"]`)?.scrollIntoView({ block: 'nearest' });
+  if (next) openDrawer(next); else $('#ct-drawer').close();
   return true;
 }
-
-// "or 00123 " and "OR 00123" are the same receipt - as the server compares them.
-const normaliseOr = v => v.trim().replace(/\s+/g, ' ').toUpperCase();
 
 // One receipt, after a plain yes or no: whose it is, and the OR number that
 // will be saved - with what the student typed, if she changed it.
 async function verifyOne(m) {
-  const r = rec(fee, m), f = FEES.find(x => x.id === fee), field = $('#c-or');
+  const r = rec(state.fee, m), f = feeOf(state.fee), field = $('#c-or');
   const number = field ? normaliseOr(field.value) : null;
   if (field && !number) { toast('Type the OR number printed on the receipt.', 'error'); field.focus(); return; }
   const changed = number !== null && number !== normaliseOr(r.or || '');
   const ok = await confirmSheet({
     title: `Verify ${NAME[m]}'s receipt?`,
-    body: `${f.stage} Fee \u00b7 ${peso(f.amount)}.` + (number ? ` OR number ${number}.` : ' No OR number was given.')
-      + ' A verification cannot be taken back \u2014 one made by mistake has to be sent back instead.',
+    body: `${f.stage} Fee · ${peso(f.amount)}.` + (number ? ` OR number ${number}.` : ' No OR number was given.')
+      + ' A verification cannot be taken back — one made by mistake has to be sent back instead.',
     note: changed ? `You changed the OR number: the student typed ${r.or}, it will be saved as ${number}.` : '',
     noteWarn: changed,
     confirmLabel: 'Verify',
     cancelLabel: 'No',
   });
   if (!ok) return;
-  if (await decide([m], 'verified', '', changed ? number : null)) toast(`Verified ${NAME[m]}.`);
+  if (await decide(m, 'verified', '', changed ? number : null)) toast(`Verified ${NAME[m]}.`);
 }
 
-function move(step) {
-  const flat = visible().flatMap(g => g.ids), at = flat.indexOf(selected) + step;
-  if (at < 0 || at >= flat.length) return;
-  selected = flat[at];
-  sendingBack = false;
-  render();
-  document.querySelector(`tr.fx-row[data-id="${selected}"]`)?.scrollIntoView({ block: 'nearest' });
+/* ---------------- CSV ---------------- */
+// Quoted, with a ' before anything a spreadsheet would run as a formula.
+const cell = v => { let s = String(v ?? ''); if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`; return `"${s.replace(/"/g, '""')}"`; };
+function download(pairs, prefix, allSections = !state.section) {
+  const lines = [['Student', 'Team', 'Section', 'Fee', 'Amount due', 'Uploaded', 'Status', 'OR number'],
+    ...pairs.filter(([f]) => f).map(([f, m]) => { const r = rec(f.id, m), t = TEAM_OF[m]; return [NAME[m], t?.name, t?.section, feeLabel(f), f.amount, r?.at, LABEL[st(f.id, m)], r?.or]; })];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + lines.map(l => l.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = `${prefix}-${allSections ? 'all-sections' : state.section.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 0);
 }
+const feePairs = ids => ids.map(m => [feeOf(state.fee), m]);
+const deanPairs = () => unsent().map(([f, m]) => [feeOf(f), m]);
 
 /* ---------------- Events ---------------- */
-$('#c-fees').addEventListener('click', e => { const b = e.target.closest('[data-fee]'); if (b) { fee = +b.dataset.fee; picked.clear(); render(); } });
-$('#c-chips').addEventListener('click', e => { const b = e.target.closest('[data-show]'); if (b) { show = b.dataset.show; picked.clear(); render(); } });
-$('#c-team').addEventListener('change', render);
-$('#c-search').addEventListener('input', render);
-$('#c-rows').addEventListener('click', e => {
-  if (e.target.dataset.pick) { const m = +e.target.dataset.pick; e.target.checked ? picked.add(m) : picked.delete(m); render(); return; }
-  const row = e.target.closest('tr.fx-row');
-  if (row) { selected = +row.dataset.id; sendingBack = false; render(); }
+const reset = () => { state.page = 1; render(); };
+$('#ct-fee').addEventListener('change', e => { state.fee = +e.target.value; state.status = 'all'; reset(); });
+$('#ct-section').innerHTML += SECTIONS.map(s => `<option>${esc(s)}</option>`).join('');
+$('#ct-section').addEventListener('change', e => { state.section = e.target.value; reset(); });
+$('#ct-search').addEventListener('input', e => { state.search = e.target.value; reset(); });
+$('#ct-page-size').addEventListener('change', e => { state.pageSize = +e.target.value; reset(); });
+root.querySelector('.ct-tabs').addEventListener('click', e => { const b = e.target.closest('[data-status]'); if (b) { state.status = b.dataset.status; reset(); } });
+$('#ct-sort').addEventListener('click', () => { state.asc = !state.asc; render(); });
+$('#ct-pages').addEventListener('click', e => { const b = e.target.closest('[data-page]'); if (b && !b.disabled) { state.page = +b.dataset.page; render(); $('#ct-table-box').scrollTop = 0; } });
+$('#ct-clear').addEventListener('click', () => {
+  Object.assign(state, { search: '', section: '', status: 'all' });
+  $('#ct-search').value = ''; $('#ct-section').value = '';
+  reset();
 });
-$('#c-all').addEventListener('change', e => { visible().flatMap(g => g.ids).filter(m => st(fee, m) === 'pending').forEach(m => e.target.checked ? picked.add(m) : picked.delete(m)); render(); });
-$('#c-bulk-clear').addEventListener('click', () => { picked.clear(); render(); });
-$('#c-bulk-verify').addEventListener('click', async () => {
-  const ids = [...picked];
-  const ok = await confirmSheet({
-    title: `Verify ${ids.length} ${ids.length === 1 ? 'receipt' : 'receipts'} without opening each one?`,
-    names: ids.map(m => NAME[m]).filter(Boolean),
-    body: 'Each one is marked paid against this fee and the members are told. A receipt with an OR number is not included: open it and check the number against the photo. A verification cannot be taken back \u2014 one made by mistake has to be sent back to the team instead.',
-    confirmLabel: `Verify ${ids.length}`,
-    danger: true,
-  });
-  if (!ok) return;
-  if (await decide(ids, 'verified')) toast(`Verified ${ids.length} ${ids.length === 1 ? 'receipt' : 'receipts'}.`);
-});
-$('#c-insp').addEventListener('change', e => {
-  if (e.target.id === 'c-or-ok') $('#c-insp [data-verify]').disabled = !e.target.checked;
-});
+$('#c-rows').addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (b) openDrawer(+b.dataset.open); });
+$('#ct-export').addEventListener('click', () => download(feePairs(shownIds()), 'capstrack-financial-records'));
+
+// The drawer.
+const drawer = $('#ct-drawer');
+drawer.addEventListener('close', () => { current = null; sendingBack = false; });
+drawer.addEventListener('change', e => { if (e.target.id === 'c-or-ok') $('#ct-verify-btn').disabled = !e.target.checked; });
 // A changed number has to be checked against the photo again.
-$('#c-insp').addEventListener('input', e => {
+drawer.addEventListener('input', e => {
   if (e.target.id !== 'c-or') return;
-  const r = rec(fee, selected), number = normaliseOr(e.target.value);
-  $('#c-or-echo').textContent = number || '\u2014';
+  const r = rec(state.fee, current), number = normaliseOr(e.target.value);
+  $('#c-or-echo').textContent = number || '—';
   $('#c-or-ok').checked = false;
-  $('#c-insp [data-verify]').disabled = true;
+  $('#ct-verify-btn').disabled = true;
   $('#c-or-hint').textContent = number && number !== normaliseOr(r.or || '')
     ? `Changed from ${r.or}. Tick the box again once it matches the photo.`
     : 'As the student typed it. Fix it here if it does not match the photo.';
 });
-$('#c-insp').addEventListener('click', async e => {
-  const b = e.target.closest('button');
-  if (!b) return;
-  if (b.hasAttribute('data-verify')) {
-    if (b.disabled) return;
-    await verifyOne(selected);
-  }
-  if (b.hasAttribute('data-back')) { sendingBack = true; renderInspector(); }
-  if (b.hasAttribute('data-cancel')) { sendingBack = false; renderInspector(); }
-  if (b.hasAttribute('data-quick')) { $('#c-reason').value = b.textContent; }
-  if (b.hasAttribute('data-confirm-back')) {
-    const reason = $('#c-reason').value.trim();
-    if (!reason) { toast('Say why, so the student knows what to fix.', 'error'); $('#c-reason').focus(); return; }
-    const m = selected;
-    if (await decide([m], 'sent_back', reason)) toast(`Sent back to ${NAME[m]}.`);
-  }
+$('#ct-verify-btn').addEventListener('click', () => { if (current) verifyOne(current); });
+$('#ct-back-btn').addEventListener('click', () => { sendingBack = true; renderDrawer(); });
+$('#ct-return-cancel').addEventListener('click', () => { sendingBack = false; renderDrawer(); });
+$('#ct-quick').innerHTML = QUICK.map(q => `<button type="button">${esc(q)}</button>`).join('');
+$('#ct-quick').addEventListener('click', e => { const b = e.target.closest('button'); if (b) $('#c-reason').value = b.textContent; });
+$('#ct-return-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const reason = $('#c-reason').value.trim(), m = current;
+  if (!reason) { toast('Say why, so the student knows what to fix.', 'error'); $('#c-reason').focus(); return; }
+  if (await decide(m, 'sent_back', reason)) toast(`Sent back to ${NAME[m]}.`);
 });
-document.addEventListener('keydown', async e => {
-  if (e.target.closest('input,textarea,select') || document.querySelector('dialog[open]') || !fee || !section) return;
-  const k = e.key.toLowerCase();
-  if (k === 'j' || e.key === 'ArrowDown') { e.preventDefault(); move(1); }
-  if (k === 'k' || e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
-  if (k === 'v' && selected && st(fee, selected) === 'pending') {
-    const box = $('#c-or-ok');
-    if (box && !box.checked) { toast('Check the OR number against the photo and tick the box first.', 'error'); box.focus(); return; }
-    await verifyOne(selected);
-  }
-  if (k === 'b' && selected && st(fee, selected) === 'pending') { e.preventDefault(); sendingBack = true; renderInspector(); }
+
+// Report: the chosen fee and section.
+$('#ct-report-btn').addEventListener('click', () => {
+  const f = feeOf(state.fee), c = tally(sectionIds());
+  $('#ct-report-sub').textContent = `${feeLabel(f)} · ${state.section || 'All sections'}`;
+  $('#ct-report-grid').innerHTML = [['Students', c.all], ['Verified', c.verified], ['For review', c.pending], ['Sent back', c.sent_back], ['Not uploaded', c.none]]
+    .map(([l, n]) => `<div class="ct-report-stat"><span>${l}</span><strong>${n}</strong></div>`).join('');
+  $('#ct-report-total').textContent = peso(c.verified * f.amount);
+  $('#ct-report').showModal();
 });
-$('#c-send').addEventListener('click', async () => {
-  const list = unsent(), total = list.reduce((sum, [id]) => sum + (FEES.find(x => x.id === id)?.amount ?? 0), 0);
-  const ok = await confirmSheet({
-    title: `Send ${list.length} verified ${list.length === 1 ? 'receipt' : 'receipts'} to the dean?`,
-    body: `${peso(total)} in total. A receipt cannot be changed once it is sent.`,
-    confirmLabel: 'Send to Dean',
-    cancelLabel: 'No',
-  });
-  if (!ok) return;
+$('#ct-report-csv').addEventListener('click', () => download(feePairs(sectionIds().sort((a, b) => NAME[a].localeCompare(NAME[b]))), 'capstrack-fee-report'));
+
+// Send to Dean: every verified receipt not sent yet, whatever the filters.
+$('#c-send').addEventListener('click', () => {
+  const list = unsent();
+  $('#ct-handoff-n').textContent = list.length;
+  $('#ct-handoff-total').textContent = peso(list.reduce((sum, [id]) => sum + (+feeOf(id)?.amount || 0), 0));
+  $('#ct-handoff-send').disabled = $('#ct-handoff-csv').disabled = !list.length;
+  $('#ct-handoff').showModal();
+});
+$('#ct-handoff-csv').addEventListener('click', () => download(deanPairs(), 'capstrack-dean-report', true));
+$('#ct-handoff-send').addEventListener('click', async e => {
+  const list = unsent();
+  e.currentTarget.disabled = true;
   try {
     const res = await send('POST', URLS.dean, {});
-    list.forEach(([, r]) => { r.sent = res.data.on; });
+    list.forEach(([, , r]) => { r.sent = res.data.on; });
+    $('#ct-handoff').close();
     render();
     toast(res.message);
-  } catch (e) {
-    await outcomeDialog({ tone: 'error', title: 'Nothing was sent', reason: e.message, body: 'The receipts are exactly as they were.', primaryLabel: 'Back to receipts' });
+  } catch (err) {
+    await outcomeDialog({ tone: 'error', title: 'Nothing was sent', reason: err.message, body: 'The receipts are exactly as they were.', primaryLabel: 'Back to receipts' });
+    $('#ct-handoff-send').disabled = false;
   }
 });
+
+// New fee.
 $('#c-new-fee').addEventListener('click', () => { $('#f-amount').value = ''; $('#f-note').value = ''; $('#fx-d-fee').showModal(); });
 $('#f-save').addEventListener('click', async () => {
   const stage = $('#f-stage').value, amount = +$('#f-amount').value, program = $('#f-program').value;
@@ -333,23 +283,16 @@ $('#f-save').addEventListener('click', async () => {
     });
   }
 });
-
-$('#c-crumb').addEventListener('click', e => { if (e.target.closest('[data-back]')) { section = null; render(); } });
-$('#c-over-tabs').addEventListener('click', e => { const b = e.target.closest('[data-over]'); if (b) { overShow = b.dataset.over; renderOver(); } });
-$('#c-over-q').addEventListener('input', renderOver);
-$('#c-sec-rows').addEventListener('click', e => {
-  const b = e.target.closest('[data-open]');
-  if (!b) return;
-  section = b.dataset.open; picked.clear(); selected = null; $('#c-search').value = '';
-  // The team filter lists only this section's teams.
-  $('#c-team').innerHTML = '<option value="">All teams</option>' + TEAMS.filter(t => t.section === section).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
-  show = tally(fee, everyone()).pending ? 'pending' : 'all';
-  render();
-});
-
 // The programs a new fee can be for.
 const programs = [...new Set(S.sections.map(s => s.split('-')[0].toUpperCase()))].filter(p => ['BSIT', 'BSIS', 'BSCS', 'BLIS'].includes(p));
 $('#f-program').innerHTML = (programs.length ? programs : ['BSIT', 'BSIS', 'BSCS', 'BLIS']).map(p => `<option>${p}</option>`).join('');
+
+// A click on the backdrop closes the page's own dialogs.
+root.querySelectorAll('dialog.ct-dialog').forEach(d => d.addEventListener('click', e => {
+  if (e.target !== d) return;
+  const b = d.getBoundingClientRect();
+  if (e.clientX < b.left || e.clientX > b.right || e.clientY < b.top || e.clientY > b.bottom) d.close();
+}));
 
 wireDialogs();
 render();

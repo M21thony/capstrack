@@ -121,7 +121,6 @@ class CapsaCorrectsOrNumberTest extends TestCase
         $this->assertStringContainsString('id="c-or"', $screen, 'the OR number is an editable field while the receipt waits');
         $this->assertStringContainsString("confirmLabel: 'Verify'", $screen);
         $this->assertStringContainsString("cancelLabel: 'No'", $screen);
-        $this->assertStringContainsString('await verifyOne(selected)', $screen, 'the button and the V key both ask first');
-        $this->assertSame(2, substr_count($screen, 'await verifyOne(selected)'));
+        $this->assertStringContainsString("\$('#ct-verify-btn').addEventListener('click', () => { if (current) verifyOne(current); });", $screen, 'the Verify button asks first');
     }
 }

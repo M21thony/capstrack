@@ -36,86 +36,163 @@
        ], JSON_UNESCAPED_SLASHES) }}">
 
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-      <symbol id="fx-i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
-      <symbol id="fx-i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
-      <symbol id="fx-i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
-      <symbol id="fx-i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
-      <symbol id="fx-i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+      <defs>
+        <symbol id="ct-i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.3"/><path d="m16.1 16.1 4.5 4.5"/></symbol>
+        <symbol id="ct-i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+        <symbol id="ct-i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="ct-i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 15v5h16v-5"/></symbol>
+        <symbol id="ct-i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="ct-i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+        <symbol id="ct-i-left" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></symbol>
+        <symbol id="ct-i-right" viewBox="0 0 24 24"><path d="m10 6 6 6-6 6"/></symbol>
+        <symbol id="ct-i-sort" viewBox="0 0 24 24"><path d="M8 18V5M4 9l4-4 4 4M16 6v13m-4-4 4 4 4-4"/></symbol>
+        <symbol id="ct-i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+        <symbol id="ct-i-report" viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></symbol>
+        <symbol id="ct-i-send" viewBox="0 0 24 24"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z"/></symbol>
+      </defs>
     </svg>
 
-    {{-- The page's name is in the top bar; the fees and New fee come first here. --}}
-    <header class="fx-page-head">
-      <nav class="fx-crumb" id="c-crumb" aria-label="Breadcrumb"></nav>
-      <div class="fx-tabs" role="tablist" aria-label="Fee" id="c-fees" hidden></div>
-      <div class="fx-actions"><button class="fx-btn" id="c-send" disabled>Send to Dean<span class="fx-count" id="c-send-n">0</span></button><button class="fx-btn" id="c-new-fee"><svg><use href="#fx-i-plus"/></svg>New fee</button></div>
-    </header>
-
-    {{-- Every section at once; Open section shows that section's receipts below. --}}
-    <div class="fx-over" id="c-over" hidden>
-      <div class="fx-stats" id="c-stats"></div>
-      <section class="fx-card" aria-label="Sections">
-        <div class="fx-card-head"><div class="fx-tabs" role="tablist" aria-label="Section status" id="c-over-tabs"></div><div class="fx-actions" id="c-over-tools"></div></div>
-        <div class="fx-toolbar"><label class="fx-field" style="display:flex;align-items:center;gap:6px;width:260px"><svg width="15" height="15" class="fx-muted"><use href="#fx-i-search"/></svg><input id="c-over-q" type="search" placeholder="Search section" aria-label="Search section" style="border:0;outline:0;width:100%;background:none"></label></div>
-        <div class="fx-scroll">
-          <table data-export="Fee submissions" data-export-into="#c-over-tools">
-            <colgroup><col><col style="width:150px"><col style="width:100px"><col style="width:100px"><col style="width:110px"><col style="width:140px"><col style="width:170px"><col style="width:150px"></colgroup>
-            <thead><tr><th>Section</th><th class="fx-r">Submitted total</th><th>Receipts</th><th>Checked</th><th>Forwarded</th><th>Latest upload</th><th>Status</th><th class="fx-r">Actions</th></tr></thead>
-            <tbody id="c-sec-rows"></tbody>
-          </table>
+    <div class="ct-page">
+      <div class="ct-top">
+        <div class="ct-feebar" id="ct-feebar">
+          <label class="ct-select-wrap"><span class="ct-sr">Fee</span>
+            <select class="ct-select" id="ct-fee"></select><svg class="ct-i"><use href="#ct-i-down"/></svg></label>
+          <span class="ct-amount" id="ct-amount"></span>
+          <div class="ct-progress-group">
+            <span class="ct-progress-label" id="ct-progress-label"></span>
+            <progress id="ct-progress" max="1" value="0" aria-label="Verified"></progress>
+          </div>
         </div>
-        <div class="fx-foot" id="c-over-foot"></div>
-      </section>
+        <div class="ct-actions">
+          <button class="ct-btn" id="c-send" type="button" disabled><svg class="ct-i"><use href="#ct-i-send"/></svg>Send to Dean<span class="ct-count" id="c-send-n">0</span></button>
+          <button class="ct-btn ct-btn-primary" id="c-new-fee" type="button"><svg class="ct-i"><use href="#ct-i-plus"/></svg>New fee</button>
+        </div>
+      </div>
+
+      <div class="ct-toolbar">
+        <div class="ct-filters">
+          <label class="ct-search"><span class="ct-sr">Search student or team</span>
+            <svg class="ct-i"><use href="#ct-i-search"/></svg>
+            <input id="ct-search" type="search" placeholder="Search student or team" autocomplete="off"></label>
+          <label class="ct-section"><span>Section</span>
+            <span class="ct-select-wrap"><select class="ct-select" id="ct-section"><option value="">All sections</option></select><svg class="ct-i"><use href="#ct-i-down"/></svg></span></label>
+        </div>
+        <div class="ct-actions">
+          <button class="ct-btn" id="ct-report-btn" type="button"><svg class="ct-i"><use href="#ct-i-report"/></svg>View report</button>
+          <button class="ct-btn" id="ct-export" type="button"><svg class="ct-i"><use href="#ct-i-download"/></svg>Export</button>
+        </div>
+      </div>
+
+      <div class="ct-tabs" role="group" aria-label="Receipt status">
+        <button type="button" data-status="all" aria-pressed="true">All <span class="ct-count" data-count="all">0</span></button>
+        <button type="button" data-status="pending" aria-pressed="false">For review <span class="ct-count" data-count="pending">0</span></button>
+        <button type="button" data-status="verified" class="ct-tab-ok" aria-pressed="false">Verified <span class="ct-count" data-count="verified">0</span></button>
+        <button type="button" data-status="sent_back" aria-pressed="false">Sent back <span class="ct-count" data-count="sent_back">0</span></button>
+        <button type="button" data-status="none" aria-pressed="false">Not uploaded <span class="ct-count" data-count="none">0</span></button>
+        <span class="ct-student-count" id="ct-student-count"></span>
+      </div>
+
+      <div class="ct-table-box" id="ct-table-box">
+        <table class="ct-table">
+          <thead><tr>
+            <th><button class="ct-sort" id="ct-sort" type="button" aria-label="Sort by student name">Student <svg class="ct-i"><use href="#ct-i-sort"/></svg></button></th>
+            <th>Section</th><th>Uploaded</th><th>Status</th><th>Receipt</th>
+          </tr></thead>
+          <tbody id="c-rows"></tbody>
+        </table>
+        <div class="ct-empty" id="ct-empty" hidden>
+          <svg class="ct-i"><use href="#ct-i-search"/></svg>
+          <h3 id="ct-empty-t">No students found</h3>
+          <p id="ct-empty-p">Try another name, section, or receipt status.</p>
+          <button class="ct-btn" id="ct-clear" type="button">Clear filters</button>
+        </div>
+      </div>
+
+      <footer class="ct-foot">
+        <span id="ct-range"></span>
+        <div class="ct-pager">
+          <label class="ct-page-size">Rows
+            <select id="ct-page-size"><option>10</option><option>25</option><option>50</option></select></label>
+          <nav class="ct-pages" id="ct-pages" aria-label="Pages"></nav>
+        </div>
+      </footer>
     </div>
 
-    <div id="c-body" style="flex:1;min-height:0;display:flex;flex-direction:column">
-      <div class="fx-summary">
-        <span id="c-fee-line"></span>
-        <div class="fx-bar" id="c-bar" aria-hidden="true"></div>
-        <div class="fx-legend" id="c-legend"></div>
+    {{-- The receipt, on the right; Verify and Send back are here. --}}
+    <dialog class="ct-dialog ct-drawer" id="ct-drawer" aria-labelledby="ct-drawer-t">
+      <div class="ct-dialog-head">
+        <div><h2 id="ct-drawer-t"></h2><p id="ct-drawer-sub"></p></div>
+        <button class="ct-icon-btn" type="button" data-close aria-label="Close"><svg class="ct-i"><use href="#ct-i-close"/></svg></button>
       </div>
-      <div class="fx-split">
-        <section class="fx-list" aria-label="Receipts">
-          <div class="fx-toolbar">
-            <div class="fx-chips" id="c-chips" role="group" aria-label="Show"></div>
-            <span class="fx-grow"></span>
-            <select class="fx-field" id="c-team" aria-label="Team"><option value="">All teams</option></select>
-            <label class="fx-field" style="display:flex;align-items:center;gap:6px;width:200px"><svg width="15" height="15" class="fx-muted"><use href="#fx-i-search"/></svg><input id="c-search" type="search" placeholder="Search member" aria-label="Search member" style="border:0;outline:0;width:100%;background:none"></label>
-          </div>
-          <div class="fx-bulk" id="c-bulk" hidden>
-            <strong id="c-bulk-n"></strong><span class="fx-grow"></span>
-            <button class="fx-btn" id="c-bulk-clear">Clear</button>
-            <button class="fx-btn fx-btn-ok" id="c-bulk-verify"><svg><use href="#fx-i-check"/></svg>Verify selected</button>
-          </div>
-          <div class="fx-scroll" tabindex="0" aria-label="Receipt list, use J and K or the arrow keys to move">
-            <table data-export="Receipts">
-              <colgroup><col style="width:52px"><col><col class="fx-col-team" style="width:150px"><col class="fx-col-up" style="width:130px"><col style="width:150px"></colgroup>
-              <thead><tr><th><input type="checkbox" id="c-all" aria-label="Select every waiting receipt shown"></th><th>Member</th><th class="fx-col-team">Section</th><th class="fx-col-up">Uploaded</th><th>Status</th></tr></thead>
-              <tbody id="c-rows"></tbody>
-            </table>
-          </div>
-        </section>
-        <aside class="fx-inspector" aria-label="Receipt" id="c-insp"></aside>
+      <div class="ct-dialog-body" id="ct-drawer-body"></div>
+      <form id="ct-return-form" hidden>
+        <label class="ct-field"><span>What needs to be corrected?</span>
+          <textarea id="c-reason" rows="3" maxlength="600"></textarea></label>
+        <div class="ct-quick" id="ct-quick"></div>
+        <div class="ct-return-actions"><button class="ct-btn" type="button" id="ct-return-cancel">Cancel</button><button class="ct-btn ct-btn-danger" type="submit">Send back</button></div>
+      </form>
+      <div class="ct-dialog-foot" id="ct-drawer-foot">
+        <button class="ct-btn" type="button" data-close>Close</button>
+        <button class="ct-btn ct-btn-danger" type="button" id="ct-back-btn">Send back</button>
+        <button class="ct-btn ct-btn-primary" type="button" id="ct-verify-btn"><svg class="ct-i"><use href="#ct-i-check"/></svg>Verify receipt</button>
       </div>
-    </div>
+    </dialog>
+
+    <dialog class="ct-dialog" id="ct-report" aria-labelledby="ct-report-t">
+      <div class="ct-dialog-head">
+        <div><h2 id="ct-report-t">Fee report</h2><p id="ct-report-sub"></p></div>
+        <button class="ct-icon-btn" type="button" data-close aria-label="Close"><svg class="ct-i"><use href="#ct-i-close"/></svg></button>
+      </div>
+      <div class="ct-dialog-body">
+        <div class="ct-report-grid" id="ct-report-grid"></div>
+        <div class="ct-report-total"><span>Verified amount</span><strong id="ct-report-total"></strong></div>
+      </div>
+      <div class="ct-dialog-foot">
+        <button class="ct-btn" type="button" data-close>Close</button>
+        <button class="ct-btn ct-btn-primary" type="button" id="ct-report-csv"><svg class="ct-i"><use href="#ct-i-download"/></svg>Download CSV</button>
+      </div>
+    </dialog>
+
+    <dialog class="ct-dialog" id="ct-handoff" aria-labelledby="ct-handoff-t">
+      <div class="ct-dialog-head">
+        <div><h2 id="ct-handoff-t">Records for the Dean</h2><p>Verified receipts not sent yet, every fee and section.</p></div>
+        <button class="ct-icon-btn" type="button" data-close aria-label="Close"><svg class="ct-i"><use href="#ct-i-close"/></svg></button>
+      </div>
+      <div class="ct-dialog-body">
+        <div class="ct-handoff-summary">
+          <div><span>Receipts</span><strong id="ct-handoff-n">0</strong></div>
+          <div><span>Total</span><strong id="ct-handoff-total">₱0</strong></div>
+        </div>
+        <p class="ct-warn">A receipt cannot be changed once it is sent.</p>
+      </div>
+      <div class="ct-dialog-foot">
+        <button class="ct-btn" type="button" data-close>Cancel</button>
+        <button class="ct-btn" type="button" id="ct-handoff-csv"><svg class="ct-i"><use href="#ct-i-download"/></svg>Download report</button>
+        <button class="ct-btn ct-btn-primary" type="button" id="ct-handoff-send"><svg class="ct-i"><use href="#ct-i-send"/></svg>Send to Dean</button>
+      </div>
+    </dialog>
+
+    <dialog class="ct-dialog" id="fx-d-fee" aria-labelledby="fx-d-fee-t">
+      <div class="ct-dialog-head">
+        <div><h2 id="fx-d-fee-t">New fee</h2><p>Pre-proposal Defense has no fee.</p></div>
+        <button class="ct-icon-btn" type="button" data-close aria-label="Close"><svg class="ct-i"><use href="#ct-i-close"/></svg></button>
+      </div>
+      <div class="ct-dialog-body">
+        <label class="ct-field"><span>Defense</span>
+          <span class="ct-select-wrap"><select class="ct-select" id="f-stage"><option>Title Defense</option><option>Pre Oral Defense</option><option>Final Oral Defense</option></select><svg class="ct-i"><use href="#ct-i-down"/></svg></span></label>
+        <div class="ct-two">
+          <label class="ct-field"><span>Per member (₱)</span><input id="f-amount" type="number" inputmode="numeric" min="0" step="50"></label>
+          <label class="ct-field"><span>Program</span>
+            <span class="ct-select-wrap"><select class="ct-select" id="f-program"></select><svg class="ct-i"><use href="#ct-i-down"/></svg></span></label>
+        </div>
+        <label class="ct-field"><span>Where to pay <em>(optional)</em></span><input id="f-note"></label>
+      </div>
+      <div class="ct-dialog-foot"><button class="ct-btn" type="button" data-close>Cancel</button><button class="ct-btn ct-btn-primary" type="button" id="f-save">Save fee</button></div>
+    </dialog>
   </div>
 </div>
 
 <dialog id="fx-d-image" class="fx-dialog fx-image" aria-label="Receipt, full size"><img id="fx-img-full" alt=""></dialog>
-
-<dialog id="fx-d-fee" class="fx-dialog" aria-labelledby="fx-d-fee-t">
-  <div class="fx-dlg-head"><h2 id="fx-d-fee-t">New fee</h2><button class="fx-icon-btn" data-close aria-label="Close"><svg><use href="#fx-i-x"/></svg></button></div>
-  <div class="fx-dlg-body">
-    <div><label class="fx-lbl" for="f-stage">Defense</label>
-      <select class="fx-field" id="f-stage"><option>Title Defense</option><option>Pre Oral Defense</option><option>Final Oral Defense</option></select>
-      <div class="fx-muted" style="font-size:12px;margin-top:4px">Pre-proposal Defense has no fee.</div></div>
-    <div class="fx-two">
-      <div><label class="fx-lbl" for="f-amount">Per member (₱)</label><input class="fx-field" id="f-amount" type="number" inputmode="numeric" min="0" step="50"></div>
-      <div><label class="fx-lbl" for="f-program">Program</label><select class="fx-field" id="f-program"></select></div>
-    </div>
-    <div><label class="fx-lbl" for="f-note">Where to pay <span class="fx-muted" style="font-weight:400">(optional)</span></label><input class="fx-field" id="f-note"></div>
-  </div>
-  <div class="fx-dlg-foot"><button class="fx-btn" data-close>Cancel</button><button class="fx-btn fx-btn-primary" id="f-save">Save fee</button></div>
-</dialog>
 
 <script nonce="{{ Vite::cspNonce() }}">
 var sidebarEl = document.querySelector('.sidebar');

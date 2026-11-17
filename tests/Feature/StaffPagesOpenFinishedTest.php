@@ -80,11 +80,11 @@ class StaffPagesOpenFinishedTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('#<script[^>]*blocking="render"#', $html);
     }
 
-    public function test_the_fee_tabs_keep_their_row_only_when_there_are_fees(): void
+    public function test_the_fee_picker_sits_in_the_page_before_the_script_runs(): void
     {
         $html = $this->actingAs($this->capsa(), 'expert')->get(route('capsa.financial'))->assertOk()->getContent();
 
-        $this->assertMatchesRegularExpression('#<div class="fx-tabs"[^>]*id="c-fees"\s+hidden\s*>#', $html);
+        $this->assertMatchesRegularExpression('#<div class="ct-feebar" id="ct-feebar">.*?<select class="ct-select" id="ct-fee">#s', $html);
     }
 
     public function test_the_rubric_list_comes_with_the_page(): void
