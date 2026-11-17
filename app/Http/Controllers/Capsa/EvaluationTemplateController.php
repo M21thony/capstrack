@@ -260,7 +260,7 @@ class EvaluationTemplateController extends Controller
         $this->own($template);
         $template->update(['is_active' => false]);
 
-        return redirect()->route('capsa.evaluations')->with('evaluation_status', 'Turned off "'.$template->title.'". Its answers are still in the results.');
+        return redirect()->route('capsa.evaluations')->with('evaluation_status', 'Closed "'.$template->title.'". Its answers are still in the results.');
     }
 
     /**
@@ -332,7 +332,7 @@ class EvaluationTemplateController extends Controller
             $taken = collect(array_intersect($clash->roles ?? [], $data['roles']))->map(fn ($r) => ExpertEvaluation::ROLES[$r])->implode(' and ');
 
             throw ValidationException::withMessages([
-                'roles' => $taken.' already '.(str_contains($taken, ' and ') ? 'have' : 'has').' an evaluation for '.$data['defense_type'].': "'.$clash->title.'". Edit that one, or turn it off first.',
+                'roles' => $taken.' already '.(str_contains($taken, ' and ') ? 'have' : 'has').' an evaluation for '.$data['defense_type'].': "'.$clash->title.'". Edit that one, or close it first.',
             ]);
         }
 

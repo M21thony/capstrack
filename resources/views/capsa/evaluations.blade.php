@@ -108,11 +108,11 @@
                 <footer class="ev-card2-foot">
                   <a class="ev-btn sm" href="{{ route('capsa.evaluations.edit', $t) }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Edit</a>
                   <form method="POST" action="{{ route('capsa.evaluations.turn_off', $t) }}"
-                        data-confirm-title="Turn off this evaluation?"
+                        data-confirm-title="Close this evaluation?"
                         data-confirm="Leaders who still owe “{{ $t->title }}” will not be asked any more. What was already answered stays in the results."
-                        data-confirm-ok="Turn off" data-confirm-tone="warn">
+                        data-confirm-ok="Close" data-confirm-tone="warn">
                     @csrf @method('PATCH')
-                    <button type="submit" class="ev-btn sm ghost-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></svg>Turn off</button>
+                    <button type="submit" class="ev-btn sm ghost-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></svg>Close</button>
                   </form>
                 </footer>
               </article>
@@ -123,7 +123,7 @@
         @if($turnedOff->isNotEmpty())
           <section class="ev-offs" aria-labelledby="ev-off-h">
             <div class="ev-offs-head">
-              <h2 id="ev-off-h">Turned off <span class="ev-n">{{ $turnedOff->count() }}</span></h2>
+              <h2 id="ev-off-h">Closed <span class="ev-n">{{ $turnedOff->count() }}</span></h2>
               <span>Not asked of anyone. What was answered stays in the results.</span>
             </div>
             <ul>

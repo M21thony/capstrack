@@ -1367,8 +1367,8 @@ return [
             ['Needs an evaluation', 'This defense has none yet. Use the **5 standard questions**, or **write your own**.', '.ev-req', 'one'],
             ['See the questions', 'Opens the **list of questions**.', 'summary', 'one'],
             ['Edit', 'Opens the evaluation to **change it**.', 'a.ev-btn.sm', 'one'],
-            ['Turn off', 'Asks you to **confirm**. Leaders who still owe it **won\'t be asked any more**. What was answered **stays in the results**.', '.ghost-danger', 'one'],
-            ['Turned off', '**Copy** one into a new evaluation, or **delete** it. Its answers **stay in the results**.', '.ev-offs'],
+            ['Close', 'Asks you to **confirm**. Leaders who still owe it **won\'t be asked any more**. What was answered **stays in the results**.', '.ghost-danger', 'one'],
+            ['Closed', '**Copy** one into a new evaluation, or **delete** it. Its answers **stay in the results**.', '.ev-offs'],
             ['Results', '**Click it** to see what leaders answered.', '.ev-tabs a[href*="tab=results"]'],
         ],
         'tabs' => [

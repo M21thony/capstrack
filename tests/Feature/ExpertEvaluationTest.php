@@ -241,10 +241,36 @@ class ExpertEvaluationTest extends TestCase
     public function test_an_evaluation_set_up_after_the_defense_was_decided_owes_nothing(): void
     {
         $this->decide();
-        Carbon::setTestNow(now()->addDay());
+        Carbon::setTestNow(now()->addDays(ExpertEvaluations::REACH_BACK_DAYS + 1));
         $this->template();
 
         $this->assertCount(0, $this->due());
+    }
+
+    /** A CaPSA who records the result first and writes the questions minutes later is not too late. */
+    public function test_an_evaluation_set_up_soon_after_the_defense_still_reaches_it(): void
+    {
+        $defense = $this->decide();
+        Carbon::setTestNow(now()->addMinutes(4));
+        $this->template();
+
+        $this->assertSame([$defense->defense_id], $this->due()->pluck('defense_id')->unique()->values()->all());
+        $this->assertCount(3, $this->due());
+    }
+
+    /** Closing stops the asking; "Use again" (a new copy, dated today) asks again. */
+    public function test_use_again_asks_again_what_closing_stopped(): void
+    {
+        $closed = $this->template();
+        $this->decide();
+        $closed->update(['is_active' => false]);
+        $this->assertCount(0, $this->due(), 'closed: nobody is asked');
+
+        Carbon::setTestNow(now()->addMonth());
+        $copy = $this->template();
+
+        $this->assertCount(3, $this->due());
+        $this->assertSame([$copy->id], $this->due()->pluck('template_id')->unique()->values()->all());
     }
 
     public function test_the_rating_is_the_average_of_the_answers(): void
@@ -526,7 +552,7 @@ class ExpertEvaluationTest extends TestCase
     public function test_a_newer_evaluation_does_not_reach_a_defense_that_had_none(): void
     {
         $this->decide();
-        Carbon::setTestNow(now()->addHour());
+        Carbon::setTestNow(now()->addDays(ExpertEvaluations::REACH_BACK_DAYS + 1));
         $this->template();
         $this->template(capsa: $this->capsaFor(['BSIT-3A']));
 
@@ -793,6 +819,23 @@ class ExpertEvaluationTest extends TestCase
 
         $this->answer($this->leader, $defense, $this->experts['grammarian'], 'grammarian', $template);
         $this->assertFalse($this->chaptersGate()->locked);
+    }
+
+    /** A later defense with nothing to evaluate does not unlock what an earlier one still owes. */
+    public function test_the_lock_holds_past_a_later_defense_that_owes_nothing(): void
+    {
+        $this->template();
+        $this->decide();
+        $title = $this->checklist->milestones()->create(['name' => 'Title', 'position' => 2, 'opened_at' => now()]);
+        $title->deliverables()->create(['title' => 'Title Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => DefenseOutcome::TITLE_DEFENSE, 'position' => 0]);
+        $final = $this->checklist->milestones()->create(['name' => 'Final', 'position' => 3, 'opened_at' => now()]);
+        $final->deliverables()->create(['title' => 'Final Form', 'kind' => Deliverable::FORM, 'position' => 0]);
+
+        $gate = MilestoneProgress::forTeam($this->checklist, $this->team->team_id)
+            ->milestones->first(fn ($m) => $m->milestone->id === $final->id);
+
+        $this->assertTrue($gate->locked);
+        $this->assertSame('the expert evaluation for Pre-proposal Defense', $gate->requires);
     }
 
     public function test_without_an_evaluation_the_passed_defense_opens_the_next_phase(): void

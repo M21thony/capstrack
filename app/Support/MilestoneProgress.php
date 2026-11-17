@@ -242,10 +242,13 @@ class MilestoneProgress
                     'evaluations_owed' => $evaluationsOwed,
                 ];
 
+                // Once shut, it stays shut for every milestone below: a later
+                // defense that owes nothing does not clear an earlier debt.
                 foreach ($items->filter(fn ($row) => $row->item->kind === Deliverable::DEFENSE && $row->item->defense_type) as $row) {
                     $stage = $row->item->defense_type;
-                    $evaluations = $owed->filter(fn ($e) => mb_strtolower($e->stage) === mb_strtolower($stage));
-                    $gate = $evaluations->isNotEmpty() ? 'the expert evaluation for '.$stage : null;
+                    if ($owed->contains(fn ($e) => mb_strtolower($e->stage) === mb_strtolower($stage))) {
+                        $gate ??= 'the expert evaluation for '.$stage;
+                    }
                 }
 
                 return $summary;

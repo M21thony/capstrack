@@ -26,9 +26,11 @@ use Illuminate\Support\Facades\DB;
  * that defense is the average. The leader is anonymous to the CaPSA/TSA and the
  * expert.
  *
- * Only a defense decided after its evaluation was set up counts: one a team
- * passed before the CaPSA/TSA had written any questions owes nothing, so adding
- * an evaluation never reaches back and locks teams that are long past it.
+ * Only a defense decided after its evaluation was set up - or at most
+ * REACH_BACK_DAYS before - counts: one a team passed long before the CaPSA/TSA
+ * wrote any questions owes nothing, so adding an evaluation never locks teams
+ * that are long past it. A closed evaluation still counts as set up, so
+ * "Use again" asks again whatever closing it stopped.
  * What the leader is asked, though, is the evaluation last set for that
  * defense - its questions and its roles - so a CaPSA/TSA's edit reaches every
  * leader yet to answer, a role it drops included. Every CaPSA/TSA of the team's
@@ -43,6 +45,13 @@ class ExpertEvaluations
 {
     /** A defense that ended in one of these was passed. */
     public const PASSING = [DefenseOutcome::PASSED, DefenseOutcome::PASSED_WITH_REVISION];
+
+    /**
+     * Questions written this soon after a defense still reach it - a CaPSA/TSA
+     * who records the result first and writes the questions after is not too
+     * late. ponytail: a fixed window, since terms carry no start date.
+     */
+    public const REACH_BACK_DAYS = 14;
 
     /**
      * What this team's leader still owes, earliest defense first.
@@ -90,13 +99,14 @@ class ExpertEvaluations
             $capsasOf[$id] = $capsasBySection[$scope->sectionFor($team, $records->get($id, collect()))] ?? [];
         }
 
-        $templates = EvaluationTemplate::active()
+        // Closed ones too: they still date when the evaluation was set up.
+        $templates = EvaluationTemplate::query()
             ->whereIn('capsa_id', collect($capsasOf)->flatten()->unique()->values())
             ->whereHas('questions')
             ->orderByDesc('id')
             ->get();
 
-        if ($templates->isEmpty()) {
+        if (! $templates->contains('is_active', true)) {
             return $out;
         }
 
@@ -111,10 +121,13 @@ class ExpertEvaluations
             // The latest attempt of each stage is the one that passed.
             foreach ($defenses->unique(fn ($d) => mb_strtolower($d->defense_type)) as $defense) {
                 $decided = $defense->outcome_recorded_at ?? $defense->schedule_date ?? $defense->updated_at ?? Carbon::now();
+                $reachesBack = Carbon::parse($decided)->addDays(self::REACH_BACK_DAYS);
 
-                // This defense's evaluations, by any CaPSA/TSA of the section.
-                $forStage = $templates->filter(fn (EvaluationTemplate $t) => in_array((int) $t->capsa_id, $capsaIds, true)
+                // This defense's evaluations, by any CaPSA/TSA of the section;
+                // only the open ones are asked.
+                $everForStage = $templates->filter(fn (EvaluationTemplate $t) => in_array((int) $t->capsa_id, $capsaIds, true)
                     && mb_strtolower($t->defense_type) === mb_strtolower($defense->defense_type));
+                $forStage = $everForStage->where('is_active', true);
 
                 if ($forStage->isEmpty()) {
                     continue;
@@ -139,9 +152,9 @@ class ExpertEvaluations
 
                     $covering = $current->filter(fn (EvaluationTemplate $t) => $t->covers($expert->role));
 
-                    // Owed only if an evaluation for this role was there when
-                    // the defense was decided, so nothing reaches back.
-                    $wasSetUp = $forStage->contains(fn (EvaluationTemplate $t) => $t->covers($expert->role) && $t->created_at <= $decided);
+                    // Owed only if an evaluation for this role - open or since
+                    // closed - was there by the defense's reach-back window.
+                    $wasSetUp = $everForStage->contains(fn (EvaluationTemplate $t) => $t->covers($expert->role) && $t->created_at <= $reachesBack);
                     $template = $wasSetUp && $covering->isNotEmpty() ? $newest($covering) : null;
 
                     if (! $template || $done->has($defense->defense_id.'|'.$expert->expert_id.'|'.$expert->role)) {

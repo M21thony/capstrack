@@ -141,7 +141,7 @@ class EvaluationTemplateTest extends TestCase
             ->assertSee('<dt>Answered</dt><dd>0</dd>', false)
             // The browser's own confirm box is never used.
             ->assertDontSee('window.confirm(', false)
-            ->assertSee('data-confirm-ok="Turn off"', false);
+            ->assertSee('data-confirm-ok="Close"', false);
     }
 
     public function test_a_new_evaluation_takes_the_roles_picked_and_its_own_questions(): void
@@ -171,7 +171,7 @@ class EvaluationTemplateTest extends TestCase
         $this->create();
 
         $this->create(['title' => 'Again', 'roles' => ['grammarian', 'consultant']])
-            ->assertSessionHasErrors(['roles' => 'Grammarian already has an evaluation for Title Defense: "Title Defense check-in". Edit that one, or turn it off first.']);
+            ->assertSessionHasErrors(['roles' => 'Grammarian already has an evaluation for Title Defense: "Title Defense check-in". Edit that one, or close it first.']);
 
         $this->create(['title' => 'For the consultant', 'roles' => ['consultant']])->assertSessionHasNoErrors();
         $this->create(['title' => 'Another defense', 'defense_type' => DefenseOutcome::PRE_PROPOSAL])->assertSessionHasNoErrors();
@@ -229,7 +229,7 @@ class EvaluationTemplateTest extends TestCase
         $this->assertFalse($template->fresh()->is_active);
         $this->assertCount(0, app(ExpertEvaluations::class)->due($this->team));
         $this->actingAs($this->capsa, 'expert')->get(route('capsa.evaluations'))
-            ->assertSee('Turned off')
+            ->assertSee('Closed')
             ->assertSee(route('capsa.evaluations.create', ['from' => $template->id]), false)
             ->assertSee('action="'.route('capsa.evaluations.destroy', $template).'"', false);
         $this->actingAs($this->capsa, 'expert')->get(route('capsa.evaluations.create', ['from' => $template->id]))
