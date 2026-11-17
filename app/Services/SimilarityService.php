@@ -1232,8 +1232,9 @@ PROMPT;
                 .'different purpose despite superficially similar wording (e.g. both being "a management '
                 .'system"). Sharing only generic words should score low (under 30); solving the same underlying '
                 .'problem with the same specific features should score high (over 65) even if worded differently. '
-                .'But same SUBJECT and users with a genuinely different FEATURE SET (not just different wording '
-                ."for the same features) is a real middle case - moderate, not high: score in the 40s.\n\n"
+                .'Same SUBJECT and same users where only some features are shared is still close to existing '
+                .'work - score 65-80; extra or missing features narrow the gap, they do not remove it. The middle '
+                ."(30s-50s) is for the same subject handled for different users or with different work done on it.\n\n"
                 .'WORKED EXAMPLES - the deciding question is always "a management/tracking/monitoring system '
                 ."FOR WHAT, and used by WHO?\", never just \"is it a management system?\":\n"
                 .'- "Student Management System" vs. "Employee Management System": BOTH are "a management '
@@ -1253,8 +1254,8 @@ PROMPT;
                 .'the same kind of users (students and advisers/panelists) - genuine core-concept overlap, not '
                 .'just shared wording. But the actual FEATURES differ: one focuses on adviser-matching and AI '
                 .'duplication checking, the other on grading/participation rating and honorarium computation - '
-                .'real, substantive scope differences, not the same system relabeled. Same subject + different '
-                ."features = moderate score, around 40-50, not near-0 and not 80+.\n"
+                .'real scope differences, so not the same system relabeled - but the same subject for the same '
+                ."users with some features shared is close to existing work: score around 65-75, not 40s and not 95.\n"
                 .'- "Mobile app for reporting broken campus facilities, routing each report to '
                 .'maintenance staff and tracking it until resolved" vs. "Repair request and job-order '
                 .'system for a school maintenance office": different words, and one side has an extra '
