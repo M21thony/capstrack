@@ -251,9 +251,10 @@ class DocumentsController extends Controller
         return PdfRemark::where('review_id', $review->review_id)
             ->where('is_general', true)
             ->orderBy('created_at')
+            ->with('replies')
             ->get(['id', 'comment', 'section'])
             ->filter(fn ($r) => filled($r->comment))
-            ->map(fn ($r) => ['id' => $r->id, 'text' => $r->comment, 'section' => $r->section])
+            ->map(fn ($r) => ['id' => $r->id, 'text' => $r->comment, 'section' => $r->section, 'replies' => $r->replies->toArray()])
             ->values()
             ->all();
     }

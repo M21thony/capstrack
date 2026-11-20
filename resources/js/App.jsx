@@ -191,7 +191,7 @@ function App() {
       .then((data) => setComments(data.map(remarkFromServer)));
     const general = request(`/reviews/${reviewId}/general-remarks`)
       .then((r) => r.json())
-      .then((data) => setGeneralComments(data.map((r) => ({ id: r.id, text: r.comment, section: r.section }))));
+      .then((data) => setGeneralComments(data.map((r) => ({ id: r.id, text: r.comment, section: r.section, replies: r.replies || [] }))));
     Promise.allSettled([status, remarks, general]).then((results) => {
       if (results.some((r) => r.status === "rejected")) showToast("Some of this review did not load. Reload the page.", { type: "error" });
       setLoaded(true);

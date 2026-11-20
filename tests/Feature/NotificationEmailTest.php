@@ -224,8 +224,8 @@ class NotificationEmailTest extends TestCase
 
         $this->actingAs($expert, 'expert')->get(route('instructor.profile'))
             ->assertOk()
-            ->assertSee('data-types="email.expert_application email.leave_request_received email.expert_slots_short"', false)
-            ->assertSee('data-types="email.document_submitted email.paper_to_check email.review_reminder"', false);
+            ->assertSee('data-types="email.expert_application email.leave_request_received email.expert_slots_short email.team_cap_request email.team_cap_decided"', false)
+            ->assertSee('data-types="email.document_submitted email.paper_to_check email.review_reminder email.remark_reply"', false);
     }
 
     public function test_a_student_can_switch_an_email_off_and_stops_getting_it(): void

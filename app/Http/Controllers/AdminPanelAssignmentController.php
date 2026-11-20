@@ -312,6 +312,7 @@ class AdminPanelAssignmentController extends Controller
             $sitting->contains($new->expert_id) => $new->name.' is already on this panel.',
             $this->teamAdviserConsultantIds($team)->map(fn ($id) => (int) $id)->contains($new->expert_id) => "This team's adviser or consultant can't also sit on their defense panel.",
             $role === 'Panel Chair' && ! $new->canChairPanel() => 'A Panel Chair needs a Master\'s degree or higher.',
+            ! $new->sitsPanelsFor($program = $team->program()) => $new->name.' does not sit panels for '.$program.'.',
             (bool) $this->fullPanelist([$new->expert_id], $team) => $this->fullMessage($new),
             default => null,
         };
@@ -394,6 +395,11 @@ class AdminPanelAssignmentController extends Controller
 
         if (array_intersect($expertIds, $this->teamAdviserConsultantIds($team)->all())) {
             return ['success' => false, 'message' => "This team's adviser or consultant can't also sit on their defense panel."];
+        }
+
+        $program = $team->program();
+        if ($other = CapstoneExpert::whereIn('expert_id', $expertIds)->get()->first(fn (CapstoneExpert $e) => ! $e->sitsPanelsFor($program))) {
+            return ['success' => false, 'message' => $other->name.' does not sit panels for '.$program.'.'];
         }
 
         if ($full = $this->fullPanelist($expertIds, $team)) {

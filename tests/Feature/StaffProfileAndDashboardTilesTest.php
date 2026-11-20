@@ -110,7 +110,7 @@ class StaffProfileAndDashboardTilesTest extends TestCase
         // One profile: their name and sections are on it too, and the old
         // CaPSA/TSA profile sends them there.
         $this->actingAs($capsa, 'expert')->get(route('instructor.profile'))->assertOk()
-            ->assertSee('Team slots')
+            ->assertSee('Team capacity')
             ->assertSee('id="pp-name-btn"', false)
             ->assertSeeInOrder(['CaPSA/TSA of', 'BSIT-4B'])
             ->assertSee('Roles and sections are set by the administrator')

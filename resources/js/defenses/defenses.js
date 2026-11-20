@@ -44,6 +44,9 @@ const fullWhy = (e, need) => {
   const left = e.max_panels - e.panels;
   return left > 0 ? `Only ${left} panel seat${left === 1 ? '' : 's'} left` : `Full: on ${e.panels} of ${e.max_panels} teams' panels`;
 };
+// Why an expert can't sit on these teams' panels: they picked other courses on their profile.
+const courseWhy = (e, teams) => (e.programs || []).length && teams.some(t => t?.program && !e.programs.includes(t.program))
+  ? `Sits panels for ${e.programs.join(', ')} only` : '';
 const win = () => S.windows[S.stage] || {};
 const minutes = () => win().minutes || 120;
 const endOf = time => addMinutes(time, minutes());
@@ -485,7 +488,7 @@ function drawAssign() {
       const on = A.seats[A.active] === e.id;
       const where = SEATS.find(([k]) => A.seats[k] === e.id);
       const why = A.active === 'chair' && !e.chair ? 'Needs a Master\'s to chair' : taken.includes(e.id) ? 'Already ' + where[1]
-        : fullWhy(e, A.teams.size ? [...A.teams].filter(id => !panelIds(T(id)).includes(e.id)).length : 1);
+        : courseWhy(e, [...A.teams].map(T)) || fullWhy(e, A.teams.size ? [...A.teams].filter(id => !panelIds(T(id)).includes(e.id)).length : 1);
       return `<button type="button" class="ex${on ? ' on' : ''}" data-act="pick-ex" data-id="${e.id}"${why ? ' disabled' : ''}><span class="av">${esc(initials(e.name))}</span><span class="grow"><b>${suggested(e) ? '<span class="star" title="Matches the teams\' project tags">★</span>' : ''}${esc(e.name)}${e.degree ? ` <span class="deg">${esc(e.degree)}</span>` : ''}${LEAVE(e)}</b><span>${esc(why || e.tags.join(', ') || 'No expertise listed')}</span>${!why && strongIn(e) ? `<span class="strong">Strong in ${esc(strongIn(e))}</span>` : ''}</span><span class="use">${on ? 'Picked' : why ? '' : 'Set as ' + SEAT_ROLE[A.active]}</span></button>`;
     }).join('') || '<div class="empty">No expert matches.</div>'}</div></div>`;
   $('aBody').innerHTML = A.one
@@ -549,7 +552,7 @@ function drawCantSit() {
       html += `<div><span class="lbl">4. Who takes the ${SEAT_ROLE[RP.seat]} seat</span>`
         + `<label class="search" for="rpQ" style="max-width:none;margin-bottom:8px">${ICON.search}<span class="sr">Search name or expertise</span><input id="rpQ" type="search" placeholder="Search name or expertise" value="${esc(RP.q)}"></label>`
         + `<div class="list" style="max-height:260px">${list.map(e => {
-          const why = RP.seat === 'chair' && !e.chair ? 'Needs a Master\'s to chair' : fullWhy(e, 1);
+          const why = RP.seat === 'chair' && !e.chair ? 'Needs a Master\'s to chair' : courseWhy(e, [t]) || fullWhy(e, 1);
           const on = RP.pick === e.id;
           return `<button type="button" class="ex${on ? ' on' : ''}" data-act="rp-pick" data-id="${e.id}"${why ? ' disabled' : ''}><span class="av">${esc(initials(e.name))}</span><span class="grow"><b>${esc(e.name)}${e.degree ? ` <span class="deg">${esc(e.degree)}</span>` : ''}${LEAVE(e)}</b><span>${esc(why || e.tags.join(', ') || 'No expertise listed')}</span></span><span class="use">${on ? 'Picked' : why ? '' : 'Pick'}</span></button>`;
         }).join('') || '<div class="empty">No expert matches.</div>'}</div></div>`

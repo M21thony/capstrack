@@ -261,7 +261,7 @@ class SubmissionController extends Controller
                     'Document to review',
                     '<strong>'.e($team->team_name ?? 'A team').'</strong> sent you <strong>'
                         .e($document->file_name).'</strong> as their '.e(SubmissionRecipients::LABELS[$role]).'.',
-                    route('instructor.docreview'),
+                    route('instructor.teams', ['tab' => 'todo']),
                     ['team_id' => $studentYear->team_id, 'review_id' => $review->review_id],
                 );
 

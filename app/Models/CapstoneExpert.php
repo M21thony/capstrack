@@ -26,12 +26,14 @@ use Illuminate\Support\Str;
     'approved_status',
     'max_teams',
     'program_slots',
+    'teams_cap_request',
     'program',
     'sections',
     'degree_title',
     'on_study_leave',
     'panel_strengths',
     'max_panels',
+    'panel_programs',
     'school_year',
     'rejection_reason',
     'reject_attempts',
@@ -69,6 +71,9 @@ class CapstoneExpert extends Authenticatable
     public const EMAIL_DOMAINS = ['@cspc.edu.ph', '@gmail.com'];
 
     public const PROGRAMS = ['BSCS', 'BSIT', 'BSIS', 'BLIS'];
+
+    // Teams in all an expert may take on their own say; more needs a CaPSA/TSA's approval.
+    public const TEAMS_CAP = 10;
 
     // What a panelist is strongest in, ticked on their profile; a panel
     // should cover all three.
@@ -116,6 +121,8 @@ class CapstoneExpert extends Authenticatable
         'sections' => 'array',
         'panel_strengths' => 'array',
         'max_panels' => 'integer',
+        'panel_programs' => 'array',
+        'teams_cap_request' => 'array',
         'created_at' => 'datetime',
         'reject_cooldown_until' => 'datetime',
         'last_seen_at' => 'datetime',
@@ -487,6 +494,23 @@ class CapstoneExpert extends Authenticatable
         return $this->handledPrograms()[0] ?? null;
     }
 
+    /**
+     * Who may approve this expert's request to take more than TEAMS_CAP teams:
+     * the CaPSA/TSAs whose sections cover a program in the request, not the
+     * expert themself. When none covers any, every other CaPSA/TSA, so the
+     * request never waits on nobody.
+     */
+    public function teamCapApprovers(): \Illuminate\Support\Collection
+    {
+        $programs = array_keys($this->teams_cap_request ?? []);
+        $capsas = self::whereHas('roles', fn ($q) => $q->where('role_name', self::CAPSA_ROLE))
+            ->where('expert_id', '!=', $this->expert_id)
+            ->get();
+        $covering = $capsas->filter(fn (self $capsa) => array_intersect($capsa->handledPrograms(), $programs) !== []);
+
+        return $covering->isEmpty() ? $capsas : $covering->values();
+    }
+
     public function handledPrograms(): array
     {
         return collect($this->sections ?? [])
@@ -829,5 +853,14 @@ class CapstoneExpert extends Authenticatable
     public function canChairPanel(): bool
     {
         return in_array($this->highest_degree, ['master', 'doctorate'], true);
+    }
+
+    /**
+     * Whether they sit panels for a team in this course. Nothing picked on
+     * their profile is every course, and so is a team whose course is unknown.
+     */
+    public function sitsPanelsFor(?string $program): bool
+    {
+        return ! $this->panel_programs || ! $program || in_array($program, $this->panel_programs, true);
     }
 }

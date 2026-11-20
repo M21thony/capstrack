@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\ExpertExpertise;
 use App\Models\Setting;
+use App\Services\Notifier;
 use App\Support\DefenseBoard;
 use App\Support\NotificationTypes;
 use Illuminate\Http\JsonResponse;
@@ -31,8 +32,9 @@ class ProfileController extends Controller
 
         // What they last saved per program. A flat number with no split
         // ("ALL") ticks nothing, so they choose the programs themselves.
-        $programSlots = [];
-        foreach ($expert->parsedCapacity() as [$program, $max]) {
+        // A request waiting for the CaPSA/TSA shows the numbers asked for.
+        $programSlots = $expert->teams_cap_request ?: [];
+        foreach ($programSlots ? [] : $expert->parsedCapacity() as [$program, $max]) {
             if ($program !== 'ALL') {
                 $programSlots[$program] = (int) $max;
             }
@@ -77,9 +79,9 @@ class ProfileController extends Controller
         $all = ($saved['all'] ?? true) !== false;
 
         $byGroup = [
-            'teams' => ['Teams', 'A team applies to you, a student asks to leave or be removed, or (CaPSA/TSA) teams outnumber the free expert slots', ['expert_application', 'leave_request_received', 'expert_slots_short']],
+            'teams' => ['Teams', 'A team applies to you, a student asks to leave or be removed, or (CaPSA/TSA) teams outnumber the free expert slots or an expert asks for more than 10 teams', ['expert_application', 'leave_request_received', 'expert_slots_short', 'team_cap_request', 'team_cap_decided']],
             'consultations' => ['Consultations', 'Bookings, cancellations, and a reminder on the day', ['consultation_booked', 'consultation_cancelled', 'consultation_reminder']],
-            'documents' => ['Documents', 'Documents and signed papers to review, and a reminder when they wait', ['document_submitted', 'paper_to_check', 'review_reminder']],
+            'documents' => ['Documents', 'Documents and signed papers to review, a reminder when they wait, and students replying to your remarks', ['document_submitted', 'paper_to_check', 'review_reminder', 'remark_reply']],
             'titles' => ['Titles and defenses', 'A team turns in its titles (CaPSA/TSA), a title waits for your approval, you are asked whether your team is ready to defend, or your panel seat changes', ['titles_submitted', 'title_change_requested', 'defense_go_request', 'defense_panel']],
             'announcements' => ['Announcements', 'Important or urgent announcements from a CaPSA/TSA', ['announcement']],
         ];
@@ -143,6 +145,11 @@ class ProfileController extends Controller
             'panel_strengths.*' => ['in:'.implode(',', array_keys(CapstoneExpert::STRENGTHS))],
             // How many teams' panels they can sit on; blank is no limit.
             'max_panels' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:30'],
+            // The courses they sit panels for; none is every course.
+            'panel_programs' => ['sometimes', 'array'],
+            'panel_programs.*' => ['in:'.implode(',', CapstoneExpert::PROGRAMS)],
+            // The CaPSA/TSA can set it too, from Expert Management.
+            'on_study_leave' => ['sometimes', 'boolean'],
         ]);
 
         $validator->after(function ($v) use ($request) {
@@ -189,26 +196,16 @@ class ProfileController extends Controller
         $validated = $validator->validated();
         $expert = auth('expert')->user();
 
-        // Keep only programs they actually take teams from, in the canonical
-        // PROGRAMS order so the saved text is stable between saves.
-        $accepted = [];
-        foreach (CapstoneExpert::PROGRAMS as $program) {
-            $count = (int) ($validated['program_slots'][$program] ?? 0);
-            if ($count > 0) {
-                $accepted[$program] = $count;
-            }
-        }
+        $packed = CapstoneExpert::packProgramSlots($validated['program_slots']);
+        $accepted = $packed['accepted'];
 
-        // program_slots is what CapstoneExpert::parsedCapacity() reads for
-        // the per-program Capacity column, and it already understands this
-        // "<n> - <PROGRAM>" shape (it's the format the roster upload's own
-        // free-text cells used). max_teams stays the overall total so the
-        // existing full/slots-left checks keep working unchanged.
-        $raw = implode(', ', array_map(
-            fn ($program, $count) => $count.' - '.$program,
-            array_keys($accepted),
-            $accepted
-        ));
+        // More than TEAMS_CAP in all, and more than they already have, waits
+        // for a CaPSA/TSA: the numbers are kept as a request, the slots stay.
+        $pending = $packed['total'] > CapstoneExpert::TEAMS_CAP && $packed['total'] > (int) $expert->max_teams;
+        $askedAgain = $pending && $expert->teams_cap_request != $accepted;
+        $slots = $pending
+            ? ['teams_cap_request' => $accepted]
+            : ['program_slots' => $packed['raw'], 'max_teams' => $packed['total'], 'teams_cap_request' => null];
 
         $clean = fn (array $fields) => collect($fields)->map(fn ($e) => trim($e))->filter()->unique(fn ($e) => mb_strtolower($e))->values();
 
@@ -238,13 +235,14 @@ class ProfileController extends Controller
             ? ['panel_strengths' => array_values(array_intersect(array_keys(CapstoneExpert::STRENGTHS), $validated['panel_strengths'] ?? []))]
             : [];
 
-        $panels = $request->exists('max_panels') ? ['max_panels' => $validated['max_panels'] ?? null] : [];
+        $panels = ($request->exists('max_panels') ? ['max_panels' => $validated['max_panels'] ?? null] : [])
+            + ($request->exists('panel_programs')
+                ? ['panel_programs' => array_values(array_intersect(CapstoneExpert::PROGRAMS, $validated['panel_programs'] ?? [])) ?: null]
+                : []);
+        $leave = $request->exists('on_study_leave') ? ['on_study_leave' => (bool) $validated['on_study_leave']] : [];
 
-        DB::transaction(function () use ($expert, $accepted, $raw, $bySide, $degree, $name, $strengths, $panels) {
-            $expert->update([
-                'program_slots' => $raw,
-                'max_teams' => array_sum($accepted),
-            ] + $degree + $name + $strengths + $panels);
+        DB::transaction(function () use ($expert, $slots, $bySide, $degree, $name, $strengths, $panels, $leave) {
+            $expert->update($slots + $degree + $name + $strengths + $panels + $leave);
 
             // Replace rather than merge - the panel sends the full list it
             // is showing, so anything missing from it was removed there.
@@ -262,9 +260,24 @@ class ProfileController extends Controller
             }
         });
 
+        if ($askedAgain) {
+            foreach ($expert->teamCapApprovers() as $capsa) {
+                Notifier::toExpert(
+                    $capsa,
+                    'team_cap_request',
+                    'An expert asks to take more than '.CapstoneExpert::TEAMS_CAP.' teams',
+                    '<strong>'.e($expert->name).'</strong> asks to take <strong>'.$packed['total'].'</strong> teams ('
+                        .e(collect($accepted)->map(fn ($n, $p) => "$p $n")->implode(', ')).').',
+                    route('capsa.experts'),
+                    ['expert_id' => $expert->expert_id],
+                );
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Profile updated.',
+            'message' => $pending ? 'Saved. Over '.CapstoneExpert::TEAMS_CAP.' teams waits for your CaPSA/TSA to approve.' : 'Profile updated.',
+            'pending' => $pending ? $packed['total'] : null,
             'program_slots' => $accepted,
             'max_teams' => $expert->fresh()->max_teams,
             'expertise' => $expertise,

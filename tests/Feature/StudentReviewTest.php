@@ -275,4 +275,48 @@ class StudentReviewTest extends TestCase
         $response->assertJsonFragment(['comment' => 'Fix this sentence.']);
         $response->assertJsonMissing(['comment' => 'Overall good work.']);
     }
+
+    public function test_student_replies_to_a_remark_and_the_reviewer_sees_it(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        $student = Student::factory()->withCompleteProfile()->create(['email' => 'reply@my.cspc.edu.ph', 'f_name' => 'Ana', 'l_name' => 'Cruz']);
+        $outsider = Student::factory()->withCompleteProfile()->create(['email' => 'outsider@my.cspc.edu.ph']);
+        $docId = $this->makeDocument(1, $student->student_id, 'Chapter 2', 'Chapter 2');
+        $expertId = $this->reviewerId();
+
+        $reviewId = DB::table('capstone_document_review')->insertGetId([
+            'review_id' => 1, 'file_id' => $docId, 'expert_id' => $expertId,
+            'role' => 'adviser', 'review_status' => 'Reviewed', 'reviewed_at' => now(),
+        ]);
+        $otherReviewId = DB::table('capstone_document_review')->insertGetId([
+            'review_id' => 2, 'file_id' => $docId, 'expert_id' => $expertId,
+            'role' => 'adviser', 'review_status' => 'Reviewed', 'reviewed_at' => now(),
+        ]);
+        $remark = fn (int $review) => DB::table('pdf_remarks')->insertGetId([
+            'review_id' => $review, 'is_general' => false, 'page_number' => 1,
+            'top_position' => 0.1, 'left_position' => 0.1, 'highlight_width' => 0.2, 'highlight_height' => 0.05,
+            'color' => 'yellow', 'comment' => 'Cite this.', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $remarkId = $remark($reviewId);
+        $foreignRemarkId = $remark($otherReviewId);
+        $url = fn (int $review, int $remark) => route('student.review.remarks.replies', [$review, $remark]);
+
+        $this->actingAs($student, 'web')->postJson($url($reviewId, $remarkId), ['body' => '  Added the citation.  '])
+            ->assertCreated()->assertJsonFragment(['who' => 'Ana Cruz', 'body' => 'Added the citation.']);
+
+        $this->assertSame(1, DB::table('notifications')->where('expert_id', $expertId)->where('type', 'remark_reply')->count());
+
+        // Both sides read the reply on its remark.
+        $this->actingAs($student, 'web')->getJson(route('student.review.remarks', $reviewId))
+            ->assertJsonPath('0.replies.0.body', 'Added the citation.');
+        $expert = CapstoneExpert::find($expertId);
+        $this->actingAs($expert, 'expert')->getJson(route('reviews.remarks.index', $reviewId))
+            ->assertOk()->assertJsonPath('0.replies.0.who', 'Ana Cruz');
+
+        // A remark of another review, a student outside the team, and an empty reply are refused.
+        $this->actingAs($student, 'web')->postJson($url($reviewId, $foreignRemarkId), ['body' => 'x'])->assertNotFound();
+        $this->actingAs($outsider, 'web')->postJson($url($reviewId, $remarkId), ['body' => 'x'])->assertForbidden();
+        $this->actingAs($student, 'web')->postJson($url($reviewId, $remarkId), ['body' => '   '])->assertStatus(422);
+        $this->assertSame(1, DB::table('pdf_remark_replies')->count());
+    }
 }

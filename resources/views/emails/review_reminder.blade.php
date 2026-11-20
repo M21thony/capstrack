@@ -38,7 +38,7 @@
             @endforeach
         </table>
 
-        <a href="{{ url('/instructor/docreview') }}" class="btn">Open Document Review</a>
+        <a href="{{ route('instructor.teams', ['tab' => 'todo']) }}" class="btn">Open your to-do list</a>
 
         <div class="footer">
             <div class="logo" style="margin-bottom:10px;">CapsTrack</div>

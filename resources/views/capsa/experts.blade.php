@@ -419,6 +419,15 @@
       </div>
     @endif
 
+    @foreach ($capRequests as $req)
+      <div class="tk-banner" role="status">
+        <span class="tk-banner-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        <p><strong>{{ $req->name }}</strong> asks to take <strong>{{ array_sum($req->teams_cap_request) }} teams</strong> ({{ collect($req->teams_cap_request)->map(fn ($n, $p) => "$p $n")->implode(', ') }}); now {{ (int) $req->max_teams }}.</p>
+        <button type="button" class="tk-btn tk-btn-sm" onclick="decideTeamCap({{ $req->expert_id }}, false, this)">Decline</button>
+        <button type="button" class="tk-btn tk-btn-sm tk-btn-pri" onclick="decideTeamCap({{ $req->expert_id }}, true, this)">Approve</button>
+      </div>
+    @endforeach
+
     @include('partials.row-select', [
       'table' => '.table',
       'noun' => 'expert',
@@ -782,7 +791,6 @@
       if ($balance > 0) return ['blue', 'ⓘ', $balance.' spare '.($balance === 1 ? 'slot' : 'slots')];
       return ['green', '✓', $need === 0 ? 'Covered' : 'Sufficient'];
   };
-  $openText = fn (?int $free) => $free === null ? 'no limit' : $free.' open';
   $totalTeams = count($coverageTeams);
   $missingTotal = collect($coverageTeams)->sum(fn ($t) => count($t['missing']));
   $shorts = [];
@@ -841,7 +849,6 @@
   .cov .table-scroll td{border-bottom:1px solid #e5e9f0;padding:14px 15px;text-align:center;vertical-align:middle}
   .cov .table-scroll td:first-child{text-align:left}
   .cov .program-name{font-weight:700;font-size:15px}
-  .cov .program-name small{display:none}
   .cov .role-name{font-weight:600}
   .cov .has-shortage td:first-child{border-left:4px solid #c63838;padding-left:11px}
   .cov .cell-status{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:7px;font-size:12px;font-weight:600;border:0;cursor:pointer;font-family:inherit}
@@ -880,8 +887,6 @@
     .cov .table-scroll td:first-child{display:block;background:#f7f8fa}
     .cov .table-scroll td:first-child:before{content:none}
     .cov .has-shortage td:first-child{padding-left:8px}
-    .cov .matrix-team-count{display:none!important}
-    .cov .program-name small{display:inline;font-weight:400;font-size:12px;color:#657186;margin-left:6px}
     .cov .coverage-value{display:flex;flex-direction:column;align-items:flex-end}
   }
 </style>
@@ -924,19 +929,23 @@
         @if (! $totalTeams)
           <div class="empty">No teams this term.</div>
         @else
+          {{-- One row per program and role, every number under its own heading: needed here + needed elsewhere against open slots. --}}
+          @php $hasOthers = $covPrograms->contains(fn ($rows) => collect($rows)->contains(fn ($r) => $r['role'] !== 'all' && $r['programNeed'] > $r['need'])); @endphp
           <table data-cov="program" data-export="Expert coverage by program" data-export-into="#cov-actions-program">
-            <colgroup><col style="width:16%"><col style="width:12%"><col style="width:24%"><col style="width:24%"><col style="width:24%"></colgroup>
-            <thead><tr><th>Program</th><th>Teams</th>@foreach ($covRoles as $label)<th>{{ $label }}</th>@endforeach</tr></thead>
+            <thead><tr><th>Program</th><th>Expert role</th><th>Needed in your sections</th>@if ($hasOthers)<th>Needed in other sections</th>@endif<th>Open slots</th><th>Result</th></tr></thead>
             <tbody>
               @foreach ($covPrograms as $p => $rows)
-                <tr class="{{ collect($rows)->contains(fn ($r) => $r['role'] !== 'all' && $r['short'] > 0) ? 'has-shortage' : '' }}">
-                  <td><span class="program-name">{{ $p }}<small>{{ $teamCount[$p] }} {{ $teamCount[$p] === 1 ? 'team' : 'teams' }}</small></span></td>
-                  <td class="matrix-team-count">{{ $teamCount[$p] }}</td>
-                  @foreach ($covRoles as $role => $label)
-                    @php $r = $roleRow($rows, $role); [$tone, $mark, $text] = $chip($r['programNeed'], $r['free']); $others = $r['programNeed'] - $r['need']; @endphp
-                    <td data-label="{{ $label }}"><span class="coverage-value"><button type="button" class="cell-status {{ $tone }}" data-cov-teams data-program="{{ $p }}" data-role="{{ $role }}">{{ $mark }} {{ $text }}</button><span class="cell-detail">{{ $r['need'] }} needed{{ $others > 0 ? ' · '.$others.' in other sections' : '' }} · {{ $openText($r['free']) }}</span></span></td>
-                  @endforeach
-                </tr>
+                @foreach ($covRoles as $role => $label)
+                  @php $r = $roleRow($rows, $role); [$tone, $mark, $text] = $chip($r['programNeed'], $r['free']); @endphp
+                  <tr class="{{ $tone === 'red' ? 'has-shortage' : '' }}">
+                    <td><span class="program-name">{{ $p }}</span></td>
+                    <td data-label="Expert role" class="role-name">{{ $label }}</td>
+                    <td data-label="Needed in your sections">{{ $r['need'] }}</td>
+                    @if ($hasOthers)<td data-label="Needed in other sections">{{ $r['programNeed'] - $r['need'] }}</td>@endif
+                    <td data-label="Open slots">{{ $r['free'] ?? 'No limit' }}</td>
+                    <td data-label="Result"><button type="button" class="cell-status {{ $tone }}" data-cov-teams data-program="{{ $p }}" data-role="{{ $role }}">{{ $mark }} {{ $text }}</button></td>
+                  </tr>
+                @endforeach
               @endforeach
             </tbody>
           </table>
@@ -1799,6 +1808,23 @@ function saveExpertDegree(select) {
     })
     .catch(() => showToast('Network error. Nothing was saved.', 'error'))
     .finally(() => { select.disabled = false; });
+}
+
+// An expert's ask for more than 10 teams: approve or decline, then reload.
+function decideTeamCap(id, approve, btn) {
+  btn.parentElement.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  fetch('{{ url('capsa/experts') }}/' + id + '/team-cap', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    body: JSON.stringify({ approve: approve }),
+  })
+    .then(r => r.json().then(d => ({ ok: r.ok && d.success, d })))
+    .then(({ ok, d }) => {
+      showToast(d.message || (ok ? 'Saved' : 'Could not save that'), ok ? 'success' : 'error');
+      if (ok) setTimeout(() => window.location.reload(), 700);
+      else btn.parentElement.querySelectorAll('button').forEach(b => { b.disabled = false; });
+    })
+    .catch(() => showToast('Network error. Nothing was saved.', 'error'));
 }
 
 // Study leave: saved the moment it is ticked, like the degree.

@@ -60,7 +60,7 @@ class SendReviewReminders extends Command
                 'Soonest: <strong>'.e($soonest->title).'</strong> from <strong>'
                     .e($soonest->team_name ?? 'a team').'</strong>'
                     .($soonest->due_on ? ', due '.e($soonest->due_on) : '').'.',
-                route('instructor.docreview'),
+                route('instructor.teams', ['tab' => 'todo']),
             );
 
             if (! $expert->wants('review_reminder', 'email')) {

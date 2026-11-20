@@ -150,7 +150,7 @@ class InstructorProfileTest extends TestCase
 
         $response = $this->actingAs($expert->fresh(), 'expert')->get(route('instructor.profile'))->assertOk();
 
-        $response->assertSee('Team slots')
+        $response->assertSee('Team capacity')
             ->assertSee($expert->email)
             ->assertSee('<option value="MIT" selected>MIT</option>', false)
             ->assertSee('data-program="BSIT"', false)
@@ -173,7 +173,7 @@ class InstructorProfileTest extends TestCase
         ExpertEvaluation::factory()->create(['expert_id' => $expert->expert_id, 'team_id' => $team->team_id, 'student_id' => $leader->student_id, 'rating' => 5]);
 
         $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
-            ->assertSeeInOrder(['Degree shown after your name', 'Team slots', 'Research areas', 'Email notifications'])
+            ->assertSeeInOrder(['Degree shown after your name', 'Team capacity', 'Research areas', 'Email notifications'])
             ->assertDontSee('team leader rating');
     }
 
@@ -187,7 +187,7 @@ class InstructorProfileTest extends TestCase
         $response->assertSee('class="btn btn-ghost" id="pp-discard"', false)
             ->assertSee('class="btn btn-primary" id="pp-save-btn"', false)
             ->assertSee('id="ct-action-toasts"', false)
-            ->assertSee("toast('Your profile was saved.', 'success')", false)
+            ->assertSee("'Your profile was saved.', 'success')", false)
             ->assertDontSee('Changes saved');
     }
 
@@ -198,6 +198,7 @@ class InstructorProfileTest extends TestCase
         $expert->forceFill(['notification_prefs' => [
             'email.expert_application' => false, 'email.leave_request_received' => false,
             'email.expert_slots_short' => false, 'email.review_reminder' => false,
+            'email.team_cap_request' => false, 'email.team_cap_decided' => false,
         ]])->save();
 
         $response = $this->actingAs($expert->fresh(), 'expert')->get(route('instructor.profile'))->assertOk();

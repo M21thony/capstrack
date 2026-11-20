@@ -85,6 +85,18 @@ final class NotificationTypes
             'label' => 'A student asks to leave a team, or a leader asks to remove a member',
             'email' => true,
         ],
+        'remark_reply' => [
+            'label' => 'A student replies to one of my remarks',
+            'email' => true,
+        ],
+        'team_cap_request' => [
+            'label' => 'An expert asks to take more than 10 teams (CaPSA/TSA)',
+            'email' => true,
+        ],
+        'team_cap_decided' => [
+            'label' => 'My CaPSA/TSA approves or declines my request for more than 10 teams',
+            'email' => true,
+        ],
         'announcement' => [
             'label' => 'A CaPSA/TSA posts an announcement for experts',
             'email' => true,

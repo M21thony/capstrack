@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
+use App\Models\PdfRemark;
+use App\Models\PdfRemarkReply;
+use App\Services\Notifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class StudentReviewController extends Controller
 {
@@ -96,11 +100,36 @@ class StudentReviewController extends Controller
     {
         $this->authorizeReview($review);
 
-        return $review->pdfRemarks()->where('is_general', false)->get([
+        return $review->pdfRemarks()->where('is_general', false)->with('replies')->get([
             'id', 'page_number', 'top_position', 'left_position',
             'highlight_width', 'highlight_height', 'color', 'comment', 'selected_text', 'section',
             'mark_type', 'rects', 'shape_ref', 'figure_label', 'diagram_type',
         ]);
+    }
+
+    /** A team member answers one of the reviewer's remarks; the reviewer is told. */
+    public function reply(Request $request, CapstoneDocumentReview $review, PdfRemark $remark)
+    {
+        $this->authorizeReview($review);
+        abort_unless((int) $remark->review_id === (int) $review->review_id, 404);
+
+        $body = trim($request->validate(['body' => 'required|string|max:2000'])['body']);
+        abort_if($body === '', 422);
+
+        $reply = PdfRemarkReply::create(['remark_id' => $remark->id, 'student_id' => Auth::id(), 'body' => $body]);
+        $reply->load('student:student_id,f_name,l_name');
+
+        Notifier::toExpert(
+            (int) $review->expert_id,
+            'remark_reply',
+            'Reply to your remark',
+            '<strong>'.e($reply->toArray()['who']).'</strong> replied on <strong>'.e($review->document?->file_name ?? 'a document')
+                .'</strong>: '.e(Str::limit($body, 120)),
+            route('instructor.docreview.annotate', $review),
+            ['review_id' => $review->review_id, 'remark_id' => $remark->id],
+        );
+
+        return $reply;
     }
 
     /** The draw.io files sent with the reviewed document, shown after its pages. */

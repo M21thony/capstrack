@@ -56,30 +56,48 @@
   .pp-sec{padding:18px 22px}
   .pp-sec + .pp-sec{border-top:1px solid var(--bg4)}
   .pp-sec-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .pp-sec-h h2{margin:0;font-size:14.5px;font-weight:700;color:var(--text)}
+  .pp-sec-h{margin-bottom:12px}
+  .pp-sec-h h2{margin:0;font-size:16px;font-weight:700;color:var(--text)}
   .pp-help{margin:3px 0 12px;font-size:12.5px;line-height:1.45;color:var(--text3)}
 
   .pp-status{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;background:rgba(22,163,74,.08);color:var(--green)}
   .pp-status.full{background:var(--amber-bg);color:var(--amber)}
   .pp-status i{width:7px;height:7px;border-radius:50%;background:currentColor}
-  .pp-progs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  /* A number typed per program; 0 or blank means no teams from it. */
-  .pp-prog{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 5px 4px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text3)}
-  .pp-prog.on{border-color:rgba(201,168,44,.6);background:var(--accent-light);color:var(--text)}
-  .pp-prog label{flex:1;font-size:13.5px;font-weight:700;cursor:pointer}
-  .pp-prog input{width:64px;height:34px;border:1px solid var(--border2);border-radius:8px;padding:0 8px;background:var(--bg2);font:inherit;font-size:14px;font-weight:700;color:var(--text);text-align:center;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
-  .pp-prog input::-webkit-outer-spin-button,.pp-prog input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  .pp-prog input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
-  .pp-prog #pp-max-panels{width:96px}
-  .pp-prog #pp-max-panels::placeholder{font-weight:500;color:var(--text3)}
-  .pp-foot{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px;font-size:12px;color:var(--text3)}
+  /* One row per program taken, counted with - and +; the rest wait in Add program. */
+  .pp-progs{display:grid;gap:8px}
+  .pp-prog{display:flex;align-items:center;gap:10px;padding:5px 12px 5px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg3)}
+  .pp-prog[hidden]{display:none}
+  .pp-prog label{flex:1;font-size:14px;font-weight:700;color:var(--text)}
+  .pp-prog > span{font-size:12.5px;color:var(--text3)}
+  .pp-step{display:inline-flex;border:1px solid var(--border2);border-radius:8px;background:var(--bg2);overflow:hidden}
+  .pp-step button{width:32px;height:32px;border:0;background:transparent;font:inherit;font-size:17px;color:var(--text2);cursor:pointer}
+  .pp-step button:hover:not(:disabled){background:var(--bg3)}
+  .pp-step button:disabled{color:var(--border2);cursor:default}
+  .pp-step input{width:44px;height:32px;border:0;border-left:1px solid var(--border2);border-right:1px solid var(--border2);border-radius:0;padding:0;background:transparent;font:inherit;font-size:14px;font-weight:700;color:var(--text);text-align:center;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+  .pp-step input::-webkit-outer-spin-button,.pp-step input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .pp-step input:focus{outline:none;box-shadow:inset 0 0 0 2px var(--accent)}
+  .pp-add{appearance:none;-webkit-appearance:none;border:0;background:transparent;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--accent3);cursor:pointer}
+  .pp-add[hidden]{display:none}
+  #pp-taken{margin-left:auto}
+  /* Panel preferences: a label over each line of choices. */
+  .pp-field + .pp-field{margin-top:14px}
+  .pp-label{display:block;margin-bottom:6px;font-size:13px;font-weight:700;color:var(--text)}
+  .pp-label em{font-style:normal;font-weight:500;color:var(--text3);margin-left:6px}
+  .pp-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
+  .pp-row .pp-label{flex:1;margin:0}
+  .pp-row #pp-panels-taken{font-size:12px;color:var(--text3)}
+  .pp-row #pp-panels-taken.pp-warn{color:var(--amber)}
+  .pp-checks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 12px}
+  .pp-strengths{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pp-check{display:inline-flex;align-items:center;gap:8px;min-height:30px;font-size:13.5px;color:var(--text);cursor:pointer}
+  .pp-check input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
+  .pp-foot{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:10px;font-size:12px;color:var(--text3)}
   .pp-foot b{color:var(--text)}
   .pp-foot .pp-warn{color:var(--amber)}
 
   .pp-tabs{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border-radius:9px;background:var(--bg3);border:1px solid var(--border);margin-bottom:12px}
-  .pp-tabs button{min-height:30px;padding:0 12px;border:0;border-radius:7px;background:transparent;color:var(--text2);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-  .pp-tabs button[aria-pressed="true"]{background:var(--bg2);color:var(--text);box-shadow:0 1px 2px rgba(24,25,31,.14)}
-  .pp-tabs em{font-style:normal;color:var(--text3);font-weight:500;font-variant-numeric:tabular-nums}
+  .pp-tabs button{min-height:32px;min-width:110px;padding:0 14px;border:0;border-radius:7px;background:transparent;color:var(--text2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .pp-tabs button[aria-pressed="true"]{background:var(--accent);color:#18191f;font-weight:700}
   .pp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
   .pp-chip{display:inline-flex;align-items:center;gap:2px;min-height:28px;padding:0 4px 0 11px;border-radius:8px;font-size:12.5px;font-weight:600;background:var(--accent-light);color:var(--accent3);border:1px solid rgba(201,168,44,.45)}
   .pp-chip button{width:20px;height:20px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;padding:0;font-size:14px;line-height:1}
@@ -106,12 +124,6 @@
   .pp-chair.yes{color:var(--green)}
   .pp-chair.no{color:var(--amber)}
 
-  .pp-strengths{display:grid;gap:8px}
-  .pp-strength{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border2);border-radius:10px;cursor:pointer}
-  .pp-strength:has(input:checked){border-color:var(--accent);background:var(--accent-glow)}
-  .pp-strength input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--accent);flex:0 0 auto}
-  .pp-strength b{display:block;font-size:13.5px;color:var(--text)}
-  .pp-strength small{display:block;font-size:12px;color:var(--text3);margin-top:1px}
   .pp-em{display:flex;align-items:center;gap:12px;padding:11px 0}
   .pp-em + .pp-em{border-top:1px solid var(--bg4)}
   .pp-em label{flex:1;min-width:0;cursor:pointer}
@@ -158,7 +170,9 @@
     .pp-name-form{grid-template-columns:repeat(2,minmax(0,1fr))}
     .pp-sec{padding:16px}
     .pp-progs{gap:6px}
-    .pp-prog{padding-left:9px}
+    .pp-prog{padding-left:10px}
+    .pp-checks,.pp-strengths{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .pp-tabs button{min-width:0}
     .pp-select{width:100%}
     .pp-status{margin-left:0}
     .pp-savebar{width:auto;flex-wrap:wrap;gap:10px}
@@ -259,34 +273,39 @@
       <div class="pp-cols">
         <div class="pp-sheet">
 
-          <section class="pp-sec" aria-labelledby="pp-slots-h">
+          <section class="pp-sec" id="pp-slots" aria-labelledby="pp-slots-h">
             <div class="pp-sec-h">
-              <h2 id="pp-slots-h">Team slots</h2>
+              <h2 id="pp-slots-h">Team capacity</h2>
               <span class="pp-status" id="pp-status" role="status"><i></i><span id="pp-status-text"></span></span>
             </div>
-            <p class="pp-help">Type how many teams you take from each program. Leave it at 0 for a program you don't take.</p>
             <div class="pp-progs">
               @foreach (\App\Models\CapstoneExpert::PROGRAMS as $program)
-                <div class="pp-prog" data-program="{{ $program }}">
+                <div class="pp-prog" data-program="{{ $program }}" hidden>
                   <label for="pp-prog-{{ $program }}">{{ $program }}</label>
-                  <input type="number" id="pp-prog-{{ $program }}" min="0" max="20" step="1" inputmode="numeric" placeholder="0" aria-label="{{ $program }} teams you take">
+                  <div class="pp-step">
+                    <button type="button" data-step="-1" aria-label="One fewer {{ $program }} team">&minus;</button>
+                    <input type="number" id="pp-prog-{{ $program }}" min="0" max="20" step="1" inputmode="numeric">
+                    <button type="button" data-step="1" aria-label="One more {{ $program }} team">+</button>
+                  </div>
+                  <span>teams</span>
                 </div>
               @endforeach
             </div>
             <div class="pp-foot">
+              <label for="pp-add-prog" class="pp-sr">Add a program</label>
+              <select id="pp-add-prog" class="pp-add"></select>
               <span id="pp-taken"></span>
-              @if ($slotSuggestion)
-                <span>Suggestion: <b>{{ $slotSuggestion }}</b>, from how quickly you review your teams' documents.</span>
-              @endif
             </div>
+            @if ($slotSuggestion)
+              <div class="pp-foot"><span>Suggestion: <b>{{ $slotSuggestion }}</b>, from how quickly you review your teams' documents.</span></div>
+            @endif
           </section>
 
           <section class="pp-sec" aria-labelledby="pp-areas-h">
             <div class="pp-sec-h"><h2 id="pp-areas-h">Research areas</h2></div>
-            <p class="pp-help">Teams are matched to you by these. Keep a list for each role you hold and for defense panels.</p>
             <div class="pp-tabs" role="group" aria-label="Research areas as">
               @foreach ($researchSides as $side => $label)
-                <button type="button" data-side="{{ $side }}" aria-pressed="{{ $side === $firstSide ? 'true' : 'false' }}">{{ $label }} <em data-side-count="{{ $side }}">{{ count($researchAreas[$side] ?? []) }}</em></button>
+                <button type="button" data-side="{{ $side }}" aria-pressed="{{ $side === $firstSide ? 'true' : 'false' }}">{{ $label }}</button>
               @endforeach
             </div>
             <div class="pp-chips" id="pp-chips"></div>
@@ -294,7 +313,7 @@
               <div class="pp-search">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
                 <label for="pp-area-input" class="pp-sr">Add a research area</label>
-                <input id="pp-area-input" type="text" autocomplete="off" placeholder="Search, or type your own research area" aria-controls="pp-pop">
+                <input id="pp-area-input" type="text" autocomplete="off" placeholder="Search or add a research area" aria-controls="pp-pop">
               </div>
               <div class="pp-pop" id="pp-pop" hidden>
                 <div class="pp-pop-groups" id="pp-pop-groups" role="group" aria-label="Research area groups"></div>
@@ -303,26 +322,41 @@
             </div>
           </section>
 
-          <section class="pp-sec" aria-labelledby="pp-panels-h">
-            <div class="pp-sec-h"><h2 id="pp-panels-h">Panel slots</h2></div>
-            <p class="pp-help">How many teams' defense panels you can sit on. Leave it blank for no limit.</p>
-            <div class="pp-progs">
-              <div class="pp-prog" id="pp-panel-row">
-                <label for="pp-max-panels">Teams</label>
-                <input type="number" id="pp-max-panels" min="1" max="30" step="1" inputmode="numeric" placeholder="No limit" aria-label="Teams whose defense panels you can sit on">
+          <section class="pp-sec" id="pp-panel" aria-labelledby="pp-panels-h">
+            <div class="pp-sec-h"><h2 id="pp-panels-h">Panel preferences</h2></div>
+            <div class="pp-field">
+              <span class="pp-label" id="pp-pprog-l">Programs <em id="pp-pcourses-all">Every program</em></span>
+              <div class="pp-checks" role="group" aria-labelledby="pp-pprog-l">
+                @foreach (\App\Models\CapstoneExpert::PROGRAMS as $program)
+                  <label class="pp-check"><input type="checkbox" data-panel-program="{{ $program }}">{{ $program }}</label>
+                @endforeach
               </div>
             </div>
-            <div class="pp-foot"><span id="pp-panels-taken"></span></div>
+            <div class="pp-field pp-row">
+              <label class="pp-label" for="pp-max-panels">Maximum teams</label>
+              <span id="pp-panels-taken"></span>
+              <select id="pp-max-panels" class="pp-select">
+                <option value="">No limit</option>
+                @for ($n = 1; $n <= 30; $n++)
+                  <option value="{{ $n }}">{{ $n }}</option>
+                @endfor
+              </select>
+            </div>
+            @php($strengthHints = ['manuscript' => 'Chapters, research method, writing', 'design' => 'Diagrams, database, architecture', 'software' => 'The working system, code, testing'])
+            <div class="pp-field">
+              <span class="pp-label" id="pp-strong-l">Review strengths</span>
+              <div class="pp-checks pp-strengths" role="group" aria-labelledby="pp-strong-l">
+                @foreach (\App\Models\CapstoneExpert::STRENGTHS as $key => $label)
+                  <label class="pp-check" title="{{ $strengthHints[$key] }}"><input type="checkbox" data-strength="{{ $key }}">{{ $label }}</label>
+                @endforeach
+              </div>
+            </div>
           </section>
 
-          <section class="pp-sec" aria-labelledby="pp-strong-h">
-            <div class="pp-sec-h"><h2 id="pp-strong-h">As a panelist, I'm strongest in</h2></div>
-            <p class="pp-help">The CaPSA/TSA sees this when seating a defense panel, so each panel covers all three. Tick one or more.</p>
-            @php($strengthHints = ['manuscript' => 'Chapters, research method, writing', 'design' => 'Diagrams, database, architecture', 'software' => 'The working system, code, testing'])
-            <div class="pp-strengths">
-              @foreach (\App\Models\CapstoneExpert::STRENGTHS as $key => $label)
-                <label class="pp-strength"><input type="checkbox" data-strength="{{ $key }}"><span><b>{{ $label }}</b><small>{{ $strengthHints[$key] }}</small></span></label>
-              @endforeach
+          <section class="pp-sec" aria-labelledby="pp-leave-h">
+            <div class="pp-em">
+              <label for="pp-leave"><b id="pp-leave-h">I'm on study leave</b><small>Students see that you may be slow to reply and hard to book. Your CaPSA/TSA can turn it on or off too.</small></label>
+              <input class="pp-switch" type="checkbox" id="pp-leave">
             </div>
           </section>
 
@@ -393,6 +427,10 @@ function closeSidebar() {
   var PANELS_HELD = {{ (int) $panelsHeld }};
   // A limit saved before slots were set per program: one number, no programs ticked.
   var FLAT_LIMIT = {{ $programSlots ? 0 : (int) ($expert->max_teams ?? 0) }};
+  // Over TEAMS_CAP in all, and over what they have now, waits for a CaPSA/TSA.
+  var TEAMS_CAP = {{ \App\Models\CapstoneExpert::TEAMS_CAP }};
+  var MAX_TEAMS = {{ (int) ($expert->max_teams ?? 0) }};
+  var PENDING = @json($expert->teams_cap_request ? array_sum($expert->teams_cap_request) : null);
   var BELL_TYPES = @json($bellTypes);
   var EMAIL_GROUPS = @json(collect($emailGroups)->map(fn ($group) => $group['types']));
   // Sourced from App\Support\SkillCatalog, the same groups the student
@@ -408,6 +446,8 @@ function closeSidebar() {
     areas: @json((object) $researchAreas),
     strengths: @json(array_values($expert->panel_strengths ?? [])),
     maxPanels: @json($expert->max_panels),
+    panelPrograms: @json(array_values($expert->panel_programs ?? [])),
+    studyLeave: @json((bool) $expert->on_study_leave),
     email: @json(collect($emailGroups)->map(fn ($group) => $group['on']))
   };
   Object.assign(saved.programs, @json((object) $programSlots));
@@ -429,31 +469,47 @@ function closeSidebar() {
   function has(name) { return areas().some(function (a) { return norm(a) === norm(name); }); }
   function make(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
+  // Programs with a row on the page: the ones taken, plus any added since.
+  var shown;
+  function resetShown() { shown = PROGRAMS.filter(function (p) { return state.programs[p] > 0; }); }
+  resetShown();
+
   function renderPrograms() {
     document.querySelectorAll('.pp-prog[data-program]').forEach(function (row) {
       var p = row.dataset.program, n = state.programs[p] || 0, box = row.querySelector('input');
-      row.classList.toggle('on', n > 0);
+      row.hidden = shown.indexOf(p) < 0;
+      row.querySelector('[data-step="-1"]').disabled = n <= 0;
+      row.querySelector('[data-step="1"]').disabled = n >= 20;
       // Left alone while it is being typed in, so the caret does not jump.
-      if (document.activeElement !== box) box.value = n ? n : '';
+      if (document.activeElement !== box) box.value = n;
     });
+    var add = el('pp-add-prog'), rest = PROGRAMS.filter(function (p) { return shown.indexOf(p) < 0; });
+    add.innerHTML = '';
+    add.appendChild(new Option('+ Add program', ''));
+    rest.forEach(function (p) { add.appendChild(new Option(p, p)); });
+    add.hidden = !rest.length;
     var t = total();
     if (!t && FLAT_LIMIT && !dirty()) t = FLAT_LIMIT;
-    var open = Math.max(t - TEAMS_HANDLED, 0);
+    var over = t > TEAMS_CAP && t > MAX_TEAMS;
+    var open = Math.max((over ? MAX_TEAMS : t) - TEAMS_HANDLED, 0);
     el('pp-status').classList.toggle('full', open === 0);
-    el('pp-status-text').textContent = open === 0 ? 'Full' : (open === 1 ? '1 slot open' : open + ' slots open');
+    el('pp-status-text').textContent = open === 0 ? 'Full' : (open === 1 ? '1 slot available' : open + ' slots available');
     var taken = el('pp-taken');
-    taken.className = t < TEAMS_HANDLED ? 'pp-warn' : '';
-    taken.innerHTML = !t
-      ? 'Type a number for at least one program to take teams.'
+    taken.className = over || t < TEAMS_HANDLED ? 'pp-warn' : '';
+    taken.innerHTML = over
+      ? (PENDING === t
+        ? 'Waiting for your CaPSA/TSA to approve <b>' + t + '</b> teams. You take <b>' + MAX_TEAMS + '</b> until then.'
+        : 'Over <b>' + TEAMS_CAP + '</b> teams needs your CaPSA/TSA\'s approval. Saving sends the request.')
+      : !t
+      ? 'Add a program to take teams.'
       : (t < TEAMS_HANDLED
         ? 'You handle <b>' + TEAMS_HANDLED + '</b> teams, more than your limit of <b>' + t + '</b>. No new team comes to you until you are below it.'
-        : 'You handle <b>' + TEAMS_HANDLED + '</b> of <b>' + t + '</b> ' + (t === 1 ? 'team' : 'teams'));
+        : '<b>' + TEAMS_HANDLED + '</b> of <b>' + t + '</b> ' + (t === 1 ? 'slot' : 'slots') + ' filled');
   }
 
   function renderAreas() {
     document.querySelectorAll('.pp-tabs [data-side]').forEach(function (b) {
       b.setAttribute('aria-pressed', b.dataset.side === side ? 'true' : 'false');
-      b.querySelector('[data-side-count]').textContent = (state.areas[b.dataset.side] || []).length;
     });
     var chips = el('pp-chips');
     chips.innerHTML = '';
@@ -560,28 +616,35 @@ function closeSidebar() {
   }
 
   function renderPanels() {
-    var max = state.maxPanels, box = el('pp-max-panels'), taken = el('pp-panels-taken');
-    var teams = function (n) { return n === 1 ? 'team\'s panel' : 'teams\' panels'; };
-    el('pp-panel-row').classList.toggle('on', max != null);
-    if (document.activeElement !== box) box.value = max == null ? '' : max;
+    var max = state.maxPanels, taken = el('pp-panels-taken');
+    el('pp-max-panels').value = max == null ? '' : String(max);
     taken.className = max != null && PANELS_HELD > max ? 'pp-warn' : '';
     taken.innerHTML = max == null
-      ? 'You sit on <b>' + PANELS_HELD + '</b> ' + teams(PANELS_HELD) + '.'
+      ? 'Sitting on <b>' + PANELS_HELD + '</b>'
       : (PANELS_HELD > max
-        ? 'You sit on <b>' + PANELS_HELD + '</b> ' + teams(PANELS_HELD) + ', more than your limit of <b>' + max + '</b>. No new panel seat comes to you until you are below it.'
-        : 'You sit on <b>' + PANELS_HELD + '</b> of <b>' + max + '</b> ' + teams(max) + '.');
+        ? 'You sit on <b>' + PANELS_HELD + '</b>, more than your limit of <b>' + max + '</b>. No new panel seat comes to you until you are below it.'
+        : '<b>' + PANELS_HELD + '</b> of <b>' + max + '</b> filled');
+    document.querySelectorAll('[data-panel-program]').forEach(function (b) { b.checked = state.panelPrograms.indexOf(b.dataset.panelProgram) >= 0; });
+    el('pp-pcourses-all').hidden = state.panelPrograms.length > 0;
   }
 
-  function renderAll() { renderPrograms(); renderPanels(); renderAreas(); renderDegree(); renderName(); renderStrengths(); renderEmail(); renderSaveBar(); }
+  document.querySelectorAll('[data-panel-program]').forEach(function (box) {
+    box.addEventListener('change', function () {
+      state.panelPrograms = [].filter.call(document.querySelectorAll('[data-panel-program]'), function (b) { return b.checked; }).map(function (b) { return b.dataset.panelProgram; });
+      changed();
+      renderPanels();
+    });
+  });
 
-  el('pp-max-panels').addEventListener('input', function (e) {
-    var n = parseInt(e.target.value, 10);
-    state.maxPanels = isNaN(n) ? null : Math.min(30, Math.max(1, n));
+  function renderAll() { renderPrograms(); renderPanels(); renderAreas(); renderDegree(); renderName(); renderStrengths(); renderEmail(); el('pp-leave').checked = state.studyLeave; renderSaveBar(); }
+
+  el('pp-leave').addEventListener('change', function (e) { state.studyLeave = e.target.checked; changed(); });
+
+  el('pp-max-panels').addEventListener('change', function (e) {
+    state.maxPanels = e.target.value ? Number(e.target.value) : null;
     changed();
     renderPanels();
   });
-  // Tidied once they move on: 40 becomes 30, 0 becomes 1.
-  el('pp-max-panels').addEventListener('blur', renderPanels);
 
   el('pp-name-btn').addEventListener('click', function () {
     editingName = !editingName;
@@ -592,16 +655,29 @@ function closeSidebar() {
     el(f[0]).addEventListener('input', function (e) { state.name[f[1]] = e.target.value; changed(); renderName(); });
   });
 
-  document.querySelectorAll('.pp-prog[data-program] input').forEach(function (box) {
-    var p = box.closest('.pp-prog').dataset.program;
-    box.addEventListener('input', function () {
-      var n = parseInt(box.value, 10);
+  document.querySelectorAll('.pp-prog[data-program]').forEach(function (row) {
+    var p = row.dataset.program, box = row.querySelector('input');
+    function set(n) {
       state.programs[p] = isNaN(n) ? 0 : Math.min(20, Math.max(0, n));
       changed();
       renderPrograms();
-    });
+    }
+    box.addEventListener('input', function () { set(parseInt(box.value, 10)); });
     // Tidied once they move on: 25 becomes 20, -1 or blank becomes 0.
     box.addEventListener('blur', renderPrograms);
+    row.querySelectorAll('[data-step]').forEach(function (b) {
+      b.addEventListener('click', function () { set((state.programs[p] || 0) + Number(b.dataset.step)); });
+    });
+  });
+
+  el('pp-add-prog').addEventListener('change', function (e) {
+    var p = e.target.value;
+    if (!p) return;
+    shown.push(p);
+    state.programs[p] = Math.max(state.programs[p] || 0, 1);
+    changed();
+    renderPrograms();
+    el('pp-prog-' + p).focus();
   });
 
   document.querySelectorAll('.pp-tabs [data-side]').forEach(function (b) {
@@ -631,6 +707,7 @@ function closeSidebar() {
 
   el('pp-discard').addEventListener('click', function () {
     state = copy(saved);
+    resetShown();
     el('pp-degree').value = state.degree;
     editingName = false;
     renderAll();
@@ -653,7 +730,8 @@ function closeSidebar() {
   // been; only the part that changed is sent.
   el('pp-save-btn').addEventListener('click', async function () {
     var btn = this;
-    var profileChanged = part(state, ['name', 'degree', 'programs', 'areas', 'strengths', 'maxPanels']) !== part(saved, ['name', 'degree', 'programs', 'areas', 'strengths', 'maxPanels']);
+    var keys = ['name', 'degree', 'programs', 'areas', 'strengths', 'maxPanels', 'panelPrograms', 'studyLeave'];
+    var profileChanged = part(state, keys) !== part(saved, keys);
     var emailChanged = JSON.stringify(state.email) !== JSON.stringify(saved.email);
     if (CAN_EDIT_NAME && (!state.name.first.trim() || !state.name.last.trim())) {
       editingName = true;
@@ -662,13 +740,13 @@ function closeSidebar() {
       return;
     }
     if (profileChanged && total() < 1) {
-      toast('Type how many teams you take from at least one program.', 'error');
+      toast('Take teams from at least one program.', 'error');
       return;
     }
     btn.disabled = true;
     try {
       if (profileChanged) {
-        var body = { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null, panel_strengths: state.strengths, max_panels: state.maxPanels };
+        var body = { program_slots: state.programs, expertise_by_side: state.areas, degree: state.degree || null, panel_strengths: state.strengths, max_panels: state.maxPanels, panel_programs: state.panelPrograms, on_study_leave: state.studyLeave };
         if (CAN_EDIT_NAME) {
           body.name = { first_name: state.name.first, middle_name: state.name.middle, last_name: state.name.last, suffix: state.name.suffix };
         } else {
@@ -685,6 +763,10 @@ function closeSidebar() {
         saved.areas = copy(state.areas);
         saved.strengths = copy(state.strengths);
         saved.maxPanels = state.maxPanels;
+        saved.panelPrograms = copy(state.panelPrograms);
+        saved.studyLeave = state.studyLeave;
+        PENDING = json.pending || null;
+        MAX_TEAMS = json.max_teams || 0;
       }
       if (emailChanged) {
         // Every bell switch on, and each email as its group says.
@@ -697,7 +779,7 @@ function closeSidebar() {
         saved.email = copy(state.email);
       }
       renderAll();
-      toast('Your profile was saved.', 'success');
+      toast(PENDING && profileChanged ? 'Saved. ' + PENDING + ' teams waits for your CaPSA/TSA to approve.' : 'Your profile was saved.', 'success');
     } catch (e) {
       toast(e.message && e.message.indexOf('fetch') < 0 ? e.message : 'Network error. Check your connection and try again.', 'error');
     } finally {

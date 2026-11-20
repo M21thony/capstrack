@@ -186,5 +186,6 @@ export const remarkFromServer = (r) => {
     carried_from_id: r.carried_from_id ?? null,
     highlightRects: rects,
     shape_ref: r.shape_ref || null,
+    replies: r.replies || [],
   };
 };

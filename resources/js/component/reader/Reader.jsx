@@ -58,6 +58,7 @@ const PATHS = {
   pin: (<><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z" /><circle cx="12" cy="10" r="2" /></>),
   shape: (<><rect x="3" y="4" width="8" height="6" rx="1" /><rect x="13" y="14" width="8" height="6" rx="1" /><path d="M7 10v7h6" /></>),
   hand: (<><path d="M12 3v18" /><path d="M3 12h18" /><polyline points="9 6 12 3 15 6" /><polyline points="9 18 12 21 15 18" /><polyline points="6 9 3 12 6 15" /><polyline points="18 9 21 12 18 15" /></>),
+  chat: <path d="M4 5h16v11H9l-5 4Z" />,
   pages: (<><rect x="5" y="3" width="14" height="18" rx="1.5" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="9" y1="12" x2="15" y2="12" /></>),
   list: (<><line x1="9" y1="6" x2="20" y2="6" /><line x1="9" y1="12" x2="20" y2="12" /><line x1="9" y1="18" x2="20" y2="18" /><line x1="4" y1="6" x2="4.1" y2="6" /><line x1="4" y1="12" x2="4.1" y2="12" /><line x1="4" y1="18" x2="4.1" y2="18" /></>),
 };
@@ -418,7 +419,66 @@ export function PagedList({ items, keyOf, renderItem, noun, empty, focusKey }) {
   );
 }
 
-function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measuring, pdf, onZoom }) {
+/** The team's answers under a remark, and (for the team) a box to add one. */
+function Replies({ id, list = [], reply, measuring }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!list.length && !reply) return null;
+  const open = reply?.openId === id;
+  const send = async () => {
+    if (!text.trim() || busy) return;
+    setBusy(true);
+    try {
+      await reply.send(id, text.trim());
+      setText("");
+      reply.setOpenId(null);
+    } catch {
+      // The box stays open with the words in it; the toast says what went wrong.
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="rr-replies" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+      {list.map((x) => (
+        <div key={x.id} className="rr-reply">
+          <div className="rr-reply-who"><Icon name="chat" />{x.who}<span>{x.at}</span></div>
+          <div className="rr-reply-t">{x.body}</div>
+        </div>
+      ))}
+      {reply && (open ? (
+        <div className="rr-reply-box">
+          <textarea
+            className="rr-input"
+            rows={2}
+            maxLength={2000}
+            tabIndex={measuring ? -1 : 0}
+            aria-label="Your reply"
+            placeholder="Reply to this remark"
+            value={text}
+            autoFocus={!measuring}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+              if (e.key === "Escape") reply.setOpenId(null);
+            }}
+          />
+          <div className="rr-row">
+            <span className="rr-spacer" />
+            <button type="button" className="rr-btn sm" tabIndex={measuring ? -1 : 0} onClick={() => reply.setOpenId(null)}>Cancel</button>
+            <button type="button" className="rr-btn sm tint" tabIndex={measuring ? -1 : 0} disabled={busy || !text.trim()} onClick={send}>Send reply</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" className="rr-btn sm ghost rr-reply-btn" tabIndex={measuring ? -1 : 0} onClick={() => reply.setOpenId(id)}>
+          <Icon name="chat" />Reply
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measuring, pdf, onZoom, reply }) {
   const kind = kindOf(r.color);
   const open = () => onOpen(r.id);
   return (
@@ -468,11 +528,12 @@ function RemarkCard({ r, n, selected, readOnly, onOpen, onEdit, onDelete, measur
       ) : null}
       <div className="rr-t">{r.text}</div>
       <span className="rr-lbl"><span className={`rr-sw c-${kind}`} />{KIND_LABEL[kind]}</span>
+      <Replies id={r.id} list={r.replies} reply={reply} measuring={measuring} />
     </div>
   );
 }
 
-function GeneralCard({ g, readOnly, onDelete, measuring }) {
+function GeneralCard({ g, readOnly, onDelete, measuring, reply }) {
   return (
     <div className="rr-card gen">
       <div className="rr-card-r1">
@@ -485,6 +546,7 @@ function GeneralCard({ g, readOnly, onDelete, measuring }) {
         )}
       </div>
       <div className="rr-t">{g.text}</div>
+      <Replies id={g.id} list={g.replies} reply={reply} measuring={measuring} />
     </div>
   );
 }
@@ -496,8 +558,12 @@ function GeneralCard({ g, readOnly, onDelete, measuring }) {
 export function RemarksPanel({
   title, remarks, general, numbers, selectedId, onOpen, readOnly = false,
   onEdit, onDelete, onAddGeneral, onDeleteGeneral, top = null, empty = null, pdf = null, onZoom = null,
+  onReply = null,
 }) {
   const [filter, setFilter] = useState("all");
+  // Which remark's reply box is open; kept here so the measured copy opens it too.
+  const [replyId, setReplyId] = useState(null);
+  const reply = onReply ? { openId: replyId, setOpenId: setReplyId, send: onReply } : null;
   const [writing, setWriting] = useState(false);
   const [gText, setGText] = useState("");
   const [gSection, setGSection] = useState("");
@@ -583,7 +649,7 @@ export function RemarksPanel({
           empty={empty || (<><b>{emptyText[0]}</b><span>{emptyText[1]}</span></>)}
           renderItem={(x, measuring) =>
             x.type === "general" ? (
-              <GeneralCard g={x.g} readOnly={readOnly} onDelete={onDeleteGeneral} measuring={measuring} />
+              <GeneralCard g={x.g} readOnly={readOnly} onDelete={onDeleteGeneral} measuring={measuring} reply={reply} />
             ) : (
               <RemarkCard
                 r={x.r}
@@ -596,6 +662,7 @@ export function RemarksPanel({
                 measuring={measuring}
                 pdf={pdf}
                 onZoom={onZoom}
+                reply={reply}
               />
             )
           }

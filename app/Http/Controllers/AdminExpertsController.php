@@ -125,6 +125,10 @@ class AdminExpertsController extends Controller
             'sectionOwners' => $sectionOwners,
             // Sections whose checklist and requests currently reach nobody.
             'uncoveredSections' => $available->diff(array_keys($sectionOwners))->values(),
+            // Asks for more than 10 teams that this viewer may answer.
+            'capRequests' => $isCapsaOnly
+                ? $experts->filter(fn ($e) => $e->teams_cap_request && $e->teamCapApprovers()->contains(fn ($c) => $c->is($viewer)))->values()
+                : collect(),
         ]);
     }
 
@@ -360,6 +364,45 @@ class AdminExpertsController extends Controller
             'message' => $expert->on_study_leave
                 ? $expert->name.' is marked as on study leave.'
                 : $expert->name.' is no longer marked as on study leave.',
+        ]);
+    }
+
+    /**
+     * PUT /experts/{expert}/team-cap - a CaPSA/TSA of the requested programs
+     * approves or declines an expert's ask for more than TEAMS_CAP teams.
+     * Approving puts the asked-for numbers in their slots.
+     */
+    public function decideTeamCap(Request $request, CapstoneExpert $expert): JsonResponse
+    {
+        $approve = (bool) $request->validate(['approve' => ['required', 'boolean']])['approve'];
+        $asked = $expert->teams_cap_request;
+
+        if (! $asked) {
+            return response()->json(['success' => false, 'message' => 'That request was already answered or taken back.'], 422);
+        }
+
+        $viewer = Auth::guard('expert')->user();
+        if (! $expert->teamCapApprovers()->contains(fn ($capsa) => $capsa->is($viewer))) {
+            return response()->json(['success' => false, 'message' => 'Only a CaPSA/TSA of those programs can answer this request.'], 403);
+        }
+
+        $packed = CapstoneExpert::packProgramSlots($asked);
+        $expert->update(($approve ? ['program_slots' => $packed['raw'], 'max_teams' => $packed['total']] : []) + ['teams_cap_request' => null]);
+
+        \App\Services\Notifier::toExpert(
+            $expert,
+            'team_cap_decided',
+            $approve ? 'Your request for more teams was approved' : 'Your request for more teams was declined',
+            '<strong>'.e($viewer->name).'</strong> '.($approve ? 'approved' : 'declined').' your request to take <strong>'.$packed['total'].'</strong> teams.',
+            route('instructor.profile'),
+            [],
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => $approve
+                ? $expert->name.' can now take '.$packed['total'].' teams.'
+                : $expert->name.'\'s request for '.$packed['total'].' teams was declined.',
         ]);
     }
 

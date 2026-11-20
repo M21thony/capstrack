@@ -106,6 +106,11 @@ class FeesGoToTheDeanTest extends TestCase
         $this->assertFalse($rows['BSIT-3B']['is_sent']);
         $this->assertSame(0.0, $rows['BSIT-3B']['amount']);
         $this->assertSame(1, $rows['BSIT-3B']['held']);
+
+        // Each section's row shows its total per defense and overall.
+        $admin = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]);
+        $this->actingAs($admin, 'expert')->get(route('admin.fees'))->assertOk()
+            ->assertSeeInOrder(['<th class="fe-num">Title Defense</th>', '<th class="fe-num">Total</th>', 'BSIT-3A', 'data-label="Title Defense">₱500.00', 'data-label="Total" style="font-weight:700">₱500.00'], false);
     }
 
     /** The dean reads; only a CaPSA/TSA sends. */

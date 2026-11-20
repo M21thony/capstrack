@@ -118,7 +118,7 @@ class PdfAnnotationController extends Controller
     {
         $this->authorizeReview($review);
 
-        return $review->pdfRemarks()->where('is_general', false)->get();
+        return $review->pdfRemarks()->where('is_general', false)->with('replies')->get();
     }
 
     public function store(Request $request, CapstoneDocumentReview $review)
@@ -273,6 +273,7 @@ class PdfAnnotationController extends Controller
         return $review->pdfRemarks()
             ->where('is_general', true)
             ->orderBy('created_at')
+            ->with('replies')
             ->get();
     }
 

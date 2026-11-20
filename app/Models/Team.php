@@ -636,9 +636,9 @@ class Team extends Model
      * column is often empty; that column is the fallback. Every member of a
      * team is in the same program, so the first one found is the team's.
      */
-    public function program(): ?string
+    public function program(?Collection $enrolments = null): ?string
     {
-        $enrolments = StudentSchoolYear::where('team_id', $this->team_id)->with('student')->get();
+        $enrolments ??= StudentSchoolYear::where('team_id', $this->team_id)->with('student')->get();
 
         foreach ($enrolments as $enrolment) {
             if ($program = Student::mapCourseToProgram((string) ($enrolment->student?->course ?? ''))) {

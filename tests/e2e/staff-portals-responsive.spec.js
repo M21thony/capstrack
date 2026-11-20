@@ -201,7 +201,7 @@ test('on a phone the expert profile opens from the floating bar as a page of its
   expect(await page.evaluate(() => document.documentElement.scrollWidth), 'no sideways scroll').toBeLessThanOrEqual(360);
 
   // A change brings up Save, clear of the floating bar.
-  await page.locator('.pp-prog input').first().fill('1');
+  await page.locator('.pp-prog:not([hidden]) [data-step="1"]').first().click();
   const bar = await page.locator('.pp-savebar').boundingBox();
   const tabs = await page.locator('.mtab').boundingBox();
   expect(bar.y + bar.height, 'Save is above the floating bar').toBeLessThanOrEqual(tabs.y);

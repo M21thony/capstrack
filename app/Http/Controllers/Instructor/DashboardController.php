@@ -132,7 +132,7 @@ class DashboardController extends Controller
                 'tint' => 'blue',
                 'title' => 'Review '.$team,
                 'meta' => ($document->deliverable?->title ?? $document->chapter ?: $document->file_name).' · Waiting '.$review->created_at?->diffForHumans(null, true),
-                'link' => route('instructor.docreview'),
+                'link' => route('instructor.teams', ['tab' => 'todo']),
             ];
         }
 
@@ -189,6 +189,7 @@ class DashboardController extends Controller
             'document_submitted' => ['doc', 'blue'],
             'paper_to_check' => ['doc', 'blue'],
             'review_reminder' => ['doc', 'blue'],
+            'remark_reply' => ['chat', 'teal'],
             'leave_request_received' => ['team', 'purple'],
             'announcement' => ['megaphone', 'orange'],
             'expert_slots_short' => ['warn', 'red'],

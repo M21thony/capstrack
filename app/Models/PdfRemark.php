@@ -34,6 +34,11 @@ class PdfRemark extends Model
         'revision_checked_at' => 'datetime',
     ];
 
+    public function replies()
+    {
+        return $this->hasMany(PdfRemarkReply::class, 'remark_id')->with('student:student_id,f_name,l_name')->oldest();
+    }
+
     /**
      * The words the CLF and the review page print for this remark: a remark
      * on a figure starts with the figure's number, since on paper there is

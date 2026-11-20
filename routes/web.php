@@ -139,6 +139,8 @@ $pagesBothRolesOpen = function () {
     Route::put('/experts/{expert}/degree', [AdminExpertsController::class, 'updateDegree'])->name('experts.degree.update');
     // Taking a master's or similar: slower to schedule. Shown to students as a tag.
     Route::put('/experts/{expert}/study-leave', [AdminExpertsController::class, 'updateStudyLeave'])->name('experts.study-leave.update');
+    // Approve or decline an expert's request to take more than 10 teams.
+    Route::put('/experts/{expert}/team-cap', [AdminExpertsController::class, 'decideTeamCap'])->name('experts.team-cap.decide');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     // Not bound to the model: route-model binding cannot find a deactivated
     // account, which is the only kind this is ever called on.
@@ -580,6 +582,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/review', [StudentReviewController::class, 'index'])->name('student.review');
             Route::get('/review/{review}/pdf', [StudentReviewController::class, 'file'])->name('student.review.pdf');
             Route::get('/review/{review}/remarks', [StudentReviewController::class, 'remarks'])->name('student.review.remarks');
+            Route::post('/review/{review}/remarks/{remark}/replies', [StudentReviewController::class, 'reply'])->name('student.review.remarks.replies');
             Route::get('/review/{review}/diagrams', [StudentReviewController::class, 'diagrams'])->name('student.review.diagrams');
             Route::get('/review/{reviewId}/clf', [ConsultationLogController::class, 'generate'])->name('student.review.clf');
             Route::get('/duplication', [PreProposalController::class, 'edit'])->name('student.duplication');

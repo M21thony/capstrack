@@ -130,7 +130,9 @@ class DocReviewController extends Controller
         $previous = url()->previous();
         $here = route('instructor.docreview.annotate', $review->review_id);
 
+        // Document Review only connects Google Drive now; files are opened from Teams.
         return parse_url($previous, PHP_URL_HOST) === $request->getHost() && ! str_starts_with($previous, $here)
+            && strtok($previous, '?') !== route('instructor.docreview')
             ? $previous
             : route('instructor.teams', ['tab' => 'todo']);
     }

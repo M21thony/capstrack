@@ -189,6 +189,16 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-card[aria-current="true"] .rr-t{display:block}
 .rr-lbl{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:#4a5060}
 
+/* The team's replies under a remark */
+.rr-replies{display:grid;gap:6px;border-top:1px dashed #e0e2e8;padding-top:6px;cursor:default}
+.rr-reply{background:#f5f8fd;border-radius:6px;padding:5px 8px;display:grid;gap:2px}
+.rr-reply-who{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:#2f4a7a;min-width:0}
+.rr-reply-who span{font-weight:400;color:#656b7a;margin-left:auto;white-space:nowrap}
+.rr-reply-who .rr-icon,.rr-reply-btn .rr-icon{width:13px;height:13px;color:#3b6bb5}
+.rr-reply-t{font-size:12.5px;line-height:1.45;color:#1e2128;white-space:pre-line;overflow-wrap:anywhere}
+.rr-reply-box{display:grid;gap:6px}
+.rr-reply-btn{justify-self:start;padding-left:4px}
+
 /* Student side: the reviewer's decision, and the document's other reviewers */
 .rv-decision{margin:12px 12px 0;padding:12px;border-radius:10px;display:grid;gap:4px;font-size:12.5px;color:#4a5060}
 .rv-decision.revise{background:#fdf6e9;border:1px solid #f0d9a8}

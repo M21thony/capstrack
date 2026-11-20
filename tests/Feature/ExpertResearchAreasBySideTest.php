@@ -107,7 +107,7 @@ class ExpertResearchAreasBySideTest extends TestCase
         $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
             ->assertSee('Embedded Systems')
             ->assertDontSee('EP_PROGRAM_SKILLS')
-            ->assertSee('Search, or type your own research area');
+            ->assertSee('Search or add a research area');
 
         $this->save($expert, ['adviser' => ['Blockchain Governance']])->assertOk();
 

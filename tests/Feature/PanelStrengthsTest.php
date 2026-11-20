@@ -74,7 +74,7 @@ class PanelStrengthsTest extends TestCase
         $expert = $this->expert(['design']);
 
         $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
-            ->assertSee("As a panelist, I'm strongest in", false)
+            ->assertSee('Review strengths', false)
             ->assertSee('data-strength="manuscript"', false)
             ->assertSee('data-strength="design"', false)
             ->assertSee('data-strength="software"', false)
@@ -100,7 +100,7 @@ class PanelStrengthsTest extends TestCase
         $this->assertNull($expert->fresh()->max_panels);
 
         $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
-            ->assertSee('Panel slots')->assertSee('id="pp-max-panels"', false);
+            ->assertSee('Panel preferences')->assertSee('id="pp-max-panels"', false);
     }
 
     public function test_the_assign_panel_gets_each_experts_strengths_and_the_three_names(): void

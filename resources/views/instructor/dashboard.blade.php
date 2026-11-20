@@ -137,7 +137,7 @@
           <div class="db-tile-body"><b>{{ $stats['teams'] }}</b><span class="lab">Assigned Teams</span></div>
           <span class="db-tile-more">View Teams →</span>
         </a>
-        <a class="db-tile tile-slate" href="{{ route('instructor.docreview') }}">
+        <a class="db-tile tile-slate" href="{{ route('instructor.teams', ['tab' => 'todo']) }}">
           <span class="db-ico t-blue"><svg class="i"><use href="#i-doc"/></svg></span>
           <div class="db-tile-body"><b>{{ $docsForReview }}</b><span class="lab">Pending Reviews</span></div>
           <span class="db-tile-more">View Documents →</span>
@@ -293,7 +293,7 @@
           </div>
           <div class="db-qa-grid">
             <a class="db-qa" href="{{ route('instructor.teams') }}"><svg class="i c-purple"><use href="#i-team"/></svg>My Teams</a>
-            <a class="db-qa" href="{{ route('instructor.docreview') }}"><svg class="i c-blue"><use href="#i-doc"/></svg>Documents</a>
+            <a class="db-qa" href="{{ route('instructor.teams', ['tab' => 'todo']) }}"><svg class="i c-blue"><use href="#i-doc"/></svg>Documents</a>
             <a class="db-qa" href="{{ route('instructor.schedule') }}"><svg class="i c-orange"><use href="#i-cal"/></svg>Schedule</a>
             <a class="db-qa" href="{{ route('instructor.grading') }}"><svg class="i c-green"><use href="#i-check"/></svg>Grading</a>
             <a class="db-qa" href="{{ route('instructor.evaluations') }}"><svg class="i c-orange"><use href="#i-star"/></svg>Evaluations</a>

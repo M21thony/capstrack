@@ -60,7 +60,29 @@ function StudentPdfViewer({
   diagrams = null, newerDiagrams = null,
   // Called once the document's first page is drawn and the remarks are in.
   onReady = null,
+  // The team's own Documents page: each remark gets a Reply box.
+  canReply = false,
 }) {
+  const [gen, setGen] = useState(general);
+  const reply = async (id, body) => {
+    const res = await fetch(`${remarksUrl}/${id}/replies`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || "",
+      },
+      body: JSON.stringify({ body }),
+    });
+    if (!res.ok) {
+      window.ctToast?.("Your reply was not sent. Try again.", "error");
+      throw new Error(String(res.status));
+    }
+    const saved = await res.json();
+    const add = (x) => (x.id === id ? { ...x, replies: [...(x.replies || []), saved] } : x);
+    setRemarks((prev) => prev.map(add));
+    setGen((prev) => prev.map(add));
+  };
   // A diagram sent as itself has no PDF: its diagram pages are all there is.
   const [numPages, setNumPages] = useState(pdfUrl ? null : 0);
   const [error, setError] = useState(null);
@@ -184,11 +206,12 @@ function StudentPdfViewer({
       <RemarksPanel
         title={`Remarks from ${reviewer}`}
         remarks={remarks}
-        general={general}
+        general={gen}
         numbers={numbers}
         selectedId={selectedId}
         onOpen={open}
         readOnly
+        onReply={canReply ? reply : null}
         top={top}
         pdf={pagesPdf}
         onZoom={setZoomId}

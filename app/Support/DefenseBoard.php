@@ -202,6 +202,7 @@ class DefenseBoard
             $roles = $experts->get($team->team_id, collect());
             $panel = $schedule ? $this->panelOf($schedule) : null;
             $tags = array_values(array_filter(array_map(fn ($t) => trim((string) $t), $team->tags ?: [])));
+            $program = $team->program($team->schoolYears);
 
             return [
                 'id' => (int) $team->team_id,
@@ -220,7 +221,9 @@ class DefenseBoard
                 'consultant' => $roles->get('consultant'),
                 'grammarian' => $roles->get('grammarian')['name'] ?? null,
                 'tags' => $tags,
-                'suggested' => $panelists->filter(fn ($e) => $this->matchedTags($tags, $e['tags']) !== [])->pluck('id')->values(),
+                'program' => $program,
+                'suggested' => $panelists->filter(fn ($e) => $this->matchedTags($tags, $e['tags']) !== []
+                    && (! $e['programs'] || ! $program || in_array($program, $e['programs'], true)))->pluck('id')->values(),
                 'panel' => $panel && $panel['chair'] ? $panel : null,
                 'panel_status' => $panel && $panel['chair'] ? $team->panel_status : null,
                 'panel_final_since' => $team->panelIsFinal() ? $team->panel_finalized_at?->toDateString() : null,
@@ -442,6 +445,8 @@ class DefenseBoard
                 'strengths' => array_values(array_intersect(array_keys(CapstoneExpert::STRENGTHS), $e->panel_strengths ?? [])),
                 'panels' => $load[$e->expert_id] ?? 0,
                 'max_panels' => $e->max_panels,
+                // The courses they sit panels for; empty is every course.
+                'programs' => $e->panel_programs ?? [],
             ]);
     }
 

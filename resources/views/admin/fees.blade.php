@@ -158,20 +158,23 @@
       </div>
       <table class="table fe-table" data-export="Fees" data-export-into="#feTools">
         <thead>
-          <tr><th>Section</th><th class="fe-num">Amount</th><th class="fe-num">Receipts</th><th>Sent on</th><th>Sent by</th><th>Status</th></tr>
+          <tr><th>Section</th>@foreach ($byStage->keys() as $stage)<th class="fe-num">{{ $stage }}</th>@endforeach<th class="fe-num">Total</th><th class="fe-num">Receipts</th><th>Sent on</th><th>Sent by</th><th>Status</th></tr>
         </thead>
         <tbody>
         @forelse ($rows as $row)
           <tr data-sent="{{ $row['is_sent'] ? 1 : 0 }}">
             <td class="td-main" data-label="Section">{{ $row['section'] }}</td>
-            <td class="fe-num" data-label="Amount" style="font-weight:700">{{ $row['amount'] ? '₱'.number_format($row['amount'], 2) : '—' }}</td>
+            @foreach ($byStage->keys() as $stage)
+              <td class="fe-num" data-label="{{ $stage }}">{{ ($row['stages'][$stage] ?? 0) ? '₱'.number_format($row['stages'][$stage], 2) : '—' }}</td>
+            @endforeach
+            <td class="fe-num" data-label="Total" style="font-weight:700">{{ $row['amount'] ? '₱'.number_format($row['amount'], 2) : '—' }}</td>
             <td class="fe-num" data-label="Receipts">{{ $row['receipts'] }}</td>
             <td data-label="Sent on">{{ $row['sent_on'] ?? '—' }}</td>
             <td data-label="Sent by">{{ $row['sent_by'] ?? '—' }}</td>
             <td data-label="Status"><span class="fe-pill {{ $row['is_sent'] ? 'on' : '' }}">{{ $row['is_sent'] ? 'Forwarded' : 'Not forwarded' }}</span></td>
           </tr>
         @empty
-          <tr><td colspan="6" class="tk-empty">No sections yet.</td></tr>
+          <tr><td colspan="9" class="tk-empty">No sections yet.</td></tr>
         @endforelse
         </tbody>
       </table>

@@ -145,6 +145,7 @@
       </div>
       <div class="ct-dialog-body">
         <div class="ct-report-grid" id="ct-report-grid"></div>
+        <table class="ct-report-sections"><thead><tr><th>Section</th><th>Verified</th><th>Total</th></tr></thead><tbody id="ct-report-sections"></tbody></table>
         <div class="ct-report-total"><span>Verified amount</span><strong id="ct-report-total"></strong></div>
       </div>
       <div class="ct-dialog-foot">

@@ -237,6 +237,11 @@ $('#ct-report-btn').addEventListener('click', () => {
   $('#ct-report-grid').innerHTML = [['Students', c.all], ['Verified', c.verified], ['For review', c.pending], ['Sent back', c.sent_back], ['Not uploaded', c.none]]
     .map(([l, n]) => `<div class="ct-report-stat"><span>${l}</span><strong>${n}</strong></div>`).join('');
   $('#ct-report-total').textContent = peso(c.verified * f.amount);
+  const secs = [...new Set(TEAMS.filter(t => !state.section || t.section === state.section).map(t => t.section))].sort();
+  $('#ct-report-sections').innerHTML = secs.map(s => {
+    const ids = TEAMS.filter(t => t.section === s).flatMap(t => t.members.map(m => m.id)), v = tally(ids).verified;
+    return `<tr><td>${esc(s)}</td><td>${v} of ${ids.length}</td><td>${peso(v * f.amount)}</td></tr>`;
+  }).join('');
   $('#ct-report').showModal();
 });
 $('#ct-report-csv').addEventListener('click', () => download(feePairs(sectionIds().sort((a, b) => NAME[a].localeCompare(NAME[b]))), 'capstrack-fee-report'));

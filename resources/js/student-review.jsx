@@ -27,6 +27,7 @@ if (el) {
             decision={json(el.dataset.decision, null)}
             others={json(el.dataset.others, [])}
             onReady={ready}
+            canReply
         />
     );
 }
