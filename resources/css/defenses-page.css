@@ -143,7 +143,10 @@
 .dp .members{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13px}
 .dp .members li{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .dp .members .grow{flex:1;min-width:0}
-.dp .ret-toggle{font-size:12px;font-weight:600;color:var(--ink-3);padding:2px 8px 2px 4px;border-radius:999px}
+.dp .gi{width:13px;height:13px;vertical-align:-2px;margin-right:4px;flex:none;stroke-width:2.4}
+.dp :is(.ret,.ret-toggle,.journey) .gi{margin-right:0}
+.dp .ret{align-items:center;gap:4px}
+.dp .ret-toggle{gap:5px;font-size:12px;font-weight:600;color:var(--ink-3);padding:2px 8px 2px 4px;border-radius:999px}
 .dp .ret-toggle.on{background:var(--violet-soft);color:var(--violet)}
 .dp .ret-toggle input{width:14px;height:14px;accent-color:var(--violet)}
 .dp .tries{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:3px}

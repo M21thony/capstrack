@@ -63,6 +63,11 @@ const ICON = {
   lock: svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', 'width="13" height="13"'),
   spark: svg('<path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/>'),
   down: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>'),
+  // Small ones that sit in a line of text.
+  check: svg('<path d="m5 13 4 4 10-10"/>', 'class="gi"'),
+  no: svg('<path d="M18 6 6 18M6 6l12 12"/>', 'class="gi"'),
+  warn: svg('<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>', 'class="gi"'),
+  ret: svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>', 'class="gi"'),
 };
 
 /* ---------------- where a team is ---------------- */
@@ -135,7 +140,7 @@ function expertsHtml(t) {
 function teamCell(t) {
   const r = t.member_list.filter(m => m.returnee);
   return `<div class="team"><span class="tbadge">${esc(initials(t.name))}</span><span class="meta"><button type="button" data-act="drawer" data-id="${t.id}">${esc(t.name)}</button><span>${esc(t.section)} · ${t.members} ${t.members === 1 ? 'member' : 'members'}</span>`
-    + (r.length ? `<span class="ret" title="${esc('Returnee' + (r.length > 1 ? 's' : '') + ': ' + r.map(m => m.name).join('; '))}">↺ ${esc(t.returnee_label || (r.length > 1 ? r.length + ' returnees' : 'Returnee'))}</span>` : '') + '</span></div>';
+    + (r.length ? `<span class="ret" title="${esc('Returnee' + (r.length > 1 ? 's' : '') + ': ' + r.map(m => m.name).join('; '))}">${ICON.ret}${esc(t.returnee_label || (r.length > 1 ? r.length + ' returnees' : 'Returnee'))}</span>` : '') + '</span></div>';
 }
 
 const titleCell = t => `<td><span class="clamp">${esc(t.title || '—')}</span></td>`;
@@ -155,10 +160,10 @@ function readyStatus(t) {
   const [first, ...rest] = hard(t);
   if (first) return `<div class="st bad">${esc(first.text)}${rest.map(b => `<small>${esc(b.text)}</small>`).join('')}</div>`;
   const warns = owed(t);
-  if (!warns.length) return '<div class="st ok" title="Adviser &amp; consultant · Panel final · Requirements done">✓ All set</div>';
+  if (!warns.length) return '<div class="st ok" title="Adviser &amp; consultant · Panel final · Requirements done"><span>' + ICON.check + 'All set</span></div>';
   const req = warns.find(b => b.key === 'req');
-  const head = req ? `⚠ Requirements not done<small>${esc(req.text.replace(/^Requirements not done:\s*/, ''))}</small>` : `⚠ ${esc(warns[0].text)}`;
-  const others = warns.filter(b => b !== (req || warns[0])).map(b => `<small>⚠ ${esc(b.text)}</small>`).join('');
+  const head = req ? `<span>${ICON.warn}Requirements not done</span><small>${esc(req.text.replace(/^Requirements not done:\s*/, ''))}</small>` : `<span>${ICON.warn}${esc(warns[0].text)}</span>`;
+  const others = warns.filter(b => b !== (req || warns[0])).map(b => `<small>${ICON.warn}${esc(b.text)}</small>`).join('');
   return `<div class="st warn" title="Doesn't stop scheduling. Follow it up before the defense.">${head}${others}</div>`;
 }
 
@@ -166,7 +171,7 @@ function readyStatus(t) {
 function owedLine(t) {
   if (t.outcome) return '';
   const req = owed(t).find(b => b.key === 'req');
-  return req ? `<small class="owes" title="The team has a date, but this is still to be handed in before the defense.">⚠ ${esc(req.text)}</small>` : '';
+  return req ? `<small class="owes" title="The team has a date, but this is still to be handed in before the defense.">${ICON.warn}${esc(req.text)}</small>` : '';
 }
 
 function resultStatus(t) {
@@ -178,13 +183,13 @@ function resultStatus(t) {
 
 function capaLine(t) {
   if (!needsAnswer(t)) return '';
-  return t.capa === 'go' ? '<small>✓ CaPA: Go</small>' : '<small>Waiting for CaPA\'s go</small>';
+  return t.capa === 'go' ? '<small>' + ICON.check + 'CaPA: Go</small>' : '<small>Waiting for CaPA\'s go</small>';
 }
 
 function awayLine(t) {
   if (!t.schedule || t.outcome) return '';
   const a = awayOn(panelIds(t), t.schedule.date)[0];
-  return a ? `<small title="${esc(nameOf(a.expert_id))} keeps the seat. Move the defense, or hold it without them.">⚠ ${esc(shortName(a.expert_id).split(' ').slice(-1)[0])} away</small>` : '';
+  return a ? `<small title="${esc(nameOf(a.expert_id))} keeps the seat. Move the defense, or hold it without them.">${ICON.warn}${esc(shortName(a.expert_id).split(' ').slice(-1)[0])} away</small>` : '';
 }
 
 function panelButton(t, big = false) {
@@ -413,7 +418,7 @@ function openDrawer(id) {
     if (j.stage === S.stage && needsAnswer(t)) label += t.capa === 'go' ? ' · CaPA: Go' : ' · waiting for the CaPA\'s go';
     const tries = j.stage === S.stage && t.tries.length
       ? `<ul class="tries">${t.tries.map(x => `<li><b>${x.kind === 'cancelled' ? 'Cancelled' : esc(x.note || 'Redefense')}</b> · ${fmtDay(x.date)}${x.kind === 'cancelled' ? ` · ${x.auto ? 'Requirements not complete' : 'CaPA: not ready'}${x.note ? ' (' + esc(x.note) + ')' : ''}` : ''}</li>`).join('')}</ul>` : '';
-    return `<li><span class="${dot}">${dot.includes('done') ? '✓' : i + 1}</span><div><b>${esc(j.stage)}</b><span>${esc(label)}</span>${tries}</div></li>`;
+    return `<li><span class="${dot}">${dot.includes('done') ? ICON.check : i + 1}</span><div><b>${esc(j.stage)}</b><span>${esc(label)}</span>${tries}</div></li>`;
   }).join('');
   const returnees = t.member_list.filter(m => m.returnee).length;
   const act = step === 'panel'
@@ -423,7 +428,7 @@ function openDrawer(id) {
     : panelButton(t, true) + (step === 'ready' && !hard(t).length ? `<button type="button" class="btn gold" data-act="schedule" data-id="${t.id}">Schedule ${SHORT[S.stage]}</button>` : '');
   openDialog(head(esc(t.name), `${esc(t.section)} · ${t.members} ${t.members === 1 ? 'member' : 'members'}`) + '<div class="db">'
     + `<p style="margin:0;font-weight:600">${esc(t.title || 'No title yet')}</p>`
-    + `<div><span class="lbl">Members${returnees ? ` · ${returnees} returnee${returnees > 1 ? 's' : ''}` : ''}</span><ul class="members">${t.member_list.map(m => `<li><span class="grow">${esc(m.name)}</span><label class="toggle ret-toggle${m.returnee ? ' on' : ''}"><input type="checkbox" data-returnee="${m.id}"${m.returnee ? ' checked' : ''}>↺ Returnee</label></li>`).join('') || '<li class="muted">No members on record.</li>'}</ul></div>`
+    + `<div><span class="lbl">Members${returnees ? ` · ${returnees} returnee${returnees > 1 ? 's' : ''}` : ''}</span><ul class="members">${t.member_list.map(m => `<li><span class="grow">${esc(m.name)}</span><label class="toggle ret-toggle${m.returnee ? ' on' : ''}"><input type="checkbox" data-returnee="${m.id}"${m.returnee ? ' checked' : ''}>${ICON.ret}Returnee</label></li>`).join('') || '<li class="muted">No members on record.</li>'}</ul></div>`
     + `<div><span class="lbl">Team experts</span>${expertsHtml(t)}</div>`
     + `<div><span class="lbl">Panel${isDraft(t) ? ' · Draft' : ''}</span>${panelHtml(t)}`
     + (isFinal(t) ? `<p class="muted" style="margin:6px 0 0;font-size:12.5px;display:flex;gap:6px;align-items:center">${ICON.lock}Final${t.panel_final_since ? ' since ' + fmtDay(t.panel_final_since) : ''}: sits every defense through Final Oral. If someone can't sit, mark them away or replace just that person.</p>`
@@ -471,7 +476,7 @@ function drawAssign() {
   const seated = SEATS.map(([k]) => E(A.seats[k])).filter(Boolean);
   const covers = `<div class="covers"><span>This panel covers</span>${Object.entries(S.strengths || {}).map(([k, label]) => {
     const ok = seated.some(e => (e.strengths || []).includes(k));
-    return `<span class="${ok ? 'ok' : 'no'}">${ok ? '✓' : '✗'} ${esc(label)}</span>`;
+    return `<span class="${ok ? 'ok' : 'no'}">${ok ? ICON.check : ICON.no}${esc(label)}</span>`;
   }).join('')}<span class="n">${seated.length} of 3 picked</span></div>`;
   const strongIn = e => (e.strengths || []).map(k => S.strengths?.[k]).filter(Boolean).join(', ');
   const seats = `<div class="seats">${SEATS.map(([k, label, rule]) => {

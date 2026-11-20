@@ -6,7 +6,7 @@
   settled lately, so an item does not just vanish.
 --}}
 @php
-  $icons = ['go' => 'cal', 'go_given' => 'check', 'title_change' => 'file', 'title' => 'file', 'adviser_title' => 'file', 'paper' => 'clip', 'signed' => 'star',
+  $icons = ['go' => 'cal', 'go_given' => 'shield', 'title_change' => 'sign', 'title' => 'file', 'adviser_title' => 'file', 'paper' => 'clip', 'signed' => 'sign',
             'review' => 'file', 'leave' => 'users', 'expert' => 'user', 'invite' => 'mail', 'grade' => 'trophy'];
   $hatName = fn ($hat) => $hat === 'capsa' ? 'CaPSA/TSA' : ucfirst($hat);
   $resultTone = fn ($r) => preg_match('/Approved|Verified|Accepted|Checked|Recommended|Reviewed|Submitted/', $r) ? 'ok'

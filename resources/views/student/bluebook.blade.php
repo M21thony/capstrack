@@ -90,7 +90,7 @@
           <div class="bs-st {{ $cls }}">{{ $word }}</div>
           @if ($row->note)<div class="bs-note">{{ $row->note }}</div>@endif
           @if ($video)
-            <button type="button" class="bs-file" data-video="https://drive.google.com/file/d/{{ $video }}/preview">▶ Play video</button>
+            <button type="button" class="bs-file" data-video="https://drive.google.com/file/d/{{ $video }}/preview"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5Z"/></svg>Play video</button>
           @elseif ($row->file)
             <a class="bs-file" href="{{ route('student.bluebook.file', $row->file) }}" target="_blank" rel="noopener">{{ $row->file->file_name }}</a>
           @endif

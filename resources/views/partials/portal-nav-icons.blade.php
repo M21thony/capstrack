@@ -14,13 +14,26 @@
 <style nonce="{{ Vite::cspNonce() }}">
   .sidebar .nav-item{gap:11px;padding-top:6px;padding-bottom:6px}
   .sidebar .nav-item > svg{
+    --ic:#cbd5e1;
     box-sizing:border-box;width:30px;height:30px;padding:6.5px;flex-shrink:0;
-    border-radius:9px;background:rgba(255,255,255,.05);
-    color:rgba(255,255,255,.62);opacity:1!important;
+    border-radius:9px;background:color-mix(in srgb,var(--ic) 14%,transparent);
+    color:var(--ic);opacity:1!important;
     fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;
     transition:background .15s,color .15s,box-shadow .15s,transform .15s;
   }
-  .sidebar .nav-item:hover > svg{background:rgba(255,255,255,.1);color:#fff}
+  /* Each kind of page keeps its own colour, so the list can be skimmed by colour. */
+  .sidebar svg:is([data-icon=dashboard],[data-icon=home]){--ic:#7dd3fc}
+  .sidebar svg:is([data-icon=team],[data-icon=teams-manage],[data-icon=expert],[data-icon=student],[data-icon=section-list],[data-icon^=user-]){--ic:#c4b5fd}
+  .sidebar svg:is([data-icon^=file-],[data-icon=feedback],[data-icon=similarity],[data-icon=inbox],[data-icon=submit],[data-icon=add]){--ic:#93c5fd}
+  .sidebar svg:is([data-icon=archive],[data-icon=book]){--ic:#a5b4fc}
+  .sidebar svg:is([data-icon=defense],[data-icon=grading],[data-icon=rubric],[data-icon=hourglass],[data-icon=alarm],[data-icon=milestone],[data-icon=target],[data-icon=verified]){--ic:#86efac}
+  .sidebar svg[data-icon=consultation]{--ic:#fdba74}
+  .sidebar svg[data-icon=announcement]{--ic:#fda4af}
+  .sidebar svg[data-icon=trophy]{--ic:#f9a8d4}
+  .sidebar svg[data-icon=receipt]{--ic:#5eead4}
+  .sidebar svg:is([data-icon=reports],[data-icon=analytics],[data-icon=progress]){--ic:#67e8f9}
+  .sidebar svg[data-icon=sign-out]{--ic:#fca5a5}
+  .sidebar .nav-item:hover > svg{background:color-mix(in srgb,var(--ic) 26%,transparent);color:#fff}
   .sidebar .nav-item:active > svg{transform:scale(.94)}
   .sidebar .nav-item.active > svg{
     background:var(--accent,#c9a82c);color:#18191f;

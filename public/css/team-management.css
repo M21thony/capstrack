@@ -802,9 +802,18 @@
 .tm-hub .todo .tc-diff dt{color:var(--mut);font-weight:600}
 .tm-hub .todo .tc-diff dd{margin:0;color:var(--ink2)}
 .tm-hub .todo .tc-diff dd.nw{color:var(--ink);font-weight:600}
-.tm-hub .todo .k-go{color:var(--info)}
-.tm-hub .todo .k-go_given{color:var(--ok)}
-.tm-hub .todo .k-title_change{color:var(--info)}
+/* Each kind of decision has its own tinted tile, so a long list can be read by colour. */
+.tm-hub .todo .ico{--k:var(--ink2);background:color-mix(in srgb,var(--k) 12%,#fff);color:var(--k)}
+.tm-hub .todo :is(.k-go,.k-title,.k-adviser_title){--k:var(--info)}
+.tm-hub .todo .k-go_given{--k:var(--ok)}
+.tm-hub .todo .k-title_change{--k:var(--violet)}
+.tm-hub .todo .k-paper{--k:var(--cyan)}
+.tm-hub .todo .k-signed{--k:var(--warn)}
+.tm-hub .todo .k-review{--k:#4f46e5}
+.tm-hub .todo .k-leave{--k:#e11d48}
+.tm-hub .todo .k-expert{--k:var(--violet)}
+.tm-hub .todo .k-invite{--k:#ea580c}
+.tm-hub .todo .k-grade{--k:#db2777}
 
 .tm-hub .apps-tools{gap:10px}
 .tm-hub .apps-tools .search{max-width:320px}

@@ -1121,7 +1121,9 @@ function renderCalendar() {
         if (status === 'ended') cls = 'is-ended';
         pill.className = `cal-slot-pill ${cls}`;
         if (status === 'ongoing') {
-          pill.textContent = `🔴 Ongoing · ${TYPE_LABELS[s.type] || 'Consultation'}`;
+          const live = document.createElement('span');
+          live.style.cssText = 'display:inline-block;width:7px;height:7px;border-radius:50%;background:#dc2626;margin-right:5px;vertical-align:1px';
+          pill.replaceChildren(live, `Ongoing · ${TYPE_LABELS[s.type] || 'Consultation'}`);
           pill.style.fontWeight = '700';
         } else if (status === 'ended') {
           pill.textContent = 'Ended ' + hr12(s.start || s.start_time).replace(' ', '');
@@ -1161,8 +1163,8 @@ function renderCalendar() {
 
       if (daySlots.some(s => s.google_event_id)) {
         const gc = document.createElement('div');
-        gc.style.cssText = 'font-size:9px;color:var(--accent);margin-top:2px';
-        gc.textContent   = '📅 GCal';
+        gc.style.cssText = 'font-size:9px;color:var(--accent);margin-top:2px;display:flex;align-items:center;gap:3px';
+        gc.innerHTML     = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>GCal';
         el.appendChild(gc);
       }
     }
