@@ -97,6 +97,12 @@ class ReaderScreensTest extends TestCase
         // Another site, or the annotator itself after a reload, goes to the To do.
         $this->assertSame($todo, $backUrl('https://evil.example/x'));
         $this->assertSame($todo, $backUrl($annotator));
+
+        // Opened from an email: no Referer, and the session's last GET was a JSON fetch.
+        $this->flushHeaders();
+        $this->assertSame($todo, $this->actingAs($this->adviser, 'expert')
+            ->withSession(['_previous' => ['url' => url('/instructor/schedule/slots')]])
+            ->get($annotator)->assertOk()->viewData('context')['backUrl']);
     }
 
     public function test_the_team_sees_the_decision_and_is_sent_to_submit_the_next_revision(): void

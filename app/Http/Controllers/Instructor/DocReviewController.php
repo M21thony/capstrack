@@ -127,7 +127,9 @@ class DocReviewController extends Controller
      */
     private function backUrl(Request $request, $review): string
     {
-        $previous = url()->previous();
+        // The Referer only: with none, url()->previous() falls back to the session's
+        // last GET, which is often a background JSON fetch (/instructor/schedule/slots).
+        $previous = (string) $request->headers->get('referer');
         $here = route('instructor.docreview.annotate', $review->review_id);
 
         // Document Review only connects Google Drive now; files are opened from Teams.
