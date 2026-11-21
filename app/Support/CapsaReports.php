@@ -8,6 +8,7 @@ use App\Models\DefenseSchedule;
 use App\Models\ExpensePost;
 use App\Models\PanelGrade;
 use App\Models\Role;
+use App\Models\Setting;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -120,6 +121,8 @@ class CapsaReports
         $years = StudentSchoolYear::acrossAllTerms()->whereNotNull('school_year')->where('school_year', '!=', '0000')
             ->distinct()->pluck('school_year')
             ->merge(Term::pluck('school_year'))->push($thisYear)
+            // A year Settings lists under "Past school years" opens here too, students or not.
+            ->merge(Setting::where('key', 'like', SectionCatalog::KEY.':%')->pluck('key')->map(fn ($k) => substr($k, strlen(SectionCatalog::KEY) + 1)))
             ->filter()->unique()->sortDesc()->values()->all();
         $year = $pick('year', $years, $thisYear);
 
@@ -130,17 +133,6 @@ class CapsaReports
         $defaultTerm = (string) $terms->firstWhere('is_active', true)?->term_id;
         $term = $pick('term', array_map('strval', array_keys($termOptions)), array_key_exists('term', $query) ? '' : $defaultTerm);
 
-        $programs = $capsa->handledPrograms();
-        $programOptions = ['' => count($programs) > 1 ? 'All programs' : ($programs[0] ?? 'All programs')]
-            + (count($programs) > 1 ? array_combine($programs, $programs) : []);
-        $program = $pick('program', array_keys($programOptions), '');
-
-        $mine = $capsa->sections ?? [];
-        sort($mine);
-        $sectionList = array_values(array_filter($mine, fn ($s) => $program === '' || TeamChecklist::programOf($s) === $program));
-        $sectionOptions = ['' => 'All sections'] + array_combine($sectionList, $sectionList) + [SectionScope::UNASSIGNED => 'Unassigned'];
-        $section = $pick('section', array_map('strval', array_keys($sectionOptions)), '');
-
         $records = StudentSchoolYear::acrossAllTerms()
             ->where('school_year', $year)
             // Same rule as everywhere else: a row with no term belongs to the running one.
@@ -150,12 +142,24 @@ class CapsaReports
             ->with('student')
             ->get()
             ->groupBy('team_id');
+        $candidates = Team::whereIn('team_id', $records->keys())->orderBy('team_name')->get();
 
-        $found = $this->scope->filterTeams(
-            Team::whereIn('team_id', $records->keys())->orderBy('team_name')->get(),
-            $records,
-            $mine,
-        );
+        // The dean (admin) has no sections of their own and sees every one that period.
+        $mine = $capsa->is_admin
+            ? $candidates->map(fn (Team $t) => $this->scope->sectionFor($t, $records->get($t->team_id, collect())))->filter()->unique()->values()->all()
+            : ($capsa->sections ?? []);
+        sort($mine);
+
+        $programs = $capsa->is_admin ? CapstoneExpert::PROGRAMS : $capsa->handledPrograms();
+        $programOptions = ['' => count($programs) > 1 ? 'All programs' : ($programs[0] ?? 'All programs')]
+            + (count($programs) > 1 ? array_combine($programs, $programs) : []);
+        $program = $pick('program', array_keys($programOptions), '');
+
+        $sectionList = array_values(array_filter($mine, fn ($s) => $program === '' || TeamChecklist::programOf($s) === $program));
+        $sectionOptions = ['' => 'All sections'] + array_combine($sectionList, $sectionList) + [SectionScope::UNASSIGNED => 'Unassigned'];
+        $section = $pick('section', array_map('strval', array_keys($sectionOptions)), '');
+
+        $found = $this->scope->filterTeams($candidates, $records, $mine);
 
         $teams = $found['teams']
             ->filter(function (Team $team) use ($found, $section, $program) {
@@ -273,7 +277,8 @@ class CapsaReports
                 'total' => $p->total ?? 0,
                 'overdue' => $p ? $p->items->where('state', MilestoneProgress::OVERDUE)->map(fn ($i) => $i->item->title)->values()->all() : [],
                 'verified' => (bool) $team->is_confirmed,
-                'url' => route('capsa.team_management.show', $team->team_id),
+                // Team Management is the CaPSA's page; the admin reads the report only.
+                'url' => $ctx['capsa']->is_capsa ? route('capsa.team_management.show', $team->team_id) : null,
             ];
         }
 

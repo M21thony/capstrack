@@ -310,7 +310,7 @@
     @endif
 
     <div class="nav-section">Reports</div>
-    @if ($isCapsa)
+    @if ($isCapsa || $isAdmin)
     <a href="{{ route('capsa.reports') }}" class="nav-item {{ str_starts_with($currentRoute ?? '', 'capsa.reports') ? 'active' : '' }}">
       <x-portal-icon name="reports" />
       Reports

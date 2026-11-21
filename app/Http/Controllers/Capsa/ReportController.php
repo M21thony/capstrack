@@ -66,7 +66,8 @@ class ReportController extends Controller
     /** A section on its own: the Team Progress table filtered to it. */
     public function section(Request $request, string $section): RedirectResponse
     {
-        abort_unless($section === SectionScope::UNASSIGNED || in_array($section, auth('expert')->user()->sections ?? [], true), 404);
+        $viewer = auth('expert')->user();
+        abort_unless($viewer->is_admin || $section === SectionScope::UNASSIGNED || in_array($section, $viewer->sections ?? [], true), 404);
 
         return redirect()->route('capsa.reports.show', ['report' => 'progress', 'section' => $section] + $request->except('tab'));
     }

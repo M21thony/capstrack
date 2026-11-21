@@ -937,7 +937,8 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
     fillList(document.getElementById('d-overdue'), d.overdue, '');
     fillList(document.getElementById('d-members'), d.members, 'No members on record');
     fillPairs(document.getElementById('d-experts'), d.experts.map(function (e) { return [e.role, e.name || 'None yet']; }));
-    document.getElementById('d-open').href = d.url;
+    document.getElementById('d-open').href = d.url || '#';
+    document.getElementById('d-open').style.display = d.url ? '' : 'none';
     openDim(drawer);
     drawer.querySelector('[data-close]').focus();
   }

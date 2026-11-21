@@ -310,18 +310,6 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::delete('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'destroy'])->name('deliverables.checks.destroy');
         // One section of the tracker, loaded when its tab is picked.
         Route::get('/sections/{section}/progress', [SectionProgressController::class, 'show'])->name('sections.progress');
-        // Reports: pick a period, open a report as a table, download it as a PDF or Excel sheet.
-        Route::get('/reports', [ReportController::class, 'index'])->name('reports');
-        Route::get('/reports/section/{section}', [ReportController::class, 'section'])->name('reports.section');
-        Route::get('/reports/builder/{table}', [ReportBuilderController::class, 'show'])->name('reports.builder');
-        Route::get('/reports/template/{template}', [ReportBuilderController::class, 'template'])->name('reports.template');
-        Route::get('/reports/data', [ReportBuilderController::class, 'data'])->name('reports.data');
-        Route::post('/reports/tables', [ReportBuilderController::class, 'store'])->name('reports.tables.store');
-        Route::post('/reports/tables/file', [ReportController::class, 'exportTable'])->name('reports.tables.export');
-        Route::put('/reports/tables/{table}', [ReportBuilderController::class, 'update'])->name('reports.tables.update');
-        Route::delete('/reports/tables/{table}', [ReportBuilderController::class, 'destroy'])->name('reports.tables.destroy');
-        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show')
-            ->whereIn('report', array_keys(CapsaReports::REPORTS));
         // The file a team uploaded for a line, opened by the CaPSA/TSA to check it.
         Route::get('/documents/{document}/file', [DocumentFileController::class, 'show'])->name('documents.file');
         Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
@@ -373,6 +361,22 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::post('/students', [CapsaStudentController::class, 'store'])->name('students.store');
         Route::patch('/students/{student}', [CapsaStudentController::class, 'update'])->name('students.update');
         Route::delete('/students/{student}', [CapsaStudentController::class, 'destroy'])->name('students.destroy');
+    });
+
+    // Reports: pick a period, open a report as a table, download it as a PDF or Excel sheet.
+    // The admin (dean) opens them too, across every section - see CapsaReports::context.
+    Route::middleware('expert.staff')->group(function () {
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+        Route::get('/reports/section/{section}', [ReportController::class, 'section'])->name('reports.section');
+        Route::get('/reports/builder/{table}', [ReportBuilderController::class, 'show'])->name('reports.builder');
+        Route::get('/reports/template/{template}', [ReportBuilderController::class, 'template'])->name('reports.template');
+        Route::get('/reports/data', [ReportBuilderController::class, 'data'])->name('reports.data');
+        Route::post('/reports/tables', [ReportBuilderController::class, 'store'])->name('reports.tables.store');
+        Route::post('/reports/tables/file', [ReportController::class, 'exportTable'])->name('reports.tables.export');
+        Route::put('/reports/tables/{table}', [ReportBuilderController::class, 'update'])->name('reports.tables.update');
+        Route::delete('/reports/tables/{table}', [ReportBuilderController::class, 'destroy'])->name('reports.tables.destroy');
+        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show')
+            ->whereIn('report', array_keys(CapsaReports::REPORTS));
     });
 
     Route::middleware('expert.capsa')->group($pagesBothRolesOpen);

@@ -211,7 +211,7 @@
             <span class="st-meta">{{ count($past) }} {{ Str::plural('school year', count($past)) }}</span>
           </header>
           <table class="table st-table">
-            <thead><tr><th style="width:16%">School year</th><th style="width:16%">Semesters</th><th>Sections</th><th style="width:10%">Total</th></tr></thead>
+            <thead><tr><th style="width:16%">School year</th><th style="width:16%">Semesters</th><th>Sections</th><th style="width:10%">Total</th><th style="width:90px"><span class="tk-vh">Actions</span></th></tr></thead>
             <tbody>
               @foreach ($past as $y => $row)
                 @php
@@ -224,6 +224,7 @@
                   <td>{{ $row['semesters'] ?: '—' }}</td>
                   <td class="st-secs">{{ collect($runs)->map(fn ($l, $k) => str_replace('-', ' ', $k).$l[0].(count($l) > 1 ? '–'.substr($k, -1).end($l) : ''))->implode(' · ') ?: '—' }}</td>
                   <td class="st-total">{{ count($row['sections']) }}</td>
+                  <td><a class="tk-btn tk-btn-sm tk-btn-dark" href="{{ route('capsa.reports', ['year' => $y]) }}">View</a></td>
                 </tr>
               @endforeach
             </tbody>
