@@ -258,15 +258,41 @@ function App() {
     return () => clearTimeout(timer);
   }, [comments, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Undo and Redo: the remarks as they were before each change the reviewer
+  // made (add, edit, redraw, delete). Going back saves like any other change.
+  const [history, setHistory] = useState({ past: [], future: [] });
+  const editComments = (update) => {
+    const before = commentsRef.current;
+    setHistory((h) => ({ past: [...h.past.slice(-99), before], future: [] }));
+    setComments(update);
+  };
+  // An older list may still hold an id a save has since replaced.
+  const currentIds = (list) => list.map((c) => {
+    let id = c.id;
+    while (idMap.current[id] != null) id = idMap.current[id];
+    return id === c.id ? c : { ...c, id };
+  });
+  const stepHistory = (back) => {
+    const { past, future } = history;
+    const from = back ? past : future;
+    if (!from.length) return;
+    const now = commentsRef.current;
+    setHistory(back
+      ? { past: past.slice(0, -1), future: [...future, now] }
+      : { past: [...past, now], future: future.slice(0, -1) });
+    setComments(currentIds(from[from.length - 1]));
+    setSelectedId(null);
+  };
+
   const deleteComment = (id) => {
     const list = commentsRef.current;
     const at = list.findIndex((c) => c.id === id);
     if (at < 0) return;
     const removed = list[at];
-    setComments(list.filter((c) => c.id !== id));
+    editComments(list.filter((c) => c.id !== id));
     if (selectedId === id) setSelectedId(null);
     showToast("Remark deleted.", {
-      undo: () => setComments((prev) => { const next = [...prev]; next.splice(at, 0, removed); return next; }),
+      undo: () => editComments((prev) => { const next = [...prev]; next.splice(at, 0, removed); return next; }),
     });
   };
 
@@ -588,7 +614,11 @@ function App() {
         <PDFChecker
           pdfUrl={pdfUrl}
           comments={comments}
-          setComments={setComments}
+          setComments={editComments}
+          onUndo={() => stepHistory(true)}
+          onRedo={() => stepHistory(false)}
+          canUndo={history.past.length > 0}
+          canRedo={history.future.length > 0}
           generalComments={generalComments}
           onAddGeneral={addGeneral}
           onDeleteGeneral={deleteGeneral}

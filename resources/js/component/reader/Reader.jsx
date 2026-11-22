@@ -60,6 +60,8 @@ const PATHS = {
   hand: (<><path d="M12 3v18" /><path d="M3 12h18" /><polyline points="9 6 12 3 15 6" /><polyline points="9 18 12 21 15 18" /><polyline points="6 9 3 12 6 15" /><polyline points="18 9 21 12 18 15" /></>),
   chat: <path d="M4 5h16v11H9l-5 4Z" />,
   pages: (<><rect x="5" y="3" width="14" height="18" rx="1.5" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="9" y1="12" x2="15" y2="12" /></>),
+  undo: (<><polyline points="9 14 4 9 9 4" /><path d="M4 9h11a5 5 0 0 1 0 10h-4" /></>),
+  redo: (<><polyline points="15 14 20 9 15 4" /><path d="M20 9H9a5 5 0 0 0 0 10h4" /></>),
   list: (<><line x1="9" y1="6" x2="20" y2="6" /><line x1="9" y1="12" x2="20" y2="12" /><line x1="9" y1="18" x2="20" y2="18" /><line x1="4" y1="6" x2="4.1" y2="6" /><line x1="4" y1="12" x2="4.1" y2="12" /><line x1="4" y1="18" x2="4.1" y2="18" /></>),
 };
 export function Icon({ name }) {
@@ -775,10 +777,17 @@ const MODES = [
 
 export function ReaderTools({
   currentPage, numPages, zoom, onGo, onZoom, mode = null, onMode = null, shapes = false, before = null, beforeLabel = "", onBefore = null,
-  real = null, onReal = null,
+  real = null, onReal = null, onUndo = null, onRedo = null, canUndo = false, canRedo = false,
 }) {
   return (
     <div className="rr-tools" role="toolbar" aria-label="Pages">
+      {onUndo && (
+        <>
+          <button type="button" className="rr-btn icon ghost" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={onUndo}><Icon name="undo" /></button>
+          <button type="button" className="rr-btn icon ghost" aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!canRedo} onClick={onRedo}><Icon name="redo" /></button>
+          <span className="rr-sep" aria-hidden="true" />
+        </>
+      )}
       {onMode && (
         <>
           {MODES.filter(([m]) => shapes || m !== "shape").map(([m, label, key]) => (

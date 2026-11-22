@@ -745,6 +745,7 @@ return [
             ['Export PDF', 'Downloads this document **with your remarks** on it.', '.an-bar .rr-btn.ghost:has(+ .rr-btn.gold)'],
             ['Apply Changes', 'Shows a **summary first**. With **no remarks** the paper is **approved**; with remarks the team is asked for a **revision**. Nothing goes out **until you confirm** there.', '.an-bar .rr-btn.gold'],
             ['Pages', '**Click a page** to jump to it.', '.rr-strip'],
+            ['Undo and Redo', 'Takes back your **last remark change**, or puts it back. **Ctrl+Z** and **Ctrl+Y** work too.', '.rr-tools [aria-label="Undo"]'],
             ['Select text', '**Select words** on the page, then write your remark and pick its kind: **Must fix, Format, Suggestion, Question or Good**.', '.rr-tools [aria-label="Select text"]'],
             ['Box', '**Drag over a figure** to leave a remark on it.', '.rr-tools [aria-label="Draw a box over a figure"]'],
             ['Pin', '**Click one spot** to leave a remark there.', '.rr-tools [aria-label="Pin one spot"]'],
@@ -752,8 +753,8 @@ return [
             ['Change page', 'Moves one page **up or down**.', '.rr-tools [aria-label="Next page"]'],
             ['Zoom', 'Makes the page **bigger or smaller**. The last button **fits it to the width**.', '.rr-tools [aria-label="Zoom in"]'],
             ['Remarks', '**Every remark** you left. Click one to go to it. Use **+ General remark** for one about the whole document.', '.rr-tab:nth-child(1)'],
-            ['Figures', '**Every figure** found in the paper. Press **Mark checked** on each one, so **none is missed**.', '.rr-tab:nth-child(2)'],
-            ['What changed', 'On a later version, your **earlier remarks** and the changes. Press **Fixed** or **Not yet** on each one.', '.rr-tab:nth-child(3)'],
+            ['Figures', '**Every figure** found in the paper. Press **Mark checked** on each one, so **none is missed**.', '.rr-tab[data-tab="figures"]'],
+            ['What changed', 'On a later version, your **earlier remarks** and the changes. Press **Fixed** or **Not yet** on each one.', '.rr-tab[data-tab="changes"]'],
         ],
         'steps' => [
             ['Select words, or drag over a figure', 'to add a remark there.'],

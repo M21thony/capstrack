@@ -168,6 +168,7 @@ function PDFChecker({
   diff = { status: "idle" }, onFocusChange,
   startMode = "text", startTab = "remarks", checkedFigures = [], onToggleFigure = () => {},
   revisionStatus = {}, onRevision = () => {}, compareOpen = false, onFigures = () => {}, diagrams = null,
+  onUndo = null, onRedo = null, canUndo = false, canRedo = false,
 }) {
   // A diagram sent as itself has no PDF: its diagram pages are all there is.
   const [numPages, setNumPages] = useState(pdfUrl ? null : 0);
@@ -196,7 +197,8 @@ function PDFChecker({
 
   // Changes since an earlier version are only drawn, never kept as remarks.
   // Opening one also moves the earlier version, when it is open beside this.
-  const [tab, setTab] = useState(startTab);
+  // A diagram sent as itself has no figure captions to list, so no Figures tab.
+  const [tab, setTab] = useState(!pdfUrl && startTab === "figures" ? "remarks" : startTab);
   const [changeId, setChangeId] = useState(null);
   const marks = showChanges && diff.status === "ready" ? diff.marks : {};
   // Diagrams are pictures, so the words diff cannot see them change: they are
@@ -258,13 +260,13 @@ function PDFChecker({
   const figuresDone = figures.filter((f) => checkedFigures.includes(f.label) || comments.some((c) => c.figure_label === f.label)).length;
   const tabList = [
     ["remarks", "Remarks"],
-    ["figures", figures.length ? `Figures ${figuresDone}/${figures.length}` : "Figures"],
+    ...(pdfUrl ? [["figures", figures.length ? `Figures ${figuresDone}/${figures.length}` : "Figures"]] : []),
     ...(base ? [["changes", toCheck ? `What changed · ${toCheck} to check` : "What changed"]] : []),
   ];
   const tabs = (
     <div className="rr-tabs" role="tablist" aria-label="Side panel">
       {tabList.map(([k, label]) => (
-        <button key={k} type="button" role="tab" className="rr-tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>
+        <button key={k} type="button" role="tab" className="rr-tab" data-tab={k} aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>
       ))}
     </div>
   );
@@ -368,11 +370,19 @@ function PDFChecker({
   };
 
   // T, B, P and S switch how the page is marked, H drags it around; V flips diagrams to the earlier version; Esc finishes adding boxes.
+  // Ctrl+Z undoes a remark change, Ctrl+Y or Ctrl+Shift+Z redoes it; typing in a box keeps its own undo.
   useEffect(() => {
     const onKey = (e) => {
       if (document.querySelector("dialog[open]")) return;
       if (e.key === "Escape" && adding) { setAdding(false); setPopPos(null); return; }
-      if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.("input, textarea, select")) return;
+      if (e.target.closest?.("input, textarea, select")) return;
+      const k = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (k === "z" || k === "y") && onUndo) {
+        e.preventDefault();
+        (k === "y" || e.shiftKey ? onRedo : onUndo)();
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key.toLowerCase() === "v" && hasBefore) { setBeforeView((v) => !v); return; }
       const next = { t: "text", b: "box", p: "pin", s: "shape", h: "hand" }[e.key.toLowerCase()];
       if (next) changeMode(next);
@@ -751,7 +761,7 @@ function PDFChecker({
 
   return (
     <div className="rr-work">
-      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} firstDiagramPage={firstDiagramPage} pdf={pdf} />
+      <PageStrip numPages={totalPages} currentPage={col.currentPage} counts={counts} onGo={col.goToPage} firstDiagramPage={pdfUrl ? firstDiagramPage : 1} pdf={pdf} />
 
       <section className="rr-viewer" aria-label="Document">
         <div className="rr-hint">{showChanges && figureDiff.status === "loading" ? figureDiff.note || "Comparing the figures…" : hint}</div>
@@ -939,7 +949,8 @@ function PDFChecker({
         </div>
         <ReaderTools currentPage={col.currentPage} numPages={totalPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} mode={mode} onMode={changeMode} shapes={drawings.pages.length > 0}
           before={hasBefore ? beforeView : null} beforeLabel={base?.round || "Earlier version"} onBefore={() => setBeforeView((v) => !v)}
-          real={canReal ? realSize : null} onReal={() => { setRealSize((v) => !v); requestAnimationFrame(() => col.goToPage(col.currentPage, false)); }} />
+          real={canReal ? realSize : null} onReal={() => { setRealSize((v) => !v); requestAnimationFrame(() => col.goToPage(col.currentPage, false)); }}
+          onUndo={onUndo} onRedo={onRedo} canUndo={canUndo} canRedo={canRedo} />
       </section>
 
       {base && tab === "changes" ? (
