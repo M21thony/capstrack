@@ -534,7 +534,7 @@ class DefenseBoard
      * for the students booking them.
      *
      * @param  iterable<int>  $expertIds
-     * @return list<array{expert_id: int, date: string, start: string, end: string, stage: string, team: string, venue: string}>
+     * @return list<array{defense_id: int, expert_id: int, date: string, start: string, end: string, stage: string, team: string, venue: string}>
      */
     public static function dutiesOf(iterable $expertIds): array
     {
@@ -543,6 +543,7 @@ class DefenseBoard
             ->with('schedule.team')
             ->get()
             ->map(fn (DefensePanel $p) => [
+                'defense_id' => (int) $p->defense_id,
                 'expert_id' => (int) $p->expert_id,
                 'date' => $p->schedule->schedule_date->toDateString(),
                 'start' => $p->schedule->schedule_date->format('H:i'),
@@ -550,6 +551,30 @@ class DefenseBoard
                 'stage' => (string) $p->schedule->defense_type,
                 'team' => (string) ($p->schedule->team->team_name ?? ''),
                 'venue' => (string) $p->schedule->venue,
+            ])->values()->all();
+    }
+
+    /**
+     * A team's own upcoming defenses, shaped like dutiesOf() rows.
+     *
+     * @return list<array{defense_id: int, date: string, start: string, end: string, stage: string, venue: string}>
+     */
+    public static function ofTeam(?int $teamId): array
+    {
+        if (! $teamId) {
+            return [];
+        }
+
+        return DefenseSchedule::where('team_id', $teamId)
+            ->whereDate('schedule_date', '>=', today())
+            ->get()
+            ->map(fn (DefenseSchedule $s) => [
+                'defense_id' => (int) $s->defense_id,
+                'date' => $s->schedule_date->toDateString(),
+                'start' => $s->schedule_date->format('H:i'),
+                'end' => self::endOf($s)->format('H:i'),
+                'stage' => (string) $s->defense_type,
+                'venue' => (string) $s->venue,
             ])->values()->all();
     }
 

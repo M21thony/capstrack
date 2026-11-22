@@ -49,4 +49,38 @@ class ConsultationDefenseClashTest extends TestCase
 
         $book($after)->assertOk()->assertJson(['success' => true]);
     }
+
+    public function test_the_teams_own_defense_shows_once_and_blocks_booking_over_it(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create(['email' => 'own@my.cspc.edu.ph']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Own', 'team_status' => 'Active']);
+        DB::table('student_s_y')->insert(['student_id' => $student->student_id, 'team_id' => $team, 'program' => 'BSCS', 'student_status' => 'Active']);
+
+        $expertId = DB::table('capstone_experts')->insertGetId([
+            'email' => 'adviser@gmail.com', 'first_name' => 'Ada', 'last_name' => 'Adviser',
+            'is_admin' => false, 'approved_status' => true, 'created_at' => now(),
+        ]);
+        $slot = DB::table('consultation_schedule')->insertGetId([
+            'expert_id' => $expertId, 'available_date' => 'Tuesday', 'start_time' => '09:00:00', 'end_time' => '10:00:00',
+            'consultation_limit' => 1, 'is_available' => true, 'recur' => 'weekly', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        // The team's own defense that Tuesday, with its adviser on the panel.
+        $tuesday = Carbon::parse('next Tuesday');
+        $defense = DefenseSchedule::create([
+            'team_id' => $team, 'defense_type' => 'Final Oral Defense', 'venue' => 'CS Lab',
+            'schedule_date' => $tuesday->copy()->setTime(9, 0), 'end_date' => $tuesday->copy()->setTime(11, 0),
+        ]);
+        DefensePanel::create(['defense_id' => $defense->defense_id, 'expert_id' => $expertId, 'panel_role' => 'Panel Member 1', 'created_at' => now()]);
+
+        $times = app(\App\Support\ConsultationBoard::class)->forStudent($student)['defenseTimes'];
+        $this->assertCount(1, $times);
+        $this->assertSame(['date' => $tuesday->toDateString(), 'start' => '09:00', 'end' => '11:00', 'stage' => 'Final Oral Defense', 'venue' => 'CS Lab', 'own' => true], $times[0]);
+
+        // The expert-clash check answers first here, so take the adviser off the panel to reach the team's own.
+        DefensePanel::where('defense_id', $defense->defense_id)->delete();
+        $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
+            'schedule_id' => $slot, 'session_date' => $tuesday->toDateString(),
+        ])->assertStatus(422)->assertJson(['success' => false, 'message' => 'Your team has a defense at that time. Pick another time.']);
+    }
 }

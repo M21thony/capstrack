@@ -1020,9 +1020,9 @@ function slotsOn(expertId, dateKey) {
     return { slot: s, busy: busy, taken: busy || !s.is_available || full.has(s.schedule_id + '|' + dateKey) };
   }).sort(function (a, b) { return String(a.slot.start_time).localeCompare(String(b.slot.start_time)); });
 }
-/** When this expert sits on a defense panel that day. */
+/** When this expert sits on a defense panel that day, or the team has its own defense. */
 function dutiesOn(expertId, dateKey) {
-  return duties.filter(function (d) { return Number(d.expert_id) === Number(expertId) && d.date === dateKey; });
+  return duties.filter(function (d) { return (d.own || Number(d.expert_id) === Number(expertId)) && d.date === dateKey; });
 }
 function bookingOn(expertId, dateKey) {
   return upcoming.concat(recent).some(function (b) { return b.session_date === dateKey && Number(b.expert_id) === Number(expertId); });
@@ -1193,7 +1193,7 @@ function renderBook() {
     else if (open === 0) { cls += ' is-full'; cap = 'Full'; aria = 'fully booked'; }
     else if (live) { cls += ' is-locked'; cap = open + ' open'; capShort = String(open); aria = open + ' open, book after your current session'; }
     else { cls += ' is-avail'; cap = open + ' open'; capShort = String(open); disabled = false; aria = open + ' open'; }
-    if (off >= 0 && dutiesOn(ex.expert_id, k).length) { cls += ' is-defense'; aria += (aria ? ', ' : '') + 'at a defense'; }
+    if (off >= 0 && dutiesOn(ex.expert_id, k).length) { cls += ' is-defense'; aria += (aria ? ', ' : '') + (dutiesOn(ex.expert_id, k).some(function (d) { return d.own; }) ? 'your defense' : 'at a defense'); }
     if (off === 0) { cls += ' is-today'; if (!cap) { cap = 'Today'; } }
     cells.push('<button type="button" class="' + cls + '" data-xh="date" data-key="' + k + '"' + (disabled ? ' disabled' : '')
       + ' aria-pressed="' + sel + '" aria-label="' + longDate(k) + (aria ? ', ' + aria : '') + '">'
@@ -1204,7 +1204,7 @@ function renderBook() {
   if (S.date && !live) {
     var ts = slotsOn(ex.expert_id, S.date);
     var away = dutiesOn(ex.expert_id, S.date).map(function (d) {
-      return '<div class="xh-duty"><b>At a defense</b><span>' + fmtT(d.start) + ' – ' + fmtT(d.end) + (d.venue ? ' · ' + esc(d.venue) : '') + '</span></div>';
+      return '<div class="xh-duty"><b>' + (d.own ? 'Your ' + esc(d.stage) : 'At a defense') + '</b><span>' + fmtT(d.start) + ' – ' + fmtT(d.end) + (d.venue ? ' · ' + esc(d.venue) : '') + '</span></div>';
     }).join('');
     times = '<h3>' + longDate(S.date) + '</h3>' + away + (ts.length ? ts.map(function (x) {
       var on = S.slotId === x.slot.schedule_id;

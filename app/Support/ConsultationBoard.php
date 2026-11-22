@@ -179,8 +179,12 @@ class ConsultationBoard
             ->mapWithKeys(fn ($a) => [$a->expert_id => $a->windowForClient()]);
 
         // When each expert sits on a defense panel: when and where, not whose.
+        // The team's own defenses ride along once, marked own, on every expert.
+        $own = DefenseBoard::ofTeam($teamId);
         $defenseTimes = collect(DefenseBoard::dutiesOf($experts->pluck('expert_id')))
+            ->reject(fn ($d) => in_array($d['defense_id'], array_column($own, 'defense_id'), true))
             ->map(fn ($d) => Arr::only($d, ['expert_id', 'date', 'start', 'end', 'venue']))
+            ->merge(collect($own)->map(fn ($d) => Arr::only($d, ['date', 'start', 'end', 'stage', 'venue']) + ['own' => true]))
             ->values();
 
         return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'bookedExpertIds', 'bookingWindows', 'defenseTimes');

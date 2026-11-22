@@ -264,6 +264,10 @@ class StudentConsultationController extends Controller
             return response()->json(['success' => false, 'message' => 'Your expert is at a defense at that time. Pick another time.'], 422);
         }
 
+        if (DefenseBoard::clashes(DefenseBoard::ofTeam($team?->team_id), Carbon::parse($sessionDate)->toDateString(), $slot->start_time, $slot->end_time)) {
+            return response()->json(['success' => false, 'message' => 'Your team has a defense at that time. Pick another time.'], 422);
+        }
+
         // Every booking gets its own event on the expert's Google Calendar, on
         // the date booked. Open slots are never put there, so the expert's
         // calendar shows booked consultations and nothing else.

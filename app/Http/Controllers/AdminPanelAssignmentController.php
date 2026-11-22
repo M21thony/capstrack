@@ -1177,8 +1177,10 @@ class AdminPanelAssignmentController extends Controller
         $byExpert = $connected->keyBy('expert_id');
         $endDate = DefenseBoard::endOf($schedule);
 
+        // The team is invited on one panelist's copy only, so students don't get it once per panelist.
+        $teamInvited = false;
         foreach ($connected as $panel) {
-            $attendees = collect($memberEmails)->merge($byExpert->except([$panel->expert_id])->pluck('expert.email')->filter())->unique()->values()->all();
+            $attendees = collect($teamInvited ? [] : $memberEmails)->merge($byExpert->except([$panel->expert_id])->pluck('expert.email')->filter())->unique()->values()->all();
 
             try {
                 if ($panel->google_event_id) {
@@ -1195,6 +1197,7 @@ class AdminPanelAssignmentController extends Controller
                     venue: $schedule->venue,
                     attendeeEmails: $attendees,
                 )]);
+                $teamInvited = true;
             } catch (\Exception $e) {
                 Log::warning('Defense panel Google Calendar sync failed', ['defense_id' => $schedule->defense_id, 'expert_id' => $panel->expert_id, 'error' => $e->getMessage()]);
             }
