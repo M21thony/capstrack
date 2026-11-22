@@ -1,7 +1,7 @@
 # CapsTrack
 
 CapsTrack is the capstone tracking system of the College of Computer Studies, CSPC.
-Students, experts (advisers and panel), the CaPSA/TSA and the admin use it for teams,
+Students, experts (capstone subject advisers, capstone adviser, consultant), the CaPSA/TSA and the admin use it for teams,
 document submissions, title duplication checks, defense schedules, grading and the
 capstone archive.
 
