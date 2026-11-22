@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\RunDuplicationCheck;
 use App\Models\ArchivedDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
@@ -11,7 +12,6 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TitleChangeRequest;
 use App\Services\Notifier;
-use App\Services\OllamaSSHClient;
 use App\Services\RecipientResolver;
 use App\Services\SimilarityService;
 use App\Support\ProjectTags;
@@ -24,7 +24,7 @@ use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -81,6 +81,11 @@ class PreProposalController extends Controller
             // The scan this student is working on: their own latest, until it
             // is saved as a pre-proposal. See openScan().
             'lastCheck' => $team ? $this->openScan($request) : null,
+            // A check still waiting its turn, or one that failed since: the page
+            // picks it up again on load. A finished one is lastCheck above, which
+            // only a team has.
+            'checkWaiting' => ($state = Cache::get(RunDuplicationCheck::key($request->user()->student_id)))
+                && ! (($state['body']['success'] ?? false) && $team),
             'reviewStarted' => (bool) $team && $this->reviewStarted($team),
             // After the Pre-proposal Defense: a title passed with revision can
             // be reworded until the final title form is in; a team sent back
@@ -208,10 +213,14 @@ class PreProposalController extends Controller
         ];
     }
 
-    // AJAX: upload a PDF, run the same check DuplicationController::check()
-    // runs, and return the extracted concepts + report so the page can fill
-    // the pre-proposal fields in place - no navigation, no retyping. Which
-    // slot this becomes is only decided later, at store() time.
+    // AJAX: upload a PDF and queue the check. Which slot this becomes is only
+    // decided later, at store() time.
+    //
+    // The check itself runs in RunDuplicationCheck on the "checks" queue, so
+    // this answers "waiting" at once and the page asks checkStatus() until the
+    // result is in. Where the queue runs jobs in place (tests, QUEUE_CONNECTION
+    // =sync) the check has already finished by the time this answers, and the
+    // result comes straight back.
     public function runCheck(Request $request): JsonResponse
     {
         // No team needed to run a check. The result is recorded against the
@@ -223,160 +232,69 @@ class PreProposalController extends Controller
             'document' => 'required|file|mimes:pdf|max:20480',
         ]);
 
-        // Matches OllamaSSHClient's own curl --max-time (300s) - these two
-        // must move together, since PHP's own limit would otherwise fatal
-        // the request before curl's timeout ever gets a chance to matter.
+        $studentSy = StudentSchoolYear::where('student_id', $request->user()->student_id)->first();
+
+        if (! $studentSy) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your enrolment record is missing, so the result cannot be saved. Tell your CaPSA/TSA.',
+            ], 422);
+        }
+
+        // Only matters when the check runs in place: OllamaSSHClient's own
+        // curl --max-time is 300s, and PHP's limit would fatal first.
         set_time_limit(300);
 
-        try {
-            app(OllamaSSHClient::class)->warmup();
+        $token = (string) Str::uuid();
 
-            $pdfText = $this->service->extractPdfText($request->file('document')->getRealPath());
+        Cache::put(RunDuplicationCheck::key($request->user()->student_id), [
+            'token' => $token,
+            'status' => 'waiting',
+            'file_name' => $request->file('document')->getClientOriginalName(),
+        ], now()->addDay());
 
-            if (empty(trim($pdfText))) {
-                throw new \Exception('Could not extract text from this PDF. Make sure it is not a scanned image without a text layer.');
-            }
+        RunDuplicationCheck::dispatch(
+            $request->user()->student_id,
+            $studentSy->s_y_id,
+            $studentSy->team_id,
+            $request->file('document')->store('duplication-checks'),
+            $token,
+        );
 
-            $gate = $this->service->isPreProposal($pdfText);
-
-            if (! ($gate['is_pre_proposal'] ?? true)) {
-                $reason = $gate['reason'] ?? 'it does not match the structure of a capstone pre-proposal';
-                throw new \Exception("This doesn't look like a pre-proposal document ({$reason}). Please upload your capstone pre-proposal.");
-            }
-
-            $concepts = $this->service->extractKeyConcepts($pdfText);
-            $matches = $this->service->findSimilarDocuments(
-                $concepts, 10, StudentSchoolYear::where('student_id', $request->user()->student_id)->value('team_id'), $pdfText
-            );
-            $instructors = $this->service->suggestInstructors($concepts);
-
-            // Only a judged match may set the verdict. An unassessed one
-            // carries a demoted embedding number, which is an ordering
-            // device, not a similarity.
-            $topScore = collect($matches)
-                ->first(fn ($m) => $m['assessed'] ?? true)['score'] ?? 0;
-            $verdict = $topScore >= 65 ? 'High Similarity'
-                    : ($topScore >= 55 ? 'Moderate Similarity' : 'Passed');
-
-            $formattedMatches = array_map(fn ($m) => [
-                'archived_id' => $m['document']->archived_id,
-                'title' => $m['document']->title,
-                'abstract' => $m['document']->abstract,
-                // Who wrote it. A team told their topic is close to something
-                // already done asks whose work it was first, and the report
-                // named a year and a programme and stopped there.
-                'authors' => $m['document']->authors,
-                'academic_year' => $m['document']->academic_year,
-                'program' => $m['document']->program,
-                // Set when the match is another team's title recommended this year, not an archive study.
-                'recommended' => $m['recommended'] ?? null,
-                'pre_proposal_id' => $m['pre_proposal_id'] ?? null,
-                'score' => $m['score'],
-                // The numbers the score is worked out from, for the match page.
-                'embedding_score' => $m['embedding_score'] ?? null,
-                'judge_score' => $m['judge_score'] ?? null,
-                // The judge's three answers that number is worked out from.
-                'answers' => $m['answers'] ?? null,
-                'exact_score' => $m['exact_score'] ?? null,
-                'reason' => $m['reason'],
-                'similarities' => $m['similarities'] ?? '',
-                'differences' => $m['differences'] ?? '',
-                'suggestion' => $m['suggestion'] ?? '',
-                'is_relevant' => $m['is_relevant'] ?? true,
-                'assessed' => $m['assessed'] ?? true,
-                'matched_on' => $m['matched_on'] ?? [],
-            ], $matches);
-
-            $studentSy = StudentSchoolYear::where('student_id', $request->user()->student_id)->first();
-
-            if (! $studentSy) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Your enrolment record is missing, so the result cannot be saved. Tell your CaPSA/TSA.',
-                ], 422);
-            }
-
-            $permanentPath = $request->file('document')->store('duplication-checks');
-
-            $check = DuplicationCheck::create([
-                'student_s_y_id' => $studentSy->s_y_id,
-                'document_path' => $permanentPath,
-                'concepts' => $concepts,
-                'top_score' => $topScore,
-                'verdict' => $verdict,
-                'matches' => $formattedMatches,
-                'instructors_suggested' => $instructors,
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'duplication_check_id' => $check->id,
-                'concepts' => $concepts,
-                'top_score' => $topScore,
-                'verdict' => $verdict,
-                'matches' => $formattedMatches,
-                'instructors' => $instructors,
-                // Words from the pre-proposal itself (title/topic/keywords)
-                // worth highlighting inside a matched abstract - a literal,
-                // student-verifiable signal instead of another AI sentence.
-                'highlight_words' => $this->service->extractHighlightWords($concepts),
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('Pre-proposal duplication check failed', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            // A student was being shown the raw failure - "Cannot connect to
-            // 127.0.0.1:22. Error 10061..." - which tells them nothing and
-            // reads like they broke something. The checker being unreachable
-            // is not their problem and not their mistake, so say that, and
-            // answer 503 rather than 500: nothing here is wrong, the machine
-            // that does the checking is simply not answering.
-            if ($this->checkerIsUnreachable($e)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'The similarity checker is not responding right now. '
-                        .'Nothing you uploaded was lost - try again in a few minutes, '
-                        .'and tell your CaPSA/TSA if it keeps happening.',
-                ], 503);
-            }
-
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
-        }
+        return $this->checkStatus($request);
     }
 
     /**
-     * Whether a failed check means the machine that does the checking is not
-     * answering, rather than something about the document.
-     *
-     * The messages worth keeping are the ones thrown deliberately above - a
-     * PDF with no text layer, a document that is not a pre-proposal. Those
-     * tell a student what to do. Everything below is the SSH tunnel or Ollama
-     * being unavailable, and none of it means anything to them.
+     * GET /pre-proposal/duplication-checks/current - where this student's
+     * check stands: still waiting, or the answer runCheck() used to give.
      */
-    private function checkerIsUnreachable(\Throwable $e): bool
+    public function checkStatus(Request $request): JsonResponse
     {
-        $signatures = [
-            'Cannot connect to',
-            'Connection refused',
-            'Empty response from Ollama',
-            'Failed to decode Ollama JSON',
-            'Failed to get embedding',
-            'Unable to connect',
-            'SSH',
-            'cURL',
-            'timed out',
-            'Operation timed out',
-        ];
+        $key = RunDuplicationCheck::key($request->user()->student_id);
+        $state = Cache::get($key);
 
-        foreach ($signatures as $signature) {
-            if (stripos($e->getMessage(), $signature) !== false) {
-                return true;
-            }
+        if (! $state) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The check did not finish. Try again - nothing you uploaded was lost.',
+            ], 404);
         }
 
-        return false;
+        if ($state['status'] === 'waiting') {
+            return response()->json(['success' => true, 'status' => 'waiting']);
+        }
+
+        Cache::forget($key);
+
+        return response()->json($state['body'] + ['file_name' => $state['file_name'] ?? null], $state['code']);
+    }
+
+    /** DELETE /pre-proposal/duplication-checks/current - Cancel. The job sees it gone and drops its work. */
+    public function cancelCheck(Request $request): JsonResponse
+    {
+        Cache::forget(RunDuplicationCheck::key($request->user()->student_id));
+
+        return response()->json(['success' => true]);
     }
 
     /**

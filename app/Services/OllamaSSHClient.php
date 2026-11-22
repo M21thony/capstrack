@@ -119,7 +119,7 @@ class OllamaSSHClient
     private function runCurl(string $jsonPayload, string $endpoint): string
     {
         if ($url = $this->directUrl()) {
-            $output = Http::timeout(300)->retry(2, 1000, throw: false)
+            $output = Http::timeout(config('services.ollama.timeout', 300))->retry(2, 1000, throw: false)
                 ->withBody($jsonPayload, 'application/json')
                 ->post($url.$endpoint)
                 ->body();
@@ -345,7 +345,7 @@ class OllamaSSHClient
 
         if ($url = $this->directUrl()) {
             $responses = Http::pool(fn (Pool $pool) => array_map(
-                fn ($payload) => $pool->timeout(300)->post($url.'/api/generate', $payload),
+                fn ($payload) => $pool->timeout(config('services.ollama.timeout', 300))->post($url.'/api/generate', $payload),
                 $payloads
             ));
 

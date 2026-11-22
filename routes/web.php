@@ -539,6 +539,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/duplication-checks', [DuplicationController::class, 'check'])->name('duplication-checks.store');
 
     Route::post('/pre-proposal/duplication-checks', [PreProposalController::class, 'runCheck'])->name('student.pre-proposal.check');
+    // Where this student's queued check stands, and Cancel. Before the {check} routes, which would take "current" as an id.
+    Route::get('/pre-proposal/duplication-checks/current', [PreProposalController::class, 'checkStatus'])->name('student.pre-proposal.check.status');
+    Route::delete('/pre-proposal/duplication-checks/current', [PreProposalController::class, 'cancelCheck'])->name('student.pre-proposal.check.cancel');
     Route::delete('/pre-proposal/duplication-checks/{check}', [PreProposalController::class, 'destroyCheck'])->name('student.pre-proposal.check.destroy');
     // A check's result read as pages rather than a modal: the whole report for
     // one title, and one archived capstone it turned up. Keyed off the check

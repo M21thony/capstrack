@@ -57,6 +57,10 @@ return [
         // tunnel below to the Windows laptop, as before.
         'url' => env('OLLAMA_URL'),
 
+        // Seconds one call to Ollama may take over the web. A server without a
+        // GPU needs far longer than 300 - see RunDuplicationCheck.
+        'timeout' => (int) env('OLLAMA_TIMEOUT', 300),
+
         'model' => env('OLLAMA_MODEL', 'qwen2.5:7B'),
         'embed_model' => env('OLLAMA_EMBED_MODEL'),
 

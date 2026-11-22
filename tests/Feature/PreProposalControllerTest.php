@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\PreProposalController;
+use App\Jobs\RunDuplicationCheck;
 use App\Models\ArchivedDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
@@ -15,6 +16,7 @@ use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class PreProposalControllerTest extends TestCase
@@ -115,6 +117,40 @@ class PreProposalControllerTest extends TestCase
 
         $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
         $this->assertDatabaseHas('duplication_checks', ['student_s_y_id' => $sy->s_y_id, 'verdict' => 'Passed']);
+    }
+
+    public function test_a_queued_check_answers_waiting_then_hands_over_its_result_once(): void
+    {
+        [$student] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline(20);
+        Queue::fake();
+        $this->actingAs($student, 'web');
+
+        $this->post(route('student.pre-proposal.check'), ['document' => UploadedFile::fake()->create('proposal.pdf', 10, 'application/pdf')])
+            ->assertOk()->assertExactJson(['success' => true, 'status' => 'waiting']);
+        $this->getJson(route('student.pre-proposal.check.status'))->assertJson(['status' => 'waiting']);
+
+        app()->call([Queue::pushed(RunDuplicationCheck::class)->first(), 'handle']);
+
+        $this->getJson(route('student.pre-proposal.check.status'))
+            ->assertOk()->assertJson(['success' => true, 'verdict' => 'Passed', 'file_name' => 'proposal.pdf']);
+        $this->getJson(route('student.pre-proposal.check.status'))->assertNotFound();
+    }
+
+    public function test_a_cancelled_check_is_dropped_when_its_turn_comes(): void
+    {
+        [$student] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline(20);
+        Queue::fake();
+        $this->actingAs($student, 'web');
+
+        $this->post(route('student.pre-proposal.check'), ['document' => UploadedFile::fake()->create('proposal.pdf', 10, 'application/pdf')]);
+        $this->deleteJson(route('student.pre-proposal.check.cancel'))->assertOk();
+
+        app()->call([Queue::pushed(RunDuplicationCheck::class)->first(), 'handle']);
+
+        $this->assertDatabaseCount('duplication_checks', 0);
+        $this->getJson(route('student.pre-proposal.check.status'))->assertNotFound();
     }
 
     public function test_store_rejects_without_a_linked_duplication_check(): void

@@ -1469,10 +1469,9 @@ function selectSdgOptions(extracted) {
 }
 
 let checkAbortController = null;
-let checkTimeoutHandle = null;
-let checkTimedOut = false;
 let checkStepInterval = null;
 let checkStillWorkingTimeout = null;
+const CHECK_STATUS_URL = @json(route('student.pre-proposal.check.status'));
 
 function handleFileSelected() {
   const fileInput = document.getElementById('file-input');
@@ -1483,16 +1482,9 @@ function handleFileSelected() {
   document.getElementById('pc-file-btn').textContent = 'Change file';
 }
 
-async function runCheck() {
-  const fileInput = document.getElementById('file-input');
-  if (!fileInput.files.length) {
-    showToast('Choose a PDF file first.', 'error');
-    return;
-  }
-
-  const overlay = document.getElementById('check-loading');
+function showCheckOverlay() {
   renderLoadingSteps(0);
-  overlay.classList.add('show');
+  document.getElementById('check-loading').classList.add('show');
   document.getElementById('loading-still-working').style.display = 'none';
   // Steps alone finish cycling at 48s (6 x 8s) - past that, still visible
   // but static, a genuinely slow check can otherwise look stuck.
@@ -1502,9 +1494,8 @@ async function runCheck() {
   let stepIdx = 0;
   checkStepInterval = setInterval(() => {
     if (stepIdx >= STEPS.length - 1) {
-      // Real checks routinely run past 6x8=48s (up to 300s on a slow
-      // model) - holding here instead of wrapping back to 0 avoids
-      // looking like the whole process just restarted.
+      // Real checks routinely run past 6x8=48s - holding here instead of
+      // wrapping back to 0 avoids looking like the whole process restarted.
       clearInterval(checkStepInterval);
       return;
     }
@@ -1512,88 +1503,106 @@ async function runCheck() {
     renderLoadingSteps(stepIdx);
   }, 8000);
 
-  const form = new FormData();
-  form.append('document', fileInput.files[0]);
-
   checkAbortController = new AbortController();
+  return checkAbortController.signal;
+}
 
-  // The server gives Ollama 300 seconds, so anything past that is not going
-  // to arrive. Without this the overlay spun until the request died on its
-  // own and came back as an HTML error page - which is what a slow
-  // connection during a presentation looks like.
-  checkTimedOut = false;
-  checkTimeoutHandle = setTimeout(() => {
-    checkTimedOut = true;
-    if (checkAbortController) checkAbortController.abort();
-  }, 330000);
+function hideCheckOverlay() {
+  clearInterval(checkStepInterval);
+  clearTimeout(checkStillWorkingTimeout);
+  document.getElementById('check-loading').classList.remove('show');
+}
+
+async function readCheck(res) {
+  // Read the body as text first. When the server dies, or a proxy gives up,
+  // what comes back is an HTML error page - and res.json() on that threw
+  // "Unexpected token '<', \"<!DOCTYPE\"", which is the error a student was
+  // left looking at.
+  const raw = await res.text();
 
   try {
-    const res = await fetch('/pre-proposal/duplication-checks', {
-      method: 'POST',
-      headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
-      body: form,
-      signal: checkAbortController.signal,
-    });
+    return JSON.parse(raw);
+  } catch (parseError) {
+    throw new Error(
+      res.status === 419
+        ? 'Your session expired while the check was running. Sign in again and retry - nothing was lost.'
+        : 'The check did not finish. Try again - nothing you uploaded was lost.'
+    );
+  }
+}
 
-    // Read the body as text first. When the server dies mid-check, or a
-    // proxy gives up on a slow connection, what comes back is an HTML error
-    // page - and res.json() on that threw "Unexpected token '<', \"<!DOCTYPE\"",
-    // which is the error a student was left looking at.
-    const raw = await res.text();
-    let data;
+// The check runs on the server's queue, after any other student's ahead of
+// it, so the answer to the upload is usually "waiting" and the page asks
+// again every few seconds until the result is in.
+async function followCheck(request, signal, fileName) {
+  try {
+    let data = await readCheck(await request);
 
-    try {
-      data = JSON.parse(raw);
-    } catch (parseError) {
-      throw new Error(
-        res.status === 419
-          ? 'Your session expired while the check was running. Sign in again and retry - nothing was lost.'
-          : 'The check did not finish. The connection may be too slow to hold it open - try again, and nothing you uploaded was lost.'
-      );
+    while (data.status === 'waiting') {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      if (signal.aborted) return;
+
+      try {
+        data = await readCheck(await fetch(CHECK_STATUS_URL, { headers: { 'Accept': 'application/json' }, signal }));
+      } catch (err) {
+        // A connection dropped for one ask is not the check failing: ask again.
+        if (err.name !== 'TypeError') throw err;
+      }
     }
 
-    clearInterval(checkStepInterval);
-    clearTimeout(checkStillWorkingTimeout);
-    clearTimeout(checkTimeoutHandle);
-    overlay.classList.remove('show');
+    if (signal.aborted) return;
+    hideCheckOverlay();
 
     if (!data.success) { showToast(data.message, 'error'); return; }
 
-    renderResult(data, fileInput.files[0].name);
+    renderResult(data, data.file_name || fileName);
   } catch (err) {
-    clearInterval(checkStepInterval);
-    clearTimeout(checkStillWorkingTimeout);
-    clearTimeout(checkTimeoutHandle);
-    overlay.classList.remove('show');
+    if (err.name === 'AbortError') return;
 
-    if (err.name === 'AbortError') {
-      // Two ways to get here: the reader pressed Cancel, or the hard stop
-      // above fired. Only the second one needs explaining.
-      if (checkTimedOut) {
-        showToast('The check ran out of time - the connection is too slow to hold it open. Try again; nothing you uploaded was lost.', 'error');
-      }
-
-      return;
-    }
-
+    hideCheckOverlay();
     showToast(err.message, 'error');
-  } finally {
-    checkAbortController = null;
-    checkTimeoutHandle = null;
   }
+}
+
+function runCheck() {
+  const fileInput = document.getElementById('file-input');
+  if (!fileInput.files.length) {
+    showToast('Choose a PDF file first.', 'error');
+    return;
+  }
+
+  const form = new FormData();
+  form.append('document', fileInput.files[0]);
+
+  const signal = showCheckOverlay();
+  followCheck(fetch('/pre-proposal/duplication-checks', {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+    body: form,
+    signal,
+  }), signal, fileInput.files[0].name);
+}
+
+// A check still waiting, or one that finished badly, since the page was last open.
+function resumeCheck() {
+  const signal = showCheckOverlay();
+  followCheck(fetch(CHECK_STATUS_URL, { headers: { 'Accept': 'application/json' }, signal }), signal, null);
 }
 
 function cancelCheck() {
-  checkTimedOut = false;
-  if (checkAbortController) {
-    checkAbortController.abort();
-  }
-  clearInterval(checkStepInterval);
-  clearTimeout(checkStillWorkingTimeout);
-  clearTimeout(checkTimeoutHandle);
-  document.getElementById('check-loading').classList.remove('show');
+  if (checkAbortController) checkAbortController.abort();
+  hideCheckOverlay();
+  // And on the server, so the check is dropped instead of run for nobody.
+  fetch(CHECK_STATUS_URL, {
+    method: 'DELETE',
+    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+  });
   showToast('Similarity check cancelled.', 'error');
 }
+
+@if($checkWaiting)
+document.addEventListener('DOMContentLoaded', resumeCheck);
+@endif
 
 @if(!empty($lastCheck))
 @php

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RunDuplicationCheck;
 use App\Models\ArchivedDocument;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
@@ -74,7 +75,8 @@ class TeamReachesTitleDefenseTest extends TestCase
         parent::setUp();
         Carbon::setTestNow('2027-01-11 09:00:00');
         Mail::fake();
-        Queue::fake();
+        // The duplication check still runs, in place, as the page waits on it.
+        Queue::fakeExcept([RunDuplicationCheck::class]);
         Storage::fake('local');
         Storage::fake('public');
 
