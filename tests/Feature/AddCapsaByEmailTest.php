@@ -94,7 +94,7 @@ class AddCapsaByEmailTest extends TestCase
         $this->actingAs($this->admin(), 'expert')
             ->get(route('admin.experts'))
             ->assertOk()
-            ->assertSee('1 section has no CaPSA/TSA yet')
+            ->assertSee('1 section needs a CaPSA/TSA')
             ->assertSee('BSIT-3B')
             ->assertSee('is still the CaPSA/TSA for BSIT-3A', false);
     }

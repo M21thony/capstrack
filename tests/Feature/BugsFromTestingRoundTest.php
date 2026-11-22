@@ -358,7 +358,7 @@ class BugsFromTestingRoundTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('Name fills in when they first sign in', $html);
+        $this->assertStringContainsString('Awaiting first sign-in', $html);
         // Every dialog opened off this row has something to call them.
         $this->assertStringContainsString('data-name="r.villanueva@cspc.edu.ph"', $html);
     }
