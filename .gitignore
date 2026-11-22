@@ -35,6 +35,7 @@ Thumbs.db
 test-results/
 playwright-report/
 storage/app/playwright-videos/
+/playwright.config.js
 
 # Stray tool dirs and downloaded installers
 .kilo/
