@@ -39,8 +39,8 @@ return [
     ],
 
     'recaptcha' => [
-        'site_key' => env('RECAPTCHA_SITE_KEY', '6LeGxAcTAAAAAL5mwDbg83TS7mhh10e95o1L42Cg'),
-        'secret_key' => env('RECAPTCHA_SECRET_KEY', '6LeGxAcTAAAAAD19URmB6m1OSQC9FLgT3IQCOgNY'),
+        'site_key' => env('RECAPTCHA_SITE_KEY'),
+        'secret_key' => env('RECAPTCHA_SECRET_KEY'),
     ],
 
     // Web push. Empty keys are not an error - push simply stays off and
