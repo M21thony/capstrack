@@ -855,6 +855,7 @@
   'slots' => $availableSlots->values(),
   'full' => $fullOccurrences,
   'windows' => $bookingWindows,
+  'duties' => $defenseTimes,
   'bookedExpertIds' => $bookedExpertIds,
   'upcoming' => $upcomingBookings,
   'recent' => $recentBookings,
@@ -900,6 +901,7 @@ var MONTHS_AHEAD = 6;
 var slots = D.slots || [];
 var full = new Set(D.full || []);
 var windows = D.windows || {};
+var duties = D.duties || [];
 var bookedExpertIds = (D.bookedExpertIds || []).map(Number);
 var upcoming = D.upcoming || [];
 var recent = D.recent || [];
@@ -1012,8 +1014,15 @@ function slotsOn(expertId, dateKey) {
     return Number(s.expert_id) === Number(expertId) && matchesDate(s, dayName, dateKey)
       && !hasEnded(dateKey, s.end_time) && withinWindow(expertId, dateKey, s.start_time);
   }).map(function (s) {
-    return { slot: s, taken: !s.is_available || full.has(s.schedule_id + '|' + dateKey) };
+    var busy = dutiesOn(expertId, dateKey).some(function (d) {
+      return d.start < String(s.end_time || '23:59').slice(0, 5) && d.end > String(s.start_time).slice(0, 5);
+    });
+    return { slot: s, busy: busy, taken: busy || !s.is_available || full.has(s.schedule_id + '|' + dateKey) };
   }).sort(function (a, b) { return String(a.slot.start_time).localeCompare(String(b.slot.start_time)); });
+}
+/** When this expert sits on a defense panel that day. */
+function dutiesOn(expertId, dateKey) {
+  return duties.filter(function (d) { return Number(d.expert_id) === Number(expertId) && d.date === dateKey; });
 }
 function bookingOn(expertId, dateKey) {
   return upcoming.concat(recent).some(function (b) { return b.session_date === dateKey && Number(b.expert_id) === Number(expertId); });
@@ -1184,6 +1193,7 @@ function renderBook() {
     else if (open === 0) { cls += ' is-full'; cap = 'Full'; aria = 'fully booked'; }
     else if (live) { cls += ' is-locked'; cap = open + ' open'; capShort = String(open); aria = open + ' open, book after your current session'; }
     else { cls += ' is-avail'; cap = open + ' open'; capShort = String(open); disabled = false; aria = open + ' open'; }
+    if (off >= 0 && dutiesOn(ex.expert_id, k).length) { cls += ' is-defense'; aria += (aria ? ', ' : '') + 'at a defense'; }
     if (off === 0) { cls += ' is-today'; if (!cap) { cap = 'Today'; } }
     cells.push('<button type="button" class="' + cls + '" data-xh="date" data-key="' + k + '"' + (disabled ? ' disabled' : '')
       + ' aria-pressed="' + sel + '" aria-label="' + longDate(k) + (aria ? ', ' + aria : '') + '">'
@@ -1193,11 +1203,14 @@ function renderBook() {
   var times;
   if (S.date && !live) {
     var ts = slotsOn(ex.expert_id, S.date);
-    times = '<h3>' + longDate(S.date) + '</h3>' + (ts.length ? ts.map(function (x) {
+    var away = dutiesOn(ex.expert_id, S.date).map(function (d) {
+      return '<div class="xh-duty"><b>At a defense</b><span>' + fmtT(d.start) + ' – ' + fmtT(d.end) + (d.venue ? ' · ' + esc(d.venue) : '') + '</span></div>';
+    }).join('');
+    times = '<h3>' + longDate(S.date) + '</h3>' + away + (ts.length ? ts.map(function (x) {
       var on = S.slotId === x.slot.schedule_id;
-      var st = x.taken ? 'Taken' : 'Book';
-      return '<button type="button" class="xh-tslot" data-xh="slot" data-id="' + x.slot.schedule_id + '"' + (x.taken ? ' disabled' : '') + ' aria-pressed="' + (on && !x.taken) + '"'
-        + ' aria-label="' + (x.taken ? 'Taken: ' : 'Book ') + fmtT(x.slot.start_time) + ' to ' + fmtT(x.slot.end_time) + '">'
+      var st = x.busy ? 'Busy' : x.taken ? 'Taken' : 'Book';
+      return '<button type="button" class="xh-tslot' + (x.busy ? ' is-busy' : '') + '" data-xh="slot" data-id="' + x.slot.schedule_id + '"' + (x.taken ? ' disabled' : '') + ' aria-pressed="' + (on && !x.taken) + '"'
+        + ' aria-label="' + (x.taken ? st + ': ' : 'Book ') + fmtT(x.slot.start_time) + ' to ' + fmtT(x.slot.end_time) + '">'
         + '<span class="xh-tt"><b>' + fmtT(x.slot.start_time) + ' – ' + fmtT(x.slot.end_time) + '</b><span class="xh-note">' + (lengthOf(x.slot) || 'Consultation') + '</span></span>'
         + '<span class="xh-st">' + st + '</span></button>';
     }).join('') : '<div class="xh-hint">No open times on this date.</div>');
@@ -1235,7 +1248,7 @@ function renderBook() {
     + notice
     + '<div class="xh-book-cols"><div class="xh-cal">' + monthEmpty + '<div class="xh-cal-grid">' + cells.join('') + '</div>'
     + '<div class="xh-legend"><span><i class="xh-lg-sq is-open"></i>Open</span><span><i class="xh-lg-sq is-mine"></i>Your booking</span>'
-    + '<span><i class="xh-lg-sq is-full"></i>Fully booked</span><span><i class="xh-lg-sq is-off"></i>Not offered</span></div></div>'
+    + '<span><i class="xh-lg-sq is-full"></i>Fully booked</span><span><i class="xh-lg-sq is-off"></i>Not offered</span><span><i class="xh-lg-sq is-defense"></i>At a defense</span></div></div>'
     + '<div class="xh-times">' + times + '</div></div>';
 }
 
@@ -1655,6 +1668,7 @@ function refresh(passive) {
       slots = data.availableSlots || [];
       full = new Set(data.fullOccurrences || []);
       windows = data.bookingWindows || {};
+      duties = data.defenseTimes || [];
       bookedExpertIds = (data.bookedExpertIds || []).map(Number);
       upcoming = data.upcomingBookings || [];
       recent = data.recentBookings || [];

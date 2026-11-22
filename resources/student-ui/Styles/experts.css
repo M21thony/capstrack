@@ -196,6 +196,14 @@
 .xh-tslot:disabled .xh-st{color:var(--xh-ink-3)}
 .xh-tslot[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-light)}
 .xh-tslot[aria-pressed="true"] .xh-st{color:var(--xh-gold-ink)}
+/* The expert sits on a defense panel: Google Calendar's Grape. */
+.xh-day.is-defense{box-shadow:inset 0 -4px 0 #8e24aa}
+.xh-day.is-defense.is-today{box-shadow:inset 0 0 0 1.5px var(--text),inset 0 -4px 0 #8e24aa}
+.xh-lg-sq.is-defense{background:#8e24aa}
+.xh-duty{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:9px 12px;border-radius:4px;background:#8e24aa;color:#fff;font-size:13px}
+.xh-tslot.is-busy{background:#f3e5f5;border-color:#e1bee7;cursor:not-allowed}
+.xh-tslot.is-busy b{color:#4a148c;text-decoration:line-through}
+.xh-tslot.is-busy .xh-st{color:#8e24aa}
 /* Under the times, so picking a time and booking it happen in one place, on one screen. */
 .xh-empty{padding:32px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px}
 .xh-empty h2{font-size:18px}

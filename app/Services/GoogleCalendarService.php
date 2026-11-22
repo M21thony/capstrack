@@ -72,6 +72,8 @@ class GoogleCalendarService
 
         $event = new Event([
             'summary' => "{$slotType} — {$teamName}",
+            // Google's Peacock, the blue CapsTrack draws consultations in.
+            'colorId' => '7',
             'description' => $topic ?: "Scheduled {$slotType} session.",
             'start' => new EventDateTime([
                 'dateTime' => $start,
@@ -147,6 +149,8 @@ class GoogleCalendarService
 
         $event = new Event([
             'summary' => "{$defenseType} — {$teamName}",
+            // Grape, the purple CapsTrack draws defenses in.
+            'colorId' => '3',
             'description' => "{$defenseType} panel for {$teamName}.",
             'location' => $venue,
             'start' => new EventDateTime([

@@ -10,6 +10,7 @@ use App\Models\Deliverable;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -177,7 +178,12 @@ class ConsultationBoard
             ->get()
             ->mapWithKeys(fn ($a) => [$a->expert_id => $a->windowForClient()]);
 
-        return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'bookedExpertIds', 'bookingWindows');
+        // When each expert sits on a defense panel: when and where, not whose.
+        $defenseTimes = collect(DefenseBoard::dutiesOf($experts->pluck('expert_id')))
+            ->map(fn ($d) => Arr::only($d, ['expert_id', 'date', 'start', 'end', 'venue']))
+            ->values();
+
+        return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'bookedExpertIds', 'bookingWindows', 'defenseTimes');
     }
 
     /**
@@ -251,6 +257,7 @@ class ConsultationBoard
             ->whereHas('schedule', fn ($q) => $q->where('expert_id', $expertId))
             ->get()
             ->countBy(fn ($b) => $b->session_date?->format('Y-m-d'));
+        $duties = DefenseBoard::dutiesOf([$expertId]);
 
         $times = [];
         for ($i = 0; $i <= $days && count($times) < $max; $i++) {
@@ -263,6 +270,7 @@ class ConsultationBoard
                     && $slot->isValidOccurrenceDate($date)
                     && ! now()->gt($date.' '.($slot->end_time ?: '23:59:59'))
                     && ! in_array($slot->schedule_id.'|'.$date, $full, true)
+                    && ! DefenseBoard::clashes($duties, $date, $slot->start_time, $slot->end_time)
                     && (! $availability || $availability->allows($date, (string) $slot->start_time))) {
                     $times[] = [
                         'schedule_id' => (int) $slot->schedule_id,

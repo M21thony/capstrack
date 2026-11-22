@@ -529,6 +529,49 @@ class DefenseBoard
         })->all();
     }
 
+    /**
+     * The defenses these experts sit on from today on, for their calendars and
+     * for the students booking them.
+     *
+     * @param  iterable<int>  $expertIds
+     * @return list<array{expert_id: int, date: string, start: string, end: string, stage: string, team: string, venue: string}>
+     */
+    public static function dutiesOf(iterable $expertIds): array
+    {
+        return DefensePanel::whereIn('expert_id', collect($expertIds))
+            ->whereHas('schedule', fn ($q) => $q->whereDate('schedule_date', '>=', today()))
+            ->with('schedule.team')
+            ->get()
+            ->map(fn (DefensePanel $p) => [
+                'expert_id' => (int) $p->expert_id,
+                'date' => $p->schedule->schedule_date->toDateString(),
+                'start' => $p->schedule->schedule_date->format('H:i'),
+                'end' => self::endOf($p->schedule)->format('H:i'),
+                'stage' => (string) $p->schedule->defense_type,
+                'team' => (string) ($p->schedule->team->team_name ?? ''),
+                'venue' => (string) $p->schedule->venue,
+            ])->values()->all();
+    }
+
+    /**
+     * Whether any of these duties overlaps a time on that date.
+     *
+     * @param  list<array{date: string, start: string, end: string}>  $duties
+     */
+    public static function clashes(array $duties, string $date, ?string $start, ?string $end): bool
+    {
+        $start = substr((string) $start, 0, 5);
+        $end = substr((string) ($end ?: '23:59'), 0, 5);
+
+        foreach ($duties as $d) {
+            if ($d['date'] === $date && $d['start'] < $end && $d['end'] > $start) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** When a defense ends; rows with no end, or one not after the start, count as two hours. */
     public static function endOf(DefenseSchedule $s): Carbon
     {

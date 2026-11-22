@@ -11,6 +11,7 @@ use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Services\GoogleCalendarService;
 use App\Support\ConsultationTopics;
+use App\Support\DefenseBoard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -86,7 +87,12 @@ class ScheduleController extends Controller
             ->whereIn('schedule_id', $slots->pluck('schedule_id')->unique()->all())
             ->get(['schedule_id', 'exception_date']);
 
-        return response()->json(['slots' => $slots, 'exceptions' => $exceptions]);
+        return response()->json([
+            'slots' => $slots,
+            'exceptions' => $exceptions,
+            // The panels they sit on, drawn in among their own slots.
+            'defenses' => DefenseBoard::dutiesOf([Auth::guard('expert')->id()]),
+        ]);
     }
 
     // PATCH /instructor/schedule/bookings/{bookingId}/cancellation

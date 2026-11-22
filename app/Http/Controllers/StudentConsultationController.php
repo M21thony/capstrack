@@ -14,6 +14,7 @@ use App\Services\GoogleCalendarService;
 use App\Services\Notifier;
 use App\Support\ConsultationBoard;
 use App\Support\ConsultationTopics;
+use App\Support\DefenseBoard;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -47,6 +48,7 @@ class StudentConsultationController extends Controller
             'fullOccurrences' => $this->board->fullOccurrences($data['availableSlots']),
             'bookedExpertIds' => $data['bookedExpertIds'],
             'bookingWindows' => $data['bookingWindows'],
+            'defenseTimes' => $data['defenseTimes'],
             'myBookedDates' => $data['upcomingBookings']->merge($data['recentBookings'])
                 ->filter(fn ($b) => $b->session_date)
                 ->map(fn ($b) => [
@@ -255,6 +257,11 @@ class StudentConsultationController extends Controller
 
         if ($bookedCount >= $limit) {
             return response()->json(['success' => false, 'message' => 'This slot is fully booked for that date.'], 422);
+        }
+
+        // Their seat on a defense panel comes first.
+        if (DefenseBoard::clashes(DefenseBoard::dutiesOf([$slot->expert_id]), Carbon::parse($sessionDate)->toDateString(), $slot->start_time, $slot->end_time)) {
+            return response()->json(['success' => false, 'message' => 'Your expert is at a defense at that time. Pick another time.'], 422);
         }
 
         // Every booking gets its own event on the expert's Google Calendar, on

@@ -816,10 +816,10 @@ select.f-input{cursor:pointer}
 .legend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);font-weight:500}
 .legend-swatch{width:14px;height:14px;border-radius:4px;flex-shrink:0}
-.legend-swatch.sw-consult{background:rgba(29,78,216,0.25);border-left:3px solid var(--blue)}
+.legend-swatch.sw-consult{background:#fff;border:1px solid #039be5}
 .legend-swatch.sw-docreview{background:rgba(124,58,237,0.25);border-left:3px solid var(--purple)}
-.legend-swatch.sw-defense{background:rgba(180,83,9,0.25);border-left:3px solid var(--amber)}
-.legend-swatch.sw-booked{background:rgba(22,163,74,0.25);border-left:3px solid var(--green)}
+.legend-swatch.sw-defense{background:#8e24aa}
+.legend-swatch.sw-booked{background:#039be5}
 .legend-swatch.sw-blocked{background:repeating-linear-gradient(-45deg,#f5f5f5,#f5f5f5 3px,rgba(220,38,38,0.15) 3px,rgba(220,38,38,0.15) 6px);border:1px solid #ddd}
 .legend-swatch.sw-today{background:var(--accent);border-radius:50%}
 
@@ -953,17 +953,14 @@ a.btn.content,
 .cal-cell.is-blocked{background:var(--bg4)!important;border-color:var(--border)}
 .cal-date-num{font-size:12px}
 
-/* ── a slot reads as a time with a colour, not a bordered label ── */
-.cal-slot-pill{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:500;
-  padding:1px 2px;border-radius:0;border-left:0!important;background:transparent!important;
-  color:var(--text2)!important;font-variant-numeric:tabular-nums}
-.cal-slot-pill::before{content:'';width:7px;height:7px;border-radius:2px;flex:none;
-  background:currentColor}
-.cal-slot-pill.type-consult::before{background:var(--blue)}
-.cal-slot-pill.type-docreview::before{background:var(--purple)}
-.cal-slot-pill.type-defense::before{background:var(--amber)}
-.cal-slot-pill.is-booked{text-decoration:none;color:var(--text3)!important}
-.cal-slot-pill.is-booked::before{background:var(--green)}
+/* ── Google Calendar's colours: an open slot outlined in Peacock, a booked
+   consultation filled with it, a defense filled with Grape ── */
+.cal-slot-pill{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;
+  padding:1px 6px;border-radius:4px;border:1px solid #039be5!important;background:#fff!important;
+  color:#039be5!important;font-variant-numeric:tabular-nums}
+.cal-slot-pill.is-booked{text-decoration:none;background:#039be5!important;color:#fff!important}
+.cal-slot-pill.is-defense{background:#8e24aa!important;border-color:#8e24aa!important;color:#fff!important;cursor:default}
+.cal-slot-pill.is-ended{background:var(--bg4,#eceef2)!important;color:var(--text3)!important;border-color:var(--border)!important}
 .cal-more{font-size:10px;font-weight:500;color:var(--text3)}
 
 /* ── panels: lifted a little, and lifted equally ── */
@@ -1283,8 +1280,7 @@ a.btn.content,
 .sc-field small{font-size:12px;font-weight:500;color:var(--text3)}
 .sc-error{font-size:12px;font-weight:600;color:var(--red,#dc2626)}
 /* A booked pill names the team; one the team asked to call off is amber. */
-.cal-slot-pill.is-asked{color:var(--amber)!important;font-weight:700}
-.cal-slot-pill.is-asked::before{background:#d97706}
+.cal-slot-pill.is-asked{color:var(--amber)!important;border-color:var(--amber)!important;font-weight:700}
 @media (max-width:768px){.sc-field textarea{font-size:16px}}
 /* Seven equal columns, whatever a pill says. */
 .cal-grid{grid-template-columns:repeat(7,minmax(0,1fr))}

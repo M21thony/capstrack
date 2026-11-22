@@ -104,8 +104,8 @@
           <div class="legend-section">
             <div class="legend-section-title">Legend</div>
             <div class="legend-grid">
-              <div class="legend-item"><div class="legend-swatch sw-consult"></div>Consultation</div>
-              <div class="legend-item"><div class="legend-swatch sw-booked"></div>Booked</div>
+              <div class="legend-item"><div class="legend-swatch sw-consult"></div>Open slot</div>
+              <div class="legend-item"><div class="legend-swatch sw-booked"></div>Consultation</div>
               <div class="legend-item"><div class="legend-swatch sw-defense"></div>Defense</div>
               <div class="legend-item"><div class="legend-swatch sw-today"></div>Today</div>            </div>
           </div>
@@ -266,15 +266,13 @@
   background:repeating-linear-gradient(var(--bg2) 0 43px, var(--border) 43px 44px)}
 .wk-col:hover{background:repeating-linear-gradient(var(--bg3) 0 43px, var(--border) 43px 44px)}
 .wk-col.is-selected{background:repeating-linear-gradient(var(--accent-light) 0 43px, var(--border) 43px 44px)}
-.wk-slot{position:absolute;left:2px;right:2px;border-radius:5px;padding:3px 5px;overflow:hidden;
-  font-size:10px;line-height:1.25;cursor:pointer;border-left:3px solid;background:var(--bg2)}
-.wk-slot b{display:block;font-weight:700;color:var(--text);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
-.wk-slot span{color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
-.wk-slot.is-booked{background:var(--navy-dark,#1e2028);border-left-color:var(--accent)}
-.wk-slot.is-booked b{color:#fff}
-.wk-slot.is-booked span{color:rgba(255,255,255,.6)}
-.wk-slot.is-open{background:var(--accent-light);border-left-color:var(--accent)}
+.wk-slot{position:absolute;left:2px;right:2px;border-radius:4px;padding:3px 5px;overflow:hidden;
+  font-size:10px;line-height:1.25;cursor:pointer;border:1px solid #039be5;background:#fff;color:#039be5}
+.wk-slot b{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk-slot span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.wk-slot.is-booked{background:#039be5;color:#fff}
+.wk-slot.is-defense{background:#8e24aa;border-color:#8e24aa;color:#fff;z-index:3;cursor:default}
+.wk-slot.is-defense span{white-space:normal}
 /* A session whose time has passed: still shown, plainly finished. */
 .cal-slot-pill.is-ended,.slot-tag.is-ended{background:var(--bg4,#eceef2);color:var(--text3);border-color:var(--border)}
 /* A team asked to cancel: the expert approves or keeps the booking. */
@@ -636,7 +634,6 @@ const MONTHS      = ['January','February','March','April','May','June','July','A
 // rather than as 'undefined' in grey.
 const TYPE_LABELS = { consult:'Consultation', docreview:'Doc Review', defense:'Defense' };
 const TYPE_CLASS  = { consult:'type-consult', docreview:'type-docreview', defense:'type-defense' };
-const TYPE_COLORS = { consult:'var(--blue)', docreview:'var(--purple)', defense:'var(--amber)' };
 const CSRF        = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
 // ══════════════════════════════════════════════════════════════
@@ -777,6 +774,8 @@ async function apiFetch(url, options = {}) {
 // stores a weekday, so without these the calendar would still draw the week
 // the adviser moved, next to the one-off that replaced it.
 let skippedDates = {};
+// The defense panels this expert sits on, by day.
+let defensesByDay = {};
 
 function isSkipped(scheduleId, dateKey) {
   return (skippedDates[scheduleId] || []).indexOf(dateKey) !== -1;
@@ -814,6 +813,8 @@ async function loadSlots() {
     // each repeating slot has been taken out of, so both shapes are read.
     const data = Array.isArray(payload) ? payload : (payload.slots || []);
     skippedDates = {};
+    defensesByDay = {};
+    (payload.defenses || []).forEach(d => (defensesByDay[d.date] = defensesByDay[d.date] || []).push(d));
     ((Array.isArray(payload) ? [] : payload.exceptions) || []).forEach(x => {
       const key = String(x.exception_date).slice(0, 10);
       (skippedDates[x.schedule_id] = skippedDates[x.schedule_id] || []).push(key);
@@ -1112,8 +1113,21 @@ function renderCalendar() {
     el.appendChild(dateEl);
 
     {
+      // A panel they sit on comes first: it is where they will be.
+      const dayDefenses = defensesByDay[key] || [];
+      dayDefenses.slice(0, 2).forEach(d => {
+        const pill = document.createElement('div');
+        pill.className = 'cal-slot-pill is-defense';
+        pill.textContent = hr12(d.start).replace(' ', '') + ' ' + d.stage + (d.team ? ' · ' + d.team : '');
+        pill.title = `${hr12(d.start)}–${hr12(d.end)} · ${d.stage}${d.team ? ' · ' + d.team : ''}${d.venue ? ' · ' + d.venue : ''}`;
+        pill.onclick = ev => ev.stopPropagation();
+        el.appendChild(pill);
+      });
+      const room = Math.max(0, 2 - dayDefenses.length);
+      const hidden = daySlots.length + dayDefenses.length - Math.min(dayDefenses.length, 2) - Math.min(daySlots.length, room);
+
       // Booked ones first: whose session it is matters more than an open time.
-      [...daySlots].sort((a, b) => (b.hasBooking ? 1 : 0) - (a.hasBooking ? 1 : 0)).slice(0, 2).forEach(s => {
+      [...daySlots].sort((a, b) => (b.hasBooking ? 1 : 0) - (a.hasBooking ? 1 : 0)).slice(0, room).forEach(s => {
         const pill = document.createElement('div');
         const status = getSlotStatusLabel(s, key);
         let cls = TYPE_CLASS[s.type] || 'type-consult';
@@ -1140,10 +1154,10 @@ function renderCalendar() {
       });
 
       el.dataset.slots = daySlots.length;
-      if (daySlots.length > 2) {
+      if (hidden > 0) {
         const more = document.createElement('div');
         more.className   = 'cal-more';
-        more.textContent = `+${daySlots.length - 2} more`;
+        more.textContent = `+${hidden} more`;
         el.appendChild(more);
       }
 
@@ -1354,7 +1368,6 @@ function renderWeek() {
       el.className = 'wk-slot ' + (slot.booked ? 'is-booked' : 'is-open');
       el.style.top = Math.max(top, 0) + 'px';
       el.style.height = height + 'px';
-      el.style.borderLeftColor = TYPE_COLORS[slot.type] || 'var(--accent)';
       el.title = hr12(slot.start || slot.start_time) + '–' + hr12(slot.end || slot.end_time)
         + ' · ' + (TYPE_LABELS[slot.type] || 'Consultation')
         + (slot.teamName ? ' · ' + slot.teamName : '');
@@ -1384,6 +1397,30 @@ function renderWeek() {
         openQuickEdit(slot, key, index, el);
       });
 
+      col.appendChild(el);
+    });
+
+    // The panels they sit on, over whatever slot shares the hour.
+    (defensesByDay[key] || []).forEach(d => {
+      const from = timeToMinutes(d.start);
+      const height = Math.max(((timeToMinutes(d.end) - from) / 60) * WK_HOUR_PX, 17);
+      const el = document.createElement('div');
+      el.className = 'wk-slot is-defense';
+      el.style.top = Math.max(((from - WK_FIRST_HOUR * 60) / 60) * WK_HOUR_PX, 0) + 'px';
+      el.style.height = height + 'px';
+      el.title = `${hr12(d.start)}–${hr12(d.end)} · ${d.stage}${d.team ? ' · ' + d.team : ''}${d.venue ? ' · ' + d.venue : ''}`;
+      const name = document.createElement('b');
+      name.textContent = d.stage;
+      el.appendChild(name);
+      const when = document.createElement('span');
+      when.textContent = hr12(d.start) + ' – ' + hr12(d.end);
+      el.appendChild(when);
+      if (height > 40) {
+        const where = document.createElement('span');
+        where.textContent = [d.team, d.venue].filter(Boolean).join(' · ');
+        el.appendChild(where);
+      }
+      el.addEventListener('click', ev => ev.stopPropagation());
       col.appendChild(el);
     });
 

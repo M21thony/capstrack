@@ -392,6 +392,7 @@ class ExpertController extends Controller
             'recentBookings' => $consult['recentBookings']->map(fn ($b) => $this->board->cardData($b))->values(),
             'bookedExpertIds' => $consult['bookedExpertIds'],
             'bookingWindows' => $consult['bookingWindows'],
+            'defenseTimes' => $consult['defenseTimes'],
         ]);
     }
 
