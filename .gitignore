@@ -36,6 +36,7 @@ test-results/
 playwright-report/
 storage/app/playwright-videos/
 /playwright.config.js
+/phpunit.xml
 
 # Stray tool dirs and downloaded installers
 .kilo/
