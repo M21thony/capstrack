@@ -346,6 +346,12 @@ function PDFChecker({
     notify("Your remark is not saved yet. Add it, or press Cancel to drop it.", { type: "info" });
   };
 
+  // A diagram page's own name, which stands in for the chapter list there; null on a PDF page.
+  const diagramName = (n) => {
+    const p = n > (numPages ?? 0) ? drawings.pages[n - (numPages ?? 0) - 1] : null;
+    return p ? p.name || p.file || "" : null;
+  };
+
   // A new remark on a mark: empty fields, and the figure guessed from the caption under it.
   const beginRemark = (d) => {
     const onFigure = d.type !== "text";
@@ -354,8 +360,8 @@ function PDFChecker({
     // After editing an older Format or Good remark, a new one starts as an offered kind.
     setKind((k) => (OFFERED_KINDS.some((o) => o.id === k) ? k : "pink"));
     setText("");
-    // The section starts as where the page sits in the PDF's bookmarks; an attached diagram's page has none.
-    setSection(d.pageNumber <= (numPages ?? 0) ? sectionAt(outline, d.pageNumber) : "");
+    // The section starts as where the page sits in the PDF's bookmarks; on a diagram page it is the diagram.
+    setSection(diagramName(d.pageNumber) ?? sectionAt(outline, d.pageNumber));
     setFigure(label);
     setDiagramType(onFigure ? guessDiagramType(figures.find((f) => f.label === label)?.title) : "");
     setPopPos(null);
@@ -370,16 +376,16 @@ function PDFChecker({
   };
 
   // T, B, P and S switch how the page is marked, H drags it around; V flips diagrams to the earlier version; Esc finishes adding boxes.
-  // Ctrl+Z undoes a remark change, Ctrl+Y or Ctrl+Shift+Z redoes it; typing in a box keeps its own undo.
+  // Ctrl+Z undoes a remark change, Ctrl+R (or Ctrl+Y, Ctrl+Shift+Z) redoes it; typing in a box keeps its own undo.
   useEffect(() => {
     const onKey = (e) => {
       if (document.querySelector("dialog[open]")) return;
       if (e.key === "Escape" && adding) { setAdding(false); setPopPos(null); return; }
       if (e.target.closest?.("input, textarea, select")) return;
       const k = e.key.toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && (k === "z" || k === "y") && onUndo) {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (k === "z" || k === "y" || k === "r") && onUndo) {
         e.preventDefault();
-        (k === "y" || e.shiftKey ? onRedo : onUndo)();
+        (k !== "z" || e.shiftKey ? onRedo : onUndo)();
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -576,7 +582,7 @@ function PDFChecker({
     setEditingId(id);
     setKind(kindOf(c.color));
     setText(c.text || "");
-    setSection(c.section || "");
+    setSection(diagramName(c.page_number) ?? (c.section || ""));
     setFigure(c.figure_label || "");
     setDiagramType(c.diagram_type || "");
     setPopPos(null);
@@ -935,7 +941,9 @@ function PDFChecker({
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveBox(); } }}
               />
-              <SectionPicker value={section} onChange={setSection} />
+              {diagramName(draft.pageNumber) == null
+                ? <SectionPicker value={section} onChange={setSection} />
+                : <div className="rr-muted">Diagram: {section}</div>}
               <div className="rr-row">
                 {draft.type === "box"
                   ? <button type="button" className="rr-btn sm ghost" onClick={() => { setAdding(true); changeMode("box"); }}>+ Box</button>

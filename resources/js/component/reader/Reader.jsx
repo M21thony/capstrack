@@ -784,7 +784,7 @@ export function ReaderTools({
       {onUndo && (
         <>
           <button type="button" className="rr-btn icon ghost" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={onUndo}><Icon name="undo" /></button>
-          <button type="button" className="rr-btn icon ghost" aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!canRedo} onClick={onRedo}><Icon name="redo" /></button>
+          <button type="button" className="rr-btn icon ghost" aria-label="Redo" title="Redo (Ctrl+R)" disabled={!canRedo} onClick={onRedo}><Icon name="redo" /></button>
           <span className="rr-sep" aria-hidden="true" />
         </>
       )}
