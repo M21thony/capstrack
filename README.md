@@ -87,22 +87,6 @@ Sign-in is by Google only, there are no passwords. These accounts exist after th
 
 Other accounts are added from inside the system by the admin and the CaPSA/TSA.
 
-## Needed outside the server
-
-Google sign-in and Google Drive need a Google Cloud project.
-Make an OAuth client (Web application) and add two Authorized redirect URIs:
-
-- `APP_URL/login/google/callback` for signing in
-- `APP_URL/admin/gdrive/callback` for connecting Google Drive
-
-Turn on the Google Drive API and Google Picker API in the same project and
-make an API key. Put the client ID, client secret and API key in `.env`.
-
-The sign-in page also needs reCAPTCHA v3 keys for the server's domain
-(google.com/recaptcha/admin).
-
-Nobody can sign in until both are set.
-
 ## Updating
 
 ```bash
