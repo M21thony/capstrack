@@ -5,6 +5,8 @@ namespace App\Support;
 use App\Models\ArchivedDocument;
 use App\Models\CapstoneExpert;
 use App\Models\DefenseSchedule;
+use App\Models\Deliverable;
+use App\Models\DeliverableCheck;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -141,7 +143,7 @@ class DefenseAnalytics
             'options' => $this->options($rows, $current),
             'tagChips' => $tagChips,
             'teamsInScope' => $inYear->count(),
-            'kpis' => $this->kpis($teams, $stages),
+            'kpis' => $this->kpis($teams, $stages, $year, $current),
             'stages' => $stages,
             'byTag' => $byTag,
             'byYear' => $byYear,
@@ -192,7 +194,13 @@ class DefenseAnalytics
 
         $capsaSections = $viewer->is_admin ? [] : ($viewer->sections ?? []);
 
-        return $teams->map(function (Team $team) use ($records, $capsaSections, $current) {
+        $cleared = DeliverableCheck::where('status', DeliverableCheck::COMPLETE)
+            ->whereIn('team_id', $teams->pluck('team_id'))
+            ->whereHas('deliverable', fn ($q) => $q->where('template_key', Deliverable::BLUEBOOK_CLEARANCE))
+            ->pluck('team_id')
+            ->flip();
+
+        return $teams->map(function (Team $team) use ($records, $capsaSections, $current, $cleared) {
             $label = $this->scope->sectionFor($team, $records->get($team->team_id, collect()));
 
             if ($capsaSections !== [] && ! $this->scope->covers($capsaSections, $label)) {
@@ -209,6 +217,7 @@ class DefenseAnalytics
                 'section' => $section,
                 'program' => $program,
                 'tags' => $this->tagsFor($team),
+                'cleared' => $cleared->has($team->team_id),
                 'stages' => $this->closeOut(collect(DefenseProgress::STAGES)
                     ->mapWithKeys(fn (string $stage) => [$stage => $this->stageRow($team, $stage, $current)])
                     ->all()),
@@ -560,11 +569,13 @@ class DefenseAnalytics
      * @param  array<string, array<string, mixed>>  $stages
      * @return array<string, mixed>
      */
-    private function kpis(Collection $teams, array $stages): array
+    private function kpis(Collection $teams, array $stages, string $year, string $current): array
     {
         $passed = array_sum(array_column($stages, 'passed_total'));
         $decided = array_sum(array_column($stages, 'decided'));
         $title = $stages['Title Defense'];
+        $finalPassed = $teams->filter(fn (array $t) => in_array($t['stages']['Final Oral Defense']['status'], ['passed', 'revision'], true)
+            && $this->counts($t['stages']['Final Oral Defense'], $year, $current));
 
         return [
             'teams' => $teams->count(),
@@ -578,6 +589,8 @@ class DefenseAnalytics
             'awaiting' => array_sum(array_column($stages, 'awaiting')),
             'redefense' => array_sum(array_column($stages, 'redefense')),
             'missed' => array_sum(array_column($stages, 'missed')),
+            'final_passed' => $finalPassed->count(),
+            'cleared' => $finalPassed->where('cleared', true)->count(),
         ];
     }
 

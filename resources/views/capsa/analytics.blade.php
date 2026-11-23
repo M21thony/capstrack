@@ -52,7 +52,7 @@
 
 /* Headline numbers. The stat-chip look is the portal's own; only the
    pass-rate tile's meter is new. */
-.an-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.an-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
 .an-kpis .stat-chip{gap:4px}
 .an-kpis .stat-n{font-size:30px}
 .an-kpi-meter{height:6px;border-radius:3px;background:var(--bg4);margin-top:8px;overflow:hidden}
@@ -378,6 +378,11 @@
         <div class="stat-n" style="color:{{ $k['awaiting'] ? 'var(--blue)' : 'var(--text)' }}">{{ $k['awaiting'] }}</div>
         <div class="stat-l">Waiting for a result</div>
         <div class="stat-sub">{{ $k['redefense'] }} need a redefense · {{ $k['missed'] }} did not pass</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--green)">{{ $k['cleared'] }}</div>
+        <div class="stat-l">Cleared for Bluebook</div>
+        <div class="stat-sub">of {{ $plural($k['final_passed'], 'team') }} that passed Final Oral Defense</div>
       </div>
     </div>
 

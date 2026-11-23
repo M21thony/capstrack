@@ -6,8 +6,11 @@ use App\Models\ArchivedDocTag;
 use App\Models\ArchivedDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
+use App\Models\Checklist;
 use App\Models\DefenseSchedule;
 use App\Models\DefenseWindow;
+use App\Models\Deliverable;
+use App\Models\DeliverableCheck;
 use App\Models\DuplicationCheck;
 use App\Models\Role;
 use App\Models\Student;
@@ -482,6 +485,35 @@ class DefenseAnalyticsTest extends TestCase
         $this->assertSame(1, $archive['years']['2023-2024']['tags']['Web-based']);
         // Unrecognised and missing tags both land in Other.
         $this->assertSame(2, $archive['years']['2024-2025']['tags']['Other']);
+    }
+
+    public function test_it_counts_the_final_defense_passers_the_dean_has_cleared(): void
+    {
+        $line = Checklist::create(['capsa_id' => $this->admin()->expert_id, 'program' => 'BSIT', 'title' => 'Checklist'])
+            ->milestones()->create(['name' => 'Bluebook Clearance', 'position' => 0])
+            ->deliverables()->create(['title' => 'Bluebook Clearance', 'kind' => Deliverable::BLUEBOOK, 'template_key' => Deliverable::BLUEBOOK_CLEARANCE, 'position' => 1]);
+        $clear = fn (Team $team, string $status = DeliverableCheck::COMPLETE) => DeliverableCheck::create(['deliverable_id' => $line->id, 'team_id' => $team->team_id, 'status' => $status, 'checked_at' => now()]);
+
+        $this->defend($cleared = $this->team('Cleared'), self::FOD, DefenseOutcome::PASSED);
+        $clear($cleared);
+        $this->defend($this->team('Waiting'), self::FOD, DefenseOutcome::PASSED);
+        $this->defend($sentBack = $this->team('Sent back'), self::FOD, DefenseOutcome::PASSED);
+        $clear($sentBack, DeliverableCheck::SENT_BACK);
+        $this->defend($lastYear = $this->team('Last year'), self::FOD, DefenseOutcome::PASSED, self::LAST_YEAR);
+        $clear($lastYear);
+
+        $kpis = $this->analyse($this->admin())['kpis'];
+        $this->assertSame(1, $kpis['cleared']);
+        $this->assertSame(3, $kpis['final_passed']);
+
+        $all = $this->analyse($this->admin(), ['school_year' => DefenseAnalytics::ALL_YEARS])['kpis'];
+        $this->assertSame(2, $all['cleared']);
+        $this->assertSame(4, $all['final_passed']);
+
+        $this->actingAs($this->admin(), 'expert')->get(route('admin.analytics'))
+            ->assertOk()
+            ->assertSee('Cleared for Bluebook')
+            ->assertSee('of 3 teams that passed Final Oral Defense');
     }
 
     // -- the page -----------------------------------------------------------
