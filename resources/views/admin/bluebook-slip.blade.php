@@ -2,7 +2,7 @@
 @if (! empty($pdf))
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><title>{{ $row->bluebook->slip_no }}</title>
-<style>body{font-family:'DejaVu Sans',sans-serif;font-size:12px;color:#1e2128;margin:24px}</style>
+<style nonce="{{ Vite::cspNonce() }}">body{font-family:'DejaVu Sans',sans-serif;font-size:12px;color:#1e2128;margin:24px}</style>
 </head><body>
 @endif
 <style nonce="{{ Vite::cspNonce() }}">

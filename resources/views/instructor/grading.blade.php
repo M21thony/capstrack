@@ -252,7 +252,7 @@
 @include('instructor.partials.skeleton-toggle')
 @if ($chaired->isNotEmpty())
 <dialog class="su" id="su" aria-labelledby="su-title">
-  <form method="dialog">
+  <form method="post">@csrf
     <div class="su-h"><b id="su-title">Grading setup</b><p>Set the grading method for teams you chair.</p></div>
     <div class="su-b">
       <section>
@@ -353,6 +353,7 @@
   dlg.addEventListener('change', render);
   dlg.addEventListener('close', function () { if (done) location.reload(); });
   $('su-cancel').addEventListener('click', function () { dlg.close(); });
+  dlg.querySelector('form').addEventListener('submit', function (e) { e.preventDefault(); });
 
   $('su-apply').addEventListener('click', function () {
     var m = method();

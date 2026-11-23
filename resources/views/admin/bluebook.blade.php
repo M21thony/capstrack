@@ -354,7 +354,7 @@
     <dialog class="bb-sheet" id="bb-slip" aria-label="Clearance slip">
       @include('admin.bluebook-slip')
       <div class="bb-foot">
-        <form method="dialog"><button class="bb-btn">Close</button></form>
+        <button class="bb-btn" type="button" id="bb-slip-close">Close</button>
         <a class="bb-btn" href="{{ route('admin.bluebook.slip', $row->team) }}"><svg class="i"><use href="#bb-save"/></svg>Download PDF</a>
         <button class="bb-btn" type="button" id="bb-print"><svg class="i"><use href="#bb-print"/></svg>Print</button>
       </div>
@@ -406,6 +406,7 @@ function closeSidebar() { if (!sidebarEl || !sidebarOverlay) return; sidebarEl.c
   if (slip) {
     document.getElementById('bb-slip-open').addEventListener('click', function () { slip.showModal(); });
     document.getElementById('bb-print').addEventListener('click', function () { window.print(); });
+    document.getElementById('bb-slip-close').addEventListener('click', function () { slip.close(); });
     if (new URLSearchParams(location.search).has('slip')) slip.showModal();
   }
 })();

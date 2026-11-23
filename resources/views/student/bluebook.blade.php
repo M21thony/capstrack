@@ -32,8 +32,7 @@
 .bs-video{border:0;border-radius:12px;padding:0;width:min(960px,94vw);margin:auto;background:#000}
 .bs-video::backdrop{background:rgba(0,0,0,.7)}
 .bs-video iframe{display:block;width:100%;aspect-ratio:16/9;border:0}
-.bs-video form{position:absolute;top:6px;right:6px}
-.bs-video form button{background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:8px;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer}
+.bs-video .bs-close{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:8px;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer}
 @media (max-width:760px){.bs-line{grid-template-columns:minmax(0,1fr)}}
 </style>
   @include('partials.render-whole')
@@ -121,7 +120,7 @@
   </div>
 
   <dialog class="bs-video" id="bs-video" aria-label="Video">
-    <form method="dialog"><button>Close</button></form>
+    <button type="button" class="bs-close">Close</button>
     <iframe allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>
   </dialog>
 @endif
@@ -136,6 +135,7 @@
   document.querySelectorAll('[data-video]').forEach(function (b) {
     b.addEventListener('click', function () { frame.src = b.dataset.video; dialog.showModal(); });
   });
+  dialog.querySelector('.bs-close').addEventListener('click', function () { dialog.close(); });
   dialog.addEventListener('close', function () { frame.src = 'about:blank'; });
 })();
 </script>
