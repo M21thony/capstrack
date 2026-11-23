@@ -190,7 +190,6 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         Route::get('/bluebook/files/{document}', [AdminBluebookController::class, 'file'])->name('bluebook.file');
         Route::get('/bluebook/{team}', [AdminBluebookController::class, 'show'])->name('bluebook.show');
         Route::post('/bluebook/{team}/clear', [AdminBluebookController::class, 'clear'])->name('bluebook.clear');
-        Route::get('/bluebook/{team}/slip', [AdminBluebookController::class, 'slip'])->name('bluebook.slip');
         Route::put('/bluebook/{team}/{deliverable}', [AdminBluebookController::class, 'check'])->name('bluebook.check');
         Route::delete('/bluebook/{team}/{deliverable}', [AdminBluebookController::class, 'undo'])->name('bluebook.undo');
     });

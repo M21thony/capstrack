@@ -54,7 +54,7 @@ class Deliverable extends Model
 
     /**
      * The Bluebook Clearance itself: nothing is uploaded, it closes when the
-     * dean clears the team. Its check's id is the slip number.
+     * dean clears the team.
      */
     public const BLUEBOOK_CLEARANCE = 'bluebook_clearance';
 

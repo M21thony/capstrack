@@ -1672,12 +1672,11 @@ return [
         'steps' => [
             ['Pick a file', 'on the right.'],
             ['Press Accept', 'or type a reason and press Send back.'],
-            ['Press Clear for Bluebook', 'once every file is accepted, and print the slip.'],
+            ['Press Clear for Bluebook', 'once every file is accepted.'],
         ],
         'tour' => [
             ['The team', 'Its **title, section, members**, and how many **files you have accepted**.', '.bb-head'],
-            ['Clear for Bluebook', 'Works once **every file is accepted**. It makes the **clearance slip**.', '#bb-clear'],
-            ['View Slip', 'Opens the slip to **download or print**.', '#bb-slip-open'],
+            ['Clear for Bluebook', 'Works once **every file is accepted**.', '#bb-clear'],
             ['The file', 'A **PDF** opens here, a **video** plays here, a **DOCX** can be downloaded.', '.bb-viewer'],
             ['Accept or Send back', '**Send back** needs a **reason**. The team is told and sends the file again. **Undo** takes back your answer.', '.bb-viewer .bb-foot'],
             ['Submitted Files', '**Every file** the team sent and **where it stands**. **Click one** to open it.', '.bb-side'],

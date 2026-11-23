@@ -63,7 +63,7 @@
   <div class="card bs-head">
     <b>Bluebook Clearance</b>
     @if ($bluebook->cleared)
-      <span>Cleared {{ $bluebook->cleared_on->format('M j, Y') }} · {{ $bluebook->slip_no }}</span>
+      <span>Cleared {{ $bluebook->cleared_on->format('M j, Y') }}</span>
     @elseif ($bluebook->locked)
       <span>Opens after {{ $bluebook->requires }}</span>
     @endif

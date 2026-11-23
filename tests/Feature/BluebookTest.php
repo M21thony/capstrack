@@ -103,15 +103,13 @@ class BluebookTest extends TestCase
         $this->delete(route('admin.bluebook.undo', [$team, $paper]));
         $this->assertSame(MilestoneProgress::WAITING_ON_DEAN, $this->progressOf($checklist, $team, $paper)->waiting_on);
 
-        // Clearing waits for every line, and makes the slip.
+        // Clearing waits for every line.
         $this->put(route('admin.bluebook.check', [$team, $paper]), ['status' => DeliverableCheck::COMPLETE]);
         $this->post(route('admin.bluebook.clear', $team))->assertStatus(422);
-        $this->get(route('admin.bluebook.slip', $team))->assertNotFound();
         $this->put(route('admin.bluebook.check', [$team, $video]), ['status' => DeliverableCheck::COMPLETE]);
-        $this->post(route('admin.bluebook.clear', $team))->assertRedirect(route('admin.bluebook.show', [$team, 'slip' => 1]));
-        $this->get(route('admin.bluebook.slip', $team))->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->post(route('admin.bluebook.clear', $team))->assertRedirect(route('admin.bluebook.show', $team));
 
-        // A cleared slip is final.
+        // A clearance is final.
         $this->delete(route('admin.bluebook.undo', [$team, $paper]))->assertStatus(422);
         $this->post(route('admin.bluebook.clear', $team))->assertStatus(422);
     }

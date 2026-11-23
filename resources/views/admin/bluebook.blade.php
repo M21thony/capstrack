@@ -106,10 +106,6 @@
 .bb-stage .pv-card{width:100%;height:100%;border-radius:0}
 .bb-stage .pv-x{display:none}
 
-.bb-sheet{width:560px;max-width:calc(100vw - 28px);max-height:calc(100vh - 28px);margin:auto;padding:0;border:0;border-radius:12px;background:#fff;overflow:auto}
-.bb-sheet::backdrop{background:rgba(20,22,28,.45)}
-.bb-sheet .bb-foot{justify-content:flex-end}
-
 @media(max-width:760px){
   #real-content{overflow:auto !important}
   .bb{flex:none;padding:8px 12px 84px}
@@ -131,12 +127,6 @@
   .bb-foot{flex-wrap:wrap}
   .bb-foot .bb-field{flex:1 1 100%}
   .bb-foot .bb-btn{flex:1}
-}
-@media print{
-  body *{visibility:hidden}
-  #bb-slip,#bb-slip *{visibility:visible}
-  #bb-slip{position:absolute;inset:0 auto auto 0;width:100%;max-width:none;max-height:none;overflow:visible}
-  #bb-slip .bb-foot{display:none}
 }
 </style>
 </head>
@@ -173,7 +163,6 @@
   <symbol id="bb-doc" viewBox="0 0 24 24"><path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h6"/></symbol>
   <symbol id="bb-vid" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 11 5-3v8l-5-3"/></symbol>
   <symbol id="bb-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></symbol>
-  <symbol id="bb-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-8h16v8h-3M7 14h10v7H7z"/></symbol>
   <symbol id="bb-seal" viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="m8.5 14-1.5 7 5-3 5 3-1.5-7M9.5 9l2 2 3-3"/></symbol>
 </svg>
 
@@ -209,7 +198,7 @@
       <table data-export="Bluebook Clearance - {{ BB::TABS[$status] }}" data-export-into="#bb-tools">
         <thead>
         @if ($status === Bluebook::CLEARED)
-          <tr><th>Team</th><th class="bb-opt">Title</th><th class="bb-opt">Program</th><th>Section</th><th>Cleared On</th><th class="bb-opt">Cleared By</th><th>Slip No.</th></tr>
+          <tr><th>Team</th><th class="bb-opt">Title</th><th class="bb-opt">Program</th><th>Section</th><th>Cleared On</th><th class="bb-opt">Cleared By</th></tr>
         @else
           <tr><th>Team</th><th class="bb-opt">Title</th><th class="bb-opt">Program</th><th>Section</th><th>Checked</th><th class="bb-opt">Submitted</th><th>Status</th></tr>
         @endif
@@ -225,7 +214,6 @@
           @if ($status === Bluebook::CLEARED)
             <td>{{ $b->cleared_on?->format('M j, Y') }}</td>
             <td class="bb-opt">{{ $b->cleared_by ?? '—' }}</td>
-            <td>{{ $b->slip_no }}</td>
           @else
             @php
               [$sc, $sw] = match ($status) {
@@ -266,7 +254,6 @@
     </div>
     @if ($b->cleared)
       <span class="bb-count">Cleared <b>{{ $b->cleared_on->format('M j, Y') }}</b> by <b>{{ $b->cleared_by ?? '—' }}</b></span>
-      <button class="bb-btn" type="button" id="bb-slip-open"><svg class="i"><use href="#bb-print"/></svg>View Slip</button>
     @else
       <div class="bb-prog"><b>{{ $b->accepted }} of {{ $b->lines->count() }}</b> accepted<span><i style="width:{{ $b->lines->count() ? round($b->accepted / $b->lines->count() * 100) : 0 }}%"></i></span></div>
       <form method="POST" action="{{ route('admin.bluebook.clear', $row->team) }}" id="bb-clear" data-team="{{ $row->team->team_name }}">
@@ -349,17 +336,6 @@
       </div>
     </aside>
   </div>
-
-  @if ($b->cleared)
-    <dialog class="bb-sheet" id="bb-slip" aria-label="Clearance slip">
-      @include('admin.bluebook-slip')
-      <div class="bb-foot">
-        <button class="bb-btn" type="button" id="bb-slip-close">Close</button>
-        <a class="bb-btn" href="{{ route('admin.bluebook.slip', $row->team) }}"><svg class="i"><use href="#bb-save"/></svg>Download PDF</a>
-        <button class="bb-btn" type="button" id="bb-print"><svg class="i"><use href="#bb-print"/></svg>Print</button>
-      </div>
-    </dialog>
-  @endif
 @endif
 </main>
   </div>
@@ -400,14 +376,6 @@ function closeSidebar() { if (!sidebarEl || !sidebarOverlay) return; sidebarEl.c
     };
     view.addEventListener('click', openPdf);
     window.addEventListener('load', openPdf);
-  }
-
-  var slip = document.getElementById('bb-slip');
-  if (slip) {
-    document.getElementById('bb-slip-open').addEventListener('click', function () { slip.showModal(); });
-    document.getElementById('bb-print').addEventListener('click', function () { window.print(); });
-    document.getElementById('bb-slip-close').addEventListener('click', function () { slip.close(); });
-    if (new URLSearchParams(location.search).has('slip')) slip.showModal();
   }
 })();
 </script>

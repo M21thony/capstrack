@@ -10,7 +10,6 @@ use App\Models\Team;
 use App\Services\Notifier;
 use App\Support\Bluebook;
 use App\Support\MilestoneProgress;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -107,7 +106,7 @@ class AdminBluebookController extends Controller
         return redirect()->route('admin.bluebook.show', [$team, 'line' => $deliverable->id]);
     }
 
-    /** Every line accepted: close the clearance line. Its check is the slip. */
+    /** Every line accepted: close the clearance line. */
     public function clear(Team $team): RedirectResponse
     {
         $bluebook = $this->row($team)->bluebook;
@@ -118,17 +117,7 @@ class AdminBluebookController extends Controller
             ['status' => DeliverableCheck::COMPLETE, 'note' => null, 'file_id' => null, 'checked_by' => auth('expert')->id(), 'checked_at' => now()],
         );
 
-        return redirect()->route('admin.bluebook.show', [$team, 'slip' => 1]);
-    }
-
-    public function slip(Team $team): Response
-    {
-        $row = $this->row($team);
-        abort_unless($row->bluebook->cleared, 404);
-
-        return Pdf::loadView('admin.bluebook-slip', ['row' => $row, 'pdf' => true])
-            ->setPaper('a4')
-            ->download($row->bluebook->slip_no.'.pdf');
+        return redirect()->route('admin.bluebook.show', $team);
     }
 
     public function file(CapstoneDocument $document): Response
@@ -143,7 +132,7 @@ class AdminBluebookController extends Controller
         return Bluebook::forDean($team->team_id)->first() ?? abort(404);
     }
 
-    /** One line of a team that is not cleared yet: a cleared slip is final. */
+    /** One line of a team that is not cleared yet: a clearance is final. */
     private function line(Team $team, Deliverable $deliverable): object
     {
         $bluebook = $this->row($team)->bluebook;

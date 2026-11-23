@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Bluebook Clearance: the milestone the Dean's Office checks. Each line takes
  * a PDF, a DOCX or a Google Drive video link; the dean accepts or sends back
  * each one (a DeliverableCheck), then clears the team, which closes the
- * clearance line and gives the slip its number.
+ * clearance line.
  */
 class Bluebook
 {
@@ -58,7 +58,6 @@ class Bluebook
             'cleared' => $cleared,
             'cleared_on' => $check?->checked_at,
             'cleared_by' => $check ? CapstoneExpert::find($check->checked_by)?->name : null,
-            'slip_no' => $check ? 'BC-'.$check->checked_at->year.'-'.str_pad((string) $check->id, 4, '0', STR_PAD_LEFT) : null,
             'status' => match (true) {
                 $cleared => self::CLEARED,
                 $lines->contains('waiting_on', MilestoneProgress::WAITING_ON_TEAM) => self::SENT_BACK,
