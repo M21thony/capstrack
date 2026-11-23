@@ -241,9 +241,13 @@
          line about asking a CaPSA/TSA for an account is gone with it. --}}
     <div class="order-7 my-3 h-px bg-line"></div>
 
+    {{-- Privacy Policy always visible here: Google's OAuth review looks for it on the home page. --}}
     <p class="order-9 mt-4 text-center text-[10px] text-[#a8a293] md:text-[11px] lg:mt-[clamp(12px,2.5vh,32px)]">CapsTrack — CSPC College of Computer Studies
-      <span class="mx-1.5 text-[#cfc9ba]">·</span>
-      <a href="{{ route('team') }}" id="meet-team-btn" class="font-semibold text-gold-dim underline-offset-2 hover:underline">Meet the Team</a>
+      <span class="mt-1 block">
+        <a href="{{ route('team') }}" id="meet-team-btn" class="font-semibold text-gold-dim underline-offset-2 hover:underline">Meet the Team</a>
+        <span class="mx-1.5 text-[#cfc9ba]">·</span>
+        <a href="{{ route('privacy') }}" class="font-semibold text-gold-dim underline-offset-2 hover:underline">Privacy Policy</a>
+      </span>
     </p>
   </div>
 </div>
