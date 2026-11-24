@@ -279,13 +279,14 @@
               <span class="pp-status" id="pp-status" role="status"><i></i><span id="pp-status-text"></span></span>
             </div>
             <div class="pp-progs">
-              @foreach (\App\Models\CapstoneExpert::PROGRAMS as $program)
+              @foreach ([...\App\Models\CapstoneExpert::PROGRAMS, 'ALL'] as $program)
+                @php($programLabel = $program === 'ALL' ? 'All programs' : $program)
                 <div class="pp-prog" data-program="{{ $program }}" hidden>
-                  <label for="pp-prog-{{ $program }}">{{ $program }}</label>
+                  <label for="pp-prog-{{ $program }}">{{ $programLabel }}</label>
                   <div class="pp-step">
-                    <button type="button" data-step="-1" aria-label="One fewer {{ $program }} team">&minus;</button>
+                    <button type="button" data-step="-1" aria-label="One fewer team ({{ $programLabel }})">&minus;</button>
                     <input type="number" id="pp-prog-{{ $program }}" min="0" max="20" step="1" inputmode="numeric">
-                    <button type="button" data-step="1" aria-label="One more {{ $program }} team">+</button>
+                    <button type="button" data-step="1" aria-label="One more team ({{ $programLabel }})">+</button>
                   </div>
                   <span>teams</span>
                 </div>
@@ -421,6 +422,8 @@ function closeSidebar() {
 
 (function () {
   var PROGRAMS = @json(\App\Models\CapstoneExpert::PROGRAMS);
+  // "ALL" is one number for every program; it and the per-program rows replace each other.
+  var SLOT_KEYS = PROGRAMS.concat('ALL');
   var SIDES = @json((object) $researchSides);
   var DEGREE_LEVELS = @json($degreeLevels);
   var TEAMS_HANDLED = {{ (int) $teamsHandled }};
@@ -442,7 +445,7 @@ function closeSidebar() {
   var saved = {
     name: @json($nameParts),
     degree: @json($expert->degree_title ?? ''),
-    programs: PROGRAMS.reduce(function (o, p) { o[p] = 0; return o; }, {}),
+    programs: SLOT_KEYS.reduce(function (o, p) { o[p] = 0; return o; }, {}),
     areas: @json((object) $researchAreas),
     strengths: @json(array_values($expert->panel_strengths ?? [])),
     maxPanels: @json($expert->max_panels),
@@ -463,7 +466,7 @@ function closeSidebar() {
   var el = function (id) { return document.getElementById(id); };
   var input = el('pp-area-input');
 
-  function total() { return PROGRAMS.reduce(function (t, p) { return t + (state.programs[p] || 0); }, 0); }
+  function total() { return SLOT_KEYS.reduce(function (t, p) { return t + (state.programs[p] || 0); }, 0); }
   function dirty() { return JSON.stringify(state) !== JSON.stringify(saved); }
   function areas() { return state.areas[side] || (state.areas[side] = []); }
   function has(name) { return areas().some(function (a) { return norm(a) === norm(name); }); }
@@ -471,7 +474,7 @@ function closeSidebar() {
 
   // Programs with a row on the page: the ones taken, plus any added since.
   var shown;
-  function resetShown() { shown = PROGRAMS.filter(function (p) { return state.programs[p] > 0; }); }
+  function resetShown() { shown = SLOT_KEYS.filter(function (p) { return state.programs[p] > 0; }); }
   resetShown();
 
   function renderPrograms() {
@@ -483,10 +486,10 @@ function closeSidebar() {
       // Left alone while it is being typed in, so the caret does not jump.
       if (document.activeElement !== box) box.value = n;
     });
-    var add = el('pp-add-prog'), rest = PROGRAMS.filter(function (p) { return shown.indexOf(p) < 0; });
+    var add = el('pp-add-prog'), rest = SLOT_KEYS.filter(function (p) { return shown.indexOf(p) < 0; });
     add.innerHTML = '';
     add.appendChild(new Option('+ Add program', ''));
-    rest.forEach(function (p) { add.appendChild(new Option(p, p)); });
+    rest.forEach(function (p) { add.appendChild(new Option(p === 'ALL' ? 'All programs' : p, p)); });
     add.hidden = !rest.length;
     var t = total();
     if (!t && FLAT_LIMIT && !dirty()) t = FLAT_LIMIT;
@@ -673,6 +676,16 @@ function closeSidebar() {
   el('pp-add-prog').addEventListener('change', function (e) {
     var p = e.target.value;
     if (!p) return;
+    if (p === 'ALL') {
+      // Keeps the teams already counted, as one number.
+      var n = total();
+      PROGRAMS.forEach(function (q) { state.programs[q] = 0; });
+      shown = [];
+      state.programs.ALL = n;
+    } else if (shown.indexOf('ALL') >= 0) {
+      shown = [];
+      state.programs.ALL = 0;
+    }
     shown.push(p);
     state.programs[p] = Math.max(state.programs[p] || 0, 1);
     changed();

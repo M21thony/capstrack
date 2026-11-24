@@ -69,6 +69,27 @@ class InstructorProfileTest extends TestCase
         $this->assertStringStartsWith('Kenn S. Aurillas', $expert->name);
     }
 
+    // An expert who takes any course sets one number; it replaces any split.
+    public function test_all_programs_takes_one_number_for_every_program(): void
+    {
+        $expert = $this->makeExpert();
+
+        $this->actingAs($expert, 'expert')->putJson(
+            route('instructor.profile.update'),
+            ['program_slots' => ['ALL' => 8, 'BSIT' => 3], 'expertise' => []]
+        )->assertOk();
+
+        $expert = $expert->fresh();
+        $this->assertSame('8 - ALL', $expert->program_slots);
+        $this->assertSame(8, (int) $expert->max_teams);
+        $this->assertTrue($expert->acceptsProgram('BLIS'));
+        $this->assertNull($expert->slotsForProgram('BSCS'));
+        $this->assertTrue(CapstoneExpert::query()->acceptsProgram('BSIS')->whereKey($expert->getKey())->exists());
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()
+            ->assertSee('"ALL":8', false);
+    }
+
     // Programs they take no teams from are dropped rather than stored as
     // zero, so "accepts BSIS?" has one answer, not two spellings of no.
     public function test_programs_with_no_slots_are_not_recorded(): void

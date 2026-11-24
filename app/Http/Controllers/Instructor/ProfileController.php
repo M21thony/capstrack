@@ -30,12 +30,13 @@ class ProfileController extends Controller
         $sides = collect(ExpertExpertise::SIDES)
             ->filter(fn (string $label, string $side) => $side === 'panel' || in_array($side, $heldRoles, true));
 
-        // What they last saved per program. A flat number with no split
-        // ("ALL") ticks nothing, so they choose the programs themselves.
+        // What they last saved per program, or "All programs". An old flat
+        // number with nothing saved per program ticks nothing, so they
+        // choose the programs themselves.
         // A request waiting for the CaPSA/TSA shows the numbers asked for.
         $programSlots = $expert->teams_cap_request ?: [];
         foreach ($programSlots ? [] : $expert->parsedCapacity() as [$program, $max]) {
-            if ($program !== 'ALL') {
+            if ($program !== 'ALL' || $expert->hasSetPrograms()) {
                 $programSlots[$program] = (int) $max;
             }
         }
@@ -171,7 +172,7 @@ class ProfileController extends Controller
             $slots = $request->input('program_slots', []);
 
             foreach (array_keys($slots) as $program) {
-                if (! in_array($program, CapstoneExpert::PROGRAMS, true)) {
+                if (! in_array($program, [...CapstoneExpert::PROGRAMS, 'ALL'], true)) {
                     $v->errors()->add('program_slots', "\"{$program}\" isn't a program you can accept teams from.");
 
                     return;

@@ -425,8 +425,10 @@ class CapstoneExpert extends Authenticatable
     {
         // Walked in PROGRAMS order rather than the caller's, so the saved
         // text is the same however the form happened to send it.
-        $accepted = [];
-        foreach (self::PROGRAMS as $program) {
+        // "ALL" is one number for every program, and replaces any split.
+        $all = (int) ($slots['ALL'] ?? 0);
+        $accepted = $all > 0 ? ['ALL' => $all] : [];
+        foreach ($all > 0 ? [] : self::PROGRAMS as $program) {
             $count = (int) ($slots[$program] ?? 0);
             if ($count > 0) {
                 $accepted[$program] = $count;
@@ -471,6 +473,7 @@ class CapstoneExpert extends Authenticatable
         return $query->where(function ($q) use ($program) {
             $q->whereNull('program_slots')
                 ->orWhere('program_slots', '')
+                ->orWhere('program_slots', 'like', '%ALL%')
                 ->orWhere('program_slots', 'like', '%'.$program.'%');
         });
     }
