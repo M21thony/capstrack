@@ -82,13 +82,13 @@
   /* Panel preferences: a label over each line of choices. */
   .pp-field + .pp-field{margin-top:14px}
   .pp-label{display:block;margin-bottom:6px;font-size:13px;font-weight:700;color:var(--text)}
-  .pp-label em{font-style:normal;font-weight:500;color:var(--text3);margin-left:6px}
   .pp-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
   .pp-row .pp-label{flex:1;margin:0}
   .pp-row #pp-panels-taken{font-size:12px;color:var(--text3)}
   .pp-row #pp-panels-taken.pp-warn{color:var(--amber)}
   .pp-checks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 12px}
   .pp-strengths{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pp-pprogs{grid-template-columns:repeat(5,minmax(0,1fr))}
   .pp-check{display:inline-flex;align-items:center;gap:8px;min-height:30px;font-size:13.5px;color:var(--text);cursor:pointer}
   .pp-check input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
   .pp-foot{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:10px;font-size:12px;color:var(--text3)}
@@ -326,8 +326,9 @@
           <section class="pp-sec" id="pp-panel" aria-labelledby="pp-panels-h">
             <div class="pp-sec-h"><h2 id="pp-panels-h">Panel preferences</h2></div>
             <div class="pp-field">
-              <span class="pp-label" id="pp-pprog-l">Programs <em id="pp-pcourses-all">Every program</em></span>
-              <div class="pp-checks" role="group" aria-labelledby="pp-pprog-l">
+              <span class="pp-label" id="pp-pprog-l">Programs</span>
+              <div class="pp-checks pp-pprogs" role="group" aria-labelledby="pp-pprog-l">
+                <label class="pp-check"><input type="checkbox" id="pp-pprog-all">All programs</label>
                 @foreach (\App\Models\CapstoneExpert::PROGRAMS as $program)
                   <label class="pp-check"><input type="checkbox" data-panel-program="{{ $program }}">{{ $program }}</label>
                 @endforeach
@@ -628,8 +629,15 @@ function closeSidebar() {
         ? 'You sit on <b>' + PANELS_HELD + '</b>, more than your limit of <b>' + max + '</b>. No new panel seat comes to you until you are below it.'
         : '<b>' + PANELS_HELD + '</b> of <b>' + max + '</b> filled');
     document.querySelectorAll('[data-panel-program]').forEach(function (b) { b.checked = state.panelPrograms.indexOf(b.dataset.panelProgram) >= 0; });
-    el('pp-pcourses-all').hidden = state.panelPrograms.length > 0;
+    el('pp-pprog-all').checked = !state.panelPrograms.length;
   }
+
+  // "All programs" is no course ticked: ticking it clears them, and it can't be unticked on its own.
+  el('pp-pprog-all').addEventListener('change', function () {
+    state.panelPrograms = [];
+    changed();
+    renderPanels();
+  });
 
   document.querySelectorAll('[data-panel-program]').forEach(function (box) {
     box.addEventListener('change', function () {

@@ -26,7 +26,8 @@ class PanelProgramsTest extends TestCase
             'expertise_by_side' => ['adviser' => ['Databases']],
         ] + $extra);
 
-        $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()->assertSee('data-panel-program="BSIS"', false);
+        $this->actingAs($expert, 'expert')->get(route('instructor.profile'))->assertOk()->assertSee('data-panel-program="BSIS"', false)
+            ->assertSee('id="pp-pprog-all"', false)->assertDontSee('Every program');
 
         $save(['panel_programs' => ['BSIS', 'BSIT']])->assertOk();
         $this->assertSame(['BSIT', 'BSIS'], $expert->fresh()->panel_programs);
