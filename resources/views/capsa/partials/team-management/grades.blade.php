@@ -155,7 +155,7 @@
                 <td>
                   <div class="gr-pdf">
                     @if ($d->sheet)
-                      <button class="btn" type="button" data-pdf-view data-pdf-url="{{ $d->sheet }}" data-pdf-title="{{ $d->team }} · signed grade sheets">View PDF</button>
+                      <button class="btn" type="button" data-pdf-view="{{ $d->sheet }}" data-pdf-title="{{ $d->team }} · signed grade sheets">View PDF</button>
                     @else
                       <span class="none">Not attached</span>
                     @endif
