@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\CapstoneDocument;
 use App\Models\Deliverable;
 use Illuminate\Support\Facades\Storage;
+use Smalot\PdfParser\Config;
 use Smalot\PdfParser\Parser;
 use Throwable;
 
@@ -143,10 +144,22 @@ class RevisionCheck
     public static function pagesOf(string $pdf): array
     {
         try {
-            return array_map(fn ($page) => (string) $page->getText(), (new Parser)->parseContent($pdf)->getPages());
+            return array_map(fn ($page) => (string) $page->getText(), self::parser()->parseContent($pdf)->getPages());
         } catch (Throwable) {
             return [];
         }
+    }
+
+    /**
+     * A reader that drops pictures: only the words are wanted, and keeping the
+     * images of a 5 MB chapter ran past PHP's 128 MB (140 MB against 44 MB).
+     */
+    public static function parser(): Parser
+    {
+        $config = new Config;
+        $config->setRetainImageContent(false);
+
+        return new Parser([], $config);
     }
 
     /**

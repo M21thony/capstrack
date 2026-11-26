@@ -14,7 +14,6 @@ use App\Support\RevisionCheck;
 use App\Support\SectionScope;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Smalot\PdfParser\Parser;
 
 class SimilarityService
 {
@@ -47,8 +46,7 @@ class SimilarityService
     // ── 1. Extract raw text from uploaded PDF ─────────────────────────
     public function extractPdfText(string $filePath): string
     {
-        $parser = new Parser;
-        $pdf = $parser->parseFile($filePath);
+        $pdf = RevisionCheck::parser()->parseFile($filePath);
 
         return preg_replace('/\s+/', ' ', trim($pdf->getText()));
     }
